@@ -9,3 +9,4 @@ The main workflow below is also presented in the powerpoint file.
 
 # Notebooks
 The directory "nooteboks" has the Jupyter notebooks under development.
+Example files to run the notebooks are available here $/mnt/agnerds/loosolab_SC_RNA_framework/raw_data
