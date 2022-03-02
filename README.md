@@ -8,4 +8,4 @@ The directory nooteboks has the notebooks under development.
 
 # Workflow
 
-![](./workflows_suggestions/workflow_page-0001.jpg)
+https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework/-/commit/853e65486cb10bbc9764607911022ca2b0c952f3#note_599461
