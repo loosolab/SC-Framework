@@ -2,13 +2,10 @@
 
 Here we are developing a set of notebooks for automation of scRNA-Seq of looso's lab.
 
-The main workflow in presented in the powerpoint file.
-
-The directory nooteboks has the notebooks under development.
-
 # Workflow
+The main workflow below is also presented in the powerpoint file.
 
 ![](image/scRNAseq_2x_2_.png)
 
 # Notebooks
-![](notebooks)
+The directory "nooteboks" has the Jupyter notebooks under development.
