@@ -8,4 +8,4 @@ The directory nooteboks has the notebooks under development.
 
 # Workflow
 
-[](/workflows_suggestions/workflow_page-0001.jpg)
+[](./workflows_suggestions/workflow_page-0001.jpg)
