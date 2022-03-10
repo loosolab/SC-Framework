@@ -13,4 +13,4 @@ The directory "nooteboks" has the Jupyter notebooks under development.
 Example files to run the notebooks are available here $/mnt/agnerds/loosolab_SC_RNA_framework/raw_data
 
 # Modules instruction
-The modules present in the notebook folder must be in the same notebook in your VM.
+The modules present in the notebook folder must be in the folder where your notebooks are located in your VM.
