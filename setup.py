@@ -8,6 +8,8 @@ setup(name='sc-toolbox',
 		install_requires=[
 			'matplotlib',
 			'numpy',
-			'scanpy'
+			'scanpy',
+			'rpy2',
+			'anndata2ri'
 		],
 		)
