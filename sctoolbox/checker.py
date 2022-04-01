@@ -2,7 +2,6 @@
 Modules for checking the existence of directories and files
 """
 #Importing modules
-import sctoolbox
 import os
 from os import path
 import sys
