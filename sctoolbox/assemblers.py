@@ -1,22 +1,23 @@
 """
 Module to assembling anndata objects
 """
-#Importing modules
-#import os
-#from os import path
-import yaml
-import checker
-import sys
+import sctoolbox.checker as ch
+import sctoolbox.creators as cr
+
 import scanpy as sc
 import pandas as pd
-from scipy import sparse
-from scipy.io import mmread
 import anndata
 from anndata import AnnData
 
+import yaml
+import sys
+
+from scipy import sparse
+from scipy.io import mmread
+
 #######################################################################################################################
 #################################ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS##########################################
-def assembler_velocity(SAMPLE, PATH, DTYPE):
+def assembler_velocity(SAMPLE, PATH, DTYPE): #Author: Guilherme Valente
     global adata
     path1=PATH + "/" + SAMPLE + "/solo/Velocyto/" + DTYPE
     path_for_matrix=PATH + "/" + SAMPLE + "/solo/Gene/" + DTYPE
@@ -42,15 +43,15 @@ def assembler_velocity(SAMPLE, PATH, DTYPE):
     return adata.copy()
 
 def velocity(tenX, TEST, dtype): #tenX is the configuration of samples in the 10X.yml. TEST is test number
-    if checker.check_infoyml("Input_solo_path"): #Check existence of solo path.
-        solo_path=''.join(checker.check_infoyml("Input_solo_path"))
-    if checker.check_infoyml("Output_path"): #Check existence of results path in yaml.
-        result_path=''.join(checker.check_infoyml("Output_path"))
+    if ch.check_infoyml("Input_solo_path"): #Check existence of solo path.
+        solo_path=''.join(ch.check_infoyml("Input_solo_path"))
+    if ch.check_infoyml("Output_path"): #Check existence of results path in yaml.
+        result_path=''.join(ch.check_infoyml("Output_path"))
         test=result_path.split("results/")[1]
         if TEST != test: #If the test description is not the same as yml, close the program.
             sys.exit("The " + TEST + " is not the same as described in info.yml.")
         else:
-            global conditions_name 
+            global conditions_name
             adata_list=list()
             conditions_name=[]
             dict_rename_samples={}
@@ -72,6 +73,12 @@ def velocity(tenX, TEST, dtype): #tenX is the configuration of samples in the 10
             print("\t\tRenaming batches.")
             adata.obs["batch"].replace(dict_rename_samples, inplace=True)
             adata.obs.rename(columns = {"batch": ''.join(conditions_name)}, inplace = True)
+            print("\t\tInserting informations")
+            cr.build_infor(adata, "Test_number", TEST) #Anndata, key and value for anndata.uns["infoprocess"]
+            cr.build_infor(adata, "Input_for_assembling", solo_path)
+            cr.build_infor(adata, "Strategy", "Assembling for velocity")
+            cr.build_infor(adata, "Anndata_path", result_path)
+            cr.build_infor(adata, "Column_for_clustering", str(''.join(conditions_name)))
             print("\t\tSaving and loading.")
             name="/anndata_1_" + TEST +".h5ad"
             adata_output= result_path + name
@@ -79,6 +86,13 @@ def velocity(tenX, TEST, dtype): #tenX is the configuration of samples in the 10
             #Loading adata file and printing num cells and num genes
             print("Loading the anndata for velocity and storing as an adata variable.")
             adata = sc.read_h5ad(filename=adata_output)
-            
+
             return(adata)
+
 #######################################################################################################################
+####################################CONVERTING FROM SEURAT TO ANNDATA OBJECT###########################################
+#def seuratconv():  #Author: Renne Wiegandt
+
+#######################################################################################################################
+####################################CONVERTING FROM SEURAT TO ANNDATA OBJECT###########################################
+#def tenxpublic():  #Author: Hendrik Schultheis

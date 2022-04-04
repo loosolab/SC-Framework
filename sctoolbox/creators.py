@@ -28,3 +28,11 @@ def directory(DIREC): #Directory creator.
     print("Creating the " + DIREC + " directory.")
     print("The " + DIREC + " directory is ready.")
     os.mkdir(DIREC)
+
+def build_infor(ANNDATA, KEY, VALUE): #Adding info anndata.uns["infoprocess"]
+    if "infoprocess" not in ANNDATA.uns:
+        ANNDATA.uns["infoprocess"]={}
+        ANNDATA.uns["infoprocess"][KEY]=VALUE
+    else:
+        ANNDATA.uns["infoprocess"][KEY]=VALUE
+    return ANNDATA.copy()

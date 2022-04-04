@@ -36,3 +36,7 @@ Example files to run the notebooks are available here $/mnt/agnerds/loosolab_SC_
 
 # Modules instruction
 The modules present in the notebook folder must be in the folder where your notebooks are located in your VM.
+
+Notebook 1_assembling_anndata:
+
+Modules to assembly the 10X anndata object able to run velocity analysis, to convert from Seurat to anndata object or to assembly the 10X anndata object from public dataset.
