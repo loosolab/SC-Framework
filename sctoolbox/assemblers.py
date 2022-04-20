@@ -90,8 +90,102 @@ def velocity(tenX, TEST, dtype): #tenX is the configuration of samples in the 10
             return(adata)
 
 #######################################################################################################################
-####################################CONVERTING FROM SEURAT TO ANNDATA OBJECT###########################################
-#def seuratconv():  #Author: Renne Wiegandt
+####################################CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT######################################
+def from_single_mtx(mtx, barcodes, genes, is_10X = True, transpose = True, barcode_index = 0, genes_index = 0, delimiter = "\t", **kwargs):
+    ''' Building adata object from single mtx and two tsv/csv files
+    
+    Parameter:
+    ----------
+    mtx : string
+        Path to mtx files
+    barcodes : string
+        Path to cell label file (.obs)
+    genes : string
+        Path to gene label file (.var)
+    is_10X : boolean
+        Set True if mtx file contains 10X data
+    transpose : boolean
+        Set True to transpose mtx matrix
+    barcode_index : int
+        Column which contains the cell barcodes (Default: 0 -> Takes first column)
+    genes_index : int
+        Column h contains the gene IDs (Default: 0 -> Takes first column)
+    delimiter : string
+        delimiter of genes and barcodes table
+    **kwargs : additional arguments
+        Contains additional arguments for scanpy.read_10x_mtx method
+        
+    returns
+    -------
+    anndata object containing the mtx matrix, gene and cell labels
+    '''
+    
+    ### Read mtx file ###
+    if is_10X:
+        adata = sc.read_10x_mtx(path=mtx, **kwargs)
+    else:
+        adata = sc.read_mtx(filename=mtx, dtype='float32')
+    
+    ### Transpose matrix if necessary ###
+    if transpose:
+        adata = adata.transpose()
+    
+    ### Read in gene and cell annotation ###
+    barcode_csv = pd.read_csv(barcodes, header=None, index_col=barcode_index, delimiter=delimiter)
+    barcode_csv.index.names = ['index']
+    genes_csv = pd.read_csv(genes, header=None, index_col=genes_index, delimiter=delimiter)
+    genes_csv.index.names = ['index']
+    
+    ### Test if they are unique ###
+    if not barcode_csv.index.is_unique:
+        raise ValueError("Barcode index column does not contain unique values")
+    if not genes_csv.index.is_unique:
+        raise ValueError("Genes index column does not contain unique values")
+    
+    ### Add tables to anndata object ###
+    adata.obs = barcode_csv 
+    adata.var = genes_csv
+    
+    return(adata)
+
+
+def from_mtx(mtx, barcodes, genes, **kwargs):
+    ''' Building adata object from list of mtx, barcodes and genes files
+    
+    Parameter:
+    ----------
+    mtx : list
+        List of paths to mtx files
+    barcodes : list
+        List of paths to cell barcode files
+    genes : list
+        List of paths to gene label files
+    is_10X : boolean
+        Set True if mtx file contains 10X data
+    transpose : boolean
+        Set True to transpose mtx matrix
+    barcode_index : int
+        Column which contains the cell barcodes (Default: 0 -> Takes first column)
+    genes_index : int
+        Column h contains the gene IDs (Default: 0 -> Takes first column)
+    delimiter : string
+        delimiter of genes and barcodes table
+    **kwargs : additional arguments
+        Contains additional arguments for scanpy.read_10x_mtx method
+
+    returns:
+    --------
+    merged anndata object containing the mtx matrix, gene and cell labels
+    '''
+    
+    adata_objects = [from_single_mtx(m, barcodes[i], genes[i], **kwargs) for i,m in enumerate(mtx)]
+    
+    if len(adata_objects) >1:
+        adata = adata_objects[0].concatenate(*adata_objects[1:], join = "inner")
+    else:
+        adata = adata_objects[0]
+    
+    return adata
 
 #######################################################################################################################
 ####################################CONVERTING FROM SEURAT TO ANNDATA OBJECT###########################################
