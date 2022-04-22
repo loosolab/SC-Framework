@@ -37,7 +37,9 @@ Example files to run the notebooks are available here $/mnt/agnerds/loosolab_SC_
 The directory "nooteboks" has the Jupyter notebooks here developed.
 
 **Notebook 1 (1_assembling_anndata.ipynb):**
+
 	Assembly the 10X anndata to run velocity analysis, convert from Seurat to anndata object, assembly the 10X anndata object from public dataset.
 
 **Notebook 2 (2_QC_filtering.ipynb):**
+
 	QC and filtering steps.
