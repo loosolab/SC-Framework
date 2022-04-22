@@ -3,9 +3,8 @@
 Here we are developing a set of notebooks for automation of scRNA-Seq of looso's lab.
 
 # Workflow
-The main workflow below is also presented in the powerpoint file.
 
-![](image/scRNAseq_2x_2_.png)
+![](image/scRNAseq.png)
 
 ## Setup utilities
 
