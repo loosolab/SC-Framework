@@ -42,7 +42,8 @@ def assembler_velocity(SAMPLE, PATH, DTYPE): #Author: Guilherme Valente
     adata.var_names_make_unique()
     return adata.copy()
 
-def velocity(tenX, TEST, dtype): #tenX is the configuration of samples in the 10X.yml. TEST is test number
+def velocity(tenX, TEST): #tenX is the configuration of samples in the 10X.yml. TEST is test number
+    dtype="filtered" #the dtype is the type of Solo data choose (raw or filtered), which default is filtered
     if ch.check_infoyml("Input_solo_path"): #Check existence of solo path.
         solo_path=''.join(ch.check_infoyml("Input_solo_path"))
     if ch.check_infoyml("Output_path"): #Check existence of results path in yaml.
@@ -186,7 +187,3 @@ def from_mtx(mtx, barcodes, genes, **kwargs):
         adata = adata_objects[0]
     
     return adata
-
-#######################################################################################################################
-####################################CONVERTING FROM SEURAT TO ANNDATA OBJECT###########################################
-#def tenxpublic():  #Author: Hendrik Schultheis

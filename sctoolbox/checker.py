@@ -36,10 +36,11 @@ def filesDir_for_check2(LIST, LISTDATA): #Check the existence of specific direct
         if c not in LISTDATA:
             list_data_not_found.append(c)
 
-def input_path_velocity(MAINPATH, tenX, DTYPE): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml, the DTYPE is the type of Solo data choose (raw or filtered)
+def input_path_velocity(MAINPATH, tenX): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml.
     global list_data_not_found
     global list_velocyto
     global list_gene
+    DTYPE="filtered" #the DTYPE is the type of Solo data choose (raw or filtered), which default is filtered
     if path.exists(MAINPATH):
         list_data_not_found=[]
         filesDir_for_check(MAINPATH) #Check if the quant folder exist
