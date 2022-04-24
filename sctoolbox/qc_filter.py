@@ -27,7 +27,7 @@ def filter_genes(adata, genes):
     ------------
     adata : AnnData
         Anndata object to filter
-    genes : str or list
+    genes : list of str
         A list of genes to remove from object.
     """
 
