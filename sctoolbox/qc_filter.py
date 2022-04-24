@@ -1,3 +1,6 @@
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 def cell_mitochondrial():
     '''
@@ -16,6 +19,31 @@ def cell_numgenes():
             Custom cutoff: user define the cutoff
     Return anndata
     '''
+
+def filter_genes(adata, genes):
+    """ Remove genes from adata object. 
+    
+    Parameters
+    ------------
+    adata : AnnData
+        Anndata object to filter
+    genes : str or list
+        A list of genes to remove from object.
+    """
+
+    #Check if all genes are found in adata
+    not_found = list(set(genes) - set(adata.var_names))
+    if len(not_found) > 0:
+        print("{0} genes were not found in adata and could therefore not be removed. These genes are: {1}".format(len(not_found), not_found))
+    
+    #Remove genes from adata
+    n_before = adata.shape[1]
+    adata = adata[:, ~adata.var_names.isin(genes)]
+    n_after = adata.shape[1]
+    print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before-n_after, n_after))
+
+    return(adata)
+
 
 def quality_violin(adata, groupby, columns, header, color_list, title=None, save=None):
     """
@@ -72,27 +100,6 @@ def quality_violin(adata, groupby, columns, header, color_list, title=None, save
     if save != None:
         plt.savefig(save, dpi=400, bbox_inches="tight")
 
-
-def genes_mitochondrial():
-    '''
-    Filter mitochondrial genes based on a custom list of genes defined by the co-worker.
-    Exclude based on the custom list.
-    Return anndata
-    '''
-
-def genes_genderspecific():
-    '''
-    Filter gender-specific genes based on a custom list of genes defined by the co-worker.
-    Exclude based on the custom list.
-    Return anndata
-    '''
-
-def genes_others():
-    '''
-    Filter other genes based on a custom list of genes defined by the co-worker.
-    Exclude based on the custom list.
-    Return anndata
-    '''
 
 def genes_mincells():
     '''
