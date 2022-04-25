@@ -19,8 +19,8 @@ from scipy.io import mmread
 #################################ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS##########################################
 def assembler_velocity(SAMPLE, PATH, DTYPE): #Author: Guilherme Valente
     global adata
-    path1=PATH + "/" + SAMPLE + "/solo/Velocyto/" + DTYPE
-    path_for_matrix=PATH + "/" + SAMPLE + "/solo/Gene/" + DTYPE
+    path1=PATH + "/quant/" + SAMPLE + "/solo/Velocyto/" + DTYPE
+    path_for_matrix=PATH + "/quant/" + SAMPLE + "/solo/Gene/" + DTYPE
     path_for_X_spl_unspl_ambig=path1
     path_for_obs=path1 + '/barcodes.tsv'
     path_for_var=path1 + '/genes.tsv'
@@ -42,10 +42,8 @@ def assembler_velocity(SAMPLE, PATH, DTYPE): #Author: Guilherme Valente
     adata.var_names_make_unique()
     return adata.copy()
 
-def velocity(tenX, TEST): #tenX is the configuration of samples in the 10X.yml. TEST is test number
+def velocity(tenX, TEST, SOLO_PATH): #tenX is the configuration of samples in the 10X.yml. TEST is test number
     dtype="filtered" #the dtype is the type of Solo data choose (raw or filtered), which default is filtered
-    if ch.check_infoyml("Input_solo_path"): #Check existence of solo path.
-        solo_path=''.join(ch.check_infoyml("Input_solo_path"))
     if ch.check_infoyml("Output_path"): #Check existence of results path in yaml.
         result_path=''.join(ch.check_infoyml("Output_path"))
         test=result_path.split("results/")[1]
@@ -65,7 +63,7 @@ def velocity(tenX, TEST): #tenX is the configuration of samples in the 10X.yml. 
                 dict_rename_samples[str(timer)]=condition_description
                 if condition not in conditions_name:
                     conditions_name.append(condition)
-                adata_list.append(assembler_velocity(sample, solo_path, dtype)) #EXECUTING THE ASSEMBLER
+                adata_list.append(assembler_velocity(sample, SOLO_PATH, dtype)) #EXECUTING THE ASSEMBLER
                 timer=timer+1
             #Creating the final anndata and saving
             print("Creating the final anndata object.")
@@ -76,10 +74,9 @@ def velocity(tenX, TEST): #tenX is the configuration of samples in the 10X.yml. 
             adata.obs.rename(columns = {"batch": ''.join(conditions_name)}, inplace = True)
             print("\t\tInserting informations")
             cr.build_infor(adata, "Test_number", TEST) #Anndata, key and value for anndata.uns["infoprocess"]
-            cr.build_infor(adata, "Input_for_assembling", solo_path)
+            cr.build_infor(adata, "Input_for_assembling", SOLO_PATH)
             cr.build_infor(adata, "Strategy", "Assembling for velocity")
             cr.build_infor(adata, "Anndata_path", result_path)
-            cr.build_infor(adata, "Column_for_clustering", str(''.join(conditions_name)))
             print("\t\tSaving and loading.")
             name="/anndata_1_" + TEST +".h5ad"
             adata_output= result_path + name

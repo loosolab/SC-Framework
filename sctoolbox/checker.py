@@ -47,7 +47,7 @@ def input_path_velocity(MAINPATH, tenX): #Check if the main directory of solo (M
         if len(list_data_not_found) != 0: #Stop the script if quant folder is not found
             error_message(MAINPATH + "/quant")
         else:
-           cr.infoyml("Input_solo_path", MAINPATH + "/quant") #Printing the input in yaml
+            pass
         del list_data_not_found
         for a in tenX: #Checking the presence of all sample directories
             sample=a.split(":")[0]
@@ -84,3 +84,7 @@ def check_infoyml(KEY): #Check the existence of a given key in info.yml and load
             sys.exit("The " + KEY + " is absent in info.yml.")
     else:
         error_message("./info.yml")
+
+def load_anndata(KEY, NOTEBOOK):
+    if "2" in str(NOTEBOOK):
+        return(''.join(check_infoyml(KEY)) + "/anndata_1_Test1.h5ad")
