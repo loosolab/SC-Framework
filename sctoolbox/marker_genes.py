@@ -32,29 +32,31 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", save_excel=None):
 		
 		group_tables[group] = pd.DataFrame(data)
 	
-	#Get in/out group fraction of expressed genes
-	groupby = adata.uns[key]["params"]["groupby"]
-	n_cells_dict = adata.obs[groupby].value_counts().to_dict() #number of cells in groups
-	
-	for group in groups: 
-		
-		#Fraction of cells inside group expressing each gene
-		s = (adata[adata.obs[groupby].isin([group]),:].X > 0).sum(axis=0).A1 #sum of cells with expression > 0 for this cluster
-		expressed = pd.DataFrame([adata.var.index, s]).T
-		expressed.columns = ["names", "n_expr"]
-		
-		group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-		group_tables[group]["in_group_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
-		
-		#Fraction of cells outside group expressing each gene
-		s = (adata[~adata.obs[groupby].isin([group]),:].X > 0).sum(axis=0).A1
-		expressed = pd.DataFrame([adata.var.index, s]).T
-		expressed.columns = ["names", "n_out_expr"]
-		
-		group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-		group_tables[group]["out_group_fraction"] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
-		
-		group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
+	#Get in/out group fraction of expressed genes (only works for .X-values above 0)
+	n_negative = sum(sum(adata.X < 0))
+	if n_negative == 0: #only calculate fractions for raw expression data
+		groupby = adata.uns[key]["params"]["groupby"]
+		n_cells_dict = adata.obs[groupby].value_counts().to_dict() #number of cells in groups
+
+		for group in groups: 
+
+			#Fraction of cells inside group expressing each gene
+			s = (adata[adata.obs[groupby].isin([group]),:].X > 0).sum(axis=0).A1 #sum of cells with expression > 0 for this cluster
+			expressed = pd.DataFrame([adata.var.index, s]).T
+			expressed.columns = ["names", "n_expr"]
+			
+			group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
+			group_tables[group]["in_group_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
+			
+			#Fraction of cells outside group expressing each gene
+			s = (adata[~adata.obs[groupby].isin([group]),:].X > 0).sum(axis=0).A1
+			expressed = pd.DataFrame([adata.var.index, s]).T
+			expressed.columns = ["names", "n_out_expr"]
+			
+			group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
+			group_tables[group]["out_group_fraction"] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
+			
+			group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 	
 	#If chosen: Save tables to joined excel
 	if save_excel is not None:
