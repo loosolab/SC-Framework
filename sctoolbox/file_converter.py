@@ -43,7 +43,7 @@ def convertToAdata(file, r_home=None):
     adata = r(f"""
                 library(Seurat)
                 
-                object <- readRDS("{path}")
+                object <- readRDS("{file}")
 
                 # check type and convert if needed
                 if (class(object) == "Seurat") {{
