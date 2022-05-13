@@ -10,6 +10,57 @@ import igraph as ig
 from itertools import combinations_with_replacement
 from matplotlib import cm
 
+def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
+    """
+    Download table of receptor-ligand interactions and store in adata.
+
+    Note: This will remove all information stored in adata.uns['receptor-ligand']
+
+    Parameters:
+    ----------
+    adata : AnnData
+        Analysis object the database will be added to.
+    dp_path : str
+        Path to database table. A valid database needs a column with receptor gene ids/ symbols and ligand gene ids/ symbols.
+        Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
+        Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+    ligand_column : str
+        Name of the column with ligand gene names.
+        Use 'ligand_gene_symbol' for the urls provided above.
+    receptor_column : str
+        Name of column with receptor gene names.
+        Use 'receptor_gene_symbol' for the urls provided above.
+    sep : str, default '\t'
+        Separator of database table.
+    inplace : boolean, default False
+        Whether to copy `adata` or modify it inplace.
+
+    Returns:
+    ----------
+    AnnData : optional
+        Copy of adata with added database path and database table to adata.uns['receptor-ligand']
+    """
+    database = pd.read_csv(db_path, sep=sep)
+
+    # check column names in table
+    if ligand_column not in database.columns:
+        raise ValueError(f"Ligand column '{ligand_column}' not found in database! Available columns: {database.columns}")
+    if receptor_column not in database.columns:
+        raise ValueError(f"Receptor column '{receptor_column}' not found in database! Available columns: {database.columns}")
+
+    modified_adata = adata if inplace else adata.copy()
+
+    # setup dict to store information old data will be overwriten!
+    modified_adata.uns['receptor-ligand'] = dict()
+
+    modified_adata.uns['receptor-ligand']['database_path'] = db_path
+    modified_adata.uns['receptor-ligand']['database'] = database
+    modified_adata.uns['receptor-ligand']['ligand_column'] = ligand_column
+    modified_adata.uns['receptor-ligand']['receptor_column'] = receptor_column
+
+    if not inplace:
+        return modified_adata
+
 def calculate_interaction_table(adata, cluster_column, partner_a, partner_b, custom_index):
     '''
     Calculate a interaction table of the clusters defined in adata.
