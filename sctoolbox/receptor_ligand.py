@@ -9,6 +9,7 @@ import os
 import igraph as ig
 from itertools import combinations_with_replacement
 from matplotlib import cm
+from tqdm import tqdm
 
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
     """
@@ -18,27 +19,27 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
 
     Parameters:
     ----------
-    adata : AnnData
-        Analysis object the database will be added to.
-    dp_path : str
-        Path to database table. A valid database needs a column with receptor gene ids/ symbols and ligand gene ids/ symbols.
-        Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
-        Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
-    ligand_column : str
-        Name of the column with ligand gene names.
-        Use 'ligand_gene_symbol' for the urls provided above.
-    receptor_column : str
-        Name of column with receptor gene names.
-        Use 'receptor_gene_symbol' for the urls provided above.
-    sep : str, default '\t'
-        Separator of database table.
-    inplace : boolean, default False
-        Whether to copy `adata` or modify it inplace.
+        adata : AnnData
+            Analysis object the database will be added to.
+        dp_path : str
+            Path to database table. A valid database needs a column with receptor gene ids/ symbols and ligand gene ids/ symbols.
+            Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
+            Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        ligand_column : str
+            Name of the column with ligand gene names.
+            Use 'ligand_gene_symbol' for the urls provided above.
+        receptor_column : str
+            Name of column with receptor gene names.
+            Use 'receptor_gene_symbol' for the urls provided above.
+        sep : str, default '\t'
+            Separator of database table.
+        inplace : boolean, default False
+            Whether to copy `adata` or modify it inplace.
 
     Returns:
     ----------
-    AnnData : optional
-        Copy of adata with added database path and database table to adata.uns['receptor-ligand']
+        AnnData : optional
+            Copy of adata with added database path and database table to adata.uns['receptor-ligand']
     """
     database = pd.read_csv(db_path, sep=sep)
 
@@ -61,85 +62,131 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
     if not inplace:
         return modified_adata
 
-def calculate_interaction_table(adata, cluster_column, partner_a, partner_b, custom_index):
-    '''
-    Calculate a interaction table of the clusters defined in adata.
+def calculate_interaction_table(adata, cluster_column, gene_index=None, normalize=1000, inplace=False):
+    """
+    Calculate an interaction table of the clusters defined in adata.
     
     Parameters:
-        adata (adata): Adata object that holds the expression values and clustering
-        cluster_column (str): Name of the cluster column in adata.obs
-        partner_a (list): Names of the first interaction partners. Corresponds to partner_b.
-        partner_b (list): Names of the second interaction partners. Corresponds to partner_a.
-        custom_index (str): Which column to use as adata.var index. If None will use the index.
-        
+    ----------
+        adata : AnnData
+            AnnData object that holds the expression values and clustering
+        cluster_column : str
+            Name of the cluster column in adata.obs.
+        gene_index : str, default None
+            Column in adata.var that holds gene symbols/ ids. Corresponds to `download_db(ligand_column, receptor_column)`. Uses index when None.
+        normalize : int, default 1000
+            Correct clusters to given size.
+        inplace : boolean, default False
+            Whether to copy `adata` or modify it inplace.
+
     Returns:
-        interactions (DataFrame): Returns pandas DataFrame of all interactions between clusters.
-    '''
-    
-    ########## compute cluster means and expression percentage for each gene ##########
-    cluster_mean_cols = []
-    perc_cols = []
-    
-    for cluster in set(adata.obs[cluster_column]):
-        print(f"Calculating {cluster} scores")
+    ----------
+        AnnData : optional
+            Copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
+    """
+    r_col, l_col = adata.uns["receptor-ligand"]["receptor_column"], adata.uns["receptor-ligand"]["ligand_column"]
+    index = adata.var[gene_index] if gene_index else adata.var.index
+
+    # test if database gene columns overlap with adata.var genes
+    if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index) or
+        not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)
+        ):
+        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.uns['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
+
+    ##### compute cluster means and expression percentage for each gene #####
+    # gene mean expression per cluster
+    cl_mean_expression = pd.DataFrame(index=index)
+    # percent cells in cluster expressing gene
+    cl_percent_expression = pd.DataFrame(index=index)
+    # number of cells for each cluster
+    clust_sizes = {}
+
+    # fill above tables
+    for cluster in tqdm(set(adata.obs[cluster_column]), desc="computing cluster gene scores"):
+        # filter adata to a specific cluster
+        cluster_adata = adata[adata.obs[cluster_column] == cluster]
+        clust_sizes[cluster] = len(cluster_adata)
         
-        cluster_data = adata[adata.obs[cluster_column] == cluster].copy()
-        
-        # compute cluster means
-        cluster_mean_cols.append(f"{cluster}_cluster_means")
-        # TODO use median
-        if custom_index is None:
-            adata.var.loc[adata.var.index.isin(cluster_data.var.index), cluster_mean_cols[-1]] = cluster_data.X.mean(axis=0).reshape(-1,1)
+        ## compute cluster means
+        if gene_index is None:
+            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var.index), cluster] = cluster_adata.X.mean(axis=0).reshape(-1,1)
         else:
-            adata.var.loc[adata.var[custom_index].isin(cluster_data.var[custom_index]), cluster_mean_cols[-1]] = cluster_data.X.mean(axis=0).reshape(-1,1)
+            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var[gene_index]), cluster] = cluster_adata.X.mean(axis=0).reshape(-1,1)
     
-        # compute expression percentage
-        perc_cols.append(f"{cluster}_cluster_percentage")
-        rows, cols = cluster_data.X.nonzero()
+        ## compute expression percentage
+        # get nonzero expression count for all genes
+        _, cols = cluster_adata.X.nonzero()
         gene_occurence = Counter(cols)
-        adata.var[perc_cols[-1]] = 0
-        adata.var.iloc[list(gene_occurence.keys()), adata.var.columns.get_loc(perc_cols[-1])] = list(gene_occurence.values())
-        adata.var[perc_cols[-1]] = adata.var[perc_cols[-1]] / len(cluster_data.obs)
+
+        cl_percent_expression[cluster] = 0
+        cl_percent_expression.iloc[list(gene_occurence.keys()), cl_percent_expression.columns.get_loc(cluster)] = list(gene_occurence.values())
+        cl_percent_expression[cluster] = cl_percent_expression[cluster] / len(cluster_adata.obs) * 100
     
-    # aggregate means/ percentage for mouse genes that mapped to the same human gene
-    cluster_means = adata.var[cluster_mean_cols].groupby(adata.var.index).mean()
-    cluster_perc = adata.var[perc_cols].groupby(adata.var.index).mean()
+    # combine duplicated genes through mean (can happen due to mapping between organisms)
+    if len(set(cl_mean_expression.index)) != len(cl_mean_expression):
+        cl_mean_expression = cl_mean_expression.groupby(cl_mean_expression.index).mean()
+        cl_percent_expression = cl_percent_expression.groupby(cl_percent_expression.index).mean()
+
+    # cluster scaling factor for cluster size correction
+    scaling_factor = {k: v / normalize for k, v in clust_sizes.items()}
     
     ########## compute zscore of cluster means for each gene ##########
-    zscores = cluster_means.apply(lambda x: pd.Series(scipy.stats.zscore(x, nan_policy='omit'), index=cluster_means.columns), axis=1)
+    # create pandas functions that show progress bar
+    tqdm.pandas(desc="computing Z-scores")
+
+    zscores = cl_mean_expression.progress_apply(lambda x: pd.Series(scipy.stats.zscore(x, nan_policy='omit'), index=cl_mean_expression.columns), axis=1)
     
-    interactions = {"cluster_a": [],
-                "cluster_b": [],
-                "partner_a": [],
-                "partner_b": [],
-                "score_a": [],
-                "score_b": [],
-                "percentage_a": [],
-                "percentage_b": []}
+    interactions = {"receptor_cluster": [],
+                    "ligand_cluster": [],
+                    "receptor_gene": [],
+                    "ligand_gene": [],
+                    "receptor_score": [],
+                    "ligand_score": [],
+                    "receptor_percent": [],
+                    "ligand_percent": [],
+                    "receptor_scale_factor": [],
+                    "ligand_scale_factor": []}
     
     ########## create interaction table ##########
-    for prot_a, prot_b in zip(partner_a, partner_b):
-        if prot_a is np.nan or prot_b is np.nan:
+    for _, (receptor, ligand) in tqdm(adata.uns["receptor-ligand"]["database"][[r_col, l_col]].iterrows(),
+                                      total=len(adata.uns["receptor-ligand"]["database"]),
+                                      desc="finding receptor-ligand interactions"):
+        # skip interaction if not in data
+        if receptor is np.nan or ligand is np.nan:
             continue
     
-        if not prot_a in zscores.index or not prot_b in zscores.index:
+        if not receptor in zscores.index or not ligand in zscores.index:
             continue
-    
-        for cluster_a, perc_a in zip(zscores.columns, cluster_perc.columns):
-            for cluster_b, perc_b in zip(zscores.columns, cluster_perc.columns):
-                interactions["partner_a"].append(prot_a)
-                interactions["partner_b"].append(prot_b)
-                interactions["cluster_a"].append(cluster_a.split("_cluster_means")[0])
-                interactions["cluster_b"].append(cluster_b.split("_cluster_means")[0])
-                interactions["score_a"].append(zscores.loc[prot_a, cluster_a])
-                interactions["score_b"].append(zscores.loc[prot_b, cluster_b])
-                interactions["percentage_a"].append(cluster_perc.loc[prot_a, perc_a])
-                interactions["percentage_b"].append(cluster_perc.loc[prot_b, perc_b])
+
+        # add interactions to dict
+        for receptor_cluster in zscores.columns:
+            for ligand_cluster in zscores.columns:
+                interactions["receptor_gene"].append(receptor)
+                interactions["ligand_gene"].append(ligand)
+                interactions["receptor_cluster"].append(receptor_cluster)
+                interactions["ligand_cluster"].append(ligand_cluster)
+                interactions["receptor_score"].append(zscores.loc[receptor, receptor_cluster])
+                interactions["ligand_score"].append(zscores.loc[ligand, ligand_cluster])
+                interactions["receptor_percent"].append(cl_percent_expression.loc[receptor, receptor_cluster])
+                interactions["ligand_percent"].append(cl_percent_expression.loc[ligand, ligand_cluster])
+                interactions["receptor_scale_factor"].append(scaling_factor[receptor_cluster])
+                interactions["ligand_scale_factor"].append(scaling_factor[ligand_cluster])
     
     interactions = pd.DataFrame(interactions)
-    interactions["interaction_score"] = interactions["score_a"] + interactions["score_b"]
+
+    # compute interaction score
+    interactions["receptor_score_corrected"] = interactions["receptor_score"] * interactions["receptor_scale_factor"]
+    interactions["ligand_score_corrected"] = interactions["ligand_score"] * interactions["ligand_scale_factor"]
+    interactions["interaction_score"] = interactions["receptor_score_corrected"] + interactions["ligand_score_corrected"]
     
-    return interactions
+    # add to adata
+    modified_adata = adata if inplace else adata.copy()
+
+    modified_adata.uns['receptor-ligand']['interactions'] = interactions
+    modified_adata.uns['receptor-ligand']['percentage'] = cl_percent_expression
+
+    if not inplace:
+        return modified_adata
 
 def interaction_violin_plot(interactions, min_perc, output, figsize=(14,20)):
     '''
