@@ -84,6 +84,9 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
         AnnData : optional
             Copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
     """
+    if "receptor-ligand" not in adata.uns.keys():
+        raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db()` before running this function.")
+
     r_col, l_col = adata.uns["receptor-ligand"]["receptor_column"], adata.uns["receptor-ligand"]["ligand_column"]
     index = adata.var[gene_index] if gene_index else adata.var.index
 
