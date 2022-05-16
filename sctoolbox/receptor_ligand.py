@@ -85,7 +85,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
             Copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
     """
     if "receptor-ligand" not in adata.uns.keys():
-        raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db()` before running this function.")
+        raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(...)` before running this function.")
 
     r_col, l_col = adata.uns["receptor-ligand"]["receptor_column"], adata.uns["receptor-ligand"]["ligand_column"]
     index = adata.var[gene_index] if gene_index else adata.var.index
@@ -186,34 +186,58 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     modified_adata = adata if inplace else adata.copy()
 
     modified_adata.uns['receptor-ligand']['interactions'] = interactions
-    modified_adata.uns['receptor-ligand']['percentage'] = cl_percent_expression
 
     if not inplace:
         return modified_adata
 
-def interaction_violin_plot(interactions, min_perc, output, figsize=(14,20)):
+def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=100):
     '''
     Generate violin plot of pairwise cluster interactions.
     
     Parameters:
-        interactions (DataFrame): Interactions table as given by calculate_interaction_table().
+        
         min_perc (float): Minimum percentage of cells in a cluster each gene must be expressed in.
         output (str): Path to output file.
         figsize (int tuple): Tuple of plot (width, height).
-    '''
-    
-    rows = len(set(interactions["cluster_a"]))
 
-    fig, axs = plt.subplots(ncols=1, nrows=rows, figsize=figsize, tight_layout={'rect': (0, 0, 1, 0.95)}) # prevent label clipping; leave space for title
+    Parameters:
+    ----------
+        adata : AnnData
+            AnnData object
+        min_perc : float
+            Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+        output : str, default None
+            Path to output file.
+        figsize : int tuple, default (5, 20)
+            Figure size
+        dpi : float, default 100
+            The resolution of the figure in dots-per-inch.
+
+    Returns:
+    ----------
+        matplotlib.axes.Axes : 
+            Object containing all plots. As returned by matplotlib.pyplot.subplots
+    '''
+    # is interaction table available?
+    if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
+        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+    
+    interactions = adata.uns["receptor-ligand"]["interactions"]
+    
+    rows = len(set(interactions["receptor_cluster"]))
+
+    fig, axs = plt.subplots(ncols=1, nrows=rows, figsize=figsize, dpi=dpi, tight_layout={'rect': (0, 0, 1, 0.95)}) # prevent label clipping; leave space for title
     #fig.suptitle('Cluster interactions', fontsize=16)
     flat_axs = axs.flatten()
 
     # generate violins of one cluster vs rest in each iteration
-    for i, cluster in enumerate(sorted(set(interactions["cluster_a"].tolist() + interactions["cluster_b"].tolist()))):
-        cluster_interactions = interactions[((interactions["cluster_a"] == cluster) | 
-                                            (interactions["cluster_b"] == cluster)) &
-                                            (interactions["percentage_a"] >= min_perc) &
-                                            (interactions["percentage_b"] >= min_perc)].copy()    
+    for i, cluster in enumerate(sorted(set(interactions["receptor_cluster"].tolist() + interactions["ligand_cluster"].tolist()))):
+        cluster_interactions = interactions[((interactions["receptor_cluster"] == cluster) | 
+                                            (interactions["ligand_cluster"] == cluster)) &
+                                            (interactions["receptor_percent"] >= min_perc) &
+                                            (interactions["ligand_percent"] >= min_perc)].copy()
+        
+        # get column of not main clusters
         cluster_interactions["Cluster"] = cluster_interactions.apply(lambda x: x[1] if x[0] == cluster else x[0], axis=1).tolist()
 
         plot = sns.violinplot(x=cluster_interactions["Cluster"],
@@ -224,9 +248,13 @@ def interaction_violin_plot(interactions, min_perc, output, figsize=(14,20)):
         
         flat_axs[i].set_title(f"Cluster {cluster}")
 
-    # create path if necessary
-    Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
-    fig.savefig(output)
+    # save plot
+    if output:
+        # create path if necessary
+        Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
+        fig.savefig(output)
+    
+    return axs
 
 def hairball(interactions, min_perc, interaction_score, output, title, color_min=None, color_max=None):
     '''
