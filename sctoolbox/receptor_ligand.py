@@ -10,6 +10,9 @@ import igraph as ig
 from itertools import combinations_with_replacement
 from matplotlib import cm
 from tqdm import tqdm
+from matplotlib.artist import Artist
+from igraph import BoundingBox, Graph, palettes
+import matplotlib
 
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
     """
@@ -193,12 +196,6 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=100):
     '''
     Generate violin plot of pairwise cluster interactions.
-    
-    Parameters:
-        
-        min_perc (float): Minimum percentage of cells in a cluster each gene must be expressed in.
-        output (str): Path to output file.
-        figsize (int tuple): Tuple of plot (width, height).
 
     Parameters:
     ----------
@@ -256,19 +253,42 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
     
     return axs
 
-def hairball(interactions, min_perc, interaction_score, output, title, color_min=None, color_max=None):
+def hairball(adata, min_perc, interaction_score=0, output=None, title="Network", color_min=0, color_max=None):
     '''
     Generate network graph of interactions between clusters.
     
+    Note: The dimensions of the jupyter view often differ from what is saved to the file.
+
+    KNOWN ISSUE: The network graph will not show up in jupyter. Writing to file works.
+
     Parameters:
-        interactions (DataFrame): Interactions table as given by calculate_interaction_table().
-        min_perc (float): Minimum percentage of cells in a cluster each gene must be expressed in.
-        interaction_score (float): Interaction score must be above this threshold for the interaction to be counted in the graph.
-        output (str): Path to output file.
-        title (str): The plots title.
-        color_min (float): Min value for color range. If None = 0
-        color_max (float): Max value for color range. If None = np.max
+    ----------
+        adata : AnnData
+            AnnData object
+        min_perc : float
+            Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+        interaction_score : float, default 0
+            Interaction score must be above this threshold for the interaction to be counted in the graph.
+        output : str, default None
+            Path to output file.
+        title : str, default 'Network'
+            The plots title.
+        color_min : float, default 0
+            Min value for color range.
+        color_max : float, default max
+            Max value for color range.
+
+    Returns:
+    ----------
+        matplotlib.axes.Axes : 
+            Object containing all plots. As returned by matplotlib.pyplot.subplots
     '''
+    # is interaction table available?
+    if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
+        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+
+    interactions = adata.uns["receptor-ligand"]["interactions"]
+
     igraph_scale=3
     matplotlib_scale=4
     
@@ -276,10 +296,6 @@ def hairball(interactions, min_perc, interaction_score, output, title, color_min
     # from https://stackoverflow.com/a/36154077
     # makes igraph compatible with matplotlib
     # so a colorbar can be added
-
-    from matplotlib.artist import Artist
-    from igraph import BoundingBox, Graph, palettes
-
     class GraphArtist(Artist):
         """Matplotlib artist class that draws igraph graphs.
 
@@ -322,7 +338,7 @@ def hairball(interactions, min_perc, interaction_score, output, title, color_min
     graph = ig.Graph()
 
     # set nodes
-    clusters = list(set(list(interactions["cluster_a"]) + list(interactions["cluster_b"])))
+    clusters = list(set(list(interactions["receptor_cluster"]) + list(interactions["ligand_cluster"])))
     
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
@@ -331,10 +347,10 @@ def hairball(interactions, min_perc, interaction_score, output, title, color_min
 
     # set edges
     for (a, b) in combinations_with_replacement(clusters, 2):
-        subset = interactions[(((interactions["cluster_a"] == a) & (interactions["cluster_b"] == b)) |
-                            ((interactions["cluster_a"] == b) & (interactions["cluster_b"] == a))) &
-                            (interactions["percentage_a"] >= min_perc) &
-                            (interactions["percentage_b"] >= min_perc) &
+        subset = interactions[(((interactions["receptor_cluster"] == a) & (interactions["ligand_cluster"] == b)) |
+                            ((interactions["receptor_cluster"] == b) & (interactions["ligand_cluster"] == a))) &
+                            (interactions["receptor_percent"] >= min_perc) &
+                            (interactions["ligand_percent"] >= min_perc) &
                             (interactions["interaction_score"] > interaction_score)]
 
         graph.add_edge(a, b, weight=len(subset))#, label=len(subset)) # add label to show edge labels
@@ -349,7 +365,6 @@ def hairball(interactions, min_perc, interaction_score, output, title, color_min
         
     ########## setup matplotlib plot and combine with igraph ##########
     # Make Matplotlib use a Cairo backend
-    import matplotlib
     matplotlib.use("cairo")
 
     # Create the figure
@@ -387,11 +402,14 @@ def hairball(interactions, min_perc, interaction_score, output, title, color_min
     # prevent label clipping out of picture
     plt.tight_layout()
 
-    # create path if necessary
-    Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
-    
-    # Save the figure
-    fig.savefig(output)
+    if output:
+        # create path if necessary
+        Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
+        
+        # Save the figure
+        fig.savefig(output)
+
+    return axes
 
 def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)):
     '''
