@@ -13,6 +13,7 @@ from tqdm import tqdm
 from matplotlib.artist import Artist
 from igraph import BoundingBox, Graph, palettes
 import matplotlib
+from matplotlib.patches import ConnectionPatch
 
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
     """
@@ -413,6 +414,8 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
 
 def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)):
     '''
+    CURRENTLY NOT FUNCTIONAL!
+
     Show cluster interactions over timepoints.
     
     Parameters:
@@ -424,6 +427,7 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
         output (str): Path to output file.
         figsize (int tuple): Tuple of plot (width, height).
     '''
+    return "Function to be implemented"
     
     fig, axs = plt.subplots(1, len(datalist), figsize=figsize)
     fig.suptitle(f"{cluster_a} - {cluster_b}")
@@ -444,23 +448,72 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
     if not output is None:
         fig.savefig(output)
 
-def connectionPlot(data, 
+def connectionPlot(adata, 
                    restrict_to=None,
-                   figsize=(25, 50),
-                   connection_alpha=None,
+                   figsize=(10, 15),
+                   dpi=100,
+                   connection_alpha="interaction_score",
                    output=None,
                    title=None,
                    # receptor params
-                   receptor_cluster_col="cluster_a",
-                   receptor_col="partner_a",
-                   receptor_hue="Receptor score",
-                   receptor_size="Genotype difference",
+                   receptor_cluster_col="receptor_cluster",
+                   receptor_col="receptor_gene",
+                   receptor_hue="receptor_score",
+                   receptor_size="receptor_percent",
                    # ligand params
-                   ligand_cluster_col="cluster_b",
-                   ligand_col="partner_b",
-                   ligand_hue="Ligand score",
-                   ligand_size="Genotype difference"
+                   ligand_cluster_col="ligand_cluster",
+                   ligand_col="ligand_gene",
+                   ligand_hue="ligand_score",
+                   ligand_size="ligand_percent"
+                   # TODO filter options
                   ):
+    '''
+    Show specific receptor-ligand connections between clusters.
+
+    Parameters:
+    ----------
+        adata : AnnData
+            AnnData object
+        restrict_to : str list, default None
+            Restrict plot to given cluster names.
+        figsize : int tuple, default (10, 15)
+            Figure size
+        dpi : float, default 100
+            The resolution of the figure in dots-per-inch.
+        connection_alpha : str, default 'interaction_score'
+            Name of column that sets alpha value of lines between plots. None to disable.
+        output : str, default None
+            Path to output file.
+        title : str, default None
+            Title of the plot
+        receptor_cluster_col : str, default 'receptor_cluster'
+            Name of column containing cluster names of receptors. Shown on x-axis.
+        receptor_col : str, default 'receptor_gene'
+            Name of column containing gene names of receptors. Shown on y-axis.
+        receptor_hue : str, default 'receptor_score'
+            Name of column containing receptor scores. Shown as point color.
+        receptor_size : str, default 'receptor_percent'
+            Name of column containing receptor expression percentage. Shown as point size.
+        ligand_cluster_col : str, default 'ligand_cluster'
+            Name of column containing cluster names of ligands. Shown on x-axis.
+        ligand_col : str, default 'ligand_gene'
+            Name of column containing gene names of ligands. Shown on y-axis.
+        ligand_hue : str, default 'ligand_score'
+            Name of column containing ligand scores. Shown as point color.
+        ligand_size : str, default 'ligand_percent'
+            Name of column containing ligand expression percentage. Shown as point size.
+
+    Returns:
+    ----------
+        matplotlib.axes.Axes : 
+            Object containing all plots. As returned by matplotlib.pyplot.subplots
+    '''
+    # is interaction table available?
+    if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
+        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+
+    data = adata.uns["receptor-ligand"]["interactions"]
+
     # restrict interactions to certain clusters
     if restrict_to:
         data = data[data[receptor_cluster_col].isin(restrict_to) & data[ligand_cluster_col].isin(restrict_to)]
@@ -468,41 +521,44 @@ def connectionPlot(data,
         raise Exception(f"No interactions between clusters {restrict_to}")
 
     # setup subplot
-    fig, axs = plt.subplots(1, 2, figsize=figsize)
+    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, layout="constrained")
     fig.suptitle(title)
 
     # receptor plot
     r_plot = sns.scatterplot(data=data, 
-                           y=receptor_col,
-                           x=receptor_cluster_col,
-                           hue=receptor_hue,
-                           size=receptor_size,
-                           ax=axs[0])
+                             y=receptor_col,
+                             x=receptor_cluster_col,
+                             hue=receptor_hue,
+                             size=receptor_size,
+                             ax=axs[0])
 
-    axs[0].yaxis.set_label_position("right")
     sns.move_legend(r_plot, loc='best', bbox_to_anchor=(-1, 1, 0, 0))
-    r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor")
-    #r_plot.set_xticklabels(r_plot.get_xticklabels(), rotation = 90)
+    r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor", axisbelow=True)
     axs[0].tick_params(axis='x', rotation=90)
+    axs[0].grid(alpha=0.8)
 
     # ligand plot
     l_plot = sns.scatterplot(data=data,
-                           y=ligand_col,
-                           x=ligand_cluster_col,
-                           hue=ligand_hue,
-                           size=ligand_size,
-                          ax=axs[1])
+                             y=ligand_col,
+                             x=ligand_cluster_col,
+                             hue=ligand_hue,
+                             size=ligand_size,
+                             ax=axs[1])
 
     axs[1].yaxis.tick_right()
     sns.move_legend(l_plot, bbox_to_anchor=(2, 1, 0, 0), loc='best')
-    l_plot.set(xlabel="Cluster", ylabel=None, title="Ligand")
-    #l_plot.set_xticklabels(l_plot.get_xticklabels(), rotation = 90)
+    l_plot.set(xlabel="Cluster", ylabel=None, title="Ligand", axisbelow=True)
     axs[1].tick_params(axis='x', rotation=90)
-    fig.tight_layout(pad=5)
+    axs[1].grid(alpha=0.8)
+
+    # force tick labels to be populated
+    # https://stackoverflow.com/questions/41122923/getting-empty-tick-labels-before-showing-a-plot-in-matplotlib
+    fig.canvas.draw()
 
     # draw receptor-ligand lines
     receptors = list(set(data[receptor_col]))
     diff_max = max(data[connection_alpha]) if connection_alpha else None
+    abs_min = abs(min(data[connection_alpha])) if connection_alpha else None
     # create colorramp
     cmap = cm.get_cmap('rainbow', len(receptors))
     colors = cmap(range(len(receptors)))
@@ -513,8 +569,7 @@ def connectionPlot(data,
         for lig_index, lig in [(i, label.get_text()) for i, label in enumerate(axs[1].get_yticklabels()) if label.get_text() in ligands]:
             # compute line alpha
             if connection_alpha:
-                alpha = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), connection_alpha].values[0] / diff_max
-                alpha **= 2
+                alpha = (data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), connection_alpha].values[0] + abs_min) / (diff_max + abs_min)
             else:
                 alpha=1
             
@@ -530,12 +585,12 @@ def connectionPlot(data,
                 color=color,
                 zorder=-1000,
                 alpha=alpha,
-                linewidth=alpha**2
+                linewidth=alpha
             )
 
             axs[1].add_artist(con)
             
     if output:
-        plt.savefig(output)
+        plt.savefig(output, bbox_inches='tight')
 
     return axs
