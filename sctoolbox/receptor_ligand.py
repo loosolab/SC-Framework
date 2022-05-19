@@ -152,7 +152,9 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
                     "receptor_percent": [],
                     "ligand_percent": [],
                     "receptor_scale_factor": [],
-                    "ligand_scale_factor": []}
+                    "ligand_scale_factor": [],
+                    "receptor_cluster_size": [],
+                    "ligand_cluster_size": []}
     
     ########## create interaction table ##########
     for _, (receptor, ligand) in tqdm(adata.uns["receptor-ligand"]["database"][[r_col, l_col]].iterrows(),
@@ -178,6 +180,8 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
                 interactions["ligand_percent"].append(cl_percent_expression.loc[ligand, ligand_cluster])
                 interactions["receptor_scale_factor"].append(scaling_factor[receptor_cluster])
                 interactions["ligand_scale_factor"].append(scaling_factor[ligand_cluster])
+                interactions["receptor_cluster_size"].append(clust_sizes[receptor_cluster])
+                interactions["ligand_cluster_size"].append(clust_sizes[ligand_cluster])
     
     interactions = pd.DataFrame(interactions)
 
@@ -555,7 +559,7 @@ def connectionPlot(adata,
     # https://stackoverflow.com/questions/41122923/getting-empty-tick-labels-before-showing-a-plot-in-matplotlib
     fig.canvas.draw()
 
-    # draw receptor-ligand lines
+    # add receptor-ligand lines
     receptors = list(set(data[receptor_col]))
     diff_max = max(data[connection_alpha]) if connection_alpha else None
     abs_min = abs(min(data[connection_alpha])) if connection_alpha else None
@@ -589,7 +593,7 @@ def connectionPlot(adata,
             )
 
             axs[1].add_artist(con)
-            
+
     if output:
         plt.savefig(output, bbox_inches='tight')
 
