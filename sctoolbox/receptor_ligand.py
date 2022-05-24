@@ -468,8 +468,8 @@ def connectionPlot(adata,
                    ligand_cluster_col="ligand_cluster",
                    ligand_col="ligand_gene",
                    ligand_hue="ligand_score",
-                   ligand_size="ligand_percent"
-                   # TODO filter options
+                   ligand_size="ligand_percent",
+                   filter=None
                   ):
     '''
     Show specific receptor-ligand connections between clusters.
@@ -506,6 +506,8 @@ def connectionPlot(adata,
             Name of column containing ligand scores. Shown as point color.
         ligand_size : str, default 'ligand_percent'
             Name of column containing ligand expression percentage. Shown as point size.
+        filter : str, default None
+            Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
 
     Returns:
     ----------
@@ -516,7 +518,11 @@ def connectionPlot(adata,
     if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
 
-    data = adata.uns["receptor-ligand"]["interactions"]
+    data = adata.uns["receptor-ligand"]["interactions"].copy()
+
+    # filter interactions
+    if filter:
+        data.query(filter, inplace=True)
 
     # restrict interactions to certain clusters
     if restrict_to:
@@ -525,7 +531,7 @@ def connectionPlot(adata,
         raise Exception(f"No interactions between clusters {restrict_to}")
 
     # setup subplot
-    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, layout="constrained")
+    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, layout="constrained", gridspec_kw={'wspace': 0.2})
     fig.suptitle(title)
 
     # receptor plot
@@ -536,7 +542,6 @@ def connectionPlot(adata,
                              size=receptor_size,
                              ax=axs[0])
 
-    sns.move_legend(r_plot, loc='best', bbox_to_anchor=(-1, 1, 0, 0))
     r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor", axisbelow=True)
     axs[0].tick_params(axis='x', rotation=90)
     axs[0].grid(alpha=0.8)
@@ -550,7 +555,6 @@ def connectionPlot(adata,
                              ax=axs[1])
 
     axs[1].yaxis.tick_right()
-    sns.move_legend(l_plot, bbox_to_anchor=(2, 1, 0, 0), loc='best')
     l_plot.set(xlabel="Cluster", ylabel=None, title="Ligand", axisbelow=True)
     axs[1].tick_params(axis='x', rotation=90)
     axs[1].grid(alpha=0.8)
@@ -566,6 +570,8 @@ def connectionPlot(adata,
     # create colorramp
     cmap = cm.get_cmap('rainbow', len(receptors))
     colors = cmap(range(len(receptors)))
+    # connection lines
+    line_list = []
     for rec, color in zip(receptors, colors):
         rec_index = [i for i, label in enumerate(axs[0].get_yticklabels()) if label.get_text() == rec][0]
 
@@ -593,6 +599,18 @@ def connectionPlot(adata,
             )
 
             axs[1].add_artist(con)
+
+            # collect lines for legend
+            line_list.append(con)
+
+    ##### legends #####
+    # set legend positions
+    # TODO better positioning
+    sns.move_legend(r_plot, loc='upper right', bbox_to_anchor=(-1, 1, 0, 0))
+    # save scatterplot legend so it is not replaced
+    axs[1].add_artist(axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left'))
+    # create legend for connection lines
+    axs[1].legend(handles=line_list, bbox_to_anchor=(2, 0.6, 0, 0), loc='upper left', title=connection_alpha)
 
     if output:
         plt.savefig(output, bbox_inches='tight')
