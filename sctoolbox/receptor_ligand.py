@@ -14,6 +14,7 @@ from matplotlib.artist import Artist
 from igraph import BoundingBox, Graph, palettes
 import matplotlib
 from matplotlib.patches import ConnectionPatch
+import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
 
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
@@ -470,7 +471,10 @@ def connectionPlot(adata,
                    ligand_col="ligand_gene",
                    ligand_hue="ligand_score",
                    ligand_size="ligand_percent",
-                   filter=None
+                   filter=None,
+                   lw_multiplier=5,
+                   wspace=0.2,
+                   line_colors="rainbow"
                   ):
     '''
     Show specific receptor-ligand connections between clusters.
@@ -509,6 +513,12 @@ def connectionPlot(adata,
             Name of column containing ligand expression percentage. Shown as point size.
         filter : str, default None
             Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
+        lw_multiplier : int, default 2
+            Linewidth multiplier.
+        wspace : float, default 0.2
+            Width between plots. Fraction of total width.
+        line_colors : str, default 'rainbow'
+            Name of colormap used to color lines. All lines are black if None.
 
     Returns:
     ----------
@@ -532,7 +542,7 @@ def connectionPlot(adata,
         raise Exception(f"No interactions between clusters {restrict_to}")
 
     # setup subplot
-    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, layout="constrained", gridspec_kw={'wspace': 0.2})
+    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, gridspec_kw={'wspace': wspace})
     fig.suptitle(title)
 
     # receptor plot
@@ -568,59 +578,74 @@ def connectionPlot(adata,
     receptors = list(set(data[receptor_col]))
 
     # create colorramp
-    cmap = cm.get_cmap('rainbow', len(receptors))
-    colors = cmap(range(len(receptors)))
+    if line_colors:
+        cmap = cm.get_cmap(line_colors, len(receptors))
+        colors = cmap(range(len(receptors)))
+    else:
+        colors = ["black"] * len(receptors)
 
     # scale connection score column between 0-1 to be used as alpha values
-    data["alpha"] = minmax_scale(data[connection_alpha])
+    if connection_alpha:
+        data["alpha"] = minmax_scale(data[connection_alpha])
 
     for rec, color in zip(receptors, colors):
+        # find receptor label location
         rec_index = [i for i, label in enumerate(axs[0].get_yticklabels()) if label.get_text() == rec][0]
 
-        ligands = list(data.loc[data[receptor_col] == rec, ligand_col])
-        for lig_index, lig in [(i, label.get_text()) for i, label in enumerate(axs[1].get_yticklabels()) if label.get_text() in ligands]:
+        for lig in data.loc[data[receptor_col] == rec, ligand_col]:
+            # find ligand label location
+            lig_index = None
+            for i, label in enumerate(axs[1].get_yticklabels()):
+                if label.get_text() == lig:
+                    lig_index = i
+                    break
+
+            # TODO
+            # a r-l pair can have multiple clusters, which results in overlapping connection lines
+            # add the moment these lines are plotted on top of each other
             # compute line alpha
             if connection_alpha:
-                alpha = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"].values[0]
+                alphas = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"]
             else:
-                alpha=1
+                alphas = [1]
             
-            # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
-            # Draw a line between the different points, defined in different coordinate
-            # systems.
-            con = ConnectionPatch(
-                # x in axes coordinates, y in data coordinates
-                xyA=(1, rec_index), coordsA=axs[0].get_yaxis_transform(),
-                # x in axes coordinates, y in data coordinates
-                xyB=(0, lig_index), coordsB=axs[1].get_yaxis_transform(),
-                arrowstyle="-",
-                color=color,
-                zorder=-1000,
-                alpha=alpha,
-                linewidth=alpha*10
-            )
+            for alpha in alphas:
+                # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
+                # Draw a line between the different points, defined in different coordinate
+                # systems.
+                con = ConnectionPatch(
+                    # x in axes coordinates, y in data coordinates
+                    xyA=(1, rec_index), coordsA=axs[0].get_yaxis_transform(),
+                    # x in axes coordinates, y in data coordinates
+                    xyB=(0, lig_index), coordsB=axs[1].get_yaxis_transform(),
+                    arrowstyle="-",
+                    color=color,
+                    zorder=-1000,
+                    alpha=alpha,
+                    linewidth=alpha * lw_multiplier
+                )
 
-            axs[1].add_artist(con)
+                axs[1].add_artist(con)
 
     ##### legends #####
-    # set legend positions
-    # TODO better positioning
+    # set receptor plot legend position
     sns.move_legend(r_plot, loc='upper right', bbox_to_anchor=(-1, 1, 0, 0))
-    # save scatterplot legend so it is not replaced
-    axs[1].add_artist(axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left'))
 
     # create legend for connection lines
     if connection_alpha:
-        line_list = [
-            ConnectionPatch(color="black", alpha=min(data["alpha"]), xyA=(0, 0), coordsA=axs[0], xyB=(0, 0)),
-            ConnectionPatch(color="black", alpha=max(data["alpha"]), xyA=(0, 0), coordsA=axs[0], xyB=(0, 0))
-        ]
-        labels = [
-            f"{min(data['alpha'])} | {min(data[connection_alpha])}",
-            f"{max(data['alpha'])} | {max(data[connection_alpha])}"
-        ]
+        step_num = 5
+        s_steps, a_steps = np.linspace(min(data[connection_alpha]), max(data[connection_alpha]), step_num), np.linspace(0, 1, step_num)
 
-        axs[1].legend(handles=line_list, labels=labels, bbox_to_anchor=(2, 0.6, 0, 0), loc='upper left', title=connection_alpha)
+        # create proxy actors https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#proxy-legend-handles
+        line_list = [lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)]
+        line_list.insert(0, lines.Line2D([], [], alpha=0, label=connection_alpha))
+
+        # add to current legend
+        handles, _ = axs[1].get_legend_handles_labels()
+        axs[1].legend(handles=handles + line_list, bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
+    else:
+        # set ligand plot legend position
+        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
 
     if output:
         plt.savefig(output, bbox_inches='tight')
