@@ -14,6 +14,7 @@ from matplotlib.artist import Artist
 from igraph import BoundingBox, Graph, palettes
 import matplotlib
 from matplotlib.patches import ConnectionPatch
+from sklearn.preprocessing import minmax_scale
 
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
     """
@@ -565,13 +566,14 @@ def connectionPlot(adata,
 
     # add receptor-ligand lines
     receptors = list(set(data[receptor_col]))
-    diff_max = max(data[connection_alpha]) if connection_alpha else None
-    abs_min = abs(min(data[connection_alpha])) if connection_alpha else None
+
     # create colorramp
     cmap = cm.get_cmap('rainbow', len(receptors))
     colors = cmap(range(len(receptors)))
-    # connection lines
-    line_list = []
+
+    # scale connection score column between 0-1 to be used as alpha values
+    data["alpha"] = minmax_scale(data[connection_alpha])
+
     for rec, color in zip(receptors, colors):
         rec_index = [i for i, label in enumerate(axs[0].get_yticklabels()) if label.get_text() == rec][0]
 
@@ -579,7 +581,7 @@ def connectionPlot(adata,
         for lig_index, lig in [(i, label.get_text()) for i, label in enumerate(axs[1].get_yticklabels()) if label.get_text() in ligands]:
             # compute line alpha
             if connection_alpha:
-                alpha = (data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), connection_alpha].values[0] + abs_min) / (diff_max + abs_min)
+                alpha = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"].values[0]
             else:
                 alpha=1
             
@@ -595,13 +597,10 @@ def connectionPlot(adata,
                 color=color,
                 zorder=-1000,
                 alpha=alpha,
-                linewidth=alpha
+                linewidth=alpha*10
             )
 
             axs[1].add_artist(con)
-
-            # collect lines for legend
-            line_list.append(con)
 
     ##### legends #####
     # set legend positions
@@ -609,8 +608,19 @@ def connectionPlot(adata,
     sns.move_legend(r_plot, loc='upper right', bbox_to_anchor=(-1, 1, 0, 0))
     # save scatterplot legend so it is not replaced
     axs[1].add_artist(axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left'))
+
     # create legend for connection lines
-    axs[1].legend(handles=line_list, bbox_to_anchor=(2, 0.6, 0, 0), loc='upper left', title=connection_alpha)
+    if connection_alpha:
+        line_list = [
+            ConnectionPatch(color="black", alpha=min(data["alpha"]), xyA=(0, 0), coordsA=axs[0], xyB=(0, 0)),
+            ConnectionPatch(color="black", alpha=max(data["alpha"]), xyA=(0, 0), coordsA=axs[0], xyB=(0, 0))
+        ]
+        labels = [
+            f"{min(data['alpha'])} | {min(data[connection_alpha])}",
+            f"{max(data['alpha'])} | {max(data[connection_alpha])}"
+        ]
+
+        axs[1].legend(handles=line_list, labels=labels, bbox_to_anchor=(2, 0.6, 0, 0), loc='upper left', title=connection_alpha)
 
     if output:
         plt.savefig(output, bbox_inches='tight')
