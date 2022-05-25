@@ -590,7 +590,11 @@ def connectionPlot(adata,
 
     for rec, color in zip(receptors, colors):
         # find receptor label location
-        rec_index = [i for i, label in enumerate(axs[0].get_yticklabels()) if label.get_text() == rec][0]
+        rec_index = None
+        for i, label in enumerate(axs[0].get_yticklabels()):
+            if label.get_text() == rec:
+                rec_index = i
+                break
 
         for lig in data.loc[data[receptor_col] == rec, ligand_col]:
             # find ligand label location
