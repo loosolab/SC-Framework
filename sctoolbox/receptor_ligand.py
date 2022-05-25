@@ -475,8 +475,8 @@ def connectionPlot(adata,
                    ligand_hue="ligand_score",
                    ligand_size="ligand_percent",
                    filter=None,
-                   lw_multiplier=5,
-                   wspace=0.2,
+                   lw_multiplier=2,
+                   wspace=0.4,
                    line_colors="rainbow"
                   ):
     '''
@@ -518,7 +518,7 @@ def connectionPlot(adata,
             Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
         lw_multiplier : int, default 2
             Linewidth multiplier.
-        wspace : float, default 0.2
+        wspace : float, default 0.4
             Width between plots. Fraction of total width.
         line_colors : str, default 'rainbow'
             Name of colormap used to color lines. All lines are black if None.
