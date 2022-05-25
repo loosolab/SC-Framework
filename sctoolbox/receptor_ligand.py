@@ -188,9 +188,12 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     interactions = pd.DataFrame(interactions)
 
     # compute interaction score
-    interactions["receptor_score_corrected"] = interactions["receptor_score"] * interactions["receptor_scale_factor"]
-    interactions["ligand_score_corrected"] = interactions["ligand_score"] * interactions["ligand_scale_factor"]
-    interactions["interaction_score"] = interactions["receptor_score_corrected"] + interactions["ligand_score_corrected"]
+    interactions["receptor_score"] = interactions["receptor_score"] * interactions["receptor_scale_factor"]
+    interactions["ligand_score"] = interactions["ligand_score"] * interactions["ligand_scale_factor"]
+    interactions["interaction_score"] = interactions["receptor_score"] + interactions["ligand_score"]
+
+    # clean up columns
+    interactions.drop(columns=["receptor_scale_factor", "ligand_scale_factor"], inplace=True)
     
     # add to adata
     modified_adata = adata if inplace else adata.copy()
