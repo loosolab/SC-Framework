@@ -589,7 +589,10 @@ def connectionPlot(adata,
 
     # scale connection score column between 0-1 to be used as alpha values
     if connection_alpha:
-        data["alpha"] = minmax_scale(data[connection_alpha])
+        # note: minmax_scale sometimes produces values >1. Looks like a rounding error (1.000000000002).
+        data["alpha"] = minmax_scale(data[connection_alpha], feature_range=(0, 1))
+        # fix values >1
+        data.loc[data["alpha"] > 1, "alpha"] = 1
 
     for rec, color in zip(receptors, colors):
         # find receptor label location
