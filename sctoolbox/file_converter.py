@@ -3,7 +3,8 @@ from os.path import join, dirname, exists
 import sys
 from pathlib import Path
 
-def convertToAdata(file, r_home=None):
+
+def convertToAdata(file, out, r_home=None):
     '''
     Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
     
@@ -12,7 +13,9 @@ def convertToAdata(file, r_home=None):
     Parameters:
     ----------
         path (str):
-            Path to the .rds file.
+            Path to the .rds or .robj file.
+        out (str):
+            path to save anndata.h5ad file.
         r_home (str):
             Path to the R home directory. If None will construct path based on location of python executable.
             E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
@@ -39,20 +42,59 @@ def convertToAdata(file, r_home=None):
     from rpy2.robjects import r
     anndata2ri.activate()
     
-    ##### convert to adata #####
-    adata = r(f"""
-                library(Seurat)
-                
-                object <- readRDS("{file}")
+    # check if file format is .robj or .Robj -> convert to .rds first
+    if file.split('.')[-1].lower() == 'robj':
 
-                # check type and convert if needed
-                if (class(object) == "Seurat") {{
-                    object <- as.SingleCellExperiment(object)
-                }} else if (class(object) == "SingleCellExperiment") {{
-                    object <- object
-                }} else {{
-                    stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-                }}
+        ##### convert to rds #####
+        r(f"""
+                file <- load("{file}")
+                object <- get(file[1])
+                saveRDS(object, file='{out}/tmp.rds')
                """)
+        
+        file = f'{out}/tmp.rds'
+        
+        ##### convert to adata #####
+        adata = r(f"""
+                    library(Seurat)
+                    
+                    object <- readRDS("{file}")
+    
+                    # check type and convert if needed
+                    if (class(object) == "Seurat") {{
+                        object <- as.SingleCellExperiment(object)
+                    }} else if (class(object) == "SingleCellExperiment") {{
+                        object <- object
+                    }} else {{
+                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+                    }}
+                   """)
+        
+        ##### Saving adata.h5ad #####
+        h5ad_file = out + '/anndata_1.h5ad'
+        adata.write(filename=h5ad_file, compression='gzip')
+
+        ##### Removing tmp.rds #####
+        os.remove(out + '/tmp.rds')
+        
+    else:
+        adata = r(f"""
+                    library(Seurat)
+
+                    object <- readRDS("{file}")
+
+                    # check type and convert if needed
+                    if (class(object) == "Seurat") {{
+                        object <- as.SingleCellExperiment(object)
+                    }} else if (class(object) == "SingleCellExperiment") {{
+                        object <- object
+                    }} else {{
+                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+                    }}
+                   """)
+
+        ##### Saving adata.h5ad #####
+        h5ad_file = out + '/anndata_1.h5ad'
+        adata.write(filename=h5ad_file, compression='gzip')
 
     return adata

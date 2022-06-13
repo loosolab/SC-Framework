@@ -125,9 +125,12 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", save_excel=None):
 		
 		group_tables[group] = pd.DataFrame(data)
 	
+	#Remove any NaN genes (genes are set to NaN if 'filter_rank_genes_groups' was used)
+	for group in group_tables:
+		group_tables[group].dropna(inplace=True)
+
 	#Get in/out group fraction of expressed genes (only works for .X-values above 0)
-	n_negative = sum(sum(adata.X < 0))
-	if n_negative == 0: #only calculate fractions for raw expression data
+	if (adata.X.min() < 0) == 0: #only calculate fractions for raw expression data
 		groupby = adata.uns[key]["params"]["groupby"]
 		n_cells_dict = adata.obs[groupby].value_counts().to_dict() #number of cells in groups
 
@@ -141,6 +144,16 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", save_excel=None):
 			group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
 			group_tables[group]["in_group_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
 			
+			#Fraction of cells for individual groups
+			for compare_group in groups:
+				if compare_group != group:
+					s = (adata[adata.obs[groupby].isin([compare_group]),:].X > 0).sum(axis=0).A1
+					expressed = pd.DataFrame(s, index=adata.var.index) #expression per gene for this group
+					expressed.columns = [compare_group + "_fraction"]
+					expressed.iloc[:,0] = expressed.iloc[:,0] / n_cells_dict[compare_group]
+
+					group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
+
 			#Fraction of cells outside group expressing each gene
 			s = (adata[~adata.obs[groupby].isin([group]),:].X > 0).sum(axis=0).A1
 			expressed = pd.DataFrame([adata.var.index, s]).T
