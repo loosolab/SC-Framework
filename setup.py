@@ -10,6 +10,7 @@ setup(name='sc-toolbox',
 			'numpy',
 			'scanpy',
 			'rpy2',
-			'anndata2ri'
+			'anndata2ri',
+			'fitter'
 		],
 		)

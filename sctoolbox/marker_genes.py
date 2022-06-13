@@ -1,4 +1,97 @@
 import pandas as pd
+from sctoolbox.checker import *
+from sctoolbox.creators import *
+
+####################################
+def label_genes(ANNDATA, label=False):
+    '''
+    OPTIONAL: Label gene types in the anndata object as a variable in the adata.var
+    If you wanna execute this part, add label=True
+
+    Parameters
+    ------------
+    ANNDATA : anndata object
+        adata object
+    label : Boolean. Default: False
+        Set True to perform the gene labelling.
+    '''
+    #Author: Guilherme Valente
+    #Message and others
+    lst_parameters=["mitochondrial", "cell_cycle", "gender_genes", "custom"]
+    list_species_cellcycle_annotations=["human", "mouse", "rat", "zebrafish"]
+    file_XY_genes="xy_genes.txt"
+    path_cellcycle_genes="/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes"
+    path_XY_genes=path_cellcycle_genes
+
+    mito_adatavar_label="mt"
+    dict_opts={}
+    infor=[] #This list will be part of the adata.uns["infoprocess"]
+    m1="Annotate "
+    m2="? Choose y or n"
+    m3="Choose one species: "
+    m4="Paste the pathway and filename in which your custom list of genes is deposited.\nNOTE: the file must have one gene per row"
+    m5="Correct the pathway or filename or type q to quit."
+    opt1=["q", "quit"]
+    opt2=["y", "yes", "n", "no"]
+    opt3=list_species_cellcycle_annotations
+
+    def fil_dict(DICT, GENETYPE, LIST):
+        DICT[GENETYPE]=["is_" + GENETYPE]
+        DICT[GENETYPE].append(LIST)
+        return(DICT)
+#Setting which parameters will be annotated
+    if label == True:
+        for a in lst_parameters:
+            answer=input(m1 + a + m2)
+            while check_options(answer, opt1, opt2) == "invalid": #Annotate?
+                answer=input(m1 + a + m2)
+            if a == "mitochondrial" and answer.lower() == "y": #Annotate mitochondrial
+                tmp_list=[mito_adatavar_label]
+                fil_dict(dict_opts, a, tmp_list)
+            if a == "cell_cycle" and answer.lower() == "y": #Annotate cell cycle
+                tmp_list=[]
+                answer=input(m3 + ', '.join(list_species_cellcycle_annotations))
+                while check_options(answer, opt1, opt3) == "invalid": #Give the species name for cell cycle
+                    answer=input(m3 + ', '.join(list_species_cellcycle_annotations))
+                for b in open(path_cellcycle_genes + "/" + answer + "_cellcycle_genes.txt"):
+                    if b.strip():
+                        tmp_list.append(b.split("\t")[0].strip())
+                fil_dict(dict_opts, a, tmp_list)
+            if a == "gender_genes" and answer.lower() == "y": #Annotate gender genes
+                tmp_list=[]
+                for b in open(path_XY_genes + "/" + file_XY_genes):
+                    if b.strip():
+                        tmp_list.append(b.split("\t")[0].strip())
+                fil_dict(dict_opts, a, tmp_list)
+            if a == "custom" and answer.lower() == "y": #Annotate customized genes
+                tmp_list=[]
+                answer=input(m4)
+                while path.isfile(answer) == False:
+                     if answer.lower() in opt1:
+                         sys.exit("You quit and lost all modifications :(")
+                     print(m5)
+                     answer=input(m5)
+                for b in open(answer, "r"):
+                    if b.strip():
+                        tmp_list.append(b.split("\t")[0].strip())
+                fil_dict(dict_opts, a, tmp_list)
+#Annotating
+    for k, v in dict_opts.items():
+        is_what=v[0]
+        genes_tag=v[1]
+        if k == "mitochondrial":
+            ANNDATA.var[is_what] = ANNDATA.var_names.str.startswith(''.join(genes_tag))
+            infor.append(is_what)
+        else:
+            ANNDATA.var[is_what] = ANNDATA.var_names.isin(genes_tag)
+            infor.append(is_what)
+#Annotating in adata.uns["infoprocess"]
+    if len(infor) > 0:
+        build_infor(ANNDATA, "genes_labeled", infor)
+    elif label == False:
+        build_infor(ANNDATA, "genes_labeled", "None")
+    return(ANNDATA)
+
 
 def get_rank_genes_tables(adata, key="rank_genes_groups", save_excel=None):
 	""" Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).

@@ -14,8 +14,58 @@ list_velocyto=["barcodes.tsv", "genes.tsv", "spliced.mtx", "unspliced.mtx", "amb
 list_gene=["matrix.mtx"]
 list_solo=["quant"]
 ##################################
+def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
+    '''
+    Checking if a given value range into acceptable limits
+    
+    Parameter
+    ----------
+    ANS : String
+        The number to check validity described as an string.
+    LIMIT1 : Int or float
+        The lower limit number
+    LIMIT2 : Int or float
+        The uper limit number
 
-#Functions
+    Return
+    ----------
+    The "valid" or "invalid" string
+    '''
+    #Author: Guilherme Valente
+    quiters=["q", "quit"]
+    if ANS.replace('.', "", 1).isdigit() == True:
+        x=float(ANS)
+        if x >=LIMIT1 and x <= LIMIT2:
+            return("valid")
+        else:
+            return("invalid")
+    else:
+        if ANS in quiters:
+            sys.exit("You quit and lost all modifications :(")
+        else:
+            return("invalid")
+
+def check_options(ANS, OPTS1, OPTS2):
+    '''
+    Check if answers from input() command were properly replied
+    Parameters
+    ------------
+    ANS : String
+        The answer provided by the user.
+    OPTS1 : List
+        Options to quit the execution: ["q", "quit"]
+    OPTS2 : List
+        Options to consider the answer valid, e.g. ["y", "yes", "n", "no"]
+    '''
+    #Author : Guilherme Valente
+    ANS=ANS.lower()
+    if ANS in OPTS1:
+        sys.exit("You quit and lost all modifications :(")
+    elif ANS not in OPTS2:
+        return("invalid")
+    elif ANS in OPTS2:
+        return("valid")
+
 def error_message(DIRE): #Print error messages and close pipeline
     sys.exit("The " + DIRE + "\nis wrong or not found.\n")
 
@@ -85,6 +135,3 @@ def check_infoyml(KEY): #Check the existence of a given key in info.yml and load
     else:
         error_message("./info.yml")
 
-def load_anndata(KEY, NOTEBOOK):
-    if "2" in str(NOTEBOOK):
-        return(''.join(check_infoyml(KEY)) + "/anndata_1_Test1.h5ad")

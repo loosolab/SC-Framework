@@ -106,3 +106,90 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 	ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, ha="right")
 	
 	return(g)
+
+
+def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, SAVE_PATH=None, FILENAME=None):
+    '''
+    Violin plot with cutoffs
+    Parameters
+    ------------
+    DEFCELLs : Pandas dataframe
+        Anndata.obs variables to be used for plot. The first colum MUST be the condition or sample description
+    DFGENES : Pandas dataframe
+        Anndata.var variables to be used for plot
+    COLORS : List
+        Name of colors to be used in the plot
+    DFCUTS : Pandas dataframe
+        Dataframe with conditions, parameters and cutoffs as columns for both DEFCELLs and DEFGENEs.
+        The cutoffs must be a list
+    PLOT : List. Default None
+        List of parameters that the cutoff lines will be plotted.
+    SAVE : Boolean
+        True, save the figure. Default: None (figure is not saved).
+    SAVE_PATH : String
+        Pathway to save the figure. It will be used if SAVE==True. Default: None
+    FILENAME : String
+        Name of file to be saved. It will be used if SAVE==True. Default: None
+    '''
+    #Author : Guilherme Valente
+    def defin_cut_lnes(NCUTS): #NCUTS define the number of cuts of X axis
+        range_limits=np.linspace(0,1,2+NCUTS).tolist()
+        list_limits=[]
+        index, counter=0, 1
+        while counter <= NCUTS+1:
+            minim, maximim=round(range_limits[index],2), round(range_limits[index+1],2)
+            if counter < NCUTS+1:
+                maximim=maximim-0.01
+            list_limits.append((minim, maximim))
+            index, counter=index+1, counter+1
+        return(list_limits)
+#Definining the parameters to be ploted
+    lst_dfcuts_cols2=DFCUTS.columns.tolist()
+#Separating dataframes for the anndata obs and var information
+    for_cells, for_genes = DFCUTS[DFCUTS[lst_dfcuts_cols2[3]] == "filter_cells"], DFCUTS[DFCUTS[lst_dfcuts_cols2[3]] == "filter_genes"]
+#Defining the X axis lines limits
+    lmts_X_for_cel, lmts_X_for_gen = defin_cut_lnes((len(for_cells[lst_dfcuts_cols2[0]].unique()))-1), defin_cut_lnes((len(for_genes[lst_dfcuts_cols2[0]].unique()))-1)
+#Ploting variables in DEFCELLs and DFGENES separately
+    ncols=3
+    nrows=(len(DFCELLS.columns) + len(DFCELLS.columns) - 2)/ncols
+    if (nrows % 2) != 0:
+        nrows=int(nrows)+1
+    fig, a = plt.subplots(int(nrows), ncols, figsize = (ncols*5, int(nrows)*5))
+    labelsize, fontsize, a = 14, 20, a.ravel()
+    def plot_cut_lines(a, limits):
+        ax.axhline(y=max(a), xmin=limits[0], xmax=limits[1], c="orange", ls="dashed", lw=3, label=round(max(a), 3))
+        ax.axhline(y=min(a), xmin=limits[0], xmax=limits[1], c="orange", ls="dashed", lw=3, label=round(min(a), 3))
+    for idx, ax in enumerate(a):
+        if idx <= len(DFCELLS.columns)-2:
+            lines=for_cells[for_cells[lst_dfcuts_cols2[1]].str.contains(DFCELLS.iloc[:, idx + 1].name)]
+            condi_cut=lines[[lst_dfcuts_cols2[0], lst_dfcuts_cols2[2]]]
+            parameter=''.join(lines[lst_dfcuts_cols2[1]].unique().tolist())
+            sns.violinplot(x=DFCELLS.iloc[:, 0], y=DFCELLS.iloc[:, idx + 1], ax=ax, palette=COLORS)
+            counter=0
+            for a in condi_cut[lst_dfcuts_cols2[2]].to_list():
+                if PLOT != None and parameter in PLOT:
+                    plot_cut_lines(a, lmts_X_for_cel[counter])
+                else:
+                    pass
+                counter=counter+1
+            ax.set_title("Cells: " + DFCELLS.columns[idx +1 ], fontsize=fontsize)
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+            ax.tick_params(labelsize=labelsize)
+        else:
+            lines=for_genes[for_genes[lst_dfcuts_cols2[1]].str.contains(DFGENES.iloc[:, idx - 3].name)]
+            param_cut=lines[[lst_dfcuts_cols2[1], lst_dfcuts_cols2[2]]]
+            parameter=''.join(lines[lst_dfcuts_cols2[1]].unique().tolist())
+            sns.violinplot(data=DFGENES.iloc[:, idx - 3], ax=ax, color="grey")
+            for a in param_cut[lst_dfcuts_cols2[2]].to_list():
+                if PLOT != None and parameter in PLOT:
+                    plot_cut_lines(a, lmts_X_for_gen[0])
+                else:
+                    pass
+            ax.set_title("Genes: " + DFGENES.columns[idx - 3 ], fontsize=fontsize)
+            ax.tick_params(labelsize=labelsize)
+    fig.tight_layout()
+#Save plot
+    if SAVE == True:
+        path_filename="note2_" + SAVE_PATH + "/" + FILENAME + ".tiff"
+        fig.savefig(path_filename, dpi=300, bbox_inches="tight")

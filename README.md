@@ -8,23 +8,24 @@ Here we are developing a set of notebooks for automation of scRNA-Seq of looso's
 
 ## Setup utilities
 
-To setup the custom single cell utilities, clone and install the tools with:
+Create and activate a conda environment:
+```
+$ conda create -n scRNAseq python=3.7
+$ conda activate scRNAseq
+```
+Install Scanpy
+See: https://scanpy.readthedocs.io/en/stable/installation.html
+
+Move to your workspace before installation. NOTE.: Install the scRNAseq automator in your workspace is crucial for a proper execution:
+```
+$ cd /mnt/workspace/YOUR_WORKSPACE
+```
+
+Clone and install the tools with:
 ```
 $ git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
 $ cd loosolab_sc_rna_framework
 $ pip install .
-```
-
-Then, the tools are available for loading into the notebooks e.g. as:
-```
-> import sctoolbox.plotting
-> sctoolbox.plotting.search_umap_parameters(adata, (...))
-```
-
-or directly as:
-```
-> from sctoolbox.plotting import search_umap_parameters
-> search_umap_parameters(adata, (...))
 ```
 
 # Usage
@@ -32,6 +33,7 @@ Open the notebook 1 (1_assembling_anndata.ipynb) and follow the instructions in 
 
 Example files to run the notebooks are available here $/mnt/agnerds/loosolab_SC_RNA_framework/examples
 
+The marker genes are stored in $/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes
 
 # Notebooks
 The directory "nooteboks" has the Jupyter notebooks here developed.
