@@ -13,18 +13,16 @@ Create and activate a conda environment:
 $ conda create -n scRNAseq python=3.7
 $ conda activate scRNAseq
 ```
-Install Scanpy
-See: https://scanpy.readthedocs.io/en/stable/installation.html
-
 Move to your workspace before installation. NOTE.: Install the scRNAseq automator in your workspace is crucial for a proper execution:
 ```
 $ cd /mnt/workspace/YOUR_WORKSPACE
+$ mkdir scRNAseq_autom
+$ cd scRNAseq_autom
 ```
 
 Clone and install the tools with:
 ```
 $ git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
-$ cd loosolab_sc_rna_framework
 $ pip install .
 ```
 
