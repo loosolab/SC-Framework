@@ -9,7 +9,7 @@ setup(name='sc-toolbox',
 			'matplotlib',
 			'numpy',
 			'scanpy',
-			'rpy2',
-			'anndata2ri'
+			'sklearn',
+			'igraph'
 		],
 		)
