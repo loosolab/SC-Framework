@@ -16,8 +16,9 @@ import matplotlib
 from matplotlib.patches import ConnectionPatch
 import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
+import warnings
 
-def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False):
+def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False):
     """
     Download table of receptor-ligand interactions and store in adata.
 
@@ -41,12 +42,23 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
             Separator of database table.
         inplace : boolean, default False
             Whether to copy `adata` or modify it inplace.
+        overwrite : boolean, default False
+            If True will overwrite existing database.
 
     Returns:
     ----------
         AnnData : optional
             Copy of adata with added database path and database table to adata.uns['receptor-ligand']
     """
+    # datbase already existing?
+    if not overwrite and "receptor-ligand" in adata.uns and "database" in adata.uns["receptor-ligand"]:
+        warnings.warn("Database already exists! Skipping. Set `overwrite=True` to replace.")
+
+        if inplace:
+            return
+        else:
+            return adata
+
     database = pd.read_csv(db_path, sep=sep)
 
     # check column names in table
@@ -68,7 +80,7 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
     if not inplace:
         return modified_adata
 
-def calculate_interaction_table(adata, cluster_column, gene_index=None, normalize=1000, inplace=False):
+def calculate_interaction_table(adata, cluster_column, gene_index=None, normalize=1000, inplace=False, overwrite=False):
     """
     Calculate an interaction table of the clusters defined in adata.
     
@@ -84,6 +96,8 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
             Correct clusters to given size.
         inplace : boolean, default False
             Whether to copy `adata` or modify it inplace.
+        overwrite : boolean, default False
+            If True will overwrite existing interaction table.
 
     Returns:
     ----------
@@ -92,6 +106,15 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     """
     if "receptor-ligand" not in adata.uns.keys():
         raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(...)` before running this function.")
+
+    # interaction table already exists?
+    if not overwrite and "receptor-ligand" in adata.uns and "interactions" in adata.uns["receptor-ligand"]:
+        warnings.warn("Interaction table already exists! Skipping. Set `overwrite=True` to replace.")
+
+        if inplace:
+            return
+        else:
+            return adata
 
     r_col, l_col = adata.uns["receptor-ligand"]["receptor_column"], adata.uns["receptor-ligand"]["ligand_column"]
     index = adata.var[gene_index] if gene_index else adata.var.index
