@@ -269,7 +269,9 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
     
     Note: The dimensions of the jupyter view often differ from what is saved to the file.
 
-    KNOWN ISSUE: The network graph will not show up in jupyter. Writing to file works.
+    KNOWN ISSUE: The network graph will not show up in jupyter unless first running `matplotlib.use("cairo")`. 
+    Afterwards run `matplotlib.use("module://matplotlib_inline.backend_inline")` in a new cell or the other plots won't work.
+    TODO: this may be fixable when igraph>=0.10 is released. https://github.com/igraph/python-igraph/issues/426
 
     Parameters:
     ----------
