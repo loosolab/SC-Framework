@@ -68,14 +68,17 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
         best_fit=list(f.get_best().keys()) #Finding the best fit
 #This is the power law or exponential distributed data
         if  "expon" in best_fit or "powerlaw" in best_fit:
-            if "expon" in best_fit: #The expon is decreasing because the Fitter uses the cumulative distribution
-                knee_direction="decreasing"
-            elif "powerlaw" in best_fit: #The powerlaw is increasing because the Fitter uses the cumulative distribution
-                knee_direction="increasing"
             lst_data2.sort()
+            avg=st.tmean(lst_data2)
             histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2)/100), weights=range(0, len(lst_data2), 1))
-            kn = KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve='convex', direction=knee_direction)
-            kn_converted = [bins_built[kn.knee-1]]
+            kni, knd = KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve='convex', direction="increasing"), KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve='convex', direction="decreasing")
+            kni_converted, knd_converted = [bins_built[kni.knee-1]], [bins_built[knd.knee-1]]
+            kni_avg, knd_avg = [kni_converted, avg], [knd_converted, avg]
+            kni_avg_dif, knd_avg_dif = max(kni_avg) - min(kni_avg), max(knd_avg) - min(knd_avg)
+            if kni_avg_dif > knd_avg_dif:
+                kn_converted=kni_avg_dif
+            else:
+                kn_converted=knd_avg_dif
             df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, kn_converted, lst_dfcuts_cols)
 #This is the skewed shaped but not like exponential nor powerlaw
         else:

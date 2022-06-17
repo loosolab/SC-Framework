@@ -1,6 +1,7 @@
 """
 Module to assembling anndata objects
 """
+import sctoolbox
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 
@@ -9,7 +10,6 @@ import pandas as pd
 import anndata
 from anndata import AnnData
 
-import yaml
 import sys
 
 from scipy import sparse
@@ -17,75 +17,100 @@ from scipy.io import mmread
 
 #######################################################################################################################
 #################################ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS##########################################
-def assembler_velocity(SAMPLE, PATH, DTYPE): #Author: Guilherme Valente
-    global adata
-    path1=PATH + "/quant/" + SAMPLE + "/solo/Velocyto/" + DTYPE
-    path_for_matrix=PATH + "/quant/" + SAMPLE + "/solo/Gene/" + DTYPE
-    path_for_X_spl_unspl_ambig=path1
-    path_for_obs=path1 + '/barcodes.tsv'
-    path_for_var=path1 + '/genes.tsv'
-    print("\t\tLoading matrix to compose the X object: " + SAMPLE)
+def assembler(SAMPLE, PATH, DTYPE, COND_NAME):
+    '''
+    This will perform the anndata object 10X assembling for velocyt analysis
+    Parameters
+    ==========
+    SAMPLE : String
+       The sample name defined by snakemake, e.g., sample1
+    PATH : String
+       The pathway where the /quant is deposited
+    DTYPE : String
+       The type of Solo data choose, which default is filtered. The options are raw or filtered.
+    COND_NAME : String.
+      The word used in the snakemake to define the name of condition of the sample, e.g, condition
+    '''
+    #Author : Guilherme Valente
+    #Messages and others
+    m1="\t\tLoading matrix to compose the .X object"
+    m2="\t\tLoading matrix to compose the .obs"
+    m3="\t\tLoading matrix to compose the .var"
+    path1=PATH + SAMPLE + "/solo/Velocyto/" + DTYPE
+    path_for_matrix=PATH + SAMPLE + "/solo/Gene/" + DTYPE
+    path_for_X_spl_unspl_ambig, path_for_obs, path_for_var=path1, path1 + '/barcodes.tsv', path1 + '/genes.tsv'
+
+    print(m1)
     X = sc.read_mtx(path_for_matrix + '/matrix.mtx')
     X = X.X.transpose()
-    print("\t\tLoading genes and cells identifiers to make the obs object: " + SAMPLE)
+    print(m2)
     obs = pd.read_csv(path_for_obs, header = None, index_col = 0)
     obs.index.name = None #Remove index column name to make it compliant with the anndata format
-    obs = obs + '-' + str(''.join(conditions_name))
-    print("\t\tLoading the gene features to make the var object: " + SAMPLE)
+    obs = obs + '-' + str(''.join(COND_NAME))
+    print(m3)
     var = pd.read_csv(path_for_var, sep='\t', names = ('gene_ids', 'feature_types'), index_col = 1)
-    print("\t\tLoading spliced, unspliced and ambigous matrix to compose the X object: " + SAMPLE)
-    spliced = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/spliced.mtx')).transpose()
-    unspliced  = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/unspliced.mtx')).transpose()
-    ambiguous  = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/ambiguous.mtx')).transpose()
-    print("\t\tCreating partial anndata object: " + SAMPLE)
+    spliced, unspliced, ambiguous = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/spliced.mtx')).transpose(), sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/unspliced.mtx')).transpose(), sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/ambiguous.mtx')).transpose()
     adata = anndata.AnnData(X = X, obs = obs, var = var, layers = {'spliced': spliced, 'unspliced': unspliced, 'ambiguous': ambiguous})
     adata.var_names_make_unique()
     return adata.copy()
 
-def velocity(tenX, TEST, SOLO_PATH): #tenX is the configuration of samples in the 10X.yml. TEST is test number
-    dtype="filtered" #the dtype is the type of Solo data choose (raw or filtered), which default is filtered
-    if ch.check_infoyml("Output_path"): #Check existence of results path in yaml.
-        result_path=''.join(ch.check_infoyml("Output_path"))
-        test=result_path.split("results/")[1]
-        if TEST != test: #If the test description is not the same as yml, close the program.
-            sys.exit("The " + TEST + " is not the same as described in info.yml.")
-        else:
-            global conditions_name
-            adata_list=list()
-            conditions_name=[]
-            dict_rename_samples={}
-            timer=0
-            for a in tenX:
-                print("Runing sample number " + str(timer + 1) + " out of " + str(len(tenX)) + " samples.")
-                sample=a.split(":")[0]
-                condition=a.split(":")[1]
-                condition_description=a.split(":")[2]
-                dict_rename_samples[str(timer)]=condition_description
-                if condition not in conditions_name:
-                    conditions_name.append(condition)
-                adata_list.append(assembler_velocity(sample, SOLO_PATH, dtype)) #EXECUTING THE ASSEMBLER
-                timer=timer+1
-            #Creating the final anndata and saving
-            print("Creating the final anndata object.")
-            print("\t\tConcatenating objects.")
-            adata = adata_list[0].concatenate(adata_list[1:])
-            print("\t\tRenaming batches.")
-            adata.obs["batch"].replace(dict_rename_samples, inplace=True)
-            adata.obs.rename(columns = {"batch": ''.join(conditions_name)}, inplace = True)
-            print("\t\tInserting informations")
-            cr.build_infor(adata, "Test_number", TEST) #Anndata, key and value for anndata.uns["infoprocess"]
-            cr.build_infor(adata, "Input_for_assembling", SOLO_PATH)
-            cr.build_infor(adata, "Strategy", "Assembling for velocity")
-            cr.build_infor(adata, "Anndata_path", result_path)
-            print("\t\tSaving and loading.")
-            name="/anndata_1_" + TEST +".h5ad"
-            adata_output= result_path + name
-            adata.write(filename=adata_output) #SAVIND THE ADATA FILE WITH SPLICED UNSPLICED; AMBIGOUS COUNTINGS
-            #Loading adata file and printing num cells and num genes
-            print("Loading the anndata for velocity and storing as an adata variable.")
-            adata = sc.read_h5ad(filename=adata_output)
-
-            return(adata)
+def assembling_velocity(path_QUANT, tenX, assembling_10_velocity, TEST, dtype="filtered"):
+    '''
+    This will check if all data to assembling the 10X for velocity is proper and also perform the assembling
+    Parameters
+    ==========
+    path_QUANT : String.
+        The directory where the quant folder from snakemake preprocessing is located.
+    tenX : List.
+        Configurations to setup the samples for anndata assembling. It must containg the sample, the word used in snakemake to assign the condition, and the condition, e.g., sample1:condition:room_air
+    assembling_10_velocity : Boolean
+        If True, the anndata 10X assembling for velocity will be executed.
+    TEST : String
+        The name to label de analysis of this scRNAseq workflow, e.g., Test1
+    dtype : String.
+        The type of Solo data choose, which default is filtered. The options are raw or filtered.
+    '''
+    #Author : Guilherme Valente
+    #Message and others
+    adata_list, conditions_name, dict_rename_samples=list(), [], {} #Stores the anndata objects assembled, conditions of each sample and the dict will be used to rename the samples
+    m1="The " + TEST + " is not the same as described in info.txt."
+    m2="Num samples: " + str(len(tenX))
+    m3="Assembling sample "
+    m4="Concatenating anndata objects, renaming batches and building anndata.uns[infoprocess]."
+    m5="\t\tSaving and loading."
+    ######
+    path_QUANT2=ch.check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="filtered") #Checking if all files for assembling are proper
+    result_path=ch.check_infoyml(TASK="give_path") #Loading the output path
+    test2=result_path.split("results/")[1].replace("/", '').strip()
+    if TEST != test2: #Check if the test description is different that the one in info.txt.
+        sys.exit(m1)
+    print(m2)
+    timer=0
+    #Assembling
+    for a in tenX:
+        print(a)
+        print(m3 + str(timer+1))
+        sample, condition, condition_description=a.split(":")[0], a.split(":")[1], a.split(":")[2]
+        dict_rename_samples[str(timer)]=condition_description
+        if condition not in conditions_name:
+            conditions_name.append(condition)
+        adata_list.append(assembler(sample, path_QUANT2 + "/", dtype, conditions_name)) #EXECUTING THE ASSEMBLER
+        timer=timer+1
+    #Creating the final anndata and saving
+    print(m4)
+    adata = adata_list[0].concatenate(adata_list[1:])
+    adata.obs["batch"].replace(dict_rename_samples, inplace=True)
+    adata.obs.rename(columns = {"batch": ''.join(conditions_name)}, inplace = True)
+    #Building anndata.info["infoprocess"]
+    cr.build_infor(adata, "Test_number", TEST) #Anndata, key and value for anndata.uns["infoprocess"]
+    cr.build_infor(adata, "Input_for_assembling", path_QUANT)
+    cr.build_infor(adata, "Strategy", "Assembling for velocity")
+    cr.build_infor(adata, "Anndata_path", result_path)
+    #Saving the data
+    print(m5)
+    adata_output=result_path + "/anndata_1_" + TEST +".h5ad"
+    adata.write(filename=adata_output)
+    return(adata)
 
 #######################################################################################################################
 ####################################CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT######################################

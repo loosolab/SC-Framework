@@ -6,14 +6,25 @@ import sctoolbox
 import os
 from os import path
 import sys
-import yaml
 import sctoolbox.creators as cr
 ##################################
-#Lists
-list_velocyto=["barcodes.tsv", "genes.tsv", "spliced.mtx", "unspliced.mtx", "ambiguous.mtx"]
-list_gene=["matrix.mtx"]
-list_solo=["quant"]
-##################################
+def check_infoyml(VALUE=None, TASK=None):
+    '''
+    This is to create load or modify the info.txt file that store the main output path
+    Parameters:
+    ===========
+    VALUE : String.
+        The pathway to be intored in the info.txt
+    TASKE : String.
+        Activity to be performed using the info.txt
+    '''
+    #Author : Guilherme Valente
+    if TASK == "create":
+        print(VALUE, file=open("./info.txt", "w")) #Create a new key and add an information.
+    elif TASK == "give_path":
+        with open('./info.txt') as a:
+            return next(a).split(":")[1].strip()
+
 def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     '''
     Checking if a given value range into acceptable limits
@@ -66,72 +77,64 @@ def check_options(ANS, OPTS1, OPTS2):
     elif ANS in OPTS2:
         return("valid")
 
-def error_message(DIRE): #Print error messages and close pipeline
-    sys.exit("The " + DIRE + "\nis wrong or not found.\n")
-
-def filesDir_for_check(DIR): #List files in a given directory for check the existence of specific directories
-    global list_velocyto
-    global list_gene
-    global list_solo
-    list_data=[b for b in os.listdir(DIR)]
-    if "Gene" in DIR:
-        filesDir_for_check2(list_gene, list_data) #Gene and Velocyto folders have the proper data (.tsv and .mtx)
-    elif "Velocyto" in DIR:
-        filesDir_for_check2(list_velocyto, list_data) #Gene and Velocyto folders have the proper data (.tsv and .mtx)
-    else:
-        filesDir_for_check2(list_solo, list_data) #Check if the quant folder is in the input directory
-
-def filesDir_for_check2(LIST, LISTDATA): #Check the existence of specific directories
-    for c in LIST:
-        if c not in LISTDATA:
-            list_data_not_found.append(c)
-
-def input_path_velocity(MAINPATH, tenX): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml.
-    global list_data_not_found
-    global list_velocyto
-    global list_gene
-    DTYPE="filtered" #the DTYPE is the type of Solo data choose (raw or filtered), which default is filtered
-    if path.exists(MAINPATH):
-        list_data_not_found=[]
-        filesDir_for_check(MAINPATH) #Check if the quant folder exist
-        if len(list_data_not_found) != 0: #Stop the script if quant folder is not found
-            error_message(MAINPATH + "/quant")
+def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="filtered"): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml.
+    '''
+    Checking if the paths are proper for assembling 10X for velocity.
+    
+    Parameters
+    =============
+    path_QUANT : String.
+        The directory where the quant folder from snakemake preprocessing is located.
+    tenX : List.
+        Configurations to setup the samples for anndata assembling. It must containg the sample, the word used in snakemake to assign the condition, and the condition, e.g., sample1:condition:room_air
+    assembling_10_velocity : Boolean
+        If True, the anndata 10X assembling for velocity will be executed.
+    dtype : String.
+        The type of Solo data choose, which default is filtered. The options are raw or filtered.
+    '''
+    #Author : Guilherme Valente
+    #Tracking is pathways exist.
+    def checking_paths(CHECK_PATH, MES):
+        if path.exists(path_QUANT):
+            return("valid")
         else:
-            pass
-        del list_data_not_found
-        for a in tenX: #Checking the presence of all sample directories
-            sample=a.split(":")[0]
-            list_data_not_found=[]
-            if path.exists(MAINPATH + "/quant/" + sample + "/solo/Gene/" + DTYPE) != True or path.exists(MAINPATH + "/quant/" + sample + "/solo/Velocyto/" + DTYPE) != True: #Checking the existence of quant/sampleX/solo/Gene/ or Velocyto
-                error_message(MAINPATH + "/quant/" + sample + "/solo/Gene/" + DTYPE)
-                print("OR\n")
-                error_message(MAINPATH + "/quant/" + sample + "/solo/Velocyto/" + DTYPE)
-            else: #Check if .mtx and .tsv files exist in Gene and Velocyto folders
-                filesDir_for_check(MAINPATH + "/quant/" + sample + "/solo/Gene/" + DTYPE) 
-                filesDir_for_check(MAINPATH + "/quant/" + sample + "/solo/Velocyto/" + DTYPE)
-                if len(list_data_not_found) == 0:
-                    print("Sample " + sample + " have the proper data for assembling an anndata for velocity analysis.")
-                else:
-                    print("Missing data in Gene or Velocyto child directories to assembling anndata object for velocity: " + str(list_data_not_found))
-    else:
-        error_message(MAINPATH)
+            sys.exit(MES)
+            
+    #Messages and others
+    go_assembling=False
+    closed_gene_path="/solo/Gene/" + dtype
+    closed_velocito_path="/solo/Velocyto/" + dtype
+    genes_path_files=['barcodes.tsv', 'genes.tsv', 'matrix.mtx']
+    velocyto_path_files=["ambiguous.mtx", "barcodes.tsv", "genes.tsv", "spliced.mtx", "unspliced.mtx"]
+    m1="Set dtype as raw or filtered."
+    m2=path_QUANT + "\nis wrong or not found.\n"
+    m3="\nis wrong or not found.\n"
 
-def output_path(OUTPATH, TEST): #Check if the directory for output exist.
-    path1=OUTPATH + "/results"
-    path2=OUTPATH + "/results/" + TEST
-    if path.exists(path1) != True: #Check if result dir exist
-        cr.directory(path1)
-    if path.exists(path2) != True: #Check if result dir exist
-        cr.directory(path2)
-    cr.infoyml("Output_path", path2) #Printing the output dir in yaml
-
-def check_infoyml(KEY): #Check the existence of a given key in info.yml and load the choose key.
-    if path.exists("info.yml"):
-        yml=yaml.load(open("info.yml", "r"), Loader=yaml.FullLoader)
-        if KEY in yml: #Check if the key exist.
-            return(yml[KEY]) #Loading the choose key.
+    #Checking if the anndata 10X velocity should be assembled.
+    if assembling_10_velocity == True:
+        if dtype == "filtered" or dtype == "raw":
+            go_assembling=True
         else:
-            sys.exit("The " + KEY + " is absent in info.yml.")
-    else:
-        error_message("./info.yml")
+            sys.exit(m1)
+    #Checking if the files are appropriated
+    if go_assembling == True:
+        #Check if */quant exist
+        if checking_paths(path_QUANT, m2) == "valid":
+            path_QUANT=path_QUANT.replace("//", "/")
+            if path_QUANT.endswith('/'):
+                path_QUANT=path_QUANT[:-1]
+            return(path_QUANT)
+            list_quant_folders=[b for b in os.listdir(path_QUANT)] #List the folders inside the quant folder.
+        #Check if the */quant/* files exist. These files are stored at genes_path_files and velocyto_path_files lists
+        for a in list_quant_folders:
+            path_solo_gene=path_QUANT + "/" + a + closed_gene_path
+            path_solo_velocyto=path_QUANT + "/" + a + closed_velocito_path
+            if checking_paths(path_solo_gene, m2) == "valid": #Checking if *sample*/solo/Gene/filtered exist
+                for b in genes_path_files:  #Checking if *sample*/solo/Gene/filtered/* files exist
+                    if b not in os.listdir(path_solo_gene):
+                        sys.exit(path_solo_gene + "/" + b + m3)
+            if checking_paths(path_solo_velocyto, m2) == "valid": #Checking if *sample*/solo/Gene/filtered exist
+                for b in velocyto_path_files:  #Checking if *sample*/solo/Gene/filtered/* files exist
+                    if b not in os.listdir(path_solo_velocyto):
+                        sys.exit(path_solo_velocyto + "/" + b + m3)
 

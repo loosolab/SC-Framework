@@ -244,7 +244,7 @@ def refining_cuts(ANNDATA, def_cut2):
                 list_cuts=sorted([float(min_cut), float(max_cut)], reverse=True)
                 new_df=new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
             elif answer == "skip":
-                pass
+                new_df=new_df.append({col0: data, col1: param, col2: "skip", col3: stra}, ignore_index=True)
     return new_df
 
 ########################STEP 3: APPLYING CUTOFFS###############################
@@ -265,7 +265,7 @@ def anndata_filter(ANNDATA, GO_CUT):
     '''
     #Author: Guilherme Valente
     def concatenating(LISTA_ADATA): #Concatenating adata
-        if len(LISTA_ADATA) > 1:  
+        if len(LISTA_ADATA) > 1:
             adata_conc=LISTA_ADATA[0].concatenate(LISTA_ADATA[1:], join='inner', batch_key=None)
         else:
             adata_conc=LISTA_ADATA[0]
@@ -280,47 +280,52 @@ def anndata_filter(ANNDATA, GO_CUT):
     act_strate=GO_CUT[stratcol].unique().tolist()
     uns_cond=ANNDATA.uns["infoprocess"]["data_to_evaluate"]
     lst_adata_sub, go_info_cell, go_info_genes =list(), [], []
-    
+
     #Creating the infoprocess
     if "Cell filter" not in ANNDATA_CP.uns["infoprocess"]:
         build_infor(ANNDATA_CP, "Cell filter", list())
     if "Gene filter" not in ANNDATA_CP.uns["infoprocess"]:
         build_infor(ANNDATA_CP, "Gene filter", list())
-            
+
     #Filter mitochondrial content first
     if "pct_counts_is_mitochondrial" in act_params:
         raw_data=GO_CUT[GO_CUT[paramcol]=="pct_counts_is_mitochondrial"]
         for idx, a in raw_data.iterrows():
             data, param, cuts, stra =a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
-            max_cut=max(cuts)
-            m1=data + " " + param + " max_percent= " + str(max_cut)
-            adata_sub=ANNDATA_CP[ANNDATA_CP.obs[uns_cond] == data,:]
-            lst_adata_sub.append(adata_sub[adata_sub.obs["pct_counts_is_mitochondrial"] < max_cut, :])
-            go_info_cell.append(m1)
+            if "skip" in cuts:
+                lst_adata_sub.append(ANNDATA_CP[ANNDATA_CP.obs[uns_cond] == data,:])
+            else:
+                max_cut=max(cuts)
+                m1=data + " " + param + " max_percent= " + str(max_cut)
+                adata_sub=ANNDATA_CP[ANNDATA_CP.obs[uns_cond] == data,:]
+                lst_adata_sub.append(adata_sub[adata_sub.obs["pct_counts_is_mitochondrial"] < max_cut, :])
+                go_info_cell.append(m1)
         ANNDATA_CP2=concatenating(lst_adata_sub)
         lst_adata_sub=list()
     else:
         ANNDATA_CP2=ANNDATA_CP
         lst_adata_sub=list()
-
     #Filtering other cells
     raw_data=GO_CUT[GO_CUT[stratcol]=="filter_cells"]
     for idx, a in raw_data.iterrows():
         data, param, cuts, stra =a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
         if param != "pct_counts_is_mitochondrial":
             adata_sub=ANNDATA_CP2[ANNDATA_CP2.obs[uns_cond] == data,:]
-            m1=data + " " + param + " "
-            min_cut, max_cut=min(cuts), max(cuts)
-            if param == "total_counts":
-                sc.pp.filter_cells(adata_sub, min_counts=min_cut, inplace=True)
-                sc.pp.filter_cells(adata_sub, max_counts=max_cut, inplace=True)
+            if "skip" in cuts:
                 lst_adata_sub.append(adata_sub)
-                go_info_cell.append(m1 + "min_counts= " + str(min_cut))
-                go_info_cell.append(m1 + "max_counts= " + str(max_cut))
-            elif param == "n_genes_by_counts":
-                sc.pp.filter_cells(adata_sub, min_genes=min_cut, inplace=True)
-                lst_adata_sub.append(adata_sub)
-                go_info_cell.append(m1 + "min_genes= " + str(min_cut))
+            else:
+                m1=data + " " + param + " "
+                min_cut, max_cut=min(cuts), max(cuts)
+                if param == "total_counts":
+                    sc.pp.filter_cells(adata_sub, min_counts=min_cut, inplace=True)
+                    sc.pp.filter_cells(adata_sub, max_counts=max_cut, inplace=True)
+                    lst_adata_sub.append(adata_sub)
+                    go_info_cell.append(m1 + "min_counts= " + str(min_cut))
+                    go_info_cell.append(m1 + "max_counts= " + str(max_cut))
+                elif param == "n_genes_by_counts":
+                    sc.pp.filter_cells(adata_sub, min_genes=min_cut, inplace=True)
+                    lst_adata_sub.append(adata_sub)
+                    go_info_cell.append(m1 + "min_genes= " + str(min_cut))
     ANNDATA_CP2=concatenating(lst_adata_sub)
     lst_adata_sub=list()
 
@@ -330,15 +335,18 @@ def anndata_filter(ANNDATA, GO_CUT):
         adata_sub=ANNDATA_CP2.copy()
         for idx, a in raw_data.iterrows():
             data, param, cuts, stra =a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
-            min_cut, max_cut=min(cuts), max(cuts)
-            if param == "n_cells_by_counts":
-                sc.pp.filter_genes(adata_sub, min_cells=min_cut, inplace=True)
-                go_info_genes.append("n_cells_by_counts min_cells= " + str(min_cut))
-            elif param == "mean_counts":
-                sc.pp.filter_genes(adata_sub, min_counts=min_cut, inplace=True)
-                go_info_genes.append("mean_counts min_counts= " + str(min_cut))
-            elif param == "pct_dropout_by_counts":
-                print("pct_dropout_by_counts filtering is not implemented.")
+            if "skip" in cuts:
+                pass
+            else:
+                min_cut, max_cut=min(cuts), max(cuts)
+                if param == "n_cells_by_counts":
+                    sc.pp.filter_genes(adata_sub, min_cells=min_cut, inplace=True)
+                    go_info_genes.append("n_cells_by_counts min_cells= " + str(min_cut))
+                elif param == "mean_counts":
+                    sc.pp.filter_genes(adata_sub, min_counts=min_cut, inplace=True)
+                    go_info_genes.append("mean_counts min_counts= " + str(min_cut))
+                elif param == "pct_dropout_by_counts":
+                    print("pct_dropout_by_counts filtering is not implemented.")
         ANNDATA_CP2=adata_sub
 
 #Annotating anndata.uns["infoprocess"]
@@ -350,7 +358,7 @@ def anndata_filter(ANNDATA, GO_CUT):
         ANNDATA_CP.uns["infoprocess"]["Gene filter"] = ANNDATA_CP.uns["infoprocess"]["Gene filter"] + go_info_genes
     else:
         ANNDATA_CP.uns["infoprocess"]["Gene filter"] = go_info_genes
-        
+
     ANNDATA_CP2.uns = ANNDATA_CP.uns
 
     print(ANNDATA)
@@ -361,10 +369,10 @@ def anndata_filter(ANNDATA, GO_CUT):
 #####################################################################################
 
 def filter_genes(adata, genes):
-    """ Remove genes from adata object. 
-    
+    """ Remove genes from adata object.
+
     Parameters
-    ------------
+    ==========
     adata : AnnData
         Anndata object to filter
     genes : list of str
@@ -375,7 +383,7 @@ def filter_genes(adata, genes):
     not_found = list(set(genes) - set(adata.var_names))
     if len(not_found) > 0:
         print("{0} genes were not found in adata and could therefore not be removed. These genes are: {1}".format(len(not_found), not_found))
-    
+
     #Remove genes from adata
     n_before = adata.shape[1]
     adata = adata[:, ~adata.var_names.isin(genes)]

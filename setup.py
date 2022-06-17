@@ -11,6 +11,7 @@ setup(name='sc-toolbox',
 			'scanpy',
 			'rpy2',
 			'anndata2ri',
+			'kneed',
 			'fitter'
 		],
 		)

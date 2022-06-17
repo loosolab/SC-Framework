@@ -23,7 +23,6 @@ def label_genes(ANNDATA, label=False):
     path_cellcycle_genes="/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes"
     path_XY_genes=path_cellcycle_genes
 
-    mito_adatavar_label="mt"
     dict_opts={}
     infor=[] #This list will be part of the adata.uns["infoprocess"]
     m1="Annotate "
@@ -31,6 +30,7 @@ def label_genes(ANNDATA, label=False):
     m3="Choose one species: "
     m4="Paste the pathway and filename in which your custom list of genes is deposited.\nNOTE: the file must have one gene per row"
     m5="Correct the pathway or filename or type q to quit."
+    m6="Type the string (case sensitivy) used to identify mit genes, e.g., mt, Mt-, so on."
     opt1=["q", "quit"]
     opt2=["y", "yes", "n", "no"]
     opt3=list_species_cellcycle_annotations
@@ -46,7 +46,8 @@ def label_genes(ANNDATA, label=False):
             while check_options(answer, opt1, opt2) == "invalid": #Annotate?
                 answer=input(m1 + a + m2)
             if a == "mitochondrial" and answer.lower() == "y": #Annotate mitochondrial
-                tmp_list=[mito_adatavar_label]
+                answer=input(m6) #Which word use to identify mitochondrial genes?
+                tmp_list=[answer]
                 fil_dict(dict_opts, a, tmp_list)
             if a == "cell_cycle" and answer.lower() == "y": #Annotate cell cycle
                 tmp_list=[]
