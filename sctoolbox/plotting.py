@@ -10,14 +10,43 @@ import qnorm
 import sctoolbox.utilities
 from sklearn.preprocessing import MinMaxScaler
 
+#############################################################################
+###################### PCA/tSNE/UMAP plotting functions #####################
+#############################################################################
 
 def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
 								  spread_min=2.0, spread_max=3.0, spread_step=0.5,
-								  metacol="Sample", verbose=True):
-	""" Investigate different combinations of dist_min and spread variables for UMAP plots"""
+                                  metacol="Sample", n_components=2, verbose=True):
+    """ 
+    Plot a grid of different combinations of min_dist and spread variables for UMAP plots. 
+    
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    dist_min : float
+        Min value for the UMAP parameter 'min_dist'. Default: 0.1.
+    dist_max : float
+        Max value for the UMAP parameter 'min_dist'. Default: 0.4.
+    dist_step : float
+        Step size for the UMAP parameter 'min_dist'. Default: 0.1.
+    spread_min : float
+        Min value for the UMAP parameter 'spread'. Default: 2.0.
+    spread_max : float
+        Max value for the UMAP parameter 'spread'. Default: 3.0.
+    spread_step : float
+        Step size for the UMAP parameter 'spread'. Default: 0.5.
+    metacol : str
+        Name of the column in adata.obs to color by. Default: "Sample".
+    n_components : int
+        Number of components in UMAP calculation. Default: 2.
+    verbose : bool
+        Print progress to console. Default: True.
+    """
 	
 	adata = adata.copy()
 	
+    #Setup parameters to loop over
 	dists = np.arange(dist_min, dist_max, dist_step)
 	dists = np.around(dists, 2)
 	spreads = np.arange(spread_min, spread_max, spread_step)
@@ -33,14 +62,13 @@ def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
 			if verbose == True:
 				print(f"Plotting umap for spread={spread} and dist={dist} ({i*len(dists)+j+1}/{len(dists)*len(spreads)})")
 		
-			#Set legend loc
-			#Add legend to last column
+            #Set legend loc for last column
 			if i == 0 and j == (len(dists)-1):
 				legend_loc = "left"
 			else:
 				legend_loc = "none"
 				
-			sc.tl.umap(adata, min_dist=dist, spread=spread, n_components=3)
+            sc.tl.umap(adata, min_dist=dist, spread=spread, n_components=n_components)
 			sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i,j])
 			
 			if j == 0:
@@ -55,6 +83,124 @@ def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
 	
 	plt.tight_layout()
 	plt.show()
+
+
+def plot_group_embedding(adata, groupby, embedding="umap", ncols=4):
+    """ Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
+    
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    groupby : str
+        Name of the column in adata.obs to group by.
+    embedding : str
+        Embedding to plot. Must be one of "umap", "tsne", "pca". Default: "umap".
+    ncols : int
+        Number of columns in the figure. Default: 4.
+    """
+    
+    #Get categories
+    groups = adata.obs[groupby].cat.categories
+    n_groups = len(groups)
+    
+    #Find out how many rows are needed
+    ncols = min(ncols, n_groups) #Make sure ncols is not larger than n_groups
+    nrows = int(np.ceil(len(groups) / ncols))
+
+    #Setup subplots
+    fig, axarr = plt.subplots(nrows, ncols, figsize = (ncols*5, nrows*5))
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr
+    axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr
+    axes_list = [b for a in axarr for b in a]
+    n_plots = len(axes_list)
+    
+    #Plot UMAP/tSNE/pca per group
+    for i, group in enumerate(groups):
+        
+        ax = axes_list[i]
+        
+        #Plot individual embedding
+        if embedding == "umap":
+            sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+        elif embedding == "tsne":
+            sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+        elif embedding == "pca":
+            sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+
+        ax.set_title(group)
+    
+    #Hide last empty plots
+    n_empty = n_plots - n_groups
+    if n_empty > 0:
+        for ax in axes_list[-n_empty:]:
+            ax.set_visible(False)
+    
+    plt.show()
+
+
+def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None):
+    """ Compare embeddings across different adata objects. Plots a grid of embeddings with the different adatas on the 
+    x-axis, and colored variables on the y-axis.
+    
+    Parameters
+    ----------
+    adata_list : list of anndata.AnnData
+        List of AnnData objects to compare.
+    var_list : list of str
+        List of variables to color in plot.
+    embedding : str
+        Embedding to plot. Must be one of "umap", "tsne" or "pca". Default: "umap".
+    adata_names : list of str
+        List of names for the adata objects. Default: None (adatas will be named adata_1, adata_2, etc.).
+    """
+    
+    embedding = embedding.lower()
+
+    available = adata_list[0].var.index.tolist() + adata_list[0].obs.columns.tolist()
+    var_list = [var for var in var_list if var in available]
+    
+    n_adata = len(adata_list)
+    n_var = len(var_list)
+    fig, axes = plt.subplots(n_var, n_adata, figsize=(4*n_adata, 4*n_var))
+    
+    #Fix indexing
+    n_cols = n_adata
+    n_rows = n_var
+    axes = np.array(axes).reshape((-1, 1)) if n_cols == 1 else axes		#Fix indexing for one column figures
+    axes = np.array(axes).reshape((1, -1)) if n_rows == 1 else axes		#Fix indexing for one row figures
+    
+    if adata_names == None:
+        adata_names = [f"adata_{n+1}" for n in range(len(adata_list))]
+    
+    import matplotlib.colors as clr
+    cmap = clr.LinearSegmentedColormap.from_list('custom umap', ['#f2f2f2','#ff4500'], N=256)
+    
+    for i, adata in enumerate(adata_list):
+        for j, var in enumerate(var_list):
+            
+            if embedding == "umap":
+                sc.pl.umap(adata, color=var, show=False, ax=axes[j,i])
+            elif embedding == "tsne":
+                sc.pl.tsne(adata, color=var, show=False, ax=axes[j,i])
+            elif embedding == "pca":
+                sc.pl.pca(adata, color=var, show=False, ax=axes[j,i], annotate_var_explained=True)
+            
+            #Set y-axis label
+            if i == 0:
+                axes[j,i].set_ylabel(var)
+            else:
+                axes[j,i].set_ylabel("")
+            
+            #Set title
+            if j == 0:
+                axes[j,i].set_title(adata_names[i])
+            else:
+                axes[j,i].set_title("")
+            
+            axes[j,i].set_xlabel("")
+    
+    #fig.tight_layout()
 
 
 def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
