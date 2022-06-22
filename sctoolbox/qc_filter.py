@@ -391,3 +391,34 @@ def filter_genes(adata, genes):
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before-n_after, n_after))
 
     return(adata)
+
+
+def estimate_doublets(adata, threshold=0.25, **kwargs):
+    """ Estimate doublet cells using scrublet.
+
+    Parameters
+    ------------
+    adata : AnnData
+        Anndata object to estimate doublets for.
+    threshold : float
+        Threshold for doublet detection. Default is 0.25.
+    kwargs : arguments
+        Additional arguments are passed to scanpy.external.pp.scrublet.
+
+    Returns
+    ---------
+    None - adata is changed in place
+    """
+    
+    #Run scrublet on adata
+    adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, **kwargs)
+
+    # Plot the distribution of scrublet scores
+    sc.external.pl.scrublet_score_distribution(adata_scrublet)
+
+    #Save scores to object
+    adata.obs["doublet_score"] = adata_scrublet.obs["doublet_score"]
+    adata.obs["predicted_doublet"] = adata_scrublet.obs["predicted_doublet"]
+    adata.uns["scrublet"] = adata_scrublet.uns["scrublet"]
+
+
