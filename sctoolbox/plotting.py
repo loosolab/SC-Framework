@@ -203,6 +203,62 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None)
     #fig.tight_layout()
 
 
+#############################################################################
+#################### Other overview plots for expression  ###################
+#############################################################################
+
+def n_cells_barplot(adata, x, groupby=None):
+    """
+    Plot number and percentage of cells per group in a barplot.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    x : str
+        Name of the column in adata.obs to group by on the x axis.
+    groupby : str
+        Name of the column in adata.obs to created stacked bars on the y axis. Default: None (the bars are not split).
+    """
+    
+    #Get cell counts for groups or all
+    tables = []
+    if groupby is not None:
+        for i, frame in adata.obs.groupby(groupby):
+            count = frame.value_counts(x).to_frame(name="count").reset_index()
+            count["groupby"] = i
+            tables.append(count)
+        counts = pd.concat(tables)
+        
+    else:
+        counts = adata.obs[x].value_counts().to_frame(name="count").reset_index()
+        counts.rename(columns={"index": x}, inplace=True)
+        counts["groupby"] = "all"
+    
+    #Format counts
+    counts_wide = counts.pivot(index=x, columns="groupby", values="count")
+    counts_wide_percent = counts_wide.div(counts_wide.sum(axis=1), axis=0) * 100
+    
+    #Plot barplots
+    fig, axarr = plt.subplots(1,2, figsize=(10,3))
+
+    counts_wide.plot.bar(stacked=True, ax=axarr[0], legend=False)
+    axarr[0].set_ylabel("Number of cells")
+    axarr[0].set_xticklabels(axarr[0].get_xticklabels(), rotation=45, ha="right")
+
+    counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
+    plt.ylabel("Percent of cells")
+    axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
+    
+    #Set location of legend
+    if groupby is None:
+        axarr[1].get_legend().remove()
+    else:
+        axarr[1].legend(title=groupby, bbox_to_anchor=(1,1))
+
+    plt.show()
+
+
 def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 	""" 
 	Plot a boxplot showing gene expression of genes in `gene_list` across the groups in `groupby`. The total gene expression is quantile normalized 
