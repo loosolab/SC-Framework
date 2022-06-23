@@ -100,9 +100,9 @@ def apply_svd(adata, layer=None):
     
     return(adata)
 
-def get_variable_features(adata, min_score=None, show=True):
+def get_variable_features(adata, min_score=None, show=True, inplace=True):
     """
-    Get the highly variable features of anndata object.
+    Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.obs. If show is True, the plot is shown.
 
     Parameters
     -----------
@@ -112,14 +112,20 @@ def get_variable_features(adata, min_score=None, show=True):
         The minimum variability score to set as threshold. Default: None (automatic)
     show : bool
         Show plot of variability scores and thresholds. Default: True.
+    inplace : bool
+        If True, the anndata object is modified. Otherwise, a new anndata object is returned. Default: True.
 
     Returns
     --------
-    None - "highly_variable" is added to adata.obs in place. If show is True, the plot is shown.
+    If inplace is False, the function returns None
+    If inplace is True, the function returns an anndata object.
     """
     
     from kneed import KneeLocator
     import statsmodels.api as sm
+
+    if inplace == False:
+        adata = adata.copy()
 
     #Calculate variability 
     epi.pp.cal_var(adata, show=False)
@@ -172,3 +178,6 @@ def get_variable_features(adata, min_score=None, show=True):
         ax.set_xlabel("Ranked features")
         ax.set_ylabel("Variability score")
 
+    #Return the copy of the adata
+    if inplace == False:
+        return adata

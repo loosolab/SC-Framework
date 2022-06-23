@@ -398,8 +398,9 @@ def filter_genes(adata, genes):
     return(adata)
 
 
-def estimate_doublets(adata, threshold=0.25, **kwargs):
-    """ Estimate doublet cells using scrublet.
+def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
+    """ Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
+        as well as a "scrublet" key in adata.uns.
 
     Parameters
     ------------
@@ -407,14 +408,20 @@ def estimate_doublets(adata, threshold=0.25, **kwargs):
         Anndata object to estimate doublets for.
     threshold : float
         Threshold for doublet detection. Default is 0.25.
+    inplace : bool
+        Whether to estimate doublets inplace or not. Default is True.
     kwargs : arguments
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
     Returns
     ---------
-    None - adata is changed in place
+    If inplace is False, the function returns a copy of the adata object. 
+    If inplace is True, the function returns None.
     """
     
+    if inplace == False:
+        adata = adata.copy()
+
     #Run scrublet on adata
     adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, **kwargs)
 
@@ -426,4 +433,6 @@ def estimate_doublets(adata, threshold=0.25, **kwargs):
     adata.obs["predicted_doublet"] = adata_scrublet.obs["predicted_doublet"]
     adata.uns["scrublet"] = adata_scrublet.uns["scrublet"]
 
+    if inplace == False:
+        return adata
 
