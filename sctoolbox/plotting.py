@@ -140,7 +140,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4):
     plt.show()
 
 
-def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None):
+def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None, **kwargs):
     """ Compare embeddings across different adata objects. Plots a grid of embeddings with the different adatas on the 
     x-axis, and colored variables on the y-axis.
     
@@ -154,13 +154,28 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None)
         Embedding to plot. Must be one of "umap", "tsne" or "pca". Default: "umap".
     adata_names : list of str
         List of names for the adata objects. Default: None (adatas will be named adata_1, adata_2, etc.).
+    kwargs : arguments
+        Additional arguments to pass to sc.pl.umap/sc.pl.tsne/sc.pl.pca.
     """
     
     embedding = embedding.lower()
 
-    available = adata_list[0].var.index.tolist() + adata_list[0].obs.columns.tolist()
-    var_list = [var for var in var_list if var in available]
-    
+    #Check the availability of vars in the adata objects
+    all_vars = set()
+    for adata in adata_list:
+        all_vars.update(set(adata.var.index))
+        all_vars.update(set(adata.obs.columns))
+
+    #Subset var list to those available in any of the adata objects
+    not_found = set(var_list) - all_vars
+    if len(not_found) == len(var_list):
+        raise ValueError("None of the variables from var_list were found in the adata objects.")
+    elif len(not_found) > 0:
+       print(f"The following variables from var_list were not found in any of the adata objects: {list(not_found)}. These will be excluded.")
+
+    var_list = [var for var in var_list if var in all_vars]
+
+    #Setup plot grid    
     n_adata = len(adata_list)
     n_var = len(var_list)
     fig, axes = plt.subplots(n_var, n_adata, figsize=(4*n_adata, 4*n_var))
@@ -178,14 +193,24 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None)
     cmap = clr.LinearSegmentedColormap.from_list('custom umap', ['#f2f2f2','#ff4500'], N=256)
     
     for i, adata in enumerate(adata_list):
+
+        #Available vars for this adata
+        available = set(adata.var.index)
+        available.update(set(adata.obs.columns))
+
         for j, var in enumerate(var_list):
             
+            #Check if var is available for this specific adata
+            if var not in available:
+                print(f"Variable '{var}' was not found in adata object '{adata_names[i]}'. Skipping coloring.")
+                var = None
+
             if embedding == "umap":
-                sc.pl.umap(adata, color=var, show=False, ax=axes[j,i])
+                sc.pl.umap(adata, color=var, show=False, ax=axes[j,i], **kwargs)
             elif embedding == "tsne":
-                sc.pl.tsne(adata, color=var, show=False, ax=axes[j,i])
+                sc.pl.tsne(adata, color=var, show=False, ax=axes[j,i], **kwargs)
             elif embedding == "pca":
-                sc.pl.pca(adata, color=var, show=False, ax=axes[j,i], annotate_var_explained=True)
+                sc.pl.pca(adata, color=var, show=False, ax=axes[j,i], **kwargs)
             
             #Set y-axis label
             if i == 0:
@@ -250,7 +275,10 @@ def n_cells_barplot(adata, x, groupby=None):
     counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
     plt.ylabel("Percent of cells")
     axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
-    
+
+    axarr[0].grid(False)
+    axarr[1].grid(False)
+
     #Set location of legend
     if groupby is None:
         axarr[1].get_legend().remove()
