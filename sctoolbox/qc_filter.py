@@ -372,11 +372,16 @@ def filter_genes(adata, genes):
     """ Remove genes from adata object.
 
     Parameters
-    ==========
-    adata : AnnData
-        Anndata object to filter
+    -----------
+    adata : anndata.AnnData
+        Annotated data matrix object to filter
     genes : list of str
         A list of genes to remove from object.
+
+    Returns
+    --------
+    adata : anndata.AnnData
+        Anndata object with removed genes.
     """
 
     #Check if all genes are found in adata
@@ -398,7 +403,7 @@ def estimate_doublets(adata, threshold=0.25, **kwargs):
 
     Parameters
     ------------
-    adata : AnnData
+    adata : anndata.AnnData
         Anndata object to estimate doublets for.
     threshold : float
         Threshold for doublet detection. Default is 0.25.

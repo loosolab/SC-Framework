@@ -24,7 +24,7 @@ def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
     Parameters
     ----------
     adata : anndata.AnnData
-        Annotated data matrix.
+        Annotated data matrix object.
     dist_min : float
         Min value for the UMAP parameter 'min_dist'. Default: 0.1.
     dist_max : float
@@ -92,7 +92,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4):
     Parameters
     ----------
     adata : anndata.AnnData
-        Annotated data matrix.
+        Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.
     embedding : str
@@ -215,7 +215,7 @@ def n_cells_barplot(adata, x, groupby=None):
     Parameters
     ----------
     adata : anndata.AnnData
-        Annotated data matrix.
+        Annotated data matrix object.
     x : str
         Name of the column in adata.obs to group by on the x axis.
     groupby : str
@@ -268,7 +268,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     Parameters
     ------------
     adata : anndata.AnnData object
-        An annotated data matrix containing counts in .X.
+        An annotated data matrix object containing counts in .X.
     gene_list : list
         A list of genes to show expression for.
     groupby : str

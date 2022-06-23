@@ -5,6 +5,7 @@ import numpy as np
 import episcanpy as epi
 import matplotlib.pyplot as plt
 
+
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
     """ Perform TF-IDF normalization on a sparse matrix. 
 
@@ -12,7 +13,7 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
     
     Parameters
     -----------
-    matrix : sparse matrix
+    matrix : scipy.sparse matrix
         The matrix to be normalized.
     tf_type : string, optional
         The type of term frequency to use. Can be either "raw", "term_frequency" or "log". Default: "term_frequency".
@@ -60,14 +61,14 @@ def apply_svd(adata, layer=None):
     
     Parameters
     -----------
-    adata : anndata object
+    adata : anndata.AnnData
         The anndata object to be decomposed.
     layer : string, optional
         The layer to be decomposed. If None, the layer is set to "X". Default: None.
     
     Returns:   
     --------
-    adata : anndata object
+    adata : anndata.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
     """
 
@@ -105,7 +106,7 @@ def get_variable_features(adata, min_score=None, show=True):
 
     Parameters
     -----------
-    adata : anndata object
+    adata : anndata.AnnData
         The anndata object containing counts for variables.
     min_score : float, optional
         The minimum variability score to set as threshold. Default: None (automatic)
