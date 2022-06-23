@@ -120,7 +120,9 @@ def get_variable_features(adata, min_score=None, show=True, inplace=True):
     If inplace is False, the function returns None
     If inplace is True, the function returns an anndata object.
     """
-    
+    sctoolbox.utilities.check_module("kneed")
+    sctoolbox.utilities.check_module("statsmodels")
+
     from kneed import KneeLocator
     import statsmodels.api as sm
 

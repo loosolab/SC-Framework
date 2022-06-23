@@ -2,8 +2,53 @@ import pandas as pd
 import sys
 import os
 import scanpy as sc
+import importlib
+
 from sctoolbox.checker import *
 from sctoolbox.creators import *
+
+
+def vprint(verbose=True):
+    """ Print the verbose message.
+    
+    Parameters
+    -----------
+    verbose : Boolean, optional
+        Set to False to disable the verbose message. Default: True
+    """
+
+    f = lambda message: print(message) if verbose == True else None
+
+    return f
+
+#Requirement for installed tools
+def check_module(module):
+    """ Check if <module> can be imported without error.
+    
+    Parameters
+    -----------
+    module : str
+        Name of the module to check.
+
+    Raises
+    ------
+    ImportError
+        If the module is not available for import.
+    """
+
+    error = 0
+    try:
+        importlib.import_module(module)
+    except ModuleNotFoundError:
+        error = 1
+    except:
+        raise #unexpected error loading module
+    
+    #Write out error if module was not found
+    if error == 1:
+        s = f"ERROR: Could not find the '{module}' module on path, but the module is needed for this functionality. Please install this package to proceed."
+        raise ImportError(s)
+
 
 #Loading adata file and adding the information to be evaluated and color list
 def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=None):
