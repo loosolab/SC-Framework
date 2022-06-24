@@ -11,13 +11,15 @@ import sctoolbox.utilities
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 
+from sctoolbox.utilities import save_figure
+
 #############################################################################
 ###################### PCA/tSNE/UMAP plotting functions #####################
 #############################################################################
 
 def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
                                   spread_min=2.0, spread_max=3.0, spread_step=0.5,
-                                  metacol="Sample", n_components=2, verbose=True):
+                                  metacol="Sample", n_components=2, verbose=True, save=None):
     """ 
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots. 
     
@@ -83,10 +85,12 @@ def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
             axes[i,j].set_xlabel("")
     
     plt.tight_layout()
+    save_figure(save)
+    
     plt.show()
 
     
-def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4):
+def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     """ Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
     
     Parameters
@@ -99,6 +103,8 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4):
         Embedding to plot. Must be one of "umap", "tsne", "pca". Default: "umap".
     ncols : int
         Number of columns in the figure. Default: 4.
+    save : str
+        Path to save the figure. Default: None.
     """
     
     #Get categories
@@ -113,7 +119,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4):
     fig, axarr = plt.subplots(nrows, ncols, figsize = (ncols*5, nrows*5))
     axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr
-    axes_list = [b for a in axarr for b in a]
+    axes_list = axarr.flatten()
     n_plots = len(axes_list)
     
     #Plot UMAP/tSNE/pca per group
@@ -137,6 +143,9 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4):
         for ax in axes_list[-n_empty:]:
             ax.set_visible(False)
     
+    #Save figure
+    save_figure(save)
+
     plt.show()
 
 
@@ -233,7 +242,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 #################### Other overview plots for expression  ###################
 #############################################################################
 
-def n_cells_barplot(adata, x, groupby=None):
+def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10,3)):
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -245,6 +254,8 @@ def n_cells_barplot(adata, x, groupby=None):
         Name of the column in adata.obs to group by on the x axis.
     groupby : str
         Name of the column in adata.obs to created stacked bars on the y axis. Default: None (the bars are not split).
+    save : str
+        Path to save the plot. Default: None (plot is not saved).
     """
     
     #Get cell counts for groups or all
@@ -266,14 +277,14 @@ def n_cells_barplot(adata, x, groupby=None):
     counts_wide_percent = counts_wide.div(counts_wide.sum(axis=1), axis=0) * 100
     
     #Plot barplots
-    fig, axarr = plt.subplots(1,2, figsize=(10,3))
+    fig, axarr = plt.subplots(1,2, figsize=figsize)
 
     counts_wide.plot.bar(stacked=True, ax=axarr[0], legend=False)
-    axarr[0].set_ylabel("Number of cells")
+    axarr[0].set_title("Number of cells")
     axarr[0].set_xticklabels(axarr[0].get_xticklabels(), rotation=45, ha="right")
 
     counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
-    plt.ylabel("Percent of cells")
+    axarr[1].set_title("Percentage of cells")
     axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
 
     axarr[0].grid(False)
@@ -285,6 +296,7 @@ def n_cells_barplot(adata, x, groupby=None):
     else:
         axarr[1].legend(title=groupby, bbox_to_anchor=(1,1))
 
+    save_figure(save)
     plt.show()
 
 

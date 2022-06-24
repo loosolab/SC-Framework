@@ -7,6 +7,34 @@ import importlib
 from sctoolbox.checker import *
 from sctoolbox.creators import *
 
+import matplotlib.pyplot as plt
+
+def create_dir(path):
+    """ Create a directory if it is not existing yet.
+    
+    Parameters
+    -----------
+    path : str
+        Path to the directory to be created.
+    """
+    
+    dirname = os.path.dirname(path) #the last dir of the path
+    os.makedirs(dirname, exist_ok=True)
+
+def save_figure(path):
+    """ Save the current figure to a file.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the file to be saved.
+    """
+
+    if path is not None:
+
+        create_dir(path) #recursively create parent dir if needed
+        plt.savefig(path, dpi=600, bbox_inches="tight")
+
 
 def vprint(verbose=True):
     """ Print the verbose message.
