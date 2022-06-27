@@ -423,7 +423,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
         adata = adata.copy()
 
     #Run scrublet on adata
-    adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, **kwargs)
+    adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, copy=True, **kwargs)
 
     # Plot the distribution of scrublet scores
     sc.external.pl.scrublet_score_distribution(adata_scrublet)
