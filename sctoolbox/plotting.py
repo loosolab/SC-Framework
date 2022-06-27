@@ -17,8 +17,8 @@ from sctoolbox.utilities import save_figure
 ###################### PCA/tSNE/UMAP plotting functions #####################
 #############################################################################
 
-def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
-                                  spread_min=2.0, spread_max=3.0, spread_step=0.5,
+def search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
+                                  spread_range=(2.0, 3.0, 0.5),
                                   metacol="Sample", n_components=2, verbose=True, save=None):
     """ 
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots. 
@@ -27,18 +27,10 @@ def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
     ----------
     adata : anndata.AnnData
         Annotated data matrix object.
-    dist_min : float
-        Min value for the UMAP parameter 'min_dist'. Default: 0.1.
-    dist_max : float
-        Max value for the UMAP parameter 'min_dist'. Default: 0.4.
-    dist_step : float
-        Step size for the UMAP parameter 'min_dist'. Default: 0.1.
-    spread_min : float
-        Min value for the UMAP parameter 'spread'. Default: 2.0.
-    spread_max : float
-        Max value for the UMAP parameter 'spread'. Default: 3.0.
-    spread_step : float
-        Step size for the UMAP parameter 'spread'. Default: 0.5.
+    dist_range : tuple
+        Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (0.1, 0.4, 0.1)
+    spread_range : tuple
+        Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (2.0, 3.0, 0.5)
     metacol : str
         Name of the column in adata.obs to color by. Default: "Sample".
     n_components : int
@@ -48,6 +40,20 @@ def search_umap_parameters(adata, dist_min=0.1, dist_max=0.4, dist_step=0.1,
     """
     
     adata = adata.copy()
+
+    if len(dist_range) != 3:
+        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
+    if len(spread_range) != 3:
+        raise ValueError("The parameter 'spread_range' must be a tuple in the form (min, max, step)")
+
+    dist_min, dist_max, dist_step = dist_range
+    spread_min, spread_max, spread_step = spread_range
+
+    #Check validity of parameters
+    if dist_step > dist_max - dist_min:
+        raise ValueError("'step' of dist_range is larger than 'max' - 'min'. Please adjust.")
+    if spread_step > spread_max - spread_min:
+        raise ValueError("'step' of spread_range is larger than 'max' - 'min'. Please adjust.")
 
     #Setup parameters to loop over
     dists = np.arange(dist_min, dist_max, dist_step)
