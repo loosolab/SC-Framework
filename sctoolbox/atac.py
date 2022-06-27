@@ -9,6 +9,7 @@ import sctoolbox.utilities
 
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
     """ Perform TF-IDF normalization on a sparse matrix. 
+    The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.
 
     Note: this function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
     
