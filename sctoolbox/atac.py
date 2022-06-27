@@ -4,6 +4,7 @@ import numpy as np
 
 import episcanpy as epi
 import matplotlib.pyplot as plt
+import sctoolbox.utilities
 
 
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
