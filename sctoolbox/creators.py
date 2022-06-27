@@ -44,24 +44,13 @@ def output_path(OUTPATH, TEST): #Check if the directory for output exist.
         The name of the user wanna use to define the analysis of this pipeline, e.g., Test1
     '''
     #Author : Guilherme Valente
-    m1="Define an appropriate path_out to stablish a place to save your results, e.g., /mnt/workspace/YOUR_NAME"
-    m2="Output directory is ready: "
 
-    #Checking if the first directory determined exists
-    directories=list(filter(None, OUTPATH.split("/")))[0]
-    if path.exists("/" + directories) != True:
-        sys.exit(m1)
+    output_dir = os.path.join(OUTPATH, "results", TEST)
 
-    #Checking if the other directories exist
-    OUTPATH2=OUTPATH + "/results/" + TEST
-    directories=list(filter(None, OUTPATH2.split("/")))
-    dire="/"
-    for a in directories:
-        dire=dire + a + "/"
-        if path.exists(dire) != True: #Create folder if it does not exist
-            os.mkdir(dire)
-    print(m2 + dire)
+    #Check if the directory exist and create if not
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Output directory is ready: {output_dir}")
 
     #Creating storing information for next
-    to_info_txt="Output_path:" + dire
+    to_info_txt="Output_path:" + output_dir
     ch.check_infoyml(VALUE=to_info_txt, TASK="create") #Printing the output dir detailed in the info.txt
