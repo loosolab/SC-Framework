@@ -104,7 +104,7 @@ def apply_svd(adata, layer=None):
 
 def get_variable_features(adata, min_score=None, show=True, inplace=True):
     """
-    Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.obs. If show is True, the plot is shown.
+    Get the highly variable features of anndata object. Adds the columns "highly_variable" and "variability_score" to adata.obs. If show is True, the plot is shown.
 
     Parameters
     -----------
