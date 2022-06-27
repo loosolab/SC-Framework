@@ -9,24 +9,24 @@ import psutil
 
 
 def add_cellxgene_annotation(adata, csv):
-	""" Add columns from cellxgene annotation to the adata .obs table.
-	
-	Parameters
-	------------
-	adata : anndata object
-		The adata object to add annotations to.
-	csv : str
-		Path to the annotation file from cellxgene containing cell annotation.
-		
-	Returns
-	--------
-	None - the annotation is added to adata in place.
-	"""
-	
-	anno_table = pd.read_csv(csv, sep=",", comment='#')
-	anno_table.set_index("index", inplace=True)
-	anno_name = anno_table.columns[-1]
-	adata.obs.loc[anno_table.index, anno_name] = anno_table[anno_name].astype('category')
+    """ Add columns from cellxgene annotation to the adata .obs table.
+    
+    Parameters
+    ------------
+    adata : anndata object
+        The adata object to add annotations to.
+    csv : str
+        Path to the annotation file from cellxgene containing cell annotation.
+        
+    Returns
+    --------
+    None - the annotation is added to adata in place.
+    """
+    
+    anno_table = pd.read_csv(csv, sep=",", comment='#')
+    anno_table.set_index("index", inplace=True)
+    anno_name = anno_table.columns[-1]
+    adata.obs.loc[anno_table.index, anno_name] = anno_table[anno_name].astype('category')
 
 
 
@@ -132,7 +132,7 @@ def annotate_features(adata, gtf,
         coordinate_cols = adata.var.columns[:3] #first three columns are coordinates
     else:
         pass
-		#TODO: Check that coordinate_cols are in adata.var
+        #TODO: Check that coordinate_cols are in adata.var
         #check_type(coordinate_cols, list, "coordinate_cols")
 
     #Convert regions to dict for uropa
@@ -192,17 +192,17 @@ def annotate_features(adata, gtf,
             jobs.append(job)
         pool.close()
 
-		#TODO: Print progress
-		n_jobs = len(jobs)
+        #TODO: Print progress
+        n_jobs = len(jobs)
         n_done = 0
-		#pbar = tqdm.tqdm(total=n_jobs)
-		#pbar.set_description("Annotating regions")
+        #pbar = tqdm.tqdm(total=n_jobs)
+        #pbar.set_description("Annotating regions")
         #while n_done < n_jobs:
             #n_current_done = sum([job.ready() for job in jobs])
-			#time.wait(1)
-			#if n_current_done != n_done:
-				#pbar.update()
-			#n_done = n_current_done
+            #time.wait(1)
+            #if n_current_done != n_done:
+                #pbar.update()
+            #n_done = n_current_done
        
         #Collect results:
         for job in jobs:
