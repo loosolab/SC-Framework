@@ -377,6 +377,11 @@ def filter_genes(adata, genes):
         Anndata object to filter
     genes : list of str
         A list of genes to remove from object.
+        
+    Returns
+    --------
+    adata : anndata.AnnData
+        Anndata object with removed genes.
     """
 
     #Check if all genes are found in adata
@@ -391,3 +396,219 @@ def filter_genes(adata, genes):
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before-n_after, n_after))
 
     return(adata)
+
+
+def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
+    """ Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
+        as well as a "scrublet" key in adata.uns.
+
+    Parameters
+    ------------
+    adata : anndata.AnnData
+        Anndata object to estimate doublets for.
+    threshold : float
+        Threshold for doublet detection. Default is 0.25.
+    inplace : bool
+        Whether to estimate doublets inplace or not. Default is True.
+    kwargs : arguments
+        Additional arguments are passed to scanpy.external.pp.scrublet.
+
+    Returns
+    ---------
+    If inplace is False, the function returns a copy of the adata object. 
+    If inplace is True, the function returns None.
+    """
+    
+    if inplace == False:
+        adata = adata.copy()
+
+    #Run scrublet on adata
+    adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, copy=True, **kwargs)
+
+    # Plot the distribution of scrublet scores
+    sc.external.pl.scrublet_score_distribution(adata_scrublet)
+
+    #Save scores to object
+    adata.obs["doublet_score"] = adata_scrublet.obs["doublet_score"]
+    adata.obs["predicted_doublet"] = adata_scrublet.obs["predicted_doublet"]
+    adata.uns["scrublet"] = adata_scrublet.uns["scrublet"]
+
+    if inplace == False:
+        return adata
+        
+#####################################################################################
+######################## More general QC filtering functions ########################
+#####################################################################################
+
+
+def quality_violin(adata, columns, which="obs", groupby=None, ncols=4, header=None, color_list=None, title=None, thresholds=None, save=None):
+    """
+    A function to plot quality measurements for cells in an anndata object.
+
+    Parameters
+    -------------
+    adata : anndata.AnnData
+        Anndata object containing quality measures in .obs/.var
+    columns : list
+        A list of columns in .obs/.var to show measures for.
+    which : str
+        Which table to show quality for. Either "obs" / "var"
+    groupby : str
+        A column in table to values on the x-axis, e.g. 'condition'. 
+    ncols : int
+        Number of columns in the plot. Default: 4.
+    header : list
+        A list of custom headers for each measure given in columns. Default: None (headers are the column names)
+    color_list : list
+        A list of colors to use for violins. Default: None (colors are chosen automatically)
+    title : str, optional
+        The title of the full plot. Default: None (no title).
+    thresholds : dict, optional
+        Dictionary containing min/max thresholds to show in plot.
+    save : str, optional
+        Save the figure to the path given in 'save'. Default: None (figure is not saved).
+    """
+
+    #Decide which table to use
+    if which == "obs":
+        table = adata.obs
+    elif which == "var":
+        table = adata.var
+
+    #Order of categories on x axis
+    if groupby is not None:
+        x_order = table[groupby].cat.categories
+    else:
+        x_order = None
+
+    #Violing plot to base the next filtering processess
+    if groupby is not None:
+        n_colors = len(table[groupby].cat.categories)
+    else:
+        n_colors = 1 #no grouping; only one violin
+
+    ncols = min(ncols, len(columns)) #Make sure ncols is not larger than the number of columns
+    nrows = int(np.ceil(len(columns) / ncols))
+
+    #Setup colors to be used
+    if color_list is None:
+        color_list = sns.color_palette("Set1", n_colors)
+    else:
+        if int(n_colors) <= int(len(color_list)):
+            raise ValueError("Increase the color_list variable")
+        else:
+            color_list = color_list[:n_colors]
+
+    #Setup headers to be used
+    if header is None:
+        header = columns
+    else:
+        #check that header has the right length
+        if len(header) != len(columns):
+            raise ValueError("Length of header does not match length of columns")
+
+
+    #Setting figures
+    fig, axarr = plt.subplots(nrows, ncols, figsize = (ncols*5, nrows*5))
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr
+    axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr
+    axes_list = axarr.flatten()
+    
+    #Plotting
+    axes_dict = {}
+    for i, column in enumerate(columns):
+        ax = axes_list[i]
+
+        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=x_order, palette=color_list)
+        ax.set_title(header[i])
+        ax.set_ylabel("")
+        ax.set_xlabel("")
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+
+        axes_dict[column] = ax
+
+    #Remove empty axes
+    for ax in axes_list[len(columns):]:
+        ax.axis('off')
+
+    #Add thresholds from dict
+    if thresholds is not None:
+
+        for col in thresholds:
+            ax = axes_dict[col]
+            ymin, ymax = ax.get_ylim()
+            
+            if "min" in thresholds[col]:
+                ax.axhline(thresholds[col]["min"], color="red", linestyle="--")
+                ax.axhspan(ymin, thresholds[col]["min"], color="grey", alpha=0.2)
+
+            if "max" in thresholds[col]:
+                ax.axhline(thresholds[col]["max"], color="red", linestyle="--")
+                ax.axhspan(thresholds[col]["max"], ymax, color="grey", alpha=0.2)
+    
+    plt.tight_layout()
+
+    #Add title
+    if title != None:
+        plt.suptitle(title, y=1.05, fontsize=20)
+
+    #Save figure
+    sctoolbox.utilities.save_figure(save)
+
+def apply_qc_thresholds(adata, thresholds, which="obs"):
+    """
+    Apply QC thresholds to anndata object.
+
+    Parameters
+    -------------
+    adata : AnnData
+        Anndata object to filter.
+    thresholds : dict
+        Dictionary of thresholds to apply.
+    which : str
+       Which table to filter on. Must be one of "obs" / "var". Default: "obs".
+
+    Returns
+    ---------
+    adata : AnnData
+        Anndata object with QC thresholds applied.
+    """
+
+    table = adata.obs if which == "obs" else adata.var
+
+    #Create copy of adata
+    adata = adata.copy()
+
+    #Check if all columns are found in adata
+    not_found = list(set(thresholds) - set(table.columns))
+    if len(not_found) > 0:
+        print("{0} threshold columns were not found in adata and could therefore not be applied. These thresholds are: {1}".format(len(not_found), not_found))
+    thresholds = {k: thresholds[k] for k in thresholds if k not in not_found}
+    
+    if len(thresholds) == 0:
+        raise ValueError(f"The thresholds given do not match the columns given in adata.{which}. Please adjust the 'which' parameter if needed.")
+
+    #Check that thresholds contain min/max
+    for column, d in thresholds.items():
+        if 'min' not in d and 'max' not in d:
+            raise ValueError("Thresholds must contain min or max")
+
+    #Apply thresholds
+    for column, d in thresholds.items():
+        print(column)
+
+        #Set min threshold
+        if 'min' in d:
+            if which == "obs":
+                adata = adata[adata.obs[column] >= d['min'],:]
+            else:
+                adata = adata[:,adata.var[column] >= d['min']]
+
+        #Set max threshold
+        if 'max' in d:
+            if which == "obs":
+                adata = adata[adata.obs[column] <= d['max'],:]
+            else:
+                adata = adata[:,adata.var[column] <= d['max']]
+
+    return adata
