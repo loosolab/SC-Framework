@@ -49,53 +49,55 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
     ANNDATA.uns[uns_condition_name + '_colors']=ANNDATA.uns["color_set"][:len(ANNDATA.obs[uns_condition_name].unique())]
     sta_cut_cells, sta_cut_genes=None, None
     #Setting colors for plot
+    m1="file_name[STRING]"
     m2="The interval=[float or int] must be between 0 to 1 or 100."
-    m3="violin_plot"
     m4="Defining and ploting cutoffs only for total_counts"
     m5="You choose not plot cutoffs"
     m6="To define cutoff demands to set the interval=[int or float] from 0 to 1 or 100."
+    pathway=ANNDATA.uns["infoprocess"]["Anndata_path"]
 
-    if only_plot == False:
-        if interval == None: #The cutoff will be performed, but it is missing the interval
+    #Creating filenames
+    if save == True and file_name is not None and type(file_name) != str: #Here checking is custom name is proper
+        sys.exist(m1)
+    elif save == True and file_name is not None and type(file_name) == str: #Custom name is proper
+        filename=pathway + file_name
+        filename=filename.replace("//", "/")
+    elif save == True and file_name is None: #Use default filename
+        filename=pathway + "note2_violin_"
+    elif save == False or save is None:
+        filename=""
+
+
+    #Checking if interval for cutoffs were properly defined
+    if only_plot == False and interval == None: #It is missing the interval for cutoff
             sys.exit(m6)
-        else:
-            filename=m3 + "_cutoff"
-#Checking if interval for cutoffs were properly defined
+    elif only_plot == False and interval != None:
             if check_cuts(str(interval), 0, 100) == "invalid": #Means the interval is not a number
                     sys.exit(m2)
             else:
                 if isinstance(interval, (int)) == True and interval >= 0 and interval <= 100: #Converting interval int for float from 0 to 1
                     interval=interval/100
-#Checking if the total count was already filtered
+            #Checking if the total count was already filtered
             act_c_total_counts, id_c_total_counts=float(ANNDATA.obs["total_counts"].sum()), float(ANNDATA.uns["infoprocess"]["ID_c_total_counts"])
             if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "valid": #Total_counts was not filtered yet, then only this parameter will be evaluated
                 sta_cut_cells, sta_cut_genes=True, False
                 calulate_and_plot_filter.append("total_counts")
-                filename=m3 + "_total_count_cutoff"
+                filename=filename + "tot_count_cut"
                 print(m4)
-#Other parameters will be evaluated because plot was selected and total count is filtered
+            #Other parameters will be evaluated because plot was selected and total count is filtered
             elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "invalid": #Total counts was filtered yet.
                 sta_cut_cells, sta_cut_genes=True, True
-                filename=m3 + "_other_param_cutoff"
+                filename=filename + "other_param_cut"
                 for a in cells_genes_list:
                     if a != "total_counts":
                         calulate_and_plot_filter.append(a)
-    else: #Only plots without cutoff lines will be provided
-        filename=m3
-
-#Defining filenames and path to save the figure
-    if save == True:
-        save_path=ANNDATA.uns["infoprocess"]["Anndata_path"]
-        if type(file_name) == str: #The violing plot will have a custom filename
-            filename=file_name
-    else:
-        save_path, filename=None, None
-
-#Building the dataframe with default cutoffs stablished and the plots
-#Here will be called the function establishing_cuts from the analyser.py module
-    if only_plot == True: #Only plot without cutoffs
+    #Ploting with or without cutoffs
+    if only_plot == True: #Only plots without cutoff lines will be provided
+        filename=filename
+        #Building the dataframe with default cutoffs stablished and the plots
+        #Here will be called the function establishing_cuts from the analyser.py module
         print(m5)
-        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, SAVE_PATH=save_path, FILENAME=filename)
+        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
     elif only_plot == False: #Calculate cutoffs and plot in the violins
         if sta_cut_cells == True: #For cells
             for a in for_cells_pd[for_cells[0]].unique().tolist(): #Getting the conditions.
@@ -114,7 +116,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
                     kurtosis_val_norm=int(kurtosis_val - 3) #This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
                     df_cuts=establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
         display(df_cuts)
-        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, SAVE_PATH=save_path, FILENAME=filename)
+        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
         return df_cuts
 
 ########################STEP 2: DEFINING CUSTOM CUTOFFS###############################

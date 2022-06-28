@@ -4,9 +4,35 @@ import os
 import scanpy as sc
 from sctoolbox.checker import *
 from sctoolbox.creators import *
+import matplotlib.pyplot as plt
 
-#Loading adata file and adding the information to be evaluated and color list
-def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=None):
+def create_dir(path):
+    """ Create a directory if it is not existing yet.
+    
+    Parameters
+    -----------
+    path : str
+        Path to the directory to be created.
+    """
+    
+    dirname = os.path.dirname(path) #the last dir of the path
+    os.makedirs(dirname, exist_ok=True)
+
+def save_figure(path):
+    """ Save the current figure to a file.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the file to be saved.
+    """
+
+    if path is not None:
+
+        create_dir(path) #recursively create parent dir if needed
+        plt.savefig(path, dpi=600, bbox_inches="tight")
+
+def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
     '''
     Load anndata object
     ==========
@@ -14,34 +40,40 @@ def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=Non
     ==========
     is_from_previous_note : Boolean
         Set to False if you wanna load an anndata object from other source rather than scRNAseq autom workflow.
-    NOTEBOOK : Int.
-        This is the number of current notebook under execution
+    which_notebook : Int.
+        The number of the notebook that generated the anndata object you want to load
         If is_from_previous_note=False, this parameter will be ignored
     data_to_evaluate : String
         This is the anndata.obs[STRING] to be used for analysis, e.g. "condition"
     '''
     #Author : Guilherme Valente
-    def loading_adata(NUM):
+    def loading_adata(NUM, MES):
         pathway=check_infoyml(TASK="give_path")
         files=os.listdir(''.join(pathway))
+        anndata_file=[]
         for a in files:
-            if "anndata_" + str(NUM-1) in a:
-                anndata_file=a
-        return(''.join(pathway) + "/" + anndata_file)
+            if "anndata_" + str(NUM) in a:
+                anndata_file.append(a)
+        if len(anndata_file) == 0:
+            print("We found these anndata objects:\n" + "\t".join(files))
+            sys.exit(MES + ''.join(pathway))
+        else:
+             return(''.join(pathway) + "/" + ''.join(anndata_file))
     #Messages and others
-    m1="You choose is_from_previous_note=True. Then, set an notebook=[INT], which INT is the number of current notebook."
+    m1="You choose is_from_previous_note=True. Then, set an which_notebook=[INT], which INT is the number of the notebook that generated the anndata object you want to load."
     m2="Set the data_to_evaluate=[STRING], which STRING is anndata.obs[STRING] to be used for analysis, e.g. condition."
     m3="Paste the pathway and filename where your anndata object deposited."
     m4="Correct the pathway or filename or type q to quit."
+    m5="Anndata object not found. Check the path or the anndata name above mentioned: "
     opt1=["q", "quit"]
 
     if isinstance(data_to_evaluate, str) == False: #Close if the anndata.obs is not correct
             sys.exit(m2)
     if is_from_previous_note == True: #Load anndata object from previous notebook
-        if isinstance(notebook, int) == False: #Close if the notebook number is not correct
+        if isinstance(which_notebook, int) == False: #Close if the notebook number is not an integer
             sys.exit(m1)
         else:
-            file_path=loading_adata(notebook)
+            file_path=loading_adata(which_notebook, m5)
             data=sc.read_h5ad(filename=file_path) #Loading the anndata
             build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
             return(data)
@@ -56,6 +88,27 @@ def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=Non
         build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
         build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
         return(data)
+
+def saving_anndata(ANNDATA, current_notebook=None):
+    '''
+    Save your anndata object
+    Parameters
+    ===========
+    ANNDATA : anndata object
+        adata object
+    current_notebook : int
+        The number of the current notebook.
+    '''
+    #Author : Guilherme Valente
+    #Messages and others
+    m1="Set an current_notebook=[INT], which INT is the number of current notebook."
+    m2="Your new anndata object is saved here: "
+
+    if isinstance(current_notebook, int) == False: #Close if the notebook number is not an integer
+        sys.exit(m1)
+    adata_output=ANNDATA.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + ANNDATA.uns["infoprocess"]["Test_number"] + ".h5ad"
+    ANNDATA.write(filename=adata_output)
+    print(m2 + adata_output)
 
 def pseudobulk_table(adata, groupby, how="mean"):
 	""" Get a pseudobulk table of values per cluster. 
