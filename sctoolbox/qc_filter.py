@@ -374,11 +374,16 @@ def filter_genes(adata, genes):
     """ Remove genes from adata object.
 
     Parameters
-    ==========
-    adata : AnnData
-        Anndata object to filter
+    -----------
+    adata : anndata.AnnData
+        Annotated data matrix object to filter
     genes : list of str
         A list of genes to remove from object.
+
+    Returns
+    --------
+    adata : anndata.AnnData
+        Anndata object with removed genes.
     """
 
     #Check if all genes are found in adata
@@ -393,3 +398,43 @@ def filter_genes(adata, genes):
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before-n_after, n_after))
 
     return(adata)
+
+
+def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
+    """ Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
+        as well as a "scrublet" key in adata.uns.
+
+    Parameters
+    ------------
+    adata : anndata.AnnData
+        Anndata object to estimate doublets for.
+    threshold : float
+        Threshold for doublet detection. Default is 0.25.
+    inplace : bool
+        Whether to estimate doublets inplace or not. Default is True.
+    kwargs : arguments
+        Additional arguments are passed to scanpy.external.pp.scrublet.
+
+    Returns
+    ---------
+    If inplace is False, the function returns a copy of the adata object. 
+    If inplace is True, the function returns None.
+    """
+    
+    if inplace == False:
+        adata = adata.copy()
+
+    #Run scrublet on adata
+    adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, copy=True, **kwargs)
+
+    # Plot the distribution of scrublet scores
+    sc.external.pl.scrublet_score_distribution(adata_scrublet)
+
+    #Save scores to object
+    adata.obs["doublet_score"] = adata_scrublet.obs["doublet_score"]
+    adata.obs["predicted_doublet"] = adata_scrublet.obs["predicted_doublet"]
+    adata.uns["scrublet"] = adata_scrublet.uns["scrublet"]
+
+    if inplace == False:
+        return adata
+

@@ -2,6 +2,8 @@ import pandas as pd
 import sys
 import os
 import scanpy as sc
+import importlib
+
 from sctoolbox.checker import *
 from sctoolbox.creators import *
 import matplotlib.pyplot as plt
@@ -32,6 +34,50 @@ def save_figure(path):
         create_dir(path) #recursively create parent dir if needed
         plt.savefig(path, dpi=600, bbox_inches="tight")
 
+
+def vprint(verbose=True):
+    """ Print the verbose message.
+    
+    Parameters
+    -----------
+    verbose : Boolean, optional
+        Set to False to disable the verbose message. Default: True
+    """
+
+    f = lambda message: print(message) if verbose == True else None
+
+    return f
+
+#Requirement for installed tools
+def check_module(module):
+    """ Check if <module> can be imported without error.
+    
+    Parameters
+    -----------
+    module : str
+        Name of the module to check.
+
+    Raises
+    ------
+    ImportError
+        If the module is not available for import.
+    """
+
+    error = 0
+    try:
+        importlib.import_module(module)
+    except ModuleNotFoundError:
+        error = 1
+    except:
+        raise #unexpected error loading module
+    
+    #Write out error if module was not found
+    if error == 1:
+        s = f"ERROR: Could not find the '{module}' module on path, but the module is needed for this functionality. Please install this package to proceed."
+        raise ImportError(s)
+
+
+#Loading adata file and adding the information to be evaluated and color list
 def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
     '''
     Load anndata object
@@ -111,29 +157,29 @@ def saving_anndata(ANNDATA, current_notebook=None):
     print(m2 + adata_output)
 
 def pseudobulk_table(adata, groupby, how="mean"):
-	""" Get a pseudobulk table of values per cluster. 
-	
-	Parameters
-	-----------
-	adata : anndata object
-		An annotated data matrix containing counts in .X.
-	groupby : str
-		Name of a column in adata.obs to cluster the pseudobulks by.
-	how : str, optional
-		How to calculate the value per cluster. Can be one of "mean" or "sum". Default: "mean"
-	"""
-	
-	adata = adata.copy()
-	adata.obs[groupby] = adata.obs[groupby].astype('category')
-	
-	#Fetch the mean/sum counts across each category in cluster_by
-	res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)                                                      
-	for clust in adata.obs[groupby].cat.categories: 
-		
-		if how == "mean":
-			res.loc[clust] = adata[adata.obs[groupby].isin([clust]),:].X.mean(0)
-		elif how == "sum":
-			res.loc[clust] = adata[adata.obs[groupby].isin([clust]),:].X.sum(0)
-	
-	res = res.T #transform to genes x clusters
-	return(res)
+    """ Get a pseudobulk table of values per cluster. 
+    
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        An annotated data matrix containing counts in .X.
+    groupby : str
+        Name of a column in adata.obs to cluster the pseudobulks by.
+    how : str, optional
+        How to calculate the value per cluster. Can be one of "mean" or "sum". Default: "mean"
+    """
+    
+    adata = adata.copy()
+    adata.obs[groupby] = adata.obs[groupby].astype('category')
+    
+    #Fetch the mean/sum counts across each category in cluster_by
+    res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)                                                      
+    for clust in adata.obs[groupby].cat.categories: 
+        
+        if how == "mean":
+            res.loc[clust] = adata[adata.obs[groupby].isin([clust]),:].X.mean(0)
+        elif how == "sum":
+            res.loc[clust] = adata[adata.obs[groupby].isin([clust]),:].X.sum(0)
+    
+    res = res.T #transform to genes x clusters
+    return(res)
