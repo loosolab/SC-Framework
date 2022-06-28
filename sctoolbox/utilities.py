@@ -157,3 +157,81 @@ def pseudobulk_table(adata, groupby, how="mean"):
     
     res = res.T #transform to genes x clusters
     return(res)
+
+
+def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", output_prefix="split_"):
+    """
+    Split BAM files into clusters based on 'groupby' from the anndata.obs table.
+
+    Parameters
+    ----------
+    adata : anndata.Anndata
+        Annotated data matrix containing clustered cells in .obs.
+    bams : str or list of str
+        One or more BAM files to split into clusters
+    groupby : str
+        Name of a column in adata.obs to cluster the pseudobulks by.
+    barcode_col : str, optional
+        Name of a column in adata.obs to use as barcodes. If None, use the index of .obs.
+    read_tag : str, optional
+        Tag to use to identify the reads to split. Must match the barcodes of the barcode_col. Default: "CB".
+    output_prefix : str, optional
+        Prefix to use for the output files. Default: "split_".
+    """
+    
+    #To-do: check whether groupby and barcode_col are in adata.obs
+    
+    if isinstance(bams, str):
+        bams = [bams]
+        
+    #Establish clusters from obs
+    clusters = set(adata.obs[groupby])
+    print(f"Found {len(clusters)} groups in .obs.{groupby}: {list(clusters)}")
+
+    if barcode_col is None:
+        barcode2cluster = dict(zip(adata.obs.index.tolist(), adata.obs[groupby]))
+    else:
+        barcode2cluster = dict(zip(adata.obs[barcode_col], adata.obs[groupby]))
+
+    #Open output files for writing clusters
+    template = pysam.AlignmentFile(bams[0], "rb")
+    
+    handles = {}
+    for cluster in clusters:
+        f_out = f"{output_prefix}{cluster}.bam"
+        handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template)
+        
+    #Loop over bamfile(s)
+    for i, bam in enumerate(bams):
+        print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
+        
+        bam_obj = pysam.AlignmentFile(bam, "rb")
+        
+        #Update progress based on total number of reads
+        total = bam_obj.mapped
+        pbar = tqdm(total=total)
+        step = int(total / 10000) #10000 total updates
+        
+        i = 0
+        written = 0
+        for read in bam_obj:
+            i += 1
+            
+            bc = read.get_tag(read_tag)
+            
+            #Update step manually - there is an overhead to update per read with hundreds of million reads
+            if i == step:
+                pbar.update(step)
+                i = 0
+            
+            if bc in barcode2cluster:
+                cluster = barcode2cluster[bc]
+                handles[cluster].write(read)
+                written += 1
+        
+        print(f"Wrote {written} reads to cluster files")
+        
+    #Close all files
+    for handle in handles.values():
+        handle.close()
+    
