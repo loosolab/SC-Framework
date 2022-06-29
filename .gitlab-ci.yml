@@ -31,7 +31,7 @@ before_script:
   - pip install .
   - pip install pytest
   - pip install pytest-cov
-  - apt-get install r-base
+  - apt -y install r-base
 
 
 stages: 
