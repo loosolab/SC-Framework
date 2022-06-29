@@ -8,6 +8,8 @@ import os
 from os import path
 import sys
 import sctoolbox.creators as cr
+import warnings
+
 ##################################
 
 def write_info_txt(path_value, file_path="./"):
@@ -16,13 +18,15 @@ def write_info_txt(path_value, file_path="./"):
     Parameters:
     ===========
     path_value : String
-        path that is written to the info.yml
+        path that is written to the info.yml.
+        Adds info.txt to end if no filename is given.
     file_path : String
         path where the info.yml is stored
     '''
 
-    if not file_path.endswith("info.txt"):
-       file_path = os.path.join(file_path,"info.txt")
+    if file_path.endswith("/"):
+        warnings.warn("No filename given. Set to info.txt")
+        file_path = os.path.join(file_path,"info.txt")
 
     with open(file_path, "w") as file:
         file.write(path_value)
