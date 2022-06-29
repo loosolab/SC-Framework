@@ -28,6 +28,7 @@ before_script:
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
+  - apt update
   - apt -y install r-base
   - pip install .
   - pip install pytest
