@@ -1,4 +1,5 @@
 from unittest import mock
+import pytest
 import builtins
 import sctoolbox.checker as checker
 
@@ -10,5 +11,9 @@ def test_fetch_info_path(tmpdir):
 
 def test_write_info_txt(tmpdir):
     file = tmpdir.join("info.txt")
-    checker.write_info_txt("/test/path/", file.strpath)
+    checker.write_info_txt("/test/path/", tmpdir.strpath)
     assert file.read() == '/test/path/'
+
+def test_write_info_txt_val_err():
+    with pytest.raises(ValueError, match="Invalid directory given."):
+        checker.write_info_txt("/test/path/", "invalid_dir")

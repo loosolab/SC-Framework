@@ -24,9 +24,10 @@ def write_info_txt(path_value, file_path="./"):
         path where the info.yml is stored
     '''
 
-    if file_path.endswith("/"):
-        warnings.warn("No filename given. Set to info.txt")
+    if os.path.isdir(file_path):
         file_path = os.path.join(file_path,"info.txt")
+    else:
+        raise ValueError("Invalid directory given.")
 
     with open(file_path, "w") as file:
         file.write(path_value)
