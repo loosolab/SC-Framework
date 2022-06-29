@@ -64,4 +64,4 @@ def output_path(OUTPATH, TEST): #Check if the directory for output exist.
 
     #Creating storing information for next
     to_info_txt="Output_path:" + dire
-    ch.check_infoyml(VALUE=to_info_txt, TASK="create") #Printing the output dir detailed in the info.txt
+    ch.write_info_txt(path_value=to_info_txt) #Printing the output dir detailed in the info.txt

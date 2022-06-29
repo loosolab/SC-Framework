@@ -4,8 +4,8 @@ import os
 import scanpy as sc
 import importlib
 
-from sctoolbox.checker import *
-from sctoolbox.creators import *
+import sctoolbox.checker as sc
+import sctoolbox.creators as cr
 
 import matplotlib.pyplot as plt
 
@@ -95,7 +95,7 @@ def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=Non
     '''
     #Author : Guilherme Valente
     def loading_adata(NUM):
-        pathway=check_infoyml(TASK="give_path")
+        pathway=sc.fetch_info_txt()
         files=os.listdir(''.join(pathway))
         for a in files:
             if "anndata_" + str(NUM-1) in a:
@@ -116,7 +116,7 @@ def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=Non
         else:
             file_path=loading_adata(notebook)
             data=sc.read_h5ad(filename=file_path) #Loading the anndata
-            build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
+            cr.build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
             return(data)
     elif is_from_previous_note == False: #Load anndata object from other source
         answer=input(m3)
@@ -126,8 +126,8 @@ def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=Non
             print(m4)
             answer=input(m4)
         data=sc.read_h5ad(filename=answer) #Loading the anndata
-        build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
-        build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
+        cr.build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
+        cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
         return(data)
 
 def pseudobulk_table(adata, groupby, how="mean"):
