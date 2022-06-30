@@ -179,7 +179,12 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         Prefix to use for the output files. Default: "split_".
     """
     
-    #To-do: check whether groupby and barcode_col are in adata.obs
+    # check whether groupby and barcode_col are in adata.obs
+    if groupby not in adata.obs.columns:
+        raise ValueError(f"Column '{groupby}' not found in adata.obs!")
+
+    if barcode_col not in adata.obs.columns:
+        raise ValueError(f"Column '{barcode_col}' not foun in adata.obs!")
     
     if isinstance(bams, str):
         bams = [bams]
@@ -234,4 +239,3 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     #Close all files
     for handle in handles.values():
         handle.close()
-    
