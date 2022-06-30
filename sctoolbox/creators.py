@@ -76,8 +76,9 @@ def build_infor(adata, key, value, inplace = True):
 	    Information to be added for a given key
     inplace : boolean
         Add info inplace
+
+    @author:  Guilherme Valente
     """
-    #Author: Guilherme Valente
 
     if  type(adata) != anndata.AnnData:
         raise TypeError("Invalid data type. AnnData object is required.")
@@ -102,8 +103,10 @@ def output_path(OUTPATH, TEST): #Check if the directory for output exist.
         The pathway where the user wanna to store the data
     TEST : String.
         The name of the user wanna use to define the analysis of this pipeline, e.g., Test1
+
+    @author Guilherme Valente
     '''
-    #Author : Guilherme Valente
+
     m1="Define an appropriate path_out to stablish a place to save your results, e.g., /mnt/workspace/YOUR_NAME"
     m2="Output directory is ready: "
 
