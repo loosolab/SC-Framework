@@ -48,6 +48,11 @@ def test_build_infor_no_inplace(test_adata, key, value):
     adata = creator.build_infor(test_adata,key,value, inplace=False)
     assert adata.uns["infoprocess"][key] == value
 
+@pytest.mark.parametrize("key",[[list(), dict()]])
+def test_build_infor_invalid_type(test_adata, key):
+    with pytest.raises(TypeError, match="unhashable type: .*"):
+        creator.build_infor(test_adata,key,1)
+
 @pytest.mark.parametrize(("invalid_type","key","value"),[(1,1,1), ("test",1,1), ([1,2,3],1,1)])
 def test_build_infor_no_anndata(invalid_type,key,value):
     with pytest.raises(TypeError, match="Invalid data type. AnnData object is required."):
