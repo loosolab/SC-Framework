@@ -17,3 +17,8 @@ def test_write_info_txt(tmpdir):
 def test_write_info_txt_val_err():
     with pytest.raises(ValueError, match="Invalid directory given."):
         checker.write_info_txt("/test/path/", "invalid_dir")
+
+@pytest.mark.parametrize("invalid_char",[">", ":", "|", "\\", "<", "\""])
+def test_write_info_txt_invalid_char(invalid_char):
+    with pytest.raises(ValueError, match="Invalid character in directory string."):
+        checker.write_info_txt("/test/path/" + invalid_char + "/" , "invalid_dir")

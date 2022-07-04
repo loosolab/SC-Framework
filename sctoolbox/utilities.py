@@ -4,7 +4,7 @@ import os
 import scanpy as sc
 import importlib
 
-import sctoolbox.checker as sc
+import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 
 import matplotlib.pyplot as plt
@@ -95,7 +95,7 @@ def load_anndata(is_from_previous_note=True, notebook=None, data_to_evaluate=Non
     '''
     #Author : Guilherme Valente
     def loading_adata(NUM):
-        pathway=sc.fetch_info_txt()
+        pathway=ch.fetch_info_txt()
         files=os.listdir(''.join(pathway))
         for a in files:
             if "anndata_" + str(NUM-1) in a:
