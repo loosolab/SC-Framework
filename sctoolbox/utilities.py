@@ -93,8 +93,8 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         This is the anndata.obs[STRING] to be used for analysis, e.g. "condition"
     '''
     #Author : Guilherme Valente
-    def loading_adata(NUM, MES):
-        pathway=check_infoyml(TASK="give_path")
+    def loading_adata(NUM):
+        pathway=sc.fetch_info_txt()
         files=os.listdir(''.join(pathway))
         anndata_file=[]
         for a in files:
@@ -121,7 +121,7 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         else:
             file_path=loading_adata(which_notebook, m5)
             data=sc.read_h5ad(filename=file_path) #Loading the anndata
-            build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
+            cr.build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
             return(data)
     elif is_from_previous_note == False: #Load anndata object from other source
         answer=input(m3)
@@ -131,8 +131,8 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
             print(m4)
             answer=input(m4)
         data=sc.read_h5ad(filename=answer) #Loading the anndata
-        build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
-        build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
+        cr.build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
+        cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
         return(data)
 
 def saving_anndata(ANNDATA, current_notebook=None):

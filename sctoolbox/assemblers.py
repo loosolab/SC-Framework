@@ -80,7 +80,7 @@ def assembling_velocity(path_QUANT, tenX, assembling_10_velocity, TEST, dtype="f
     m5="\t\tSaving and loading."
     ######
     path_QUANT2=ch.check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="filtered") #Checking if all files for assembling are proper
-    result_path=ch.check_infoyml(TASK="give_path") #Loading the output path
+    result_path=ch.fetch_info_txt() #Loading the output path
     test2=result_path.split("results/")[1].replace("/", '').strip()
     if TEST != test2: #Check if the test description is different that the one in info.txt.
         sys.exit(m1)
