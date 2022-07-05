@@ -11,6 +11,58 @@ import sctoolbox.creators as cr
 import warnings
 import re
 
+import re
+
+##################################
+
+def check_notebook(notebook_num):
+    '''Check if the notebook number is int.
+    Parameters
+    ----------
+    notebook_num : Int
+       The number of the notebook assigned for the user for both load or save an anndata object
+    '''
+    if isinstance(notebook_num, int) == False:
+        raise TypeError('Only integer allowed')
+
+def write_info_txt(path_value, file_path="./"):
+    ''' Write path to info.txt
+
+    Parameters:
+    ===========
+    path_value : String
+        path that is written to the info.yml.
+        Adds info.txt to end if no filename is given.
+    file_path : String
+        path where the info.yml is stored
+    '''
+
+    pattern = re.compile('[<>:"\\\|\?\*]')
+    if re.search(pattern,path_value):
+        raise ValueError("Invalid character in directory string.")
+
+    if os.path.isdir(file_path):
+        file_path = os.path.join(file_path,"info.txt")
+    else:
+        raise ValueError("Invalid directory given.")
+
+    with open(file_path, "w") as file:
+        file.write(path_value)
+
+
+def fetch_info_txt(file_path="./info.txt"):
+    ''' Get path stored in the info.txt file
+
+    Parameters:
+    ===========
+    file_path : String
+        full path of info.txt file
+
+    Returns:
+    ========
+    path as string that was stored in the first line of info.txt
+    '''
+
 ##################################
 
 def write_info_txt(path_value, file_path="./"):
@@ -167,4 +219,3 @@ def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="f
                 for b in velocyto_path_files:  #Checking if *sample*/solo/Gene/filtered/* files exist
                     if b not in os.listdir(path_solo_velocyto):
                         sys.exit(path_solo_velocyto + "/" + b + m3)
-
