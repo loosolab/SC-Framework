@@ -7,7 +7,6 @@ import seaborn as sns
 import numpy as np
 import scanpy as sc
 import qnorm
-from sctoolbox.utilities import *
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 from sctoolbox.utilities import save_figure
@@ -361,8 +360,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #############################################################################
 
 def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME=None):
-    '''
-    Violin plot with cutoffs
+    '''Violin plot with cutoffs
     Parameters
     ------------
     DEFCELLs : Pandas dataframe
