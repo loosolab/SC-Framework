@@ -9,6 +9,7 @@ from os import path
 import sys
 import sctoolbox.creators as cr
 import warnings
+import re
 
 ##################################
 
@@ -23,6 +24,10 @@ def write_info_txt(path_value, file_path="./"):
     file_path : String
         path where the info.yml is stored
     '''
+
+    pattern = re.compile('[<>:"\\\|\?\*]')
+    if re.search(pattern,path_value):
+        raise ValueError("Invalid character in directory string.")
 
     if os.path.isdir(file_path):
         file_path = os.path.join(file_path,"info.txt")

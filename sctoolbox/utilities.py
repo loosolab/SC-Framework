@@ -4,8 +4,9 @@ import os
 import scanpy as sc
 import importlib
 
-from sctoolbox.checker import *
-from sctoolbox.creators import *
+import sctoolbox.checker as ch
+import sctoolbox.creators as cr
+
 import matplotlib.pyplot as plt
 
 def create_dir(path):
@@ -94,7 +95,7 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
     '''
     #Author : Guilherme Valente
     def loading_adata(NUM):
-        pathway=sc.fetch_info_txt()
+        pathway=ch.fetch_info_txt()
         files=os.listdir(''.join(pathway))
         anndata_file=[]
         for a in files:
