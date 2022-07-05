@@ -9,6 +9,7 @@ from os import path
 import sys
 import sctoolbox.creators as cr
 import warnings
+
 import re
 
 ##################################
@@ -38,6 +39,42 @@ def write_info_txt(path_value, file_path="./"):
     pattern = re.compile('[<>:"\\\|\?\*]')
     if re.search(pattern,path_value):
         raise ValueError("Invalid character in directory string.")
+
+    if os.path.isdir(file_path):
+        file_path = os.path.join(file_path,"info.txt")
+    else:
+        raise ValueError("Invalid directory given.")
+
+    with open(file_path, "w") as file:
+        file.write(path_value)
+
+
+def fetch_info_txt(file_path="./info.txt"):
+    ''' Get path stored in the info.txt file
+
+    Parameters:
+    ===========
+    file_path : String
+        full path of info.txt file
+
+    Returns:
+    ========
+    path as string that was stored in the first line of info.txt
+    '''
+
+##################################
+
+def write_info_txt(path_value, file_path="./"):
+    ''' Write path to info.txt
+
+    Parameters:
+    ===========
+    path_value : String
+        path that is written to the info.yml.
+        Adds info.txt to end if no filename is given.
+    file_path : String
+        path where the info.yml is stored
+    '''
 
     if os.path.isdir(file_path):
         file_path = os.path.join(file_path,"info.txt")
