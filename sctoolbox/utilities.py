@@ -6,6 +6,7 @@ import importlib
 
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
+
 import matplotlib.pyplot as plt
 
 def create_dir(path):
