@@ -286,7 +286,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
     
     return axs
 
-def hairball(adata, min_perc, interaction_score=0, output=None, title="Network", color_min=0, color_max=None):
+def hairball(adata, min_perc, interaction_score=0, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count"):
     '''
     Generate network graph of interactions between clusters.
     
@@ -312,6 +312,8 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
             Min value for color range.
         color_max : float, default max
             Max value for color range.
+        cbar_label : str, default 'Interaction count'
+            Label above the colorbar.
 
     Returns:
     ----------
@@ -428,14 +430,15 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
     cb = matplotlib.colorbar.ColorbarBase(axes[1], 
                                         orientation='vertical', 
                                         cmap=colormap,
-                                        #label='Receptor-Ligand Interactions',
                                         norm=matplotlib.colors.Normalize(0 if color_min is None else color_min, 
                                                                         max_weight))
     
     cb.ax.tick_params(labelsize=10*matplotlib_scale) 
+    cb.ax.set_title(cbar_label, fontsize=10*matplotlib_scale)
 
     # prevent label clipping out of picture
     plt.tight_layout()
+    plt.subplots_adjust(right=0.9)
 
     if output:
         # create path if necessary
