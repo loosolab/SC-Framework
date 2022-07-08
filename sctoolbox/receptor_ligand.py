@@ -286,7 +286,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
     
     return axs
 
-def hairball(adata, min_perc, interaction_score=0, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count"):
+def hairball(adata, min_perc, interaction_score=0, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False):
     '''
     Generate network graph of interactions between clusters.
     
@@ -314,6 +314,8 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
             Max value for color range.
         cbar_label : str, default 'Interaction count'
             Label above the colorbar.
+        show_count : bool, default False
+            Show the interaction count in the hairball.
 
     Returns:
     ----------
@@ -390,7 +392,7 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
                             (interactions["ligand_percent"] >= min_perc) &
                             (interactions["interaction_score"] > interaction_score)]
 
-        graph.add_edge(a, b, weight=len(subset))#, label=len(subset)) # add label to show edge labels
+        graph.add_edge(a, b, weight=len(subset))
 
     # set edge colors/ width based on weight
     colormap = cm.get_cmap('viridis', len(graph.es))
@@ -399,6 +401,10 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
     for e in graph.es:
         e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
         e["width"] = (e["weight"] / max_weight) * 10
+        # show weights in plot
+        if show_count:
+            e["label"] = e["weight"]
+            e["label_size"] = 25
         
     ########## setup matplotlib plot and combine with igraph ##########
     # Make Matplotlib use a Cairo backend
