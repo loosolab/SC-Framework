@@ -4,8 +4,9 @@ import os
 import scanpy as sc
 import importlib
 
-from sctoolbox.checker import *
-from sctoolbox.creators import *
+import sctoolbox.checker as ch
+import sctoolbox.creators as cr
+
 import matplotlib.pyplot as plt
 
 def create_dir(path):
@@ -27,6 +28,8 @@ def save_figure(path):
     ----------
     path : str
         Path to the file to be saved.
+        Add the extension (e.g. .tiff) you wanna save your figure in the end of path, e.g., /mnt/*/note2_violin.tiff
+        The lack of extension indicates the figure will be saved as .png
     """
 
     if path is not None:
@@ -93,36 +96,35 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         This is the anndata.obs[STRING] to be used for analysis, e.g. "condition"
     '''
     #Author : Guilherme Valente
-    def loading_adata(NUM, MES):
-        pathway=check_infoyml(TASK="give_path")
+    def loading_adata(NUM):
+        pathway=ch.fetch_info_txt()
         files=os.listdir(''.join(pathway))
-        anndata_file=[]
-        for a in files:
-            if "anndata_" + str(NUM) in a:
-                anndata_file.append(a)
-        if len(anndata_file) == 0:
-            print("We found these anndata objects:\n" + "\t".join(files))
-            sys.exit(MES + ''.join(pathway))
-        else:
-             return(''.join(pathway) + "/" + ''.join(anndata_file))
+        loading="anndata_" + str(NUM)
+        if any(loading in items for items in files):
+            for file in files:
+               if loading in file:
+                    anndata_file=file
+        else: #In case the user provided an inexistent anndata number
+            sys.exit(loading + " was not found in " + pathway)
+        return(''.join(pathway) + "/" + anndata_file)
     #Messages and others
     m1="You choose is_from_previous_note=True. Then, set an which_notebook=[INT], which INT is the number of the notebook that generated the anndata object you want to load."
     m2="Set the data_to_evaluate=[STRING], which STRING is anndata.obs[STRING] to be used for analysis, e.g. condition."
     m3="Paste the pathway and filename where your anndata object deposited."
     m4="Correct the pathway or filename or type q to quit."
-    m5="Anndata object not found. Check the path or the anndata name above mentioned: "
     opt1=["q", "quit"]
 
     if isinstance(data_to_evaluate, str) == False: #Close if the anndata.obs is not correct
             sys.exit(m2)
     if is_from_previous_note == True: #Load anndata object from previous notebook
-        if isinstance(which_notebook, int) == False: #Close if the notebook number is not an integer
+        try:
+            ch.check_notebook(which_notebook)
+        except TypeError:
             sys.exit(m1)
-        else:
-            file_path=loading_adata(which_notebook, m5)
-            data=sc.read_h5ad(filename=file_path) #Loading the anndata
-            build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
-            return(data)
+        file_path=loading_adata(which_notebook)
+        data=sc.read_h5ad(filename=file_path) #Loading the anndata
+        cr.build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
+        return(data)
     elif is_from_previous_note == False: #Load anndata object from other source
         answer=input(m3)
         while path.isfile(answer) == False: #False if pathway is wrong
@@ -131,8 +133,8 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
             print(m4)
             answer=input(m4)
         data=sc.read_h5ad(filename=answer) #Loading the anndata
-        build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
-        build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
+        cr.build_infor(data, "data_to_evaluate", data_to_evaluate) #Annotating the anndata data to evaluate
+        cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0]) #Annotating the anndata path
         return(data)
 
 def saving_anndata(ANNDATA, current_notebook=None):
@@ -150,8 +152,10 @@ def saving_anndata(ANNDATA, current_notebook=None):
     m1="Set an current_notebook=[INT], which INT is the number of current notebook."
     m2="Your new anndata object is saved here: "
 
-    if isinstance(current_notebook, int) == False: #Close if the notebook number is not an integer
-        sys.exit(m1)
+    try:
+        ch.check_notebook(current_notebook)
+    except TypeError:
+        sys.exit(m1) #Close if the notebook number is not an integer
     adata_output=ANNDATA.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + ANNDATA.uns["infoprocess"]["Test_number"] + ".h5ad"
     ANNDATA.write(filename=adata_output)
     print(m2 + adata_output)

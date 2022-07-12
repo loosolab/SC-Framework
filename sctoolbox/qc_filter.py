@@ -13,7 +13,7 @@ from sctoolbox.analyser import *
 
 ########################STEP 1: DEFINING DEFAULT CUTOFFS###############################
 #######################################################################################
-def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=None):
+def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):
     '''
     1- Definining the cutoffs for QC and filtering steps.
     2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
@@ -26,10 +26,11 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
         If true, only a plot with the data without cutoff lines will be provided.
     interval : Int or Float. Default: None.
         The percentage (from 0 to 1 or 100) to be used to calculate the cutoffs.
-    file_name : String
-        If you wanna use a custom filename to save.
-    save : Boolean
-        True, save the figure to the path given in 'save'. Default: None (figure is not saved).
+    file_name : String. Default is "note2_violin_"
+        Define a name for save a custom filename to save.
+        NOTE: use a sintax at least composing the "note2_". Do not add any file extension.
+    save : Boolean. Default is False
+        True, save the figure to the path given in 'save'.
 
     Returns
     ------------
@@ -57,16 +58,13 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
     pathway=ANNDATA.uns["infoprocess"]["Anndata_path"]
 
     #Creating filenames
-    if save == True and file_name is not None and type(file_name) != str: #Here checking is custom name is proper
+    if save == True and file_name != "note2_violin_" and type(file_name) != str: #Here checking is custom name is proper
         sys.exist(m1)
-    elif save == True and file_name is not None and type(file_name) == str: #Custom name is proper
+    elif save == True and type(file_name) == str: #Custom name is proper. If custom is not provided, the default is used
         filename=pathway + file_name
         filename=filename.replace("//", "/")
-    elif save == True and file_name is None: #Use default filename
-        filename=pathway + "note2_violin_"
-    elif save == False or save is None:
+    elif save == False:
         filename=""
-
 
     #Checking if interval for cutoffs were properly defined
     if only_plot == False and interval == None: #It is missing the interval for cutoff
