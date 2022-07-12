@@ -12,6 +12,8 @@ Create and activate a conda environment:
 ```
 $ conda create -n scRNAseq_autom python=3.7 ipykernel
 $ conda activate scRNAseq_autom
+$ conda install pip
+$ conda install r-base
 ```
 Register the environment in the kernel
 ```
