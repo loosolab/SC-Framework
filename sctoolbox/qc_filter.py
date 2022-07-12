@@ -13,7 +13,7 @@ from sctoolbox.analyser import *
 
 ########################STEP 1: DEFINING DEFAULT CUTOFFS###############################
 #######################################################################################
-def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=None):
+def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):
     '''
     1- Definining the cutoffs for QC and filtering steps.
     2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
@@ -26,10 +26,11 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
         If true, only a plot with the data without cutoff lines will be provided.
     interval : Int or Float. Default: None.
         The percentage (from 0 to 1 or 100) to be used to calculate the cutoffs.
-    file_name : String
-        If you wanna use a custom filename to save.
-    save : Boolean
-        True, save the figure to the path given in 'save'. Default: None (figure is not saved).
+    file_name : String. Default is "note2_violin_"
+        Define a name for save a custom filename to save.
+        NOTE: use a sintax at least composing the "note2_". Do not add any file extension.
+    save : Boolean. Default is False
+        True, save the figure to the path given in 'save'.
 
     Returns
     ------------
@@ -49,53 +50,52 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
     ANNDATA.uns[uns_condition_name + '_colors']=ANNDATA.uns["color_set"][:len(ANNDATA.obs[uns_condition_name].unique())]
     sta_cut_cells, sta_cut_genes=None, None
     #Setting colors for plot
+    m1="file_name[STRING]"
     m2="The interval=[float or int] must be between 0 to 1 or 100."
-    m3="violin_plot"
     m4="Defining and ploting cutoffs only for total_counts"
     m5="You choose not plot cutoffs"
     m6="To define cutoff demands to set the interval=[int or float] from 0 to 1 or 100."
+    pathway=ANNDATA.uns["infoprocess"]["Anndata_path"]
 
-    if only_plot == False:
-        if interval == None: #The cutoff will be performed, but it is missing the interval
+    #Creating filenames
+    if save == True and file_name != "note2_violin_" and type(file_name) != str: #Here checking is custom name is proper
+        sys.exist(m1)
+    elif save == True and type(file_name) == str: #Custom name is proper. If custom is not provided, the default is used
+        filename=pathway + file_name
+        filename=filename.replace("//", "/")
+    elif save == False:
+        filename=""
+
+    #Checking if interval for cutoffs were properly defined
+    if only_plot == False and interval == None: #It is missing the interval for cutoff
             sys.exit(m6)
-        else:
-            filename=m3 + "_cutoff"
-#Checking if interval for cutoffs were properly defined
+    elif only_plot == False and interval != None:
             if check_cuts(str(interval), 0, 100) == "invalid": #Means the interval is not a number
                     sys.exit(m2)
             else:
                 if isinstance(interval, (int)) == True and interval >= 0 and interval <= 100: #Converting interval int for float from 0 to 1
                     interval=interval/100
-#Checking if the total count was already filtered
+            #Checking if the total count was already filtered
             act_c_total_counts, id_c_total_counts=float(ANNDATA.obs["total_counts"].sum()), float(ANNDATA.uns["infoprocess"]["ID_c_total_counts"])
             if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "valid": #Total_counts was not filtered yet, then only this parameter will be evaluated
                 sta_cut_cells, sta_cut_genes=True, False
                 calulate_and_plot_filter.append("total_counts")
-                filename=m3 + "_total_count_cutoff"
+                filename=filename + "tot_count_cut"
                 print(m4)
-#Other parameters will be evaluated because plot was selected and total count is filtered
+            #Other parameters will be evaluated because plot was selected and total count is filtered
             elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "invalid": #Total counts was filtered yet.
                 sta_cut_cells, sta_cut_genes=True, True
-                filename=m3 + "_other_param_cutoff"
+                filename=filename + "other_param_cut"
                 for a in cells_genes_list:
                     if a != "total_counts":
                         calulate_and_plot_filter.append(a)
-    else: #Only plots without cutoff lines will be provided
-        filename=m3
-
-#Defining filenames and path to save the figure
-    if save == True:
-        save_path=ANNDATA.uns["infoprocess"]["Anndata_path"]
-        if type(file_name) == str: #The violing plot will have a custom filename
-            filename=file_name
-    else:
-        save_path, filename=None, None
-
-#Building the dataframe with default cutoffs stablished and the plots
-#Here will be called the function establishing_cuts from the analyser.py module
-    if only_plot == True: #Only plot without cutoffs
+    #Ploting with or without cutoffs
+    if only_plot == True: #Only plots without cutoff lines will be provided
+        filename=filename
+        #Building the dataframe with default cutoffs stablished and the plots
+        #Here will be called the function establishing_cuts from the analyser.py module
         print(m5)
-        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, SAVE_PATH=save_path, FILENAME=filename)
+        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
     elif only_plot == False: #Calculate cutoffs and plot in the violins
         if sta_cut_cells == True: #For cells
             for a in for_cells_pd[for_cells[0]].unique().tolist(): #Getting the conditions.
@@ -114,7 +114,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
                     kurtosis_val_norm=int(kurtosis_val - 3) #This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
                     df_cuts=establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
         display(df_cuts)
-        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, SAVE_PATH=save_path, FILENAME=filename)
+        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
         return df_cuts
 
 ########################STEP 2: DEFINING CUSTOM CUTOFFS###############################
@@ -372,11 +372,16 @@ def filter_genes(adata, genes):
     """ Remove genes from adata object.
 
     Parameters
-    ==========
-    adata : AnnData
-        Anndata object to filter
+    -----------
+    adata : anndata.AnnData
+        Annotated data matrix object to filter
     genes : list of str
         A list of genes to remove from object.
+
+    Returns
+    --------
+    adata : anndata.AnnData
+        Anndata object with removed genes.
     """
 
     #Check if all genes are found in adata
@@ -391,3 +396,43 @@ def filter_genes(adata, genes):
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before-n_after, n_after))
 
     return(adata)
+
+
+def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
+    """ Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
+        as well as a "scrublet" key in adata.uns.
+
+    Parameters
+    ------------
+    adata : anndata.AnnData
+        Anndata object to estimate doublets for.
+    threshold : float
+        Threshold for doublet detection. Default is 0.25.
+    inplace : bool
+        Whether to estimate doublets inplace or not. Default is True.
+    kwargs : arguments
+        Additional arguments are passed to scanpy.external.pp.scrublet.
+
+    Returns
+    ---------
+    If inplace is False, the function returns a copy of the adata object. 
+    If inplace is True, the function returns None.
+    """
+    
+    if inplace == False:
+        adata = adata.copy()
+
+    #Run scrublet on adata
+    adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, copy=True, **kwargs)
+
+    # Plot the distribution of scrublet scores
+    sc.external.pl.scrublet_score_distribution(adata_scrublet)
+
+    #Save scores to object
+    adata.obs["doublet_score"] = adata_scrublet.obs["doublet_score"]
+    adata.obs["predicted_doublet"] = adata_scrublet.obs["predicted_doublet"]
+    adata.uns["scrublet"] = adata_scrublet.uns["scrublet"]
+
+    if inplace == False:
+        return adata
+
