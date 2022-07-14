@@ -1,11 +1,16 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import ipywidgets as widgets
 import sys
 from scipy.stats import *
 import scipy
 from kneed import KneeLocator
 import pandas as pd
+import functools #for partial functions
+from matplotlib.patches import Rectangle
+import time
+
 from sctoolbox.plotting import *
 from sctoolbox.creators import *
 from sctoolbox.checker import *
@@ -436,12 +441,89 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
     if inplace == False:
         return adata
         
+
+
+
 #####################################################################################
 ######################## More general QC filtering functions ########################
 #####################################################################################
 
+def _link_sliders(sliders):
+    """ Link the values between interactive sliders.
+    
+    Parameters
+    ------------
+    sliders : 
 
-def quality_violin(adata, columns, which="obs", groupby=None, ncols=4, header=None, color_list=None, title=None, thresholds=None, save=None):
+
+    """
+    
+    tup = [(slider, 'value') for slider in sliders]
+    
+    l_list = []
+    for i in range(1,len(tup)):
+        l = widgets.link(*tup[i-1:i+1])
+        l_list.append(l)
+    
+    return l_list
+
+def _toggle_linkage(checkbox, l_list):
+    """ Either link or unlink sliders depending on the new value of the checkbox.
+    
+    Parameters
+    -----------
+    checkbox: 
+    
+    l_list : ..     
+    
+    """
+    
+    check_bool = checkbox["new"]
+    
+    if check_bool == True:
+        for l in l_list:
+            l.link()
+    elif check_bool == False:
+        for l in l_list:
+            l.unlink()
+    
+def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade, save=None):
+    """ Update the locations of thresholds in plot """
+    
+    vmin, vmax = slider["new"]
+    
+    #Update min line
+    ydata = min_line.get_ydata()
+    ydata = [vmin for _ in ydata]
+    min_line.set_ydata(ydata)
+    
+    x,y = min_shade.get_xy()
+    min_shade.set_height(vmin - y)
+        
+    #Update max line
+    ydata = max_line.get_ydata()
+    ydata = [vmax for _ in ydata]
+    max_line.set_ydata(ydata)
+    
+    x,y = max_shade.get_xy()
+    max_shade.set_height(vmax - y)
+    
+    #Draw figure after update
+    fig.canvas.draw_idle()
+    
+    #Save figure
+    sctoolbox.utilities.save_figure(save)
+
+    
+def quality_violin(adata, columns, 
+                                which="obs", 
+                                groupby=None, 
+                                ncols=3, 
+                                header=None, 
+                                color_list=None, 
+                                title=None, 
+                                thresholds=None,
+                                save=None):
     """
     A function to plot quality measurements for cells in an anndata object.
 
@@ -463,39 +545,39 @@ def quality_violin(adata, columns, which="obs", groupby=None, ncols=4, header=No
         A list of colors to use for violins. Default: None (colors are chosen automatically)
     title : str, optional
         The title of the full plot. Default: None (no title).
-    thresholds : dict, optional
+    init_thresholds : dict, optional
         Dictionary containing min/max thresholds to show in plot.
     save : str, optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
     """
+
+    #---------------- Test input and get ready --------------#
+
+    ncols = min(ncols, len(columns)) #Make sure ncols is not larger than the number of columns
+    nrows = int(np.ceil(len(columns) / ncols))
 
     #Decide which table to use
     if which == "obs":
         table = adata.obs
     elif which == "var":
         table = adata.var
+    else:
+        raise ValueError()
 
     #Order of categories on x axis
     if groupby is not None:
-        x_order = table[groupby].cat.categories
+        groups = table[groupby].cat.categories
+        n_colors = len(groups)
     else:
-        x_order = None
-
-    #Violing plot to base the next filtering processess
-    if groupby is not None:
-        n_colors = len(table[groupby].cat.categories)
-    else:
-        n_colors = 1 #no grouping; only one violin
-
-    ncols = min(ncols, len(columns)) #Make sure ncols is not larger than the number of columns
-    nrows = int(np.ceil(len(columns) / ncols))
+        groups = None
+        n_colors = 1
 
     #Setup colors to be used
     if color_list is None:
         color_list = sns.color_palette("Set1", n_colors)
     else:
         if int(n_colors) <= int(len(color_list)):
-            raise ValueError("Increase the color_list variable")
+            raise ValueError("Increase the color_list variable to at least {} colors.".format(n_colors))
         else:
             color_list = color_list[:n_colors]
 
@@ -506,54 +588,123 @@ def quality_violin(adata, columns, which="obs", groupby=None, ncols=4, header=No
         #check that header has the right length
         if len(header) != len(columns):
             raise ValueError("Length of header does not match length of columns")
-
-
-    #Setting figures
-    fig, axarr = plt.subplots(nrows, ncols, figsize = (ncols*5, nrows*5))
-    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr
-    axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr
-    axes_list = axarr.flatten()
     
-    #Plotting
-    axes_dict = {}
-    for i, column in enumerate(columns):
-        ax = axes_list[i]
+    #Setup thresholds if not given
+    if thresholds is None:
+        thresholds = {col: {} for col in columns}
 
-        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=x_order, palette=color_list)
-        ax.set_title(header[i])
-        ax.set_ylabel("")
-        ax.set_xlabel("")
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
 
-        axes_dict[column] = ax
+    #---------------- Setup figure --------------#
+
+    #Setting up output figure
+    output = widgets.Output()
+    with output: 
+        fig, axarr = plt.subplots(nrows, ncols, figsize=(ncols*3, nrows*3))
+        axes_list = axarr.flatten()
 
     #Remove empty axes
     for ax in axes_list[len(columns):]:
         ax.axis('off')
 
-    #Add thresholds from dict
-    if thresholds is not None:
-
-        for col in thresholds:
-            ax = axes_dict[col]
-            ymin, ymax = ax.get_ylim()
-            
-            if "min" in thresholds[col]:
-                ax.axhline(thresholds[col]["min"], color="red", linestyle="--")
-                ax.axhspan(ymin, thresholds[col]["min"], color="grey", alpha=0.2)
-
-            if "max" in thresholds[col]:
-                ax.axhline(thresholds[col]["max"], color="red", linestyle="--")
-                ax.axhspan(thresholds[col]["max"], ymax, color="grey", alpha=0.2)
-    
-    plt.tight_layout()
-
-    #Add title
+    #Add title of full plot
     if title != None:
         plt.suptitle(title, y=1.05, fontsize=20)
 
-    #Save figure
-    sctoolbox.utilities.save_figure(save)
+    #Add title of individual plots
+    for i in range(len(columns)):
+        ax = axes_list[i]
+        ax.set_title(header[i], fontsize=12)
+  
+
+    #------------- Plot data and add sliders ---------#
+
+    #Plotting data
+    slider_dict = {}
+    accordion_content = []
+    for i, column in enumerate(columns):
+        ax = axes_list[i]
+        slider_dict[column] = {}
+
+        #Plot data from table
+        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+        ax.set_ylabel("")
+        ax.set_xlabel("")    
+
+        ticks = ax.get_xticks()
+        ylim = ax.get_ylim() #ylim before plotting any thresholds
+
+        #Establish groups
+        if groupby is not None:
+            group_names = groups
+        else:
+            group_names = ["Threshold"] 
+
+        #Plot thresholds per group
+        data_min = table[column].min()
+        data_max = table[column].max()  
+        slider_list = []
+        for j, group in enumerate(group_names):
+            
+            #Establish the threshold to plot
+            if group in thresholds[column]:
+                vmin = thresholds[column][group].get("min", data_min)
+                vmax = thresholds[column][group].get("max", data_max)
+            else:
+                vmin = thresholds[column].get("min", data_min)
+                vmax = thresholds[column].get("max", data_max)
+
+            #Plot line and shading
+            tick = ticks[j]
+            x = [tick-0.5, tick+0.5]
+
+            min_line = ax.plot(x, [vmin]*2, color="red", linestyle="--")[0]
+            max_line = ax.plot(x, [vmax]*2, color="red", linestyle="--")[0]
+            min_shade = ax.add_patch(Rectangle((x[0], ylim[0]), x[1]-x[0], vmin - ylim[0], color="grey", alpha=0.2, linewidth=0))
+            max_shade = ax.add_patch(Rectangle((x[0], ylim[1]), x[1]-x[0], vmax - ylim[1], color="grey", alpha=0.2, linewidth=0))
+
+            #Add slider to control thresholds
+            slider = widgets.FloatRangeSlider(description=group, min=vmin, max=vmax, 
+                                                value=[vmin, vmax],  #initial value
+                                                continuous_update=False)
+
+            slider.observe(functools.partial(_update_thresholds, fig=fig, min_line=min_line, 
+                                                                    min_shade=min_shade,
+                                                                    max_line=max_line,
+                                                                    max_shade=max_shade, 
+                                                                    save=save), 
+                                                                    names=["value"])
+
+            slider_list.append(slider)
+            slider_dict[column][group] = slider
+
+        #Link sliders together
+        if len(slider_list) > 0:
+            link_list = _link_sliders(slider_list)
+        
+            #Toggle linked sliders
+            c = widgets.Checkbox(value=True, description='Global threshold', disabled=False, indent=False)
+            c.observe(functools.partial(_toggle_linkage, l_list=link_list), names=["value"])
+
+            box = widgets.VBox([c] + slider_list)
+        
+        else:
+            box = widgets.Vbox(slider_list)
+        
+        accordion_content.append(box)
+
+    plt.tight_layout()
+    sctoolbox.utilities.save_figure(save) #save plot; can be overwritten if thresholds are changed
+
+    #Assemble accordion with different measures
+    accordion = widgets.Accordion(children=accordion_content)
+    for i in range(len(columns)):
+        accordion.set_title(i, columns[i])
+
+    full_box = widgets.HBox([accordion, output])
+
+    return full_box, slider_dict
+
 
 def apply_qc_thresholds(adata, thresholds, which="obs"):
     """
