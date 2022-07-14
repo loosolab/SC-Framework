@@ -8,9 +8,8 @@ import os
 from os import path
 import sys
 import sctoolbox.creators as cr
+import sctoolbox.utilities as ut
 import warnings
-import re
-
 import re
 
 ##################################
@@ -126,7 +125,7 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     '''
     #Author: Guilherme Valente
     quiters=["q", "quit"]
-    if ANS.replace('.', "", 1).isdigit() == True:
+    if ut.is_str_numeric(ANS) == True:
         x=float(ANS)
         if x >=LIMIT1 and x <= LIMIT2:
             return(True)

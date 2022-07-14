@@ -9,6 +9,13 @@ import sctoolbox.creators as cr
 
 import matplotlib.pyplot as plt
 
+def is_str_numeric(ans):
+    try:
+        float(ans)
+        return True
+    except ValueError:
+        return False
+
 def create_dir(path):
     """ Create a directory if it is not existing yet.
     
