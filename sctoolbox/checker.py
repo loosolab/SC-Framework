@@ -172,9 +172,18 @@ def check_quit(answer):
     if answer in ["q", "quit"]:
         sys.exit("You quit and lost all modifications :(")
 
+
+def checking_paths(CHECK_PATH):
+    if path.exists(CHECK_PATH):
+        return("valid")
+    else:
+        return("invalid path")
+
+
 def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="filtered"): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml.
     '''
     Checking if the paths are proper for assembling 10X for velocity.
+
     
     Parameters
     =============
@@ -189,11 +198,6 @@ def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="f
     '''
     #Author : Guilherme Valente
     #Tracking is pathways exist.
-    def checking_paths(CHECK_PATH, MES):
-        if path.exists(path_QUANT):
-            return("valid")
-        else:
-            sys.exit(MES)
             
     #Messages and others
     go_assembling=False
