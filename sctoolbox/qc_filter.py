@@ -33,7 +33,7 @@ def loop_question(ANSWER, QUIT_M, CHECK): #Checking invalid outcome
     opt1, opt2, opt3, opt4=["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"] #Lists with possible answers for each question
     options={"yn":opt2, "custdef":opt3, "custdefskip": opt4}
     if check_options(CHECK,list(options.keys()))==False and type(CHECK) != float:
-	sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
+        sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
 
     ANSWER=input(ANSWER).lower()
     #Check validity of options
