@@ -254,6 +254,9 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
                 handles[cluster].write(read)
                 written += 1
         
+        # close progressbar
+        pbar.close()
+
         print(f"Wrote {written} reads to cluster files")
         
     #Close all files
