@@ -17,27 +17,47 @@ def run_scsa(adata, scsa_path, wholedb_path, results_path='', python='',
     function and generates input matrix for SCSA, then runs SCSA and assigns cell types to clusters
     in adata.obs.
 
-    Args:
-        adata (AnnData): Adata object to be annotated, must contain ranked genes in adata.uns
-        scsa_path (str): Path to SCSA.py
-        wholedb_path (str): Path to whole.db
-        results_path (str, optional): Path where the results csv file will be saved. Defaults to ''.
-        python (str, optional): Path to python. If not given, will be infered form sys.executable.
-        species (str, optional): Supports only human or mouse. Defaults to Human.
-        source (str, optional): Which software was used to generate ranked genes. Defaults to 'scanpy'.
-        fc (float, optional): Fold change threshold to filter genes. Defaults to 1.5.
-        pvalue (float, optional): P value threshold to filter. Defaults to 0.01.
-        tissue (str, optional): A specific tissue can be defined. Defaults to 'All'.
-        celltype (str, optional): Either normal or cancer. Defaults to 'normal'.
-        gene_symbol (bool, optional): Whether the genes in adata are gene names. Defaults to True.
-        user_db ([bool],str, optional): Path to the user defined marker database . Defaults to False.
-        z_score (str, optional): Whether to choose the best scoring cell type. Defaults to 'best'.
-        inplace (bool, optional): If True, cell types will be added to adata.obs. Defaults to True.
-        key (str, optional): The key in adata.uns where ranked genes are stored. Defaults to 'rank_genes_groups'.
-        key_added (str, optional): The column name in adata.obs where the cell types will be added. Defaults to 'SCSA_pred_celltypes'.
-        clusters_col (str, optional): Column in adata.obs where the cluster annotation is found. Defaults to 'leiden'.
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Adata object to be annotated, must contain ranked genes in adata.uns
+    scsa_path : str 
+        Path to SCSA.py
+    wholedb_path : str 
+        Path to whole.db
+    results_path : str, optional
+        Path where the results csv file will be saved. Defaults to ''.
+    python : str, optional
+        Path to python. If not given, will be infered form sys.executable.
+    species : str, optional
+        Supports only human or mouse. Defaults to Human.
+    source : str, optional
+        Which software was used to generate ranked genes. Defaults to 'scanpy'.
+    fc : float, optional
+        Fold change threshold to filter genes. Defaults to 1.5.
+    pvalue : float, optional
+        P value threshold to filter. Defaults to 0.01.
+    tissue : float, optional
+        A specific tissue can be defined. Defaults to 'All'.
+    celltype : str, optional
+        Either normal or cancer. Defaults to 'normal'.
+    gene_symbol : str, optional
+        Whether the genes in adata are gene names. Defaults to True.
+    user_db : bool, optional
+        Path to the user defined marker database . Defaults to False.
+    z_score : str, optional
+        Whether to choose the best scoring cell type. Defaults to 'best'.
+    inplace : bool, optional
+        If True, cell types will be added to adata.obs. Defaults to True.
+    key : str, optional
+        The key in adata.uns where ranked genes are stored. Defaults to 'rank_genes_groups'.
+    key_added : str, optional
+        The column name in adata.obs where the cell types will be added. Defaults to 'SCSA_pred_celltypes'.
+    clusters_col : str, optional
+            Column in adata.obs where the cluster annotation is found. Defaults to 'leiden'.
 
-    Returns:
+    Returns
+    --------
         AnnData: If inplace==False, returns adata with cell types in adata.obs
     """
 
