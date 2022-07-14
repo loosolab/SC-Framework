@@ -3,6 +3,7 @@ import sys
 import os
 import scanpy as sc
 import importlib
+import re
 
 from sctoolbox.checker import *
 from sctoolbox.creators import *
@@ -186,6 +187,12 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     read_buffer : int , default 1000
         Number of reads read/ processed at once.
     """
+    # check then load modules
+    check_module("pysam")
+    import pysam
+
+    check_module("tqdm")
+    from tqdm import tqdm
     
     # check whether groupby and barcode_col are in adata.obs
     if groupby not in adata.obs.columns:
@@ -211,7 +218,8 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     
     handles = {}
     for cluster in clusters:
-        f_out = f"{output_prefix}{cluster}.bam"
+        # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
+        f_out = re.sub(r'[\\/*?:"<>|]', "_", f"{output_prefix}{cluster}") + ".bam"
         handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template)
         
     #Loop over bamfile(s)
