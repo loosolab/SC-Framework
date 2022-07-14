@@ -106,24 +106,13 @@ def output_path(OUTPATH, TEST): #Check if the directory for output exist.
 
     @author Guilherme Valente
     '''
+    #Author : Guilherme Valente
 
-    m1="Define an appropriate path_out to stablish a place to save your results, e.g., /mnt/workspace/YOUR_NAME"
-    m2="Output directory is ready: "
+    output_dir = os.path.join(OUTPATH, "results", TEST)
 
-    #Checking if the first directory determined exists
-    directories=list(filter(None, OUTPATH.split("/")))[0]
-    if path.exists("/" + directories) != True:
-        sys.exit(m1)
-
-    #Checking if the other directories exist
-    OUTPATH2=OUTPATH + "/results/" + TEST
-    directories=list(filter(None, OUTPATH2.split("/")))
-    dire="/"
-    for a in directories:
-        dire=dire + a + "/"
-        if path.exists(dire) != True: #Create folder if it does not exist
-            os.mkdir(dire)
-    print(m2 + dire)
+    #Check if the directory exist and create if not
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Output directory is ready: {output_dir}")
 
     #Creating storing information for next
     ch.write_info_txt(path_value=dire) #Printing the output dir detailed in the info.txt
