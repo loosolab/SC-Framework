@@ -110,9 +110,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
     #Checking if interval for cutoffs were properly defined
     if only_plot == False and interval == None: #It is missing the interval for cutoff
             sys.exit(m6)
-        else:
-            filename=m3 + "_cutoff"
-#Checking if interval for cutoffs were properly defined
+    elif only_plot == False and interval != None:
             if check_cuts(str(interval), 0, 100) == False: #Means the interval is not a number
                     sys.exit(m2)
             else:
