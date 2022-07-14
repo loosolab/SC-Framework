@@ -229,7 +229,11 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         bam_obj = pysam.AlignmentFile(bam, "rb")
         
         #Update progress based on total number of reads
-        total = bam_obj.mapped
+        # fall back to "samtools view -c file" if bam_obj.mapped is not available
+        try:
+            total = bam_obj.mapped
+        except ValueError:
+            total = int(pysam.view("-c", bam))
         pbar = tqdm(total=total)
         step = int(total / 10000) #10000 total updates
         
