@@ -10,6 +10,7 @@ from sctoolbox.plotting import *
 from sctoolbox.creators import *
 from sctoolbox.checker import *
 from sctoolbox.analyser import *
+import sctoolbox.utilities as ut
 
 ########################STEP 1: DEFINING DEFAULT CUTOFFS###############################
 #######################################################################################
@@ -37,7 +38,7 @@ def loop_question(ANSWER, QUIT_M, CHECK): #Checking invalid outcome
 
     ANSWER=input(ANSWER).lower()
     #Check validity of options
-    while check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) == False:
+    while check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) == False and ut.is_str_numeric(ANSWER) == False:
         print("Choose one of these options: " + str(opt1 + opt2 + opt3 + opt4))
         ANSWER=input(ANSWER).lower()
 
