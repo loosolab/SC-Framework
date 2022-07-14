@@ -15,4 +15,5 @@ setup(name='sc-toolbox',
 			'fitter',
 			'qnorm'
 		],
+		include_package_data=True,
 		)
