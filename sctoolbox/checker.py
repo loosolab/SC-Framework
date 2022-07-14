@@ -40,23 +40,23 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
 
     Return
     ----------
-    The "valid" or "invalid" string
+    The True or False
     '''
     #Author: Guilherme Valente
     quiters=["q", "quit"]
     if ANS.replace('.', "", 1).isdigit() == True:
         x=float(ANS)
         if x >=LIMIT1 and x <= LIMIT2:
-            return("valid")
+            return(True)
         else:
-            return("invalid")
+            return(False)
     else:
         if ANS in quiters:
             sys.exit("You quit and lost all modifications :(")
         else:
-            return("invalid")
+            return(False)
 
-def check_options(ANS, OPTS1, OPTS2):
+def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
     '''
     Check if answers from input() command were properly replied
     Parameters
@@ -64,18 +64,31 @@ def check_options(ANS, OPTS1, OPTS2):
     ANS : String
         The answer provided by the user.
     OPTS1 : List
-        Options to quit the execution: ["q", "quit"]
-    OPTS2 : List
-        Options to consider the answer valid, e.g. ["y", "yes", "n", "no"]
+        Options allowed. Default : ["q", "quit", "y", "yes", "n", "no"]
+    Returns
+    -----------
+        Return True or False
     '''
-    #Author : Guilherme Valente
-    ANS=ANS.lower()
-    if ANS in OPTS1:
+    if type(ANS) is str:
+        ANS=ANS.lower()
+        if ANS in OPTS1:
+            check_quit(ANS)
+            return True
+    return False
+
+def check_quit(answer):
+    '''
+    Quit the functions if the answer is q or quite.
+    Parameters
+    ----------
+    answer: String
+        The answer of a user
+    Return
+    ----------
+        Quit the process
+    '''
+    if answer in ["q", "quit"]:
         sys.exit("You quit and lost all modifications :(")
-    elif ANS not in OPTS2:
-        return("invalid")
-    elif ANS in OPTS2:
-        return("valid")
 
 def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="filtered"): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml.
     '''
