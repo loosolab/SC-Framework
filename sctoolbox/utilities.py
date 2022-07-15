@@ -160,7 +160,7 @@ def pseudobulk_table(adata, groupby, how="mean"):
     return(res)
 
 
-def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", output_prefix="split_", reader_threads=1, writer_threads=1, threads=1, read_buffer=1000):
+def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", output_prefix="split_"):
     """
     Split BAM files into clusters based on 'groupby' from the anndata.obs table.
 
@@ -178,14 +178,6 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         Tag to use to identify the reads to split. Must match the barcodes of the barcode_col. Default: "CB".
     output_prefix : str, optional
         Prefix to use for the output files. Default: "split_".
-    reader_threads : int, default 1
-        Number of threads to use for reading.
-    writer_threads : int, default 1,
-        Number of threads to use for writing.
-    threads : int, default 1
-        Number of threads to use for read processing.
-    read_buffer : int , default 1000
-        Number of reads read/ processed at once.
     """
     # check then load modules
     check_module("pysam")
