@@ -6,6 +6,9 @@ import multiprocessing as mp
 
 import sctoolbox.utilities
 import psutil
+import subprocess
+import gzip
+import shutil
 
 
 def add_cellxgene_annotation(adata, csv):
@@ -34,11 +37,21 @@ def add_cellxgene_annotation(adata, csv):
 ########################### Uropa annotation of peaks ###########################
 #################################################################################
 
+def _is_gz_file(filepath):
+    with open(filepath, 'rb') as test_f:
+        return test_f.read(2) == b'\x1f\x8b'
+
+def gunzip_file(f_in, f_out):
+    with gzip.open(f_in, 'rb') as h_in:
+        with open(f_out, 'wb') as h_out:
+            shutil.copyfileobj(h_in, h_out)
+
 def annotate_features(adata, gtf, 
                                config=None, 
                                best=True, 
                                threads=1, 
                                coordinate_cols=None,
+                               temp_dir="",
                                verbose=True,
                                inplace=True
                     ):
@@ -62,6 +75,8 @@ def annotate_features(adata, gtf,
         Number of threads to use for multiprocessing. Default: 1.
     verbose : boolean
         Whether to write output to stdout. Default: True.
+    temp_dir : str, optional
+        Path to a directory to store files. Is only used if input .gtf-file needs sorting. Default: "" (current working dir).
     inplace : boolean
         Whether to add the annotations to the adata object in place. Default: True.
 
@@ -147,25 +162,65 @@ def annotate_features(adata, gtf,
             }
         region_dicts.append(d)
     
-    #Index tabix
+    #Prepare .gtf file in terms of index and sorting
     print("Preparing gtf file for annotation...")
-    gtf_given = gtf 	#gtf before indexing
-    gtf_index = gtf + ".tbi"
-    if not os.path.exists(gtf_index):
-        try:
-            gtf = pysam.tabix_index(gtf, preset="gff", keep_original=True)
-        except OSError: #gtf is already gzipped
-            gtf_gz = gtf + ".gz"
-            gtf_index = gtf_gz + ".tbi"
-            if not os.path.exists(gtf_index):
-                gtf_gz = pysam.tabix_index(gtf_gz, preset="gff", keep_original=True)
-            gtf = gtf_gz
+    success = 0
+    sort_done = 0
+    while success == 0:
+        try: #try to open gtf with Tabix
+            print("- Reading gtf with Tabix")
+            g = pysam.TabixFile(gtf)
+            g.close()
+            success = 1
+            print("Done preparing gtf!")
+
+        except Exception as e: #if not possible, try to sort gtf
+            print("- Index of gtf not found - trying to index gtf")
+
+            #First check if gtf was already gzipped
+            try:
+                gtf_gz = gtf + ".gz"
+                pysam.tabix_compress(gtf, gtf_gz)
+            except Exception as e:
+                gtf = gtf_gz #gtf was already gzipped
+
+            #Try to index
+            try:
+                gtf = pysam.tabix_index(gtf, seq_col=0, start_col=3, end_col=4, keep_original=True, force=True, meta_char='#')
+            except Exception as e:
+                print("- Indexing failed - the GTF is probably unsorted")
+
+                #Start by uncompressing file if file is gz
+                is_gz = _is_gz_file(gtf)
+                if is_gz:
+                    gtf_uncompressed = os.path.join(temp_dir, "uncompressed.gtf")
+                    print(f"- Uncompressing gtf to: {gtf_uncompressed}")
+                    try:
+                        gunzip_file(gtf, gtf_uncompressed)
+                    except Exception:
+                        raise ValueError("Could not uncompress gtf file to sort. Please ensure that the input gtf is sorted.")
+                    gtf = gtf_uncompressed
+
+                #Try to sort gtf
+                if sort_done == 0: #make sure sort was not already performed
+                    gtf_sorted = os.path.join(temp_dir, "sorted.gtf")
+                    sort_call = "grep -v \"^#\" {0} | sort -k1,1 -k4,4n > {1}".format(gtf, gtf_sorted)
+                    print("- Attempting to sort gtf with call: '{0}'".format(sort_call))
+
+                    try:
+                        _ = subprocess.check_output(sort_call, shell=True)
+                        gtf = gtf_sorted #this gtf will now go to next loop in while
+                        sort_done = 1
+                    except subprocess.CalledProcessError:
+                        raise ValueError("Could not sort gtf file using command-line call: {0}".format(sort_call))
+                else:
+                    raise ValueError("Could not read input gtf - please check for the correct format.")
 
     #Force close of gtf file left open; pysam issue 1038
     proc = psutil.Process()
     for f in proc.open_files():
-        if f.path == os.path.abspath(gtf_given):
-            os.close(f.fd) 
+        if f.path == os.path.abspath(gtf):
+            os.close(f.fd)
 
     #Split input regions into cores
     n_reg = len(region_dicts)
@@ -291,7 +346,6 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     import pysam
     import uropa
     from uropa.annotation import annotate_single_peak
-    from uropa.utils import format_config
 
     logger = uropa.utils.UROPALogger()
 
