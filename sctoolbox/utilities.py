@@ -21,6 +21,13 @@ def create_dir(path):
     dirname = os.path.dirname(path) #the last dir of the path
     if dirname is not "":
         os.makedirs(dirname, exist_ok=True)
+        
+def is_str_numeric(ans):
+    try:
+        float(ans)
+        return True
+    except ValueError:
+        return False
 
 def save_figure(path):
     """ Save the current figure to a file.
