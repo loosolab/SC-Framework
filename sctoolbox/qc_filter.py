@@ -10,9 +10,51 @@ from sctoolbox.plotting import *
 from sctoolbox.creators import *
 from sctoolbox.checker import *
 from sctoolbox.analyser import *
+import sctoolbox.utilities as ut
 
 ########################STEP 1: DEFINING DEFAULT CUTOFFS###############################
 #######################################################################################
+def loop_question(ANSWER, QUIT_M, CHECK): #Checking invalid outcome
+    '''
+    This core check the validity of user's answer.
+    Parameters
+    ---------------
+    ANSWER : String
+        User's answer
+    QUIT_M : String
+        Question to be print if the user's answer is invalid
+    CHECK : String
+        Types of questions. The options are "yn", "custdef", or float
+    Returns
+    ---------------
+    The user's answer in lower case format
+    '''
+    #Author: Guilherme Valente
+    #List and others
+    opt1, opt2, opt3, opt4=["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"] #Lists with possible answers for each question
+    options={"yn":opt2, "custdef":opt3, "custdefskip": opt4}
+    if check_options(CHECK,list(options.keys()))==False and type(CHECK) != float:
+        sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
+
+    ANSWER=input(ANSWER).lower()
+    #Check validity of options
+    while check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) == False and ut.is_str_numeric(ANSWER) == False:
+        print("Choose one of these options: " + str(opt1 + opt2 + opt3 + opt4))
+        ANSWER=input(ANSWER).lower()
+
+    #In case the input is valid, goes futher
+    if type(CHECK) != float:
+        while check_options(ANSWER, OPTS1= opt1 + options[CHECK]) == False:
+            print(m1 + QUIT_M)
+            ANSWER=input()
+            check_options(ANSWER, opt1 + options[CHECK])
+    else: #Checking validity of custom value: >=0 and <= a limit (the CHECK)
+        while check_cuts(ANSWER, 0, CHECK) == False:
+            print(m1 + QUIT_M)
+            ANSWER=input()
+            check_cuts(ANSWER, 0, CHECK)
+    return(ANSWER.lower())
+
 def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):
     '''
     1- Definining the cutoffs for QC and filtering steps.
@@ -70,20 +112,20 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
     if only_plot == False and interval == None: #It is missing the interval for cutoff
             sys.exit(m6)
     elif only_plot == False and interval != None:
-            if check_cuts(str(interval), 0, 100) == "invalid": #Means the interval is not a number
+            if check_cuts(str(interval), 0, 100) == False: #Means the interval is not a number
                     sys.exit(m2)
             else:
                 if isinstance(interval, (int)) == True and interval >= 0 and interval <= 100: #Converting interval int for float from 0 to 1
                     interval=interval/100
             #Checking if the total count was already filtered
             act_c_total_counts, id_c_total_counts=float(ANNDATA.obs["total_counts"].sum()), float(ANNDATA.uns["infoprocess"]["ID_c_total_counts"])
-            if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "valid": #Total_counts was not filtered yet, then only this parameter will be evaluated
+            if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == True: #Total_counts was not filtered yet, then only this parameter will be evaluated
                 sta_cut_cells, sta_cut_genes=True, False
                 calulate_and_plot_filter.append("total_counts")
                 filename=filename + "tot_count_cut"
                 print(m4)
-            #Other parameters will be evaluated because plot was selected and total count is filtered
-            elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "invalid": #Total counts was filtered yet.
+#Other parameters will be evaluated because plot was selected and total count is filtered
+            elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == False: #Total counts was filtered yet.
                 sta_cut_cells, sta_cut_genes=True, True
                 filename=filename + "other_param_cut"
                 for a in cells_genes_list:
@@ -164,52 +206,7 @@ def refining_cuts(ANNDATA, def_cut2):
     else:
         df_NOT_tot_coun=dfcut[dfcut[col1]!= "total_counts"].reset_index(drop=True)
         is_total_count_filt=True
-    def loop_question(ANSWER, QUIT_M, CHECK): #Checking invalid outcome
-        '''
-        This core check the validity of user's answer.
-        Parameters
-        ---------------
-        ANSWER : String
-            User's answer
-        QUIT_M : String
-            Question to be print if the user's answer is invalid
-        CHECK : String
-            Types of questions. The options are "yn", "custdef", or float
-
-        Returns
-        ---------------
-        The user's answer in lower case format
-        '''
-        #Author: Guilherme Valente
-        #List and others
-        opt1, opt2, opt3, opt4=["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"] #Lists with possible answers for each question
-        m1="Invalid choice! "
-        #Executing
-        ANSWER=input(ANSWER).lower()
-        if ANSWER in opt1:
-            sys.exit("You quit and lost all modifications :(")
-        if CHECK == "yn": #Checking validity of Y or N question
-            while check_options(ANSWER, opt1, opt2) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_options(ANSWER, opt1, opt2)
-        elif CHECK == "custdef": #Checking validity of custom or def question
-            while check_options(ANSWER, opt1, opt3) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_options(ANSWER, opt1, opt3)
-        elif CHECK == "custdefskip": #Checking validity of custom, def or skip question
-            while check_options(ANSWER, opt1, opt4) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_options(ANSWER, opt1, opt4)
-        elif type(CHECK) == float: #Checking validity of custom value: >=0 and <= a limit (the CHECK)
-            while check_cuts(ANSWER, 0, CHECK) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_cuts(ANSWER, 0, CHECK)
-        return(ANSWER.lower())
-#Executing the main function
+    #Executing the main function
     if is_total_count_filt == False: #It means that total_counts was not filtered. Then, the dataframe has only total_count information
         print(m2)
         display(df_tot_coun)

@@ -9,17 +9,12 @@ import sctoolbox.creators as cr
 
 import matplotlib.pyplot as plt
 
-def create_dir(path):
-    """ Create a directory if it is not existing yet.
-    
-    Parameters
-    -----------
-    path : str
-        Path to the directory to be created.
-    """
-    
-    dirname = os.path.dirname(path) #the last dir of the path
-    os.makedirs(dirname, exist_ok=True)
+def is_str_numeric(ans):
+    try:
+        float(ans)
+        return True
+    except ValueError:
+        return False
 
 def save_figure(path):
     """ Save the current figure to a file.
