@@ -16,18 +16,6 @@ def is_str_numeric(ans):
     except ValueError:
         return False
 
-def create_dir(path):
-    """ Create a directory if it is not existing yet.
-    
-    Parameters
-    -----------
-    path : str
-        Path to the directory to be created.
-    """
-    
-    dirname = os.path.dirname(path) #the last dir of the path
-    os.makedirs(dirname, exist_ok=True)
-
 def save_figure(path):
     """ Save the current figure to a file.
     
