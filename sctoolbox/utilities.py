@@ -211,7 +211,7 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     handles = {}
     for cluster in clusters:
         # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
-        f_out = re.sub(r'[\\/*?:"<>|]', "_", f"{output_prefix}{cluster}") + ".bam"
+        f_out = output_prefix + re.sub(r'[\\/*?:"<>|]', "_", cluster) + ".bam"
         handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template)
         
     #Loop over bamfile(s)
