@@ -19,7 +19,8 @@ def create_dir(path):
     """
     
     dirname = os.path.dirname(path) #the last dir of the path
-    os.makedirs(dirname, exist_ok=True)
+    if dirname is not "":
+        os.makedirs(dirname, exist_ok=True)
 
 def save_figure(path):
     """ Save the current figure to a file.
