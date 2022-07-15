@@ -46,7 +46,10 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
             DF_CUTS2=DF_CUTS2.append({LST_DFCUTS_COLS[0]: CONDI3, LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_cells"}, ignore_index=True)
         return DF_CUTS2
 #Defining the types of distributions to be evaluated and organizing the data
-    lst_distr, lst_dfcuts_cols, np_data2, lst_data2=["uniform", "expon", "powerlaw", "norm"], DF_CUTS.columns.tolist(), DATA2.to_numpy(), DATA2.tolist()
+    lst_distr, curves, directions = ["uniform", "expon", "powerlaw", "norm"], ["convex", "concave"], ["increasing", "decreasing"]
+    lst_dfcuts_cols, np_data2, lst_data2 = DF_CUTS.columns.tolist(), DATA2.to_numpy(), DATA2.tolist()
+    knns = list()
+
 #This is a normal distribution
     if SKEW_VAL == 0:
         cut_right, cut_left=np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100-(INTERVAL*100)) #Percentile
@@ -69,17 +72,16 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
 #This is the power law or exponential distributed data
         if  "expon" in best_fit or "powerlaw" in best_fit:
             lst_data2.sort()
-            avg=st.tmean(lst_data2)
             histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2)/100), weights=range(0, len(lst_data2), 1))
-            kni, knd = KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve='convex', direction="increasing"), KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve='convex', direction="decreasing")
-            kni_converted, knd_converted = [bins_built[kni.knee-1]], [bins_built[knd.knee-1]]
-            kni_avg, knd_avg = [kni_converted, avg], [knd_converted, avg]
-            kni_avg_dif, knd_avg_dif = max(kni_avg) - min(kni_avg), max(knd_avg) - min(knd_avg)
-            if kni_avg_dif > knd_avg_dif:
-                kn_converted=kni_avg_dif
-            else:
-                kn_converted=knd_avg_dif
-            df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, kn_converted, lst_dfcuts_cols)
+            for a in curves:
+                for b in directions:
+                    knns2=KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve=a, direction=b)
+                    knn2_converted=bins_built[knns2.knee-1].item()
+                    if knn2_converted > 0:
+                        knns.append(knn2_converted)
+            kn_selected=[min(knns)]
+            df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, kn_selected, lst_dfcuts_cols)
+
 #This is the skewed shaped but not like exponential nor powerlaw
         else:
             cut_right, cut_left=np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100-(INTERVAL*100)) #Percentile
