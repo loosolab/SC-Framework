@@ -13,6 +13,7 @@ setup(name='sc-toolbox',
 			'anndata2ri',
 			'kneed',
 			'fitter',
-			'qnorm'
+			'qnorm',
+			'plotly'
 		],
 		)
