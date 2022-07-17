@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import ipywidgets as widgets
+import ipywidgets
 import sys
 from scipy.stats import *
 import scipy
@@ -448,6 +448,66 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
 ######################## More general QC filtering functions ########################
 #####################################################################################
 
+def _validate_minmax(d):
+    """
+    
+    """
+    allowed = set(["min", "max"])
+    keys = set(d.keys())
+    
+    not_allowed = len(keys - allowed)
+    if not_allowed > 0:
+        raise ValueError("Keys {0} not allowed".format(not_allowed))
+    
+def validate_threshold_dict(table, thresholds, groupby=None):
+    """ 
+    Validate threshold dictionary. Thresholds can be in the format::
+    
+    thresholds = {"chrM_percent": {"min": 0, "max": 10},
+                  "total_reads": {"min": 1000}}
+              
+    Or per group in 'groupy':
+
+    thresholds = {"chrM_percent": {
+                               "Sample1": {"max": 10},
+                               "Sample2": {"max": 5}
+                               },
+                  "total_reads": {"min": 1000}}
+    
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        Table to validate thresholds for.
+    thresholds : dict
+        Dictionary of thresholds to validate.
+    groupby : str, optional
+        Column for grouping thresholds. Default: None (no grouping)
+    """
+    
+    if groupby is not None:
+        groups = table[groupby]
+    
+    #Check if all columns in thresholds are available
+    threshold_columns = thresholds.keys()
+    not_found = [col for col in threshold_columns if col not in table.columns]
+    if len(not_found) > 0:
+        raise ValueError("Column(s) '{0}' given in thresholds are not found in table".format(not_found))
+        
+    #Check the format of individual column thresholds
+    for col in thresholds:
+        
+        if groupby is None: #expecting one threshold for all cells
+            _validate_minmax(thresholds[col])
+    
+        else: #Expecting either one threshold or a threshold for each sample
+            
+            for key in thresholds[col]:
+                if key in groups:
+                    minmax_dict = thresholds[col][key]
+                    _validate_minmax(minmax_dict)
+                else: #this is a minmax threshold
+                    _validate_minmax(thresholds[col])
+
 def _link_sliders(sliders):
     """ Link the values between interactive sliders.
     
@@ -462,7 +522,7 @@ def _link_sliders(sliders):
     
     l_list = []
     for i in range(1,len(tup)):
-        l = widgets.link(*tup[i-1:i+1])
+        l = ipywidgets.link(*tup[i-1:i+1])
         l_list.append(l)
     
     return l_list
@@ -487,45 +547,50 @@ def _toggle_linkage(checkbox, l_list):
         for l in l_list:
             l.unlink()
     
-def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade, save=None):
+def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
     """ Update the locations of thresholds in plot """
     
-    vmin, vmax = slider["new"]
+    tmin, tmax = slider["new"] #threshold values from slider
     
     #Update min line
     ydata = min_line.get_ydata()
-    ydata = [vmin for _ in ydata]
+    ydata = [tmin for _ in ydata]
     min_line.set_ydata(ydata)
     
     x,y = min_shade.get_xy()
-    min_shade.set_height(vmin - y)
+    min_shade.set_height(tmin - y)
         
     #Update max line
     ydata = max_line.get_ydata()
-    ydata = [vmax for _ in ydata]
+    ydata = [tmax for _ in ydata]
     max_line.set_ydata(ydata)
     
     x,y = max_shade.get_xy()
-    max_shade.set_height(vmax - y)
+    max_shade.set_height(tmax - y)
     
     #Draw figure after update
     fig.canvas.draw_idle()
     
     #Save figure
-    sctoolbox.utilities.save_figure(save)
+    #sctoolbox.utilities.save_figure(save)
 
     
 def quality_violin(adata, columns, 
                                 which="obs", 
                                 groupby=None, 
-                                ncols=3, 
+                                ncols=2, 
                                 header=None, 
                                 color_list=None, 
                                 title=None, 
                                 thresholds=None,
+                                sliders=True,
                                 save=None):
     """
     A function to plot quality measurements for cells in an anndata object.
+
+    Note
+    ------
+    Notebook needs to start with "%matplotlib widget" for the interactive sliders to work.
 
     Parameters
     -------------
@@ -533,20 +598,22 @@ def quality_violin(adata, columns,
         Anndata object containing quality measures in .obs/.var
     columns : list
         A list of columns in .obs/.var to show measures for.
-    which : str
-        Which table to show quality for. Either "obs" / "var"
-    groupby : str
+    which : str, optional
+        Which table to show quality for. Either "obs" / "var". Default: "obs".
+    groupby : str, optional
         A column in table to values on the x-axis, e.g. 'condition'. 
     ncols : int
-        Number of columns in the plot. Default: 4.
-    header : list
+        Number of columns in the plot. Default: 2.
+    header : list, optional
         A list of custom headers for each measure given in columns. Default: None (headers are the column names)
-    color_list : list
+    color_list : list, optional
         A list of colors to use for violins. Default: None (colors are chosen automatically)
     title : str, optional
         The title of the full plot. Default: None (no title).
-    init_thresholds : dict, optional
-        Dictionary containing min/max thresholds to show in plot.
+    thresholds : dict, optional
+        Dictionary containing initial min/max thresholds to show in plot.
+    sliders : bool, optional
+        Whether to show sliders for thresholding. Default: True.
     save : str, optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
     """
@@ -597,10 +664,8 @@ def quality_violin(adata, columns,
     #---------------- Setup figure --------------#
 
     #Setting up output figure
-    output = widgets.Output()
-    with output: 
-        fig, axarr = plt.subplots(nrows, ncols, figsize=(ncols*3, nrows*3))
-        axes_list = axarr.flatten()
+    fig, axarr = plt.subplots(nrows, ncols, figsize=(ncols*3, nrows*3))
+    axes_list = axarr.flatten()
 
     #Remove empty axes
     for ax in axes_list[len(columns):]:
@@ -608,12 +673,12 @@ def quality_violin(adata, columns,
 
     #Add title of full plot
     if title != None:
-        plt.suptitle(title, y=1.05, fontsize=20)
+        fig.suptitle(title, fontsize=16)
 
     #Add title of individual plots
     for i in range(len(columns)):
         ax = axes_list[i]
-        ax.set_title(header[i], fontsize=12)
+        ax.set_title(header[i], fontsize=11)
   
 
     #------------- Plot data and add sliders ---------#
@@ -632,7 +697,7 @@ def quality_violin(adata, columns,
         ax.set_xlabel("")    
 
         ticks = ax.get_xticks()
-        ylim = ax.get_ylim() #ylim before plotting any thresholds
+        ymin, ymax = ax.get_ylim() #ylim before plotting any thresholds
 
         #Establish groups
         if groupby is not None:
@@ -647,66 +712,120 @@ def quality_violin(adata, columns,
         for j, group in enumerate(group_names):
             
             #Establish the threshold to plot
-            if group in thresholds[column]:
-                vmin = thresholds[column][group].get("min", data_min)
-                vmax = thresholds[column][group].get("max", data_max)
+            if column not in thresholds: #no thresholds given
+                tmin = data_min
+                tmax = data_max
+            elif group in thresholds[column]: #thresholds per group
+                tmin = thresholds[column][group].get("min", data_min)
+                tmax = thresholds[column][group].get("max", data_max)
             else:
-                vmin = thresholds[column].get("min", data_min)
-                vmax = thresholds[column].get("max", data_max)
+                tmin = thresholds[column].get("min", data_min)
+                tmax = thresholds[column].get("max", data_max)
 
             #Plot line and shading
             tick = ticks[j]
             x = [tick-0.5, tick+0.5]
 
-            min_line = ax.plot(x, [vmin]*2, color="red", linestyle="--")[0]
-            max_line = ax.plot(x, [vmax]*2, color="red", linestyle="--")[0]
-            min_shade = ax.add_patch(Rectangle((x[0], ylim[0]), x[1]-x[0], vmin - ylim[0], color="grey", alpha=0.2, linewidth=0))
-            max_shade = ax.add_patch(Rectangle((x[0], ylim[1]), x[1]-x[0], vmax - ylim[1], color="grey", alpha=0.2, linewidth=0))
+            min_line = ax.plot(x, [tmin]*2, color="red", linestyle="--")[0]
+            max_line = ax.plot(x, [tmax]*2, color="red", linestyle="--")[0]
+
+            y1, y2, y3, y4 = sorted([ymin, tmin, tmax, ymax]) #sorted positions of axes and lines from small to large
+            min_shade = ax.add_patch(Rectangle((x[0], y1), x[1]-x[0], y2-y1, color="grey", alpha=0.2, linewidth=0))
+            max_shade = ax.add_patch(Rectangle((x[0], y4), x[1]-x[0], y3-y4, color="grey", alpha=0.2, linewidth=0)) #negative height
 
             #Add slider to control thresholds
-            slider = widgets.FloatRangeSlider(description=group, min=vmin, max=vmax, 
-                                                value=[vmin, vmax],  #initial value
+            slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max, 
+                                                value=[tmin, tmax],  #initial value
                                                 continuous_update=False)
 
             slider.observe(functools.partial(_update_thresholds, fig=fig, min_line=min_line, 
                                                                     min_shade=min_shade,
                                                                     max_line=max_line,
-                                                                    max_shade=max_shade, 
-                                                                    save=save), 
+                                                                    max_shade=max_shade), 
                                                                     names=["value"])
 
             slider_list.append(slider)
-            slider_dict[column][group] = slider
+            if groupby is not None:
+                slider_dict[column][group] = slider
+            else:
+                slider_dict[column] = slider
 
         #Link sliders together
         if len(slider_list) > 0:
             link_list = _link_sliders(slider_list)
         
             #Toggle linked sliders
-            c = widgets.Checkbox(value=True, description='Global threshold', disabled=False, indent=False)
+            c = ipywidgets.Checkbox(value=True, description='Global threshold', disabled=False, indent=False)
             c.observe(functools.partial(_toggle_linkage, l_list=link_list), names=["value"])
 
-            box = widgets.VBox([c] + slider_list)
+            box = ipywidgets.VBox([c] + slider_list)
         
         else:
-            box = widgets.Vbox(slider_list)
+            box = ipywidgets.Vbox(slider_list)
         
         accordion_content.append(box)
 
-    plt.tight_layout()
+    fig.tight_layout()
     sctoolbox.utilities.save_figure(save) #save plot; can be overwritten if thresholds are changed
 
     #Assemble accordion with different measures
-    accordion = widgets.Accordion(children=accordion_content)
+    accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
     for i in range(len(columns)):
         accordion.set_title(i, columns[i])
 
-    full_box = widgets.HBox([accordion, output])
+    #Setup box to hold all widgets
+    fig.canvas.header_visible = False
+    fig.canvas.toolbar_visible = False
+    fig.canvas.resizable = True
+    fig.canvas.width = "auto"
+
+    if sliders == True:
+        full_box = ipywidgets.HBox([accordion, fig.canvas])
+    else:
+        full_box = fig.canvas #ipywidgets.HBox([fig.canvas])
 
     return full_box, slider_dict
 
+def get_slider_thresholds(slider_dict):
+    """ Get thresholds from sliders.
+    
+    Parameters
+    ----------
+    slider_dict : dict
+        Dictionary of sliders in the format 'slider_dict[column][group] = slider' or 'slider_dict[column] = slider' if no grouping.
+    
+    Returns
+    -------
+    dict in the format threshold_dict[column][group] = {"min": <min_threshold>, "max": <max_threshold>} or 
+    threshold_dict[column] = {"min": <min_threshold>, "max": <max_threshold>} if no grouping
 
-def apply_qc_thresholds(adata, thresholds, which="obs"):
+    """
+    threshold_dict = {}
+    for measure in slider_dict:
+        threshold_dict[measure] = {}
+        
+        if isinstance(slider_dict[measure], dict): #thresholds for groups
+            for group in slider_dict[measure]:
+                slider = slider_dict[measure][group]
+                threshold_dict[measure][group] = {"min": slider.value[0], "max": slider.value[1]}
+
+            #Check if all groups have the same thresholds
+            mins = set([d["min"] for d in threshold_dict[measure].values()])
+            maxs = set([d["max"] for d in threshold_dict[measure].values()])
+
+            #Set overall threshold if individual sliders are similar
+            if len(mins) == 1 and len(maxs) == 1:
+                threshold_dict[measure] = threshold_dict[measure][group] #takes the last group from the previous for loop
+
+        else: #One threshold for measure
+            slider = slider_dict[measure]
+            threshold_dict[measure] = {"min": slider.value[0], "max": slider.value[1]}
+
+    return threshold_dict
+
+
+
+def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None):
     """
     Apply QC thresholds to anndata object.
 
@@ -718,6 +837,8 @@ def apply_qc_thresholds(adata, thresholds, which="obs"):
         Dictionary of thresholds to apply.
     which : str
        Which table to filter on. Must be one of "obs" / "var". Default: "obs".
+    groupby : str
+        Column in table to group by. Default: None.
 
     Returns
     ---------
@@ -733,33 +854,71 @@ def apply_qc_thresholds(adata, thresholds, which="obs"):
     #Check if all columns are found in adata
     not_found = list(set(thresholds) - set(table.columns))
     if len(not_found) > 0:
-        print("{0} threshold columns were not found in adata and could therefore not be applied. These thresholds are: {1}".format(len(not_found), not_found))
+        print("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
     thresholds = {k: thresholds[k] for k in thresholds if k not in not_found}
     
     if len(thresholds) == 0:
         raise ValueError(f"The thresholds given do not match the columns given in adata.{which}. Please adjust the 'which' parameter if needed.")
 
+    if groupby is not None:
+        groups = table[groupby].cat.categories
+
     #Check that thresholds contain min/max
     for column, d in thresholds.items():
         if 'min' not in d and 'max' not in d:
-            raise ValueError("Thresholds must contain min or max")
+            if groupby is not None:
+                keys = d.keys()
+                not_found = list(set(keys) - set(groups))
+                if not_found > 0:
+                    raise ValueError(f"{len(not_found)} groups from thresholds were not found in adata.obs[{groupby}]. These groups are: {not_found}")
+
+            else:
+                raise ValueError("Error in threshold format: Thresholds must contain min or max per column, or a threshold per group in groupby")
 
     #Apply thresholds
-    for column, d in thresholds.items():
-        print(column)
+    for column, d in thresholds.items(): 
 
-        #Set min threshold
-        if 'min' in d:
-            if which == "obs":
-                adata = adata[adata.obs[column] >= d['min'],:]
-            else:
-                adata = adata[:,adata.var[column] >= d['min']]
+        #Update size of table
+        table = adata.obs if which == "obs" else adata.var
 
-        #Set max threshold
-        if 'max' in d:
-            if which == "obs":
-                adata = adata[adata.obs[column] <= d['max'],:]
+        #Collect boolean array of rows to select of table
+        excluded = np.array([False] * len(table))
+        if groupby is not None:
+            if "min" in d or "max" in d:
+                global_threshold = True
+
             else:
-                adata = adata[:,adata.var[column] <= d['max']]
+                for group in d:
+                    minmax_dict = d[group]
+
+                    group_bool = table[groupby] == group
+
+                    if "min" in minmax_dict:
+                        excluded = excluded | (group_bool & (table[column] < minmax_dict["min"]))
+
+                    if "max" in minmax_dict:
+                        excluded = excluded | (group_bool & (table[column] > minmax_dict["max"]))
+        else:
+            global_threshold = True
+
+        #Select using a global threshold
+        if global_threshold == True:
+            minmax_dict = d
+
+            if "min" in minmax_dict:
+                excluded = excluded | (table[column] < minmax_dict["min"]) #if already excluded, or if excluded by min
+
+            if "max" in minmax_dict:
+                excluded = excluded | (table[column] > minmax_dict["max"])
+
+        #Apply filtering
+        included = ~excluded
+        if which == "obs":
+            adata = adata[included,:]
+            name = "cells"
+        else: 
+            adata = adata[:,included] #filter on var
+            name = ".var features"
+        print(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
 
     return adata
