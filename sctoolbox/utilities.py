@@ -3,6 +3,7 @@ import sys
 import os
 import scanpy as sc
 import importlib
+import re
 
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
@@ -15,6 +16,48 @@ def is_str_numeric(ans):
         return True
     except ValueError:
         return False
+
+def get_package_versions():
+    """
+    Utility to get a dictionary of currently installed python packages and versions.
+
+    Returns
+    --------
+    A dict in the form: 
+    {"package1": "1.2.1", "package2":"4.0.1", (...)}
+    
+    """
+    
+    #Import freeze
+    try:
+        from pip._internal.operations import freeze
+    except ImportError:  # pip < 10.0
+        from pip.operations import freeze
+    
+    #Get list of packages and versions with freeze
+    package_list = freeze.freeze()
+    package_dict = {} #dict for collecting versions
+    for s in package_list:
+        try:
+            name, version = re.split("==| @ ", s)
+            package_dict[name] = version
+        except:
+            print(f"Error reading version for package: {s}")
+    
+    return package_dict
+
+def create_dir(path):
+    """ Create a directory if it is not existing yet.
+    
+    Parameters
+    -----------
+    path : str
+        Path to the directory to be created.
+    """
+    
+    dirname = os.path.dirname(path) #the last dir of the path
+    if dirname is not "": #if dirname is "", file is in current dir
+        os.makedirs(dirname, exist_ok=True)
 
 def save_figure(path):
     """ Save the current figure to a file.
