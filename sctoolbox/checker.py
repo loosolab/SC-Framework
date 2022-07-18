@@ -66,7 +66,7 @@ def fetch_info_txt(file_path="./info.txt"):
         return file.readline()
 
 
-def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
+def check_cuts(ANS, LIMIT1, LIMIT2):  # Checking cutoffs validity
     '''
     Checking if a given value range into acceptable limits
 

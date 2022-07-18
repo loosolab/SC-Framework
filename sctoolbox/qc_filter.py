@@ -438,7 +438,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
 
     Returns
     ---------
-    If inplace is False, the function returns a copy of the adata object. 
+    If inplace is False, the function returns a copy of the adata object.
     If inplace is True, the function returns None.
     """
 

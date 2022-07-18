@@ -26,10 +26,10 @@ def convertToAdata(file, out, r_home=None):
             Converted anndata object.
     '''
 
-    ##### Set R installation path #####
-    if not r_home:       
+    # Set R installation path
+    if not r_home:
         # https://stackoverflow.com/a/54845971
-        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib","R")
+        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
 
     if not exists(r_home):
         raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
@@ -44,7 +44,7 @@ def convertToAdata(file, out, r_home=None):
     # check if file format is .robj or .Robj -> convert to .rds first
     if file.split('.')[-1].lower() == 'robj':
 
-        ##### convert to rds #####
+        # convert to rds
         r(f"""
                 file <- load("{file}")
                 object <- get(file[1])
@@ -53,7 +53,7 @@ def convertToAdata(file, out, r_home=None):
 
         file = f'{out}/tmp.rds'
 
-        ##### convert to adata #####
+        # convert to adata
         adata = r(f"""
                     library(Seurat)
 
@@ -69,11 +69,11 @@ def convertToAdata(file, out, r_home=None):
                     }}
                    """)
 
-        ##### Saving adata.h5ad #####
+        # Saving adata.h5ad
         h5ad_file = out + '/anndata_1.h5ad'
         adata.write(filename=h5ad_file, compression='gzip')
 
-        ##### Removing tmp.rds #####
+        # Removing tmp.rds
         os.remove(out + '/tmp.rds')
 
     else:
@@ -92,7 +92,7 @@ def convertToAdata(file, out, r_home=None):
                     }}
                    """)
 
-        ##### Saving adata.h5ad #####
+        # Saving adata.h5ad
         h5ad_file = out + '/anndata_1.h5ad'
         adata.write(filename=h5ad_file, compression='gzip')
 

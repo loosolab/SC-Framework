@@ -47,10 +47,12 @@ def label_genes(ANNDATA, label=False):
             answer = input(m1 + a + m2)
             while check_options(answer) is False:  # Annotate?
                 answer = input(m1 + a + m2)
+
             if a == "mitochondrial" and answer.lower() == "y":  # Annotate mitochondrial
                 answer = input(m6)  # Which word use to identify mitochondrial genes?
                 tmp_list = [answer]
                 fil_dict(dict_opts, a, tmp_list)
+
             if a == "cell_cycle" and answer.lower() == "y":  # Annotate cell cycle
                 tmp_list = []
                 answer = input(m3 + ', '.join(list_species_cellcycle_annotations))
@@ -61,21 +63,21 @@ def label_genes(ANNDATA, label=False):
                         tmp_list.append(b.split("\t")[0].strip())
                 fil_dict(dict_opts, a, tmp_list)
 
-            if a == "gender_genes" and answer.lower() == "y": # Annotate gender genes
+            if a == "gender_genes" and answer.lower() == "y":  # Annotate gender genes
                 tmp_list = []
                 for b in open(path_XY_genes + "/" + file_XY_genes):
                     if b.strip():
                         tmp_list.append(b.split("\t")[0].strip())
                 fil_dict(dict_opts, a, tmp_list)
 
-            if a == "custom" and answer.lower() == "y": #Annotate customized genes
+            if a == "custom" and answer.lower() == "y":  # Annotate customized genes
                 tmp_list = []
                 answer = input(m4)
                 while path.isfile(answer) is False:
-                     if answer.lower() in opt1:
-                         sys.exit("You quit and lost all modifications :(")
-                     print(m5)
-                     answer = input(m5)
+                    if answer.lower() in opt1:
+                        sys.exit("You quit and lost all modifications :(")
+                    print(m5)
+                    answer = input(m5)
                 for b in open(answer, "r"):
                     if b.strip():
                         tmp_list.append(b.split("\t")[0].strip())

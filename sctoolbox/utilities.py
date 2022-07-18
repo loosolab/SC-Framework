@@ -18,6 +18,20 @@ def is_str_numeric(ans):
         return False
 
 
+def create_dir(path):
+    """ Create a directory if it is not existing yet.
+
+    Parameters
+    -----------
+    path : str
+        Path to the directory to be created.
+    """
+
+    dirname = os.path.dirname(path)  # the last dir of the path
+    if dirname != "":  # if dirname is "", file is in current dir
+        os.makedirs(dirname, exist_ok=True)
+
+
 def save_figure(path):
     """ Save the current figure to a file.
 
@@ -128,7 +142,7 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
 
     elif is_from_previous_note is False:  # Load anndata object from other source
         answer = input(m3)
-        while path.isfile(answer) is False:  # False if pathway is wrong
+        while os.path.isfile(answer) is False:  # False if pathway is wrong
             if answer.lower() in opt1:
                 sys.exit("You quit and lost all modifications :(")
             print(m4)

@@ -52,7 +52,7 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
 
     # This is a normal distribution
     if SKEW_VAL == 0:
-        cut_right, cut_left = np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100 - (INTERVAL*100))  # Percentile
+        cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL * 100))  # Percentile
         join_cuts = [cut_right, cut_left]
         if 0 in join_cuts:
             join_cuts = [max(join_cuts)]
@@ -60,7 +60,7 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
 
     # This is a mesokurtic skewed distributed (long tail and not sharp)
     elif SKEW_VAL != 0 and KURTOSIS_NORM == 0:
-        cut_right, cut_left = np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100 - (INTERVAL*100))  # Percentile
+        cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL * 100))  # Percentile
         join_cuts = [cut_right, cut_left]
         if 0 in join_cuts:
             join_cuts = [max(join_cuts)]
@@ -78,7 +78,7 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
             histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2) / 100), weights=range(0, len(lst_data2), 1))
             for a in curves:
                 for b in directions:
-                    knns2 = KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve=a, direction=b)
+                    knns2 = KneeLocator(x=range(1, len(histon2) + 1), y=histon2, curve=a, direction=b)
                     knn2_converted = bins_built[knns2.knee - 1].item()
                     if knn2_converted > 0:
                         knns.append(knn2_converted)
@@ -87,7 +87,7 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
 
         # This is the skewed shaped but not like exponential nor powerlaw
         else:
-            cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL*100))  # Percentile
+            cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL * 100))  # Percentile
             join_cuts = [cut_right, cut_left]
             if 0 in join_cuts:
                 join_cuts = [max(join_cuts)]

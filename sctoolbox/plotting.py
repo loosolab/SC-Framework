@@ -206,8 +206,9 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
     if adata_names is None:
         adata_names = [f"adata_{n+1}" for n in range(len(adata_list))]
 
-    import matplotlib.colors as clr
-    cmap = clr.LinearSegmentedColormap.from_list('custom umap', ['#f2f2f2', '#ff4500'], N=256)
+    # code for coloring single cell expressions?
+    # import matplotlib.colors as clr
+    # cmap = clr.LinearSegmentedColormap.from_list('custom umap', ['#f2f2f2', '#ff4500'], N=256)
 
     for i, adata in enumerate(adata_list):
 

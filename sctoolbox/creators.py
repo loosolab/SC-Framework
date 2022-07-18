@@ -8,8 +8,9 @@ import sctoolbox
 import sctoolbox.checker as ch
 import anndata
 
-#Do we need this?
-def add_color_set(adata, inplace = True):
+
+# Do we need this?
+def add_color_set(adata, inplace=True):
     """ Add color set to adata object
 
     Parameter:
@@ -24,34 +25,34 @@ def add_color_set(adata, inplace = True):
         AnnData object with color set
     """
 
-    color_list=['red', 'blue', 'green', 'pink', 'chartreuse',
-                'gray', 'yellow', 'brown', 'purple', 'orange', 'wheat',
-                'lightseagreen', 'cyan', 'khaki', 'cornflowerblue', 'olive',
-                'gainsboro', 'darkmagenta', 'slategray', 'ivory', 'darkorchid',
-                'papayawhip', 'paleturquoise', 'oldlace', 'orangered',
-                'lavenderblush', 'gold', 'seagreen', 'deepskyblue', 'lavender',
-                'peru', 'silver', 'midnightblue', 'antiquewhite', 'blanchedalmond',
-                'firebrick', 'greenyellow', 'thistle', 'powderblue', 'darkseagreen',
-                'darkolivegreen', 'moccasin', 'olivedrab', 'mediumseagreen',
-                'lightgray', 'darkgreen', 'tan', 'yellowgreen', 'peachpuff',
-                'cornsilk', 'darkblue', 'violet', 'cadetblue', 'palegoldenrod',
-                'darkturquoise', 'sienna', 'mediumorchid', 'springgreen',
-                'darkgoldenrod', 'magenta', 'steelblue', 'navy', 'lightgoldenrodyellow',
-                'saddlebrown', 'aliceblue', 'beige', 'hotpink', 'aquamarine', 'tomato',
-                'darksalmon', 'navajowhite', 'lawngreen', 'lightsteelblue', 'crimson',
-                'mediumturquoise', 'mistyrose', 'lightcoral', 'mediumaquamarine',
-                'mediumblue', 'darkred', 'lightskyblue', 'mediumspringgreen',
-                'darkviolet', 'royalblue', 'seashell', 'azure', 'lightgreen', 'fuchsia',
-                'floralwhite', 'mintcream', 'lightcyan', 'bisque', 'deeppink',
-                'limegreen', 'lightblue', 'darkkhaki', 'maroon', 'aqua', 'lightyellow',
-                'plum', 'indianred', 'linen', 'honeydew', 'burlywood', 'goldenrod',
-                'mediumslateblue', 'lime', 'lightslategray', 'forestgreen', 'dimgray',
-                'lemonchiffon', 'darkgray', 'dodgerblue', 'darkcyan', 'orchid',
-                'blueviolet', 'mediumpurple', 'darkslategray', 'turquoise', 'salmon',
-                'lightsalmon', 'coral', 'lightpink', 'slateblue', 'darkslateblue',
-                'white', 'sandybrown', 'chocolate', 'teal', 'mediumvioletred', 'skyblue',
-                'snow', 'palegreen', 'ghostwhite', 'indigo', 'rosybrown', 'palevioletred',
-                'darkorange', 'whitesmoke']
+    color_list = ['red', 'blue', 'green', 'pink', 'chartreuse',
+                  'gray', 'yellow', 'brown', 'purple', 'orange', 'wheat',
+                  'lightseagreen', 'cyan', 'khaki', 'cornflowerblue', 'olive',
+                  'gainsboro', 'darkmagenta', 'slategray', 'ivory', 'darkorchid',
+                  'papayawhip', 'paleturquoise', 'oldlace', 'orangered',
+                  'lavenderblush', 'gold', 'seagreen', 'deepskyblue', 'lavender',
+                  'peru', 'silver', 'midnightblue', 'antiquewhite', 'blanchedalmond',
+                  'firebrick', 'greenyellow', 'thistle', 'powderblue', 'darkseagreen',
+                  'darkolivegreen', 'moccasin', 'olivedrab', 'mediumseagreen',
+                  'lightgray', 'darkgreen', 'tan', 'yellowgreen', 'peachpuff',
+                  'cornsilk', 'darkblue', 'violet', 'cadetblue', 'palegoldenrod',
+                  'darkturquoise', 'sienna', 'mediumorchid', 'springgreen',
+                  'darkgoldenrod', 'magenta', 'steelblue', 'navy', 'lightgoldenrodyellow',
+                  'saddlebrown', 'aliceblue', 'beige', 'hotpink', 'aquamarine', 'tomato',
+                  'darksalmon', 'navajowhite', 'lawngreen', 'lightsteelblue', 'crimson',
+                  'mediumturquoise', 'mistyrose', 'lightcoral', 'mediumaquamarine',
+                  'mediumblue', 'darkred', 'lightskyblue', 'mediumspringgreen',
+                  'darkviolet', 'royalblue', 'seashell', 'azure', 'lightgreen', 'fuchsia',
+                  'floralwhite', 'mintcream', 'lightcyan', 'bisque', 'deeppink',
+                  'limegreen', 'lightblue', 'darkkhaki', 'maroon', 'aqua', 'lightyellow',
+                  'plum', 'indianred', 'linen', 'honeydew', 'burlywood', 'goldenrod',
+                  'mediumslateblue', 'lime', 'lightslategray', 'forestgreen', 'dimgray',
+                  'lemonchiffon', 'darkgray', 'dodgerblue', 'darkcyan', 'orchid',
+                  'blueviolet', 'mediumpurple', 'darkslategray', 'turquoise', 'salmon',
+                  'lightsalmon', 'coral', 'lightpink', 'slateblue', 'darkslateblue',
+                  'white', 'sandybrown', 'chocolate', 'teal', 'mediumvioletred', 'skyblue',
+                  'snow', 'palegreen', 'ghostwhite', 'indigo', 'rosybrown', 'palevioletred',
+                  'darkorange', 'whitesmoke']
 
     if type(adata) != anndata.AnnData:
         raise TypeError("Invalid data type. AnnData object is required.")
