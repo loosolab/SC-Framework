@@ -184,7 +184,7 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     writer_threads : int, default 1,
         Number of threads to use for writing.
     parallel : boolean, default False
-        Number of threads to use for read processing.
+        Whether to enable parallel processsing.
     """
     # check then load modules
     check_module("pysam")
