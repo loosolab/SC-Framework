@@ -1,11 +1,8 @@
 # Loading packages
 import scanpy as sc
-from sctoolbox.creators import *
-from sctoolbox.checker import *
+import sctoolbox.creators as creators
 from fitter import Fitter
 import numpy as np
-from scipy.stats import *
-import scipy.stats as st
 from kneed import KneeLocator
 
 ###################################################################################################################
@@ -132,14 +129,14 @@ def qcmetric_calculator(ANNDATA, control_var=False):
             ANNDATA.var[a] = qc_metrics[1][a]
 
     # Annotating into anndata.uns["infoprocess"] the qc_var parameter for the sc.pp.calculate_qc_metrics
-    build_infor(ANNDATA, m1, VAR)
+    creators.build_infor(ANNDATA, m1, VAR)
 
     # Storing the original counts
     for a in obs_info:
         go_to_id = ANNDATA.obs[a].sum()
-        build_infor(ANNDATA, m2 + "c_" + a, go_to_id)
+        creators.build_infor(ANNDATA, m2 + "c_" + a, go_to_id)
     for a in var_info:
         go_to_id = ANNDATA.var[a].sum()
-        build_infor(ANNDATA, m2 + "g_" + a, go_to_id)
+        creators.build_infor(ANNDATA, m2 + "g_" + a, go_to_id)
 
     return(ANNDATA)
