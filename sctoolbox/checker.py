@@ -2,15 +2,11 @@
 Modules for checking the existence of directories and files
 """
 # Importing modules
-from multiprocessing.sharedctypes import Value
-import sctoolbox
 import os
-from os import path
 import sys
-import sctoolbox.creators as cr
-import sctoolbox.utilities as ut
-import warnings
 import re
+
+import sctoolbox.utilities as ut
 
 
 def check_notebook(notebook_num):
@@ -152,7 +148,7 @@ def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="f
     # Author : Guilherme Valente
     # Tracking is pathways exist.
     def checking_paths(CHECK_PATH, MES):
-        if path.exists(path_QUANT):
+        if os.path.exists(path_QUANT):
             return("valid")
         else:
             sys.exit(MES)
