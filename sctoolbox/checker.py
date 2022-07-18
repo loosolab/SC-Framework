@@ -32,7 +32,7 @@ def write_info_txt(path_value, file_path="./"):
         path where the info.yml is stored
     '''
 
-    pattern = re.compile('[<>:"\\\|\?\*]')
+    pattern = re.compile(r'[<>:"\\\|\?\*]')
     if re.search(pattern, path_value):
         raise ValueError("Invalid character in directory string.")
 
