@@ -4,6 +4,7 @@ import os
 import scanpy as sc
 import importlib
 import re
+import multiprocessing
 
 from sctoolbox.checker import *
 from sctoolbox.creators import *
@@ -160,7 +161,7 @@ def pseudobulk_table(adata, groupby, how="mean"):
     return(res)
 
 
-def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", output_prefix="split_"):
+def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", output_prefix="split_", reader_threads=1, writer_threads=1, parallel=False):
     """
     Split BAM files into clusters based on 'groupby' from the anndata.obs table.
 
@@ -178,6 +179,12 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         Tag to use to identify the reads to split. Must match the barcodes of the barcode_col. Default: "CB".
     output_prefix : str, optional
         Prefix to use for the output files. Default: "split_".
+    reader_threads : int, default 1
+        Number of threads to use for reading.
+    writer_threads : int, default 1,
+        Number of threads to use for writing.
+    parallel : boolean, default False
+        Whether to enable parallel processsing.
     """
     # check then load modules
     check_module("pysam")
@@ -195,62 +202,185 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     
     if isinstance(bams, str):
         bams = [bams]
+
+    # TODO create folder if specified in prefix
         
     #Establish clusters from obs
     clusters = set(adata.obs[groupby])
     print(f"Found {len(clusters)} groups in .obs.{groupby}: {list(clusters)}")
 
+    # setup barcode <-> cluster dict
     if barcode_col is None:
         barcode2cluster = dict(zip(adata.obs.index.tolist(), adata.obs[groupby]))
     else:
         barcode2cluster = dict(zip(adata.obs[barcode_col], adata.obs[groupby]))
 
-    #Open output files for writing clusters
+    # create template used for bam header
     template = pysam.AlignmentFile(bams[0], "rb")
-    
-    handles = {}
-    for cluster in clusters:
-        # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
-        f_out = output_prefix + re.sub(r'[\\/*?:"<>|]', "_", cluster) + ".bam"
-        handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template)
-        
-    #Loop over bamfile(s)
-    for i, bam in enumerate(bams):
-        print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
-        
-        bam_obj = pysam.AlignmentFile(bam, "rb")
-        
-        #Update progress based on total number of reads
-        # fall back to "samtools view -c file" if bam_obj.mapped is not available
-        try:
-            total = bam_obj.mapped
-        except ValueError:
-            total = int(pysam.view("-c", bam))
-        pbar = tqdm(total=total)
-        step = int(total / 10000) #10000 total updates
-        
-        i = 0
-        written = 0
-        for read in bam_obj:
-            i += 1
-            
-            bc = read.get_tag(read_tag)
-            
-            #Update step manually - there is an overhead to update per read with hundreds of million reads
-            if i == step:
-                pbar.update(step)
-                i = 0
-            
-            if bc in barcode2cluster:
-                cluster = barcode2cluster[bc]
-                handles[cluster].write(read)
-                written += 1
-        
-        # close progressbar
-        pbar.close()
 
-        print(f"Wrote {written} reads to cluster files")
+    if parallel:
+        # create path for output files
+        out_paths = {}
+        for cluster in clusters:
+            # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
+            save_cluster_name = re.sub(r'[\\/*?:"<>|]', '_', cluster)
+            out_paths[cluster] = f"{output_prefix}{save_cluster_name}.bam"
+
+        ### Setup
+        # setup pools
+        reader_pool = multiprocessing.Pool(reader_threads)
+        writer_pool = multiprocessing.Pool(writer_threads)
+
+        # setup queues to forward data between processes
+        manager = multiprocessing.Manager()
+
+        #read_chunk_queue = manager.Queue()
+        cluster_queues = {cluster: manager.Queue() for cluster in clusters}
+
+        ### Start process
+        # start reading bams and add reads into respective cluster queue
+        reader_results = []
+        for bam in bams:
+            reader_results.append(reader_pool.apply_async(_buffered_reader, (bam, cluster_queues, barcode2cluster, read_tag), callback=lambda x: print(x)))
+
+        # write reads to files; one process per file
+        writer_results = []
+        for cluster in clusters:
+            writer_results.append(writer_pool.apply_async(_writer, (cluster_queues[cluster], out_paths[cluster], str(template.header)), callback=lambda x: print(x)))
+
+        ### End process + cleanup
+        # wait for readers to finish
+        reader_pool.close()
+        reader_pool.join()
+
+        # put None into queues as a sentinel to stop writers
+        for q in cluster_queues.values():
+            q.put(None)
+
+        # wait for writers to finish
+        writer_pool.close()
+        writer_pool.join()
+
+    else:
+        # open output bam files
+        handles = {}
+        for cluster in clusters:
+            # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
+            save_cluster_name = re.sub(r'[\\/*?:"<>|]', '_', cluster)
+            f_out = f"{output_prefix}{save_cluster_name}.bam"
+            handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template)
+
+        #Loop over bamfile(s)
+        for i, bam in enumerate(bams):
+            print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
+            
+            bam_obj = pysam.AlignmentFile(bam, "rb")
+            
+            #Update progress based on total number of reads
+            # fall back to "samtools view -c file" if bam_obj.mapped is not available
+            try:
+                total = bam_obj.mapped
+            except ValueError:
+                total = int(pysam.view("-c", bam))
+            pbar = tqdm(total=total)
+            step = int(total / 10000) #10000 total updates
+            
+            i = 0
+            written = 0
+            for read in bam_obj:
+                i += 1
+                
+                bc = read.get_tag(read_tag)
+                
+                #Update step manually - there is an overhead to update per read with hundreds of million reads
+                if i == step:
+                    pbar.update(step)
+                    i = 0
+                
+                if bc in barcode2cluster:
+                    cluster = barcode2cluster[bc]
+                    handles[cluster].write(read)
+                    written += 1
+            
+            # close progressbar
+            pbar.close()
+
+            print(f"Wrote {written} reads to cluster files")
+
+        #Close all files
+        for handle in handles.values():
+            handle.close()
+
+def _buffered_reader(path, out_queues, bc2cluster, tag):
+    """
+    Open bam file and add reads to respective output queue.
+
+    Parameters
+    ----------
+    path : str
+        Path to bam file.
+    read_num : int
+        Number of reads per chunk.
+    out_queue : dict
+        Dict of multiprocesssing.Queues with cluster as key
+    bc2cluster : dict
+        Dict of clusters with barcode as key.
+    tag : str
+        Read tag that should be used for queue assignment.
+    """
+    import pysam
+
+    # open bam
+    bam = pysam.AlignmentFile(path, "rb")
+
+    # put each read into correct queue
+    i = 0
+    for read in bam:
+        bc = read.get_tag(tag)
+
+        # put read into matching cluster queue
+        if bc in bc2cluster:
+            cluster = bc2cluster[bc]
+            out_queues[cluster].put(read.to_string())
         
-    #Close all files
-    for handle in handles.values():
-        handle.close()
+        i += 1
+
+    bam.close()
+
+    return(f"Done reading {path} of {i} reads")
+
+def _writer(read_queue, path, bam_header):
+    """
+    Write reads to given file.
+
+    Parameters
+    ----------
+    read_queue : multiprocessing.Queue
+        Queue of reads to be written into file.
+    path : str
+        Path to output file
+    bam_header : str(pysam.AlignmentHeader)
+        Used as template for output bam.
+    """
+    import pysam
+
+    handle = pysam.AlignmentFile(path, "wb", text=bam_header)
+
+    i = 0
+    while True:
+        read = read_queue.get()
+
+        # stop writing
+        if read is None:
+            break
+
+        # create read object
+        read = pysam.AlignedSegment.fromstring(read, handle.header)
+
+        handle.write(read)
+
+        i += 1
+
+    handle.close()
+
+    return(f"Done. Wrote {i} reads to {path}.")
