@@ -42,14 +42,7 @@ lint:
   stage: style_checks
   script:
     - pip install flake8
-    - flake8 sctoolbox
-  allow_failure: true
-
-type_checking:
-  stage: style_checks
-  script:
-    - pip install mypy
-    - mypy sctoolbox
+    - flake8 sctoolbox --ignore=E501 # ignore line too long
   allow_failure: true
 
 cov:
