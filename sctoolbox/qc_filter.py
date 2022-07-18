@@ -109,7 +109,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
     if only_plot is False and interval is None:  # It is missing the interval for cutoff
         sys.exit(m6)
 
-    elif only_plot == False and interval is not None:
+    elif not only_plot and interval is not None:
         if checker.check_cuts(str(interval), 0, 100) is False:  # Means the interval is not a number
             sys.exit(m2)
         else:
@@ -348,7 +348,7 @@ def anndata_filter(ANNDATA, GO_CUT):
         raw_data = GO_CUT[GO_CUT[stratcol] == "filter_genes"]
         adata_sub = ANNDATA_CP2.copy()
         for idx, a in raw_data.iterrows():
-            data, param, cuts, stra = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
+            data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
             if "skip" in cuts:
                 pass
             else:
