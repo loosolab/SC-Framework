@@ -1,14 +1,9 @@
 """
 Module to assembling anndata objects
 """
-import sctoolbox.checker as ch
-import sctoolbox.creators as cr
-
 import scanpy as sc
 import pandas as pd
-import anndata
 
-import sys
 import os
 import glob
 
