@@ -11,6 +11,15 @@ from sctoolbox.creators import *
 
 import matplotlib.pyplot as plt
 
+
+def _is_notebook():
+	""" Utility to check if function is being run from a notebook or a script """
+	try:
+		_ = get_ipython()
+		return(True)
+	except NameError:
+		return(False)
+
 def create_dir(path):
     """ Create a directory if it is not existing yet.
     
@@ -186,25 +195,26 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
     parallel : boolean, default False
         Whether to enable parallel processsing.
     """
+
     # check then load modules
     check_module("pysam")
     import pysam
 
     check_module("tqdm")
     from tqdm import tqdm
-    
+
     # check whether groupby and barcode_col are in adata.obs
     if groupby not in adata.obs.columns:
         raise ValueError(f"Column '{groupby}' not found in adata.obs!")
 
     if barcode_col is not None and barcode_col not in adata.obs.columns:
         raise ValueError(f"Column '{barcode_col}' not found in adata.obs!")
-    
+
     if isinstance(bams, str):
         bams = [bams]
 
     # TODO create folder if specified in prefix
-        
+
     #Establish clusters from obs
     clusters = set(adata.obs[groupby])
     print(f"Found {len(clusters)} groups in .obs.{groupby}: {list(clusters)}")
@@ -240,8 +250,9 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         ### Start process
         # start reading bams and add reads into respective cluster queue
         reader_results = []
-        for bam in bams:
-            reader_results.append(reader_pool.apply_async(_buffered_reader, (bam, cluster_queues, barcode2cluster, read_tag), callback=lambda x: print(x)))
+        for i, bam in enumerate(bams):
+            bam_name = os.path.basename(bam)
+            reader_results.append(reader_pool.apply_async(_buffered_reader, (bam, cluster_queues, barcode2cluster, read_tag, i, bam_name), callback=lambda x: print(x)))
 
         # write reads to files; one process per file
         writer_results = []
@@ -251,6 +262,7 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         ### End process + cleanup
         # wait for readers to finish
         reader_pool.close()
+        _ = [result.get() for result in reader_results]  # get any errors from threads
         reader_pool.join()
 
         # put None into queues as a sentinel to stop writers
@@ -311,7 +323,7 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", ou
         for handle in handles.values():
             handle.close()
 
-def _buffered_reader(path, out_queues, bc2cluster, tag):
+def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text):
     """
     Open bam file and add reads to respective output queue.
 
@@ -327,11 +339,38 @@ def _buffered_reader(path, out_queues, bc2cluster, tag):
         Dict of clusters with barcode as key.
     tag : str
         Read tag that should be used for queue assignment.
+    pbar_position : int
+        The position of the pbar for this job.
+    pbar_text 
+        The text of the pbar for this job.
     """
+   
     import pysam
+    
+    if _is_notebook() == True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+
+    print(' ', end='', flush=True)  #hack for making progress bars work in notebooks; https://github.com/tqdm/tqdm/issues/485#issuecomment-473338308
 
     # open bam
     bam = pysam.AlignmentFile(path, "rb")
+
+    #number of reads in bam 
+    try:
+        total = bam.mapped
+    except ValueError:
+        print("Getting number of reads using pysam")
+        total = int(pysam.view("-c", bam))
+
+    # setup progressbar
+    pbar = tqdm(total=total, position=pbar_position, desc=pbar_text)
+    step = int(total / 10000) #10000 total updates
+
+    # Setup read buffer per cluster
+    read_buffer = {cluster: [] for cluster in set(bc2cluster.values())}
+    buffer_size = 10000
 
     # put each read into correct queue
     i = 0
@@ -341,9 +380,18 @@ def _buffered_reader(path, out_queues, bc2cluster, tag):
         # put read into matching cluster queue
         if bc in bc2cluster:
             cluster = bc2cluster[bc]
-            out_queues[cluster].put(read.to_string())
+            read_buffer[cluster].append(read.to_string())
+
+            # Send reads to buffer when buffer size is reached
+            if len(read_buffer[cluster]) == buffer_size:
+                out_queues[cluster].put(read_buffer[cluster])
+                out_queues[cluster] = []
         
+        #update progress bar
         i += 1
+        if i == step:
+            pbar.update(step)
+            i = 0
 
     bam.close()
 
@@ -368,18 +416,19 @@ def _writer(read_queue, path, bam_header):
 
     i = 0
     while True:
-        read = read_queue.get()
+        read_lst = read_queue.get()
 
         # stop writing
-        if read is None:
+        if read_lst is None:
             break
+        
+        for read in read_lst:
+            # create read object
+            read = pysam.AlignedSegment.fromstring(read, handle.header)
 
-        # create read object
-        read = pysam.AlignedSegment.fromstring(read, handle.header)
+            handle.write(read)
 
-        handle.write(read)
-
-        i += 1
+            i += 1
 
     handle.close()
 
