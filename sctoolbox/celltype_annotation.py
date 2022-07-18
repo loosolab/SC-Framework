@@ -61,6 +61,26 @@ def get_rank_genes(d):
     genes = list(names_dict.keys())
     return genes
 
+def check_genes_databses(all_genes, gene_db, source):
+    """ Check the coverage of genes between a database and a list of genes 
+    
+    Parameters
+    -----------
+    all_genes : list
+        List of input genes withou duplicates
+    genes_db : list
+        list of marker genes
+    source : str
+        Where genes_db originated from: wholeDB or user_db
+    """
+
+    #Check the overlap between input genes and database
+    gene_overlap = set(all_genes).intersection(gene_db)
+    if len(gene_overlap) == 0:
+        raise ValueError(f"No match found between input genes and {source} database. Adjust 'gene_column' to control input genes and 'gene_symbol' to control the switch between name/id.")
+    perc_overlap = round(len(gene_overlap)/len(all_genes) * 100, 1)
+    print(f"{len(gene_overlap)}/{len(all_genes)} ({perc_overlap}%) input genes were found in {source} database (total genes in database: {len(gene_db)})")
+
 
 def run_scsa(adata,
             gene_column=None,
@@ -139,7 +159,8 @@ def run_scsa(adata,
         AnnData: If inplace==False, returns adata with cell types in adata.obs
     """
 
-    species = species.capitalize()
+    if species:
+        species = species.capitalize()
 
     ### checking if columns exist in adata ###
     if key not in adata.uns.keys():
@@ -150,6 +171,14 @@ def run_scsa(adata,
         groupby = adata.uns[key]['params']['groupby']
     except:
         raise KeyError(f"Could not find 'params' within adata.uns[{key}]. Please ensure that this key contains results of rank_genes_groups.")
+        
+     # Check species and user.db
+    if species not in ['Human', 'Mouse', None]:
+        raise ValueError('Supported species are only: human or mouse! To annotate other species, set species=None and provide a user_db')
+    if not user_db and not species:
+        raise ValueError('If no species is provided, user_db must be given! Supported species are: human or mouse! If you want to annotate other species, please provide a marker genes list using the parameter: user_db')
+    #elif not user_db and species not in ['Human', 'Mouse']:
+        #raise ValueError('Supported species are only: human or mouse! If you want to annotate other species, please provide a marker genes list using the parameter user_db')
 
     #Get paths to scripts and files
     if not python_path: 
@@ -179,15 +208,13 @@ def run_scsa(adata,
     all_genes = get_rank_genes(result)
     print("Found {} genes from input ranked genes".format(len(all_genes)))
     print("Checking if genes are in the database...")
-    if user_db is None:
+    if species is not None:
         database_genes_symbol, database_genes_id = read_scsa_database(species)
         symbol_overlap = set(all_genes).intersection(database_genes_symbol)
         id_overlap = set(all_genes).intersection(database_genes_id)
 
         #If gene_symbol is 'auto', try to infer column from database
         if gene_symbol == 'auto':
-            symbol_overlap = set(all_genes).intersection(database_genes_symbol)
-            id_overlap = set(all_genes).intersection(database_genes_id)
             print(f"gene symbol overlap: {len(symbol_overlap)} | ensembl id overlap: {len(id_overlap)}")
 
             if len(symbol_overlap) == 0 and len(id_overlap) == 0:
@@ -204,18 +231,18 @@ def run_scsa(adata,
             database_genes = database_genes_symbol
         else:
             database_genes = database_genes_id
+            
+        # check database_genes against all_genes
+        check_genes_databses(all_genes, database_genes, source='wholeDB')
 
-    else:
+    if user_db is not None:
         #Read user database and check overlap with input genes
         user_database = pd.read_csv(user_db, sep="\t", header=None)
         database_genes = set(user_database[1].tolist())
+        
+        # check database_genes against all_genes
+        check_genes_databses(all_genes, database_genes, source='User DB')
     
-    #Check the overlap between input genes and database
-    gene_overlap = set(all_genes).intersection(database_genes)
-    if len(gene_overlap) == 0:
-        raise ValueError("No match found between input genes and marker database. Adjust 'gene_column' to control input genes and 'gene_symbol' to control the switch between name/id.")
-    perc_overlap = round(len(gene_overlap)/len(all_genes) * 100, 1)
-    print(f"{len(gene_overlap)}/{len(all_genes)} ({perc_overlap}%) input genes were found in user database (total genes in database: {len(database_genes)})")
 
     ### Setup table for SCSA input ###
     groups = result['names'].dtype.names
@@ -238,10 +265,15 @@ def run_scsa(adata,
         if gene_symbol == "symbol":
             scsa_cmd += ' -E'
         if user_db:
-            scsa_cmd += f' -M {user_db} -N'
+            scsa_cmd += f' -M {user_db}'
 
     else:
-        raise ValueError('Supported species are: human or mouse')
+        # annotating other species is possible if species is False and user_db is provided
+        scsa_cmd = f"{python_path} {scsa_path} -d {wholedb_path} -i {csv} -s scanpy -k {tissue} -b -f {fc} -p {pvalue} -o {results_path} -m txt -M {user_db} -N"
+        
+        if gene_symbol == "symbol":
+            scsa_cmd += ' -E'
+
 
     # writing the output of the run to the output file
     cmd_output = './scsa_output.txt'  # the output of the command will be saved to this file
@@ -265,6 +297,8 @@ def run_scsa(adata,
         dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
 
     print(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
+    for _,row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
+        print(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
     ###  Add the annotated celltypes to the anndata-object ###
     if inplace:
