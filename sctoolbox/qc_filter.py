@@ -1,15 +1,7 @@
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 import sys
-from scipy.stats import *
-from kneed import KneeLocator
+from scipy.stats import skew, kurtosis
 import pandas as pd
-from sctoolbox.plotting import *
-from sctoolbox.creators import *
-from sctoolbox.checker import *
-from sctoolbox.analyser import *
-import sctoolbox.utilities as ut
+from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
 
 ###############################################################################
@@ -36,26 +28,26 @@ def loop_question(ANSWER, QUIT_M, CHECK):  # Checking invalid outcome
     # List and others
     opt1, opt2, opt3, opt4 = ["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"]  # Lists with possible answers for each question
     options = {"yn": opt2, "custdef": opt3, "custdefskip": opt4}
-    if check_options(CHECK, list(options.keys())) is False and type(CHECK) != float:
+    if checker.check_options(CHECK, list(options.keys())) is False and type(CHECK) != float:
         sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
 
     ANSWER = input(ANSWER).lower()
     # Check validity of options
-    while check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) is False and ut.is_str_numeric(ANSWER) is False:
+    while checker.check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) is False and utilities.is_str_numeric(ANSWER) is False:
         print("Choose one of these options: " + str(opt1 + opt2 + opt3 + opt4))
         ANSWER = input(ANSWER).lower()
 
     # In case the input is valid, goes futher
     if type(CHECK) != float:
-        while check_options(ANSWER, OPTS1=opt1 + options[CHECK]) is False:
+        while checker.check_options(ANSWER, OPTS1=opt1 + options[CHECK]) is False:
             print(m1 + QUIT_M)
             ANSWER = input()
-            check_options(ANSWER, opt1 + options[CHECK])
+            checker.check_options(ANSWER, opt1 + options[CHECK])
     else:  # Checking validity of custom value: >=0 and <= a limit (the CHECK)
-        while check_cuts(ANSWER, 0, CHECK) is False:
+        while checker.check_cuts(ANSWER, 0, CHECK) is False:
             print(m1 + QUIT_M)
             ANSWER = input()
-            check_cuts(ANSWER, 0, CHECK)
+            checker.check_cuts(ANSWER, 0, CHECK)
     return(ANSWER.lower())
 
 
@@ -118,7 +110,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
         sys.exit(m6)
 
     elif only_plot == False and interval is not None:
-        if check_cuts(str(interval), 0, 100) is False:  # Means the interval is not a number
+        if checker.check_cuts(str(interval), 0, 100) is False:  # Means the interval is not a number
             sys.exit(m2)
         else:
             if isinstance(interval, (int)) is True and interval >= 0 and interval <= 100:  # Converting interval int for float from 0 to 1
@@ -126,14 +118,14 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
 
         # Checking if the total count was already filtered
         act_c_total_counts, id_c_total_counts = float(ANNDATA.obs["total_counts"].sum()), float(ANNDATA.uns["infoprocess"]["ID_c_total_counts"])
-        if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is True:  # Total_counts was not filtered yet, then only this parameter will be evaluated
+        if checker.check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is True:  # Total_counts was not filtered yet, then only this parameter will be evaluated
             sta_cut_cells, sta_cut_genes = True, False
             calulate_and_plot_filter.append("total_counts")
             filename = filename + "tot_count_cut"
             print(m4)
 
         # Other parameters will be evaluated because plot was selected and total count is filtered
-        elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is False:  # Total counts was filtered yet.
+        elif checker.check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is False:  # Total counts was filtered yet.
             sta_cut_cells, sta_cut_genes = True, True
             filename = filename + "other_param_cut"
             for a in cells_genes_list:
@@ -147,7 +139,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
         # Building the dataframe with default cutoffs stablished and the plots
         # Here will be called the function establishing_cuts from the analyser.py module
         print(m5)
-        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
+        return plotting.qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
 
     elif only_plot is False:  # Calculate cutoffs and plot in the violins
         if sta_cut_cells is True:  # For cells
@@ -158,7 +150,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
                         data = adata_cond[b]
                         skew_val, kurtosis_val = round(skew(data.to_numpy(), bias=False), 1), int(kurtosis(data.to_numpy(), fisher=False, bias=False))  # Calculating the skewness and kurtosis
                         kurtosis_val_norm = int(kurtosis_val - 3)  # This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
-                        df_cuts = establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, b, a)
+                        df_cuts = analyser.establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, b, a)
 
         if sta_cut_genes is True:  # For genes
             for a in for_genes:
@@ -166,9 +158,9 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
                     data = for_genes_pd[a]
                     skew_val, kurtosis_val = round(skew(data.to_numpy(), bias=False), 1), int(kurtosis(data.to_numpy(), fisher=False, bias=False))  # Calculating the skewness and kurtosis
                     kurtosis_val_norm = int(kurtosis_val - 3)  # This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
-                    df_cuts = establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
-        display(df_cuts)
-        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
+                    df_cuts = analyser.establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
+
+        plotting.qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
         return df_cuts
 
 ######################################################################################
@@ -302,9 +294,9 @@ def anndata_filter(ANNDATA, GO_CUT):
 
     # Creating the infoprocess
     if "Cell filter" not in ANNDATA_CP.uns["infoprocess"]:
-        build_infor(ANNDATA_CP, "Cell filter", list())
+        creators.build_infor(ANNDATA_CP, "Cell filter", list())
     if "Gene filter" not in ANNDATA_CP.uns["infoprocess"]:
-        build_infor(ANNDATA_CP, "Gene filter", list())
+        creators.build_infor(ANNDATA_CP, "Gene filter", list())
 
     # Filter mitochondrial content first
     if "pct_counts_is_mitochondrial" in act_params:
