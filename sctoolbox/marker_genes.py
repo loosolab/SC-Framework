@@ -1,6 +1,8 @@
+import os
+import sys
+
 import pandas as pd
-from sctoolbox.checker import *
-from sctoolbox.creators import *
+from sctoolbox import checker, creators
 
 
 def label_genes(ANNDATA, label=False):
@@ -45,7 +47,7 @@ def label_genes(ANNDATA, label=False):
     if label is True:
         for a in lst_parameters:
             answer = input(m1 + a + m2)
-            while check_options(answer) is False:  # Annotate?
+            while checker.check_options(answer) is False:  # Annotate?
                 answer = input(m1 + a + m2)
 
             if a == "mitochondrial" and answer.lower() == "y":  # Annotate mitochondrial
@@ -56,7 +58,7 @@ def label_genes(ANNDATA, label=False):
             if a == "cell_cycle" and answer.lower() == "y":  # Annotate cell cycle
                 tmp_list = []
                 answer = input(m3 + ', '.join(list_species_cellcycle_annotations))
-                while check_options(answer, OPTS1=opt_quit + opt_annotation) is False:  # Give the species name for cell cycle
+                while checker.check_options(answer, OPTS1=opt_quit + opt_annotation) is False:  # Give the species name for cell cycle
                     answer = input(m3 + ', '.join(list_species_cellcycle_annotations))
                 for b in open(path_cellcycle_genes + "/" + answer + "_cellcycle_genes.txt"):
                     if b.strip():
@@ -73,7 +75,7 @@ def label_genes(ANNDATA, label=False):
             if a == "custom" and answer.lower() == "y":  # Annotate customized genes
                 tmp_list = []
                 answer = input(m4)
-                while path.isfile(answer) is False:
+                while os.path.isfile(answer) is False:
                     if answer.lower() in opt1:
                         sys.exit("You quit and lost all modifications :(")
                     print(m5)
@@ -95,9 +97,9 @@ def label_genes(ANNDATA, label=False):
 
     # Annotating in adata.uns["infoprocess"]
     if len(infor) > 0:
-        build_infor(ANNDATA, "genes_labeled", infor)
+        creators.build_infor(ANNDATA, "genes_labeled", infor)
     elif label is False:
-        build_infor(ANNDATA, "genes_labeled", "None")
+        creators.build_infor(ANNDATA, "genes_labeled", "None")
     return(ANNDATA)
 
 
