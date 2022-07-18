@@ -2,9 +2,6 @@
 Modules for creating files or directories
 """
 import os
-from os import path
-import sys
-import sctoolbox
 import sctoolbox.checker as ch
 import anndata
 
