@@ -1,14 +1,12 @@
 """
 Module to assembling anndata objects
 """
-import sctoolbox
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 
 import scanpy as sc
 import pandas as pd
 import anndata
-from anndata import AnnData
 
 import sys
 
