@@ -57,10 +57,7 @@ def vprint(verbose=True):
     verbose : Boolean, optional
         Set to False to disable the verbose message. Default: True
     """
-
-    f = lambda message: print(message) if verbose is True else None
-
-    return f
+    return lambda message: print(message) if verbose is True else None
 
 
 # Requirement for installed tools
