@@ -42,8 +42,8 @@ lint:
   stage: style_checks
   script:
     - pip install flake8
-    - flake8 sctoolbox
-  allow_failure: true
+    - flake8 sctoolbox --ignore=E501 --exclude sctoolbox/data
+  allow_failure: false
 
 type_checking:
   stage: style_checks
