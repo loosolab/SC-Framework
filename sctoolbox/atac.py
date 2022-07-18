@@ -8,11 +8,11 @@ import sctoolbox.utilities
 
 
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
-    """ Perform TF-IDF normalization on a sparse matrix. 
+    """ Perform TF-IDF normalization on a sparse matrix.
     The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.
 
     Note: this function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
-    
+
     Parameters
     -----------
     matrix : scipy.sparse matrix
@@ -23,52 +23,52 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
         The type of inverse document frequency to use. Can be either "unary", "inverse_freq" or "inverse_freq_smooth". Default: "inverse_freq".
     """
 
-    #t - term (peak)
-    #d - document (cell)
-    #N - count of corpus (total set of cells)
+    # t - term (peak)
+    # d - document (cell)
+    # N - count of corpus (total set of cells)
 
-    #Normalize matrix to number of found peaks
+    # Normalize matrix to number of found peaks
     dense = matrix.todense()
-    peaks_per_cell = dense.sum(axis=1)  #i.e. the length of the document(number of words)
-    
-    #Decide on which Term frequency to use:
+    peaks_per_cell = dense.sum(axis=1)  # i.e. the length of the document(number of words)
+
+    # Decide on which Term frequency to use:
     if tf_type == "raw":
         tf = dense
     elif tf_type == "term_frequency":
-        tf = dense / peaks_per_cell     #Counts normalized to peaks (words) per cell (document)
+        tf = dense / peaks_per_cell     # Counts normalized to peaks (words) per cell (document)
     elif tf_type == "log":
-        tf = np.log1p(dense)            #for binary documents, this scales with "raw"
-    
-    
-    #Decide on the Inverse document frequency to use
-    N = dense.shape[0]     #number of cells (number of documents)
-    df = dense.sum(axis=0) #number of cells carrying each peak (number of documents containing each word) 
-    
+        tf = np.log1p(dense)            # for binary documents, this scales with "raw"
+
+
+    # Decide on the Inverse document frequency to use
+    N = dense.shape[0]     # number of cells (number of documents)
+    df = dense.sum(axis=0)  # number of cells carrying each peak (number of documents containing each word)
+
     if idf_type == "unary":
-        idf = np.ones(dense.shape[1]) #shape is number of peaks
+        idf = np.ones(dense.shape[1])  # shape is number of peaks
     elif idf_type == "inverse_freq":
-        idf = np.log(N/df)   #each cell has at least one peak (each document has one word), so df is always > 0
+        idf = np.log(N/df)    # each cell has at least one peak (each document has one word), so df is always > 0
     elif idf_type == "inverse_freq_smooth":
         idf = np.log(N/(df+1)) + 1
-    
-    #Obtain TF_IDF
+
+    # Obtain TF_IDF
     tf_idf = np.array(tf) * np.array(idf).squeeze()
     tf_idf = sparse.csr_matrix(tf_idf)
-    
+
     return(tf_idf)
 
 
 def apply_svd(adata, layer=None):
     """ Singular value decomposition of anndata object.
-    
+
     Parameters
     -----------
     adata : anndata.AnnData
         The anndata object to be decomposed.
     layer : string, optional
         The layer to be decomposed. If None, the layer is set to "X". Default: None.
-    
-    Returns:   
+
+    Returns:
     --------
     adata : anndata.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
@@ -78,16 +78,16 @@ def apply_svd(adata, layer=None):
         mat = adata.X
     else:
         mat = adata.layers[layer]
-        
-    #SVD
-    u, s, v = scipy.sparse.linalg.svds(mat, k=30, which="LM") #find largest variance
 
-    #u/s/v are reversed in scipy.sparse.linalg.svds:
+    # SVD
+    u, s, v = scipy.sparse.linalg.svds(mat, k=30, which="LM") # find largest variance
+
+    # u/s/v are reversed in scipy.sparse.linalg.svds:
     s = s[::-1]
     u = np.fliplr(u)
     v = np.flipud(v)
 
-    #Visualize explained variance
+    # Visualize explained variance
     var_explained = np.round(s**2/np.sum(s**2), decimals=3)
 
     adata.obsm["X_svd"] = u
