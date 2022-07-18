@@ -9,6 +9,8 @@ import scanpy as sc
 import qnorm
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
+from matplotlib import colors
+
 from sctoolbox.utilities import save_figure
 import plotly as po
 import plotly.graph_objects as go
