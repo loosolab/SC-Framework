@@ -15,6 +15,50 @@ from sctoolbox.utilities import save_figure
 ###################### PCA/tSNE/UMAP plotting functions #####################
 #############################################################################
 
+
+def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
+    """
+    Plot the pca variance explained by each component as a barplot.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str
+        Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>]. Default: "pca".
+    n_pcs : int, optional
+        Number of components to plot. Default: 20.
+    ax : matplotlib.axes.Axes, optional
+        Axes object to plot on. If None, a new figure is created. Default: None.
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        print(ax)
+
+    if method not in adata.uns:
+        raise KeyError("The given method '{0}' is not found in adata.uns. Please make sure to run the method before plotting variance.")
+
+    # Get variance from object
+    var_explained = adata.uns["pca"]["variance_ratio"][:n_pcs]
+    var_explained = var_explained * 100  # to percent
+
+    # Plot barplot of variance
+    sns.barplot(x=list(range(1, len(var_explained) + 1)),
+                y=var_explained,
+                color="limegreen",
+                ax=ax)
+
+    # Finalize plot
+    ax.set_xlabel('PCs', fontsize=12)
+    ax.set_ylabel("Variance explained (%)")
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
+    ax.set_axisbelow(True)
+
+    return(ax)
+
+
 def search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
                                   spread_range=(2.0, 3.0, 0.5),
                                   metacol="Sample", n_components=2, verbose=True, save=None):
