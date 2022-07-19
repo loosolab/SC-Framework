@@ -440,3 +440,39 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
 #Save plot
     if SAVE == True:
         save_figure(FILENAME)
+
+
+def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
+    """
+    Create a multipanel plot comparing different batch correction methods
+
+    Parameters
+    ------------
+    adatas : dict of anndata.AnnData
+        Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
+        E.g.: {"bbknn": anndata}
+    color_by : str or list of str
+        Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
+    plots : str or list of str
+        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
+        List order is forwarded to plot.
+    figsize : number tuple
+        Size of the plot in inch.
+    output : str, default None
+        Path to plot output file.
+    dpi : number, default 300
+        Dots per inch.
+    """
+    ##### checks #####
+    # dict contains only anndata
+    # color_by exists in anndata.obs
+    # plots are valid
+
+    ##### plotting #####
+    # setup subplot structure
+
+    # fill in plots
+
+    # save
+
+    # show plot if in jupyter notebook
