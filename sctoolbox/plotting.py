@@ -485,15 +485,31 @@ def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
                 raise ValueError(f"Couldn't find {color_group} in at least one adata.obs")
 
     # plots are valid
-    invalid_plots = set(plots) - set(["UMAP", "tSNE", "PCA", "PCA-var"])
+    invalid_plots = set(plots) - set(["UMAP", "tSNE", "PCA", "PCA-var"]) # TODO
     if invalid_plots:
         raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
     ##### plotting #####
     # setup subplot structure
+    # overestimate rows empty rows will be deleted afterwards
+    rows = len(plots) * len(color_by)
+    fig, axs = plt.subplots(nrows=rows, ncols=len(adatas), dpi=dpi, figsize=figsize)
+    axs = axs.flatten()
 
     # fill in plots
+    for i, ax in enumerate(axs):
+        adata = adatas[i % len(adatas)]
+
+        # TODO add in plots
+        # TODO this has to somehow know that there are multiple rows (one for each coloring) for certain plots like UMAP.
+
+    # remove empty plot spaces
+    for j in range(i + 1, rows):
+        fig.delaxes(axs[j])
 
     # save
+    if output:
+        plt.savefig(output)
 
     # show plot if in jupyter notebook
+    # TODO
