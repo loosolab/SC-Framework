@@ -15,12 +15,12 @@ import matplotlib.pyplot as plt
 
 
 def _is_notebook():
-	""" Utility to check if function is being run from a notebook or a script """
-	try:
-		_ = get_ipython()
-		return(True)
-	except NameError:
-		return(False)
+    """ Utility to check if function is being run from a notebook or a script """
+    try:
+        _ = get_ipython()
+        return(True)
+    except NameError:
+        return(False)
 
 def create_dir(path):
     """ Create a directory if it is not existing yet.
@@ -188,8 +188,17 @@ def split_list(l, n):
 
     return chunks
 
-def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB", 
-                       output_prefix="split_", reader_threads=1, writer_threads=1, parallel=False, 
+
+def split_bam_clusters(adata,
+                       bams,
+                       groupby,
+                       barcode_col=None,
+                       read_tag="CB",
+                       output_prefix="split_",
+                       reader_threads=1,
+                       writer_threads=1,
+                       parallel=False,
+                       pysam_threads=4,
                        buffer_size=10000,
                        max_queue_size=1000):
     """
@@ -241,7 +250,7 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB",
     # create output folder if needed
     create_dir(output_prefix)
 
-    #Establish clusters from obs
+    # Establish clusters from obs
     clusters = list(set(adata.obs[groupby]))
     print(f"Found {len(clusters)} groups in .obs.{groupby}: {clusters}")
 
@@ -299,7 +308,7 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB",
             queue = cluster_queues[chunk[0]]  # same queue for the whole chunk
             position = len(bams) + j
             path_dict = {cluster: out_paths[cluster] for cluster in chunk}  # subset of out_paths specific for this writer
-            writer_results.append(writer_pool.apply_async(_writer, (queue, path_dict, str(template.header), position), callback=lambda x: print(x)))
+            writer_results.append(writer_pool.apply_async(_writer, (queue, path_dict, str(template.header), pysam_threads, position), callback=lambda x: print(x)))
 
         # ---- End process + cleanup ----#
         # wait for readers to finish
@@ -322,48 +331,49 @@ def split_bam_clusters(adata, bams, groupby, barcode_col=None, read_tag="CB",
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
             save_cluster_name = re.sub(r'[\\/*?:"<>|]', '_', cluster)
             f_out = f"{output_prefix}{save_cluster_name}.bam"
-            handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template)
+            handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template, threads=pysam_threads)
 
-        #Loop over bamfile(s)
+        # Loop over bamfile(s)
         for i, bam in enumerate(bams):
             print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
-            
+
             bam_obj = pysam.AlignmentFile(bam, "rb")
-            
-            #Update progress based on total number of reads
+
+            # Update progress based on total number of reads
             # fall back to "samtools view -c file" if bam_obj.mapped is not available
             try:
                 total = bam_obj.mapped
             except ValueError:
                 total = int(pysam.view("-c", bam))
             pbar = tqdm(total=total)
-            step = int(total / 10000) #10000 total updates
-            
+            step = int(total / 10000)  # 10000 total updates
+
             i = 0
             written = 0
             for read in bam_obj:
                 i += 1
-                
+
                 bc = read.get_tag(read_tag)
-                
-                #Update step manually - there is an overhead to update per read with hundreds of million reads
+
+                # Update step manually - there is an overhead to update per read with hundreds of million reads
                 if i == step:
                     pbar.update(step)
                     i = 0
-                
+
                 if bc in barcode2cluster:
                     cluster = barcode2cluster[bc]
                     handles[cluster].write(read)
                     written += 1
-            
+
             # close progressbar
             pbar.close()
 
             print(f"Wrote {written} reads to cluster files")
 
-        #Close all files
+        # Close all files
         for handle in handles.values():
             handle.close()
+
 
 def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text, buffer_size=10000):
     """
@@ -390,18 +400,18 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
     """
 
     import pysam
-    
-    if _is_notebook() == True:
+
+    if _is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
 
-    print(' ', end='', flush=True)  #hack for making progress bars work in notebooks; https://github.com/tqdm/tqdm/issues/485#issuecomment-473338308
+    print(' ', end='', flush=True)  # hack for making progress bars work in notebooks; https://github.com/tqdm/tqdm/issues/485#issuecomment-473338308
 
     # open bam
     bam = pysam.AlignmentFile(path, "rb")
 
-    # Get number of reads in bam 
+    # Get number of reads in bam
     try:
         total = bam.mapped
     except ValueError:
@@ -429,7 +439,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
             if len(read_buffer[cluster]) == buffer_size:
                 out_queues[cluster].put((cluster, read_buffer[cluster]))  # send the tuple of (clustername, read_buffer) to queue
                 read_buffer[cluster] = []
-        
+
         # update progress bar
         i += 1
         if i == step:
@@ -437,7 +447,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
             i = 0
 
     bam.close()
-    
+
     # Send remaining reads to buffer
     for cluster in read_buffer:
         if len(read_buffer[cluster]) > 0:
@@ -445,7 +455,8 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
 
     return(f"Done reading {path} of {i} reads")
 
-def _writer(read_queue, out_paths, bam_header, position=0):
+
+def _writer(read_queue, out_paths, bam_header, pysam_threads=4, position=0):
     """
     Write reads to given file.
 
@@ -455,13 +466,14 @@ def _writer(read_queue, out_paths, bam_header, position=0):
         Queue of reads to be written into file.
     out_paths : dict
         Path to output files for this writer. In the format {cluster1: <path>, cluster2: <path>}
+    pysam_threads : int, optional
+        Number of threads for pysam to use for writing. This is different from the threads used for the individual writers. Default: 4.
     bam_header : str(pysam.AlignmentHeader)
         Used as template for output bam.
     """
     import pysam
-    import psutil
 
-    if _is_notebook() == True:
+    if _is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
@@ -469,14 +481,16 @@ def _writer(read_queue, out_paths, bam_header, position=0):
     print(' ', end='', flush=True)  # hack for making progress bars work in notebooks
     pbar = tqdm(position=position, unit=" items", desc="Size of writer queue for clusters: {0}".format(list(out_paths.keys())))
 
+    # open bam files for writing cluster reads
     try:
         handles = {}
         for cluster in out_paths:
-            handles[cluster] = pysam.AlignmentFile(out_paths[cluster], "wb", text=bam_header)
+            handles[cluster] = pysam.AlignmentFile(out_paths[cluster], "wb", text=bam_header, threads=pysam_threads)
     except Exception as e:
         print(e.message)
         raise e
 
+    # fetch reads from queue and write to bam
     i = 0
     while True:
         cluster, read_lst = read_queue.get()
@@ -484,7 +498,7 @@ def _writer(read_queue, out_paths, bam_header, position=0):
         # stop writing
         if cluster is None:
             break
-        
+
         # write reads to file
         handle = handles[cluster]  # the handle for this cluster
         for read in read_lst:
@@ -503,4 +517,4 @@ def _writer(read_queue, out_paths, bam_header, position=0):
     for handle in handles.values():
         handle.close()
 
-    return(f"Done. Wrote {i} reads to {path}.")
+    return("Done.")
