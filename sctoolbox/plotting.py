@@ -455,7 +455,8 @@ def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
         Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
     plots : str or list of str
         Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
-        List order is forwarded to plot.
+        Note: List order is forwarded to plot.
+        # TODO description for choices?
     figsize : number tuple
         Size of the plot in inch.
     output : str, default None
@@ -463,10 +464,30 @@ def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
     dpi : number, default 300
         Dots per inch.
     """
+    if not isinstance(color_by, list):
+        color_by = [color_by]
+
+    if not isinstance(plots, list):
+        plots = [plots]
+
     ##### checks #####
     # dict contains only anndata
+    wrong_type = {k: type(v) for k, v in adatas.items() if not isinstance(v, sc.AnnData)}
+    if wrong_type:
+        raise ValueError(f"All items in 'adatas' parameter have to be of type AnnData. Found: {wrong_type}")
+
     # color_by exists in anndata.obs
+    # TODO add adata.var check?
+    # TODO more details; what adatas are missing the column?
+    for color_group in color_by:
+        for adata in adatas.value():
+            if not color_group in adata.obs.columns:
+                raise ValueError(f"Couldn't find {color_group} in at least one adata.obs")
+
     # plots are valid
+    invalid_plots = set(plots) - set(["UMAP", "tSNE", "PCA", "PCA-var"])
+    if invalid_plots:
+        raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
     ##### plotting #####
     # setup subplot structure
