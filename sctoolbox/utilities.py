@@ -318,10 +318,11 @@ def split_bam_clusters(adata,
 
         # put None into queues as a sentinel to stop writers
         for q in cluster_queues.values():
-            q.put(None)
+            q.put((None, None))
 
         # wait for writers to finish
         writer_pool.close()
+        _ = [result.get() for result in writer_results]  # get any errors from threads
         writer_pool.join()
 
     else:
@@ -416,8 +417,8 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
         total = bam.mapped
     except ValueError:
         print("Getting number of reads using pysam")
-        total = int(pysam.view("-c", bam))
-
+        total = int(pysam.view("-c", path))
+    
     # setup progressbar
     pbar = tqdm(total=total, position=pbar_position, desc=pbar_text, unit="reads")
     step = int(total / 10000)  # 10000 total updates
@@ -426,6 +427,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
     read_buffer = {cluster: [] for cluster in set(bc2cluster.values())}
 
     # put each read into correct queue
+    written = 0
     i = 0  # count to update pbar
     for read in bam:
         bc = read.get_tag(tag)
@@ -438,6 +440,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
             # Send reads to buffer when buffer size is reached
             if len(read_buffer[cluster]) == buffer_size:
                 out_queues[cluster].put((cluster, read_buffer[cluster]))  # send the tuple of (clustername, read_buffer) to queue
+                written += len(read_buffer[cluster])
                 read_buffer[cluster] = []
 
         # update progress bar
@@ -446,14 +449,18 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
             pbar.update(step)
             i = 0
 
+    # all reads have been read
+    pbar.n = total
+    pbar.refresh()
     bam.close()
 
     # Send remaining reads to buffer
     for cluster in read_buffer:
         if len(read_buffer[cluster]) > 0:
-            out_queues[cluster].put(read_buffer[cluster])
+            out_queues[cluster].put((cluster, read_buffer[cluster]))
+            written += len(read_buffer[cluster])
 
-    return(f"Done reading {path} of {i} reads")
+    return f"Done reading '{path}' - sent {written} reads to writer queues"
 
 
 def _writer(read_queue, out_paths, bam_header, pysam_threads=4, position=0):
@@ -491,7 +498,7 @@ def _writer(read_queue, out_paths, bam_header, pysam_threads=4, position=0):
         raise e
 
     # fetch reads from queue and write to bam
-    i = 0
+    n_written = {cluster: 0 for cluster in out_paths}
     while True:
         cluster, read_lst = read_queue.get()
 
@@ -506,8 +513,7 @@ def _writer(read_queue, out_paths, bam_header, pysam_threads=4, position=0):
             # create read object and write to handle
             read = pysam.AlignedSegment.fromstring(read, handle.header)
             handle.write(read)
-
-            i += 1
+            n_written[cluster] += 1
 
         # Get size of writer queue
         pbar.n = read_queue.qsize()
@@ -517,4 +523,4 @@ def _writer(read_queue, out_paths, bam_header, pysam_threads=4, position=0):
     for handle in handles.values():
         handle.close()
 
-    return("Done.")
+    return "Done writing reads to .bam-files."
