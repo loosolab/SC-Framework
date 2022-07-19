@@ -36,10 +36,10 @@ before_script:
 
 
 stages: 
-  - style_checks
   - tests
+
 lint:
-  stage: style_checks
+  stage: tests
   script:
     - pip install flake8
     - flake8 sctoolbox --ignore=E501 # ignore line too long
