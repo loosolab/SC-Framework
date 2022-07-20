@@ -579,10 +579,6 @@ def batch_overview(adatas,
     for i, name in enumerate(adatas):
         axs[i].set_title(name)  # first rows should have the adata names
 
-    # remove empty plot spaces
-    for j in range(ax_idx, len(axs)):
-        fig.delaxes(axs[j])
-
     #fig.tight_layout()
 
     # save
