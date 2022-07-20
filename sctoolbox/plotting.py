@@ -35,7 +35,8 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     else:
-        print(ax)
+        # TODO: check if ax is an ax object
+        pass
 
     if method not in adata.uns:
         raise KeyError("The given method '{0}' is not found in adata.uns. Please make sure to run the method before plotting variance.")
@@ -486,7 +487,12 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
         save_figure(FILENAME)
 
 
-def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
+def batch_overview(adatas, 
+                   color_by, 
+                   plots=["PCA", "PCA-var", "UMAP"],
+                   figsize=None, 
+                   output=None, 
+                   dpi=300):
     """
     Create a multipanel plot comparing different batch correction methods
 
@@ -501,8 +507,9 @@ def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
         Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
         Note: List order is forwarded to plot.
         # TODO description for choices?
+        Default is: ["PCA", "PCA-var", "UMAP"]
     figsize : number tuple
-        Size of the plot in inch.
+        Size of the plot in inch. Default: None (automatic based on number of columns/rows).
     output : str, default None
         Path to plot output file.
     dpi : number, default 300
@@ -524,9 +531,9 @@ def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
     # TODO add adata.var check?
     # TODO more details; what adatas are missing the column?
     for color_group in color_by:
-        for adata in adatas.value():
+        for name, adata in adatas.items():
             if not color_group in adata.obs.columns:
-                raise ValueError(f"Couldn't find {color_group} in at least one adata.obs")
+                raise ValueError(f"Couldn't find column '{color_group}' in the adata.obs for '{name}'")
 
     # plots are valid
     invalid_plots = set(plots) - set(["UMAP", "tSNE", "PCA", "PCA-var"]) # TODO
@@ -535,21 +542,48 @@ def batch_overview(adatas, color_by, plots, figsize, output=None, dpi=300):
 
     ##### plotting #####
     # setup subplot structure
-    # overestimate rows empty rows will be deleted afterwards
-    rows = len(plots) * len(color_by)
-    fig, axs = plt.subplots(nrows=rows, ncols=len(adatas), dpi=dpi, figsize=figsize)
-    axs = axs.flatten()
+    row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
+    rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  #the number of rows in output plot
+    cols = len(adatas)
+    figsize = figsize if figsize is not None else (cols * 4, rows * 4)
+    fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
+    axs = axs.flatten() # flatten to 1d array per row
+    
+    # Fill in plots for every adata across plot type and color_by
+    ax_idx = 0
+    for plot_type in plots: 
+        for color in color_by:
+            for name, adata in adatas.items():
+            
+                ax = axs[ax_idx]
 
-    # fill in plots
-    for i, ax in enumerate(axs):
-        adata = adatas[i % len(adatas)]
+                # Plot depending on type
+                if plot_type == "PCA-var": 
+                    plot_pca_variance(adata, ax=ax) #  this plot takes no color
+                
+                elif plot_type == "UMAP":
+                    sc.pl.umap(adata, color=color, ax=ax, show=False)
 
-        # TODO add in plots
-        # TODO this has to somehow know that there are multiple rows (one for each coloring) for certain plots like UMAP.
+                elif plot_type == "tSNE":
+                    sc.pl.tsne(adata, color=color, ax=ax, show=False)
+
+                elif plot_type == "PCA":
+                    sc.pl.pca(adata, color=color, ax=ax, show=False)
+                
+                ax_idx += 1 # increment index for next plot
+
+            if plot_type == "PCA-var":
+                break #PCA variance is not dependent on color; break off early from color_by loop
+
+    # Finalize axes titles and labels
+    for i, name in enumerate(adatas):
+        axs[i].set_title(name)  # first rows should have the adata names
 
     # remove empty plot spaces
-    for j in range(i + 1, rows):
+    for j in range(ax_idx, len(axs)):
         fig.delaxes(axs[j])
+
+    #fig.tight_layout()
 
     # save
     if output:
