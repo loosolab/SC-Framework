@@ -286,7 +286,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
     
     return axs
 
-def hairball(adata, min_perc, interaction_score=0, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False):
+def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False):
     '''
     Generate network graph of interactions between clusters.
     
@@ -304,6 +304,8 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
             Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
         interaction_score : float, default 0
             Interaction score must be above this threshold for the interaction to be counted in the graph.
+        interaction_perc : float, default None
+            Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
         output : str, default None
             Path to output file.
         title : str, default 'Network'
@@ -330,6 +332,10 @@ def hairball(adata, min_perc, interaction_score=0, output=None, title="Network",
 
     igraph_scale=3
     matplotlib_scale=4
+
+    # overwrite interaction_score
+    if interaction_perc:
+        interaction_score = np.percentile(interactions["interaction_score"], interaction_perc)
     
     ########## setup class that combines igraph with matplotlib ##########
     # from https://stackoverflow.com/a/36154077
