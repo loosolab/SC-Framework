@@ -31,7 +31,7 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     
     Parameter
     ----------
-    ANS : String
+    ANS : String (integer) or Integer
         The number to check validity described as an string.
     LIMIT1 : Int or float
         The lower limit number
@@ -44,17 +44,25 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     '''
     #Author: Guilherme Valente
     quiters=["q", "quit"]
-    if ANS.replace('.', "", 1).isdigit() == True:
-        x=float(ANS)
-        if x >=LIMIT1 and x <= LIMIT2:
-            return("valid")
-        else:
-            return("invalid")
+    
+    # check if the first input is string or not
+    # in the context of pipeline the ANS is always coming as STRING,
+    # however it could be provided also as an integer.
+    if isinstance(ANS, str):
+        ANS = ANS.replace('.', "", 1)
+        if ANS.isdigit()==False:
+            if ANS in quiters:
+                sys.exit("You quit and lost all modifications")
+            else:
+                sys.exit("You must provide string or number!")
+
+    # Check the range of provided integer input
+    x=float(ANS)
+    if x >=LIMIT1 and x <= LIMIT2:
+        return("valid")
     else:
-        if ANS in quiters:
-            sys.exit("You quit and lost all modifications :(")
-        else:
-            return("invalid")
+        return("invalid")
+
 
 def check_options(ANS, OPTS1, OPTS2):
     '''
