@@ -199,7 +199,6 @@ def refining_cuts(ANNDATA, def_cut2):
     q3 = ": minimun cutoff [FLOAT or INT]"
     q4 = ": maximum cutoff [FLOAT or INT]"
     q5 = ": custom, def or skip"
-    m1 = "\n\nChoose y or n\n"
     m2 = "The default setting is:"
     m3 = "\n\n#########################################################\nNOTE. Choose: \n\t1) custom to define new cutoffs\n\t2) def to use the previously defined cutoffs\n#########################################################\n"
     m4 = "\n\nChoose custom or def\n"
@@ -259,6 +258,8 @@ def refining_cuts(ANNDATA, def_cut2):
 ###############################################################################
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
+
+
 def anndata_filter(ANNDATA, GO_CUT):
     '''
     Parameters
