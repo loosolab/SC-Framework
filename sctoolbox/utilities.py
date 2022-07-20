@@ -272,7 +272,9 @@ def split_bam_clusters(adata,
                        parallel=False,
                        pysam_threads=4,
                        buffer_size=10000,
-                       max_queue_size=1000):
+                       max_queue_size=1000,
+                       sort_bams=False,
+                       index_bams=False):
     """
     Split BAM files into clusters based on 'groupby' from the anndata.obs table.
 
@@ -300,6 +302,10 @@ def split_bam_clusters(adata,
         The size of the buffer between readers and writers. Default is 10.000 reads.
     max_queue_size : int, optional
         The maximum size of the queue between readers and writers. Default is 1000.
+    sort_bams : boolean, default False
+        Sort reads in each output bam
+    index_bams : boolean, default False
+        Create an index file for each output bam. Will throw an error if `sort_bams` is False.
     """
 
     # check then load modules
@@ -315,6 +321,9 @@ def split_bam_clusters(adata,
 
     if barcode_col is not None and barcode_col not in adata.obs.columns:
         raise ValueError(f"Column '{barcode_col}' not found in adata.obs!")
+
+    if index_bams and not sort_bams:
+        raise ValueError("`sort_bams=True` must be set for indexing to be possible.")
 
     if isinstance(bams, str):
         bams = [bams]
@@ -343,10 +352,12 @@ def split_bam_clusters(adata,
 
         # create path for output files
         out_paths = {}
+        output_files = []
         for cluster in clusters:
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
             save_cluster_name = re.sub(r'[\\/*?:"<>|]', '_', cluster)
             out_paths[cluster] = f"{output_prefix}{save_cluster_name}.bam"
+            output_files.append(f"{output_prefix}{save_cluster_name}.bam")
 
         # ---- Setup pools and queues ---- #
         # setup pools
@@ -400,11 +411,14 @@ def split_bam_clusters(adata,
     else:
         # open output bam files
         handles = {}
+        output_files = []
         for cluster in clusters:
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
             save_cluster_name = re.sub(r'[\\/*?:"<>|]', '_', cluster)
             f_out = f"{output_prefix}{save_cluster_name}.bam"
             handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template, threads=pysam_threads)
+
+            output_files.append(f_out)
 
         # Loop over bamfile(s)
         for i, bam in enumerate(bams):
@@ -446,6 +460,16 @@ def split_bam_clusters(adata,
         # Close all files
         for handle in handles.values():
             handle.close()
+
+    # sort reads
+    if sort_bams:
+        for file in tqdm(output_files, desc="Sorting reads", unit="files"):
+            pysam.sort("-o", file, file)
+
+    # index files
+    if index_bams:
+        for file in tqdm(output_files, desc="Indexing", unit="files"):
+            pysam.index(file, "-@", str(pysam_threads))
 
 
 def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text, buffer_size=10000):
