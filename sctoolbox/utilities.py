@@ -229,6 +229,38 @@ def split_list(l, n):
     return chunks
 
 
+def open_bam(file, mode, verbosity=3, **kwargs):
+    """
+    Open bam file with pysam.AlignmentFile. On a specific verbosity level.
+
+    Parameters
+    ----------
+    file : str
+        Path to bam file.
+    mode : str
+        Mode to open the file in. See pysam.AlignmentFile
+    verbosity : int
+        Verbosity level 0 for no messages.
+    **kwargs :
+        Forwarded to pysam.AlignmentFile
+    """
+    # check then load modules
+    check_module("pysam")
+    import pysam
+
+    # save verbosity, then set temporary one
+    former_verbosity = pysam.get_verbosity()
+    pysam.set_verbosity(verbosity)
+
+    # open file
+    handle = pysam.AlignmentFile(file, mode, **kwargs)
+
+    # return to former verbosity
+    pysam.set_verbosity(former_verbosity)
+
+    return handle
+
+
 def split_bam_clusters(adata,
                        bams,
                        groupby,
@@ -305,7 +337,7 @@ def split_bam_clusters(adata,
         barcode2cluster = dict(zip(adata.obs[barcode_col], adata.obs[groupby]))
 
     # create template used for bam header
-    template = pysam.AlignmentFile(bams[0], "rb")
+    template = open_bam(bams[0], "rb", verbosity=0)
 
     if parallel:
 
@@ -450,7 +482,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, pbar_position, pbar_text
     print(' ', end='', flush=True)  # hack for making progress bars work in notebooks; https://github.com/tqdm/tqdm/issues/485#issuecomment-473338308
 
     # open bam
-    bam = pysam.AlignmentFile(path, "rb")
+    bam = open_bam(path, "rb", verbosity=0)
 
     # Get number of reads in bam
     try:
