@@ -31,9 +31,9 @@ def label_genes(ANNDATA, label=False):
     m4="Paste the pathway and filename in which your custom list of genes is deposited.\nNOTE: the file must have one gene per row"
     m5="Correct the pathway or filename or type q to quit."
     m6="Type the string (case sensitivy) used to identify mit genes, e.g., mt, Mt-, so on."
-    opt1=["q", "quit"]
-    opt2=["y", "yes", "n", "no"]
-    opt3=list_species_cellcycle_annotations
+    opt_quit=["q", "quit"]
+#    opt2=["y", "yes", "n", "no"]
+    opt_annotation=list_species_cellcycle_annotations
 
     def fil_dict(DICT, GENETYPE, LIST):
         DICT[GENETYPE]=["is_" + GENETYPE]
@@ -43,7 +43,7 @@ def label_genes(ANNDATA, label=False):
     if label == True:
         for a in lst_parameters:
             answer=input(m1 + a + m2)
-            while check_options(answer, opt1, opt2) == "invalid": #Annotate?
+            while check_options(answer) == False: #Annotate?
                 answer=input(m1 + a + m2)
             if a == "mitochondrial" and answer.lower() == "y": #Annotate mitochondrial
                 answer=input(m6) #Which word use to identify mitochondrial genes?
@@ -52,7 +52,7 @@ def label_genes(ANNDATA, label=False):
             if a == "cell_cycle" and answer.lower() == "y": #Annotate cell cycle
                 tmp_list=[]
                 answer=input(m3 + ', '.join(list_species_cellcycle_annotations))
-                while check_options(answer, opt1, opt3) == "invalid": #Give the species name for cell cycle
+                while check_options(answer, OPTS1=opt_quit + opt_annotation) == False: #Give the species name for cell cycle
                     answer=input(m3 + ', '.join(list_species_cellcycle_annotations))
                 for b in open(path_cellcycle_genes + "/" + answer + "_cellcycle_genes.txt"):
                     if b.strip():

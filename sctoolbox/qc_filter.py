@@ -10,10 +10,52 @@ from sctoolbox.plotting import *
 from sctoolbox.creators import *
 from sctoolbox.checker import *
 from sctoolbox.analyser import *
+import sctoolbox.utilities as ut
 
 ########################STEP 1: DEFINING DEFAULT CUTOFFS###############################
 #######################################################################################
-def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=None):
+def loop_question(ANSWER, QUIT_M, CHECK): #Checking invalid outcome
+    '''
+    This core check the validity of user's answer.
+    Parameters
+    ---------------
+    ANSWER : String
+        User's answer
+    QUIT_M : String
+        Question to be print if the user's answer is invalid
+    CHECK : String
+        Types of questions. The options are "yn", "custdef", or float
+    Returns
+    ---------------
+    The user's answer in lower case format
+    '''
+    #Author: Guilherme Valente
+    #List and others
+    opt1, opt2, opt3, opt4=["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"] #Lists with possible answers for each question
+    options={"yn":opt2, "custdef":opt3, "custdefskip": opt4}
+    if check_options(CHECK,list(options.keys()))==False and type(CHECK) != float:
+        sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
+
+    ANSWER=input(ANSWER).lower()
+    #Check validity of options
+    while check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) == False and ut.is_str_numeric(ANSWER) == False:
+        print("Choose one of these options: " + str(opt1 + opt2 + opt3 + opt4))
+        ANSWER=input(ANSWER).lower()
+
+    #In case the input is valid, goes futher
+    if type(CHECK) != float:
+        while check_options(ANSWER, OPTS1= opt1 + options[CHECK]) == False:
+            print(m1 + QUIT_M)
+            ANSWER=input()
+            check_options(ANSWER, opt1 + options[CHECK])
+    else: #Checking validity of custom value: >=0 and <= a limit (the CHECK)
+        while check_cuts(ANSWER, 0, CHECK) == False:
+            print(m1 + QUIT_M)
+            ANSWER=input()
+            check_cuts(ANSWER, 0, CHECK)
+    return(ANSWER.lower())
+
+def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):
     '''
     1- Definining the cutoffs for QC and filtering steps.
     2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
@@ -26,10 +68,11 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
         If true, only a plot with the data without cutoff lines will be provided.
     interval : Int or Float. Default: None.
         The percentage (from 0 to 1 or 100) to be used to calculate the cutoffs.
-    file_name : String
-        If you wanna use a custom filename to save.
-    save : Boolean
-        True, save the figure to the path given in 'save'. Default: None (figure is not saved).
+    file_name : String. Default is "note2_violin_"
+        Define a name for save a custom filename to save.
+        NOTE: use a sintax at least composing the "note2_". Do not add any file extension.
+    save : Boolean. Default is False
+        True, save the figure to the path given in 'save'.
 
     Returns
     ------------
@@ -49,53 +92,52 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
     ANNDATA.uns[uns_condition_name + '_colors']=ANNDATA.uns["color_set"][:len(ANNDATA.obs[uns_condition_name].unique())]
     sta_cut_cells, sta_cut_genes=None, None
     #Setting colors for plot
+    m1="file_name[STRING]"
     m2="The interval=[float or int] must be between 0 to 1 or 100."
-    m3="violin_plot"
     m4="Defining and ploting cutoffs only for total_counts"
     m5="You choose not plot cutoffs"
     m6="To define cutoff demands to set the interval=[int or float] from 0 to 1 or 100."
+    pathway=ANNDATA.uns["infoprocess"]["Anndata_path"]
 
-    if only_plot == False:
-        if interval == None: #The cutoff will be performed, but it is missing the interval
+    #Creating filenames
+    if save == True and file_name != "note2_violin_" and type(file_name) != str: #Here checking is custom name is proper
+        sys.exist(m1)
+    elif save == True and type(file_name) == str: #Custom name is proper. If custom is not provided, the default is used
+        filename=pathway + file_name
+        filename=filename.replace("//", "/")
+    elif save == False:
+        filename=""
+
+    #Checking if interval for cutoffs were properly defined
+    if only_plot == False and interval == None: #It is missing the interval for cutoff
             sys.exit(m6)
-        else:
-            filename=m3 + "_cutoff"
-#Checking if interval for cutoffs were properly defined
-            if check_cuts(str(interval), 0, 100) == "invalid": #Means the interval is not a number
+    elif only_plot == False and interval != None:
+            if check_cuts(str(interval), 0, 100) == False: #Means the interval is not a number
                     sys.exit(m2)
             else:
                 if isinstance(interval, (int)) == True and interval >= 0 and interval <= 100: #Converting interval int for float from 0 to 1
                     interval=interval/100
-#Checking if the total count was already filtered
+            #Checking if the total count was already filtered
             act_c_total_counts, id_c_total_counts=float(ANNDATA.obs["total_counts"].sum()), float(ANNDATA.uns["infoprocess"]["ID_c_total_counts"])
-            if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "valid": #Total_counts was not filtered yet, then only this parameter will be evaluated
+            if check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == True: #Total_counts was not filtered yet, then only this parameter will be evaluated
                 sta_cut_cells, sta_cut_genes=True, False
                 calulate_and_plot_filter.append("total_counts")
-                filename=m3 + "_total_count_cutoff"
+                filename=filename + "tot_count_cut"
                 print(m4)
 #Other parameters will be evaluated because plot was selected and total count is filtered
-            elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == "invalid": #Total counts was filtered yet.
+            elif check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) == False: #Total counts was filtered yet.
                 sta_cut_cells, sta_cut_genes=True, True
-                filename=m3 + "_other_param_cutoff"
+                filename=filename + "other_param_cut"
                 for a in cells_genes_list:
                     if a != "total_counts":
                         calulate_and_plot_filter.append(a)
-    else: #Only plots without cutoff lines will be provided
-        filename=m3
-
-#Defining filenames and path to save the figure
-    if save == True:
-        save_path=ANNDATA.uns["infoprocess"]["Anndata_path"]
-        if type(file_name) == str: #The violing plot will have a custom filename
-            filename=file_name
-    else:
-        save_path, filename=None, None
-
-#Building the dataframe with default cutoffs stablished and the plots
-#Here will be called the function establishing_cuts from the analyser.py module
-    if only_plot == True: #Only plot without cutoffs
+    #Ploting with or without cutoffs
+    if only_plot == True: #Only plots without cutoff lines will be provided
+        filename=filename
+        #Building the dataframe with default cutoffs stablished and the plots
+        #Here will be called the function establishing_cuts from the analyser.py module
         print(m5)
-        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, SAVE_PATH=save_path, FILENAME=filename)
+        return qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
     elif only_plot == False: #Calculate cutoffs and plot in the violins
         if sta_cut_cells == True: #For cells
             for a in for_cells_pd[for_cells[0]].unique().tolist(): #Getting the conditions.
@@ -114,7 +156,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name=None, save=N
                     kurtosis_val_norm=int(kurtosis_val - 3) #This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
                     df_cuts=establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
         display(df_cuts)
-        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, SAVE_PATH=save_path, FILENAME=filename)
+        qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
         return df_cuts
 
 ########################STEP 2: DEFINING CUSTOM CUTOFFS###############################
@@ -164,52 +206,7 @@ def refining_cuts(ANNDATA, def_cut2):
     else:
         df_NOT_tot_coun=dfcut[dfcut[col1]!= "total_counts"].reset_index(drop=True)
         is_total_count_filt=True
-    def loop_question(ANSWER, QUIT_M, CHECK): #Checking invalid outcome
-        '''
-        This core check the validity of user's answer.
-        Parameters
-        ---------------
-        ANSWER : String
-            User's answer
-        QUIT_M : String
-            Question to be print if the user's answer is invalid
-        CHECK : String
-            Types of questions. The options are "yn", "custdef", or float
-
-        Returns
-        ---------------
-        The user's answer in lower case format
-        '''
-        #Author: Guilherme Valente
-        #List and others
-        opt1, opt2, opt3, opt4=["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"] #Lists with possible answers for each question
-        m1="Invalid choice! "
-        #Executing
-        ANSWER=input(ANSWER).lower()
-        if ANSWER in opt1:
-            sys.exit("You quit and lost all modifications :(")
-        if CHECK == "yn": #Checking validity of Y or N question
-            while check_options(ANSWER, opt1, opt2) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_options(ANSWER, opt1, opt2)
-        elif CHECK == "custdef": #Checking validity of custom or def question
-            while check_options(ANSWER, opt1, opt3) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_options(ANSWER, opt1, opt3)
-        elif CHECK == "custdefskip": #Checking validity of custom, def or skip question
-            while check_options(ANSWER, opt1, opt4) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_options(ANSWER, opt1, opt4)
-        elif type(CHECK) == float: #Checking validity of custom value: >=0 and <= a limit (the CHECK)
-            while check_cuts(ANSWER, 0, CHECK) == "invalid":
-                print(m1 + QUIT_M)
-                ANSWER=input()
-                check_cuts(ANSWER, 0, CHECK)
-        return(ANSWER.lower())
-#Executing the main function
+    #Executing the main function
     if is_total_count_filt == False: #It means that total_counts was not filtered. Then, the dataframe has only total_count information
         print(m2)
         display(df_tot_coun)
