@@ -12,6 +12,7 @@ setup(name='sc-toolbox',
 			'rpy2',
 			'anndata2ri',
 			'kneed',
-			'fitter'
+			'fitter',
+			'qnorm'
 		],
 		)

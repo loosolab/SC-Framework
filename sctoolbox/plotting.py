@@ -7,10 +7,8 @@ import seaborn as sns
 import numpy as np
 import scanpy as sc
 import qnorm
-import sctoolbox.utilities
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
-
 from sctoolbox.utilities import save_figure
 
 #############################################################################
@@ -361,9 +359,8 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 ########################## Quality control plotting #########################
 #############################################################################
 
-def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, SAVE_PATH=None, FILENAME=None):
-    '''
-    Violin plot with cutoffs
+def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME=None):
+    '''Violin plot with cutoffs
     Parameters
     ------------
     DEFCELLs : Pandas dataframe
@@ -379,10 +376,8 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, SAVE_PAT
         List of parameters that the cutoff lines will be plotted.
     SAVE : Boolean
         True, save the figure. Default: None (figure is not saved).
-    SAVE_PATH : String
-        Pathway to save the figure. It will be used if SAVE==True. Default: None
     FILENAME : String
-        Name of file to be saved. It will be used if SAVE==True. Default: None
+        Path and name of file to be saved. It will be used if SAVE==True. Default: None
     '''
     #Author : Guilherme Valente
     def defin_cut_lnes(NCUTS): #NCUTS define the number of cuts of X axis
@@ -444,5 +439,4 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, SAVE_PAT
     fig.tight_layout()
 #Save plot
     if SAVE == True:
-        path_filename="note2_" + SAVE_PATH + "/" + FILENAME + ".tiff"
-        fig.savefig(path_filename, dpi=300, bbox_inches="tight")
+        save_figure(FILENAME)

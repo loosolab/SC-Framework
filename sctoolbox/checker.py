@@ -2,28 +2,65 @@
 Modules for checking the existence of directories and files
 """
 #Importing modules
+from multiprocessing.sharedctypes import Value
 import sctoolbox
 import os
 from os import path
 import sys
 import sctoolbox.creators as cr
-##################################
-def check_infoyml(VALUE=None, TASK=None):
+import sctoolbox.utilities as ut
+import warnings
+import re
+
+def check_notebook(notebook_num):
+    '''Check if the notebook number is int.
+    Parameters
+    ----------
+    notebook_num : Int
+       The number of the notebook assigned for the user for both load or save an anndata object
     '''
-    This is to create load or modify the info.txt file that store the main output path
+    if isinstance(notebook_num, int) == False:
+        raise TypeError('Only integer allowed')
+
+def write_info_txt(path_value, file_path="./"):
+    ''' Write path to info.txt
+
     Parameters:
     ===========
-    VALUE : String.
-        The pathway to be intored in the info.txt
-    TASKE : String.
-        Activity to be performed using the info.txt
+    path_value : String
+        path that is written to the info.yml.
+        Adds info.txt to end if no filename is given.
+    file_path : String
+        path where the info.yml is stored
     '''
-    #Author : Guilherme Valente
-    if TASK == "create":
-        print(VALUE, file=open("./info.txt", "w")) #Create a new key and add an information.
-    elif TASK == "give_path":
-        with open('./info.txt') as a:
-            return next(a).split(":")[1].strip()
+
+    pattern = re.compile('[<>:"\\\|\?\*]')
+    if re.search(pattern,path_value):
+        raise ValueError("Invalid character in directory string.")
+
+    if os.path.isdir(file_path):
+        file_path = os.path.join(file_path,"info.txt")
+    else:
+        raise ValueError("Invalid directory given.")
+
+    with open(file_path, "w") as file:
+        file.write(path_value)
+
+def fetch_info_txt(file_path="./info.txt"):
+    ''' Get path stored in the info.txt file
+
+    Parameters:
+    ===========
+    file_path : String
+        full path of info.txt file
+
+    Returns:
+    ========
+    path as string that was stored in the first line of info.txt
+    '''
+
+    with open(file_path, "r") as file:
+        return file.readline()
 
 def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     '''
@@ -40,23 +77,23 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
 
     Return
     ----------
-    The "valid" or "invalid" string
+    The True or False
     '''
     #Author: Guilherme Valente
     quiters=["q", "quit"]
-    if ANS.replace('.', "", 1).isdigit() == True:
+    if ut.is_str_numeric(ANS) == True:
         x=float(ANS)
         if x >=LIMIT1 and x <= LIMIT2:
-            return("valid")
+            return(True)
         else:
-            return("invalid")
+            return(False)
     else:
         if ANS in quiters:
             sys.exit("You quit and lost all modifications :(")
         else:
-            return("invalid")
+            return(False)
 
-def check_options(ANS, OPTS1, OPTS2):
+def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
     '''
     Check if answers from input() command were properly replied
     Parameters
@@ -64,18 +101,31 @@ def check_options(ANS, OPTS1, OPTS2):
     ANS : String
         The answer provided by the user.
     OPTS1 : List
-        Options to quit the execution: ["q", "quit"]
-    OPTS2 : List
-        Options to consider the answer valid, e.g. ["y", "yes", "n", "no"]
+        Options allowed. Default : ["q", "quit", "y", "yes", "n", "no"]
+    Returns
+    -----------
+        Return True or False
     '''
-    #Author : Guilherme Valente
-    ANS=ANS.lower()
-    if ANS in OPTS1:
+    if type(ANS) is str:
+        ANS=ANS.lower()
+        if ANS in OPTS1:
+            check_quit(ANS)
+            return True
+    return False
+
+def check_quit(answer):
+    '''
+    Quit the functions if the answer is q or quite.
+    Parameters
+    ----------
+    answer: String
+        The answer of a user
+    Return
+    ----------
+        Quit the process
+    '''
+    if answer in ["q", "quit"]:
         sys.exit("You quit and lost all modifications :(")
-    elif ANS not in OPTS2:
-        return("invalid")
-    elif ANS in OPTS2:
-        return("valid")
 
 def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="filtered"): #Check if the main directory of solo (MAINPATH) and files exist to assembling the anndata object to make velocyte analysis. tenX is the configuration of samples in the 10X.yml.
     '''
@@ -137,4 +187,3 @@ def check_input_path_velocity(path_QUANT, tenX, assembling_10_velocity, dtype="f
                 for b in velocyto_path_files:  #Checking if *sample*/solo/Gene/filtered/* files exist
                     if b not in os.listdir(path_solo_velocyto):
                         sys.exit(path_solo_velocyto + "/" + b + m3)
-
