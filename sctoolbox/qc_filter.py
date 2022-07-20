@@ -3,6 +3,7 @@ from scipy.stats import skew, kurtosis
 import pandas as pd
 from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
+from IPython.display import display
 
 ###############################################################################
 #                      STEP 1: DEFINING DEFAULT CUTOFFS                       #
@@ -40,12 +41,12 @@ def loop_question(ANSWER, QUIT_M, CHECK):  # Checking invalid outcome
     # In case the input is valid, goes futher
     if type(CHECK) != float:
         while checker.check_options(ANSWER, OPTS1=opt1 + options[CHECK]) is False:
-            print(m1 + QUIT_M)
+            print("Invalid choice! " + QUIT_M)
             ANSWER = input()
             checker.check_options(ANSWER, opt1 + options[CHECK])
     else:  # Checking validity of custom value: >=0 and <= a limit (the CHECK)
         while checker.check_cuts(ANSWER, 0, CHECK) is False:
-            print(m1 + QUIT_M)
+            print("Invalid choice! " + QUIT_M)
             ANSWER = input()
             checker.check_cuts(ANSWER, 0, CHECK)
     return(ANSWER.lower())
@@ -258,8 +259,6 @@ def refining_cuts(ANNDATA, def_cut2):
 ###############################################################################
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
-
-
 def anndata_filter(ANNDATA, GO_CUT):
     '''
     Parameters
@@ -283,7 +282,6 @@ def anndata_filter(ANNDATA, GO_CUT):
         return adata_conc
 
     # List, messages and others
-    m1 = ""  # Fill message to go to anndata.uns["infoprocess"]
     ANNDATA_CP = ANNDATA.copy()
     ANNDATA_CP2 = ANNDATA_CP.copy()
     datamcol, paramcol, cutofcol, stratcol = GO_CUT.columns[0], GO_CUT.columns[1], GO_CUT.columns[2], GO_CUT.columns[3]
@@ -302,7 +300,7 @@ def anndata_filter(ANNDATA, GO_CUT):
     if "pct_counts_is_mitochondrial" in act_params:
         raw_data = GO_CUT[GO_CUT[paramcol] == "pct_counts_is_mitochondrial"]
         for idx, a in raw_data.iterrows():
-            data, param, cuts, stra = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
+            data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
             if "skip" in cuts:
                 lst_adata_sub.append(ANNDATA_CP[ANNDATA_CP.obs[uns_cond] == data, :])
             else:
@@ -320,7 +318,7 @@ def anndata_filter(ANNDATA, GO_CUT):
     # Filtering other cells
     raw_data = GO_CUT[GO_CUT[stratcol] == "filter_cells"]
     for idx, a in raw_data.iterrows():
-        data, param, cuts, stra = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
+        data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
         if param != "pct_counts_is_mitochondrial":
             adata_sub = ANNDATA_CP2[ANNDATA_CP2.obs[uns_cond] == data, :]
             if "skip" in cuts:

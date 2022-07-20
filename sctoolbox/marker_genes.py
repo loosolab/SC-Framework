@@ -76,7 +76,7 @@ def label_genes(ANNDATA, label=False):
                 tmp_list = []
                 answer = input(m4)
                 while os.path.isfile(answer) is False:
-                    if answer.lower() in opt1:
+                    if answer.lower() in opt_quit:
                         sys.exit("You quit and lost all modifications :(")
                     print(m5)
                     answer = input(m5)
