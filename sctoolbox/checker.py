@@ -9,6 +9,7 @@ from os import path
 import sys
 import sctoolbox.creators as cr
 import sctoolbox.utilities as ut
+import sctoolbox.checker as ch
 import warnings
 import re
 
@@ -134,3 +135,35 @@ def check_quit(answer):
     '''
     if answer in ["q", "quit"]:
         sys.exit("You quit and lost all modifications :(")
+
+
+def chek_requirements(anndata, current_notebook=None):
+    '''Check if the current anndata object has all requirements to be analysed by the current notebook.
+    Parameters
+    ----------
+    anndata : Anndata object
+    current_notebook : Int
+        The number of the current notebook. It is important to set the correct number because each notebook has its
+        own mandatory anndata requirements.
+
+    Requirements of each notebook
+    ----------
+        Notebook 3 demands total_counts filtered
+    
+    Return
+    ---------
+        Report the information is missing in the anndata object.
+    '''
+#Messages and others
+    m1 = "Set the current_notebook[INT]"
+    m2 = "Notebook 3 demands total_counts filtered. Run notebook 2 before the 3rd notebook."
+
+#Check if the current_notebook is int
+    try:
+        ch.check_notebook(current_notebook)
+        if current_notebook == 3:
+            if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
+                sys.exit(m2)
+        display(anndata)
+    except:
+        sys.exit(m1)
