@@ -63,6 +63,7 @@ pages:
   script:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
+    - pip install nbsphinx_link 
     - cd docs
     - make html
     - mv build/html/ ../public/
