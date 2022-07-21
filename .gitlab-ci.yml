@@ -64,6 +64,7 @@ pages:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link 
+    - pip install pandoc
     - cd docs
     - make html
     - mv build/html/ ../public/
