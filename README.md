@@ -1,64 +1,56 @@
 # loosolab_SC_RNA_framework
 
-Here we are developing a set of notebooks for automation of scRNA-Seq of looso's lab.
+A python framework for single cell analysis. It provides a plethora of functions for conducting common analysis tasks and respective visualization. It also includes a number of jupyter notebooks to further streamline the analysis process, making it easy to follow and reproduce analysis results.
 
 # Workflow
 
 ![](image/scRNAseq.png)
 
-## Installing
+# Installation
 
-Create and activate a conda environment:
+1. Download the repository. This will download the repository to your current folder.
 ```
-$ conda create -n scRNAseq_autom python=3.7 ipykernel
-$ conda activate scRNAseq_autom
-$ conda install pip
-$ conda install r-base
+git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
 ```
-Register the environment in the kernel
+2. Change working directory to repository.
 ```
-$ python -n ipykernel install --user --name scRNAseq_autom --display-name "scRNAseq_autom"
+cd loosolab_sc_rna_framework
 ```
-Move to your workspace before installation. NOTE.: Install the scRNAseq automator in your workspace is crucial for a proper execution:
+3. Install analysis environment. Speed up installation by replacing `conda` with `mamba` (has to be installed).
 ```
-$ cd /mnt/workspace/YOUR_WORKSPACE
-$ mkdir scRNAseq_autom
-$ cd scRNAseq_autom
+conda env create -f sctoolbox_env.yml
 ```
-Clone and install the tools with:
+4. Activate the environment.
 ```
-$ git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
-$ cd loosolab_sc_rna_framework
-$ git checkout dev
-$ pip install .
+conda activate sctoolbox
 ```
-Copy the notebooks to another directory
+5. Register the environment as a jupyter kernel.
 ```
-$ cp notebooks/* /home/notebooks 
+python -n ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
 
 # Usage
-1- Open your notebook and set the scRNAseq_autom kernel
+1. Open your notebook and set the `sctoolbox` kernel
 
-2- Open the notebook 1 (1_assembling_anndata.ipynb) and follow the instructions in the first two cells.
+2. Open the first notebook (`1_assembling_anndata.ipynb`) and follow the instructions of the first two cells.
 
-3- Example files to run the notebooks are available here
+3. Example files to run the notebooks are available here:
 ```
-$/mnt/agnerds/loosolab_SC_RNA_framework/examples/assembling_10_velocity
+/mnt/agnerds/loosolab_SC_RNA_framework/examples/assembling_10_velocity
 ```
 
-4- The marker genes are stored here
+4. The marker genes are stored here:
 ```
-$/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes
+/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes
 ```
 
 # Notebooks
-The directory "nooteboks" has the Jupyter notebooks here developed.
+The main parts of the analysis workflow are provided as jupyter notebooks. They can be found in the `notebooks` directory.
 
-**Notebook 1 (1_assembling_anndata.ipynb):**
+## Notebook 1 (1_assembling_anndata.ipynb)
 
-	Assembly the 10X anndata to run velocity analysis, convert from Seurat to anndata object, assembly the 10X anndata object from public dataset.
+Assembly the 10X anndata to run velocity analysis, convert from Seurat to anndata object, assembly the 10X anndata object from public dataset.
 
-**Notebook 2 (2_QC_filtering.ipynb):**
+## Notebook 2 (2_QC_filtering.ipynb)
 
-	QC and filtering steps.
+QC and filtering steps.
