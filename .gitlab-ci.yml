@@ -62,6 +62,7 @@ cov:
 pages:
   script:
     - pip install sphinx sphinx-rtd-theme
+    - pip install nbsphinx
     - cd docs
     - make html
     - mv build/html/ ../public/
