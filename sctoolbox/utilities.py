@@ -17,7 +17,8 @@ def is_str_numeric(ans):
         return False
 
 def save_figure(path):
-    """ Save the current figure to a file.
+    """ 
+    Save the current figure to a file.
     
     Parameters
     ----------
@@ -135,6 +136,7 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
 def saving_anndata(ANNDATA, current_notebook=None):
     '''
     Save your anndata object
+
     Parameters
     ===========
     ANNDATA : anndata object
