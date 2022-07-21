@@ -65,7 +65,17 @@ cov:
       junit: pytest.xml
 
 
-
+pages:
+  script:
+    - pip install sphinx sphinx-rtd-theme
+    - cd docs
+    - make html
+    - mv build/html/ ../public/
+  artifacts:
+    paths:
+      - public
+  #rules:
+  #  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 #test:
 #  script:
@@ -82,15 +92,3 @@ cov:
 #  artifacts:
 #    paths:
 #      - dist/*.whl
-
-#pages:
-#  script:
-#    - pip install sphinx sphinx-rtd-theme
-#    - cd doc
-#    - make html
-#    - mv build/html/ ../public/
-#  artifacts:
-#    paths:
-#      - public
-#  rules:
-#    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
