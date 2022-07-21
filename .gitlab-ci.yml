@@ -61,10 +61,10 @@ cov:
 
 pages:
   script:
+    - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link 
-    - pip install pandoc
     - cd docs
     - make html
     - mv build/html/ ../public/
