@@ -153,7 +153,7 @@ def define_PC(anndata):
         A int representing the number of PC of elbow, in which the distribution decrease significantly.
     '''
     y = anndata.uns["pca"]["variance_ratio"]
-    x = range(1, len(y)+1)
+    x = range(1, len(y) + 1)
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
     selected_kn = kn.knee
 # Adding info in anndata.uns["infoprocess"]
