@@ -3,14 +3,16 @@ Module to assembling anndata objects
 """
 import scanpy as sc
 import pandas as pd
+
 import os
 import glob
 from scipy import sparse
 from scipy.io import mmread
 
 
-# ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS
-
+#######################################################################################################################
+#                                ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS                                         #
+#######################################################################################################################
 
 def from_single_starsolo(path, dtype="filtered"):
     '''
@@ -41,7 +43,7 @@ def from_single_starsolo(path, dtype="filtered"):
     barcodes_f = os.path.join(genedir, "barcodes.tsv")
     genes_f = os.path.join(genedir, "genes.tsv")
     spliced_f = os.path.join(velodir, 'spliced.mtx')
-    unspliced_f = os.path.join(velodir,  'unspliced.mtx')
+    unspliced_f = os.path.join(velodir, 'unspliced.mtx')
     ambiguous_f = os.path.join(velodir, 'ambiguous.mtx')
 
     # Check whether files are present
@@ -52,7 +54,7 @@ def from_single_starsolo(path, dtype="filtered"):
     # Setup main adata object from matrix/barcodes/genes
     print("Setting up adata from solo files")
     adata = from_single_mtx(matrix_f, barcodes_f, genes_f, is_10X=False)
-    adata.var.columns = ["gene", "type"] #specific to the starsolo format
+    adata.var.columns = ["gene", "type"]  # specific to the starsolo format
     for col in adata.obs.columns:
         adata.var[col] = adata.var[col].astype("category")
 
@@ -88,7 +90,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 
     # TODO: test that quant folder is existing
 
-    #Collect configuration into a dictionary
+    # Collect configuration into a dictionary
     config_dict = {}
     if configuration is not None:
         for string in configuration:
@@ -103,7 +105,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     sample_names = [os.path.basename(x) for x in sample_dirs]
     print(f"Found samples: {sample_names}")
 
-    #Subset to use_samples if they are provided
+    # Subset to use_samples if they are provided
     if use_samples is not None:
         idx = [i for i, sample in enumerate(sample_names) if sample in use_samples]
         sample_names = [sample_names[i] for i in idx]
@@ -124,7 +126,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         # Make barcode index unique
         adata.obs.index = adata.obs.index + "-" + sample_name
         adata.obs["sample"] = sample_name
-        
+
         # Add additional information from configuration
         if sample_name in config_dict:
             for key in config_dict[sample_name]:
@@ -140,11 +142,13 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     return adata
 
 
-# CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT
-
+#######################################################################################################################
+#                                   CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT                                     #
+#######################################################################################################################
 
 def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
     ''' Building adata object from single mtx and two tsv/csv files
+
     Parameters
     ----------
     mtx : string
@@ -170,40 +174,41 @@ def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_i
     -------
     anndata object containing the mtx matrix, gene and cell labels
     '''
-
-    ### Read mtx file ###
+    # Read mtx file
     if is_10X:
         adata = sc.read_10x_mtx(path=mtx, **kwargs)
     else:
         adata = sc.read_mtx(filename=mtx, dtype='float32')
 
-    ### Transpose matrix if necessary ###
+    # Transpose matrix if necessary
     if transpose:
         adata = adata.transpose()
 
-    ### Read in gene and cell annotation ###
+    # Read in gene and cell annotation
     barcode_csv = pd.read_csv(barcodes, header=None, index_col=barcode_index, delimiter=delimiter)
     barcode_csv.index.names = ['index']
-    barcode_csv.columns = [str(c) for c in barcode_csv.columns] #convert to string
+    barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
     genes_csv = pd.read_csv(genes, header=None, index_col=genes_index, delimiter=delimiter)
     genes_csv.index.names = ['index']
-    genes_csv.columns = [str(c) for c in genes_csv.columns] #convert to string
+    genes_csv.columns = [str(c) for c in genes_csv.columns]  # convert to string
 
-    ### Test if they are unique ###
+    # Test if they are unique
     if not barcode_csv.index.is_unique:
         raise ValueError("Barcode index column does not contain unique values")
     if not genes_csv.index.is_unique:
         raise ValueError("Genes index column does not contain unique values")
 
-    ### Add tables to anndata object ###
+    # Add tables to anndata object
     adata.obs = barcode_csv
     adata.var = genes_csv
 
-    return(adata)
+    return adata
 
 
 def from_mtx(mtx, barcodes, genes, **kwargs):
-    '''Building adata object from list of mtx, barcodes and genes files
+    '''
+    Building adata object from list of mtx, barcodes and genes files
+
     Parameters
     ----------
     mtx : list
@@ -229,9 +234,11 @@ def from_mtx(mtx, barcodes, genes, **kwargs):
     --------
     merged anndata object containing the mtx matrix, gene and cell labels
     '''
-    adata_objects = [from_single_mtx(m, barcodes[i], genes[i], **kwargs) for i,m in enumerate(mtx)]
+
+    adata_objects = [from_single_mtx(m, barcodes[i], genes[i], **kwargs) for i, m in enumerate(mtx)]
+
     if len(adata_objects) > 1:
-        adata = adata_objects[0].concatenate(*adata_objects[1:], join = "outer")
+        adata = adata_objects[0].concatenate(*adata_objects[1:], join="outer")
     else:
         adata = adata_objects[0]
 

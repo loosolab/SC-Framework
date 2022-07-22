@@ -1,9 +1,9 @@
 """
 Modules for checking the existence of directories and files
 """
+# Importing modules
 import os
 import sys
-import sctoolbox.checker as ch
 import re
 
 
@@ -14,7 +14,7 @@ def check_notebook(notebook_num):
     notebook_num : Int
        The number of the notebook assigned for the user for both load or save an anndata object
     '''
-    if isinstance(notebook_num, int) == False:
+    if isinstance(notebook_num, int) is False:
         raise TypeError('Only integer allowed')
 
 
@@ -29,12 +29,13 @@ def write_info_txt(path_value, file_path="./"):
     file_path : String
         path where the info.yml is stored
     '''
-    pattern = re.compile('[<>:"\\\|\?\*]')
-    if re.search(pattern,path_value):
+
+    pattern = re.compile(r'[<>:"\\\|\?\*]')
+    if re.search(pattern, path_value):
         raise ValueError("Invalid character in directory string.")
 
     if os.path.isdir(file_path):
-        file_path = os.path.join(file_path,"info.txt")
+        file_path = os.path.join(file_path, "info.txt")
     else:
         raise ValueError("Invalid directory given.")
 
@@ -58,9 +59,10 @@ def fetch_info_txt(file_path="./info.txt"):
         return file.readline()
 
 
-def check_cuts(ANS, LIMIT1, LIMIT2): # Checking cutoffs validity
+def check_cuts(ANS, LIMIT1, LIMIT2):  # Checking cutoffs validity
     '''
     Checking if a given value range into acceptable limits
+
     Parameter
     ----------
     ANS : String (integer) or Integer
@@ -74,14 +76,15 @@ def check_cuts(ANS, LIMIT1, LIMIT2): # Checking cutoffs validity
     ----------
     The True or False
     '''
-    quiters=["q", "quit"]
+    # Author: Guilherme Valente
+    quiters = ["q", "quit"]
 
     # check if the first input is string or not
     # in the context of pipeline the ANS is always coming as STRING,
     # however it could be provided also as an integer.
     if isinstance(ANS, str):
         ANS = ANS.replace('.', "", 1)
-        if ANS.isdigit()==False:
+        if not ANS.isdigit():
             if ANS in quiters:
                 sys.exit("You quit and lost all modifications")
             else:
@@ -114,6 +117,7 @@ def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
             check_quit(ANS)
             return True
     return False
+
 
 def check_quit(answer):
     '''Quit the functions if the answer is q or quite.
