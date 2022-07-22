@@ -40,12 +40,6 @@ lint:
     - flake8 sctoolbox --ignore=E501 # ignore line too long
   allow_failure: false
 
-type_checking:
-  script:
-    - pip install mypy
-    - mypy sctoolbox
-  allow_failure: true
-
 cov:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
