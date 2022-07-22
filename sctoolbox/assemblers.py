@@ -149,7 +149,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 
 def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
     ''' Building adata object from single mtx and two tsv/csv files
-    
+
     Parameters
     ----------
     mtx : string
@@ -170,7 +170,7 @@ def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_i
         delimiter of genes and barcodes table
     **kwargs : additional arguments
         Contains additional arguments for scanpy.read_10x_mtx method
-    
+
     Returns
     -------
     anndata object containing the mtx matrix, gene and cell labels
@@ -207,9 +207,9 @@ def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_i
 
 
 def from_mtx(mtx, barcodes, genes, **kwargs):
-    ''' 
+    '''
     Building adata object from list of mtx, barcodes and genes files
-    
+
     Parameters
     ----------
     mtx : list

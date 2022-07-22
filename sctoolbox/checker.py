@@ -78,7 +78,7 @@ def check_cuts(ANS, LIMIT1, LIMIT2):  # Checking cutoffs validity
     The True or False
     '''
     # Author: Guilherme Valente
-    quiters=["q", "quit"]
+    quiters = ["q", "quit"]
 
     # check if the first input is string or not
     # in the context of pipeline the ANS is always coming as STRING,

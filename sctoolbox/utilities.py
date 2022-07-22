@@ -33,9 +33,9 @@ def create_dir(path):
 
 
 def save_figure(path):
-    """ 
+    """
     Save the current figure to a file.
-    
+
     Parameters
     ----------
     path : str
@@ -45,7 +45,6 @@ def save_figure(path):
     """
 
     if path is not None:
-
         create_dir(path)  # recursively create parent dir if needed
         plt.savefig(path, dpi=600, bbox_inches="tight")
 
