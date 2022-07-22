@@ -12,6 +12,7 @@ import sctoolbox.creators as cr
 
 import matplotlib.pyplot as plt
 
+
 def _is_notebook():
     """ Utility to check if function is being run from a notebook or a script """
     try:
@@ -19,6 +20,7 @@ def _is_notebook():
         return(True)
     except NameError:
         return(False)
+
 
 def create_dir(path):
     """ Create a directory if it is not existing yet.
@@ -213,12 +215,13 @@ def pseudobulk_table(adata, groupby, how="mean"):
     res = res.T  # transform to genes x clusters
     return(res)
 
-def split_list(l, n):
+
+def split_list(lst, n):
     """ Split list into n chunks.
-    
+
     Parameters
     -----------
-    l : list
+    lst : list
         List to be chunked
     n : int
         Number of chunks.
@@ -226,7 +229,7 @@ def split_list(l, n):
     """
     chunks = []
     for i in range(0, n):
-        chunks.append(l[i::n])
+        chunks.append(lst[i::n])
 
     return chunks
 
@@ -476,6 +479,7 @@ def split_bam_clusters(adata,
         for file in tqdm(output_files, desc="Indexing", unit="files"):
             pysam.index(file, "-@", str(pysam_threads))
 
+
 def get_bam_reads(bam_obj):
     """ Get the number of reads from an open pysam.AlignmentFile
 
@@ -533,7 +537,7 @@ def _monitor_progress(progress_queue,
 
     # Initialize progress bars dependent on individual_pbars true/false
     pbars = {}
-    if individual_pbars == True:  # individual progress per reader/writer
+    if individual_pbars is True:  # individual progress per reader/writer
 
         # readers
         for i, name in enumerate(total_reads):
@@ -541,13 +545,13 @@ def _monitor_progress(progress_queue,
 
         # writers
         for j, cluster in enumerate(cluster_names):
-            pbars[cluster] = tqdm(total=1, position=i+j, desc=f"Writing queued reads ({cluster})")  # total is 1 instead of 0 to trigger progress bar
+            pbars[cluster] = tqdm(total=1, position=i + j, desc=f"Writing queued reads ({cluster})")  # total is 1 instead of 0 to trigger progress bar
             pbars[cluster].total = 0  # reset to 0 (bar is still shown)
             pbars[cluster].refresh()
 
     else:   # merged progress for reading and writing
 
-        # readers 
+        # readers
         sum_reads = sum(total_reads.values())
         pbar = tqdm(total=sum_reads, position=0, desc="Reading from bams", unit="reads")
         for name in total_reads:
@@ -561,7 +565,7 @@ def _monitor_progress(progress_queue,
             pbars[cluster] = pbar  # all clusters share the same pbar
 
     # Fetch progress from readers/writers
-    writers_running = len(writer_jobs) 
+    writers_running = len(writer_jobs)
     reading_done = False
     while True:
 
@@ -586,14 +590,14 @@ def _monitor_progress(progress_queue,
         reader_pbars = [pbars[name] for name in total_reads]
         if reading_done is False and (sum([pbar.total for pbar in reader_pbars]) == sum([pbar.n for pbar in reader_pbars])):
             reading_done = True
-            _ = [reader_job.get() for reader_job in reader_jobs] # wait for all writers to finish
+            _ = [reader_job.get() for reader_job in reader_jobs]  # wait for all writers to finish
 
             for queue in cluster_queues.values():
                 queue.put((None, None))  # Insert None into queue to signal end of reads
 
         # Check if all writers are done
         if writers_running == 0:
-            _ = [writer_job.get() for writer_job in writer_jobs] # wait for all readers to finish
+            _ = [writer_job.get() for writer_job in writer_jobs]  # wait for all readers to finish
             break
 
     return 0  # success
