@@ -34,26 +34,13 @@ before_script:
   - pip install pytest
   - pip install pytest-cov
 
-
-stages: 
-  - style_checks
-  - tests
 lint:
-  stage: style_checks
   script:
     - pip install flake8
-    - flake8 sctoolbox
-  allow_failure: true
-
-type_checking:
-  stage: style_checks
-  script:
-    - pip install mypy
-    - mypy sctoolbox
-  allow_failure: true
+    - flake8 sctoolbox --ignore=E501 # ignore line too long
+  allow_failure: false
 
 cov:
-  stage: tests
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
@@ -65,7 +52,20 @@ cov:
       junit: pytest.xml
 
 
-
+pages:
+  script:
+    - apt-get update -qq && apt-get install -qq -y pandoc
+    - pip install sphinx sphinx-rtd-theme
+    - pip install nbsphinx
+    - pip install nbsphinx_link 
+    - cd docs
+    - make html
+    - mv build/html/ ../public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 #test:
 #  script:
@@ -82,15 +82,3 @@ cov:
 #  artifacts:
 #    paths:
 #      - dist/*.whl
-
-#pages:
-#  script:
-#    - pip install sphinx sphinx-rtd-theme
-#    - cd doc
-#    - make html
-#    - mv build/html/ ../public/
-#  artifacts:
-#    paths:
-#      - public
-#  rules:
-#    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

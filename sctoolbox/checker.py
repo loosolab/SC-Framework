@@ -1,16 +1,11 @@
 """
 Modules for checking the existence of directories and files
 """
-#Importing modules
-from multiprocessing.sharedctypes import Value
-import sctoolbox
+# Importing modules
 import os
-from os import path
 import sys
-import sctoolbox.creators as cr
-import sctoolbox.utilities as ut
-import warnings
 import re
+
 
 def check_notebook(notebook_num):
     '''Check if the notebook number is int.
@@ -19,8 +14,9 @@ def check_notebook(notebook_num):
     notebook_num : Int
        The number of the notebook assigned for the user for both load or save an anndata object
     '''
-    if isinstance(notebook_num, int) == False:
+    if isinstance(notebook_num, int) is False:
         raise TypeError('Only integer allowed')
+
 
 def write_info_txt(path_value, file_path="./"):
     ''' Write path to info.txt
@@ -34,17 +30,18 @@ def write_info_txt(path_value, file_path="./"):
         path where the info.yml is stored
     '''
 
-    pattern = re.compile('[<>:"\\\|\?\*]')
-    if re.search(pattern,path_value):
+    pattern = re.compile(r'[<>:"\\\|\?\*]')
+    if re.search(pattern, path_value):
         raise ValueError("Invalid character in directory string.")
 
     if os.path.isdir(file_path):
-        file_path = os.path.join(file_path,"info.txt")
+        file_path = os.path.join(file_path, "info.txt")
     else:
         raise ValueError("Invalid directory given.")
 
     with open(file_path, "w") as file:
         file.write(path_value)
+
 
 def fetch_info_txt(file_path="./info.txt"):
     ''' Get path stored in the info.txt file
@@ -62,10 +59,11 @@ def fetch_info_txt(file_path="./info.txt"):
     with open(file_path, "r") as file:
         return file.readline()
 
-def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
+
+def check_cuts(ANS, LIMIT1, LIMIT2):  # Checking cutoffs validity
     '''
     Checking if a given value range into acceptable limits
-    
+
     Parameter
     ----------
     ANS : String (integer) or Integer
@@ -79,23 +77,23 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     ----------
     The True or False
     '''
-    #Author: Guilherme Valente
-    quiters=["q", "quit"]
-    
+    # Author: Guilherme Valente
+    quiters = ["q", "quit"]
+
     # check if the first input is string or not
     # in the context of pipeline the ANS is always coming as STRING,
     # however it could be provided also as an integer.
     if isinstance(ANS, str):
         ANS = ANS.replace('.', "", 1)
-        if ANS.isdigit()==False:
+        if not ANS.isdigit():
             if ANS in quiters:
                 sys.exit("You quit and lost all modifications")
             else:
                 sys.exit("You must provide string or number!")
 
     # Check the range of provided integer input
-    x=float(ANS)
-    if x >=LIMIT1 and x <= LIMIT2:
+    x = float(ANS)
+    if x >= LIMIT1 and x <= LIMIT2:
         return("valid")
     else:
         return("invalid")
@@ -115,11 +113,12 @@ def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
         Return True or False
     '''
     if type(ANS) is str:
-        ANS=ANS.lower()
+        ANS = ANS.lower()
         if ANS in OPTS1:
             check_quit(ANS)
             return True
     return False
+
 
 def check_quit(answer):
     '''
