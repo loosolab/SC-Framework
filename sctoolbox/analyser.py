@@ -1,6 +1,7 @@
 # Loading packages
 import scanpy as sc
 import sctoolbox.creators as creators
+import sctoolbox.annotation as an
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
@@ -155,11 +156,11 @@ def compute_PCA(ANNDATA, use_highly_variable=True):
     ----------
         Anndata with PCA computed
     '''
-    #Computing PCA
+    # Computing PCA
     print("Computing PCA")
     sc.pp.pca(ANNDATA, use_highly_variable=use_highly_variable)
-    #Adding info in anndata.uns["infoprocess"]
-    build_infor(ANNDATA, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
+    # Adding info in anndata.uns["infoprocess"]
+    creators.build_infor(ANNDATA, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
     return ANNDATA.copy()
 
 
@@ -176,17 +177,17 @@ def adata_normalize_total(ANNDATA, excl=True):
     ==========
         Anndata with expression values normalized and log converted
     '''
-    #Author : Guilherme Valente
-#Normalizing and logaritimyzing
+    # Author : Guilherme Valente
+# Normalizing and logaritimyzing
     print("Normalizing the data and converting to log")
     sc.pp.normalize_total(ANNDATA, exclude_highly_expressed=excl)
     sc.pp.log1p(ANNDATA)
-#Adding info in anndata.uns["infoprocess"]
-    build_infor(ANNDATA, "Scanpy normalization", "exclude_highly_expressed= " + str(excl))
+# Adding info in anndata.uns["infoprocess"]
+    creators.build_infor(ANNDATA, "Scanpy normalization", "exclude_highly_expressed= " + str(excl))
     return ANNDATA.copy()
 
 
-def run_PCA(ANNDATA, exclude_HEG = True, use_HVG_PCA = True):
+def run_PCA(ANNDATA, exclude_HEG=True, use_HVG_PCA=True):
     '''Defining the ideal number of highly variable genes (HGV) and annotate them.
     Parameters
     ==========
@@ -200,15 +201,15 @@ def run_PCA(ANNDATA, exclude_HEG = True, use_HVG_PCA = True):
     ==========
         Anndata with expression values normalized and log converted and PCA computed
     '''
-#Author : Guilherme Valente
-    
-#TODO check if user inserted True or False for exclude_HEG and use_HVG_PCA
-    
-#Normalization and converting to log
+# Author : Guilherme Valente
+
+# TODO check if user inserted True or False for exclude_HEG and use_HVG_PCA
+
+# Normalization and converting to log
     adata_normalize_total(ANNDATA, exclude_HEG)
-#Annotate highly variable genes
+# Annotate highly variable genes
     an.annot_HVG(ANNDATA)
-#Compute PCA
+# Compute PCA
     compute_PCA(ANNDATA, use_highly_variable=use_HVG_PCA)
-#Returning
+# Returning
     return ANNDATA.copy()
