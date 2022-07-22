@@ -9,7 +9,13 @@ setup(name='sc-toolbox',
 			'matplotlib',
 			'numpy',
 			'scanpy',
-			'sklearn',
-			'igraph'
+			'rpy2',
+			'anndata2ri',
+			'kneed',
+			'fitter',
+			'qnorm'
 		],
-		)
+		extras_require={
+			'receptor-ligand': ['sklearn', 'igraph']
+		}
+)

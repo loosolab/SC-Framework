@@ -1,101 +1,159 @@
 """
 Module to assembling anndata objects
 """
-import sctoolbox.checker as ch
-import sctoolbox.creators as cr
-
 import scanpy as sc
 import pandas as pd
-import anndata
-from anndata import AnnData
 
-import yaml
-import sys
+import os
+import glob
 
 from scipy import sparse
 from scipy.io import mmread
 
-#######################################################################################################################
-#################################ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS##########################################
-def assembler_velocity(SAMPLE, PATH, DTYPE): #Author: Guilherme Valente
-    global adata
-    path1=PATH + "/quant/" + SAMPLE + "/solo/Velocyto/" + DTYPE
-    path_for_matrix=PATH + "/quant/" + SAMPLE + "/solo/Gene/" + DTYPE
-    path_for_X_spl_unspl_ambig=path1
-    path_for_obs=path1 + '/barcodes.tsv'
-    path_for_var=path1 + '/genes.tsv'
-    print("\t\tLoading matrix to compose the X object: " + SAMPLE)
-    X = sc.read_mtx(path_for_matrix + '/matrix.mtx')
-    X = X.X.transpose()
-    print("\t\tLoading genes and cells identifiers to make the obs object: " + SAMPLE)
-    obs = pd.read_csv(path_for_obs, header = None, index_col = 0)
-    obs.index.name = None #Remove index column name to make it compliant with the anndata format
-    obs = obs + '-' + str(''.join(conditions_name))
-    print("\t\tLoading the gene features to make the var object: " + SAMPLE)
-    var = pd.read_csv(path_for_var, sep='\t', names = ('gene_ids', 'feature_types'), index_col = 1)
-    print("\t\tLoading spliced, unspliced and ambigous matrix to compose the X object: " + SAMPLE)
-    spliced = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/spliced.mtx')).transpose()
-    unspliced  = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/unspliced.mtx')).transpose()
-    ambiguous  = sparse.csr_matrix(mmread(path_for_X_spl_unspl_ambig + '/ambiguous.mtx')).transpose()
-    print("\t\tCreating partial anndata object: " + SAMPLE)
-    adata = anndata.AnnData(X = X, obs = obs, var = var, layers = {'spliced': spliced, 'unspliced': unspliced, 'ambiguous': ambiguous})
-    adata.var_names_make_unique()
-    return adata.copy()
-
-def velocity(tenX, TEST, SOLO_PATH): #tenX is the configuration of samples in the 10X.yml. TEST is test number
-    dtype="filtered" #the dtype is the type of Solo data choose (raw or filtered), which default is filtered
-    if ch.check_infoyml("Output_path"): #Check existence of results path in yaml.
-        result_path=''.join(ch.check_infoyml("Output_path"))
-        test=result_path.split("results/")[1]
-        if TEST != test: #If the test description is not the same as yml, close the program.
-            sys.exit("The " + TEST + " is not the same as described in info.yml.")
-        else:
-            global conditions_name
-            adata_list=list()
-            conditions_name=[]
-            dict_rename_samples={}
-            timer=0
-            for a in tenX:
-                print("Runing sample number " + str(timer + 1) + " out of " + str(len(tenX)) + " samples.")
-                sample=a.split(":")[0]
-                condition=a.split(":")[1]
-                condition_description=a.split(":")[2]
-                dict_rename_samples[str(timer)]=condition_description
-                if condition not in conditions_name:
-                    conditions_name.append(condition)
-                adata_list.append(assembler_velocity(sample, SOLO_PATH, dtype)) #EXECUTING THE ASSEMBLER
-                timer=timer+1
-            #Creating the final anndata and saving
-            print("Creating the final anndata object.")
-            print("\t\tConcatenating objects.")
-            adata = adata_list[0].concatenate(adata_list[1:])
-            print("\t\tRenaming batches.")
-            adata.obs["batch"].replace(dict_rename_samples, inplace=True)
-            adata.obs.rename(columns = {"batch": ''.join(conditions_name)}, inplace = True)
-            print("\t\tInserting informations")
-            cr.build_infor(adata, "Test_number", TEST) #Anndata, key and value for anndata.uns["infoprocess"]
-            cr.build_infor(adata, "Input_for_assembling", SOLO_PATH)
-            cr.build_infor(adata, "Strategy", "Assembling for velocity")
-            cr.build_infor(adata, "Anndata_path", result_path)
-            print("\t\tSaving and loading.")
-            name="/anndata_1_" + TEST +".h5ad"
-            adata_output= result_path + name
-            adata.write(filename=adata_output) #SAVIND THE ADATA FILE WITH SPLICED UNSPLICED; AMBIGOUS COUNTINGS
-            #Loading adata file and printing num cells and num genes
-            print("Loading the anndata for velocity and storing as an adata variable.")
-            adata = sc.read_h5ad(filename=adata_output)
-
-            return(adata)
 
 #######################################################################################################################
-####################################CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT######################################
-def from_single_mtx(mtx, barcodes, genes, is_10X = True, transpose = True, barcode_index = 0, genes_index = 0, delimiter = "\t", **kwargs):
+#                                ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS                                         #
+#######################################################################################################################
+
+def from_single_starsolo(path, dtype="filtered"):
+    '''
+    This will assemble an anndata object from the starsolo folder.
+
+    Parameters
+    ----------
+    path : str
+        Path to the "solo" folder from starsolo.
+    dtype : str, optional
+        The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
+    '''
+    # Author : Guilherme Valente & Mette Bentsen
+
+    # dtype must be either raw or filtered
+    if dtype not in ["raw", "filtered"]:
+        raise ValueError("dtype must be either 'raw' or 'filtered'")
+
+    # Establish which directory to look for data in
+    genedir = os.path.join(path, "Gene", dtype)
+    velodir = os.path.join(path, "Velocyto", dtype)
+    for path in [genedir, velodir]:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"The path to the data does not exist: {path}")
+
+    # File paths for different elements
+    matrix_f = os.path.join(genedir, 'matrix.mtx')
+    barcodes_f = os.path.join(genedir, "barcodes.tsv")
+    genes_f = os.path.join(genedir, "genes.tsv")
+    spliced_f = os.path.join(velodir, 'spliced.mtx')
+    unspliced_f = os.path.join(velodir, 'unspliced.mtx')
+    ambiguous_f = os.path.join(velodir, 'ambiguous.mtx')
+
+    # Check whether files are present
+    for f in [matrix_f, barcodes_f, genes_f, spliced_f, unspliced_f, ambiguous_f]:
+        if not os.path.exists(f):
+            raise FileNotFoundError(f"File '{f}' was not found. Please check that path contains the full output of starsolo.")
+
+    # Setup main adata object from matrix/barcodes/genes
+    print("Setting up adata from solo files")
+    adata = from_single_mtx(matrix_f, barcodes_f, genes_f, is_10X=False)
+    adata.var.columns = ["gene", "type"]  # specific to the starsolo format
+    for col in adata.obs.columns:
+        adata.var[col] = adata.var[col].astype("category")
+
+    # Add in velocity information
+    print("Adding velocity information from spliced/unspliced/ambiguous")
+    spliced = sparse.csr_matrix(mmread(spliced_f).transpose())
+    unspliced = sparse.csr_matrix(mmread(unspliced_f).transpose())
+    ambiguous = sparse.csr_matrix(mmread(ambiguous_f).transpose())
+
+    adata.layers["spliced"] = spliced
+    adata.layers["unspliced"] = unspliced
+    adata.layers["ambiguous"] = ambiguous
+
+    return adata
+
+
+def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
+    '''
+    Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
+
+    Parameters
+    -----------
+    path : str
+        The directory where the quant folder from snakemake preprocessing is located.
+    configuration : list
+        Configurations to setup the samples for anndata assembling. It must containg the sample, the word used in snakemake to assign the condition, and the condition, e.g., sample1:condition:room_air
+    use_samples : list or None
+        List of samples to use. If None, all samples will be used.
+    dtype : str, optional
+        The type of Solo data to choose. The options are 'raw' or 'filtered'. Default: filtered.
+    '''
+    # Author : Guilherme Valente
+
+    # TODO: test that quant folder is existing
+
+    # Collect configuration into a dictionary
+    config_dict = {}
+    if configuration is not None:
+        for string in configuration:
+            sample, condition, condition_name = string.split(":")
+
+            if sample not in config_dict:
+                config_dict[sample] = {}
+            config_dict[sample][condition] = condition_name
+
+    # Establishing which samples to use for assembly
+    sample_dirs = glob.glob(os.path.join(path, "*"))
+    sample_names = [os.path.basename(x) for x in sample_dirs]
+    print(f"Found samples: {sample_names}")
+
+    # Subset to use_samples if they are provided
+    if use_samples is not None:
+        idx = [i for i, sample in enumerate(sample_names) if sample in use_samples]
+        sample_names = [sample_names[i] for i in idx]
+        sample_dirs = [sample_dirs[i] for i in idx]
+
+        print(f"Using samples: {sample_names}")
+        if len(sample_names) == 0:
+            raise ValueError("None of the given 'use_samples' match the samples found in the directory.")
+
+    # Assembling from different samples:
+    adata_list = []
+    for sample_name, sample_dir in zip(sample_names, sample_dirs):
+
+        print(f"Assembling sample '{sample_name}'")
+        solo_dir = os.path.join(sample_dir, "solo")
+        adata = from_single_starsolo(solo_dir, dtype=dtype)
+
+        # Make barcode index unique
+        adata.obs.index = adata.obs.index + "-" + sample_name
+        adata.obs["sample"] = sample_name
+
+        # Add additional information from configuration
+        if sample_name in config_dict:
+            for key in config_dict[sample_name]:
+                adata.obs[key] = config_dict[sample_name][key]
+                adata.obs[key] = adata.obs[key].astype("category")
+
+        adata_list.append(adata)
+
+    # Concatenating the adata objects
+    print("Concatenating anndata objects")
+    adata = adata_list[0].concatenate(adata_list[1:], join="outer")
+
+    return adata
+
+
+#######################################################################################################################
+#                                   CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT                                     #
+#######################################################################################################################
+
+def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
     ''' Building adata object from single mtx and two tsv/csv files
-    
-    Parameter:
+
+    Parameters
     ----------
     mtx : string
-        Path to mtx files
+        Path to the mtx file (.mtx)
     barcodes : string
         Path to cell label file (.obs)
     genes : string
@@ -112,45 +170,47 @@ def from_single_mtx(mtx, barcodes, genes, is_10X = True, transpose = True, barco
         delimiter of genes and barcodes table
     **kwargs : additional arguments
         Contains additional arguments for scanpy.read_10x_mtx method
-        
-    returns
+
+    Returns
     -------
     anndata object containing the mtx matrix, gene and cell labels
     '''
-    
-    ### Read mtx file ###
+    # Read mtx file
     if is_10X:
         adata = sc.read_10x_mtx(path=mtx, **kwargs)
     else:
         adata = sc.read_mtx(filename=mtx, dtype='float32')
-    
-    ### Transpose matrix if necessary ###
+
+    # Transpose matrix if necessary
     if transpose:
         adata = adata.transpose()
-    
-    ### Read in gene and cell annotation ###
+
+    # Read in gene and cell annotation
     barcode_csv = pd.read_csv(barcodes, header=None, index_col=barcode_index, delimiter=delimiter)
     barcode_csv.index.names = ['index']
+    barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
     genes_csv = pd.read_csv(genes, header=None, index_col=genes_index, delimiter=delimiter)
     genes_csv.index.names = ['index']
-    
-    ### Test if they are unique ###
+    genes_csv.columns = [str(c) for c in genes_csv.columns]  # convert to string
+
+    # Test if they are unique
     if not barcode_csv.index.is_unique:
         raise ValueError("Barcode index column does not contain unique values")
     if not genes_csv.index.is_unique:
         raise ValueError("Genes index column does not contain unique values")
-    
-    ### Add tables to anndata object ###
-    adata.obs = barcode_csv 
+
+    # Add tables to anndata object
+    adata.obs = barcode_csv
     adata.var = genes_csv
-    
-    return(adata)
+
+    return adata
 
 
 def from_mtx(mtx, barcodes, genes, **kwargs):
-    ''' Building adata object from list of mtx, barcodes and genes files
-    
-    Parameter:
+    '''
+    Building adata object from list of mtx, barcodes and genes files
+
+    Parameters
     ----------
     mtx : list
         List of paths to mtx files
@@ -171,16 +231,16 @@ def from_mtx(mtx, barcodes, genes, **kwargs):
     **kwargs : additional arguments
         Contains additional arguments for scanpy.read_10x_mtx method
 
-    returns:
+    Returns
     --------
     merged anndata object containing the mtx matrix, gene and cell labels
     '''
-    
-    adata_objects = [from_single_mtx(m, barcodes[i], genes[i], **kwargs) for i,m in enumerate(mtx)]
-    
-    if len(adata_objects) >1:
-        adata = adata_objects[0].concatenate(*adata_objects[1:], join = "inner")
+
+    adata_objects = [from_single_mtx(m, barcodes[i], genes[i], **kwargs) for i, m in enumerate(mtx)]
+
+    if len(adata_objects) > 1:
+        adata = adata_objects[0].concatenate(*adata_objects[1:], join="outer")
     else:
         adata = adata_objects[0]
-    
+
     return adata
