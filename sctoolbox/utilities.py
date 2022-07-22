@@ -4,11 +4,10 @@ import os
 import scanpy as sc
 import importlib
 import re
+import matplotlib.pyplot as plt
 
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
-
-import matplotlib.pyplot as plt
 
 
 def is_str_numeric(ans):
@@ -18,38 +17,40 @@ def is_str_numeric(ans):
     except ValueError:
         return False
 
+
 def get_package_versions():
     """
     Utility to get a dictionary of currently installed python packages and versions.
 
     Returns
     --------
-    A dict in the form: 
+    A dict in the form:
     {"package1": "1.2.1", "package2":"4.0.1", (...)}
-    
+
     """
-    
-    #Import freeze
+
+    # Import freeze
     try:
         from pip._internal.operations import freeze
     except ImportError:  # pip < 10.0
         from pip.operations import freeze
-    
-    #Get list of packages and versions with freeze
+
+    # Get list of packages and versions with freeze
     package_list = freeze.freeze()
-    package_dict = {} #dict for collecting versions
+    package_dict = {}  # dict for collecting versions
     for s in package_list:
         try:
             name, version = re.split("==| @ ", s)
             package_dict[name] = version
-        except:
+        except Exception:
             print(f"Error reading version for package: {s}")
-    
+
     return package_dict
+
 
 def create_dir(path):
     """ Create a directory if it is not existing yet.
-    
+
     Parameters
     -----------
     path : str
