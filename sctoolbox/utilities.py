@@ -353,7 +353,7 @@ def split_bam_clusters(adata,
     # create template used for bam header
     template = open_bam(bams[0], "rb", verbosity=0)
 
-    #Get number in reads in input bam(s)
+    # Get number in reads in input bam(s)
     print("Reading total number of reads from bams...")
     n_reads = {}
     for path in bams:
@@ -361,7 +361,7 @@ def split_bam_clusters(adata,
         n_reads[path] = get_bam_reads(handle)
         handle.close()
 
-    #--------- Start splitting ---------#
+    # --------- Start splitting --------- #
     print("Starting splitting of bams...")
     if parallel:
 
@@ -390,7 +390,7 @@ def split_bam_clusters(adata,
             for cluster in chunk:
                 cluster_queues[cluster] = m  # manager is shared between different clusters if writer_threads < number of clusters
 
-        #Queue for progress bar
+        # Queue for progress bar
         progress_queue = manager.Queue()
 
         # ---- Start process ---- #
@@ -478,7 +478,7 @@ def split_bam_clusters(adata,
 
 def get_bam_reads(bam_obj):
     """ Get the number of reads from an open pysam.AlignmentFile
-    
+
     Parameters
     -----------
     bam_obj : pysam.AlignmentFile
@@ -495,8 +495,9 @@ def get_bam_reads(bam_obj):
     except ValueError:  # fall back to "samtools view -c file" if bam_obj.mapped is not available
         path = bam_obj.filename
         total = int(pysam.view("-c", path))
-    
+
     return(total)
+
 
 def _monitor_progress(progress_queue,
                       cluster_queues,
@@ -559,11 +560,11 @@ def _monitor_progress(progress_queue,
         for cluster in cluster_names:
             pbars[cluster] = pbar  # all clusters share the same pbar
 
-    #Fetch progress from readers/writers
+    # Fetch progress from readers/writers
     writers_running = len(writer_jobs) 
     reading_done = False
     while True:
-        
+
         task, name, value = progress_queue.get()
         pbar = pbars[name]
 
@@ -593,9 +594,10 @@ def _monitor_progress(progress_queue,
         # Check if all writers are done
         if writers_running == 0:
             _ = [writer_job.get() for writer_job in writer_jobs] # wait for all readers to finish
-            break 
+            break
 
     return 0  # success
+
 
 def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_size=10000):
     """
@@ -621,7 +623,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
 
     # open bam
     bam = open_bam(path, "rb", verbosity=0)
-    
+
     # Setup read buffer per cluster
     read_buffer = {cluster: [] for cluster in set(bc2cluster.values())}
 
@@ -706,13 +708,13 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
             read = pysam.AlignedSegment.fromstring(read, handle.header)
             handle.write(read)
 
-        #Send written to progress
+        # Send written to progress
         progress_queue.put(("written", cluster, len(read_lst)))
 
     # Close files after use
     for handle in handles.values():
         handle.close()
-    
+
     # Tell monitoring queue that this writing job is done
     progress_queue.put(("done", cluster_names[0], None))  # cluster is not used here, but is needed for the progress queue
 
