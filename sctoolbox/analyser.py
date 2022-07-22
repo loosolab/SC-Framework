@@ -156,6 +156,6 @@ def define_PC(anndata):
     x = range(1, len(y)+1)
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
     selected_kn = kn.knee
-#Adding info in anndata.uns["infoprocess"]
-    build_infor(anndata, "Best num PC before batch cor", selected_kn)
+# Adding info in anndata.uns["infoprocess"]
+    creators.build_infor(anndata, "Best num PC before batch cor", selected_kn)
     return selected_kn
