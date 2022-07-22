@@ -286,7 +286,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
     
     return axs
 
-def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False):
+def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False, restrict_to=None):
     '''
     Generate network graph of interactions between clusters.
     
@@ -318,6 +318,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
             Label above the colorbar.
         show_count : bool, default False
             Show the interaction count in the hairball.
+        restrict_to : list of str, default None
+            Only show given clusters provided in list.
 
     Returns:
     ----------
@@ -329,6 +331,13 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
 
     interactions = adata.uns["receptor-ligand"]["interactions"]
+
+    # any invalid cluster names
+    if restrict_to:
+        valid_clusters = set.union(set(interactions["ligand_cluster"]), set(interactions["receptor_cluster"]))
+        invalid_clusters = set(restrict_to) - valid_clusters
+        if invalid_clusters:
+            raise ValueError(f"Invalid cluster in `restrict_to`: {invalid_clusters}")
 
     igraph_scale=3
     matplotlib_scale=4
@@ -383,7 +392,10 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     graph = ig.Graph()
 
     # set nodes
-    clusters = list(set(list(interactions["receptor_cluster"]) + list(interactions["ligand_cluster"])))
+    if restrict_to:
+        clusters = restrict_to
+    else:
+        clusters = list(set(list(interactions["receptor_cluster"]) + list(interactions["ligand_cluster"])))
     
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
