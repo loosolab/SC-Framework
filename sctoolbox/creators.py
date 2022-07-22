@@ -3,15 +3,12 @@ Modules for creating files or directories
 """
 import os
 from os import path
-import sys
-import sctoolbox
 import sctoolbox.checker as ch
 import anndata
 
-#Do we need this?
-def add_color_set(adata, inplace = True):
-    """ Add color set to adata object
 
+def add_color_set(adata, inplace=True):
+    """ Add color set to adata object
     Parameter:
     ----------
     adata : AnnData object
@@ -63,9 +60,8 @@ def add_color_set(adata, inplace = True):
         return m_adata
 
 
-def build_infor(adata, key, value, inplace = True):
+def build_infor(adata, key, value, inplace=True):
     """ Adding info anndata.uns["infoprocess"]
-
     Parameters
     ------------
     adata : anndata object
@@ -76,11 +72,9 @@ def build_infor(adata, key, value, inplace = True):
 	    Information to be added for a given key
     inplace : boolean
         Add info inplace
-
-    @author:  Guilherme Valente
     """
 
-    if  type(adata) != anndata.AnnData:
+    if type(adata) != anndata.AnnData:
         raise TypeError("Invalid data type. AnnData object is required.")
 
     m_adata = adata if inplace else adata.copy()
@@ -92,6 +86,7 @@ def build_infor(adata, key, value, inplace = True):
 
     if not inplace:
         return m_adata
+
 
 def create_dir(OUTPATH, TEST):
     '''This will create the directory to store the results of scRNAseq autom pipeline
@@ -108,9 +103,9 @@ def create_dir(OUTPATH, TEST):
 
     output_dir = os.path.join(OUTPATH, "results", TEST)
 
-    #Check if the directory exist and create if not
+    # Check if the directory exist and create if not
     os.makedirs(output_dir, exist_ok=True)
     print(f"Output directory is ready: {output_dir}")
 
-    #Creating storing information for next
-    ch.write_info_txt(path_value=output_dir) #Printing the output dir detailed in the info.txt
+    # Creating storing information for next
+    ch.write_info_txt(path_value=output_dir) # Printing the output dir detailed in the info.txt

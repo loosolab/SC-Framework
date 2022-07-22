@@ -1,17 +1,11 @@
 """
 Modules for checking the existence of directories and files
 """
-#Importing modules
-from multiprocessing.sharedctypes import Value
-import sctoolbox
 import os
-from os import path
 import sys
-import sctoolbox.creators as cr
-import sctoolbox.utilities as ut
 import sctoolbox.checker as ch
-import warnings
 import re
+
 
 def check_notebook(notebook_num):
     '''Check if the notebook number is int.
@@ -22,6 +16,7 @@ def check_notebook(notebook_num):
     '''
     if isinstance(notebook_num, int) == False:
         raise TypeError('Only integer allowed')
+
 
 def write_info_txt(path_value, file_path="./"):
     ''' Write path to info.txt
@@ -34,7 +29,6 @@ def write_info_txt(path_value, file_path="./"):
     file_path : String
         path where the info.yml is stored
     '''
-
     pattern = re.compile('[<>:"\\\|\?\*]')
     if re.search(pattern,path_value):
         raise ValueError("Invalid character in directory string.")
@@ -47,9 +41,9 @@ def write_info_txt(path_value, file_path="./"):
     with open(file_path, "w") as file:
         file.write(path_value)
 
+
 def fetch_info_txt(file_path="./info.txt"):
     ''' Get path stored in the info.txt file
-
     Parameters:
     ===========
     file_path : String
@@ -63,10 +57,10 @@ def fetch_info_txt(file_path="./info.txt"):
     with open(file_path, "r") as file:
         return file.readline()
 
-def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
+
+def check_cuts(ANS, LIMIT1, LIMIT2): # Checking cutoffs validity
     '''
     Checking if a given value range into acceptable limits
-    
     Parameter
     ----------
     ANS : String (integer) or Integer
@@ -80,9 +74,8 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
     ----------
     The True or False
     '''
-    #Author: Guilherme Valente
     quiters=["q", "quit"]
-    
+
     # check if the first input is string or not
     # in the context of pipeline the ANS is always coming as STRING,
     # however it could be provided also as an integer.
@@ -95,8 +88,8 @@ def check_cuts(ANS, LIMIT1, LIMIT2): #Checking cutoffs validity
                 sys.exit("You must provide string or number!")
 
     # Check the range of provided integer input
-    x=float(ANS)
-    if x >=LIMIT1 and x <= LIMIT2:
+    x = float(ANS)
+    if x >= LIMIT1 and x <= LIMIT2:
         return("valid")
     else:
         return("invalid")
@@ -116,15 +109,14 @@ def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
         Return True or False
     '''
     if type(ANS) is str:
-        ANS=ANS.lower()
+        ANS = ANS.lower()
         if ANS in OPTS1:
             check_quit(ANS)
             return True
     return False
 
 def check_quit(answer):
-    '''
-    Quit the functions if the answer is q or quite.
+    '''Quit the functions if the answer is q or quite.
     Parameters
     ----------
     answer: String
@@ -149,16 +141,16 @@ def chek_requirements(anndata, current_notebook=None):
     Requirements of each notebook
     ----------
         Notebook 3 demands total_counts filtered
-    
+
     Return
     ---------
         Report the information is missing in the anndata object.
     '''
-#Messages and others
+# Messages and others
     m1 = "Set the current_notebook[INT]"
     m2 = "Notebook 3 demands total_counts filtered. Run notebook 2 before the 3rd notebook."
 
-#Check if the current_notebook is int
+# Check if the current_notebook is int
     try:
         ch.check_notebook(current_notebook)
         if current_notebook == 3:
