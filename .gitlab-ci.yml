@@ -34,18 +34,11 @@ before_script:
   - pip install pytest
   - pip install pytest-cov
 
-
 lint:
   script:
     - pip install flake8
-    - flake8 sctoolbox
-  allow_failure: true
-
-type_checking:
-  script:
-    - pip install mypy
-    - mypy sctoolbox
-  allow_failure: true
+    - flake8 sctoolbox --ignore=E501 # ignore line too long
+  allow_failure: false
 
 cov:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
