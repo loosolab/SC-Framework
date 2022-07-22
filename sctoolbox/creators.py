@@ -64,7 +64,7 @@ def add_color_set(adata, inplace=True):
 
 
 def build_infor(adata, key, value, inplace=True):
-    """ Adding info anndata.uns["infoprocess"]
+    ''' Adding info anndata.uns["infoprocess"]
     Parameters
     ------------
     adata : anndata object
@@ -75,7 +75,7 @@ def build_infor(adata, key, value, inplace=True):
         Information to be added for a given key
     inplace : boolean
         Add info inplace
-    """
+    '''
 
     if type(adata) != anndata.AnnData:
         raise TypeError("Invalid data type. AnnData object is required.")

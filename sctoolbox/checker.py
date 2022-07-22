@@ -156,10 +156,10 @@ def chek_requirements(anndata, current_notebook=None):
 
 # Check if the current_notebook is int
     try:
-        ch.check_notebook(current_notebook)
+        check_notebook(current_notebook)
         if current_notebook == 3:
             if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
                 sys.exit(m2)
-        display(anndata)
-    except:
+        print(anndata)
+    except TypeError:
         sys.exit(m1)
