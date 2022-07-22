@@ -9,10 +9,12 @@ setup(name='sc-toolbox',
 			'matplotlib',
 			'numpy',
 			'scanpy',
-			'rpy2',
-			'anndata2ri',
 			'kneed',
 			'fitter',
 			'qnorm'
 		],
-		)
+		extras_require={
+			'converter': ['rpy2', 'anndata2ri'],
+			'bam': ['pysam']
+		}
+)
