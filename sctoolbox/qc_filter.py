@@ -413,8 +413,9 @@ def filter_genes(adata, genes):
 
 
 def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
-    """ Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
-        as well as a "scrublet" key in adata.uns.
+    """ 
+    Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
+    as well as a "scrublet" key in adata.uns.
 
     Parameters
     ------------
