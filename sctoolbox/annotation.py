@@ -1,11 +1,4 @@
 import pandas as pd
-import numpy as np
-import copy
-import os
-import multiprocessing as mp
-
-import sctoolbox.utilities
-import psutil
 
 
 def add_cellxgene_annotation(adata, csv):
