@@ -16,6 +16,6 @@ setup(name='sc-toolbox',
 			'qnorm'
 		],
 		extras_require={
-			'receptor-ligand': ['sklearn', 'igraph']
+			'receptor-ligand': ['sklearn', 'igraph', 'cairocffi']  # cairocffi needed for cairo backend
 		}
 )
