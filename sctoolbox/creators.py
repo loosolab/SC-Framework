@@ -9,9 +9,6 @@ import anndata
 # Do we need this?
 def add_color_set(adata, inplace=True):
     """ Add color set to adata object
-
-def add_color_set(adata, inplace=True):
-    """ Add color set to adata object
     Parameter:
     ----------
     adata : AnnData object
