@@ -1,18 +1,14 @@
-#Loading packages
+# Loading packages
 import scanpy as sc
-import sys
-from sctoolbox.creators import *
-from sctoolbox.checker import *
+import sctoolbox.creators as creators
 from fitter import Fitter
 import numpy as np
-from scipy.stats import *
-import scipy.stats as st
 from kneed import KneeLocator
-import os.path
-from os import path
 
 ###################################################################################################################
-def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2, CONDI2): #Ir para analyser.py
+
+
+def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2, CONDI2):  # Ir para analyser.py
     '''
     Defining cutoffs for anndata.obs and anndata.var parameters
 
@@ -38,58 +34,63 @@ def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2,
     ------------
     Pandas dataframe with cutoffs for each parameter and dataset
     '''
-    #Author: Guilherme Valente
+    # Author: Guilherme Valente
     def filling_df_cut(DF_CUTS2, CONDI3, PARAM3, LST_CUTS, LST_DFCUTS_COLS):
-        if CONDI3 == None:
-            DF_CUTS2=DF_CUTS2.append({LST_DFCUTS_COLS[0]: "_", LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_genes"}, ignore_index=True)
+        if CONDI3 is None:
+            DF_CUTS2 = DF_CUTS2.append({LST_DFCUTS_COLS[0]: "_", LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_genes"}, ignore_index=True)
         else:
-            DF_CUTS2=DF_CUTS2.append({LST_DFCUTS_COLS[0]: CONDI3, LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_cells"}, ignore_index=True)
+            DF_CUTS2 = DF_CUTS2.append({LST_DFCUTS_COLS[0]: CONDI3, LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_cells"}, ignore_index=True)
         return DF_CUTS2
-#Defining the types of distributions to be evaluated and organizing the data
+
+    # Defining the types of distributions to be evaluated and organizing the data
     lst_distr, curves, directions = ["uniform", "expon", "powerlaw", "norm"], ["convex", "concave"], ["increasing", "decreasing"]
     lst_dfcuts_cols, np_data2, lst_data2 = DF_CUTS.columns.tolist(), DATA2.to_numpy(), DATA2.tolist()
     knns = list()
 
-#This is a normal distribution
+    # This is a normal distribution
     if SKEW_VAL == 0:
-        cut_right, cut_left=np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100-(INTERVAL*100)) #Percentile
-        join_cuts=[cut_right, cut_left]
+        cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL * 100))  # Percentile
+        join_cuts = [cut_right, cut_left]
         if 0 in join_cuts:
-            join_cuts=[max(join_cuts)]
+            join_cuts = [max(join_cuts)]
         df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, join_cuts, lst_dfcuts_cols)
-#This is a mesokurtic skewed distributed (long tail and not sharp)
+
+    # This is a mesokurtic skewed distributed (long tail and not sharp)
     elif SKEW_VAL != 0 and KURTOSIS_NORM == 0:
-        cut_right, cut_left=np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100-(INTERVAL*100)) #Percentile
-        join_cuts=[cut_right, cut_left]
+        cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL * 100))  # Percentile
+        join_cuts = [cut_right, cut_left]
         if 0 in join_cuts:
-            join_cuts=[max(join_cuts)]
+            join_cuts = [max(join_cuts)]
         df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, join_cuts, lst_dfcuts_cols)
-#This is a skewed distribution (long tail), and platykurtic (not extremely sharp, not so long tail) or leptokurtic (extremely sharp, long tail)
+
+    # This is a skewed distribution (long tail), and platykurtic (not extremely sharp, not so long tail) or leptokurtic (extremely sharp, long tail)
     elif SKEW_VAL != 0 and KURTOSIS_NORM != 0:
         f = Fitter(np_data2, distributions=lst_distr)
         f.fit()
-        best_fit=list(f.get_best().keys()) #Finding the best fit
-#This is the power law or exponential distributed data
-        if  "expon" in best_fit or "powerlaw" in best_fit:
+        best_fit = list(f.get_best().keys())  # Finding the best fit
+
+        # This is the power law or exponential distributed data
+        if "expon" in best_fit or "powerlaw" in best_fit:
             lst_data2.sort()
-            histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2)/100), weights=range(0, len(lst_data2), 1))
+            histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2) / 100), weights=range(0, len(lst_data2), 1))
             for a in curves:
                 for b in directions:
-                    knns2=KneeLocator(x=range(1, len(histon2)+1), y=histon2, curve=a, direction=b)
-                    knn2_converted=bins_built[knns2.knee-1].item()
+                    knns2 = KneeLocator(x=range(1, len(histon2) + 1), y=histon2, curve=a, direction=b)
+                    knn2_converted = bins_built[knns2.knee - 1].item()
                     if knn2_converted > 0:
                         knns.append(knn2_converted)
-            kn_selected=[min(knns)]
+            kn_selected = [min(knns)]
             df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, kn_selected, lst_dfcuts_cols)
 
-#This is the skewed shaped but not like exponential nor powerlaw
+        # This is the skewed shaped but not like exponential nor powerlaw
         else:
-            cut_right, cut_left=np.percentile(np_data2, (INTERVAL*100)), np.percentile(np_data2, 100-(INTERVAL*100)) #Percentile
-            join_cuts=[cut_right, cut_left]
+            cut_right, cut_left = np.percentile(np_data2, (INTERVAL * 100)), np.percentile(np_data2, 100 - (INTERVAL * 100))  # Percentile
+            join_cuts = [cut_right, cut_left]
             if 0 in join_cuts:
-                join_cuts=[max(join_cuts)]
+                join_cuts = [max(join_cuts)]
             df_cutoffs = filling_df_cut(DF_CUTS, CONDI2, PARAM2, join_cuts, lst_dfcuts_cols)
     return(df_cutoffs)
+
 
 def qcmetric_calculator(ANNDATA, control_var=False):
     '''
@@ -104,34 +105,38 @@ def qcmetric_calculator(ANNDATA, control_var=False):
         The qc_var of sc.pp.calculate_qc_metrics will use this variable to control the qc metrics calculation (e.g. "is_mito").
         For details, see qc_vars at https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
     '''
-    #Author: Guilherme Valente
-    #Message and others
-    m1="pp.calculate_qc_metrics qc_vars: "
-    m2="ID_"
-    obs_info=['total_counts', 'n_genes_by_counts', 'log1p_total_counts']
-    var_info=['n_cells_by_counts', 'mean_counts', 'log1p_mean_counts', 'pct_dropout_by_counts']
+    # Author: Guilherme Valente
+    # Message and others
+    m1 = "pp.calculate_qc_metrics qc_vars: "
+    m2 = "ID_"
+    obs_info = ['total_counts', 'n_genes_by_counts', 'log1p_total_counts']
+    var_info = ['n_cells_by_counts', 'mean_counts', 'log1p_mean_counts', 'pct_dropout_by_counts']
 
-    VAR=ANNDATA.uns["infoprocess"]["genes_labeled"]
-    if VAR != None:
-        qc_metrics = sc.pp.calculate_qc_metrics(adata = ANNDATA, qc_vars = VAR, inplace = False, log1p=True)
+    VAR = ANNDATA.uns["infoprocess"]["genes_labeled"]
+    if VAR is not None:
+        qc_metrics = sc.pp.calculate_qc_metrics(adata=ANNDATA, qc_vars=VAR, inplace=False, log1p=True)
         for a in VAR:
             obs_info.append('total_counts_' + a)
             obs_info.append('pct_counts_' + a)
     else:
-        qc_metrics = sc.pp.calculate_qc_metrics(adata = ANNDATA, inplace = False, log1p=True)
+        qc_metrics = sc.pp.calculate_qc_metrics(adata=ANNDATA, inplace=False, log1p=True)
+
     for a in list(qc_metrics[0].columns.values):
         if a in obs_info:
             ANNDATA.obs[a] = qc_metrics[0][a]
     for a in list(qc_metrics[1].columns.values):
         if a in var_info:
             ANNDATA.var[a] = qc_metrics[1][a]
-    #Annotating into anndata.uns["infoprocess"] the qc_var parameter for the sc.pp.calculate_qc_metrics
-    build_infor(ANNDATA, m1, VAR)
-    #Storing the original counts
+
+    # Annotating into anndata.uns["infoprocess"] the qc_var parameter for the sc.pp.calculate_qc_metrics
+    creators.build_infor(ANNDATA, m1, VAR)
+
+    # Storing the original counts
     for a in obs_info:
-        go_to_id=ANNDATA.obs[a].sum()
-        build_infor(ANNDATA, m2 + "c_" + a, go_to_id)
+        go_to_id = ANNDATA.obs[a].sum()
+        creators.build_infor(ANNDATA, m2 + "c_" + a, go_to_id)
     for a in var_info:
-        go_to_id=ANNDATA.var[a].sum()
-        build_infor(ANNDATA, m2 + "g_" + a, go_to_id)
+        go_to_id = ANNDATA.var[a].sum()
+        creators.build_infor(ANNDATA, m2 + "g_" + a, go_to_id)
+
     return(ANNDATA)

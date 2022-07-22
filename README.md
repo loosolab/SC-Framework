@@ -1,6 +1,8 @@
 # loosolab_SC_RNA_framework
 
-Here we are developing a set of notebooks for automation of scRNA-Seq of looso's lab.
+Here we are developing a set of notebooks for automation of scRNA-Seq of looso's lab. 
+
+Read the docs documentation: https://loosolab.pages.gwdg.de/software/loosolab_sc_rna_framework/ (dev branch)
 
 # Workflow
 
