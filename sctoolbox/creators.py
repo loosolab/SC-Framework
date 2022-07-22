@@ -8,7 +8,8 @@ import anndata
 
 # Do we need this?
 def add_color_set(adata, inplace=True):
-    """ Add color set to adata object
+    """
+    Add color set to adata object
     Parameter:
     ----------
     adata : AnnData object
@@ -61,7 +62,8 @@ def add_color_set(adata, inplace=True):
 
 
 def build_infor(adata, key, value, inplace=True):
-    ''' Adding info anndata.uns["infoprocess"]
+    '''
+    Adding info anndata.uns["infoprocess"]
     Parameters
     ------------
     adata : anndata object

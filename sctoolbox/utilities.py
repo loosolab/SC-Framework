@@ -3,10 +3,8 @@ import sys
 import os
 import scanpy as sc
 import importlib
-
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
-
 import matplotlib.pyplot as plt
 
 
@@ -19,7 +17,8 @@ def is_str_numeric(ans):
 
 
 def create_dir(path):
-    """ Create a directory if it is not existing yet.
+    """
+    Create a directory if it is not existing yet.
 
     Parameters
     -----------
@@ -50,7 +49,8 @@ def save_figure(path):
 
 
 def vprint(verbose=True):
-    """ Print the verbose message.
+    """
+    Print the verbose message.
 
     Parameters
     -----------
@@ -62,7 +62,8 @@ def vprint(verbose=True):
 
 # Requirement for installed tools
 def check_module(module):
-    """ Check if <module> can be imported without error.
+    """
+    Check if <module> can be imported without error.
 
     Parameters
     -----------
@@ -91,7 +92,8 @@ def check_module(module):
 
 # Loading adata file and adding the information to be evaluated and color list
 def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
-    '''Load anndata object
+    '''
+    Load anndata object
     Parameters
     ==========
     is_from_previous_note : Boolean
@@ -149,7 +151,8 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
 
 
 def saving_anndata(ANNDATA, current_notebook=None):
-    '''Save your anndata object
+    '''
+    Save your anndata object
     Parameters
     ===========
     ANNDATA : anndata object
@@ -172,7 +175,8 @@ def saving_anndata(ANNDATA, current_notebook=None):
 
 
 def pseudobulk_table(adata, groupby, how="mean"):
-    """ Get a pseudobulk table of values per cluster.
+    """
+    Get a pseudobulk table of values per cluster.
 
     Parameters
     -----------

@@ -44,7 +44,8 @@ def write_info_txt(path_value, file_path="./"):
 
 
 def fetch_info_txt(file_path="./info.txt"):
-    ''' Get path stored in the info.txt file
+    '''
+    Get path stored in the info.txt file
     Parameters:
     ===========
     file_path : String
@@ -120,7 +121,8 @@ def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
 
 
 def check_quit(answer):
-    '''Quit the functions if the answer is q or quite.
+    '''
+    Quit the functions if the answer is q or quite.
     Parameters
     ----------
     answer: String
@@ -133,33 +135,28 @@ def check_quit(answer):
         sys.exit("You quit and lost all modifications :(")
 
 
-def chek_requirements(anndata, current_notebook=None):
-    '''Check if the current anndata object has all requirements to be analysed by the current notebook.
+def check_requirements(anndata, current_notebook=None):
+    '''
+    Check if the current anndata object has all requirements to be analysed by the current notebook.
     Parameters
     ----------
     anndata : Anndata object
-    current_notebook : Int
+        anndata.Anndata
+    current_notebook : int, default : None
         The number of the current notebook. It is important to set the correct number because each notebook has its
         own mandatory anndata requirements.
 
     Requirements of each notebook
     ----------
         Notebook 3 demands total_counts filtered
-
-    Return
-    ---------
-        Report the information is missing in the anndata object.
     '''
-# Messages and others
-    m1 = "Set the current_notebook[INT]"
-    m2 = "Notebook 3 demands total_counts filtered. Run notebook 2 before the 3rd notebook."
 
 # Check if the current_notebook is int
-    try:
-        check_notebook(current_notebook)
-        if current_notebook == 3:
-            if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
-                sys.exit(m2)
-        print(anndata)
-    except TypeError:
-        sys.exit(m1)
+    check_notebook(current_notebook) # Check if the parameter is an int. If not, raises an error.
+    if current_notebook == 3:
+        if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
+            raise ValueError("Notebook 3 demands total_counts filtered. Run notebook 2 before the 3rd notebook.")
+    #TODO : add other notebooks as elif
+    else:
+        raise ValueError("Set the current_notebook properly.")
+    print(anndata)
