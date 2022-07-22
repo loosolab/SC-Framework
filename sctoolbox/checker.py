@@ -6,8 +6,6 @@ import os
 import sys
 import re
 
-import sctoolbox.utilities as ut
-
 
 def check_notebook(notebook_num):
     '''Check if the notebook number is int.
@@ -79,27 +77,26 @@ def check_cuts(ANS, LIMIT1, LIMIT2):  # Checking cutoffs validity
     ----------
     The True or False
     '''
-    #Author: Guilherme Valente
+    # Author: Guilherme Valente
     quiters=["q", "quit"]
-    
+
     # check if the first input is string or not
     # in the context of pipeline the ANS is always coming as STRING,
     # however it could be provided also as an integer.
     if isinstance(ANS, str):
         ANS = ANS.replace('.', "", 1)
-        if ANS.isdigit()==False:
+        if not ANS.isdigit():
             if ANS in quiters:
                 sys.exit("You quit and lost all modifications")
             else:
                 sys.exit("You must provide string or number!")
 
     # Check the range of provided integer input
-    x=float(ANS)
-    if x >=LIMIT1 and x <= LIMIT2:
+    x = float(ANS)
+    if x >= LIMIT1 and x <= LIMIT2:
         return("valid")
     else:
         return("invalid")
-
 
 
 def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):

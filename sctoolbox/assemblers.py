@@ -26,9 +26,9 @@ def from_single_starsolo(path, dtype="filtered"):
     dtype : str, optional
         The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
     '''
-    #Author : Guilherme Valente & Mette Bentsen
+    # Author : Guilherme Valente & Mette Bentsen
 
-    #dtype must be either raw or filtered
+    # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
         raise ValueError("dtype must be either 'raw' or 'filtered'")
 
@@ -47,7 +47,7 @@ def from_single_starsolo(path, dtype="filtered"):
     unspliced_f = os.path.join(velodir, 'unspliced.mtx')
     ambiguous_f = os.path.join(velodir, 'ambiguous.mtx')
 
-    #Check whether files are present
+    # Check whether files are present
     for f in [matrix_f, barcodes_f, genes_f, spliced_f, unspliced_f, ambiguous_f]:
         if not os.path.exists(f):
             raise FileNotFoundError(f"File '{f}' was not found. Please check that path contains the full output of starsolo.")
