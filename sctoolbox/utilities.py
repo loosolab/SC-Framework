@@ -414,7 +414,7 @@ def split_bam_clusters(adata,
         # ---- End process + cleanup ----#
 
         # wait for readers and writers to finish
-        _monitor_progress(progress_queue, cluster_queues, reader_jobs, writer_jobs, n_reads, individual_pbars)  # does not return until all readers/writers are finished 
+        _monitor_progress(progress_queue, cluster_queues, reader_jobs, writer_jobs, n_reads, individual_pbars)  # does not return until all readers/writers are finished
         reader_pool.join()
         writer_pool.join()
 
@@ -632,7 +632,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     read_buffer = {cluster: [] for cluster in set(bc2cluster.values())}
 
     # put each read into correct queue
-    step = 100000  # progress every in hundred thousand reads 
+    step = 100000  # progress every in hundred thousand reads
     n_reads_step = 0  # count of reads read from bam per step
     for read in bam:
 
