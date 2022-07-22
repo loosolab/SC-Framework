@@ -151,12 +151,12 @@ def check_requirements(anndata, current_notebook=None):
         Notebook 3 demands total_counts filtered
     '''
 
-# Check if the current_notebook is int
-    check_notebook(current_notebook) # Check if the parameter is an int. If not, raises an error.
+# Check if the current_notebook is int. Then, check if the anndata fits the requirements.
+    check_notebook(current_notebook)
     if current_notebook == 3:
         if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
             raise ValueError("Notebook 3 demands total_counts filtered. Run notebook 2 before the 3rd notebook.")
-    #TODO : add other notebooks as elif
+    # TODO : add other notebooks as elif
     else:
         raise ValueError("Set the current_notebook properly.")
     print(anndata)
