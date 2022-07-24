@@ -7,7 +7,7 @@ from sctoolbox import celltype_annotation
 @pytest.fixture
 def test_adata():
     adata_dir = os.path.join(os.path.dirname(__file__), 'data', 'scsa')
-    adata = ad.read_h5ad(adata_dir+'adata_scsa.h5ad')
+    adata = ad.read_h5ad(adata_dir+'/adata_scsa.h5ad')
     return adata
 
 def test_adata_uns():
