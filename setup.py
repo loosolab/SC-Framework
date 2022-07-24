@@ -11,7 +11,11 @@ setup(name='sc-toolbox',
 			'scanpy',
 			'kneed',
 			'fitter',
-			'qnorm'
+			'qnorm',
+			'scipy',
+			'episcanpy',
+			'pyyaml',
+			'statsmodels',
 		],
 		extras_require={
 			'converter': ['rpy2==3.4.5', 'anndata2ri'],

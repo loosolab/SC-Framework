@@ -10,6 +10,39 @@ import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 
 
+# ----------------- String functions ---------------- #
+
+def longest_common_suffix(list_of_strings):
+    """
+    Find the longest common suffix of a list of strings.
+
+    Parameters
+    -----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    -------
+    str
+        Longest common suffix of the list of strings.
+    """
+    reversed_strings = [' '.join(s.split()[::-1]) for s in list_of_strings]
+    reversed_lcs = os.path.commonprefix(reversed_strings)
+    lcs = ' '.join(reversed_lcs.split()[::-1])
+
+    return lcs
+
+
+def remove_prefix(s, prefix):
+    """ Remove prefix from a string. """
+    return s[len(prefix):] if s.startswith(prefix) else s
+
+
+def remove_suffix(s, suffix):
+    """ Remove suffix from a string. """
+    return s[len(suffix):] if s.startswith(suffix) else s
+
+
 def is_str_numeric(ans):
     try:
         float(ans)
@@ -17,6 +50,8 @@ def is_str_numeric(ans):
     except ValueError:
         return False
 
+
+# ------------------ I/O functions ----------------- #
 
 def create_dir(path):
     """ Create a directory if it is not existing yet.
