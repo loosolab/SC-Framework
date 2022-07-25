@@ -18,6 +18,7 @@ import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
 import warnings
 
+
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False):
     """
     Download table of receptor-ligand interactions and store in adata.
@@ -80,10 +81,11 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
     if not inplace:
         return modified_adata
 
+
 def calculate_interaction_table(adata, cluster_column, gene_index=None, normalize=1000, inplace=False, overwrite=False):
     """
     Calculate an interaction table of the clusters defined in adata.
-    
+
     Parameters:
     ----------
         adata : AnnData
@@ -120,12 +122,12 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     index = adata.var[gene_index] if gene_index else adata.var.index
 
     # test if database gene columns overlap with adata.var genes
-    if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index) or
-        not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)
-        ):
+    if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
+        or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)
+            ):
         raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.uns['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
 
-    ##### compute cluster means and expression percentage for each gene #####
+    # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
     cl_mean_expression = pd.DataFrame(index=index)
     # percent cells in cluster expressing gene
@@ -138,14 +140,14 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
         # filter adata to a specific cluster
         cluster_adata = adata[adata.obs[cluster_column] == cluster]
         clust_sizes[cluster] = len(cluster_adata)
-        
-        ## compute cluster means
+
+        # -- compute cluster means --
         if gene_index is None:
-            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var.index), cluster] = cluster_adata.X.mean(axis=0).reshape(-1,1)
+            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var.index), cluster] = cluster_adata.X.mean(axis=0).reshape(-1, 1)
         else:
-            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var[gene_index]), cluster] = cluster_adata.X.mean(axis=0).reshape(-1,1)
-    
-        ## compute expression percentage
+            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var[gene_index]), cluster] = cluster_adata.X.mean(axis=0).reshape(-1, 1)
+
+        # -- compute expression percentage --
         # get nonzero expression count for all genes
         _, cols = cluster_adata.X.nonzero()
         gene_occurence = Counter(cols)
@@ -153,7 +155,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
         cl_percent_expression[cluster] = 0
         cl_percent_expression.iloc[list(gene_occurence.keys()), cl_percent_expression.columns.get_loc(cluster)] = list(gene_occurence.values())
         cl_percent_expression[cluster] = cl_percent_expression[cluster] / len(cluster_adata.obs) * 100
-    
+
     # combine duplicated genes through mean (can happen due to mapping between organisms)
     if len(set(cl_mean_expression.index)) != len(cl_mean_expression):
         cl_mean_expression = cl_mean_expression.groupby(cl_mean_expression.index).mean()
@@ -161,13 +163,13 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     # cluster scaling factor for cluster size correction
     scaling_factor = {k: v / normalize for k, v in clust_sizes.items()}
-    
-    ########## compute zscore of cluster means for each gene ##########
+
+    # ----- compute zscore of cluster means for each gene -----
     # create pandas functions that show progress bar
     tqdm.pandas(desc="computing Z-scores")
 
     zscores = cl_mean_expression.progress_apply(lambda x: pd.Series(scipy.stats.zscore(x, nan_policy='omit'), index=cl_mean_expression.columns), axis=1)
-    
+
     interactions = {"receptor_cluster": [],
                     "ligand_cluster": [],
                     "receptor_gene": [],
@@ -180,16 +182,16 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
                     "ligand_scale_factor": [],
                     "receptor_cluster_size": [],
                     "ligand_cluster_size": []}
-    
-    ########## create interaction table ##########
+
+    # ----- create interaction table -----
     for _, (receptor, ligand) in tqdm(adata.uns["receptor-ligand"]["database"][[r_col, l_col]].iterrows(),
                                       total=len(adata.uns["receptor-ligand"]["database"]),
                                       desc="finding receptor-ligand interactions"):
         # skip interaction if not in data
         if receptor is np.nan or ligand is np.nan:
             continue
-    
-        if not receptor in zscores.index or not ligand in zscores.index:
+
+        if receptor not in zscores.index or ligand not in zscores.index:
             continue
 
         # add interactions to dict
@@ -207,7 +209,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
                 interactions["ligand_scale_factor"].append(scaling_factor[ligand_cluster])
                 interactions["receptor_cluster_size"].append(clust_sizes[receptor_cluster])
                 interactions["ligand_cluster_size"].append(clust_sizes[ligand_cluster])
-    
+
     interactions = pd.DataFrame(interactions)
 
     # compute interaction score
@@ -217,7 +219,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     # clean up columns
     interactions.drop(columns=["receptor_scale_factor", "ligand_scale_factor"], inplace=True)
-    
+
     # add to adata
     modified_adata = adata if inplace else adata.copy()
 
@@ -225,6 +227,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     if not inplace:
         return modified_adata
+
 
 def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=100):
     '''
@@ -256,8 +259,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
     
     rows = len(set(interactions["receptor_cluster"]))
 
-    fig, axs = plt.subplots(ncols=1, nrows=rows, figsize=figsize, dpi=dpi, tight_layout={'rect': (0, 0, 1, 0.95)}) # prevent label clipping; leave space for title
-    #fig.suptitle('Cluster interactions', fontsize=16)
+    fig, axs = plt.subplots(ncols=1, nrows=rows, figsize=figsize, dpi=dpi, tight_layout={'rect': (0, 0, 1, 0.95)})  # prevent label clipping; leave space for title
     flat_axs = axs.flatten()
 
     # generate violins of one cluster vs rest in each iteration
@@ -285,6 +287,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
         fig.savefig(output)
     
     return axs
+
 
 def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False, restrict_to=None):
     '''
@@ -346,18 +349,20 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     if interaction_perc:
         interaction_score = np.percentile(interactions["interaction_score"], interaction_perc)
     
-    ########## setup class that combines igraph with matplotlib ##########
+    # ----- setup class that combines igraph with matplotlib -----
     # from https://stackoverflow.com/a/36154077
     # makes igraph compatible with matplotlib
     # so a colorbar can be added
     class GraphArtist(Artist):
-        """Matplotlib artist class that draws igraph graphs.
+        """
+        Matplotlib artist class that draws igraph graphs.
 
         Only Cairo-based backends are supported.
         """
 
         def __init__(self, graph, bbox, palette=None, *args, **kwds):
-            """Constructs a graph artist that draws the given graph within
+            """
+            Constructs a graph artist that draws the given graph within
             the given bounding box.
 
             `graph` must be an instance of `igraph.Graph`.
@@ -396,7 +401,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         clusters = restrict_to
     else:
         clusters = list(set(list(interactions["receptor_cluster"]) + list(interactions["ligand_cluster"])))
-    
+
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
     graph.vs['size'] = 45
@@ -424,7 +429,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
             e["label"] = e["weight"]
             e["label_size"] = 25
         
-    ########## setup matplotlib plot and combine with igraph ##########
+    # ----- setup matplotlib plot and combine with igraph -----
     # Make Matplotlib use a Cairo backend
     matplotlib.use("cairo")
 
@@ -473,6 +478,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
     return axes
 
+
 def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)):
     '''
     CURRENTLY NOT FUNCTIONAL!
@@ -508,6 +514,7 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
     
     if not output is None:
         fig.savefig(output)
+
 
 def connectionPlot(adata, 
                    restrict_to=None,
@@ -689,7 +696,7 @@ def connectionPlot(adata,
 
                 axs[1].add_artist(con)
 
-    ##### legends #####
+    # ----- legends -----
     # set receptor plot legend position
     sns.move_legend(r_plot, loc='upper right', bbox_to_anchor=(-1, 1, 0, 0))
 
