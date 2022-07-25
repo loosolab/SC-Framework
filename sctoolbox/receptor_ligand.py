@@ -405,6 +405,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     graph.vs['label'] = clusters
     graph.vs['size'] = 45
     graph.vs['label_size'] = 30
+    graph.vs['label_dist'] = 2
+    graph.vs['label_angle'] = 4
 
     # set edges
     for (a, b) in combinations_with_replacement(clusters, 2):
