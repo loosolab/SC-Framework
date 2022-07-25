@@ -424,7 +424,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
         e["width"] = (e["weight"] / max_weight) * 10
         # show weights in plot
-        if show_count:
+        if show_count and e["weight"] > 0:
             e["label"] = e["weight"]
             e["label_size"] = 25
 
