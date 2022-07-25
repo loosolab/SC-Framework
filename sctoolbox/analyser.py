@@ -183,9 +183,10 @@ def adata_normalize_total(ANNDATA, excl=True):
     creators.build_infor(ANNDATA, "Scanpy normalization", "exclude_highly_expressed= " + str(excl))
 
 
-def run_PCA(ANNDATA, exclude_HEG=True, use_HVG_PCA=True):
+def norm_log_PCA(ANNDATA, exclude_HEG=True, use_HVG_PCA=True):
     '''
-    Defining the ideal number of highly variable genes (HGV) and annotate them.
+    Defining the ideal number of highly variable genes (HGV) and annotate them,
+    and compute PCA.
 
     Parameters
     ==========
