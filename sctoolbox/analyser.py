@@ -144,51 +144,49 @@ def qcmetric_calculator(ANNDATA, control_var=False):
 
 
 def compute_PCA(ANNDATA, use_highly_variable=True):
-    '''Compute PCA
+    '''
+    Compute PCA and add information to adata.uns['infoprocess']
+
     Parameters
     ----------
     ANNDATA : anndata object
         adata object
     use_highly_variable : Boolean. Default : True.
         If true, use highly variable genes to compute PCA
-
-    Return
-    ----------
-        Anndata with PCA computed
     '''
     # Computing PCA
     print("Computing PCA")
     sc.pp.pca(ANNDATA, use_highly_variable=use_highly_variable)
+
     # Adding info in anndata.uns["infoprocess"]
     creators.build_infor(ANNDATA, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
-    return ANNDATA.copy()
 
 
 def adata_normalize_total(ANNDATA, excl=True):
     '''
     Normalizing the total counts and converting to log
+
     Parameters
     ==========
     ANNDATA : anndata object
         adata object
     excl : Boolean. Default : True
         Decision to exclude highly expressed genes (HEG) from normalization
-    Return
-    ==========
-        Anndata with expression values normalized and log converted
     '''
     # Author : Guilherme Valente
-# Normalizing and logaritimyzing
+    # Normalizing and logaritimyzing
     print("Normalizing the data and converting to log")
     sc.pp.normalize_total(ANNDATA, exclude_highly_expressed=excl)
     sc.pp.log1p(ANNDATA)
-# Adding info in anndata.uns["infoprocess"]
+
+    # Adding info in anndata.uns["infoprocess"]
     creators.build_infor(ANNDATA, "Scanpy normalization", "exclude_highly_expressed= " + str(excl))
-    return ANNDATA.copy()
 
 
 def run_PCA(ANNDATA, exclude_HEG=True, use_HVG_PCA=True):
-    '''Defining the ideal number of highly variable genes (HGV) and annotate them.
+    '''
+    Defining the ideal number of highly variable genes (HGV) and annotate them.
+
     Parameters
     ==========
     ANNDATA : anndata object
@@ -197,19 +195,23 @@ def run_PCA(ANNDATA, exclude_HEG=True, use_HVG_PCA=True):
         If True, highly expressed genes (HEG) will be not considered in the normalization
     use_HVG_PCA : Boolean. Boolean. Default: True
         If true, highly variable genes (HVG) will be also considered to calculate PCA
+
     Return
     ==========
         Anndata with expression values normalized and log converted and PCA computed
     '''
-# Author : Guilherme Valente
+    # Author : Guilherme Valente
 
-# TODO check if user inserted True or False for exclude_HEG and use_HVG_PCA
+    # TODO check if user inserted True or False for exclude_HEG and use_HVG_PCA
 
-# Normalization and converting to log
+    # Normalization and converting to log
     adata_normalize_total(ANNDATA, exclude_HEG)
-# Annotate highly variable genes
+
+    # Annotate highly variable genes
     an.annot_HVG(ANNDATA)
-# Compute PCA
+
+    # Compute PCA
     compute_PCA(ANNDATA, use_highly_variable=use_HVG_PCA)
-# Returning
+
+    # Returning
     return ANNDATA.copy()
