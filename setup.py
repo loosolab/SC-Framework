@@ -13,6 +13,7 @@ setup(name='sc-toolbox',
 			'fitter',
 			'qnorm'
 		],
+		include_package_data=True,
 		extras_require={
 			'converter': ['rpy2==3.4.5', 'anndata2ri'],
 			'bam': ['pysam']
