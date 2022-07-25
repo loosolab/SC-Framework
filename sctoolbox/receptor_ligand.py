@@ -459,9 +459,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
                                           orientation='vertical',
                                           cmap=colormap,
                                           norm=matplotlib.colors.Normalize(0 if color_min is None else color_min,
-                                                                           max_weight
-                                                                          )
-                                         )
+                                                                           max_weight)
+                                          )
 
     cb.ax.tick_params(labelsize=10 * matplotlib_scale)
     cb.ax.set_title(cbar_label, fontsize=10 * matplotlib_scale)
@@ -537,8 +536,7 @@ def connectionPlot(adata,
                    filter=None,
                    lw_multiplier=2,
                    wspace=0.4,
-                   line_colors="rainbow"
-    ):
+                   line_colors="rainbow"):
     """
     Show specific receptor-ligand connections between clusters.
 
