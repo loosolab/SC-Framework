@@ -4,8 +4,99 @@ import sctoolbox.creators as creators
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
+import scanpy.external as sce
 
-###################################################################################################################
+
+# --------------------------- Batch correction methods -------------------------- #
+
+def wrap_corrections(adata,
+                     batch_key,
+                     methods=["bbknn", "mnn"]):
+    """
+    Wrapper for calculating multiple batch corrections for adata using the 'batch_correction' function.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An annotated data matrix object to apply corrections to.
+    batch_key : str
+        The column in adata.obs containing batch information.
+    methods : list of str
+        The method(s) to use for batch correction. Options are: (...).
+        Default: []
+    """
+
+    # TODO: check if methods are valid
+    if isinstance(methods, str):
+        methods = [methods]
+
+    # Collect batch correction per method
+    anndata_dict = {}
+    for method in methods:
+        anndata_dict[method] = batch_correction(adata, batch_key, method)  # batch correction returns the corrected adata
+
+    return anndata_dict
+
+
+def batch_correction(adata, batch_key, method):
+    """
+    Perform batch correction on the adata object using the 'method' given.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        An annotated data matrix object to apply corrections to.
+    batch_key : str
+        The column in adata.obs containing batch information.
+    method : str
+        Method for batch correction. Options are: (....)
+    """
+
+    method = method.lower()
+
+    # TODO: check that batch_key is in adata object
+
+    # Run batch correction depending on method
+    if method == "bbknn":
+        adata = sce.pp.bbknn(adata, batch_key=batch_key, copy=True)  # bbknn is an alternative to neighbors
+
+    elif method == "mnn":
+
+        # split adata on batch_key
+        batch_categories = list(set(adata.obs[batch_key]))
+        adatas = [adata[adata.obs["batch_key"] == category] for category in batch_categories]
+
+        # TODO: enable var_subset as input
+
+        # give individual adatas to mnn_correct
+        adata, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, batch_categories=batch_categories, do_concatenate=True)
+
+        sc.pp.scale(adata)  # from the mnnpy github example
+        sc.pp.neighbors(adata)
+
+    elif method == "harmony":
+        adata = adata.copy()  # there is no copy option for harmony
+
+        sce.pp.harmony_integrate(adata, key=batch_key)
+        adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]
+        sc.pp.neighbors(adata)
+
+    elif method == "scanorama":
+        adata = adata.copy()  # there is no copy option for scanorama
+
+        sce.pp.scanorama_integrate(adata, key=batch_key)
+        adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
+        sc.pp.neighbors(adata)
+
+    elif method == "combat":
+        adata = sc.pp.combat(adata, key=batch_key, inplace=False)
+
+    else:
+        raise ValueError(f"Method '{method}' is not a valid batch correction method.")
+
+    return adata  # the corrected adata object
+
+# --------------------------- Automatic thresholds ------------------------- #
 
 
 def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2, CONDI2):  # Ir para analyser.py
