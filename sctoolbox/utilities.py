@@ -25,9 +25,10 @@ def longest_common_suffix(list_of_strings):
     str
         Longest common suffix of the list of strings.
     """
-    reversed_strings = [' '.join(s.split()[::-1]) for s in list_of_strings]
+
+    reversed_strings = [s[::-1] for s in list_of_strings]
     reversed_lcs = os.path.commonprefix(reversed_strings)
-    lcs = ' '.join(reversed_lcs.split()[::-1])
+    lcs = reversed_lcs[::-1]
 
     return lcs
 
@@ -39,7 +40,7 @@ def remove_prefix(s, prefix):
 
 def remove_suffix(s, suffix):
     """ Remove suffix from a string. """
-    return s[len(suffix):] if s.startswith(suffix) else s
+    return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
 def is_str_numeric(ans):

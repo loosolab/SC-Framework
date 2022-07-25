@@ -5,6 +5,8 @@ import yaml
 def test_write_TOBIAS_config():
 
     sctoolbox.atac.write_TOBIAS_config("tobias.yml", bams=["bam1.bam", "bam2.bam"])
-    yml = yaml.load(open("tobias.yml"))
+    yml = yaml.full_load(open("tobias.yml"))
 
-    assert yml["data"]["bam1"] == "bam1.bam"
+    assert yml["data"]["1"] == "bam1.bam"
+
+test_write_TOBIAS_config()
