@@ -11,11 +11,13 @@ setup(name='sc-toolbox',
 			'scanpy',
 			'kneed',
 			'fitter',
-			'qnorm'
+			'qnorm',
+			'pandas'
 		],
 		include_package_data=True,
 		extras_require={
 			'converter': ['rpy2==3.4.5', 'anndata2ri'],
 			'bam': ['pysam']
+			'atac': ['psutil', 'uropa']
 		}
 )
