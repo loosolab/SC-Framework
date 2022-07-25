@@ -123,7 +123,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     # test if database gene columns overlap with adata.var genes
     if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
-        or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)): # TODO
+            or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)):
         raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.uns['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
 
     # ----- compute cluster means and expression percentage for each gene -----
@@ -341,8 +341,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         if invalid_clusters:
             raise ValueError(f"Invalid cluster in `restrict_to`: {invalid_clusters}")
 
-    igraph_scale=3
-    matplotlib_scale=4
+    igraph_scale = 3
+    matplotlib_scale = 4
 
     # overwrite interaction_score
     if interaction_perc:
@@ -392,7 +392,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
                 raise TypeError("graph plotting is supported only on Cairo backends")
             self.graph.__plot__(renderer.gc.ctx, self.bbox, self.palette, *self.args, **self.kwds)
 
-    ########## create igraph ##########
+    # ----- create igraph -----
     graph = ig.Graph()
 
     # set nodes
@@ -408,11 +408,11 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
     # set edges
     for (a, b) in combinations_with_replacement(clusters, 2):
-        subset = interactions[(((interactions["receptor_cluster"] == a) & (interactions["ligand_cluster"] == b)) |
-                            ((interactions["receptor_cluster"] == b) & (interactions["ligand_cluster"] == a))) &
-                            (interactions["receptor_percent"] >= min_perc) &
-                            (interactions["ligand_percent"] >= min_perc) &
-                            (interactions["interaction_score"] > interaction_score)]
+        subset = interactions[(((interactions["receptor_cluster"] == a) & (interactions["ligand_cluster"] == b))
+                              | ((interactions["receptor_cluster"] == b) & (interactions["ligand_cluster"] == a)))
+                              & (interactions["receptor_percent"] >= min_perc)
+                              & (interactions["ligand_percent"] >= min_perc)
+                              & (interactions["interaction_score"] > interaction_score)]
 
         graph.add_edge(a, b, weight=len(subset))
 
