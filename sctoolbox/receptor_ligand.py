@@ -433,8 +433,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     matplotlib.use("cairo")
 
     # Create the figure
-    fig, axes = plt.subplots(1, 2, figsize=(8*matplotlib_scale, 6*matplotlib_scale), gridspec_kw={'width_ratios': [20, 1]})
-    fig.suptitle(title, fontsize=12*matplotlib_scale)
+    fig, axes = plt.subplots(1, 2, figsize=(8 * matplotlib_scale, 6 * matplotlib_scale), gridspec_kw={'width_ratios': [20, 1]})
+    fig.suptitle(title, fontsize=12 * matplotlib_scale)
 
     # hide axis under network graph
     axes[0].axis('off')
