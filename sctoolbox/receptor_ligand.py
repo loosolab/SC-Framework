@@ -123,8 +123,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     # test if database gene columns overlap with adata.var genes
     if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
-        or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)
-            ):
+        or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)): # TODO
         raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.uns['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
 
     # ----- compute cluster means and expression percentage for each gene -----
@@ -229,8 +228,8 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
         return modified_adata
 
 
-def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=100):
-    '''
+def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100):
+    """
     Generate violin plot of pairwise cluster interactions.
 
     Parameters:
@@ -248,15 +247,15 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
 
     Returns:
     ----------
-        matplotlib.axes.Axes : 
+        matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
-    '''
+    """
     # is interaction table available?
     if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
-    
+
     interactions = adata.uns["receptor-ligand"]["interactions"]
-    
+
     rows = len(set(interactions["receptor_cluster"]))
 
     fig, axs = plt.subplots(ncols=1, nrows=rows, figsize=figsize, dpi=dpi, tight_layout={'rect': (0, 0, 1, 0.95)})  # prevent label clipping; leave space for title
@@ -264,20 +263,20 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
 
     # generate violins of one cluster vs rest in each iteration
     for i, cluster in enumerate(sorted(set(interactions["receptor_cluster"].tolist() + interactions["ligand_cluster"].tolist()))):
-        cluster_interactions = interactions[((interactions["receptor_cluster"] == cluster) | 
-                                            (interactions["ligand_cluster"] == cluster)) &
-                                            (interactions["receptor_percent"] >= min_perc) &
-                                            (interactions["ligand_percent"] >= min_perc)].copy()
-        
+        cluster_interactions = interactions[((interactions["receptor_cluster"] == cluster)
+                                            | (interactions["ligand_cluster"] == cluster))
+                                            & (interactions["receptor_percent"] >= min_perc)
+                                            & (interactions["ligand_percent"] >= min_perc)].copy()
+
         # get column of not main clusters
         cluster_interactions["Cluster"] = cluster_interactions.apply(lambda x: x[1] if x[0] == cluster else x[0], axis=1).tolist()
 
         plot = sns.violinplot(x=cluster_interactions["Cluster"],
-                    y=cluster_interactions["interaction_score"], 
-                    ax=flat_axs[i])
-        
+                              y=cluster_interactions["interaction_score"],
+                              ax=flat_axs[i])
+
         plot.set_xticklabels(plot.get_xticklabels(), rotation=90)
-        
+
         flat_axs[i].set_title(f"Cluster {cluster}")
 
     # save plot
@@ -285,17 +284,17 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5,20), dpi=10
         # create path if necessary
         Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
         fig.savefig(output)
-    
+
     return axs
 
 
 def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False, restrict_to=None):
-    '''
+    """
     Generate network graph of interactions between clusters.
-    
+
     Note: The dimensions of the jupyter view often differ from what is saved to the file.
 
-    KNOWN ISSUE: The network graph will not show up in jupyter unless first running `matplotlib.use("cairo")`. 
+    KNOWN ISSUE: The network graph will not show up in jupyter unless first running `matplotlib.use("cairo")`.
     Afterwards run `matplotlib.use("module://matplotlib_inline.backend_inline")` in a new cell or the other plots won't work.
     TODO: this may be fixable when igraph>=0.10 is released. https://github.com/igraph/python-igraph/issues/426
 
@@ -326,9 +325,9 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
     Returns:
     ----------
-        matplotlib.axes.Axes : 
+        matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
-    '''
+    """
     # is interaction table available?
     if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
@@ -348,7 +347,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     # overwrite interaction_score
     if interaction_perc:
         interaction_score = np.percentile(interactions["interaction_score"], interaction_perc)
-    
+
     # ----- setup class that combines igraph with matplotlib -----
     # from https://stackoverflow.com/a/36154077
     # makes igraph compatible with matplotlib
@@ -392,7 +391,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
             if not isinstance(renderer, RendererCairo):
                 raise TypeError("graph plotting is supported only on Cairo backends")
             self.graph.__plot__(renderer.gc.ctx, self.bbox, self.palette, *self.args, **self.kwds)
-    
+
     ########## create igraph ##########
     graph = ig.Graph()
 
@@ -428,7 +427,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         if show_count:
             e["label"] = e["weight"]
             e["label_size"] = 25
-        
+
     # ----- setup matplotlib plot and combine with igraph -----
     # Make Matplotlib use a Cairo backend
     matplotlib.use("cairo")
@@ -456,14 +455,16 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     axes[0].artists.append(graph_artist)
 
     # add colorbar
-    cb = matplotlib.colorbar.ColorbarBase(axes[1], 
-                                        orientation='vertical', 
-                                        cmap=colormap,
-                                        norm=matplotlib.colors.Normalize(0 if color_min is None else color_min, 
-                                                                        max_weight))
-    
-    cb.ax.tick_params(labelsize=10*matplotlib_scale) 
-    cb.ax.set_title(cbar_label, fontsize=10*matplotlib_scale)
+    cb = matplotlib.colorbar.ColorbarBase(axes[1],
+                                          orientation='vertical',
+                                          cmap=colormap,
+                                          norm=matplotlib.colors.Normalize(0 if color_min is None else color_min,
+                                                                           max_weight
+                                                                          )
+                                         )
+
+    cb.ax.tick_params(labelsize=10 * matplotlib_scale)
+    cb.ax.set_title(cbar_label, fontsize=10 * matplotlib_scale)
 
     # prevent label clipping out of picture
     plt.tight_layout()
@@ -472,7 +473,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     if output:
         # create path if necessary
         Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
-        
+
         # Save the figure
         fig.savefig(output)
 
@@ -480,11 +481,11 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
 
 def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)):
-    '''
+    """
     CURRENTLY NOT FUNCTIONAL!
 
     Show cluster interactions over timepoints.
-    
+
     Parameters:
         datalist (list): List of interaction DataFrames. Each DataFrame represents a timepoint.
         datalabel (list): List of strings. Used to label the violins.
@@ -493,30 +494,30 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
         min_perc (float): Minimum percentage of cells in a cluster each gene must be expressed in.
         output (str): Path to output file.
         figsize (int tuple): Tuple of plot (width, height).
-    '''
+    """
     return "Function to be implemented"
-    
+
     fig, axs = plt.subplots(1, len(datalist), figsize=figsize)
     fig.suptitle(f"{cluster_a} - {cluster_b}")
-    
+
     flat_axs = axs.flatten()
     for i, (table, label) in enumerate(zip(datalist, datalabel)):
         # filter data
-        subset = table[((table["cluster_a"] == cluster_a) & (table["cluster_b"] == cluster_b) |
-                        (table["cluster_a"] == cluster_b) & (table["cluster_b"] == cluster_a)) &
-                    (table["percentage_a"] >= min_perc) &
-                    (table["percentage_b"] >= min_perc)]
-        
+        subset = table[((table["cluster_a"] == cluster_a) & (table["cluster_b"] == cluster_b)
+                       | (table["cluster_a"] == cluster_b) & (table["cluster_b"] == cluster_a))
+                       & (table["percentage_a"] >= min_perc)
+                       & (table["percentage_b"] >= min_perc)]
+
         v = sns.violinplot(data=subset, y="interaction_score", ax=flat_axs[i])
         v.set_xticklabels([label])
-        
+
     plt.tight_layout()
-    
-    if not output is None:
+
+    if output is not None:
         fig.savefig(output)
 
 
-def connectionPlot(adata, 
+def connectionPlot(adata,
                    restrict_to=None,
                    figsize=(10, 15),
                    dpi=100,
@@ -537,8 +538,8 @@ def connectionPlot(adata,
                    lw_multiplier=2,
                    wspace=0.4,
                    line_colors="rainbow"
-                  ):
-    '''
+    ):
+    """
     Show specific receptor-ligand connections between clusters.
 
     Parameters:
@@ -584,9 +585,9 @@ def connectionPlot(adata,
 
     Returns:
     ----------
-        matplotlib.axes.Axes : 
+        matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
-    '''
+    """
     # is interaction table available?
     if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
@@ -608,7 +609,7 @@ def connectionPlot(adata,
     fig.suptitle(title)
 
     # receptor plot
-    r_plot = sns.scatterplot(data=data, 
+    r_plot = sns.scatterplot(data=data,
                              y=receptor_col,
                              x=receptor_cluster_col,
                              hue=receptor_hue,
@@ -677,7 +678,7 @@ def connectionPlot(adata,
                 alphas = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"]
             else:
                 alphas = [1]
-            
+
             for alpha in alphas:
                 # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
                 # Draw a line between the different points, defined in different coordinate
