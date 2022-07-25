@@ -3,11 +3,10 @@ import sys
 import os
 import scanpy as sc
 import importlib
+import matplotlib.pyplot as plt
 
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
-
-import matplotlib.pyplot as plt
 
 
 # ----------------- String functions ---------------- #
