@@ -236,6 +236,12 @@ def write_TOBIAS_config(out_path,
         Output directory of the TOBIAS run. Default: "TOBIAS_output".
     """
 
+    # Check organism input
+    organism = organism.lower()
+    valid_organisms = ["human", "mouse", "zebrafish"]
+    if organism not in valid_organisms:
+        raise ValueError(f"'{organism}' is not a valid organism. Valid organisms are: " + ", ".join(valid_organisms))
+
     # Remove any common prefix and suffix from names
     if names is None:
         prefix = os.path.commonprefix(bams)
