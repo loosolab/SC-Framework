@@ -1,5 +1,11 @@
 from setuptools import setup
 
+# Module requirements
+converter = ['rpy2==3.4.5', 'anndata2ri']
+atac = ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa']
+all = converter + atac
+
+
 setup(name='sc-toolbox',
 		description='Custom modules for single cell analysis',
 		license='MIT',
@@ -12,12 +18,13 @@ setup(name='sc-toolbox',
 			'kneed',
 			'fitter',
 			'qnorm',
-			'pandas'
+			'scipy',
+			'statsmodels'
 		],
 		include_package_data=True,
 		extras_require={
-			'converter': ['rpy2==3.4.5', 'anndata2ri'],
-			'bam': ['pysam']
-			'atac': ['psutil', 'uropa']
+			'all': all,
+			'converter': converter,
+			'atac': atac
 		}
 )
