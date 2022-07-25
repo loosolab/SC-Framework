@@ -561,7 +561,7 @@ def anndata_overview(adatas,
     # ---- plotting ---- #
     # setup subplot structure
     row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
-    rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  #the number of rows in output plot
+    rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
@@ -569,7 +569,7 @@ def anndata_overview(adatas,
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0
-    for plot_type in plots: 
+    for plot_type in plots:
         for color in color_by:
             for i, (name, adata) in enumerate(adatas.items()):
 
