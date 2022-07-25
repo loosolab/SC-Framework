@@ -9,13 +9,13 @@ setup(name='sc-toolbox',
 			'matplotlib',
 			'numpy',
 			'scanpy',
-			'rpy2',
-			'anndata2ri',
 			'kneed',
 			'fitter',
 			'qnorm'
 		],
 		extras_require={
-			'receptor-ligand': ['sklearn', 'igraph', 'cairocffi']  # cairocffi needed for cairo backend
+			'receptor-ligand': ['sklearn', 'igraph', 'cairocffi'],  # cairocffi needed for cairo backend
+			'converter': ['rpy2==3.4.5', 'anndata2ri'],
+			'bam': ['pysam']
 		}
 )
