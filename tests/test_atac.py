@@ -8,5 +8,3 @@ def test_write_TOBIAS_config():
     yml = yaml.full_load(open("tobias.yml"))
 
     assert yml["data"]["1"] == "bam1.bam"
-
-test_write_TOBIAS_config()

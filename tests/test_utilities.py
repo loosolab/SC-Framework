@@ -20,7 +20,3 @@ def test_remove_suffix():
     strings = ["blueberry", "strawberry", "blackberry"]
     nosuffix = [utils.remove_suffix(s, "berry") for s in strings]
     assert nosuffix == ["blue", "straw", "black"]
-
-test_longest_common_suffix()
-test_remove_prefix()
-test_remove_suffix()
