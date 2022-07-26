@@ -75,7 +75,7 @@ def test_anndata_overview_fail_color_by(adata):
 
     # invalid color_by
     # no input
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Couldn't find column"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=None,
@@ -86,7 +86,7 @@ def test_anndata_overview_fail_color_by(adata):
         )
     
     #wrong input
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Couldn't find column"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=adata.obs.columns.join() + "-invalid",
@@ -103,7 +103,7 @@ def test_anndata_overview_fail_plots(adata):
 
     # invalid plots
     # no input
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid plot specified:"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -114,7 +114,7 @@ def test_anndata_overview_fail_plots(adata):
         )
 
     # wrong input
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid plot specified:"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
