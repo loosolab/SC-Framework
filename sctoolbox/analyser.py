@@ -1,6 +1,6 @@
 # Loading packages
 import scanpy as sc
-import sctoolbox.creators as creators
+import sctoolbox.creators as cr
 import sctoolbox.annotation as an
 from fitter import Fitter
 import numpy as np
