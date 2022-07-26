@@ -34,7 +34,7 @@ def test_plot_pca_variance(adata):
 def test_plot_pca_variance_fail(adata):
     """ Test if failes on invalid method. """
     # generate invalid method
-    invalid = adata.uns.keys().join() + "-invalid"
+    invalid = "-".join(list(adata.uns.keys())) + "-invalid"
 
     with pytest.raises(KeyError):
         sctoolbox.plotting.plot_pca_variance(adata, method=invalid)
@@ -47,7 +47,7 @@ def test_anndata_overview(adata, tmp_file):
 
     sctoolbox.plotting.anndata_overview(
         adatas=adatas,
-        color_by=adata.obs.columns,
+        color_by=list(adata.obs.columns),
         plots=["PCA", "PCA-var", "UMAP"],
         figsize=None,
         output=None,
@@ -103,7 +103,7 @@ def test_anndata_overview_fail_plots(adata):
         # no input
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
-            color_by=adata.obs.columns,
+            color_by=list(adata.obs.columns),
             plots=None,
             figsize=None,
             output=None,
@@ -112,7 +112,7 @@ def test_anndata_overview_fail_plots(adata):
         # wrong input
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
-            color_by=adata.obs.columns,
+            color_by=list(adata.obs.columns),
             plots=["PCA", "invalid"],
             figsize=None,
             output=None,
