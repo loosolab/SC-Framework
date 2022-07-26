@@ -1,11 +1,7 @@
 # Loading packages
 import scanpy as sc
-<<<<<<< HEAD
 import sctoolbox.creators as creators
 import sctoolbox.annotation as an
-=======
-import sctoolbox.creators as cr
->>>>>>> 3e5e021a39ac5d1cb09d297877fa937690690f1c
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator

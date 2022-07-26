@@ -33,14 +33,16 @@ def annot_HVG(anndata):
         Anndata.var["highly_variable"]
     '''
     # Messages and others
-    repeat, repeat_limit, HVG_list, min_mean = 0, 10, list(), 0.0125 # Default for sc.pp.highly_variable_genes
+    # Default for sc.pp.highly_variable_genes
+    repeat, repeat_limit, HVG_list, min_mean = 0, 10, list(), 0.0125
 
     # Finding the highly variable genes
     print("Annotating highy variable genes (HVG)")
     sc.pp.highly_variable_genes(anndata, min_mean=min_mean)
     HVG = sum(anndata.var.highly_variable)
     HVG_list.append(HVG)
-    while HVG < 1000 or HVG > 5000: # These 1K and 5K limits were proposed by DOI:10.15252/msb.20188746
+    # These 1K and 5K limits were proposed by DOI:10.15252/msb.20188746
+    while HVG < 1000 or HVG > 5000:
         if HVG < 1000:
             min_mean = min_mean / 10
         if HVG > 5000:
@@ -52,6 +54,6 @@ def annot_HVG(anndata):
         if repeat == repeat_limit:
             break
         HVG_list.append(HVG)
-    #Adding info in anndata.uns["infoprocess"]
+    # Adding info in anndata.uns["infoprocess"]
     cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(HVG_list[-1]))
     return anndata.copy()
