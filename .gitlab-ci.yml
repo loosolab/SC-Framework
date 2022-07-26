@@ -30,14 +30,18 @@ before_script:
   - source venv/bin/activate
   - apt update
   - apt -y install r-base
-  - pip install .
+  - pip install .[all]
   - pip install pytest
   - pip install pytest-cov
+
+# flake8 ignore rules:
+# E501 = Line too long
+# W503 = Line break occurred before a binary operator
 
 lint:
   script:
     - pip install flake8
-    - flake8 sctoolbox --ignore=E501 # ignore line too long
+    - flake8 sctoolbox --ignore=E501,W503 --exclude sctoolbox/data
   allow_failure: false
 
 cov:
