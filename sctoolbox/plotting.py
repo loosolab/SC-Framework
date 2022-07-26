@@ -565,7 +565,7 @@ def anndata_overview(adatas,
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
-    axs = axs.flatten()  # flatten to 1d array per row
+    axs = axs.flatten() if rows > 1 or cols > 1 else axs  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0
