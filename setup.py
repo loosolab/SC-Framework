@@ -19,7 +19,8 @@ setup(name='sc-toolbox',
 			'fitter',
 			'qnorm',
 			'scipy',
-			'statsmodels'
+			'statsmodels',
+			'tqdm'
 		],
 		include_package_data=True,
 		extras_require={
