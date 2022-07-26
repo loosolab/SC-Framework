@@ -2,7 +2,7 @@ from setuptools import setup
 
 # Module requirements
 converter = ['rpy2==3.4.5', 'anndata2ri']
-atac = ['pysam', 'episcanpy', 'pyyaml']
+atac = ['pysam', 'episcanpy', 'pyyaml', 'ipywidgets']
 all = converter + atac
 
 

@@ -446,7 +446,7 @@ def split_bam_clusters(adata,
             writer_jobs.append(writer_pool.apply_async(_writer, (queue, path_dict, str(template.header), progress_queue, pysam_threads)))
         writer_pool.close()
 
-        # ---- End process + cleanup ----#
+        # ---- End process + cleanup ---- #
 
         # wait for readers and writers to finish
         _monitor_progress(progress_queue, cluster_queues, reader_jobs, writer_jobs, n_reads, individual_pbars)  # does not return until all readers/writers are finished
@@ -516,7 +516,8 @@ def split_bam_clusters(adata,
 
 
 def get_bam_reads(bam_obj):
-    """ Get the number of reads from an open pysam.AlignmentFile
+    """
+    Get the number of reads from an open pysam.AlignmentFile
 
     Parameters
     -----------
