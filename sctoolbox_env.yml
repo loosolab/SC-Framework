@@ -1,0 +1,11 @@
+name: sctoolbox
+channels:
+    - bioconda
+    - conda-forge
+dependencies:
+  - r-base
+  - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
+  - pip
+  - pip:
+    - -e ".[converter,bam]" # install sctoolbox from local repository, has to be in current directory!
+  - ipykernel # needed to register environment as jupyter kernel
