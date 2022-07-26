@@ -422,7 +422,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
         step = 100000  # progress every in hundred thousand reads
         n_reads_step = 0  # count of reads read from bam per step
         for read in bam:
-            
+
             # get barcode
             if read.has_tag(tag):
                 bc = read.get_tag(tag)
