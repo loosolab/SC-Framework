@@ -59,7 +59,7 @@ def test_anndata_overview(adata, tmp_file):
 
     sctoolbox.plotting.anndata_overview(
         adatas=adatas,
-        color_by=adata.obs.columns,
+        color_by=list(adata.obs.columns),
         plots=["PCA", "PCA-var", "UMAP"],
         figsize=None,
         output=tmp_file,
@@ -89,7 +89,7 @@ def test_anndata_overview_fail_color_by(adata):
     with pytest.raises(ValueError, match="Couldn't find column"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
-            color_by=adata.obs.columns.join() + "-invalid",
+            color_by="-".join(list(adata.obs.columns)) + "-invalid",
             plots=["PCA", "PCA-var", "UMAP"],
             figsize=None,
             output=None,
