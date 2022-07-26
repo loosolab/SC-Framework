@@ -1,3 +1,4 @@
+from multiprocessing.sharedctypes import Value
 import pytest
 import sctoolbox.plotting
 import scanpy as sc
@@ -73,8 +74,8 @@ def test_anndata_overview_fail_color_by(adata):
     adatas = {"raw": adata}
 
     # invalid color_by
+    # no input
     with pytest.raises(ValueError):
-        # no input
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=None,
@@ -83,7 +84,9 @@ def test_anndata_overview_fail_color_by(adata):
             output=None,
             dpi=300
         )
-        # wrong input
+    
+    #wrong input
+    with pytest.raises(ValueError):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=adata.obs.columns.join() + "-invalid",
@@ -99,8 +102,8 @@ def test_anndata_overview_fail_plots(adata):
     adatas = {"raw": adata}
 
     # invalid plots
+    # no input
     with pytest.raises(ValueError):
-        # no input
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -109,7 +112,9 @@ def test_anndata_overview_fail_plots(adata):
             output=None,
             dpi=300
         )
-        # wrong input
+
+    # wrong input
+    with pytest.raises(ValueError):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
