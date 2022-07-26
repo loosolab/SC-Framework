@@ -159,7 +159,7 @@ def compute_PCA(ANNDATA, use_highly_variable=True):
     sc.pp.pca(ANNDATA, use_highly_variable=use_highly_variable)
 
     # Adding info in anndata.uns["infoprocess"]
-    creators.build_infor(ANNDATA, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
+    cr.build_infor(ANNDATA, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
 
 
 def adata_normalize_total(ANNDATA, excl=True):
@@ -180,7 +180,7 @@ def adata_normalize_total(ANNDATA, excl=True):
     sc.pp.log1p(ANNDATA)
 
     # Adding info in anndata.uns["infoprocess"]
-    creators.build_infor(ANNDATA, "Scanpy normalization", "exclude_highly_expressed= " + str(excl))
+    cr.build_infor(ANNDATA, "Scanpy normalization", "exclude_highly_expressed= " + str(excl))
 
 
 def norm_log_PCA(ANNDATA, exclude_HEG=True, use_HVG_PCA=True):
