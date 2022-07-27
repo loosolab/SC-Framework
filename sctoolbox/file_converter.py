@@ -3,6 +3,8 @@ from os.path import join, dirname, exists
 import sys
 from pathlib import Path
 
+import sctoolbox.utilities as utils
+
 
 def convertToAdata(file, out, r_home=None):
     '''
@@ -37,9 +39,21 @@ def convertToAdata(file, out, r_home=None):
     os.environ['R_HOME'] = r_home
 
     # Initialize R <-> python interface
+    utils.check_module("anndata2ri")
     import anndata2ri
+    utils.check_module("rpy2")
     from rpy2.robjects import r
     anndata2ri.activate()
+
+    # check if Seurat and SingleCellExperiment are installed
+    r("""
+    if (!require(Seurat)) {
+        stop("R dependency Seurat not found.")
+    }
+    if (!require(SingleCellExperiment)) {
+        stop("R dependecy SingleCellExperiment not found.)
+    }
+      """)
 
     # check if file format is .robj or .Robj -> convert to .rds first
     if file.split('.')[-1].lower() == 'robj':
