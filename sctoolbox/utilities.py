@@ -67,7 +67,7 @@ def create_dir(path):
         os.makedirs(dirname, exist_ok=True)
 
 
-def save_figure(path):
+def save_figure(path, dpi=600):
     """
     Save the current figure to a file.
 
@@ -76,12 +76,14 @@ def save_figure(path):
     path : str
         Path to the file to be saved.
         Add the extension (e.g. .tiff) you wanna save your figure in the end of path, e.g., /mnt/*/note2_violin.tiff
-        The lack of extension indicates the figure will be saved as .png
+        The lack of extension indicates the figure will be saved as .png.
+    dpi : int, optional
+        DPI of the figure. Default: 600.
     """
 
     if path is not None:
         create_dir(path)  # recursively create parent dir if needed
-        plt.savefig(path, dpi=600, bbox_inches="tight")
+        plt.savefig(path, dpi=dpi, bbox_inches="tight")
 
 
 def vprint(verbose=True):
