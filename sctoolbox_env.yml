@@ -4,6 +4,8 @@ channels:
     - conda-forge
 dependencies:
   - r-base
+  - r-seurat
+  - bioconductor-singlecellexperiment
   - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
   - pip
   - pip:
