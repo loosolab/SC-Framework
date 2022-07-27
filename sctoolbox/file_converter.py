@@ -47,67 +47,44 @@ def convertToAdata(file, out, r_home=None):
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
-    if (!require(Seurat)) {
-        stop("R dependency Seurat not found.")
-    }
-    if (!require(SingleCellExperiment)) {
-        stop("R dependecy SingleCellExperiment not found.)
-    }
-      """)
+        if (!require(Seurat)) {
+            stop("R dependency Seurat not found.")
+        }
+        if (!require(SingleCellExperiment)) {
+            stop("R dependecy SingleCellExperiment not found.)
+        }
+    """)
 
-    # check if file format is .robj or .Robj -> convert to .rds first
-    if file.split('.')[-1].lower() == 'robj':
+    # ----- convert to anndata ----- #
+    adata = r(f"""
+                library(Seurat)
 
-        # convert to rds
-        r(f"""
-                file <- load("{file}")
-                object <- get(file[1])
-                saveRDS(object, file='{out}/tmp.rds')
-               """)
-
-        file = f'{out}/tmp.rds'
-
-        # convert to adata
-        adata = r(f"""
-                    library(Seurat)
-
+                # ----- load object ----- #
+                if (endswith(lower("{file}"), ".robj")) {{
+                    # load file; returns vector of created variables
+                    new_vars <- load("{file}")
+                    # store new variable into another variable to work on
+                    object <- get(file[1])
+                }} else if(endswith(lower("{file}"), ".rds")) {{
+                    # load object
                     object <- readRDS("{file}")
+                }} else {{
+                    stop("Unknown file extension. Expected '.robj' or '.rds' got ", {file})
+                }}
 
-                    # check type and convert if needed
-                    if (class(object) == "Seurat") {{
-                        object <- as.SingleCellExperiment(object)
-                    }} else if (class(object) == "SingleCellExperiment") {{
-                        object <- object
-                    }} else {{
-                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-                    }}
-                   """)
+                # ----- convert to SingleCellExperiment ----- #
+                # SingleCellExperiment is needed for anndata conversion
+                if (class(object) == "Seurat") {{
+                    object <- as.SingleCellExperiment(object)
+                }} else if (class(object) == "SingleCellExperiment") {{
+                    object <- object
+                }} else {{
+                    stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+                }}
+            """)
 
-        # Saving adata.h5ad
-        h5ad_file = out + '/anndata_1.h5ad'
-        adata.write(filename=h5ad_file, compression='gzip')
-
-        # Removing tmp.rds
-        os.remove(out + '/tmp.rds')
-
-    else:
-        adata = r(f"""
-                    library(Seurat)
-
-                    object <- readRDS("{file}")
-
-                    # check type and convert if needed
-                    if (class(object) == "Seurat") {{
-                        object <- as.SingleCellExperiment(object)
-                    }} else if (class(object) == "SingleCellExperiment") {{
-                        object <- object
-                    }} else {{
-                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-                    }}
-                   """)
-
-        # Saving adata.h5ad
-        h5ad_file = out + '/anndata_1.h5ad'
-        adata.write(filename=h5ad_file, compression='gzip')
+    # Saving adata.h5ad
+    h5ad_file = out + '/anndata_1.h5ad'
+    adata.write(filename=h5ad_file, compression='gzip')
 
     return adata
