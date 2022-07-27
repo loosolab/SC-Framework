@@ -58,7 +58,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
             stop("R dependency Seurat not found.")
         }
         if (!require(SingleCellExperiment)) {
-            stop("R dependecy SingleCellExperiment not found.)
+            stop("R dependecy SingleCellExperiment not found.")
         }
     """)
 
