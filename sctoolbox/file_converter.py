@@ -6,7 +6,7 @@ from pathlib import Path
 import sctoolbox.utilities as utils
 
 
-def convertToAdata(file, out, r_home=None):
+def convertToAdata(file, out_prefix=None, r_home=None):
     '''
     Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -16,16 +16,16 @@ def convertToAdata(file, out, r_home=None):
     ----------
         path : str
             Path to the .rds or .robj file.
-        out : str
-            path to save anndata.h5ad file.
+        out_prefix : str, default None
+            Prefix added to save anndata.h5ad file. Won't save if None.
         r_home : str, default None
             Path to the R home directory. If None will construct path based on location of python executable.
             E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
 
     Returns
     -------
-         anndata.AnnData:
-            Converted anndata object.
+         anndata.AnnData or None:
+            Returns converted anndata object if out_prefix is None.
     '''
 
     # Set R installation path
@@ -83,8 +83,8 @@ def convertToAdata(file, out, r_home=None):
                 }}
             """)
 
-    # Saving adata.h5ad
-    h5ad_file = out + '/anndata_1.h5ad'
-    adata.write(filename=h5ad_file, compression='gzip')
-
-    return adata
+    if out_prefix:
+        # Saving adata.h5ad
+        adata.write(filename=f"{out_prefix}anndata.h5ad", compression='gzip')
+    else:
+        return adata
