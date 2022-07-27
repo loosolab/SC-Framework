@@ -1,34 +1,38 @@
 import os
+import pytest
 import sctoolbox.bam
 import glob
 import scanpy as sc
 
 
-def test_open_bam():
-
+@pytest.fixture
+def bam_handle():
+    """ Fixture for a bam file handle. """
     bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
     handle = sctoolbox.bam.open_bam(bam_f, "rb")
 
-    assert type(handle).__name__ == "AlignmentFile"
+    return handle
 
 
-def test_get_bam_reads():
+def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    handle = sctoolbox.bam.open_bam(bam_f, "rb")
-    total = sctoolbox.bam.get_bam_reads(handle)
+    assert type(bam_handle).__name__ == "AlignmentFile"
+
+
+def test_get_bam_reads(bam_handle):
+
+    total = sctoolbox.bam.get_bam_reads(bam_handle)
 
     assert total == 10000
 
 
-def test_split_bam_clusters():
+def test_split_bam_clusters(bam_handle):
 
     bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
 
     # Get input reads
-    input_handle = sctoolbox.bam.open_bam(bam_f, "rb")
-    n_reads_input = sctoolbox.bam.get_bam_reads(input_handle)
+    n_reads_input = sctoolbox.bam.get_bam_reads(bam_handle)
 
     # Split bam
     adata = sc.read_h5ad(adata_f)
