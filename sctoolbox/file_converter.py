@@ -12,18 +12,18 @@ def convertToAdata(file, out, r_home=None):
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
-    Parameters:
+    Parameters
     ----------
-        path (str):
+        path : str
             Path to the .rds or .robj file.
-        out (str):
+        out : str
             path to save anndata.h5ad file.
-        r_home (str):
+        r_home : str, default None
             Path to the R home directory. If None will construct path based on location of python executable.
             E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
 
-    Returns:
-    ----------
+    Returns
+    -------
          anndata.AnnData:
             Converted anndata object.
     '''
