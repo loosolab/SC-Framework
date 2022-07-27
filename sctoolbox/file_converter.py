@@ -72,7 +72,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
                         # load file; returns vector of created variables
                         new_vars <- load("{file}")
                         # store new variable into another variable to work on
-                        object <- get(file[1])
+                        object <- get(new_vars[1])
                     }} else if(endswith(lower("{file}"), ".rds")) {{
                         # load object
                         object <- readRDS("{file}")
