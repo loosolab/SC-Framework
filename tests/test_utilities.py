@@ -20,3 +20,11 @@ def test_remove_suffix():
     strings = ["blueberry", "strawberry", "blackberry"]
     nosuffix = [utils.remove_suffix(s, "berry") for s in strings]
     assert nosuffix == ["blue", "straw", "black"]
+
+
+def test_split_list():
+
+    strings = ["a", "b", "c"]
+    split = utils.split_list(strings, 2)
+
+    assert split == [["a", "c"], ["b"]]
