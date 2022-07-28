@@ -251,7 +251,6 @@ def split_bam_clusters(adata,
             temp_file = file + ".tmp"  # temporary sort file
             pysam.sort("-o", temp_file, file)
             os.rename(temp_file, file)
-            os.remove(temp_file)  # remove temporary file
 
     # index files
     if index_bams:
