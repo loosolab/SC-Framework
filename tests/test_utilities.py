@@ -1,10 +1,14 @@
+import pytest
 import sctoolbox.utilities as utils
 
+@pytest.fixture
+def berries():
+    return ["blueberry", "strawberry", "blackberry"]
 
-def test_longest_common_suffix():
 
-    strings = ["blueberry", "strawberry", "blackberry"]
-    suffix = utils.longest_common_suffix(strings)
+def test_longest_common_suffix(berries):
+
+    suffix = utils.longest_common_suffix(berries)
     assert suffix == "berry"
 
 
@@ -15,8 +19,13 @@ def test_remove_prefix():
     assert noprefix == ["d", "e", "f"]
 
 
-def test_remove_suffix():
+def test_remove_suffix(berries):
 
-    strings = ["blueberry", "strawberry", "blackberry"]
-    nosuffix = [utils.remove_suffix(s, "berry") for s in strings]
+    nosuffix = [utils.remove_suffix(s, "berry") for s in berries]
     assert nosuffix == ["blue", "straw", "black"]
+
+
+def test_split_list(berries):
+
+    split = utils.split_list(berries, 2)
+    assert split == [["blueberry", "blackberry"], ["strawberry"]]
