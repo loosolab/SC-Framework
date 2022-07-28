@@ -14,7 +14,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
 
     Parameters
     ----------
-    path : str
+    file : str
         Path to the .rds or .robj file.
     output : str, default None
         Path to output .h5ad file. Won't save if None.
