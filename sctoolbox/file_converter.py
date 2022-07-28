@@ -119,6 +119,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     else:
         return adata
 
+
 def _none2null(none_obj):
     """ rpy2 converter that translates python 'None' to R 'NULL' """
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
