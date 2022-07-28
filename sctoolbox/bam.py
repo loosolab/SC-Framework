@@ -6,38 +6,6 @@ import multiprocessing
 import sctoolbox.utilities as utils
 
 
-def open_bam(file, mode, verbosity=3, **kwargs):
-    """
-    Open bam file with pysam.AlignmentFile. On a specific verbosity level.
-
-    Parameters
-    ----------
-    file : str
-        Path to bam file.
-    mode : str
-        Mode to open the file in. See pysam.AlignmentFile
-    verbosity : int
-        Verbosity level 0 for no messages.
-    **kwargs :
-        Forwarded to pysam.AlignmentFile
-    """
-    # check then load modules
-    utils.check_module("pysam")
-    import pysam
-
-    # save verbosity, then set temporary one
-    former_verbosity = pysam.get_verbosity()
-    pysam.set_verbosity(verbosity)
-
-    # open file
-    handle = pysam.AlignmentFile(file, mode, **kwargs)
-
-    # return to former verbosity
-    pysam.set_verbosity(former_verbosity)
-
-    return handle
-
-
 def split_bam_clusters(adata,
                        bams,
                        groupby,
@@ -64,22 +32,22 @@ def split_bam_clusters(adata,
         One or more BAM files to split into clusters
     groupby : str
         Name of a column in adata.obs to cluster the pseudobulks by.
-    barcode_col : str, optional
+    barcode_col : str, default None
         Name of a column in adata.obs to use as barcodes. If None, use the index of .obs.
-    read_tag : str, optional
-        Tag to use to identify the reads to split. Must match the barcodes of the barcode_col. Default: "CB".
-    output_prefix : str, optional
-        Prefix to use for the output files. Default: "split_".
+    read_tag : str, default "CB"
+        Tag to use to identify the reads to split. Must match the barcodes of the barcode_col.
+    output_prefix : str, default "split_"
+        Prefix to use for the output files.
     reader_threads : int, default 1
         Number of threads to use for reading.
     writer_threads : int, default 1,
         Number of threads to use for writing.
     parallel : boolean, default False
         Whether to enable parallel processsing.
-    buffer_size : int, optional
-        The size of the buffer between readers and writers. Default is 10.000 reads.
-    max_queue_size : int, optional
-        The maximum size of the queue between readers and writers. Default is 1000.
+    buffer_size : int, default 10000
+        The size of the buffer between readers and writers.
+    max_queue_size : int, default 1000
+        The maximum size of the queue between readers and writers.
     individual_pbars : boolean, default False
         Whether to show a progress bar for each individual BAM file and output clusters. Default: False (overall progress bars).
     sort_bams : boolean, default False
@@ -87,7 +55,6 @@ def split_bam_clusters(adata,
     index_bams : boolean, default False
         Create an index file for each output bam. Will throw an error if `sort_bams` is False.
     """
-
     # check then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
@@ -142,6 +109,7 @@ def split_bam_clusters(adata,
     # --------- Start splitting --------- #
     print("Starting splitting of bams...")
     if parallel:
+        # ---------- parallel splitting ---------- #
 
         # create path for output files
         out_paths = {}
@@ -194,6 +162,7 @@ def split_bam_clusters(adata,
         writer_pool.join()
 
     else:
+        # ---------- sequential splitting ---------- #
         # open output bam files
         handles = {}
         output_files = []
@@ -201,7 +170,7 @@ def split_bam_clusters(adata,
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
             save_cluster_name = re.sub(r'[\\/*?:"<>| ]', '_', cluster)
             f_out = f"{output_prefix}{save_cluster_name}.bam"
-            handles[cluster] = pysam.AlignmentFile(f_out, "wb", template=template, threads=pysam_threads)
+            handles[cluster] = open_bam(f_out, "wb", template=template, threads=pysam_threads, verbosity=0)
 
             output_files.append(f_out)
 
@@ -209,7 +178,7 @@ def split_bam_clusters(adata,
         for i, bam in enumerate(bams):
             print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
 
-            bam_obj = pysam.AlignmentFile(bam, "rb")
+            bam_obj = open_bam(bam, "rb", verbosity=0)
 
             # Update progress based on total number of reads
             total = get_bam_reads(bam_obj)
@@ -244,6 +213,7 @@ def split_bam_clusters(adata,
         for handle in handles.values():
             handle.close()
 
+    # ---------- post split functionality ---------- #
     # sort reads
     if sort_bams:
         print("Sorting output bams...")
@@ -262,18 +232,60 @@ def split_bam_clusters(adata,
     print("Finished splitting bams!")
 
 
+# ------------------------------------------------------------------ #
+# ---------------------- bam helper functions ---------------------- #
+# ------------------------------------------------------------------ #
+
+def open_bam(file, mode, verbosity=3, **kwargs):
+    """
+    Open bam file with pysam.AlignmentFile. On a specific verbosity level.
+
+    Parameters
+    ----------
+    file : str
+        Path to bam file.
+    mode : str
+        Mode to open the file in. See pysam.AlignmentFile
+    verbosity : int, default 3
+        Set verbosity level. Verbosity level 0 for no messages.
+    **kwargs :
+        Forwarded to pysam.AlignmentFile
+
+    Returns
+    -------
+    pysam.AlignmentFile :
+        Object to work on SAM/BAM files.
+    """
+    # check then load modules
+    utils.check_module("pysam")
+    import pysam
+
+    # save verbosity, then set temporary one
+    former_verbosity = pysam.get_verbosity()
+    pysam.set_verbosity(verbosity)
+
+    # open file
+    handle = pysam.AlignmentFile(file, mode, **kwargs)
+
+    # return to former verbosity
+    pysam.set_verbosity(former_verbosity)
+
+    return handle
+
+
 def get_bam_reads(bam_obj):
     """
     Get the number of reads from an open pysam.AlignmentFile
 
     Parameters
-    -----------
+    ----------
     bam_obj : pysam.AlignmentFile
         An open pysam.AlignmentFile object to get the number of reads from.
 
     Returns
     -------
-    int : number of reads in the bam file
+    int :
+        number of reads in the bam file
     """
     # check then load modules
     utils.check_module("pysam")
@@ -286,8 +298,12 @@ def get_bam_reads(bam_obj):
         path = bam_obj.filename
         total = int(pysam.view("-c", path))
 
-    return(total)
+    return total
 
+
+# ------------------------------------------------------------------ #
+# -------------------- multiprocessing functions ------------------- #
+# ------------------------------------------------------------------ #
 
 def _monitor_progress(progress_queue,
                       cluster_queues,
@@ -298,6 +314,8 @@ def _monitor_progress(progress_queue,
     """
     Function for monitoring read/write progress of split_bam_clusters.
 
+    Parameters
+    ----------
     progress_queue : multiprocessing.Queue
         Queue to send progress updates to.
     cluster_queues : dict of multiprocessing.Queue
@@ -308,10 +326,14 @@ def _monitor_progress(progress_queue,
         List of writer jobs.
     total_reads : dict
         Dictionary containing total reads for each input .bam-file. Keys are filenames and values are total reads.
-    individual_pbars : bool, optional
-        If True, show progress bar for each cluster. If False, show one progress bar for all clusters. Default: False.
-    """
+    individual_pbars : bool, default False
+        If True, show progress bar for each cluster. If False, show one progress bar for all clusters.
 
+    Returns
+    -------
+    int :
+        Returns 0 on success.
+    """
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
@@ -407,10 +429,14 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
         Read tag that should be used for queue assignment.
     progress_queue : multiprocessing.Queue
         Queue to send progress updates to.
-    buffer_size : int, optional
-        Size of buffer (number of reads) for each queue to collect before writing. Default: 10000.
-    """
+    buffer_size : int, default 10000
+        Size of buffer (number of reads) for each queue to collect before writing.
 
+    Returns
+    -------
+    int :
+        Returns 0 on success.
+    """
     try:
         # open bam
         bam = open_bam(path, "rb", verbosity=0)
@@ -476,10 +502,14 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
         Used as template for output bam.
     progress_queue : multiprocessing.Queue
         Queue to send progress updates to.
-    pysam_threads : int, optional
-        Number of threads for pysam to use for writing. This is different from the threads used for the individual writers. Default: 4.
-    """
+    pysam_threads : int, default 4
+        Number of threads for pysam to use for writing. This is different from the threads used for the individual writers.
 
+    Returns
+    -------
+    int :
+        Returns 0 on success.
+    """
     try:
         import pysam  # install of pysam was checked in parent function
 
