@@ -28,7 +28,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     Returns
     -------
     anndata.AnnData or None:
-        Returns converted anndata object if out_prefix is None.
+        Returns converted anndata object if output is None.
     """
     # Set R installation path
     if not r_home:
@@ -44,7 +44,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     utils.check_module("anndata2ri")
     import anndata2ri
     utils.check_module("rpy2")
-    from rpy2.robjects import r, default_converter, conversion
+    from rpy2.robjects import r, default_converter, conversion, globalenv
     anndata2ri.activate()
 
     # create rpy2 None to NULL converter
@@ -54,61 +54,64 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
-        if (!require(Seurat)) {
+        if (!suppressPackageStartupMessages(require(Seurat))) {
             stop("R dependency Seurat not found.")
         }
-        if (!require(SingleCellExperiment)) {
+        if (!suppressPackageStartupMessages(require(SingleCellExperiment))) {
             stop("R dependecy SingleCellExperiment not found.")
         }
     """)
 
-    # ----- convert to anndata ----- #
+    # add variables into R
     with conversion.localconverter(default_converter + none_converter):
-        adata = r(f"""
-                    library(Seurat)
+        globalenv["file"] = file
+        globalenv["layer"] = layer
 
-                    # ----- load object ----- #
-                    if (endswith(lower("{file}"), ".robj")) {{
-                        # load file; returns vector of created variables
-                        new_vars <- load("{file}")
-                        # store new variable into another variable to work on
-                        object <- get(new_vars[1])
-                    }} else if(endswith(lower("{file}"), ".rds")) {{
-                        # load object
-                        object <- readRDS("{file}")
-                    }} else {{
-                        stop("Unknown file extension. Expected '.robj' or '.rds' got ", {file})
-                    }}
+    # ----- convert to anndata ----- #
+    r("""
+        # ----- load object ----- #
+        if (endsWith(tolower(file), ".robj")) {
+            # load file; returns vector of created variables
+            new_vars <- load(file)
+            # store new variable into another variable to work on
+            object <- get(new_vars[1])
+        } else if (endsWith(tolower(file), ".rds")) {
+            # load object
+            object <- readRDS(file)
+        } else {
+            stop("Unknown file extension. Expected '.robj' or '.rds' got", file)
+        }
 
-                    # ----- convert to SingleCellExperiment ----- #
-                    # SingleCellExperiment is needed for anndata conversion
-                    if (class(object) == "Seurat") {{
-                        object <- as.SingleCellExperiment(object)
-                    }} else if (class(object) == "SingleCellExperiment") {{
-                        object <- object
-                    }} else {{
-                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-                    }}
+        # ----- convert to SingleCellExperiment ----- #
+        # can only convert Seurat -> SingleCellExperiment -> anndata
+        if (class(object) == "Seurat") {
+            object <- as.SingleCellExperiment(object)
+        } else if (class(object) == "SingleCellExperiment") {
+            object <- object
+        } else {
+            stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+        }
 
-                    # ----- change layer ----- #
-                    # adata can only store a single layer
-                    if (!is.null({layer})) {{
-                        layers <- c(mainExpName(object), altExpNames(object))
+        # ----- change layer ----- #
+        # adata can only store a single layer
+        if (!is.null(layer)) {
+            layers <- c(mainExpName(object), altExpNames(object))
 
-                        # check if layer is valid
-                        if (!{layer} %in% layers) {{
-                            stop("Invalid layer! Expected one of ", layers, " got, {layer})
-                        }}
+            # check if layer is valid
+            if (!layer %in% layers) {
+                stop("Invalid layer! Expected one of ", paste(layers, collapse = ", "), " got ", layer)
+            }
 
-                        # select layer
-                        if ({layer} != mainExpName(object)) {{
-                            mainExpName(object) <- {layer}
-                        }}
-                    }}
+            # select layer
+            if (layer != mainExpName(object)) {
+                object <- swapAltExp(object, layer, saved = mainExpName(object), withColData = TRUE)
+            }
+        }
+    """)
 
-                    # return object for conversion
-                    object
-              """)
+    # pull SingleCellExperiment into python
+    # this also converts to anndata
+    adata = globalenv["object"]
 
     if output:
         # Saving adata.h5ad
@@ -119,4 +122,6 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
 def _none2null(none_obj):
     """ rpy2 converter that translates python 'None' to R 'NULL' """
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    from rpy2.robjects import r
+
     return r("NULL")
