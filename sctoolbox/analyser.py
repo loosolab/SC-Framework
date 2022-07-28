@@ -36,16 +36,16 @@ def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2,
     Pandas dataframe with cutoffs for each parameter and dataset
 
     Notes
-    -----
+    -------
     Author: Guilherme Valente
 
     """
-    # Author: Guilherme Valente
-    def filling_df_cut(df_cuts2, CONDI3, PARAM3, LST_CUTS, LST_DFCUTS_COLS):
-        if CONDI3 is None:
-            df_cuts2 = df_cuts2.append({LST_DFCUTS_COLS[0]: "_", LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_genes"}, ignore_index=True)
+
+    def filling_df_cut(df_cuts2, condi3, param3, lst_cuts, lst_dfcuts_cols):
+        if condi3 is None:
+            df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: "_", lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_genes"}, ignore_index=True)
         else:
-            df_cuts2 = df_cuts2.append({LST_DFCUTS_COLS[0]: CONDI3, LST_DFCUTS_COLS[1]: PARAM3, LST_DFCUTS_COLS[2]: LST_CUTS, LST_DFCUTS_COLS[3]: "filter_cells"}, ignore_index=True)
+            df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: condi3, lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_cells"}, ignore_index=True)
         return df_cuts2
 
     # Defining the types of distributions to be evaluated and organizing the data
@@ -213,7 +213,7 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True):
     Returns
     ---------
         Anndata with expression values normalized and log converted and PCA computed
-    
+
     Notes
     -----
     Author: Guilherme Valente
