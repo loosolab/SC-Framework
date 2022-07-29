@@ -143,19 +143,28 @@ def qcmetric_calculator(ANNDATA, control_var=False):
 
 
 def define_PC(anndata):
-    '''Defining the most significant PCs (best PC)
+    """
+    Defining the most significant PCs (best PC)
+
     Parameters
-    ==========
+    ----------
     anndata : anndata object
         anndata object
-    Return
-    ==========
-        A int representing the number of PC of elbow, in which the distribution decrease significantly.
-    '''
+
+    Returns
+    -------
+    int
+        representing the number of PC of elbow, in which the distribution decrease significantly.
+    """
+    # Define x and y values for knee locator
     y = anndata.uns["pca"]["variance_ratio"]
     x = range(1, len(y) + 1)
+
+    # Run knee locator 
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
     selected_kn = kn.knee
-# Adding info in anndata.uns["infoprocess"]
+
+    # Adding info in anndata.uns["infoprocess"]
     creators.build_infor(anndata, "Best num PC before batch cor", selected_kn)
+
     return selected_kn
