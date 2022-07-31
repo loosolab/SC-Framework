@@ -46,8 +46,7 @@ def gunzip_file(f_in, f_out):
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
 
-
-def annotate_features(adata,
+def annotate_adata(adata,
                       gtf,
                       config=None,
                       best=True,
@@ -101,15 +100,8 @@ def annotate_features(adata,
     >>> annotate_regions(adata, gtf="genes.gtf",
                                 config=custom_config)
     """
-
     # Setup verbose print function
     print = sctoolbox.utilities.vprint(verbose)
-
-    if inplace is False:
-        adata = adata.copy()
-
-    if inplace is True and best is False:
-        raise ValueError("Inplace annotation is only possible if best is True. Please set inplace==False or best==True.")
 
     # Check that packages are installed
     sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
@@ -161,6 +153,148 @@ def annotate_features(adata,
              "peak_end": int(row[coordinate_cols[2]]),
              "peak_id": idx}
         region_dicts.append(d)
+
+    gtf = prepare_gtf(gtf, temp_dir, print)
+
+    annotations_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
+
+    # Preparation of adata.var update
+
+    # Drop some columns already present
+    drop_columns = ["peak_chr", "peak_start", "peak_end"]
+    annotations_table.drop(columns=drop_columns, inplace=True)
+
+    # Rename feat -> gene to prevent confusion with input features
+    rename_dict = {c: c.replace("feat", "gene") for c in annotations_table.columns}
+    rename_dict.update({'peak_id': '_peak_id',
+                        'feature': 'annotation_feature',
+                        'distance': 'distance_to_gene',
+                        'relative_location': 'relative_location_to_gene',
+                        'query': 'annotation_query'})
+    annotations_table.rename(columns=rename_dict, inplace=True)
+
+    # Set columns as categorical
+    cols = rename_dict.values()
+    cols = [col for col in cols if col not in ["distance_to_gene", "gene_ovl_peak", "peak_ovl_gene"]]
+    for col in cols:
+        annotations_table[col] = annotations_table[col].astype('category')
+
+    # Check if columns already exist
+    existing = set(regions.columns).intersection(annotations_table.columns)
+    if len(existing) > 0:
+        print("WARNING: The following annotation columns already exist in adata.var: {0}".format(existing))
+        print("These columns will be overwritten by the annotation")
+        regions.drop(columns=existing, inplace=True)
+
+    # Merge original sites with annotations
+    regions_annotated = regions.merge(annotations_table, how="outer", left_index=True, right_on="_peak_id")
+    regions_annotated.index = [idx2name[i] for i in regions_annotated["_peak_id"]]  # put index name back into regions
+    regions_annotated.drop(columns=["_peak_id"], inplace=True)
+
+    # Duplicate peaks in adata if best is False
+    if best is False:
+        adata = adata[:, regions_annotated.index]  # duplicates rows of adata.X and .var
+
+    # Save var input object
+    adata.var = regions_annotated
+
+    print("Finished annotation of features! The results are found in the .var table.")
+
+    if inplace is False:
+        return adata  # else returns None
+
+
+
+def annotate_narrowPeak(filepath,
+                        gtf,
+                        config=None,
+                        best=True,
+                        threads=1,
+                        coordinate_cols=None,
+                        temp_dir="",
+                        verbose=True,
+                        inplace=True):
+
+    """
+
+    :param filepath:
+    :param gtf:
+    :param config:
+    :param best:
+    :param threads:
+    :param coordinate_cols:
+    :param temp_dir:
+    :param verbose:
+    :param inplace:
+    :return:
+    """
+    # Setup verbose print function
+    print = sctoolbox.utilities.vprint(verbose)
+
+    # Check that packages are installed
+    sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
+    import uropa.utils
+    sctoolbox.utilities.check_module("pysam")
+    import pysam
+
+    # TODO: Check input types
+    # check_type(gtf, str, "gtf")
+    # check_type(config, [type(None), dict], "config")
+    # check_value(threads, vmin=1, name="threads")
+
+    # Establish configuration dict
+    print("Setting up annotation configuration...")
+    if config is None:
+        cfg_dict = {"queries": [{"distance": [10000, 1000],
+                                 "feature_anchor": "start",
+                                 "feature": "gene",
+                                 "name": "promoters"}],
+                    "priority": True,
+                    "show_attributes": "all"}
+    else:
+        cfg_dict = config
+
+    cfg_dict = copy.deepcopy(cfg_dict)  # make sure that config is not being changed in place
+    logger = uropa.utils.UROPALogger()
+    cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
+    print("Config dictionary: {0}".format(cfg_dict))
+
+    region_dicts = load_narrowPeak(filepath, print)
+
+    gtf = prepare_gtf(gtf, temp_dir, print)
+
+    annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
+
+    print("annotation done")
+
+
+
+def load_narrowPeak(filepath, print):
+
+    print("load regions_dict from: " + filepath)
+    peaks = pd.read_csv(filepath, header=None, sep='\t')
+    peaks = peaks.drop([3, 4, 5, 6, 7, 8, 9], axis=1)
+    peaks.columns = ["peak_chr", "peak_start", "peak_end"]
+    peaks["peak_id"] = peaks.index
+
+    region_dicts = []
+    for i in range(len(peaks.index)):
+        entry = peaks.iloc[i]
+        dict = entry.to_dict()
+        region_dicts.append(dict)
+
+    return region_dicts
+
+def prepare_gtf(gtf, temp_dir, print):
+
+    """
+
+    :param gtf:
+    :param print:
+    :return:
+    """
+    sctoolbox.utilities.check_module("pysam")
+    import pysam
 
     # Prepare .gtf file in terms of index and sorting
     print("Preparing gtf file for annotation...")
@@ -221,6 +355,16 @@ def annotate_features(adata,
     for f in proc.open_files():
         if f.path == os.path.abspath(gtf):
             os.close(f.fd)
+
+    return gtf
+
+def annotate_features(region_dicts,
+             threads,
+             gtf,
+             cfg_dict,
+             best):
+
+    #Annotation from regions_dict
 
     # Split input regions into cores
     n_reg = len(region_dicts)
@@ -299,49 +443,7 @@ def annotate_features(adata,
     # Convert to pandas table
     annotations_table = pd.DataFrame(annotations)
 
-    # Drop some columns already present
-    drop_columns = ["peak_chr", "peak_start", "peak_end"]
-    annotations_table.drop(columns=drop_columns, inplace=True)
-
-    # Rename feat -> gene to prevent confusion with input features
-    rename_dict = {c: c.replace("feat", "gene") for c in annotations_table.columns}
-    rename_dict.update({'peak_id': '_peak_id',
-                        'feature': 'annotation_feature',
-                        'distance': 'distance_to_gene',
-                        'relative_location': 'relative_location_to_gene',
-                        'query': 'annotation_query'})
-    annotations_table.rename(columns=rename_dict, inplace=True)
-
-    # Set columns as categorical
-    cols = rename_dict.values()
-    cols = [col for col in cols if col not in ["distance_to_gene", "gene_ovl_peak", "peak_ovl_gene"]]
-    for col in cols:
-        annotations_table[col] = annotations_table[col].astype('category')
-
-    # Check if columns already exist
-    existing = set(regions.columns).intersection(annotations_table.columns)
-    if len(existing) > 0:
-        print("WARNING: The following annotation columns already exist in adata.var: {0}".format(existing))
-        print("These columns will be overwritten by the annotation")
-        regions.drop(columns=existing, inplace=True)
-
-    # Merge original sites with annotations
-    regions_annotated = regions.merge(annotations_table, how="outer", left_index=True, right_on="_peak_id")
-    regions_annotated.index = [idx2name[i] for i in regions_annotated["_peak_id"]]  # put index name back into regions
-    regions_annotated.drop(columns=["_peak_id"], inplace=True)
-
-    # Duplicate peaks in adata if best is False
-    if best is False:
-        adata = adata[:, regions_annotated.index]  # duplicates rows of adata.X and .var
-
-    # Save var input object
-    adata.var = regions_annotated
-
-    print("Finished annotation of features! The results are found in the .var table.")
-
-    if inplace is False:
-        return adata  # else returns None
-
+    return annotations_table
 
 def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     """ Multiprocessing safe function to annotate a chunk of regions """
@@ -366,3 +468,7 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     tabix_obj.close()
 
     return(all_valid_annotations)
+
+
+    
+    
