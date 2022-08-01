@@ -172,7 +172,7 @@ def compute_PCA(anndata, use_highly_variable=True):
     cr.build_infor(anndata, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
 
 
-def adata_normalize_total(anndata, excl=True, inplace=False):
+def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log_kwargs={}):
     """
     Normalizing the total counts and converting to log
 
@@ -181,9 +181,13 @@ def adata_normalize_total(anndata, excl=True, inplace=False):
     anndata : anndata.AnnData
         Anndata object to normalize.
     excl : boolean, default True
-        Decision to exclude highly expressed genes (HEG) from normalization
+        Decision to exclude highly expressed genes (HEG) from normalization.
     inplace : boolean, default False
         Whether the anndata object is modified inplace.
+    norm_kwargs : dict, default {}
+        Additional parameters forwarded to scanpy.pp.normalize_total().
+    log_kwargs : dict, default {}
+        Additional parameters forwarded to scanpy.pp.log1p().
 
     Notes
     -----
@@ -198,8 +202,8 @@ def adata_normalize_total(anndata, excl=True, inplace=False):
 
     # Normalizing and logaritimyzing
     print("Normalizing the data and converting to log")
-    sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True)
-    sc.pp.log1p(adata_m, inplace=True)
+    sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True, **norm_kwargs)
+    sc.pp.log1p(adata_m, inplace=True, **log_kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
     cr.build_infor(adata_m, "Scanpy normalization", "exclude_highly_expressed= " + str(excl), inplace=True)
