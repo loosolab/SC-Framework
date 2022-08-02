@@ -44,33 +44,28 @@ def annot_HVG(anndata, inplace=True, **kwargs):
     """
     adata_m = anndata if inplace else anndata.copy()
 
-    # Default for sc.pp.highly_variable_genes
-    repeat, repeat_limit, HVG_list, min_mean = 0, 10, list(), 0.0125
+    # setup vars
+    repeat_limit, min_mean = 10, 0.0125
 
-    # Finding the highly variable genes
     print("Annotating highy variable genes (HVG)")
-    sc.pp.highly_variable_genes(anndata, min_mean=min_mean, inplace=True, **kwargs)
-    HVG = sum(anndata.var.highly_variable)
-    HVG_list.append(HVG)
 
-    # These 1K and 5K limits were proposed by DOI:10.15252/msb.20188746
-    while HVG < 1000 or HVG > 5000:
-        if HVG < 1000:
-            min_mean = min_mean / 10
-        elif HVG > 5000:
-            min_mean = min_mean * 10
-        sc.pp.highly_variable_genes(anndata, min_mean=min_mean, inplace=True, **kwargs)
-        HVG = sum(anndata.var.highly_variable)
+    # adjust min_mean to get a HVG count in a certain range
+    for _ in range(repeat_limit):
+        sc.pp.highly_variable_genes(adata_m, min_mean=min_mean, inplace=True, **kwargs)
 
-        if HVG == HVG_list[-1]:
-            repeat = repeat + 1
-        if repeat == repeat_limit:
+        # counts True values in column
+        hvg_count = sum(adata_m.var.highly_variable)
+
+        # adjust min_mean
+        if hvg_count < 1000:
+            min_mean /= 10
+        elif hvg_count > 5000:
+            min_mean *= 10
+        else:
             break
 
-        HVG_list.append(HVG)
-
     # Adding info in anndata.uns["infoprocess"]
-    cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(HVG_list[-1]), inplace=True)
+    cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)
 
     if not inplace:
         return adata_m
