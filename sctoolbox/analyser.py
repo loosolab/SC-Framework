@@ -153,7 +153,7 @@ def qcmetric_calculator(anndata, control_var=False):
     return(anndata)
 
 
-def compute_PCA(anndata, use_highly_variable=True, inplace=False):
+def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
     """
     Compute PCA and add information to adata.uns['infoprocess']
 
@@ -165,6 +165,8 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False):
         If true, use highly variable genes to compute PCA.
     inplace : boolean, default False
         Whether the anndata object is modified inplace.
+    **kwargs :
+        Additional parameters forwarded to scanpy.pp.pca().
 
     Returns
     -------
@@ -175,7 +177,7 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False):
 
     # Computing PCA
     print("Computing PCA")
-    sc.pp.pca(adata_m, use_highly_variable=use_highly_variable)
+    sc.pp.pca(adata_m, use_highly_variable=use_highly_variable, **kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
     cr.build_infor(adata_m, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable), inplace=True)
