@@ -21,7 +21,7 @@ def add_cellxgene_annotation(adata, csv):
     adata.obs.loc[anno_table.index, anno_name] = anno_table[anno_name].astype('category')
 
 
-def annot_HVG(anndata, inplace=True, **kwargs):
+def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, inplace=True, **kwargs):
     """
     Annotate highly variable genes (HVG). Tries to annotate between 1,000 and 5,000 HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
     Default limits are chosen as proposed by https://doi.org/10.15252/msb.20188746.
@@ -32,6 +32,10 @@ def annot_HVG(anndata, inplace=True, **kwargs):
     ----------
     anndata : anndata.AnnData
         Anndata object to annotate.
+    min_mean : float, default 0.0125
+        Starting min_mean parameter for finding HVGs.
+    max_iterations : int, default 10
+        Maximum number of min_mean adjustments.
     inplace : boolean, default False
         Whether the anndata object is modified inplace.
     **kwargs :
@@ -44,22 +48,20 @@ def annot_HVG(anndata, inplace=True, **kwargs):
     """
     adata_m = anndata if inplace else anndata.copy()
 
-    # setup vars
-    repeat_limit, min_mean = 10, 0.0125
-
     print("Annotating highy variable genes (HVG)")
 
     # adjust min_mean to get a HVG count in a certain range
-    for _ in range(repeat_limit):
+    for i in range(max_iterations + 1):
         sc.pp.highly_variable_genes(adata_m, min_mean=min_mean, inplace=True, **kwargs)
 
         # counts True values in column
         hvg_count = sum(adata_m.var.highly_variable)
 
         # adjust min_mean
-        if hvg_count < 1000:
+        # skip adjustment if in last iteration
+        if i < max_iterations and hvg_count < 1000:
             min_mean /= 10
-        elif hvg_count > 5000:
+        elif i < max_iterations and hvg_count > 5000:
             min_mean *= 10
         else:
             break
