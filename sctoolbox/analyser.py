@@ -153,23 +153,35 @@ def qcmetric_calculator(anndata, control_var=False):
     return(anndata)
 
 
-def compute_PCA(anndata, use_highly_variable=True):
+def compute_PCA(anndata, use_highly_variable=True, inplace=False):
     """
     Compute PCA and add information to adata.uns['infoprocess']
 
     Parameters
     ----------
-    anndata : anndata object
-        adata object
-    use_highly_variable : Boolean. Default : True.
-        If true, use highly variable genes to compute PCA
+    anndata : anndata.AnnData
+        Anndata object to add the PCA to.
+    use_highly_variable : boolean, default True
+        If true, use highly variable genes to compute PCA.
+    inplace : boolean, default False
+        Whether the anndata object is modified inplace.
+
+    Returns
+    -------
+    anndata.AnnData or None:
+        Returns anndata object with PCA components. Or None if inplace = True.
     """
+    adata_m = anndata if inplace else anndata.copy()
+
     # Computing PCA
     print("Computing PCA")
-    sc.pp.pca(anndata, use_highly_variable=use_highly_variable)
+    sc.pp.pca(adata_m, use_highly_variable=use_highly_variable)
 
     # Adding info in anndata.uns["infoprocess"]
-    cr.build_infor(anndata, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable))
+    cr.build_infor(adata_m, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable), inplace=True)
+
+    if not inplace:
+        return adata_m
 
 
 def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log_kwargs={}):
@@ -212,39 +224,41 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
         return adata_m
 
 
-def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True):
+def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
     """
-    Defining the ideal number of highly variable genes (HGV) and annotate them,
-    and compute PCA.
+    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
 
     Parameters
-    -----------
-    anndata : anndata object
-        adata object
-    exclude_HEG : Boolean. Default : True
-        If True, highly expressed genes (HEG) will be not considered in the normalization
-    use_HVG_PCA : Boolean. Boolean. Default: True
-        If true, highly variable genes (HVG) will be also considered to calculate PCA
+    ----------
+    anndata : anndata.AnnData
+        Anndata object to work on.
+    exclude_HEG : boolean, default True
+        If True, highly expressed genes (HEG) will be not considered in the normalization.
+    use_HVG_PCA : boolean, default True
+        If true, highly variable genes (HVG) will be also considered to calculate PCA.
+    inplace : boolean, default False
+        Whether to work inplace on the anndata object.
 
     Returns
-    ---------
-        Anndata with expression values normalized and log converted and PCA computed
+    -------
+    anndata.Anndata or None:
+        Anndata with expression values normalized and log converted and PCA computed.
 
     Notes
     -----
     Author: Guilherme Valente
     """
-
-    # TODO check if user inserted True or False for exclude_HEG and use_HVG_PCA
+    # TODO some of the functions can not operate inplace!
+    adata_m = anndata if inplace else anndata.copy()
 
     # Normalization and converting to log
-    adata_normalize_total(anndata, exclude_HEG)
+    adata_normalize_total(adata_m, exclude_HEG, inplace=True)
 
     # Annotate highly variable genes
-    an.annot_HVG(anndata)
+    an.annot_HVG(adata_m, inplace=True)
 
     # Compute PCA
     compute_PCA(anndata, use_highly_variable=use_HVG_PCA)
 
-    # Returning
-    return anndata.copy()
+    if not inplace:
+        return adata_m
