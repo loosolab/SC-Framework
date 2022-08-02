@@ -21,10 +21,9 @@ def add_cellxgene_annotation(adata, csv):
     adata.obs.loc[anno_table.index, anno_name] = anno_table[anno_name].astype('category')
 
 
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, inplace=True, **kwargs):
+def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, **kwargs):
     """
-    Annotate highly variable genes (HVG). Tries to annotate between 1,000 and 5,000 HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
-    Default limits are chosen as proposed by https://doi.org/10.15252/msb.20188746.
+    Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
 
     Note: Logarithmized data is expected.
 
@@ -36,6 +35,11 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, inplace=True, **kwarg
         Starting min_mean parameter for finding HVGs.
     max_iterations : int, default 10
         Maximum number of min_mean adjustments.
+    hvg_range : int tuple, default (1000, 5000)
+        Number of HVGs should be in the given range. Will issue a warning if result is not in range.
+        Default limits are chosen as proposed by https://doi.org/10.15252/msb.20188746.
+    step : float, default 10
+        Value min_mean is adjusted by in each iteration. Will divide min_value (below range) or multiply (above range) by this value.
     inplace : boolean, default False
         Whether the anndata object is modified inplace.
     **kwargs :
@@ -59,10 +63,10 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, inplace=True, **kwarg
 
         # adjust min_mean
         # skip adjustment if in last iteration
-        if i < max_iterations and hvg_count < 1000:
-            min_mean /= 10
-        elif i < max_iterations and hvg_count > 5000:
-            min_mean *= 10
+        if i < max_iterations and hvg_count < hvg_range[0]:
+            min_mean /= step
+        elif i < max_iterations and hvg_count > hvg_range[1]:
+            min_mean *= step
         else:
             break
 
