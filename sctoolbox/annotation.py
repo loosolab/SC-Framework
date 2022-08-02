@@ -21,39 +21,54 @@ def add_cellxgene_annotation(adata, csv):
     adata.obs.loc[anno_table.index, anno_name] = anno_table[anno_name].astype('category')
 
 
-def annot_HVG(anndata):
-    '''
-    Annotate highly variable genes
+def annot_HVG(anndata, inplace=True):
+    """
+    Annotate highly variable genes (HVG). Tries to annotate between 1,000 and 5,000 HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
+    Default limits are chosen as proposed by https://doi.org/10.15252/msb.20188746.
+
+    Note: Logarithmized data is expected.
+
     Parameters
     ----------
-    anndata : anndata object
-        adata object
-    Return
-    ----------
-        Anndata.var["highly_variable"]
-    '''
-    # Messages and others
+    anndata : anndata.AnnData
+        Anndata object to annotate.
+    inplace : boolean, default False
+        Whether the anndata object is modified inplace.
+
+    Returns
+    -------
+    anndata.Anndata or None:
+        Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
+    """
+    adata_m = anndata if inplace else anndata.copy()
+
     # Default for sc.pp.highly_variable_genes
     repeat, repeat_limit, HVG_list, min_mean = 0, 10, list(), 0.0125
 
     # Finding the highly variable genes
     print("Annotating highy variable genes (HVG)")
-    sc.pp.highly_variable_genes(anndata, min_mean=min_mean)
+    sc.pp.highly_variable_genes(anndata, min_mean=min_mean, inplace=True)
     HVG = sum(anndata.var.highly_variable)
     HVG_list.append(HVG)
+
     # These 1K and 5K limits were proposed by DOI:10.15252/msb.20188746
     while HVG < 1000 or HVG > 5000:
         if HVG < 1000:
             min_mean = min_mean / 10
-        if HVG > 5000:
+        elif HVG > 5000:
             min_mean = min_mean * 10
-        sc.pp.highly_variable_genes(anndata, min_mean=min_mean)
+        sc.pp.highly_variable_genes(anndata, min_mean=min_mean, inplace=True)
         HVG = sum(anndata.var.highly_variable)
+
         if HVG == HVG_list[-1]:
             repeat = repeat + 1
         if repeat == repeat_limit:
             break
+
         HVG_list.append(HVG)
+
     # Adding info in anndata.uns["infoprocess"]
-    cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(HVG_list[-1]))
-    return anndata.copy()
+    cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(HVG_list[-1]), inplace=True)
+
+    if not inplace:
+        return adata_m
