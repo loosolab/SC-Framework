@@ -13,35 +13,38 @@ def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2,
     """
     Defining cutoffs for anndata.obs and anndata.var parameters
 
+    TODO change param names to be more meaningful
+
     Parameters
-    ------------
+    ----------
     data2 : pandas.core.series.Series
-        Dataset to be have the cutoffs calculated
-    interval : Int or float
+        Dataset to be have the cutoffs calculated.
+    interval : int or float
         A percentage value from 0 to 1 or 100 to be used to calculate the confidence interval or percentile
-    skew_val : Int
+    skew_val : int
         The skew value of the dataset under evaluated
-    kurtosis_norm : Int
+    kurtosis_norm : int
         The normalized kurtosis value of the dataset under evaluated
-    df_cuts : Pandas dataframe
+    df_cuts : pandas.DataFrame
         An empty dataframe with data_to_evaluate, parameters, cutoff and strategy as columns to be filled.
         The rows will be the information of each sample analysed by this function.
-    param2 : String
+    param2 : str
         The name of anndata.obs or anndata.var parameter to be evaluated by this function
-    condi2 : String
+    condi2 : str
         The name of anndata.obs sample to be evaluated by this function
 
     Returns
-    ------------
-    Pandas dataframe with cutoffs for each parameter and dataset
+    -------
+    pandas.DataFrame :
+        Pandas dataframe with cutoffs for each parameter and dataset.
 
     Notes
-    -------
+    -----
     Author: Guilherme Valente
-
     """
 
     def filling_df_cut(df_cuts2, condi3, param3, lst_cuts, lst_dfcuts_cols):
+        """ TODO add documentation """
         if condi3 is None:
             df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: "_", lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_genes"}, ignore_index=True)
         else:
@@ -96,7 +99,7 @@ def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2,
                 join_cuts = [max(join_cuts)]
             df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
 
-    return(df_cutoffs)
+    return df_cutoffs
 
 
 def qcmetric_calculator(anndata, control_var=False):
@@ -104,10 +107,12 @@ def qcmetric_calculator(anndata, control_var=False):
     Calculating the qc metrics using the Scanpy
 
     Parameters
-    ------------
-    anndata : anndata object
-        adata object
-    control_var : Boolean
+    ----------
+    anndata : anndata.AnnData
+        Anndata object the quality metrics are added to.
+    control_var : boolean, default False
+        TODO this parameter is not used!!!
+
         If True, the adata.uns["infoprocess"]["gene_labeled"] will be used in the qc_var to control the metrics calculation
         The qc_var of sc.pp.calculate_qc_metrics will use this variable to control the qc metrics calculation (e.g. "is_mito").
         For details, see qc_vars at https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
@@ -115,8 +120,12 @@ def qcmetric_calculator(anndata, control_var=False):
     Notes
     -----
     Author: Guilherme Valente
-    """
 
+    Returns
+    -------
+    anndata.AnnData:
+        Returns anndata object with added quality metrics.
+    """
     # Message and others
     m1 = "pp.calculate_qc_metrics qc_vars: "
     m2 = "ID_"
@@ -150,7 +159,7 @@ def qcmetric_calculator(anndata, control_var=False):
         go_to_id = anndata.var[a].sum()
         cr.build_infor(anndata, m2 + "g_" + a, go_to_id)
 
-    return(anndata)
+    return anndata
 
 
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
