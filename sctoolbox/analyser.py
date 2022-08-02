@@ -250,7 +250,6 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
     -----
     Author: Guilherme Valente
     """
-    # TODO some of the functions can not operate inplace!
     adata_m = anndata if inplace else anndata.copy()
 
     # Normalization and converting to log
@@ -260,7 +259,7 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
     an.annot_HVG(adata_m, inplace=True)
 
     # Compute PCA
-    compute_PCA(anndata, use_highly_variable=use_HVG_PCA)
+    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
 
     if not inplace:
         return adata_m
