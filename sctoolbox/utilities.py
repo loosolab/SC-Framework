@@ -138,7 +138,6 @@ def check_module(module):
         raise ImportError(s)
 
 
-# 
 def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
     """
     Load anndata from a previous notebook.
