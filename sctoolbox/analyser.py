@@ -5,6 +5,7 @@ from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
 import scanpy.external as sce
+from scipy import sparse
 
 
 # --------------------------- Batch correction methods -------------------------- #
@@ -89,7 +90,11 @@ def batch_correction(adata, batch_key, method):
         sc.pp.neighbors(adata)
 
     elif method == "combat":
-        adata = sc.pp.combat(adata, key=batch_key, inplace=False)
+
+        corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False)
+
+        adata = adata.copy()  # make sure adata is not modified
+        adata.X = sparse.csr_matrix(corrected_mat)
 
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
