@@ -135,26 +135,27 @@ def check_quit(answer):
         sys.exit("You quit and lost all modifications :(")
 
 
-def check_requirements(anndata, current_notebook=None):
-    '''
+def check_requirements(anndata, current_notebook):
+    """
     Check if the current anndata object has all requirements to be analysed by the current notebook.
+
     Parameters
     ----------
-    anndata : Anndata object
-        anndata.Anndata
-    current_notebook : int, default : None
+    anndata : anndata.Anndata
+        Anndata object to check for requirements.
+    current_notebook : int
         The number of the current notebook. It is important to set the correct number because each notebook has its
         own mandatory anndata requirements.
 
     Requirements of each notebook
-    ----------
+    -----------------------------
         Notebook 3 demands total_counts filtered
-    '''
-
-# Check if the current_notebook is int. Then, check if the anndata fits the requirements.
+    """
+    # Check if the current_notebook is int. Then, check if the anndata fits the requirements.
     check_notebook(current_notebook)
+
     if current_notebook >= 3:
         if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
             raise ValueError("This notebook demands total_counts filtered. Run notebook 2.")
     else:
-        raise ValueError("Set the current_notebook properly.")
+        raise ValueError(f"Invalid notebook number detected. Got current_notebook={current_notebook}.")
