@@ -6,7 +6,6 @@ import pandas as pd
 
 import os
 import glob
-
 from scipy import sparse
 from scipy.io import mmread
 

@@ -1,6 +1,6 @@
 # Loading packages
 import scanpy as sc
-import sctoolbox.creators as creators
+import sctoolbox.creators as cr
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
@@ -8,7 +8,7 @@ from kneed import KneeLocator
 ###################################################################################################################
 
 
-def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2, CONDI2):  # Ir para analyser.py
+def establishing_cuts(DATA2, INTERVAL, SKEW_VAL, KURTOSIS_NORM, DF_CUTS, PARAM2, CONDI2):
     '''
     Defining cutoffs for anndata.obs and anndata.var parameters
 
@@ -129,15 +129,15 @@ def qcmetric_calculator(ANNDATA, control_var=False):
             ANNDATA.var[a] = qc_metrics[1][a]
 
     # Annotating into anndata.uns["infoprocess"] the qc_var parameter for the sc.pp.calculate_qc_metrics
-    creators.build_infor(ANNDATA, m1, VAR)
+    cr.build_infor(ANNDATA, m1, VAR)
 
     # Storing the original counts
     for a in obs_info:
         go_to_id = ANNDATA.obs[a].sum()
-        creators.build_infor(ANNDATA, m2 + "c_" + a, go_to_id)
+        cr.build_infor(ANNDATA, m2 + "c_" + a, go_to_id)
     for a in var_info:
         go_to_id = ANNDATA.var[a].sum()
-        creators.build_infor(ANNDATA, m2 + "g_" + a, go_to_id)
+        cr.build_infor(ANNDATA, m2 + "g_" + a, go_to_id)
 
     return(ANNDATA)
 
