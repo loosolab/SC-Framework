@@ -154,8 +154,43 @@ def check_requirements(anndata, current_notebook):
     # Check if the current_notebook is int. Then, check if the anndata fits the requirements.
     check_notebook(current_notebook)
 
-    if current_notebook >= 3:
+    # TODO add missing checks
+    if current_notebook >= 1:
+        # assembling anndata
+        raise ValueError("To be implemented")
+    elif current_notebook >= 2:
+        # qc and filtering
+        raise ValueError("To be implemented")
+    elif current_notebook >= 3:
+        # normalization, correction and comparison
         if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
             raise ValueError("This notebook demands total_counts filtered. Run notebook 2.")
+    elif current_notebook >= 4:
+        # clustering
+        raise ValueError("To be implemented")
+    elif current_notebook >= 5:
+        # annotation
+        raise ValueError("To be implemented")
+    elif current_notebook >= 6:
+        # differential expression
+        raise ValueError("To be implemented")
+    elif current_notebook >= 7:
+        # general plots
+        raise ValueError("To be implemented")
+    elif current_notebook >= 8:
+        # cell counting
+        raise ValueError("To be implemented")
+    elif current_notebook >= 9:
+        # velocity
+        raise ValueError("To be implemented")
+    elif current_notebook >= 10:
+        # trajectory
+        raise ValueError("To be implemented")
+    elif current_notebook >= 11:
+        # receptor-ligand
+        raise ValueError("To be implemented")
+    elif current_notebook >= 12:
+        # cyber
+        raise ValueError("To be implemented")
     else:
         raise ValueError(f"Invalid notebook number detected. Got current_notebook={current_notebook}.")
