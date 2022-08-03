@@ -15,9 +15,9 @@ def adata():
 
 
 @pytest.fixture
-def adata_no_pca():
+def adata_no_pca(adata):
     """ Adata without PCA. """
-    anndata = adata()
+    anndata = adata.copy()
 
     # remove pca
     anndata.uns.pop("pca")
