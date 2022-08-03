@@ -152,17 +152,19 @@ def check_quit(answer):
         sys.exit("You quit and lost all modifications :(")
 
 
-def check_requirements(anndata, current_notebook=None):
+def check_requirements(anndata, current_notebook, check_previous=True):
     """
     Check if the current anndata object has all requirements to be analysed by the current notebook.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
-        Anndata to check for requirements.
-    current_notebook : int, default None
+    anndata : anndata.Anndata
+        Anndata object to check for requirements.
+    current_notebook : int
         The number of the current notebook. It is important to set the correct number because each notebook has its
         own mandatory anndata requirements.
+    check_previous : boolean
+        If True will check all dependencies of previous notebooks.
 
     Requirements of each notebook
     -----------------------------
@@ -171,10 +173,67 @@ def check_requirements(anndata, current_notebook=None):
     """
     # Check if the current_notebook is int. Then, check if the anndata fits the requirements.
     check_notebook(current_notebook)
-    if current_notebook == 3:
+
+    # set True if any check was done
+    class Checked:
+        any_check = False
+
+    def do_check(c, n, p):
+        """ Do check if notebook is a previous one or is equal to current. """
+        if p and c >= n or c == n:
+            Checked.any_check = True
+            return True
+        return False
+
+    # TODO add missing checks
+    if do_check(current_notebook, 1, check_previous):
+        # assembling anndata
+        print("Check 1 to be implemented")
+
+    if do_check(current_notebook, 2, check_previous):
+        # qc and filtering
+        print("Check 2 to be implemented")
+
+    if do_check(current_notebook, 3, check_previous):
+        # normalization, correction and comparison
         if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
-            raise ValueError("Notebook 3 demands total_counts filtered. Run notebook 2 before the 3rd notebook.")
-    # TODO : add other notebooks as elif
-    else:
-        raise ValueError("Set the current_notebook properly.")
-    print(anndata)
+            raise ValueError("This notebook demands total_counts filtered. Run notebook 2.")
+
+    if do_check(current_notebook, 4, check_previous):
+        # clustering
+        print("Check 4 to be implemented")
+
+    if do_check(current_notebook, 5, check_previous):
+        # annotation
+        print("Check 5 to be implemented")
+
+    if do_check(current_notebook, 6, check_previous):
+        # differential expression
+        print("Check 6 to be implemented")
+
+    if do_check(current_notebook, 7, check_previous):
+        # general plots
+        print("Check 7 to be implemented")
+
+    if do_check(current_notebook, 8, check_previous):
+        # cell counting
+        print("Check 8 to be implemented")
+
+    if do_check(current_notebook, 9, check_previous):
+        # velocity
+        print("Check 9 to be implemented")
+
+    if do_check(current_notebook, 10, check_previous):
+        # trajectory
+        print("Check 10 to be implemented")
+
+    if do_check(current_notebook, 11, check_previous):
+        # receptor-ligand
+        print("Check 11 to be implemented")
+
+    if do_check(current_notebook, 12, check_previous):
+        # cyber
+        print("Check 12 to be implemented")
+
+    if not Checked.any_check:
+        raise ValueError(f"Invalid notebook number detected. Got current_notebook={current_notebook}.")
