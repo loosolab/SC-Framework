@@ -170,6 +170,6 @@ def define_PC(anndata):
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
 
     # Adding info in anndata.uns["infoprocess"]
-    creators.build_infor(anndata, "PCA_knee_threshold", kn.knee)
+    cr.build_infor(anndata, "PCA_knee_threshold", kn.knee)
 
     return kn.knee
