@@ -10,6 +10,30 @@ import matplotlib.pyplot as plt
 
 # ----------------- String functions ---------------- #
 
+def clean_flanking_strings(list_of_strings):
+    """
+    Remove common suffix and prefix from a list of strings, e.g. running the function on
+    ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
+
+    Parameters
+    -----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    ---------
+    List of strings without common suffix and prefix
+    """
+
+    suffix = longest_common_suffix(list_of_strings)
+    prefix = os.path.commonprefix(list_of_strings)
+
+    list_of_strings_clean = [remove_prefix(s, prefix) for s in list_of_strings]
+    list_of_strings_clean = [remove_suffix(s, suffix) for s in list_of_strings_clean]
+
+    return list_of_strings_clean
+
+
 def longest_common_suffix(list_of_strings):
     """
     Find the longest common suffix of a list of strings.
@@ -280,3 +304,43 @@ def split_list(lst, n):
         chunks.append(lst[i::n])
 
     return chunks
+
+
+def write_list_file(lst, path):
+    """
+    Write a list to a file with one element per line.
+
+    Parameters
+    -----------
+    lst : list
+        A list of values/strings to write to file
+    path : str
+        Path to output file.
+    """
+
+    lst = [str(s) for s in lst]
+    s = "\n".join(lst)
+
+    with open(path, "w") as f:
+        f.write(s)
+
+
+def read_list_file(path):
+    """
+    Read a list from a file with one element per line.
+
+    Parameters
+    ----------
+    path : str
+        Path to read file from.
+
+    Returns
+    -------
+    List of strings from file
+    """
+
+    f = open(path)
+    lst = f.readlines()
+    f.close()
+
+    return lst

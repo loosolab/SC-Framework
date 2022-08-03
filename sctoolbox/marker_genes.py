@@ -1,106 +1,141 @@
 import os
-import sys
-
+import re
+import glob
+import pkg_resources
 import pandas as pd
-from sctoolbox import checker, creators
+
+import sctoolbox.utilities as utils
+import sctoolbox.creators as creators
 
 
-def label_genes(ANNDATA, label=False):
-    '''
-    OPTIONAL: Label gene types in the anndata object as a variable in the adata.var
-    If you wanna execute this part, add label=True
+def get_chromosome_genes(gtf, chromosomes):
+    """
+    Get a list of all genes in the gtf for certain chromosome(s)
 
     Parameters
     ------------
-    ANNDATA : anndata object
+    gtf : str
+        Path to the gtf file.
+    chromosomes : str or list
+        A chromosome or a list of chromosome names to search for genes in.
+
+    Note 
+    ------
+    This function is not directly by the framework, but is used to create the marker gene lists for 'label_genes'.
+    """
+
+    if isinstance(chromosomes, str):
+        chromosomes = [chromosomes]
+
+    all_chromosomes = {}
+
+    gene_names = {}
+    with open(gtf) as f:
+        for line in f:
+
+            columns = line.rstrip().split("\t")
+            chrom = columns[0]
+            all_chromosomes[chrom] = ""  # save for overview on the chromosomes in the gtf
+
+            # Save gene name if gene in chromosomes
+            if chrom in chromosomes:
+                m = re.search("gene_name \"(.+?)\";", line)
+                if m is not None:
+                    name = m.group(1)
+                    gene_names[name] = ""
+
+    all_chromosomes = list(all_chromosomes.keys())
+
+    # Check that chromosomes were valid
+    for chrom in chromosomes:
+        if chrom not in all_chromosomes:
+            raise ValueError(f"Chromosome '{chrom}' not found in gtf file. Available chromosomes are: {all_chromosomes}")
+
+    # Collect final gene list
+    gene_names = list(gene_names.keys())
+
+    return(gene_names)
+
+
+def label_genes(adata,
+                gene_column=None,
+                species=None):
+    """
+    Label genes as ribosomal, mitochrondrial, cell cycle phase and gender genes.
+
+    Parameters
+    ------------
+    adata : anndata object
         adata object
-    label : Boolean. Default: False
-        Set True to perform the gene labelling.
-    '''
-    # Author: Guilherme Valente
-    # Message and others
+    gene_column : str, optional
+        Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
+    species : str, optional
+        Name of the species. If not provided, the species is inferred adata.uns["infoprocess"]["species"]
+    
+    Notes
+    --------
+    Author: Guilherme Valente & Mette Bentsen
 
-    lst_parameters = ["mitochondrial", "cell_cycle", "gender_genes", "custom"]
-    list_species_cellcycle_annotations = ["human", "mouse", "rat", "zebrafish"]
-    file_XY_genes = "xy_genes.txt"
-    path_cellcycle_genes = "/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes"
-    path_XY_genes = path_cellcycle_genes
+    """
 
-    dict_opts = {}
-    infor = []  # This list will be part of the adata.uns["infoprocess"]
-    m1 = "Annotate "
-    m2 = "? Choose y or n"
-    m3 = "Choose one species: "
-    m4 = "Paste the pathway and filename in which your custom list of genes is deposited.\nNOTE: the file must have one gene per row"
-    m5 = "Correct the pathway or filename or type q to quit."
-    m6 = "Type the string (case sensitivy) used to identify mit genes, e.g., mt, Mt-, so on."
-    opt_quit = ["q", "quit"]
-    # opt2=["y", "yes", "n", "no"]
-    opt_annotation = list_species_cellcycle_annotations
+    # Location of gene lists
+    genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
-    def fil_dict(DICT, GENETYPE, LIST):
-        DICT[GENETYPE] = ["is_" + GENETYPE]
-        DICT[GENETYPE].append(LIST)
-        return(DICT)
+    # Get organism from the adata object
+    if species is None:
+        species = adata.uns['infoprocess']['species']
+    species = species.lower()
 
-    # Setting which parameters will be annotated
-    if label is True:
-        for a in lst_parameters:
-            answer = input(m1 + a + m2)
-            while checker.check_options(answer) is False:  # Annotate?
-                answer = input(m1 + a + m2)
+    # Get the full list of genes from adata
+    if gene_column is None:
+        adata_genes = adata.var.index
+    else:
+        adata_genes = adata.var[gene_column]
 
-            if a == "mitochondrial" and answer.lower() == "y":  # Annotate mitochondrial
-                answer = input(m6)  # Which word use to identify mitochondrial genes?
-                tmp_list = [answer]
-                fil_dict(dict_opts, a, tmp_list)
+    # ------- Annotate genes in adata ------ #
+    added = []
 
-            if a == "cell_cycle" and answer.lower() == "y":  # Annotate cell cycle
-                tmp_list = []
-                answer = input(m3 + ', '.join(list_species_cellcycle_annotations))
-                while checker.check_options(answer, OPTS1=opt_quit + opt_annotation) is False:  # Give the species name for cell cycle
-                    answer = input(m3 + ', '.join(list_species_cellcycle_annotations))
-                for b in open(path_cellcycle_genes + "/" + answer + "_cellcycle_genes.txt"):
-                    if b.strip():
-                        tmp_list.append(b.split("\t")[0].strip())
-                fil_dict(dict_opts, a, tmp_list)
+    # Annotate ribosomal genes
+    adata.var["is_ribo"] = adata_genes.str.lower().str.startswith(('rps', 'rpl'))
+    added.append("is_ribo")
 
-            if a == "gender_genes" and answer.lower() == "y":  # Annotate gender genes
-                tmp_list = []
-                for b in open(path_XY_genes + "/" + file_XY_genes):
-                    if b.strip():
-                        tmp_list.append(b.split("\t")[0].strip())
-                fil_dict(dict_opts, a, tmp_list)
+    # Annotate mitochrondrial genes
+    path_mito_genes = genelist_dir + species + "_mito_genes.txt"
+    if os.path.exists(path_mito_genes):
+        gene_list = utils.read_list_file(path_mito_genes)
+        adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
+        added.append("is_mito")
 
-            if a == "custom" and answer.lower() == "y":  # Annotate customized genes
-                tmp_list = []
-                answer = input(m4)
-                while os.path.isfile(answer) is False:
-                    if answer.lower() in opt_quit:
-                        sys.exit("You quit and lost all modifications :(")
-                    print(m5)
-                    answer = input(m5)
-                for b in open(answer, "r"):
-                    if b.strip():
-                        tmp_list.append(b.split("\t")[0].strip())
-                fil_dict(dict_opts, a, tmp_list)
-    # Annotating
-    for k, v in dict_opts.items():
-        is_what = v[0]
-        genes_tag = v[1]
-        if k == "mitochondrial":
-            ANNDATA.var[is_what] = ANNDATA.var_names.str.startswith(''.join(genes_tag))
-            infor.append(is_what)
-        else:
-            ANNDATA.var[is_what] = ANNDATA.var_names.isin(genes_tag)
-            infor.append(is_what)
+    else:
+        adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
 
-    # Annotating in adata.uns["infoprocess"]
-    if len(infor) > 0:
-        creators.build_infor(ANNDATA, "genes_labeled", infor)
-    elif label is False:
-        creators.build_infor(ANNDATA, "genes_labeled", "None")
-    return(ANNDATA)
+    # Annotate cell cycle genes
+    path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
+    if os.path.exists(path_cellcycle_genes):
+        table = pd.read_csv(path_cellcycle_genes, header=None, sep="\t")
+        cc_dict = dict(zip(table[0], table[1]))
+
+        adata.var["cellcycle"] = [cc_dict.get(gene, "NA") for gene in adata_genes]  # assigns cell cycle phase or "NA"
+
+    else:
+        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
+        available_species = utils.clean_flanking_strings(available_files)
+        print(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
+
+    # Annotate gender genes
+    path_gender_genes = genelist_dir + species + "_gender_genes.txt"
+    if os.path.exists(path_gender_genes):
+        gene_list = utils.read_list_file(path_gender_genes)
+        adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
+        added.append("is_gender")
+
+    else:
+        available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
+        available_species = utils.clean_flanking_strings(available_files)
+        print(f"No gender genes available for species '{species}'. Available species are: {available_species}")
+
+    # --------- Save information -------- #
+    creators.build_infor(adata, "genes_labeled", added)
 
 
 def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, save_excel=None):
