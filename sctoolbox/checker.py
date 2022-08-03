@@ -157,40 +157,52 @@ def check_requirements(anndata, current_notebook):
     # TODO add missing checks
     if current_notebook >= 1:
         # assembling anndata
-        raise ValueError("To be implemented")
-    elif current_notebook >= 2:
+        print("Check 1 to be implemented")
+    
+    if current_notebook >= 2:
         # qc and filtering
-        raise ValueError("To be implemented")
-    elif current_notebook >= 3:
+        print("Check 2 to be implemented")
+    
+    if current_notebook >= 3:
         # normalization, correction and comparison
         if "total_counts" not in str(anndata.uns["infoprocess"]["Cell filter"]):
             raise ValueError("This notebook demands total_counts filtered. Run notebook 2.")
-    elif current_notebook >= 4:
+    
+    if current_notebook >= 4:
         # clustering
-        raise ValueError("To be implemented")
-    elif current_notebook >= 5:
+        print("Check 4 to be implemented")
+    
+    if current_notebook >= 5:
         # annotation
-        raise ValueError("To be implemented")
-    elif current_notebook >= 6:
+        print("Check 5 to be implemented")
+    
+    if current_notebook >= 6:
         # differential expression
-        raise ValueError("To be implemented")
-    elif current_notebook >= 7:
+        print("Check 6 to be implemented")
+    
+    if current_notebook >= 7:
         # general plots
-        raise ValueError("To be implemented")
-    elif current_notebook >= 8:
+        print("Check 7 to be implemented")
+    
+    if current_notebook >= 8:
         # cell counting
-        raise ValueError("To be implemented")
-    elif current_notebook >= 9:
+        print("Check 8 to be implemented")
+    
+    if current_notebook >= 9:
         # velocity
-        raise ValueError("To be implemented")
-    elif current_notebook >= 10:
+        print("Check 9 to be implemented")
+    
+    if current_notebook >= 10:
         # trajectory
-        raise ValueError("To be implemented")
-    elif current_notebook >= 11:
+        print("Check 10 to be implemented")
+    
+    if current_notebook >= 11:
         # receptor-ligand
-        raise ValueError("To be implemented")
-    elif current_notebook >= 12:
+        print("Check 11 to be implemented")
+    
+    if current_notebook >= 12:
         # cyber
-        raise ValueError("To be implemented")
+        print("Check 12 to be implemented")
+    
     else:
         raise ValueError(f"Invalid notebook number detected. Got current_notebook={current_notebook}.")
