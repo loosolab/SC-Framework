@@ -469,22 +469,6 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
 
     return(all_valid_annotations)
 
-if __name__ == '__main__':
 
-    import anndata as ad
-
-    GTF_PATH = '/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf'
-    INPUT_PATH = '/home/jan/python-workspace/sc-atac/data/anndata'
-    peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/ENC-1K2DA-070-SM-AZPYJ_snATAC_esophagus_squamous_epithelium_Rep1_peaks.narrowPeak'
-
-    annotate_narrowPeak(peakfile, GTF_PATH)
-
-    filename = 'annotation_test.h5ad'
-
-    # adata = ad.read(f'{INPUT_PATH}/{filename}')
-    # #
-    # annotate_adata(adata, GTF_PATH)
-    # check = adata.var.copy()
-    # print("Finished")
     
     
