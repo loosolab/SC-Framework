@@ -159,7 +159,7 @@ def define_PC(anndata):
         An int representing the number of PCs until elbow, defining PCs with significant variance.
     """
     # check if pca exists
-    if not "pca" in anndata.uns or not "variance_ratio" in anndata.uns["pca"]:
+    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
 
     # prepare values
@@ -170,6 +170,6 @@ def define_PC(anndata):
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
 
     # Adding info in anndata.uns["infoprocess"]
-    creators.build_infor(anndata, "Best num PC before batch cor", kn.knee)
+    creators.build_infor(anndata, "PCA_knee_threshold", kn.knee)
 
     return kn.knee
