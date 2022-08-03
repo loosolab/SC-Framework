@@ -168,8 +168,9 @@ def define_PC(anndata):
 
     # compute knee
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+    knee = int(kn.knee)  # cast from numpy.int64
 
     # Adding info in anndata.uns["infoprocess"]
-    cr.build_infor(anndata, "PCA_knee_threshold", kn.knee)
+    cr.build_infor(anndata, "PCA_knee_threshold", knee)
 
-    return kn.knee
+    return knee
