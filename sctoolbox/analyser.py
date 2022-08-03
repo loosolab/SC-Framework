@@ -144,27 +144,32 @@ def qcmetric_calculator(ANNDATA, control_var=False):
 
 def define_PC(anndata):
     """
-    Defining the most significant PCs (best PC)
+    Define threshold for most variable PCA components.
+
+    Note: Function expects PCA to be computed beforehand.
 
     Parameters
     ----------
-    anndata : anndata object
-        anndata object
+    anndata : anndata.AnnData
+        Anndata object with PCA to get significant PCs threshold from.
 
     Returns
     -------
-    int
-        representing the number of PC of elbow, in which the distribution decrease significantly.
+    int :
+        An int representing the number of PCs until elbow, defining PCs with significant variance.
     """
-    # Define x and y values for knee locator
+    # check if pca exists
+    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
+        raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
+
+    # prepare values
     y = anndata.uns["pca"]["variance_ratio"]
     x = range(1, len(y) + 1)
 
-    # Run knee locator 
+    # compute knee
     kn = KneeLocator(x, y, curve='convex', direction='decreasing')
-    selected_kn = kn.knee
 
     # Adding info in anndata.uns["infoprocess"]
-    creators.build_infor(anndata, "Best num PC before batch cor", selected_kn)
+    creators.build_infor(anndata, "PCA_knee_threshold", kn.knee)
 
-    return selected_kn
+    return kn.knee
