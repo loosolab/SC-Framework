@@ -3,10 +3,9 @@ import sys
 import os
 import scanpy as sc
 import importlib
-import matplotlib.pyplot as plt
-
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
+import matplotlib.pyplot as plt
 
 
 # ----------------- String functions ---------------- #
@@ -54,7 +53,8 @@ def _is_notebook():
 # ------------------ I/O functions ----------------- #
 
 def create_dir(path):
-    """ Create a directory if it is not existing yet.
+    """
+    Create a directory if it is not existing yet.
 
     Parameters
     ----------
@@ -140,8 +140,6 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
     """
     Load anndata object
 
-    Author: Guilherme Valente
-
     Parameters
     ----------
     is_from_previous_note : boolean, default True
@@ -205,8 +203,6 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
 def saving_anndata(anndata, current_notebook=None):
     """
     Save your anndata object
-
-    Author: Guilherme Valente
 
     Parameters
     ----------
