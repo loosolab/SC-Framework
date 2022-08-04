@@ -19,7 +19,7 @@ def get_chromosome_genes(gtf, chromosomes):
     chromosomes : str or list
         A chromosome or a list of chromosome names to search for genes in.
 
-    Note 
+    Note
     ------
     This function is not directly by the framework, but is used to create the marker gene lists for 'label_genes'.
     """
@@ -71,7 +71,7 @@ def label_genes(adata,
         Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
     species : str, optional
         Name of the species. If not provided, the species is inferred adata.uns["infoprocess"]["species"]
-    
+
     Notes
     --------
     Author: Guilherme Valente & Mette Bentsen
