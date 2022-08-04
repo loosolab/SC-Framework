@@ -241,7 +241,7 @@ def saving_anndata(anndata, current_notebook):
     if not isinstance(current_notebook, int):
         raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
-    adata_output = anndata.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad"
+    adata_output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad")
     anndata.write(filename=adata_output)
 
     print(f"Your new anndata object is saved here: {adata_output}")
