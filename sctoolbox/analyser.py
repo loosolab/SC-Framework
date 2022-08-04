@@ -35,6 +35,8 @@ def wrap_corrections(adata,
     for method in methods:
         anndata_dict[method] = batch_correction(adata, batch_key, method)  # batch correction returns the corrected adata
 
+    anndata_dict['uncorrected'] = adata
+
     return anndata_dict
 
 
@@ -64,12 +66,16 @@ def batch_correction(adata, batch_key, method):
 
         # split adata on batch_key
         batch_categories = list(set(adata.obs[batch_key]))
-        adatas = [adata[adata.obs["batch_key"] == category] for category in batch_categories]
+        adatas = [adata[adata.obs[batch_key] == category] for category in batch_categories]
 
         # TODO: enable var_subset as input
 
         # give individual adatas to mnn_correct
         adata, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, batch_categories=batch_categories, do_concatenate=True)
+        
+        # sc.pp.scale expect only adata object, which is the first element of the output list;
+        # therfore:
+        adata = adata[0][0]
 
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.pp.neighbors(adata)
@@ -83,6 +89,10 @@ def batch_correction(adata, batch_key, method):
 
     elif method == "scanorama":
         adata = adata.copy()  # there is no copy option for scanorama
+
+        # scanorama expect the batch key in a sorted format
+        # therefore anndata.obs should be sorted based on batch column before this method.
+        adata.obs = adata.obs.sort_values(batch_key)
 
         sce.pp.scanorama_integrate(adata, key=batch_key)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
