@@ -1,4 +1,4 @@
-from cgi import test
+import pytest
 import sctoolbox.annotation as anno
 import scanpy as sc
 import os
