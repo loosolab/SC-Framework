@@ -25,9 +25,18 @@ def adata_no_pca(adata):
     return anndata
 
 
+def test_norm_log_PCA(adata_no_pca):
+    """ Test if the returned adata has pca coordinates and highly variable genes """
+    an.norm_log_PCA(adata_no_pca)
+
+    check = ("X_pca" in adata.obsm) and ("highly_variable" in adata.var.columns)
+    assert check
+
+
 def test_define_PC(adata):
     """ Test if threshold is returned. """
     assert isinstance(an.define_PC(adata), int)
+
 
 def test_define_PC_error(adata_no_pca):
     """ Test if error without PCA. """
