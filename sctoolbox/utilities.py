@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import sys
 import os
 import scanpy as sc
@@ -6,6 +7,29 @@ import importlib
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
+
+
+# ------------------ Type checking ----------------- -#
+
+def is_integer_array(arr):
+    """
+    Check if all values of arr are integers.
+
+    Parameters
+    ----------
+    x : numpy.array
+        Array of values to be checked.
+
+    Returns
+    -------
+    boolean
+        True if all values are integers, False otherwise.
+    """
+
+    # https://stackoverflow.com/a/7236784
+    boolean = np.equal(np.mod(arr, 1), 0)
+
+    return np.all(boolean)
 
 
 # ----------------- String functions ---------------- #
