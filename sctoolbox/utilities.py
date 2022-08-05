@@ -79,15 +79,22 @@ def _is_notebook():
 def create_dir(path):
     """
     Create a directory if it is not existing yet.
+    'path' can be either a direct path of the directory, or a path to a file for which the upper directory should be created.
 
     Parameters
     ----------
     path : str
         Path to the directory to be created.
     """
-    dirname = os.path.dirname(path)  # the last dir of the path
-    if dirname != "":  # if dirname is "", file is in current dir
-        os.makedirs(dirname, exist_ok=True)
+
+    base = os.path.basename(path)
+    if "." in base:  # path is expected to be a file
+        dirname = os.path.dirname(path)  # the last dir of the path
+        if dirname != "":  # if dirname is "", file is in current dir
+            os.makedirs(dirname, exist_ok=True)
+
+    else:
+        os.makedirs(path, exist_ok=True)
 
 
 def is_str_numeric(ans):
@@ -340,7 +347,7 @@ def read_list_file(path):
     """
 
     f = open(path)
-    lst = f.readlines()
+    lst = f.read().splitlines()  # get lines without "\n"
     f.close()
 
     return lst
