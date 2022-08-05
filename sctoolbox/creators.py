@@ -6,22 +6,24 @@ import sctoolbox.checker as ch
 import anndata
 
 
-# Do we need this?
 def add_color_set(adata, inplace=True):
     """
     Add color set to adata object
-    Parameter:
+
+    TODO Do we need this?
+
+    Parameters
     ----------
-    adata : AnnData object
-        AnnData object from scanpy
+    adata : anndata.AnnData
+        AnnData object to add the colors to.
     inplace : boolean
-        Add color set inplace
+        Whether the anndata object is modified in place.
 
-    Returns:
+    Returns
     -------
-        AnnData object with color set
+    anndata.AnnData or None :
+        AnnData object with color set.
     """
-
     color_list = ['red', 'blue', 'green', 'pink', 'chartreuse',
                   'gray', 'yellow', 'brown', 'purple', 'orange', 'wheat',
                   'lightseagreen', 'cyan', 'khaki', 'cornflowerblue', 'olive',
@@ -57,16 +59,18 @@ def add_color_set(adata, inplace=True):
     m_adata = adata if inplace else adata.copy()
     if "color_set" not in m_adata.uns:
         m_adata.uns["color_set"] = color_list
+
     if not inplace:
         return m_adata
 
 
 def build_infor(adata, key, value, inplace=True):
-    '''
+    """
     Adding info anndata.uns["infoprocess"]
+
     Parameters
-    ------------
-    adata : anndata object
+    ----------
+    adata : anndata.AnnData
         adata object
     key : String
         The name of key to be added
@@ -74,8 +78,12 @@ def build_infor(adata, key, value, inplace=True):
         Information to be added for a given key
     inplace : boolean
         Add info inplace
-    '''
 
+    Returns
+    -------
+    anndata.AnnData or None :
+        AnnData object with added info in .uns["infoprocess"].
+    """
     if type(adata) != anndata.AnnData:
         raise TypeError("Invalid data type. AnnData object is required.")
 
@@ -90,20 +98,19 @@ def build_infor(adata, key, value, inplace=True):
         return m_adata
 
 
-def create_dir(OUTPATH, TEST):
-    '''This will create the directory to store the results of scRNAseq autom pipeline
+def create_dir(outpath, test):
+    """
+    This will create the directory to store the results of scRNAseq autom pipeline.
+    Constructed path has following scheme: /<outpath>/results/<test>/
+
     Parameters
     ----------
-    OUTPATH : String.
-        The pathway where the user wanna to store the data
-    TEST : String.
-        The name of the user wanna use to define the analysis of this pipeline, e.g., Test1
-    Return
-    ----------
-        The directory where all results will be stored
-    '''
-
-    output_dir = os.path.join(OUTPATH, "results", TEST)
+    outpath : str
+        Path to where the data is stored.
+    test : str
+        Name of the specific folder the output will be stored in. Is appended to outpath.
+    """
+    output_dir = os.path.join(outpath, "results", test)
 
     # Check if the directory exist and create if not
     os.makedirs(output_dir, exist_ok=True)

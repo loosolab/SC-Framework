@@ -83,12 +83,11 @@ def save_figure(path, dpi=600):
     ----------
     path : str
         Path to the file to be saved.
-        Add the extension (e.g. .tiff) you wanna save your figure in the end of path, e.g., /mnt/*/note2_violin.tiff
+        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff
         The lack of extension indicates the figure will be saved as .png.
-    dpi : int, optional
-        DPI of the figure. Default: 600.
+    dpi : int, default 600
+        Dots per inch. Higher value increases resolution.
     """
-
     if path is not None:
         create_dir(path)  # recursively create parent dir if needed
         plt.savefig(path, dpi=dpi, bbox_inches="tight")
@@ -96,17 +95,21 @@ def save_figure(path, dpi=600):
 
 def vprint(verbose=True):
     """
-    Print the verbose message.
+    Generates a function with given verbosity. Either hides or prints all messages.
 
     Parameters
     ----------
     verbose : boolean, default True
         Set to False to disable the verbose message.
+
+    Returns
+    -------
+        function :
+            Function that expects a single str argument. Will print string depending on verbosity.
     """
     return lambda message: print(message) if verbose is True else None
 
 
-# Requirement for installed tools
 def check_module(module):
     """
     Check if <module> can be imported without error.
@@ -135,10 +138,9 @@ def check_module(module):
         raise ImportError(s)
 
 
-# Loading adata file and adding the information to be evaluated and color list
 def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
     """
-    Load anndata object
+    Load anndata from a previous notebook.
 
     Parameters
     ----------
@@ -153,9 +155,10 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
     Returns
     -------
     anndata.AnnData :
-        Anndata object
+        Loaded anndata object.
     """
     def loading_adata(NUM):
+        """ TODO add documentation """
         pathway = ch.fetch_info_txt()
         files = os.listdir(''.join(pathway))
         loading = "anndata_" + str(NUM)
@@ -200,44 +203,40 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         return data
 
 
-def saving_anndata(anndata, current_notebook=None):
+def saving_anndata(anndata, current_notebook):
     """
     Save your anndata object
 
     Parameters
     ----------
     anndata : anndata.AnnData
-        adata object
-    current_notebook : int, default None
+        Anndata object to save.
+    current_notebook : int
         The number of the current notebook.
     """
-    # Messages and others
-    m1 = "Set an current_notebook=[INT], which INT is the number of current notebook."
-    m2 = "Your new anndata object is saved here: "
-
-    try:
-        ch.check_notebook(current_notebook)
-    except TypeError:
-        sys.exit(m1)  # Close if the notebook number is not an integer
+    if not isinstance(current_notebook, int):
+        raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
     adata_output = anndata.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad"
     anndata.write(filename=adata_output)
 
-    print(m2 + adata_output)
+    print(f"Your new anndata object is saved here: {adata_output}")
 
 
 def pseudobulk_table(adata, groupby, how="mean"):
     """
     Get a pseudobulk table of values per cluster.
 
+    TODO avoid adata.copy()
+
     Parameters
     ----------
     adata : anndata.AnnData
-        An annotated data matrix containing counts in .X.
+        Anndata object with counts in .X.
     groupby : str
-        Name of a column in adata.obs to cluster the pseudobulks by.
+        Column name in adata.obs from which the pseudobulks are created.
     how : str, default "mean"
-        How to calculate the value per cluster. Can be one of "mean" or "sum".
+        How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
 
     Returns
     -------
@@ -247,7 +246,7 @@ def pseudobulk_table(adata, groupby, how="mean"):
     adata = adata.copy()
     adata.obs[groupby] = adata.obs[groupby].astype('category')
 
-    # Fetch the mean/sum counts across each category in cluster_by
+    # Fetch the mean/ sum counts across each category in cluster_by
     res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)
     for clust in adata.obs[groupby].cat.categories:
 
@@ -256,7 +255,7 @@ def pseudobulk_table(adata, groupby, how="mean"):
         elif how == "sum":
             res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0)
 
-    res = res.T  # transform to genes x clusters
+    res = res.T  # transpose to genes x clusters (switch columns with rows)
     return res
 
 
