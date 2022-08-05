@@ -8,28 +8,32 @@ import re
 
 
 def check_notebook(notebook_num):
-    '''Check if the notebook number is int.
+    """
+    Check if the notebook number is int.
+
+    TODO do we need this?
+
     Parameters
     ----------
-    notebook_num : Int
+    notebook_num : int
        The number of the notebook assigned for the user for both load or save an anndata object
-    '''
-    if isinstance(notebook_num, int) is False:
+    """
+    if not isinstance(notebook_num, int):
         raise TypeError('Only integer allowed')
 
 
 def write_info_txt(path_value, file_path="./"):
-    ''' Write path to info.txt
+    """
+    Write path to info.txt
 
-    Parameters:
-    ===========
-    path_value : String
-        path that is written to the info.yml.
+    Parameters
+    ----------
+    path_value : str
+        Path that is written to the info.yml.
         Adds info.txt to end if no filename is given.
-    file_path : String
-        path where the info.yml is stored
-    '''
-
+    file_path : str, default ./
+        Path where the info.yml is stored
+    """
     pattern = re.compile(r'[<>:"\\\|\?\*]')
     if re.search(pattern, path_value):
         raise ValueError("Invalid character in directory string.")
@@ -44,93 +48,106 @@ def write_info_txt(path_value, file_path="./"):
 
 
 def fetch_info_txt(file_path="./info.txt"):
-    '''
+    """
     Get path stored in the info.txt file
-    Parameters:
-    ===========
-    file_path : String
-        full path of info.txt file
 
-    Returns:
-    ========
-    path as string that was stored in the first line of info.txt
-    '''
+    Parameters
+    ----------
+    file_path : str
+        Path to info.txt file.
 
+    Returns
+    -------
+    str :
+        Path that was stored in the first line of info.txt.
+    """
     with open(file_path, "r") as file:
         return file.readline()
 
 
-def check_cuts(ANS, LIMIT1, LIMIT2):  # Checking cutoffs validity
-    '''
+def check_cuts(ans, limit1, limit2):  # Checking cutoffs validity
+    """
     Checking if a given value range into acceptable limits
 
-    Parameter
+    Parameters
     ----------
-    ANS : String (integer) or Integer
-        The number to check validity described as an string.
-    LIMIT1 : Int or float
-        The lower limit number
-    LIMIT2 : Int or float
-        The uper limit number
+    ans : str of int or int
+        The number to check validity described as a string.
+    limit1 : int or float
+        The lower limit number.
+    limit2 : int or float
+        The upper limit number.
 
-    Return
-    ----------
-    The True or False
-    '''
-    # Author: Guilherme Valente
+    Returns
+    -------
+    str :
+        Returns "valid" if in bounds and "invalid" if out of given bounds.
+
+    Notes
+    -----
+    Author: Guilherme Valente
+    """
     quiters = ["q", "quit"]
 
     # check if the first input is string or not
-    # in the context of pipeline the ANS is always coming as STRING,
+    # in the context of pipeline the ans is always coming as STRING,
     # however it could be provided also as an integer.
-    if isinstance(ANS, str):
-        ANS = ANS.replace('.', "", 1)
-        if not ANS.isdigit():
-            if ANS in quiters:
+    if isinstance(ans, str):
+        ans = ans.replace('.', "", 1)
+        if not ans.isdigit():
+            if ans in quiters:
                 sys.exit("You quit and lost all modifications")
             else:
                 sys.exit("You must provide string or number!")
 
     # Check the range of provided integer input
-    x = float(ANS)
-    if x >= LIMIT1 and x <= LIMIT2:
-        return("valid")
+    x = float(ans)
+    if x >= limit1 and x <= limit2:
+        return "valid"
     else:
-        return("invalid")
+        return "invalid"
 
 
-def check_options(ANS, OPTS1=["q", "quit", "y", "yes", "n", "no"]):
-    '''
+def check_options(answer, options=["q", "quit", "y", "yes", "n", "no"]):
+    """
     Check if answers from input() command were properly replied
+
+    TODO is this needed?
+
     Parameters
-    ------------
-    ANS : String
+    ----------
+    answer : str
         The answer provided by the user.
-    OPTS1 : List
-        Options allowed. Default : ["q", "quit", "y", "yes", "n", "no"]
+    options : list, default ["q", "quit", "y", "yes", "n", "no"]
+        Options allowed.
+
     Returns
-    -----------
-        Return True or False
-    '''
-    if type(ANS) is str:
-        ANS = ANS.lower()
-        if ANS in OPTS1:
-            check_quit(ANS)
+    -------
+        boolean :
+            Returns True if ans is a string and in options. Exits python if "q" or "quit".
+    """
+    if type(answer) is str:
+        answer = answer.lower()
+
+        if answer in options:
+            check_quit(answer)
+
             return True
+
     return False
 
 
 def check_quit(answer):
-    '''
-    Quit the functions if the answer is q or quite.
+    """
+    Exit python if the answer is q or quit.
+
+    TODO is this needed?
+
     Parameters
     ----------
-    answer: String
-        The answer of a user
-    Return
-    ----------
-        Quit the process
-    '''
+    answer : str
+        String with answer.
+    """
     if answer in ["q", "quit"]:
         sys.exit("You quit and lost all modifications :(")
 
@@ -151,7 +168,8 @@ def check_requirements(anndata, current_notebook, check_previous=True):
 
     Requirements of each notebook
     -----------------------------
-        Notebook 3 demands total_counts filtered
+    Notebook 3 :
+        Requires filtered total_counts.
     """
     # Check if the current_notebook is int. Then, check if the anndata fits the requirements.
     check_notebook(current_notebook)
