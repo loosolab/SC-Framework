@@ -4,6 +4,7 @@ import numpy as np
 import scanpy as sc
 import os
 import sctoolbox.analyser as an
+import sctoolbox.utilities as utils
 
 
 @pytest.fixture
@@ -23,6 +24,12 @@ def adata_no_pca(adata):
     anndata.uns.pop("pca")
 
     return anndata
+
+def test_adata_normalize_total(adata):
+    """ Test that data was normalized"""
+
+    an.adata_normalize_total(adata)
+    assert utils.is_integer_array(adata.X) is False
 
 
 def test_norm_log_PCA(adata_no_pca):
