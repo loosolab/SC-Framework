@@ -409,7 +409,7 @@ def filter_genes(adata, genes):
     n_after = adata.shape[1]
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before - n_after, n_after))
 
-    return(adata)
+    return adata
 
 
 def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):

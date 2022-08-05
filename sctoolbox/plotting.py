@@ -440,7 +440,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
                 maximim = maximim - 0.01
             list_limits.append((minim, maximim))
             index, counter = index + 1, counter + 1
-        return(list_limits)
+        return list_limits
 
     # Definining the parameters to be ploted
     lst_dfcuts_cols2 = DFCUTS.columns.tolist()
