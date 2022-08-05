@@ -71,7 +71,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
             break
 
     # warn if outside of range
-    if hvg_count < hvg_count[0] or hvg_count > hvg_count[1]:
+    if hvg_count < hvg_range[0] or hvg_count > hvg_range[1]:
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
 
     # Adding info in anndata.uns["infoprocess"]
