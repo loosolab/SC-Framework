@@ -226,7 +226,7 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
     # Normalizing and logaritimyzing
     print("Normalizing the data and converting to log")
     sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True, **norm_kwargs)
-    sc.pp.log1p(adata_m, inplace=True, **log_kwargs)
+    sc.pp.log1p(adata_m, copy=False, **log_kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
     cr.build_infor(adata_m, "Scanpy normalization", "exclude_highly_expressed= " + str(excl), inplace=True)

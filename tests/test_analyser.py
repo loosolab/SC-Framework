@@ -25,18 +25,20 @@ def adata_no_pca(adata):
 
     return anndata
 
+
 def test_adata_normalize_total(adata):
     """ Test that data was normalized"""
 
-    an.adata_normalize_total(adata)
-    assert utils.is_integer_array(adata.X) is False
+    an.adata_normalize_total(adata, inplace=True)
+    mat = adata.X.todense()
+    assert utils.is_integer_array(mat) == False
 
 
 def test_norm_log_PCA(adata_no_pca):
     """ Test if the returned adata has pca coordinates and highly variable genes """
-    an.norm_log_PCA(adata_no_pca)
+    an.norm_log_PCA(adata_no_pca, inplace=True)
 
-    check = ("X_pca" in adata.obsm) and ("highly_variable" in adata.var.columns)
+    check = ("X_pca" in adata_no_pca.obsm) and ("highly_variable" in adata_no_pca.var.columns)
     assert check
 
 
