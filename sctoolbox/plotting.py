@@ -59,7 +59,7 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
     ax.set_axisbelow(True)
 
-    return(ax)
+    return ax
 
 
 def search_umap_parameters(adata,
@@ -401,7 +401,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
-    return(g)
+    return g
 
 
 #############################################################################
@@ -440,7 +440,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
                 maximim = maximim - 0.01
             list_limits.append((minim, maximim))
             index, counter = index + 1, counter + 1
-        return(list_limits)
+        return list_limits
 
     # Definining the parameters to be ploted
     lst_dfcuts_cols2 = DFCUTS.columns.tolist()

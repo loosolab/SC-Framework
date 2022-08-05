@@ -22,7 +22,7 @@ def is_integer_array(arr):
 
     Returns
     -------
-    boolean
+    boolean :
         True if all values are integers, False otherwise.
     """
 
@@ -33,6 +33,30 @@ def is_integer_array(arr):
 
 
 # ----------------- String functions ---------------- #
+
+def clean_flanking_strings(list_of_strings):
+    """
+    Remove common suffix and prefix from a list of strings, e.g. running the function on
+    ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
+
+    Parameters
+    -----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    ---------
+    List of strings without common suffix and prefix
+    """
+
+    suffix = longest_common_suffix(list_of_strings)
+    prefix = os.path.commonprefix(list_of_strings)
+
+    list_of_strings_clean = [remove_prefix(s, prefix) for s in list_of_strings]
+    list_of_strings_clean = [remove_suffix(s, suffix) for s in list_of_strings_clean]
+
+    return list_of_strings_clean
+
 
 def longest_common_suffix(list_of_strings):
     """
@@ -56,17 +80,52 @@ def longest_common_suffix(list_of_strings):
 
 
 def remove_prefix(s, prefix):
-    """ Remove prefix from a string. """
+    """
+    Remove prefix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    prefix : str
+        Prefix to be removed.
+
+    Returns
+    -------
+    str :
+        String without prefix.
+    """
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
 def remove_suffix(s, suffix):
-    """ Remove suffix from a string. """
+    """
+    Remove suffix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    suffix : str
+        Suffix to be removed.
+
+    Returns
+    -------
+    str :
+        String without suffix.
+    """
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
 def _is_notebook():
-    """ Utility to check if function is being run from a notebook or a script """
+    """
+    Utility to check if function is being run from a notebook or a script.
+
+    Returns
+    -------
+    boolean :
+        True if running from a notebook, False otherwise.
+    """
     try:
         _ = get_ipython()
         return True
@@ -79,15 +138,22 @@ def _is_notebook():
 def create_dir(path):
     """
     Create a directory if it is not existing yet.
+    'path' can be either a direct path of the directory, or a path to a file for which the upper directory should be created.
 
     Parameters
     ----------
     path : str
         Path to the directory to be created.
     """
-    dirname = os.path.dirname(path)  # the last dir of the path
-    if dirname != "":  # if dirname is "", file is in current dir
-        os.makedirs(dirname, exist_ok=True)
+
+    base = os.path.basename(path)
+    if "." in base:  # path is expected to be a file
+        dirname = os.path.dirname(path)  # the last dir of the path
+        if dirname != "":  # if dirname is "", file is in current dir
+            os.makedirs(dirname, exist_ok=True)
+
+    else:
+        os.makedirs(path, exist_ok=True)
 
 
 def is_str_numeric(ans):
@@ -241,7 +307,7 @@ def saving_anndata(anndata, current_notebook):
     if not isinstance(current_notebook, int):
         raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
-    adata_output = anndata.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad"
+    adata_output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad")
     anndata.write(filename=adata_output)
 
     print(f"Your new anndata object is saved here: {adata_output}")
@@ -304,3 +370,44 @@ def split_list(lst, n):
         chunks.append(lst[i::n])
 
     return chunks
+
+
+def write_list_file(lst, path):
+    """
+    Write a list to a file with one element per line.
+
+    Parameters
+    -----------
+    lst : list
+        A list of values/strings to write to file
+    path : str
+        Path to output file.
+    """
+
+    lst = [str(s) for s in lst]
+    s = "\n".join(lst)
+
+    with open(path, "w") as f:
+        f.write(s)
+
+
+def read_list_file(path):
+    """
+    Read a list from a file with one element per line.
+
+    Parameters
+    ----------
+    path : str
+        Path to read file from.
+
+    Returns
+    -------
+    list :
+        List of strings read from file.
+    """
+
+    f = open(path)
+    lst = f.read().splitlines()  # get lines without "\n"
+    f.close()
+
+    return lst
