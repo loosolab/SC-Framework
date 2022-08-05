@@ -1,16 +1,128 @@
 import pandas as pd
+import numpy as np
 import sys
 import os
 import scanpy as sc
 import importlib
-
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
-
 import matplotlib.pyplot as plt
 
 
+# ------------------ Type checking ----------------- -#
+
+def is_integer_array(arr):
+    """
+    Check if all values of arr are integers.
+
+    Parameters
+    ----------
+    x : numpy.array
+        Array of values to be checked.
+
+    Returns
+    -------
+    boolean
+        True if all values are integers, False otherwise.
+    """
+
+    # https://stackoverflow.com/a/7236784
+    boolean = np.equal(np.mod(arr, 1), 0)
+
+    return np.all(boolean)
+
+
+# ----------------- String functions ---------------- #
+
+def clean_flanking_strings(list_of_strings):
+    """
+    Remove common suffix and prefix from a list of strings, e.g. running the function on
+    ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
+
+    Parameters
+    -----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    ---------
+    List of strings without common suffix and prefix
+    """
+
+    suffix = longest_common_suffix(list_of_strings)
+    prefix = os.path.commonprefix(list_of_strings)
+
+    list_of_strings_clean = [remove_prefix(s, prefix) for s in list_of_strings]
+    list_of_strings_clean = [remove_suffix(s, suffix) for s in list_of_strings_clean]
+
+    return list_of_strings_clean
+
+
+def longest_common_suffix(list_of_strings):
+    """
+    Find the longest common suffix of a list of strings.
+
+    Parameters
+    ----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    -------
+    str :
+        Longest common suffix of the list of strings.
+    """
+    reversed_strings = [s[::-1] for s in list_of_strings]
+    reversed_lcs = os.path.commonprefix(reversed_strings)
+    lcs = reversed_lcs[::-1]
+
+    return lcs
+
+
+def remove_prefix(s, prefix):
+    """ Remove prefix from a string. """
+    return s[len(prefix):] if s.startswith(prefix) else s
+
+
+def remove_suffix(s, suffix):
+    """ Remove suffix from a string. """
+    return s[:-len(suffix)] if s.endswith(suffix) else s
+
+
+def _is_notebook():
+    """ Utility to check if function is being run from a notebook or a script """
+    try:
+        _ = get_ipython()
+        return True
+    except NameError:
+        return False
+
+
+# ------------------ I/O functions ----------------- #
+
+def create_dir(path):
+    """
+    Create a directory if it is not existing yet.
+    'path' can be either a direct path of the directory, or a path to a file for which the upper directory should be created.
+
+    Parameters
+    ----------
+    path : str
+        Path to the directory to be created.
+    """
+
+    base = os.path.basename(path)
+    if "." in base:  # path is expected to be a file
+        dirname = os.path.dirname(path)  # the last dir of the path
+        if dirname != "":  # if dirname is "", file is in current dir
+            os.makedirs(dirname, exist_ok=True)
+
+    else:
+        os.makedirs(path, exist_ok=True)
+
+
 def is_str_numeric(ans):
+    """ Check if string can be converted to number. """
     try:
         float(ans)
         return True
@@ -18,21 +130,7 @@ def is_str_numeric(ans):
         return False
 
 
-def create_dir(path):
-    """ Create a directory if it is not existing yet.
-
-    Parameters
-    -----------
-    path : str
-        Path to the directory to be created.
-    """
-
-    dirname = os.path.dirname(path)  # the last dir of the path
-    if dirname != "":  # if dirname is "", file is in current dir
-        os.makedirs(dirname, exist_ok=True)
-
-
-def save_figure(path):
+def save_figure(path, dpi=600):
     """
     Save the current figure to a file.
 
@@ -40,32 +138,39 @@ def save_figure(path):
     ----------
     path : str
         Path to the file to be saved.
-        Add the extension (e.g. .tiff) you wanna save your figure in the end of path, e.g., /mnt/*/note2_violin.tiff
-        The lack of extension indicates the figure will be saved as .png
+        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff
+        The lack of extension indicates the figure will be saved as .png.
+    dpi : int, default 600
+        Dots per inch. Higher value increases resolution.
     """
-
     if path is not None:
         create_dir(path)  # recursively create parent dir if needed
-        plt.savefig(path, dpi=600, bbox_inches="tight")
+        plt.savefig(path, dpi=dpi, bbox_inches="tight")
 
 
 def vprint(verbose=True):
-    """ Print the verbose message.
+    """
+    Generates a function with given verbosity. Either hides or prints all messages.
 
     Parameters
-    -----------
-    verbose : Boolean, optional
-        Set to False to disable the verbose message. Default: True
+    ----------
+    verbose : boolean, default True
+        Set to False to disable the verbose message.
+
+    Returns
+    -------
+        function :
+            Function that expects a single str argument. Will print string depending on verbosity.
     """
     return lambda message: print(message) if verbose is True else None
 
 
-# Requirement for installed tools
 def check_module(module):
-    """ Check if <module> can be imported without error.
+    """
+    Check if <module> can be imported without error.
 
     Parameters
-    -----------
+    ----------
     module : str
         Name of the module to check.
 
@@ -74,7 +179,6 @@ def check_module(module):
     ImportError
         If the module is not available for import.
     """
-
     error = 0
     try:
         importlib.import_module(module)
@@ -89,23 +193,27 @@ def check_module(module):
         raise ImportError(s)
 
 
-# Loading adata file and adding the information to be evaluated and color list
 def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
-    '''
-    Load anndata object
-    ==========
+    """
+    Load anndata from a previous notebook.
+
     Parameters
-    ==========
-    is_from_previous_note : Boolean
-        Set to False if you wanna load an anndata object from other source rather than scRNAseq autom workflow.
-    which_notebook : Int.
+    ----------
+    is_from_previous_note : boolean, default True
+        Set to False if you want to load an anndata object from other source rather than scRNAseq autom workflow.
+    which_notebook : int, default None
         The number of the notebook that generated the anndata object you want to load
         If is_from_previous_note=False, this parameter will be ignored
-    data_to_evaluate : String
-        This is the anndata.obs[STRING] to be used for analysis, e.g. "condition"
-    '''
-    # Author : Guilherme Valente
+    data_to_evaluate : str, default None
+        This is the anndata.obs column (`anndata.obs[data_to_evaluate]`) to be used for analysis, e.g. "condition"
+
+    Returns
+    -------
+    anndata.AnnData :
+        Loaded anndata object.
+    """
     def loading_adata(NUM):
+        """ TODO add documentation """
         pathway = ch.fetch_info_txt()
         files = os.listdir(''.join(pathway))
         loading = "anndata_" + str(NUM)
@@ -116,7 +224,7 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         else:  # In case the user provided an inexistent anndata number
             sys.exit(loading + " was not found in " + pathway)
 
-        return(''.join(pathway) + "/" + anndata_file)
+        return ''.join(pathway) + "/" + anndata_file
 
     # Messages and others
     m1 = "You choose is_from_previous_note=True. Then, set an which_notebook=[INT], which INT is the number of the notebook that generated the anndata object you want to load."
@@ -135,7 +243,7 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         file_path = loading_adata(which_notebook)
         data = sc.read_h5ad(filename=file_path)  # Loading the anndata
         cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
-        return(data)
+        return data
 
     elif is_from_previous_note is False:  # Load anndata object from other source
         answer = input(m3)
@@ -147,51 +255,53 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         data = sc.read_h5ad(filename=answer)  # Loading the anndata
         cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
         cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0])  # Annotating the anndata path
-        return(data)
+        return data
 
 
-def saving_anndata(ANNDATA, current_notebook=None):
-    '''
+def saving_anndata(anndata, current_notebook):
+    """
     Save your anndata object
 
     Parameters
-    ===========
-    ANNDATA : anndata object
-        adata object
+    ----------
+    anndata : anndata.AnnData
+        Anndata object to save.
     current_notebook : int
         The number of the current notebook.
-    '''
-    # Author : Guilherme Valente
-    # Messages and others
-    m1 = "Set an current_notebook=[INT], which INT is the number of current notebook."
-    m2 = "Your new anndata object is saved here: "
+    """
+    if not isinstance(current_notebook, int):
+        raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
-    try:
-        ch.check_notebook(current_notebook)
-    except TypeError:
-        sys.exit(m1)  # Close if the notebook number is not an integer
-    adata_output = ANNDATA.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + ANNDATA.uns["infoprocess"]["Test_number"] + ".h5ad"
-    ANNDATA.write(filename=adata_output)
-    print(m2 + adata_output)
+    adata_output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad")
+    anndata.write(filename=adata_output)
+
+    print(f"Your new anndata object is saved here: {adata_output}")
 
 
 def pseudobulk_table(adata, groupby, how="mean"):
-    """ Get a pseudobulk table of values per cluster.
+    """
+    Get a pseudobulk table of values per cluster.
+
+    TODO avoid adata.copy()
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
-        An annotated data matrix containing counts in .X.
+        Anndata object with counts in .X.
     groupby : str
-        Name of a column in adata.obs to cluster the pseudobulks by.
-    how : str, optional
-        How to calculate the value per cluster. Can be one of "mean" or "sum". Default: "mean"
-    """
+        Column name in adata.obs from which the pseudobulks are created.
+    how : str, default "mean"
+        How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
 
+    Returns
+    -------
+    pandas.DataFrame :
+        DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
+    """
     adata = adata.copy()
     adata.obs[groupby] = adata.obs[groupby].astype('category')
 
-    # Fetch the mean/sum counts across each category in cluster_by
+    # Fetch the mean/ sum counts across each category in cluster_by
     res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)
     for clust in adata.obs[groupby].cat.categories:
 
@@ -200,5 +310,68 @@ def pseudobulk_table(adata, groupby, how="mean"):
         elif how == "sum":
             res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0)
 
-    res = res.T  # transform to genes x clusters
-    return(res)
+    res = res.T  # transpose to genes x clusters (switch columns with rows)
+    return res
+
+
+def split_list(lst, n):
+    """
+    Split list into n chunks.
+
+    Parameters
+    -----------
+    lst : list
+        List to be chunked
+    n : int
+        Number of chunks.
+
+    Returns
+    -------
+    list :
+        List of lists (chunks).
+    """
+    chunks = []
+    for i in range(0, n):
+        chunks.append(lst[i::n])
+
+    return chunks
+
+
+def write_list_file(lst, path):
+    """
+    Write a list to a file with one element per line.
+
+    Parameters
+    -----------
+    lst : list
+        A list of values/strings to write to file
+    path : str
+        Path to output file.
+    """
+
+    lst = [str(s) for s in lst]
+    s = "\n".join(lst)
+
+    with open(path, "w") as f:
+        f.write(s)
+
+
+def read_list_file(path):
+    """
+    Read a list from a file with one element per line.
+
+    Parameters
+    ----------
+    path : str
+        Path to read file from.
+
+    Returns
+    -------
+    List of strings from file
+    """
+
+    f = open(path)
+    lst = f.read().splitlines()  # get lines without "\n"
+    f.close()
+
+    return lst
