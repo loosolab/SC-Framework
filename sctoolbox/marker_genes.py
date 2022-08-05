@@ -21,7 +21,7 @@ def get_chromosome_genes(gtf, chromosomes):
 
     Note
     ------
-    This function is not directly by the framework, but is used to create the marker gene lists for 'label_genes'.
+    This function is not directly used by the framework, but is used to create the marker gene lists for 'label_genes'.
     """
 
     if isinstance(chromosomes, str):
