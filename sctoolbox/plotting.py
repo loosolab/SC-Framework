@@ -59,7 +59,7 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
     ax.set_axisbelow(True)
 
-    return(ax)
+    return ax
 
 
 def search_umap_parameters(adata,
@@ -401,7 +401,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
-    return(g)
+    return g
 
 
 #############################################################################

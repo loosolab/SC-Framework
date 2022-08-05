@@ -49,7 +49,7 @@ def loop_question(ANSWER, QUIT_M, CHECK):  # Checking invalid outcome
             print("Invalid choice! " + QUIT_M)
             ANSWER = input()
             checker.check_cuts(ANSWER, 0, CHECK)
-    return(ANSWER.lower())
+    return ANSWER.lower()
 
 
 def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):

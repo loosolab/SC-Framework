@@ -56,7 +56,7 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
     tf_idf = np.array(tf) * np.array(idf).squeeze()
     tf_idf = sparse.csr_matrix(tf_idf)
 
-    return(tf_idf)
+    return tf_idf
 
 
 def apply_svd(adata, layer=None):
@@ -101,7 +101,7 @@ def apply_svd(adata, layer=None):
     # adata.varm["PCs"] = adata.varm["SVs"]
     # adata.uns["pca"] = adata.uns["svd"]
 
-    return(adata)
+    return adata
 
 
 def get_variable_features(adata, min_score=None, show=True, inplace=True):

@@ -59,7 +59,7 @@ def get_chromosome_genes(gtf, chromosomes):
     # Collect final gene list
     gene_names = list(gene_names.keys())
 
-    return(gene_names)
+    return gene_names
 
 
 def label_genes(adata,
@@ -230,4 +230,4 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
                 table.to_excel(writer, sheet_name=f'{group}', index=False)
 
-    return(group_tables)
+    return group_tables
