@@ -80,16 +80,16 @@ def longest_common_suffix(list_of_strings):
 
 
 def remove_prefix(s, prefix):
-    """ 
-    Remove prefix from a string. 
-    
+    """
+    Remove prefix from a string.
+
     Parameters
     ----------
     s : str
         String to be processed.
     prefix : str
         Prefix to be removed.
-    
+
     Returns
     -------
     str :
@@ -99,16 +99,16 @@ def remove_prefix(s, prefix):
 
 
 def remove_suffix(s, suffix):
-    """ 
-    Remove suffix from a string. 
-    
+    """
+    Remove suffix from a string.
+
     Parameters
     ----------
     s : str
         String to be processed.
     suffix : str
         Suffix to be removed.
-    
+
     Returns
     -------
     str :
@@ -118,9 +118,9 @@ def remove_suffix(s, suffix):
 
 
 def _is_notebook():
-    """ 
+    """
     Utility to check if function is being run from a notebook or a script.
-    
+
     Returns
     -------
     boolean :

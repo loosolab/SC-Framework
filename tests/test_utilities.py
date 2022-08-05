@@ -40,6 +40,11 @@ def test_longest_common_suffix(berries):
 def test_create_dir():
     """ Test if the directory is created. """
 
+    # Ensure that testdir is not already existing
+    if os.path.isdir("testdir"):
+        shutil.rmtree("testdir")
+
+    # create the dir with the utils function
     utils.create_dir("testdir")
     assert os.path.isdir("testdir")
 
@@ -53,13 +58,13 @@ def test_is_notebook():
     assert boolean is False  # testing environment is not notebook
 
 
-@pytest.mark.parametrize("str,boolean", [("1.3", True), ("astring", False)])
-def test_is_str_numeric(string, boolean):
+@pytest.mark.parametrize("string,expected", [("1.3", True), ("astring", False)])
+def test_is_str_numeric(string, expected):
     """ Test if a string can be converted to numeric """
 
     result = utils.is_str_numeric(string)
 
-    assert result == boolean
+    assert result == expected
 
 
 def test_check_module():
