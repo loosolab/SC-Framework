@@ -226,7 +226,7 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
     # Normalizing and logaritimyzing
     print("Normalizing the data and converting to log")
     sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True, **norm_kwargs)
-    sc.pp.log1p(adata_m, inplace=True, **log_kwargs)
+    sc.pp.log1p(adata_m, copy=False, **log_kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
     cr.build_infor(adata_m, "Scanpy normalization", "exclude_highly_expressed= " + str(excl), inplace=True)
@@ -272,3 +272,37 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
 
     if not inplace:
         return adata_m
+
+
+def define_PC(anndata):
+    """
+    Define threshold for most variable PCA components.
+
+    Note: Function expects PCA to be computed beforehand.
+
+    Parameters
+    ----------
+    anndata : anndata.AnnData
+        Anndata object with PCA to get significant PCs threshold from.
+
+    Returns
+    -------
+    int :
+        An int representing the number of PCs until elbow, defining PCs with significant variance.
+    """
+    # check if pca exists
+    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
+        raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
+
+    # prepare values
+    y = anndata.uns["pca"]["variance_ratio"]
+    x = range(1, len(y) + 1)
+
+    # compute knee
+    kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+    knee = int(kn.knee)  # cast from numpy.int64
+
+    # Adding info in anndata.uns["infoprocess"]
+    cr.build_infor(anndata, "PCA_knee_threshold", knee)
+
+    return knee
