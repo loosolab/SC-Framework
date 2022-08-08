@@ -636,13 +636,13 @@ def boxplot(dt):
     
     Parameter:
     ----------
-        dt : pandas.DataFrame
-            pandas datafame containing numerical values in every column.
+    dt : pandas.DataFrame
+        pandas datafame containing numerical values in every column.
     
     Returns:
     --------
-        AxesSubplot
-            containing boxplot for every column.
+    AxesSubplot
+        containing boxplot for every column.
     """
     # TODO check dt if columns are all numeric
     box_plot = sns.boxplot(data=dt)
