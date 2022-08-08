@@ -554,4 +554,23 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
 
     return(all_valid_annotations)
 
+if __name__ == '__main__':
 
+    import anndata as ad
+
+    GTF_PATH = '/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf'
+    INPUT_PATH = '/home/jan/python-workspace/sc-atac/data/anndata'
+    #peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/ENC-1K2DA-070-SM-AZPYJ_snATAC_esophagus_squamous_epithelium_Rep1_peaks.narrowPeak'
+    peakfile =  '/home/jan/python-workspace/sc-atac/data/peaks/cropped_testing.narrowPeak'
+
+   # region_dicts = annotate_narrowPeak(peakfile, GTF_PATH)
+
+    #filename = 'ENC-1JKYN-146-SM-A8CPH_snATAC_esophagus_muscularis_mucosa_Rep1_clustered.h5ad'
+
+    adata_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    #adata = ad.read(f'{INPUT_PATH}/{filename}')
+    adata = ad.read('/home/jan/python-workspace/sc-rna/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
+    # #
+    annotate_adata(adata, GTF_PATH)
+    # check = adata.var.copy()
+    print("Finished")
