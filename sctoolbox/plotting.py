@@ -18,6 +18,50 @@ from sctoolbox.utilities import save_figure
 #############################################################################
 
 
+def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
+    """
+    Plot the pca variance explained by each component as a barplot.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str
+        Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>]. Default: "pca".
+    n_pcs : int, optional
+        Number of components to plot. Default: 20.
+    ax : matplotlib.axes.Axes, optional
+        Axes object to plot on. If None, a new figure is created. Default: None.
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        # TODO: check if ax is an ax object
+        pass
+
+    if method not in adata.uns:
+        raise KeyError("The given method '{0}' is not found in adata.uns. Please make sure to run the method before plotting variance.")
+
+    # Get variance from object
+    var_explained = adata.uns["pca"]["variance_ratio"][:n_pcs]
+    var_explained = var_explained * 100  # to percent
+
+    # Plot barplot of variance
+    sns.barplot(x=list(range(1, len(var_explained) + 1)),
+                y=var_explained,
+                color="limegreen",
+                ax=ax)
+
+    # Finalize plot
+    ax.set_xlabel('PCs', fontsize=12)
+    ax.set_ylabel("Variance explained (%)")
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
+    ax.set_axisbelow(True)
+
+    return ax
+
+
 def search_umap_parameters(adata,
                            dist_range=(0.1, 0.4, 0.1),
                            spread_range=(2.0, 3.0, 0.5),
@@ -357,7 +401,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
 
-    return(g)
+    return g
 
 
 #############################################################################
@@ -396,7 +440,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
                 maximim = maximim - 0.01
             list_limits.append((minim, maximim))
             index, counter = index + 1, counter + 1
-        return(list_limits)
+        return list_limits
 
     # Definining the parameters to be ploted
     lst_dfcuts_cols2 = DFCUTS.columns.tolist()
@@ -454,3 +498,117 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
     # Save plot
     if SAVE is True:
         save_figure(FILENAME)
+
+
+def anndata_overview(adatas,
+                     color_by,
+                     plots=["PCA", "PCA-var", "UMAP"],
+                     figsize=None,
+                     output=None,
+                     dpi=300):
+    """
+    Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
+
+    Parameters
+    ------------
+    adatas : dict of anndata.AnnData
+        Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
+        E.g.: {"bbknn": anndata}
+    color_by : str or list of str
+        Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
+    plots : str or list of str
+        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
+        Note: List order is forwarded to plot.
+        - UMAP: Plots the UMAP embedding of the data.
+        - tSNE: Plots the tSNE embedding of the data.
+        - PCA: Plots the PCA embedding of the data.
+        - PCA-var: Plots the variance explained by each PCA component.
+        Default is: ["PCA", "PCA-var", "UMAP"]
+    figsize : number tuple, optional
+        Size of the plot in inch. Default: None (automatic based on number of columns/rows).
+    output : str, optional
+        Path to plot output file. Default: None (not saved)
+    dpi : number, default 300
+        Dots per inch for output
+    """
+    if not isinstance(color_by, list):
+        color_by = [color_by]
+
+    if not isinstance(plots, list):
+        plots = [plots]
+
+    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+
+    # ---- checks ---- #
+    # dict contains only anndata
+    wrong_type = {k: type(v) for k, v in adatas.items() if not isinstance(v, sc.AnnData)}
+    if wrong_type:
+        raise ValueError(f"All items in 'adatas' parameter have to be of type AnnData. Found: {wrong_type}")
+
+    # color_by exists in anndata.obs
+    # TODO more details; what adatas are missing the column?
+    for color_group in color_by:
+        for name, adata in adatas.items():
+            if color_group not in adata.obs.columns and color_group not in adata.var.index:
+                raise ValueError(f"Couldn't find column '{color_group}' in the adata.obs or adata.var for '{name}'")
+
+    # check if plots are valid
+    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+    invalid_plots = set(plots) - set(valid_plots)
+    if invalid_plots:
+        raise ValueError(f"Invalid plot specified: {invalid_plots}")
+
+    # ---- plotting ---- #
+    # setup subplot structure
+    row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
+    rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
+    cols = len(adatas)
+    figsize = figsize if figsize is not None else (cols * 4, rows * 4)
+    fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
+    axs = axs.flatten()  # flatten to 1d array per row
+
+    # Fill in plots for every adata across plot type and color_by
+    ax_idx = 0
+    for plot_type in plots:
+        for color in color_by:
+            for i, (name, adata) in enumerate(adatas.items()):
+
+                ax = axs[ax_idx]
+
+                # Only show legend for the last column
+                if i == 0:
+                    legend_loc = "left"
+                else:
+                    legend_loc = "none"
+
+                # Plot depending on type
+                if plot_type == "PCA-var":
+                    plot_pca_variance(adata, ax=ax)  # this plot takes no color
+
+                elif plot_type == "UMAP":
+                    sc.pl.umap(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+
+                elif plot_type == "tSNE":
+                    sc.pl.tsne(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+
+                elif plot_type == "PCA":
+                    sc.pl.pca(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+
+                ax_idx += 1  # increment index for next plot
+
+            if plot_type == "PCA-var":
+                break  # PCA variance is not dependent on color; break off early from color_by loop
+
+    # Finalize axes titles and labels
+    for i, name in enumerate(adatas):
+        axs[i].set_title(name)  # first rows should have the adata names
+
+    # fig.tight_layout()
+
+    # save
+    save_figure(output)
+    if output:
+        plt.savefig(output)
+
+    # show plot if in jupyter notebook
+    # TODO

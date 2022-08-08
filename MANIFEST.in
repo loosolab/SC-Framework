@@ -1,0 +1,2 @@
+include sctoolbox/data/*
+include sctoolbox/data/gene_lists/*.txt
