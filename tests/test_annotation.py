@@ -3,7 +3,7 @@ import scanpy as sc
 import sctoolbox.annotation
 
 
-def test_annotate_features():
+def test_annotate_adata():
 
     gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
     adata_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')

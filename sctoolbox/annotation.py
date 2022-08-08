@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import os
 import multiprocessing as mp
+import re
 
 import sctoolbox.utilities
 import psutil
@@ -45,6 +46,58 @@ def gunzip_file(f_in, f_out):
     with gzip.open(f_in, 'rb') as h_in:
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
+
+def format_adata(adata):
+    '''
+    Checks columns and index of adata.var if format matches:
+     -index: chr*_start_stop
+     -column_1 = 'peak_chr'
+     -column_2 = 'peak_start'
+     -column_3 = 'peak_end'
+
+     If the format matches as described above, nothing will be done.
+     If not the index of adata.var is checked if it matches following describing format:
+     index: chr*_start_stop
+
+     If yes adata.var gets formatted by adding the columns speak_chr, peak_start, peak_stop like described in the index
+    :param adata:
+    :return: adata
+    '''
+
+    adata_regions = adata.var
+    i = len(adata_regions.index)
+    names = adata_regions.index
+
+    regex = r'chr._*_*'
+
+    if not set(['peak_end', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) and re.match(regex, names[0]):
+        print("should be formatted")
+        print("formatting: ")
+        peak_chr_list = []
+        peak_start_list = []
+        peak_end_list = []
+
+        for name in names:
+            string_list = name.split("_")
+
+            peak_chr_list.append(string_list[0])
+            peak_start_list.append(string_list[1])
+            peak_end_list.append(string_list[2])
+
+        adata_regions = adata_regions.drop(['peak_stop', 'peak_start', 'peak_chr'], axis=1, errors='ignore')
+
+        adata_regions.insert(0, "peak_end", peak_end_list)
+        adata_regions.insert(0, "peak_start", peak_start_list)
+        adata_regions.insert(0, "peak_chr", peak_chr_list)
+
+        adata.var = adata_regions
+
+    elif not re.match(regex, names[0]):
+        print("Cannot be formatted, index does not match chr_start_stop")
+
+    if set(['peak_end', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) and re.match(regex, names[0]):
+        print("is formatted")
+        return adata
 
 def annotate_adata(adata,
                       gtf,
@@ -131,6 +184,8 @@ def annotate_adata(adata,
     cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
     print("Config dictionary: {0}".format(cfg_dict))
 
+    # Format adata.var table if necessary
+    adata = format_adata(adata)
     # Read regions from .var table
     print("Setting up genomic regions to annotate...")
     regions = adata.var.copy()
@@ -216,6 +271,7 @@ def annotate_narrowPeak(filepath,
                         inplace=True):
 
     """
+    Annotates narrowPeak files with UROPA like the annotate_adata function.
 
     :param filepath:
     :param gtf:
@@ -226,7 +282,7 @@ def annotate_narrowPeak(filepath,
     :param temp_dir:
     :param verbose:
     :param inplace:
-    :return:
+    :return: annotation_table
     """
     # Setup verbose print function
     print = sctoolbox.utilities.vprint(verbose)
@@ -267,6 +323,7 @@ def annotate_narrowPeak(filepath,
 
     print("annotation done")
 
+    return annotation_table
 
 
 def load_narrowPeak(filepath, print):
