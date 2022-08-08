@@ -1,8 +1,3 @@
-import os
-from os.path import join, dirname, exists
-import sys
-from pathlib import Path
-
 import sctoolbox.utilities as utils
 
 
@@ -30,15 +25,8 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     anndata.AnnData or None:
         Returns converted anndata object if output is None.
     """
-    # Set R installation path
-    if not r_home:
-        # https://stackoverflow.com/a/54845971
-        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
-
-    if not exists(r_home):
-        raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
-
-    os.environ['R_HOME'] = r_home
+    # Setup R
+    utils.setup_R(r_home)
 
     # Initialize R <-> python interface
     utils.check_module("anndata2ri")
