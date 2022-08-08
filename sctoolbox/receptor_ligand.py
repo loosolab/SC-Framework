@@ -25,9 +25,9 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
 
     Note: This will remove all information stored in adata.uns['receptor-ligand']
 
-    Parameters:
+    Parameters
     ----------
-        adata : AnnData
+        adata : anndata.AnnData
             Analysis object the database will be added to.
         dp_path : str
             Path to database table. A valid database needs a column with receptor gene ids/ symbols and ligand gene ids/ symbols.
@@ -46,8 +46,8 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
         overwrite : boolean, default False
             If True will overwrite existing database.
 
-    Returns:
-    ----------
+    Returns
+    -------
         AnnData : optional
             Copy of adata with added database path and database table to adata.uns['receptor-ligand']
     """
@@ -86,9 +86,9 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     """
     Calculate an interaction table of the clusters defined in adata.
 
-    Parameters:
+    Parameters
     ----------
-        adata : AnnData
+        adata : anndata.AnnData
             AnnData object that holds the expression values and clustering
         cluster_column : str
             Name of the cluster column in adata.obs.
@@ -101,9 +101,9 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
         overwrite : boolean, default False
             If True will overwrite existing interaction table.
 
-    Returns:
-    ----------
-        AnnData : optional
+    Returns
+    -------
+        anndata.AnnData or None : 
             Copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
     """
     if "receptor-ligand" not in adata.uns.keys():
@@ -232,9 +232,9 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
     """
     Generate violin plot of pairwise cluster interactions.
 
-    Parameters:
+    Parameters
     ----------
-        adata : AnnData
+        adata : anndata.AnnData
             AnnData object
         min_perc : float
             Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
@@ -245,8 +245,8 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
         dpi : float, default 100
             The resolution of the figure in dots-per-inch.
 
-    Returns:
-    ----------
+    Returns
+    -------
         matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
@@ -298,9 +298,9 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     Afterwards run `matplotlib.use("module://matplotlib_inline.backend_inline")` in a new cell or the other plots won't work.
     TODO: this may be fixable when igraph>=0.10 is released. https://github.com/igraph/python-igraph/issues/426
 
-    Parameters:
+    Parameters
     ----------
-        adata : AnnData
+        adata : anndata.AnnData
             AnnData object
         min_perc : float
             Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
@@ -323,8 +323,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         restrict_to : list of str, default None
             Only show given clusters provided in list.
 
-    Returns:
-    ----------
+    Returns
+    -------
         matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
@@ -542,9 +542,9 @@ def connectionPlot(adata,
     """
     Show specific receptor-ligand connections between clusters.
 
-    Parameters:
+    Parameters
     ----------
-        adata : AnnData
+        adata : anndata.AnnData
             AnnData object
         restrict_to : str list, default None
             Restrict plot to given cluster names.
@@ -583,8 +583,8 @@ def connectionPlot(adata,
         line_colors : str, default 'rainbow'
             Name of colormap used to color lines. All lines are black if None.
 
-    Returns:
-    ----------
+    Returns
+    -------
         matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
