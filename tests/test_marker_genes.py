@@ -5,6 +5,7 @@ import sctoolbox.marker_genes
 
 
 def test_get_chromosome_genes():
+    """ Test if get_chromosome_genes get the right genes from the gtf """
 
     gtf = os.path.join(os.path.dirname(__file__), 'data', 'genes.gtf')
 
@@ -19,7 +20,8 @@ def test_get_chromosome_genes():
 
 
 def test_label_genes():
-
+    """ Test of genes are labeled in adata.var """
+    
     h5ad = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 

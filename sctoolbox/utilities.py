@@ -22,7 +22,7 @@ def is_integer_array(arr):
 
     Returns
     -------
-    boolean
+    boolean :
         True if all values are integers, False otherwise.
     """
 
@@ -80,17 +80,52 @@ def longest_common_suffix(list_of_strings):
 
 
 def remove_prefix(s, prefix):
-    """ Remove prefix from a string. """
+    """
+    Remove prefix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    prefix : str
+        Prefix to be removed.
+
+    Returns
+    -------
+    str :
+        String without prefix.
+    """
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
 def remove_suffix(s, suffix):
-    """ Remove suffix from a string. """
+    """
+    Remove suffix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    suffix : str
+        Suffix to be removed.
+
+    Returns
+    -------
+    str :
+        String without suffix.
+    """
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
 def _is_notebook():
-    """ Utility to check if function is being run from a notebook or a script """
+    """
+    Utility to check if function is being run from a notebook or a script.
+
+    Returns
+    -------
+    boolean :
+        True if running from a notebook, False otherwise.
+    """
     try:
         _ = get_ipython()
         return True
@@ -367,7 +402,8 @@ def read_list_file(path):
 
     Returns
     -------
-    List of strings from file
+    list :
+        List of strings read from file.
     """
 
     f = open(path)

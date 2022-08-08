@@ -49,7 +49,7 @@ def loop_question(ANSWER, QUIT_M, CHECK):  # Checking invalid outcome
             print("Invalid choice! " + QUIT_M)
             ANSWER = input()
             checker.check_cuts(ANSWER, 0, CHECK)
-    return(ANSWER.lower())
+    return ANSWER.lower()
 
 
 def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):
@@ -409,7 +409,7 @@ def filter_genes(adata, genes):
     n_after = adata.shape[1]
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before - n_after, n_after))
 
-    return(adata)
+    return adata
 
 
 def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):

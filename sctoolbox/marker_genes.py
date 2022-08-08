@@ -19,9 +19,14 @@ def get_chromosome_genes(gtf, chromosomes):
     chromosomes : str or list
         A chromosome or a list of chromosome names to search for genes in.
 
+    Returns
+    ---------
+    list :
+        A list of all genes in the gtf for the given chromosome(s).
+
     Note
     ------
-    This function is not directly by the framework, but is used to create the marker gene lists for 'label_genes'.
+    This function is not directly used by the framework, but is used to create the marker gene lists for 'label_genes'.
     """
 
     if isinstance(chromosomes, str):
@@ -54,7 +59,7 @@ def get_chromosome_genes(gtf, chromosomes):
     # Collect final gene list
     gene_names = list(gene_names.keys())
 
-    return(gene_names)
+    return gene_names
 
 
 def label_genes(adata,
@@ -65,7 +70,7 @@ def label_genes(adata,
 
     Parameters
     ------------
-    adata : anndata object
+    adata : anndata.Anndata
         adata object
     gene_column : str, optional
         Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
@@ -154,7 +159,8 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
     Returns
     --------
-    A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
+    dict :
+        A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
     """
 
     # Read structure in .uns to pandas dataframes
@@ -224,4 +230,4 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
                 table.to_excel(writer, sheet_name=f'{group}', index=False)
 
-    return(group_tables)
+    return group_tables
