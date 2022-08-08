@@ -576,23 +576,42 @@ def anndata_overview(adatas,
                 ax = axs[ax_idx]
 
                 # Only show legend for the last column
-                if i == 0:
-                    legend_loc = "left"
+                if i == len(adatas) - 1:
+                    legend_loc = "right margin"
+                    colorbar_loc = "right"
                 else:
                     legend_loc = "none"
+                    colorbar_loc = None
+
+                # Collect options for plotting
+                embedding_kwargs = {"color": color, "title": "",
+                                    "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
+                                    "show": False}
 
                 # Plot depending on type
                 if plot_type == "PCA-var":
                     plot_pca_variance(adata, ax=ax)  # this plot takes no color
 
                 elif plot_type == "UMAP":
-                    sc.pl.umap(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+                    sc.pl.umap(adata, ax=ax, **embedding_kwargs)
 
                 elif plot_type == "tSNE":
-                    sc.pl.tsne(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+                    sc.pl.tsne(adata, ax=ax, **embedding_kwargs)
 
                 elif plot_type == "PCA":
-                    sc.pl.pca(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+                    sc.pl.pca(adata, ax=ax, **embedding_kwargs)
+
+                # Set title for the legend
+                if hasattr(ax, "legend_") and ax.legend_ is not None:
+                    ax.legend_.set_title(color)
+                    plt.setp(ax.legend_.get_title(), fontsize=14)
+                    plt.setp(ax.legend_.get_texts(), fontsize=14)
+
+                # Adjust colorbars
+                if hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
+                    ax._colorbars[0].set_title(color, ha="left")
+                    ax._colorbars[0]._colorbar_info["shrink"] = 0.8
+                    ax._colorbars[0]._colorbar_info["pad"] = -0.15  # move colorbar closer to plot
 
                 ax_idx += 1  # increment index for next plot
 
@@ -601,14 +620,11 @@ def anndata_overview(adatas,
 
     # Finalize axes titles and labels
     for i, name in enumerate(adatas):
-        axs[i].set_title(name)  # first rows should have the adata names
-
-    # fig.tight_layout()
+        axs[i].set_title(name, size=18, fontweight='bold')  # first rows should have the adata names
 
     # save
     save_figure(output)
     if output:
         plt.savefig(output)
 
-    # show plot if in jupyter notebook
-    # TODO
+    return axs

@@ -29,7 +29,7 @@ def wrap_corrections(adata,
     batch_key : str
         The column in adata.obs containing batch information.
     methods : list of str
-        The method(s) to use for batch correction. Options are: 
+        The method(s) to use for batch correction. Options are:
         - bbknn
         - mnn
         - harmony
