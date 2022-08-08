@@ -73,7 +73,7 @@ def batch_correction(adata, batch_key, method):
 
         # give individual adatas to mnn_correct
         adata, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, batch_categories=batch_categories, do_concatenate=True)
-        
+
         # sc.pp.scale expect only adata object, which is the first element of the output list;
         # therfore:
         adata = adata[0][0]
