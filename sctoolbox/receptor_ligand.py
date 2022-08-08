@@ -103,7 +103,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     Returns
     -------
-        anndata.AnnData or None : 
+        anndata.AnnData or None :
             Copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
     """
     if "receptor-ligand" not in adata.uns.keys():
