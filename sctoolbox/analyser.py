@@ -18,7 +18,8 @@ import sctoolbox.utilities as utils
 
 def wrap_corrections(adata,
                      batch_key,
-                     methods=["bbknn", "mnn"]):
+                     methods=["bbknn", "mnn"],
+                     method_kwargs={}):
     """
     Wrapper for calculating multiple batch corrections for adata using the 'batch_correction' function.
 
@@ -35,11 +36,22 @@ def wrap_corrections(adata,
         - harmony
         - scanorama
         - combat
-    """
+    method_kwargs : dict, default {}
+        Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).
 
+    Returns
+    -------
+    dict of anndata.Anndata :
+        Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.
+    """
     # Ensure that methods can be looped over
     if isinstance(methods, str):
         methods = [methods]
+
+    # check method_kwargs keys
+    unknown_keys = set(method_kwargs.keys()) - set(methods)
+    if unknown_keys:
+        raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
 
     # Check the existance of packages before running batch_corrections
     required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "mnn": "mnnpy", "scanorama": "scanorama"}
@@ -52,7 +64,7 @@ def wrap_corrections(adata,
     # Collect batch correction per method
     anndata_dict = {}
     for method in methods:
-        anndata_dict[method] = batch_correction(adata, batch_key, method)  # batch correction returns the corrected adata
+        anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, value={}))  # batch correction returns the corrected adata
 
     anndata_dict['uncorrected'] = adata
 
