@@ -1,12 +1,17 @@
 # Loading packages
 import scanpy as sc
-import sctoolbox.creators as cr
-import sctoolbox.annotation as an
+import scanpy.external as sce
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
-import scanpy.external as sce
 from scipy import sparse
+from contextlib import redirect_stderr
+import io
+
+import anndata
+import sctoolbox.creators as cr
+import sctoolbox.annotation as an
+import sctoolbox.utilities as utils
 
 
 # --------------------------- Batch correction methods -------------------------- #
@@ -24,13 +29,25 @@ def wrap_corrections(adata,
     batch_key : str
         The column in adata.obs containing batch information.
     methods : list of str
-        The method(s) to use for batch correction. Options are: (...).
-        Default: []
+        The method(s) to use for batch correction. Options are: 
+        - bbknn
+        - mnn
+        - harmony
+        - scanorama
+        - combat
     """
 
-    # TODO: check if methods are valid
+    # Ensure that methods can be looped over
     if isinstance(methods, str):
         methods = [methods]
+
+    # Check the existance of packages before running batch_corrections
+    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "mnn": "mnnpy", "scanorama": "scanorama"}
+    for method in methods:
+        if method in required_packages:  # not all packages need external tools
+            f = io.StringIO()
+            with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
+                utils.check_module(required_packages[method])
 
     # Collect batch correction per method
     anndata_dict = {}
@@ -39,10 +56,12 @@ def wrap_corrections(adata,
 
     anndata_dict['uncorrected'] = adata
 
+    print("Finished batch correction(s)!")
+
     return anndata_dict
 
 
-def batch_correction(adata, batch_key, method):
+def batch_correction(adata, batch_key, method, highly_variable=True):
     """
     Perform batch correction on the adata object using the 'method' given.
 
@@ -53,12 +72,23 @@ def batch_correction(adata, batch_key, method):
     batch_key : str
         The column in adata.obs containing batch information.
     method : str
-        Method for batch correction. Options are: (....)
+        Method for batch correction. Options are:
+        - bbknn
+        - mnn
+        - harmony
+        - scanorama
+        - combat
+    highly_variable : bool, default True
+        Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     """
 
     method = method.lower()
 
-    # TODO: check that batch_key is in adata object
+    print(f"Running batch correction with '{method}'...")
+
+    # Check that batch_key is in adata object
+    if batch_key not in adata.obs.columns:
+        raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
 
     # Run batch correction depending on method
     if method == "bbknn":
@@ -70,16 +100,22 @@ def batch_correction(adata, batch_key, method):
         batch_categories = list(set(adata.obs[batch_key]))
         adatas = [adata[adata.obs[batch_key] == category] for category in batch_categories]
 
-        # TODO: enable var_subset as input
+        # Set highly variable genes as var_subset if chosen (and available)
+        var_subset = None
+        if highly_variable:
+            if "highly_variable" in adata.var.columns:
+                var_subset = adata.var[adata.var.highly_variable].index
 
         # give individual adatas to mnn_correct
-        adata, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, batch_categories=batch_categories, do_concatenate=True)
+        corrected_adatas, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, var_subset=var_subset,
+                                                    batch_categories=batch_categories, do_concatenate=False)
 
-        # sc.pp.scale expect only adata object, which is the first element of the output list;
-        # therfore:
-        adata = adata[0][0]
+        # Join corrected adatas
+        corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
+        adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
 
         sc.pp.scale(adata)  # from the mnnpy github example
+        sc.tl.pca(adata)  # rerun pca
         sc.pp.neighbors(adata)
 
     elif method == "harmony":
@@ -94,7 +130,7 @@ def batch_correction(adata, batch_key, method):
 
         # scanorama expect the batch key in a sorted format
         # therefore anndata.obs should be sorted based on batch column before this method.
-        adata.obs = adata.obs.sort_values(batch_key)
+        adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
 
         sce.pp.scanorama_integrate(adata, key=batch_key)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
@@ -107,13 +143,16 @@ def batch_correction(adata, batch_key, method):
         adata = adata.copy()  # make sure adata is not modified
         adata.X = sparse.csr_matrix(corrected_mat)
 
+        sc.pp.pca(adata)
+        sc.pp.neighbors(adata)
+
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
 
     return adata  # the corrected adata object
 
-# --------------------------- Automatic thresholds ------------------------- #
 
+# --------------------------- Automatic thresholds ------------------------- #
 
 def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2, condi2):
     """
