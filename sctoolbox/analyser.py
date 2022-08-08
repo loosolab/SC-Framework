@@ -12,6 +12,7 @@ import anndata
 import sctoolbox.creators as cr
 import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
+import sctoolbox.plotting as plot
 
 
 # --------------------------- Batch correction methods -------------------------- #
@@ -451,3 +452,35 @@ def define_PC(anndata):
     cr.build_infor(anndata, "PCA_knee_threshold", knee)
 
     return knee
+
+
+def evaluate_batch_effect(adata_dict, r_home = None):
+    """
+    Evaluate batch effect methods using lisi.
+
+    Parameters:
+    -----------
+    adata_dict : dict
+        dictionary containing anndata objects as value and correction method as key.
+    r_home : str, default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+    
+    Returns:
+    --------
+    AxesSubplot
+        Boxplot containing lisi scores for every correction method.
+    """
+
+    utils.setup_R(r_home)
+
+    for method, adata in adata_dict.values():
+        pass
+        # run lisi for each adata.obsm['X_umap']. What about PCA? both?
+
+
+    # Merge results into one pandas dataframe
+
+    # Plot
+    plot.boxplot(merged_lisi_scores)
+
