@@ -68,23 +68,49 @@ def format_adata(adata):
     i = len(adata_regions.index)
     names = adata_regions.index
 
-    regex = r'chr._*_*'
+    #define regex patterns to check index
+    regex_1 = r'chr._+[0-9*]+_+[0-9*]'
+    regex_2 = r'chr.:+[0-9*]+-+[0-9*]'
 
-    if not set(['peak_end', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) and re.match(regex, names[0]):
+    #check conditions
+    condition_1 = set(['peak_stop', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
+    condition_2 = bool(re.match(regex_1, names[0])) or bool(re.match(regex_2, names[0]))
+
+    if not condition_1 and condition_2:
         print("should be formatted")
         print("formatting: ")
+        # Prepare lists to insert
         peak_chr_list = []
         peak_start_list = []
         peak_end_list = []
 
-        for name in names:
-            string_list = name.split("_")
+        # Check index format:
+        if re.match(regex_1, names[0]):
 
-            peak_chr_list.append(string_list[0])
-            peak_start_list.append(string_list[1])
-            peak_end_list.append(string_list[2])
+            for name in names:
+                string_list = name.split("_")
 
-        adata_regions = adata_regions.drop(['peak_stop', 'peak_start', 'peak_chr'], axis=1, errors='ignore')
+                peak_chr_list.append(string_list[0])
+                peak_start_list.append(string_list[1])
+                peak_end_list.append(string_list[2])
+
+        if re.match(regex_2, names[0]):
+
+            for name in names:
+                string_list = []
+
+                first_split = name.split(':')
+                string_list.append(first_split[0])
+
+                second_split = first_split[1].split('-')
+                string_list.extend(second_split)
+
+                peak_chr_list.append(string_list[0])
+                peak_start_list.append(string_list[1])
+                peak_end_list.append(string_list[2])
+
+        adata_regions = adata_regions.drop(['peak_end', 'peak_start', 'peak_chr', 'start', 'stop', 'chr'], axis=1,
+                                           errors='ignore')
 
         adata_regions.insert(0, "peak_end", peak_end_list)
         adata_regions.insert(0, "peak_start", peak_start_list)
@@ -92,10 +118,12 @@ def format_adata(adata):
 
         adata.var = adata_regions
 
-    elif not re.match(regex, names[0]):
+    elif not condition_2:
         print("Cannot be formatted, index does not match chr_start_stop")
 
-    if set(['peak_end', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) and re.match(regex, names[0]):
+    condition_1 = set(['peak_stop', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
+
+    if condition_1:
         print("is formatted")
         return adata
 
@@ -527,5 +555,3 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     return(all_valid_annotations)
 
 
-    
-    
