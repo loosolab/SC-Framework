@@ -29,13 +29,14 @@ def wrap_corrections(adata,
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
-    methods : list of str
+    methods : list of str or function
         The method(s) to use for batch correction. Options are:
         - bbknn
         - mnn
         - harmony
         - scanorama
         - combat
+        Or provide a custom batch correction function. See `batch_correction(method)` for more information.
     method_kwargs : dict, default {}
         Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).
 
