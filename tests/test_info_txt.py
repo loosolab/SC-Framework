@@ -5,11 +5,11 @@ import sctoolbox.checker as checker
 
 
 @mock.patch.object(builtins, "open", new_callable=mock.mock_open, read_data="/test/path/")
-def test_fetch_info_path():
+def test_fetch_info_path(tmpdir):
     """ Test if path is correctly returned. """
     result_path = checker.fetch_info_txt("test")
 
-    assert result_path == '/test/path/'
+    assert result_path == tmpdir
 
 
 def test_write_info_txt(tmpdir):

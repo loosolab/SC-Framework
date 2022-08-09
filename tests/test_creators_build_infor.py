@@ -9,7 +9,7 @@ def test_adata():
     """ Create anndata object. """
     adata = anndata.AnnData(pd.DataFrame({"a": pd.Series(1, index=list(range(2)), dtype="float32"),
                                           "b": pd.Series(1, index=list(range(2)), dtype="float32")},
-                                          index=["a","b","c","d"]))
+                                          index=["a", "b", "c", "d"]))
     return adata
 
 
@@ -37,7 +37,7 @@ def color_list():
             'indigo', 'rosybrown', 'palevioletred', 'darkorange', 'whitesmoke']
 
 
-@pytest.mark.parametrize("key,value", [(1, 2), ("test", "string"), ("test", 1), (5,"test"), ("asdf", [1, 2, 3]), ("dict", {})])
+@pytest.mark.parametrize("key,value", [(1, 2), ("test", "string"), ("test", 1), (5, "test"), ("asdf", [1, 2, 3]), ("dict", {})])
 def test_build_infor_wo_infoprocess(test_adata, key, value):
     """ Test if key-value pair is added to adata.uns["infoprocess"]. Without prior dict existing. """
     creator.build_infor(test_adata, key, value)
@@ -65,14 +65,14 @@ def test_build_infor_no_inplace(test_adata, key, value):
 def test_build_infor_invalid_type(test_adata, key):
     """ Test invalid key error. """
     with pytest.raises(TypeError, match="unhashable type: .*"):
-        creator.build_infor(test_adata,key,1)
+        creator.build_infor(test_adata, key, 1)
 
 
-@pytest.mark.parametrize(("invalid_type", "key","value"), [(1, 1, 1), ("test", 1, 1), ([1, 2, 3], 1, 1)])
+@pytest.mark.parametrize(("invalid_type", "key", "value"), [(1, 1, 1), ("test", 1, 1), ([1, 2, 3], 1, 1)])
 def test_build_infor_no_anndata(invalid_type, key, value):
     """ Test invalid object for anndata. """
     with pytest.raises(TypeError, match="Invalid data type. AnnData object is required."):
-        creator.build_infor(invalid_type,key,value)
+        creator.build_infor(invalid_type, key, value)
 
 
 def test_add_color_set_inplace(test_adata, color_list):
