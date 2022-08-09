@@ -9,7 +9,7 @@ def test_fetch_info_path(tmpdir):
     """ Test if path is correctly returned. """
     result_path = checker.fetch_info_txt("test")
 
-    assert result_path == tmpdir
+    assert result_path == '/test/path/'
 
 
 def test_write_info_txt(tmpdir):
