@@ -10,7 +10,7 @@ def test_adata():
     adata = anndata.AnnData(
         pd.DataFrame(
             {
-                "a": pd.Series(1, index=list(range(2)), dtype="float32"), 
+                "a": pd.Series(1, index=list(range(2)), dtype="float32"),
                 "b": pd.Series(1, index=list(range(2)), dtype="float32")
             },
             index=["a", "b", "c", "d"]
