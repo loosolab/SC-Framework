@@ -3,7 +3,8 @@ from setuptools import setup
 # Module requirements
 converter = ['rpy2==3.4.5', 'anndata2ri']
 atac = ['pysam', 'episcanpy', 'pyyaml', 'ipywidgets']
-all = converter + atac
+batch_correction = ['bbknn', 'mnnpy', 'harmonypy', 'scanorama']
+all = converter + atac + batch_correction
 
 
 setup(name='sc-toolbox',
@@ -26,6 +27,7 @@ setup(name='sc-toolbox',
 		extras_require={
 			'all': all,
 			'converter': converter,
-			'atac': atac
+			'atac': atac,
+			'batch_correction': batch_correction
 		}
 )
