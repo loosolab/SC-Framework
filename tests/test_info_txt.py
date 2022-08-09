@@ -30,4 +30,4 @@ def test_write_info_txt_val_err():
 def test_write_info_txt_invalid_char(invalid_char):
     """ Test error for invalid charachters in path. """
     with pytest.raises(ValueError, match="Invalid character in directory string."):
-        checker.write_info_txt("/test/path/" + invalid_char + "/" , "invalid_dir")
+        checker.write_info_txt("/test/path/" + invalid_char + "/", "invalid_dir")
