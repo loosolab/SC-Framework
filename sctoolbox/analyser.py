@@ -64,7 +64,7 @@ def wrap_corrections(adata,
     # Collect batch correction per method
     anndata_dict = {}
     for method in methods:
-        anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, value={}))  # batch correction returns the corrected adata
+        anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
 
     anndata_dict['uncorrected'] = adata
 
