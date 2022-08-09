@@ -104,7 +104,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     anndata.AnnData :
         A copy of the anndata with applied batch correction.
     """
-    method = method.lower()
+    if not callable(method):
+        method = method.lower()
 
     print(f"Running batch correction with '{method}'...")
 
