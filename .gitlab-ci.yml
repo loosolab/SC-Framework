@@ -41,7 +41,7 @@ before_script:
 lint:
   script:
     - pip install flake8
-    - flake8 sctoolbox --ignore=E501,W503 --exclude sctoolbox/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --exclude sctoolbox/data tests/data
   allow_failure: false
 
 cov:
