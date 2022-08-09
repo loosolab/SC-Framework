@@ -1,14 +1,7 @@
-import pytest
-import sctoolbox
-from sctoolbox.checker import *
+import sctoolbox.checker as ch
 
 def test_check_cuts():
-	input1 = "100"
-	input2 = 1
-	input3 = 1000	
-	output1 = "valid"
-	output2 = "invalid"
+    """ Test if int representation of ans is in given range. """
+    result = ch.check_cuts(ans="100", limi1=1, limit2=1000)
 
-	result = check_cuts(input1, input2, input3)
-
-	assert result == output1
+    assert result == "valid"
