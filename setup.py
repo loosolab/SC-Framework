@@ -20,7 +20,8 @@ setup(name='sc-toolbox',
 			'qnorm',
 			'scipy',
 			'statsmodels',
-			'tqdm'
+			'tqdm',
+			'pandas'
 		],
 		include_package_data=True,
 		extras_require={
