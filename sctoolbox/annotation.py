@@ -47,7 +47,9 @@ def gunzip_file(f_in, f_out):
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
 
+
 def format_adata(adata):
+
     '''
     Checks columns and index of adata.var if format matches:
      -index: chr*_start_stop
@@ -65,14 +67,13 @@ def format_adata(adata):
     '''
 
     adata_regions = adata.var
-    i = len(adata_regions.index)
     names = adata_regions.index
 
-    #define regex patterns to check index
+    # define regex patterns to check index
     regex_1 = r'chr._+[0-9*]+_+[0-9*]'
     regex_2 = r'chr.:+[0-9*]+-+[0-9*]'
 
-    #check conditions
+    # check conditions
     condition_1 = set(['peak_stop', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
     condition_2 = bool(re.match(regex_1, names[0])) or bool(re.match(regex_2, names[0]))
 
@@ -127,15 +128,17 @@ def format_adata(adata):
         print("is formatted")
         return adata
 
+
 def annotate_adata(adata,
-                      gtf,
-                      config=None,
-                      best=True,
-                      threads=1,
-                      coordinate_cols=None,
-                      temp_dir="",
-                      verbose=True,
-                      inplace=True):
+                   gtf,
+                   config=None,
+                   best=True,
+                   threads=1,
+                   coordinate_cols=None,
+                   temp_dir="",
+                   verbose=True,
+                   inplace=True):
+
     """
     Annotate adata .var features with genes from .gtf using UROPA [1]_. The function assumes that the adata.var contains genomic coordinates in the first
     three columns, e.g. "chromosome", "start", "end". If specific columns should be used, please adjust the names via 'coordinate_cols'.
@@ -187,8 +190,6 @@ def annotate_adata(adata,
     # Check that packages are installed
     sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
-    sctoolbox.utilities.check_module("pysam")
-    import pysam
 
     # TODO: Check input types
     # check_type(gtf, str, "gtf")
@@ -287,7 +288,6 @@ def annotate_adata(adata,
         return adata  # else returns None
 
 
-
 def annotate_narrowPeak(filepath,
                         gtf,
                         config=None,
@@ -318,8 +318,6 @@ def annotate_narrowPeak(filepath,
     # Check that packages are installed
     sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
-    sctoolbox.utilities.check_module("pysam")
-    import pysam
 
     # TODO: Check input types
     # check_type(gtf, str, "gtf")
@@ -369,6 +367,7 @@ def load_narrowPeak(filepath, print):
         region_dicts.append(dict)
 
     return region_dicts
+
 
 def prepare_gtf(gtf, temp_dir, print):
 
@@ -443,20 +442,21 @@ def prepare_gtf(gtf, temp_dir, print):
 
     return gtf
 
+
 def annotate_features(region_dicts,
-             threads,
-             gtf,
-             cfg_dict,
-             best):
+                      threads,
+                      gtf,
+                      cfg_dict,
+                      best):
 
-    #Annotation from regions_dict
+    # annotation from regions_dict
 
-    # Split input regions into cores
+    # split input regions into cores
     n_reg = len(region_dicts)
     per_chunk = int(np.ceil(n_reg / float(threads)))
     region_dict_chunks = [region_dicts[i:i + per_chunk] for i in range(0, n_reg, per_chunk)]
 
-    # Calculate annotations for each chunk
+    # calculate annotations for each chunk
     print("Annotating regions...")
     annotations = []
     if threads == 1:
@@ -530,6 +530,7 @@ def annotate_features(region_dicts,
 
     return annotations_table
 
+
 def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     """ Multiprocessing safe function to annotate a chunk of regions """
 
@@ -552,25 +553,4 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
 
     tabix_obj.close()
 
-    return(all_valid_annotations)
-
-if __name__ == '__main__':
-
-    import anndata as ad
-
-    GTF_PATH = '/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf'
-    INPUT_PATH = '/home/jan/python-workspace/sc-atac/data/anndata'
-    #peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/ENC-1K2DA-070-SM-AZPYJ_snATAC_esophagus_squamous_epithelium_Rep1_peaks.narrowPeak'
-    peakfile =  '/home/jan/python-workspace/sc-atac/data/peaks/cropped_testing.narrowPeak'
-
-   # region_dicts = annotate_narrowPeak(peakfile, GTF_PATH)
-
-    #filename = 'ENC-1JKYN-146-SM-A8CPH_snATAC_esophagus_muscularis_mucosa_Rep1_clustered.h5ad'
-
-    adata_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
-    #adata = ad.read(f'{INPUT_PATH}/{filename}')
-    adata = ad.read('/home/jan/python-workspace/sc-rna/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
-    # #
-    annotate_adata(adata, GTF_PATH)
-    # check = adata.var.copy()
-    print("Finished")
+    return (all_valid_annotations)
