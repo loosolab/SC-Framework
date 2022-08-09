@@ -21,7 +21,7 @@ def test_get_chromosome_genes():
 
 def test_label_genes():
     """ Test of genes are labeled in adata.var """
-    
+
     h5ad = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 

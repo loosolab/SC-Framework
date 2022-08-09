@@ -1,6 +1,4 @@
 import pytest
-import pandas as pd
-import numpy as np
 import scanpy as sc
 import os
 import sctoolbox.analyser as an
@@ -28,10 +26,10 @@ def adata_no_pca(adata):
 
 def test_adata_normalize_total(adata):
     """ Test that data was normalized"""
-
     an.adata_normalize_total(adata, inplace=True)
     mat = adata.X.todense()
-    assert utils.is_integer_array(mat) == False
+
+    assert not utils.is_integer_array(mat)
 
 
 def test_norm_log_PCA(adata_no_pca):

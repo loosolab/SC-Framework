@@ -6,26 +6,27 @@ atac = ['pysam', 'episcanpy', 'pyyaml', 'ipywidgets']
 all = converter + atac
 
 
-setup(name='sc-toolbox',
-		description='Custom modules for single cell analysis',
-		license='MIT',
-		packages=['sctoolbox'],
-		python_requires='>=3',
-		install_requires=[
-			'matplotlib',
-			'numpy',
-			'scanpy',
-			'kneed',
-			'fitter',
-			'qnorm',
-			'scipy',
-			'statsmodels',
-			'tqdm'
-		],
-		include_package_data=True,
-		extras_require={
-			'all': all,
-			'converter': converter,
-			'atac': atac
-		}
+setup(
+    name='sc-toolbox',
+    description='Custom modules for single cell analysis',
+    license='MIT',
+    packages=['sctoolbox'],
+    python_requires='>=3',
+    install_requires=[
+        'matplotlib',
+        'numpy',
+        'scanpy',
+        'kneed',
+        'fitter',
+        'qnorm',
+        'scipy',
+        'statsmodels',
+        'tqdm'
+    ],
+    include_package_data=True,
+    extras_require={
+        'all': all,
+        'converter': converter,
+        'atac': atac
+    }
 )
