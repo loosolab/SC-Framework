@@ -64,7 +64,7 @@ def test_define_PC_error(adata_no_pca):
 
 
 def test_evaluate_batch_effect(adata_batch_dict):
-    """Test if Axes.Subplot is returned"""
+    """ Test if Axes.Subplot is returned. """
 
     ax = an.evaluate_batch_effect(adata_batch_dict)
     ax_type = type(ax).__name__
@@ -72,7 +72,7 @@ def test_evaluate_batch_effect(adata_batch_dict):
     assert ax_type == "AxesSubplot"
 
 
-@pytest.mark.parametrize("key",["a", "b"])
+@pytest.mark.parametrize("key", ["a", "b"])
 def test_evaluate_batch_effect_keyerror(adata_batch_dict, key):
     with pytest.raises(KeyError, match="adata.obsm of the .*"):
         an.evaluate_batch_effect(adata_batch_dict, obsm_key=key)
