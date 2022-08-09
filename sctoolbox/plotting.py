@@ -633,29 +633,29 @@ def anndata_overview(adatas,
 def boxplot(dt):
     """
     Generate one plot containing one box per column. The median value is shown.
-    
+
     Parameter:
     ----------
     dt : pandas.DataFrame
         pandas datafame containing numerical values in every column.
-    
+
     Returns:
     --------
     AxesSubplot
         containing boxplot for every column.
     """
     box_plot = sns.boxplot(data=dt)
-    
+
     # From:
     # https://stackoverflow.com/questions/49554139/boxplot-of-multiple-columns-of-a-pandas-dataframe-on-the-same-figure-seaborn
     ax = box_plot.axes
     lines = ax.get_lines()
     categories = ax.get_xticks()
-    
+
     # Add median label
     for cat in categories:
-        y = round(lines[4+cat*6].get_ydata()[0],2) 
+        y = round(lines[4 + cat * 6].get_ydata()[0], 2)
         ax.text(cat, y, f'{y}', ha='center', va='center', fontweight='bold', size=10, color='white',
                 bbox=dict(facecolor='#445A64'))
-    
+
     return box_plot

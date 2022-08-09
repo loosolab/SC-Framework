@@ -15,6 +15,7 @@ import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
 import sctoolbox.plotting as plot
 
+
 # --------------------------- Batch correction methods -------------------------- #
 
 def wrap_corrections(adata,
@@ -454,7 +455,7 @@ def define_PC(anndata):
     return knee
 
 
-def evaluate_batch_effect(adata_dict, obsm_key = 'X_umap', batch_key = 'batch'):
+def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
     """
     Evaluate batch effect methods using LISI.
 
@@ -466,7 +467,7 @@ def evaluate_batch_effect(adata_dict, obsm_key = 'X_umap', batch_key = 'batch'):
         The column in adata.obsm containing coordinates.
     batch_key : str, default 'batch'
         The column in adata.obs containing batch information.
-    
+
     Returns:
     --------
     AxesSubplot

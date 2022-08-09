@@ -11,7 +11,6 @@ from os.path import join, dirname, exists
 from pathlib import Path
 
 
-
 # ------------------ Type checking ----------------- -#
 
 def is_integer_array(arr):
