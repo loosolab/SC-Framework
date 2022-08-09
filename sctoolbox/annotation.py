@@ -617,4 +617,3 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 
     if not inplace:
         return adata_m
-
