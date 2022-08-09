@@ -29,6 +29,6 @@ setup(
         'all': all,
         'converter': converter,
         'atac': atac,
-		'batch_correction': batch_correction
+        'batch_correction': batch_correction
     }
 )
