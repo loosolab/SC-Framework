@@ -1,4 +1,3 @@
-from multiprocessing.sharedctypes import Value
 import pytest
 import sctoolbox.plotting
 import scanpy as sc
@@ -13,6 +12,7 @@ def adata():
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
     return sc.read_h5ad(f)
+
 
 @pytest.fixture
 def tmp_file():
@@ -86,8 +86,8 @@ def test_anndata_overview_fail_color_by(adata):
             output=None,
             dpi=300
         )
-    
-    #wrong input
+
+    # wrong input
     with pytest.raises(ValueError, match="Couldn't find column"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
