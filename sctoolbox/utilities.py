@@ -436,3 +436,11 @@ def setup_R(r_home=None):
         raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
 
     os.environ['R_HOME'] = r_home
+
+
+def _none2null(none_obj):
+    """ rpy2 converter that translates python 'None' to R 'NULL' """
+    # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    from rpy2.robjects import r
+
+    return r("NULL")

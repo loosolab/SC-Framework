@@ -38,7 +38,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     # create rpy2 None to NULL converter
     # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     none_converter = conversion.Converter("None converter")
-    none_converter.py2rpy.register(type(None), _none2null)
+    none_converter.py2rpy.register(type(None), utils._none2null)
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
@@ -106,11 +106,3 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
         adata.write(filename=output, compression='gzip')
     else:
         return adata
-
-
-def _none2null(none_obj):
-    """ rpy2 converter that translates python 'None' to R 'NULL' """
-    # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
-    from rpy2.robjects import r
-
-    return r("NULL")
