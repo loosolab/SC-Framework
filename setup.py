@@ -21,7 +21,8 @@ setup(name='sc-toolbox',
 			'scipy',
 			'statsmodels',
 			'tqdm',
-			'pandas'
+			'pandas',
+			'seaborn'
 		],
 		include_package_data=True,
 		extras_require={
