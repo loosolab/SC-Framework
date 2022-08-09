@@ -7,13 +7,13 @@ from kneed import KneeLocator
 from scipy import sparse
 from contextlib import redirect_stderr
 import io
+import pandas as pd
 
 import anndata
 import sctoolbox.creators as cr
 import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
 import sctoolbox.plotting as plot
-
 
 # --------------------------- Batch correction methods -------------------------- #
 
@@ -454,33 +454,32 @@ def define_PC(anndata):
     return knee
 
 
-def evaluate_batch_effect(adata_dict, r_home = None):
+def evaluate_batch_effect(adata_dict, batch_key = 'batch'):
     """
-    Evaluate batch effect methods using lisi.
+    Evaluate batch effect methods using LISI.
 
     Parameters:
     -----------
     adata_dict : dict
         dictionary containing anndata objects as value and correction method as key.
-    r_home : str, default None
-        Path to the R home directory. If None will construct path based on location of python executable.
-        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+    batch_key : str, default 'batch'
+        The column in adata.obs containing batch information.
     
     Returns:
     --------
     AxesSubplot
         Boxplot containing lisi scores for every correction method.
     """
+    # Load LISI
+    from harmonypy.lisi import compute_lisi
 
-    utils.setup_R(r_home)
+    # setup empty pandas data
+    merged_lisi_scores = pd.DataFrame()
 
-    for method, adata in adata_dict.values():
-        pass
+    for method, adata in adata_dict.items():
         # run lisi for each adata.obsm['X_umap']. What about PCA? both?
-
-
-    # Merge results into one pandas dataframe
+        lisi_res = compute_lisi(adata.obsm['X_umap'], adata.obs, [batch_key])
+        merged_lisi_scores[method] = lisi_res.flatten().tolist()
 
     # Plot
-    plot.boxplot(merged_lisi_scores)
-
+    return plot.boxplot(merged_lisi_scores)
