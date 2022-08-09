@@ -26,7 +26,7 @@ conda activate sctoolbox
 ```
 5. Register the environment as a jupyter kernel.
 ```
-python -n ipykernel install --user --name sctoolbox --display-name "sctoolbox"
+python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
 
 # Usage

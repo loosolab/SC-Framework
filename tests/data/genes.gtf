@@ -1,0 +1,6 @@
+chr1	havana	gene	11869	14409	.	+	.	gene_id "ENSG00000223972"; gene_version "5"; gene_name "DDX11L1"; gene_source "havana"; gene_biotype "transcribed_unprocessed_pseudogene";
+chr1	havana	gene	14404	29570	.	-	.	gene_id "ENSG00000227232"; gene_version "5"; gene_name "WASH7P"; gene_source "havana"; gene_biotype "unprocessed_pseudogene";
+chr1	mirbase	gene	17369	17436	.	-	.	gene_id "ENSG00000278267"; gene_version "1"; gene_name "MIR6859-1"; gene_source "mirbase"; gene_biotype "miRNA";
+chr11	ensembl_havana	gene	75759512	75801535	.	+	.	gene_id "ENSG00000062282"; gene_version "15"; gene_name "DGAT2"; gene_source "ensembl_havana"; gene_biotype "protein_coding";
+chr11	havana	gene	75775904	75776929	.	+	.	gene_id "ENSG00000254826"; gene_version "1"; gene_source "havana"; gene_biotype "lncRNA";
+chr11	havana	gene	75800877	75803415	.	-	.	gene_id "ENSG00000254814"; gene_version "1"; gene_source "havana"; gene_biotype "lncRNA";
