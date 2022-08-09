@@ -459,8 +459,8 @@ def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
     """
     Evaluate batch effect methods using LISI.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     adata_dict : dict
         dictionary containing anndata objects as value and correction method as key.
     obsm_key : str, default 'X_umap'
@@ -468,12 +468,18 @@ def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
     batch_key : str, default 'batch'
         The column in adata.obs containing batch information.
 
-    Returns:
-    --------
+    Returns
+    -------
     AxesSubplot
         Boxplot containing lisi scores for every correction method.
+
+    Notes
+    -----
+    For further information on LISI:
+    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
     """
     # Load LISI
+    utils.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
 
     # setup empty pandas data
