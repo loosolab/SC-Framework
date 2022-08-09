@@ -583,6 +583,19 @@ def anndata_overview(adatas,
                     legend_loc = "none"
                     colorbar_loc = None
 
+                # add row label to first plot
+                if i == 0:
+                    # https://stackoverflow.com/a/25814386
+                    ax.annotate(plot_type,
+                                xy=(0, 0.5),
+                                xytext=(-ax.yaxis.labelpad - 5, 0),
+                                xycoords=ax.yaxis.label,
+                                textcoords='offset points',
+                                size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
+                                horizontalalignment='right',
+                                verticalalignment='center',
+                                fontweight='bold')
+
                 # Collect options for plotting
                 embedding_kwargs = {"color": color, "title": "",
                                     "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
