@@ -83,13 +83,16 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
-    method : str
-        Method for batch correction. Options are:
-        - bbknn
-        - mnn
-        - harmony
-        - scanorama
-        - combat
+    method : str or function
+        Either one of the predefined methods or a custom function for batch correction.
+        Note: The custom function is expected to accept an anndata object as the first parameter and return the batch corrected anndata.
+
+        Available methods:
+            - bbknn
+            - mnn
+            - harmony
+            - scanorama
+            - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     **kwargs :
@@ -164,6 +167,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         sc.pp.pca(adata)
         sc.pp.neighbors(adata)
 
+    elif callable(method):
+        adata = method(adata.copy(), **kwargs)
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
 
