@@ -408,11 +408,86 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
+def violinplot(table, y, color_by=None, hlines=None):
+    """
+    Creates a violinplot. With optional horizontal lines for each violin.
+    
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        Values to create the violins from.
+    y : str
+        Column name of table. Values that will be shown on y-axis.
+    color_by : str
+        Column name of table. Used to color group violins.
+    hlines : float/ list or dict of float/ list with color_by categories as keys.
+        Define horizontal lines for each violin.
+
+    Returns
+    -------
+    matplotlib.axes.Axes :
+        Object containing the violinplot.
+    """
+    # check if valid column name
+    if y not in table.columns:
+        raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
+
+    # set violin order
+    color_group_order = set(table[color_by]) if not color_by is None else color_by
+
+    # hlines has to be number of list if color_by=None
+    if color_by is None and not hlines is None or isinstance(hlines, (list, int, float)):
+        raise ValueError(f"Parameter hlines has to be number or list of numbers for color_by=None. Got type {type(hlines)}.")
+
+    # check valid groups in hlines dict
+    if isinstance(hlines, dict):
+        invalid_keys = set(hlines.keys()) - set(table.columns)
+        if invalid_keys:
+            raise ValueError(f"Invalid dict keys in hlines parameter. Key(s) have to match table column names. Invalid keys: {invalid_keys}")
+
+    # create violinplot
+    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order)
+
+    # add horizontal lines
+    if hlines:
+        # make iterable
+        hlines = hlines if isinstance(hlines, list) or isinstance(hlines, dict) else [hlines]
+        
+        # make hlines dict
+        hlines_dict = hlines if isinstance(hlines, dict) else {}
+
+        # horizontal line length computation
+        violin_width = 1 / len(color_group_order)
+        line_length = violin_width - 2 * violin_width * 0.1  # subtract 10% padding
+        half_length = line_length / 2
+
+        # draw line(s) for each violin
+        for i, violin_name in enumerate(color_group_order):
+            violin_center = violin_width * (i + 1) - violin_width / 2
+
+            # ensure iterable
+            line_heights = hlines_dict.setdefault(violin_name, hlines)
+            line_heights = line_heights if isinstance(line_heights, list) else [line_heights]
+            for line_height in line_heights:
+                # skip if invalid line_height
+                if not isinstance(line_height, (int, float)):
+                    continue
+                
+                plot.axhline(y=line_height,
+                             xmin=violin_center - half_length,
+                             xmax=violin_center + half_length,
+                             color="orange",
+                             ls="dashed",
+                             lw=3)
+
+    return plot
+
 def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME=None):
-    '''Violin plot with cutoffs
+    """
+    Violin plot with cutoffs
 
     Parameters
-    ------------
+    ----------
     DEFCELLs : Pandas dataframe
         Anndata.obs variables to be used for plot. The first colum MUST be the condition or sample description
     DFGENES : Pandas dataframe
@@ -428,7 +503,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
         True, save the figure. Default: None (figure is not saved).
     FILENAME : String
         Path and name of file to be saved. It will be used if SAVE==True. Default: None
-    '''
+    """
     # Author : Guilherme Valente
     def defin_cut_lnes(NCUTS):  # NCUTS define the number of cuts of X axis
         range_limits = np.linspace(0, 1, 2 + NCUTS).tolist()
