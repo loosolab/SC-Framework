@@ -542,7 +542,7 @@ def anndata_overview(adatas,
 
     if not isinstance(plots, list):
         plots = [plots]
-    
+
     if not isinstance(evaluate_batch_on, list):
         evaluate_batch_on = [evaluate_batch_on]
 
@@ -661,9 +661,9 @@ def anndata_overview(adatas,
     if batch_key:
         for eval in evaluate_batch_on:
             gs = axs[ax_idx].get_gridspec()
-            for ax in axs[ax_idx:ax_idx+cols]:
+            for ax in axs[ax_idx:ax_idx + cols]:
                 ax.remove()
-            axbig = fig.add_subplot(gs[ax_idx:ax_idx+cols])
+            axbig = fig.add_subplot(gs[ax_idx:ax_idx + cols])
             lisi_scores = evaluate_batch_effect(adatas, obsm_key=eval, batch_key=batch_key)
             axbig = boxplot(lisi_scores)
             annotate_row(axbig, f"LISI {eval}")
