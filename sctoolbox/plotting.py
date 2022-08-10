@@ -480,6 +480,10 @@ def violinplot(table, y, color_by=None, hlines=None):
                              ls="dashed",
                              lw=3)
 
+    # remove x-axis ticks if color_by=None
+    if color_by is None:
+        plot.tick_params(axis="x", which="both", bottom=False)
+
     return plot
 
 def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME=None):
