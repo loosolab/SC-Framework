@@ -657,7 +657,6 @@ def anndata_overview(adatas,
         fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
-    print(axs)
     # Add LISI boxplot as last row to the figure
     if batch_key:
         for eval in evaluate_batch_on:
