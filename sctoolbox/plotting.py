@@ -12,6 +12,7 @@ import pandas as pd
 
 import sctoolbox.utilities
 from sctoolbox.utilities import save_figure
+from sctoolbox.analyser import evaluate_batch_effect
 
 #############################################################################
 #                     PCA/tSNE/UMAP plotting functions                      #
@@ -503,6 +504,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
 def anndata_overview(adatas,
                      color_by,
                      plots=["PCA", "PCA-var", "UMAP"],
+                     evaluate_batch = True,
                      figsize=None,
                      output=None,
                      dpi=300):
@@ -524,6 +526,8 @@ def anndata_overview(adatas,
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
         Default is: ["PCA", "PCA-var", "UMAP"]
+    evaluate_batch: boolean, default True
+        If 'True' evaluates the batch effect using LISI. The resulting plot is added to the bottom of the figure.
     figsize : number tuple, optional
         Size of the plot in inch. Default: None (automatic based on number of columns/rows).
     output : str, optional
@@ -538,6 +542,20 @@ def anndata_overview(adatas,
         plots = [plots]
 
     valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+
+    # ---- helper functions ---- #
+    def annotate_row(ax, plot_type):
+        """ Annotate row in figure. """
+        # https://stackoverflow.com/a/25814386
+        ax.annotate(plot_type,
+                    xy=(0, 0.5),
+                    xytext=(-ax.yaxis.labelpad - 5, 0),
+                    xycoords=ax.yaxis.label,
+                    textcoords='offset points',
+                    size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
+                    horizontalalignment='right',
+                    verticalalignment='center',
+                    fontweight='bold')
 
     # ---- checks ---- #
     # dict contains only anndata
@@ -562,6 +580,7 @@ def anndata_overview(adatas,
     # setup subplot structure
     row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
+    if evaluate_batch: rows +=1
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
@@ -585,16 +604,7 @@ def anndata_overview(adatas,
 
                 # add row label to first plot
                 if i == 0:
-                    # https://stackoverflow.com/a/25814386
-                    ax.annotate(plot_type,
-                                xy=(0, 0.5),
-                                xytext=(-ax.yaxis.labelpad - 5, 0),
-                                xycoords=ax.yaxis.label,
-                                textcoords='offset points',
-                                size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
-                                horizontalalignment='right',
-                                verticalalignment='center',
-                                fontweight='bold')
+                    annotate_row(ax, plot_type)
 
                 # Collect options for plotting
                 embedding_kwargs = {"color": color, "title": "",
@@ -636,6 +646,17 @@ def anndata_overview(adatas,
     for i, name in enumerate(adatas):
         fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
+    
+    # Add LISI boxplot as last row to the figure
+    if evaluate_batch:
+        # From: https://matplotlib.org/stable/gallery/subplots_axes_and_figures/gridspec_and_subplots.html
+        gs = axs[ax_idx].get_gridspec()
+        # remove the underlying axes
+        for ax in axs[ax_idx:]:
+            ax.remove()
+        axbig = fig.add_subplot(gs[ax_idx:])
+        axbig = evaluate_batch_effect(adatas)
+        annotate_row(axbig, "LISI")
 
     # save
     save_figure(output)
