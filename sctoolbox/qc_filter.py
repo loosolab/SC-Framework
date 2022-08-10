@@ -1,9 +1,11 @@
 import sys
+from tabnanny import check
 from scipy.stats import skew, kurtosis
 import pandas as pd
 from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
 from IPython.display import display
+import numpy as np
 
 ###############################################################################
 #                      STEP 1: DEFINING DEFAULT CUTOFFS                       #
@@ -57,8 +59,10 @@ def loop_question(answer, quit_m, check):
     return answer.lower()
 
 
-def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violin_", save=False):
+def set_def_cuts(anndata, interval, var="all", obs="all", only_plot=False, file_name="note2_violin_", save=False):
     """
+    Find thresholds for the given .obs and .var columns in anndata.
+
     1- Definining the cutoffs for QC and filtering steps.
     2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
 
@@ -66,13 +70,17 @@ def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violi
     ----------
     anndata : anndata.AnnData
         anndata object
+    interval : int or float
+        The percentage (from 0 to 100) to be used to calculate the cutoffs.
+    var : str or list of str, default 'all'
+        Anndata.var columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
+    obs : str or list of str, default 'all'
+        Anndata.obs columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
     only_plot : bool, default False
         If true, only a plot with the data without cutoff lines will be provided.
-    interval : int or float, default None
-        The percentage (from 0 to 1 or 100) to be used to calculate the cutoffs.
     file_name : str, default "note2_violin_"
         Define a name for save a custom filename to save.
-        NOTE: use a sintax at least composing the "note2_". Do not add any file extension.
+        NOTE: use a syntax at least composing the "note2_". Do not add any file extension.
     save : bool, default False
         True, save the figure to the path given in 'save'.
 
@@ -85,6 +93,45 @@ def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violi
     pandas.DataFrame or None:
         A pandas dataframe with the defined cutoff parameters. None for only_plot=True.
     """
+    # -------------------- checks & setup ------------------- #
+    # is interval valid?
+    if not checker.in_range(interval, (0, 100)):
+        raise ValueError(f"Parameter interval is {interval} but has to be in range 0 - 100!")
+
+    # anything selected?
+    if var is None and obs is None:
+        raise ValueError("Parameters var & obs are empty. Set at least one of them.")
+
+    # expand 'all'; get all numeric columns
+    if var == "all":
+        var = list(anndata.var.select_dtypes(np.number).columns)
+    if obs == "all":
+        obs = list(anndata.obs.select_dtypes(np.number).columns)
+
+    # make iterable
+    obs = obs if isinstance(obs, list) else [obs]
+    var = var if isinstance(var, list) else [var]
+    
+    # invalid column name?
+    invalid_obs = set(obs) - set(anndata.obs.columns)
+    invalid_var = set(var) - set(anndata.var.columns)
+    if invalid_obs or invalid_var:
+        raise ValueError(f"""
+                         Invalid names in obs and/ or var detected:
+                         obs: {invalid_obs}
+                         var: {invalid_var}
+                         """)
+
+    # columns numeric?
+    not_num_obs = set(obs) - set(anndata.obs.select_dtypes(np.number).columns)
+    not_num_var = set(var) - set(anndata.var.select_dtype(np.number).columns)
+    if not_num_obs or not_num_var:
+        raise ValueError(f"""
+                         Selected columns have to be numeric. Not numeric column(s) received:
+                         obs: {not_num_obs}
+                         var: {not_num_var}
+                         """)
+
     # List, dfs, messages and others
     uns_condition_name = anndata.uns["infoprocess"]["data_to_evaluate"]  # The name of data to evaluate parameter, e.g., "condition"
     for_cells = [uns_condition_name, "n_genes_by_counts", "total_counts", "pct_counts_is_mitochondrial"]  # List of obs variables to be analysed. The first item MUST be the data to be evaluated
@@ -99,10 +146,8 @@ def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violi
 
     # Setting colors for plot
     m1 = "file_name[STRING]"
-    m2 = "The interval=[float or int] must be between 0 to 1 or 100."
     m4 = "Defining and ploting cutoffs only for total_counts"
     m5 = "You choose not plot cutoffs"
-    m6 = "To define cutoff demands to set the interval=[int or float] from 0 to 1 or 100."
     pathway = anndata.uns["infoprocess"]["Anndata_path"]
 
     # Creating filenames
@@ -114,17 +159,7 @@ def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violi
     elif save is False:
         filename = ""
 
-    # Checking if interval for cutoffs were properly defined
-    if only_plot is False and interval is None:  # It is missing the interval for cutoff
-        sys.exit(m6)
-
-    elif not only_plot and interval is not None:
-        if checker.check_cuts(str(interval), 0, 100) is False:  # Means the interval is not a number
-            sys.exit(m2)
-        else:
-            if isinstance(interval, (int)) is True and interval >= 0 and interval <= 100:  # Converting interval int for float from 0 to 1
-                interval = interval / 100
-
+    if not only_plot:
         # Checking if the total count was already filtered
         act_c_total_counts, id_c_total_counts = float(anndata.obs["total_counts"].sum()), float(anndata.uns["infoprocess"]["ID_c_total_counts"])
         if checker.check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is True:  # Total_counts was not filtered yet, then only this parameter will be evaluated
@@ -170,6 +205,7 @@ def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violi
                     df_cuts = analyser.establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
 
         plotting.qcf_ploting(for_cells_pd, for_genes_pd, anndata.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
+
         return df_cuts
 
 ######################################################################################
@@ -265,6 +301,7 @@ def refining_cuts(anndata, def_cut2):
                 new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
             elif answer == "skip":
                 new_df = new_df.append({col0: data, col1: param, col2: "skip", col3: stra}, ignore_index=True)
+
     return new_df
 
 ###############################################################################
