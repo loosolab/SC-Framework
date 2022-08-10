@@ -10,83 +10,91 @@ from IPython.display import display
 ###############################################################################
 
 
-def loop_question(ANSWER, QUIT_M, CHECK):  # Checking invalid outcome
-    '''
+def loop_question(answer, quit_m, check):
+    """
     This core check the validity of user's answer.
+
     Parameters
-    ---------------
-    ANSWER : String
+    ----------
+    answer : str
         User's answer
-    QUIT_M : String
+    quit_m : str
         Question to be print if the user's answer is invalid
-    CHECK : String
+    check : str
         Types of questions. The options are "yn", "custdef", or float
+
     Returns
-    ---------------
-    The user's answer in lower case format
-    '''
-    # Author: Guilherme Valente
+    -------
+    str :
+        The user's answer in lower case format
+    """
     # List and others
     opt1, opt2, opt3, opt4 = ["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"]  # Lists with possible answers for each question
     options = {"yn": opt2, "custdef": opt3, "custdefskip": opt4}
-    if checker.check_options(CHECK, list(options.keys())) is False and type(CHECK) != float:
+
+    if checker.check_options(check, list(options.keys())) is False and type(check) != float:
         sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
 
-    ANSWER = input(ANSWER).lower()
+    answer = input(answer).lower()
     # Check validity of options
-    while checker.check_options(ANSWER, OPTS1=opt1 + opt2 + opt3 + opt4) is False and utilities.is_str_numeric(ANSWER) is False:
+    while checker.check_options(answer, options=opt1 + opt2 + opt3 + opt4) is False and utilities.is_str_numeric(answer) is False:
         print("Choose one of these options: " + str(opt1 + opt2 + opt3 + opt4))
-        ANSWER = input(ANSWER).lower()
+        answer = input(answer).lower()
 
     # In case the input is valid, goes futher
-    if type(CHECK) != float:
-        while checker.check_options(ANSWER, OPTS1=opt1 + options[CHECK]) is False:
-            print("Invalid choice! " + QUIT_M)
-            ANSWER = input()
-            checker.check_options(ANSWER, opt1 + options[CHECK])
-    else:  # Checking validity of custom value: >=0 and <= a limit (the CHECK)
-        while checker.check_cuts(ANSWER, 0, CHECK) is False:
-            print("Invalid choice! " + QUIT_M)
-            ANSWER = input()
-            checker.check_cuts(ANSWER, 0, CHECK)
-    return ANSWER.lower()
+    if type(check) != float:
+        while checker.check_options(answer, options=opt1 + options[check]) is False:
+            print("Invalid choice! " + quit_m)
+            answer = input()
+            checker.check_options(answer, opt1 + options[check])
+    else:
+        # Checking validity of custom value: >=0 and <= a limit (the CHECK)
+        while checker.check_cuts(answer, 0, check) is False:
+            print("Invalid choice! " + quit_m)
+            answer = input()
+            checker.check_cuts(answer, 0, check)
+
+    return answer.lower()
 
 
-def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violin_", save=False):
-    '''
+def set_def_cuts(anndata, only_plot=False, interval=None, file_name="note2_violin_", save=False):
+    """
     1- Definining the cutoffs for QC and filtering steps.
     2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
 
     Parameters
-    ------------
-    ANNDATA : anndata object
+    ----------
+    anndata : anndata.AnnData
         anndata object
-    only_plot : Boolean
+    only_plot : bool, default False
         If true, only a plot with the data without cutoff lines will be provided.
-    interval : Int or Float. Default: None.
+    interval : int or float, default None
         The percentage (from 0 to 1 or 100) to be used to calculate the cutoffs.
-    file_name : String. Default is "note2_violin_"
+    file_name : str, default "note2_violin_"
         Define a name for save a custom filename to save.
         NOTE: use a sintax at least composing the "note2_". Do not add any file extension.
-    save : Boolean. Default is False
+    save : bool, default False
         True, save the figure to the path given in 'save'.
 
+    Notes
+    -----
+    Author: Guilherme Valente
+
     Returns
-    ------------
-    - A pandas dataframe with the defined cutoff parameters.
-    - Violin plots.
-    '''
-    # Author: Guilherme Valente
+    -------
+    pandas.DataFrame or None:
+        A pandas dataframe with the defined cutoff parameters. None for only_plot=True.
+    """
     # List, dfs, messages and others
-    uns_condition_name = ANNDATA.uns["infoprocess"]["data_to_evaluate"]  # The name of data to evaluate parameter, e.g., "condition"
+    uns_condition_name = anndata.uns["infoprocess"]["data_to_evaluate"]  # The name of data to evaluate parameter, e.g., "condition"
     for_cells = [uns_condition_name, "n_genes_by_counts", "total_counts", "pct_counts_is_mitochondrial"]  # List of obs variables to be analysed. The first item MUST be the data to be evaluated
     for_genes = ["n_cells_by_counts", "mean_counts", "pct_dropout_by_counts"]  # List of var variables to be analysed.
-    for_cells_pd = ANNDATA.obs[ANNDATA.obs.columns.intersection(for_cells)]
-    for_genes_pd = ANNDATA.var[ANNDATA.var.columns.intersection(for_genes)]
+    for_cells_pd = anndata.obs[anndata.obs.columns.intersection(for_cells)]
+    for_genes_pd = anndata.var[anndata.var.columns.intersection(for_genes)]
     cells_genes_list = for_cells[1:] + for_genes
     calulate_and_plot_filter = []  # Samples to be calculated cutoffs and further plotted with cutoff lines
     df_cuts = pd.DataFrame(columns=["data_to_evaluate", "parameters", "cutoff", "strategy"])  # Empty df to be filled with the cutoffs
-    ANNDATA.uns[uns_condition_name + '_colors'] = ANNDATA.uns["color_set"][:len(ANNDATA.obs[uns_condition_name].unique())]
+    anndata.uns[uns_condition_name + '_colors'] = anndata.uns["color_set"][:len(anndata.obs[uns_condition_name].unique())]
     sta_cut_cells, sta_cut_genes = None, None
 
     # Setting colors for plot
@@ -95,7 +103,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
     m4 = "Defining and ploting cutoffs only for total_counts"
     m5 = "You choose not plot cutoffs"
     m6 = "To define cutoff demands to set the interval=[int or float] from 0 to 1 or 100."
-    pathway = ANNDATA.uns["infoprocess"]["Anndata_path"]
+    pathway = anndata.uns["infoprocess"]["Anndata_path"]
 
     # Creating filenames
     if save is True and file_name != "note2_violin_" and type(file_name) != str:  # Here checking is custom name is proper
@@ -118,7 +126,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
                 interval = interval / 100
 
         # Checking if the total count was already filtered
-        act_c_total_counts, id_c_total_counts = float(ANNDATA.obs["total_counts"].sum()), float(ANNDATA.uns["infoprocess"]["ID_c_total_counts"])
+        act_c_total_counts, id_c_total_counts = float(anndata.obs["total_counts"].sum()), float(anndata.uns["infoprocess"]["ID_c_total_counts"])
         if checker.check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is True:  # Total_counts was not filtered yet, then only this parameter will be evaluated
             sta_cut_cells, sta_cut_genes = True, False
             calulate_and_plot_filter.append("total_counts")
@@ -140,7 +148,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
         # Building the dataframe with default cutoffs stablished and the plots
         # Here will be called the function establishing_cuts from the analyser.py module
         print(m5)
-        return plotting.qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
+        return plotting.qcf_ploting(for_cells_pd, for_genes_pd, anndata.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
 
     elif only_plot is False:  # Calculate cutoffs and plot in the violins
         if sta_cut_cells is True:  # For cells
@@ -161,7 +169,7 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
                     kurtosis_val_norm = int(kurtosis_val - 3)  # This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
                     df_cuts = analyser.establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
 
-        plotting.qcf_ploting(for_cells_pd, for_genes_pd, ANNDATA.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
+        plotting.qcf_ploting(for_cells_pd, for_genes_pd, anndata.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
         return df_cuts
 
 ######################################################################################
@@ -169,22 +177,26 @@ def set_def_cuts(ANNDATA, only_plot=False, interval=None, file_name="note2_violi
 ######################################################################################
 
 
-def refining_cuts(ANNDATA, def_cut2):
-    '''
+def refining_cuts(anndata, def_cut2):
+    """
     Refining the cutoffs to be used in the QC and filtering steps
 
     Parameters
-    ------------
-    ANNDATA : anndata object
+    ----------
+    anndata : anndata.AnnData
         anndata object
-    def_cut2 : Pandas dataframe.
+    def_cut2 : pandas.DataFrame
         A dataframe with the default cutoffs calculated by the function set_def_cuts of qc_filter.py module
 
-    Return
-    -----------
-    Pandas dataframe to be used for the QC and filtering steps
-    '''
-    # Author: Guilherme Valente
+    Notes
+    -----
+    Author: Guilherme Valente
+
+    Returns
+    -------
+    pandas.DataFrame :
+        Pandas dataframe to be used for the QC and filtering steps
+    """
     # Dataframes and others
     dfcut = def_cut2.copy()
     new_df = dfcut[0:0]
@@ -192,7 +204,7 @@ def refining_cuts(ANNDATA, def_cut2):
     col1 = dfcut.columns[1]  # parameters
     col2 = dfcut.columns[2]  # cutoffs
     col3 = dfcut.columns[3]  # strategy
-    cond_name = ANNDATA.uns["infoprocess"]["data_to_evaluate"]
+    cond_name = anndata.uns["infoprocess"]["data_to_evaluate"]
 
     # Questions, and messages
     q2 = ": custom or def"
@@ -209,7 +221,7 @@ def refining_cuts(ANNDATA, def_cut2):
     m9 = "\n\nChoose custom, def or skip\n"
 
     # Checking if the total_counts was already filtered
-    if ANNDATA.obs["total_counts"].sum() == ANNDATA.uns["infoprocess"]["ID_c_total_counts"]:  # If False, means that the total_counts was not filtered yet
+    if anndata.obs["total_counts"].sum() == anndata.uns["infoprocess"]["ID_c_total_counts"]:  # If False, means that the total_counts was not filtered yet
         df_tot_coun = dfcut[dfcut[col1] == "total_counts"].reset_index(drop=True)
         is_total_count_filt = False
     else:
@@ -227,7 +239,7 @@ def refining_cuts(ANNDATA, def_cut2):
             if answer == "def":
                 new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
             elif answer == "custom":
-                max_lim = max(ANNDATA.obs[ANNDATA.obs[cond_name] == data][param])
+                max_lim = max(anndata.obs[anndata.obs[cond_name] == data][param])
                 min_cut = loop_question(data + " " + param + q3, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
                 max_cut = loop_question(data + " " + param + q4, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
                 list_cuts = sorted([float(min_cut), float(max_cut)], reverse=True)
@@ -244,9 +256,9 @@ def refining_cuts(ANNDATA, def_cut2):
                 new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
             elif answer == "custom":
                 if stra == "filter_cells":
-                    max_lim = max(ANNDATA.obs[ANNDATA.obs[cond_name] == data][param])
+                    max_lim = max(anndata.obs[anndata.obs[cond_name] == data][param])
                 elif stra == "filter_genes":
-                    max_lim = max(ANNDATA.var[param])
+                    max_lim = max(anndata.var[param])
                 min_cut = loop_question(data + " " + param + q3, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
                 max_cut = loop_question(data + " " + param + q4, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
                 list_cuts = sorted([float(min_cut), float(max_cut)], reverse=True)
@@ -260,22 +272,29 @@ def refining_cuts(ANNDATA, def_cut2):
 ###############################################################################
 
 
-def anndata_filter(ANNDATA, GO_CUT):
-    '''
+def anndata_filter(anndata, go_cut):
+    """
+    TODO
+
     Parameters
     ----------
-    ANNDATA : anndata object
+    anndata : anndata.AnnData
         anndata object
-    GO_CUT : Pandas dataframe
+    go_cut : pandas.DataFrame
         Pandas dataframe with the samples, parameters, and cutoffs to be used in the filtering process
 
-    Return
-    ----------
-    Filtered anndata
-    Annotation of filtering parameters in the anndata.uns["infoprocess"]
-    '''
-    # Author: Guilherme Valente
+    Notes
+    -----
+    Author: Guilherme Valente
+
+    Returns
+    -------
+    anndata.AnnData :
+        Filtered anndata
+        Annotation of filtering parameters in the anndata.uns["infoprocess"]
+    """
     def concatenating(LISTA_ADATA):  # Concatenating adata
+        """ TODO """
         if len(LISTA_ADATA) > 1:
             adata_conc = LISTA_ADATA[0].concatenate(LISTA_ADATA[1:], join='inner', batch_key=None)
         else:
@@ -283,45 +302,45 @@ def anndata_filter(ANNDATA, GO_CUT):
         return adata_conc
 
     # List, messages and others
-    ANNDATA_CP = ANNDATA.copy()
-    ANNDATA_CP2 = ANNDATA_CP.copy()
-    datamcol, paramcol, cutofcol, stratcol = GO_CUT.columns[0], GO_CUT.columns[1], GO_CUT.columns[2], GO_CUT.columns[3]
-    act_params = GO_CUT[paramcol].unique().tolist()
-    act_strate = GO_CUT[stratcol].unique().tolist()
-    uns_cond = ANNDATA.uns["infoprocess"]["data_to_evaluate"]
+    anndata_CP = anndata.copy()
+    anndata_CP2 = anndata_CP.copy()
+    datamcol, paramcol, cutofcol, stratcol = go_cut.columns[0], go_cut.columns[1], go_cut.columns[2], go_cut.columns[3]
+    act_params = go_cut[paramcol].unique().tolist()
+    act_strate = go_cut[stratcol].unique().tolist()
+    uns_cond = anndata.uns["infoprocess"]["data_to_evaluate"]
     lst_adata_sub, go_info_cell, go_info_genes = list(), [], []
 
     # Creating the infoprocess
-    if "Cell filter" not in ANNDATA_CP.uns["infoprocess"]:
-        creators.build_infor(ANNDATA_CP, "Cell filter", list())
-    if "Gene filter" not in ANNDATA_CP.uns["infoprocess"]:
-        creators.build_infor(ANNDATA_CP, "Gene filter", list())
+    if "Cell filter" not in anndata_CP.uns["infoprocess"]:
+        creators.build_infor(anndata_CP, "Cell filter", list())
+    if "Gene filter" not in anndata_CP.uns["infoprocess"]:
+        creators.build_infor(anndata_CP, "Gene filter", list())
 
     # Filter mitochondrial content first
     if "pct_counts_is_mitochondrial" in act_params:
-        raw_data = GO_CUT[GO_CUT[paramcol] == "pct_counts_is_mitochondrial"]
+        raw_data = go_cut[go_cut[paramcol] == "pct_counts_is_mitochondrial"]
         for idx, a in raw_data.iterrows():
             data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
             if "skip" in cuts:
-                lst_adata_sub.append(ANNDATA_CP[ANNDATA_CP.obs[uns_cond] == data, :])
+                lst_adata_sub.append(anndata_CP[anndata_CP.obs[uns_cond] == data, :])
             else:
                 max_cut = max(cuts)
                 m1 = data + " " + param + " max_percent= " + str(max_cut)
-                adata_sub = ANNDATA_CP[ANNDATA_CP.obs[uns_cond] == data, :]
+                adata_sub = anndata_CP[anndata_CP.obs[uns_cond] == data, :]
                 lst_adata_sub.append(adata_sub[adata_sub.obs["pct_counts_is_mitochondrial"] < max_cut, :])
                 go_info_cell.append(m1)
-        ANNDATA_CP2 = concatenating(lst_adata_sub)
+        anndata_CP2 = concatenating(lst_adata_sub)
         lst_adata_sub = list()
     else:
-        ANNDATA_CP2 = ANNDATA_CP
+        anndata_CP2 = anndata_CP
         lst_adata_sub = list()
 
     # Filtering other cells
-    raw_data = GO_CUT[GO_CUT[stratcol] == "filter_cells"]
+    raw_data = go_cut[go_cut[stratcol] == "filter_cells"]
     for idx, a in raw_data.iterrows():
         data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
         if param != "pct_counts_is_mitochondrial":
-            adata_sub = ANNDATA_CP2[ANNDATA_CP2.obs[uns_cond] == data, :]
+            adata_sub = anndata_CP2[anndata_CP2.obs[uns_cond] == data, :]
             if "skip" in cuts:
                 lst_adata_sub.append(adata_sub)
             else:
@@ -339,13 +358,13 @@ def anndata_filter(ANNDATA, GO_CUT):
                     lst_adata_sub.append(adata_sub)
                     go_info_cell.append(m1 + "min_genes= " + str(min_cut))
 
-    ANNDATA_CP2 = concatenating(lst_adata_sub)
+    anndata_CP2 = concatenating(lst_adata_sub)
     lst_adata_sub = list()
 
     # Filtering genes
     if "filter_genes" in act_strate:
-        raw_data = GO_CUT[GO_CUT[stratcol] == "filter_genes"]
-        adata_sub = ANNDATA_CP2.copy()
+        raw_data = go_cut[go_cut[stratcol] == "filter_genes"]
+        adata_sub = anndata_CP2.copy()
         for idx, a in raw_data.iterrows():
             data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
             if "skip" in cuts:
@@ -360,44 +379,44 @@ def anndata_filter(ANNDATA, GO_CUT):
                     go_info_genes.append("mean_counts min_counts= " + str(min_cut))
                 elif param == "pct_dropout_by_counts":
                     print("pct_dropout_by_counts filtering is not implemented.")
-        ANNDATA_CP2 = adata_sub
+        anndata_CP2 = adata_sub
 
     # Annotating anndata.uns["infoprocess"]
-    if len(ANNDATA_CP.uns["infoprocess"]["Cell filter"]) > 0:
-        ANNDATA_CP.uns["infoprocess"]["Cell filter"] = ANNDATA_CP.uns["infoprocess"]["Cell filter"] + go_info_cell
+    if len(anndata_CP.uns["infoprocess"]["Cell filter"]) > 0:
+        anndata_CP.uns["infoprocess"]["Cell filter"] = anndata_CP.uns["infoprocess"]["Cell filter"] + go_info_cell
     else:
-        ANNDATA_CP.uns["infoprocess"]["Cell filter"] = go_info_cell
-    if len(ANNDATA_CP.uns["infoprocess"]["Gene filter"]) > 0:
-        ANNDATA_CP.uns["infoprocess"]["Gene filter"] = ANNDATA_CP.uns["infoprocess"]["Gene filter"] + go_info_genes
+        anndata_CP.uns["infoprocess"]["Cell filter"] = go_info_cell
+    if len(anndata_CP.uns["infoprocess"]["Gene filter"]) > 0:
+        anndata_CP.uns["infoprocess"]["Gene filter"] = anndata_CP.uns["infoprocess"]["Gene filter"] + go_info_genes
     else:
-        ANNDATA_CP.uns["infoprocess"]["Gene filter"] = go_info_genes
+        anndata_CP.uns["infoprocess"]["Gene filter"] = go_info_genes
 
-    ANNDATA_CP2.uns = ANNDATA_CP.uns
+    anndata_CP2.uns = anndata_CP.uns
 
-    print(ANNDATA)
-    print(ANNDATA_CP2)
-    return ANNDATA_CP2.copy()
+    print(anndata)
+    print(anndata_CP2)
+    return anndata_CP2.copy()
 
 #####################################################################################
 #####################################################################################
 
 
 def filter_genes(adata, genes):
-    """ Remove genes from adata object.
+    """
+    Remove genes from adata object.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Annotated data matrix object to filter
     genes : list of str
         A list of genes to remove from object.
 
     Returns
-    --------
-    adata : anndata.AnnData
+    -------
+    anndata.AnnData :
         Anndata object with removed genes.
     """
-
     # Check if all genes are found in adata
     not_found = list(set(genes) - set(adata.var_names))
     if len(not_found) > 0:
@@ -418,22 +437,22 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
     as well as a "scrublet" key in adata.uns.
 
     Parameters
-    ------------
+    ----------
     adata : anndata.AnnData
         Anndata object to estimate doublets for.
-    threshold : float
-        Threshold for doublet detection. Default is 0.25.
-    inplace : bool
-        Whether to estimate doublets inplace or not. Default is True.
-    kwargs : arguments
+    threshold : float, default 0.25
+        Threshold for doublet detection.
+    inplace : bool, default True
+        Whether to estimate doublets inplace or not.
+    **kwargs :
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
     Returns
-    ---------
-    If inplace is False, the function returns a copy of the adata object.
-    If inplace is True, the function returns None.
+    -------
+    anndata.Anndata or None :
+        If inplace is False, the function returns a copy of the adata object.
+        If inplace is True, the function returns None.
     """
-
     if inplace is False:
         adata = adata.copy()
 
