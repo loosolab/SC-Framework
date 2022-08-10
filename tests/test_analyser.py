@@ -23,6 +23,7 @@ def adata_no_pca(adata):
 
     return anndata
 
+
 @pytest.fixture
 def adata_batch_dict(adata):
     """ Adata containing batch column in obs. """
@@ -31,7 +32,7 @@ def adata_batch_dict(adata):
     # Add batch column
     anndata_batch.obs['batch'] = ["a", "b"] * 100
 
-    return {"adata":anndata_batch}
+    return {"adata": anndata_batch}
 
 
 def test_adata_normalize_total(adata):

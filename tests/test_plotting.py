@@ -21,6 +21,7 @@ def df():
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
 
+
 @pytest.fixture
 def tmp_file():
     """ Return path for a temporary file. """
