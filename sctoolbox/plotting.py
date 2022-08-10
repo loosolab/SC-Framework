@@ -504,7 +504,8 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
 def anndata_overview(adatas,
                      color_by,
                      plots=["PCA", "PCA-var", "UMAP"],
-                     evaluate_batch=True,
+                     batch_key=None,
+                     evaluate_batch_on=['X_pca', 'X_umap'],
                      figsize=None,
                      output=None,
                      dpi=300):
@@ -518,20 +519,21 @@ def anndata_overview(adatas,
         E.g.: {"bbknn": anndata}
     color_by : str or list of str
         Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
-    plots : str or list of str
+    plots : str or list of str, default ["PCA", "PCA-var", "UMAP"]
         Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
         Note: List order is forwarded to plot.
         - UMAP: Plots the UMAP embedding of the data.
         - tSNE: Plots the tSNE embedding of the data.
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
-        Default is: ["PCA", "PCA-var", "UMAP"]
-    evaluate_batch: boolean, default True
-        If 'True' evaluates the batch effect using LISI. The resulting plot is added to the bottom of the figure.
-    figsize : number tuple, optional
-        Size of the plot in inch. Default: None (automatic based on number of columns/rows).
-    output : str, optional
-        Path to plot output file. Default: None (not saved)
+    batch_key: str, default None
+        If set evaluates the batch effect using LISI on given column. The resulting plot is added to the bottom of the figure.
+    evaluate_batch_on: str or list of str, default ['X_pca', 'X_umap']
+        keys for adata.obsm that store the coordinates for with the batch evaluation should be done.
+    figsize : number tuple, default None (automatic based on number of columns/rows)
+        Size of the plot in inch.
+    output : str, default None (not saved)
+        Path to plot output file.
     dpi : number, default 300
         Dots per inch for output
     """
@@ -540,8 +542,9 @@ def anndata_overview(adatas,
 
     if not isinstance(plots, list):
         plots = [plots]
-
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+    
+    if not isinstance(evaluate_batch_on, list):
+        evaluate_batch_on = [evaluate_batch_on]
 
     # ---- helper functions ---- #
     def annotate_row(ax, plot_type):
@@ -576,12 +579,18 @@ def anndata_overview(adatas,
     if invalid_plots:
         raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
+    # check if batch_evaluations are valid
+    valid_batch_evaluations = ["X_umap", "X_tsne", "X_pca"]
+    invalid_batch_evaluations = set(evaluate_batch_on) - set(valid_batch_evaluations)
+    if invalid_batch_evaluations and batch_key:
+        raise ValueError(f"Invalid batch_evaluations specified: {invalid_plots}")
+
     # ---- plotting ---- #
     # setup subplot structure
     row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
-    if evaluate_batch:
-        rows += 1
+    if batch_key:
+        rows += len(evaluate_batch_on)
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
@@ -648,17 +657,18 @@ def anndata_overview(adatas,
         fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
+    print(axs)
     # Add LISI boxplot as last row to the figure
-    if evaluate_batch:
-        # From: https://matplotlib.org/stable/gallery/subplots_axes_and_figures/gridspec_and_subplots.html
-        gs = axs[ax_idx].get_gridspec()
-        # remove the underlying axes
-        for ax in axs[ax_idx:]:
-            ax.remove()
-        axbig = fig.add_subplot(gs[ax_idx:])
-        lisi_scores = evaluate_batch_effect(adatas)
-        axbig = boxplot(lisi_scores)
-        annotate_row(axbig, "LISI")
+    if batch_key:
+        for eval in evaluate_batch_on:
+            gs = axs[ax_idx].get_gridspec()
+            for ax in axs[ax_idx:ax_idx+cols]:
+                ax.remove()
+            axbig = fig.add_subplot(gs[ax_idx:ax_idx+cols])
+            lisi_scores = evaluate_batch_effect(adatas, obsm_key=eval, batch_key=batch_key)
+            axbig = boxplot(lisi_scores)
+            annotate_row(axbig, f"LISI {eval}")
+            ax_idx += cols
 
     # save
     save_figure(output)
