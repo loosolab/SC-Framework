@@ -583,6 +583,19 @@ def anndata_overview(adatas,
                     legend_loc = "none"
                     colorbar_loc = None
 
+                # add row label to first plot
+                if i == 0:
+                    # https://stackoverflow.com/a/25814386
+                    ax.annotate(plot_type,
+                                xy=(0, 0.5),
+                                xytext=(-ax.yaxis.labelpad - 5, 0),
+                                xycoords=ax.yaxis.label,
+                                textcoords='offset points',
+                                size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
+                                horizontalalignment='right',
+                                verticalalignment='center',
+                                fontweight='bold')
+
                 # Collect options for plotting
                 embedding_kwargs = {"color": color, "title": "",
                                     "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
@@ -604,8 +617,9 @@ def anndata_overview(adatas,
                 # Set title for the legend
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
                     ax.legend_.set_title(color)
-                    plt.setp(ax.legend_.get_title(), fontsize=14)
-                    plt.setp(ax.legend_.get_texts(), fontsize=14)
+                    fontsize = ax.legend_.get_title()._fontproperties._size * 1.2  # increase fontsize of legend title and text
+                    plt.setp(ax.legend_.get_title(), fontsize=fontsize)
+                    plt.setp(ax.legend_.get_texts(), fontsize=fontsize)
 
                 # Adjust colorbars
                 if hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
@@ -620,7 +634,8 @@ def anndata_overview(adatas,
 
     # Finalize axes titles and labels
     for i, name in enumerate(adatas):
-        axs[i].set_title(name, size=18, fontweight='bold')  # first rows should have the adata names
+        fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
+        axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
     # save
     save_figure(output)
