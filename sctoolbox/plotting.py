@@ -504,7 +504,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
 def anndata_overview(adatas,
                      color_by,
                      plots=["PCA", "PCA-var", "UMAP"],
-                     evaluate_batch = True,
+                     evaluate_batch=True,
                      figsize=None,
                      output=None,
                      dpi=300):
@@ -580,7 +580,8 @@ def anndata_overview(adatas,
     # setup subplot structure
     row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
-    if evaluate_batch: rows +=1
+    if evaluate_batch:
+        rows += 1
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
@@ -646,7 +647,7 @@ def anndata_overview(adatas,
     for i, name in enumerate(adatas):
         fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
-    
+
     # Add LISI boxplot as last row to the figure
     if evaluate_batch:
         # From: https://matplotlib.org/stable/gallery/subplots_axes_and_figures/gridspec_and_subplots.html
