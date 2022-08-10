@@ -13,7 +13,6 @@ import anndata
 import sctoolbox.creators as cr
 import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
-import sctoolbox.plotting as plot
 
 
 # --------------------------- Batch correction methods -------------------------- #
@@ -495,8 +494,8 @@ def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
 
     Returns
     -------
-    AxesSubplot
-        Boxplot containing lisi scores for every correction method.
+    pandas.DataFrame
+        containting LISI scores. Rows -> Cells; Columns -> adatas
 
     Notes
     -----
@@ -522,5 +521,4 @@ def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
         lisi_res = compute_lisi(adata.obsm[obsm_key], adata.obs, [batch_key])
         merged_lisi_scores[method] = lisi_res.flatten().tolist()
 
-    # Plot
-    return plot.boxplot(merged_lisi_scores)
+    return merged_lisi_scores

@@ -656,7 +656,8 @@ def anndata_overview(adatas,
         for ax in axs[ax_idx:]:
             ax.remove()
         axbig = fig.add_subplot(gs[ax_idx:])
-        axbig = evaluate_batch_effect(adatas)
+        lisi_scores = evaluate_batch_effect(adatas)
+        axbig = boxplot(lisi_scores)
         annotate_row(axbig, "LISI")
 
     # save

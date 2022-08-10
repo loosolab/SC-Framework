@@ -67,8 +67,7 @@ def test_evaluate_batch_effect(adata_batch_dict):
 
     ax = an.evaluate_batch_effect(adata_batch_dict)
     ax_type = type(ax).__name__
-
-    assert ax_type == "AxesSubplot"
+    assert ax_type == "DataFrame"
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
