@@ -25,14 +25,22 @@ def adata_no_pca(adata):
 
 
 @pytest.fixture
-def adata_batch_dict(adata):
+def adata_batch(adata):
     """ Adata containing batch column in obs. """
     anndata_batch = adata.copy()
 
     # Add batch column
     anndata_batch.obs['batch'] = ["a", "b"] * 100
 
-    return {"adata": anndata_batch}
+    return anndata_batch
+
+
+@pytest.fixture
+def adata_batch_dict(adata_batch):
+    """ dict containing Adata containing batch column in obs. """
+    anndata_batch_dict = adata_batch.copy()
+
+    return {'adata' : anndata_batch_dict}
 
 
 def test_adata_normalize_total(adata):
@@ -62,26 +70,27 @@ def test_define_PC_error(adata_no_pca):
         an.define_PC(adata_no_pca)
 
 
-def test_evaluate_batch_effect(adata_batch_dict):
-    """ Test if DataFrame containing LISI column in .obs is returned. """
-    df = an.evaluate_batch_effect(adata_batch_dict['adata'], 'batch')
-    df_type = type(df).__name__
-    assert df_type == "DataFrame"
-    assert "LISI_score_X_umap" in df.obs
+def test_evaluate_batch_effect(adata_batch):
+    """ Test if AnnData containing LISI column in .obs is returned. """
+    ad = an.evaluate_batch_effect(adata_batch, 'batch')
+    ad_type = type(ad).__name__
+    assert ad_type == "AnnData"
+    print(ad.obs)
+    assert "LISI_score" in ad.obs
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
-def test_evaluate_batch_effect_keyerror(adata_batch_dict, key):
-    with pytest.raises(KeyError, match="adata.obsm does not contain the obsm key: .*"):
-        an.evaluate_batch_effect(adata_batch_dict['adata'], batch_key='batch', obsm_key=key)
+def test_evaluate_batch_effect_keyerror(adata_batch, key):
+    with pytest.raises(KeyError, match="adata.obsm .*"):
+        an.evaluate_batch_effect(adata_batch, batch_key='batch', obsm_key=key)
 
-    with pytest.raises(KeyError, match="adata.obs does not contain the obs key: .*"):
-        an.evaluate_batch_effect(adata_batch_dict['adata'], batch_key=key)
+    with pytest.raises(KeyError, match="adata.obs .*"):
+        an.evaluate_batch_effect(adata_batch, batch_key=key)
 
 
 def test_wrap_batch_evaluation(adata_batch_dict):
     """ Test if DataFrame containing LISI column in .obs is returned. """
-    adata_dict = an.wrap_batch_evaluation(adata_batch_dict, 'batch')
+    adata_dict = an.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
     adata_dict_type = type(adata_dict).__name__
     adata_type = type(adata_dict['adata']).__name__
 

@@ -12,7 +12,6 @@ import pandas as pd
 
 import sctoolbox.utilities
 from sctoolbox.utilities import save_figure
-from sctoolbox.analyser import evaluate_batch_effect
 
 #############################################################################
 #                     PCA/tSNE/UMAP plotting functions                      #

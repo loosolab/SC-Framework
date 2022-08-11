@@ -1,5 +1,4 @@
 # Loading packages
-from pickle import TRUE
 import scanpy as sc
 import scanpy.external as sce
 from fitter import Fitter
@@ -8,6 +7,7 @@ from kneed import KneeLocator
 from scipy import sparse
 from contextlib import redirect_stderr
 import io
+import copy
 
 import anndata
 import sctoolbox.creators as cr
@@ -522,13 +522,13 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
 
     # run LISI on all adata objects
     lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
-    adata.obs[col_name] = lisi_res.flatten()
+    adata_m.obs[col_name] = lisi_res.flatten()
 
     if not inplace:
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca','X_umap'], inplace=False):
+def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca', 'X_umap'], inplace=False):
     """
     Calculate batch evaluation score for a dict of anndata objects.
 
@@ -551,7 +551,7 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca','X_umap'], inplac
         Dict containing an anndata object for each batch correction method as values with LISI scores added to .obs.
     """
     # Handle inplace option
-    adatas_m = adatas if inplace else adatas.copy()
+    adatas_m = adatas if inplace else copy.deepcopy(adatas)
 
     # Ensure that obsm_key can be looped over
     if isinstance(obsm_key, str):
