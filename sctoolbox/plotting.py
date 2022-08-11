@@ -409,7 +409,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
-def violinplot(table, y, color_by=None, hlines=None):
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
     """
     Creates a violinplot. With optional horizontal lines for each violin.
     
@@ -423,6 +423,10 @@ def violinplot(table, y, color_by=None, hlines=None):
         Column name of table. Used to color group violins.
     hlines : float/ list or dict of float/ list with color_by categories as keys.
         Define horizontal lines for each violin.
+    colors : list of str, default None
+        List of colors to use for violins.
+    ax : matplotlib.axes.Axes, default None
+        Axes object to draw the plot on. Otherwise use current axes.
 
     Returns
     -------
@@ -447,7 +451,7 @@ def violinplot(table, y, color_by=None, hlines=None):
             raise ValueError(f"Invalid dict keys in hlines parameter. Key(s) have to match table column names. Invalid keys: {invalid_keys}")
 
     # create violinplot
-    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order)
+    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order, color=colors, ax=ax)
 
     # add horizontal lines
     if hlines:
