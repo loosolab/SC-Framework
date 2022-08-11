@@ -1,11 +1,11 @@
 import sys
 from tabnanny import check
-from scipy.stats import skew, kurtosis
 import pandas as pd
 from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
 from IPython.display import display
 import numpy as np
+import os
 
 ###############################################################################
 #                      STEP 1: DEFINING DEFAULT CUTOFFS                       #
@@ -51,17 +51,17 @@ def loop_question(answer, quit_m, check):
             checker.check_options(answer, opt1 + options[check])
     else:
         # Checking validity of custom value: >=0 and <= a limit (the CHECK)
-        while checker.check_cuts(answer, 0, check) is False:
+        while checker.check_cuts(answer, 0, check) is False:  # TODO
             print("Invalid choice! " + quit_m)
             answer = input()
-            checker.check_cuts(answer, 0, check)
+            checker.check_cuts(answer, 0, check)  # TODO
 
     return answer.lower()
 
 
-def set_def_cuts(anndata, interval, var="all", obs="all", only_plot=False, file_name="note2_violin_", save=False):
+def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, obs_color_by=None, only_plot=False, file_name="note2_violin_", save=False):
     """
-    Find thresholds for the given .obs and .var columns in anndata.
+    Find thresholds for the given .obs (cell) and .var (gene) columns in anndata.
 
     1- Definining the cutoffs for QC and filtering steps.
     2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
@@ -73,9 +73,9 @@ def set_def_cuts(anndata, interval, var="all", obs="all", only_plot=False, file_
     interval : int or float
         The percentage (from 0 to 100) to be used to calculate the cutoffs.
     var : str or list of str, default 'all'
-        Anndata.var columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
+        Anndata.var (gene) columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
     obs : str or list of str, default 'all'
-        Anndata.obs columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
+        Anndata.obs (cell) columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
     only_plot : bool, default False
         If true, only a plot with the data without cutoff lines will be provided.
     file_name : str, default "note2_violin_"
@@ -83,10 +83,6 @@ def set_def_cuts(anndata, interval, var="all", obs="all", only_plot=False, file_
         NOTE: use a syntax at least composing the "note2_". Do not add any file extension.
     save : bool, default False
         True, save the figure to the path given in 'save'.
-
-    Notes
-    -----
-    Author: Guilherme Valente
 
     Returns
     -------
@@ -124,7 +120,7 @@ def set_def_cuts(anndata, interval, var="all", obs="all", only_plot=False, file_
 
     # columns numeric?
     not_num_obs = set(obs) - set(anndata.obs.select_dtypes(np.number).columns)
-    not_num_var = set(var) - set(anndata.var.select_dtype(np.number).columns)
+    not_num_var = set(var) - set(anndata.var.select_dtypes(np.number).columns)
     if not_num_obs or not_num_var:
         raise ValueError(f"""
                          Selected columns have to be numeric. Not numeric column(s) received:
@@ -132,81 +128,44 @@ def set_def_cuts(anndata, interval, var="all", obs="all", only_plot=False, file_
                          var: {not_num_var}
                          """)
 
-    # List, dfs, messages and others
-    uns_condition_name = anndata.uns["infoprocess"]["data_to_evaluate"]  # The name of data to evaluate parameter, e.g., "condition"
-    for_cells = [uns_condition_name, "n_genes_by_counts", "total_counts", "pct_counts_is_mitochondrial"]  # List of obs variables to be analysed. The first item MUST be the data to be evaluated
-    for_genes = ["n_cells_by_counts", "mean_counts", "pct_dropout_by_counts"]  # List of var variables to be analysed.
-    for_cells_pd = anndata.obs[anndata.obs.columns.intersection(for_cells)]
-    for_genes_pd = anndata.var[anndata.var.columns.intersection(for_genes)]
-    cells_genes_list = for_cells[1:] + for_genes
-    calulate_and_plot_filter = []  # Samples to be calculated cutoffs and further plotted with cutoff lines
-    df_cuts = pd.DataFrame(columns=["data_to_evaluate", "parameters", "cutoff", "strategy"])  # Empty df to be filled with the cutoffs
-    anndata.uns[uns_condition_name + '_colors'] = anndata.uns["color_set"][:len(anndata.obs[uns_condition_name].unique())]
-    sta_cut_cells, sta_cut_genes = None, None
-
-    # Setting colors for plot
-    m1 = "file_name[STRING]"
-    m4 = "Defining and ploting cutoffs only for total_counts"
-    m5 = "You choose not plot cutoffs"
-    pathway = anndata.uns["infoprocess"]["Anndata_path"]
+    # TODO check if data was filtered before
 
     # Creating filenames
-    if save is True and file_name != "note2_violin_" and type(file_name) != str:  # Here checking is custom name is proper
-        sys.exist(m1)
-    elif save is True and type(file_name) == str:  # Custom name is proper. If custom is not provided, the default is used
-        filename = pathway + file_name
-        filename = filename.replace("//", "/")
-    elif save is False:
-        filename = ""
+    if save and file_name != "note2_violin_" and not isinstance(file_name, str):  # Here checking is custom name is proper
+        sys.exist("file_name[STRING]")
+    elif save and isinstance(file_name, str):  # Custom name is proper. If custom is not provided, the default is used
+        pathway = anndata.uns["infoprocess"]["Anndata_path"]
+        filename = os.path.join(pathway, file_name)
+    elif not save:
+        filename = None
 
+    # setup thresholds data frame
+    thresholds = {'index': [], 'threshold': [], 'color_by': []}
+    for column in obs + var:
+        thresholds['index'].append(column)
+        thresholds['threshold'].append(None)
+        thresholds['color_by'].append(None) # TODO implement color_by
+
+    thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
+
+    # Plotting with or without cutoffs
     if not only_plot:
-        # Checking if the total count was already filtered
-        act_c_total_counts, id_c_total_counts = float(anndata.obs["total_counts"].sum()), float(anndata.uns["infoprocess"]["ID_c_total_counts"])
-        if checker.check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is True:  # Total_counts was not filtered yet, then only this parameter will be evaluated
-            sta_cut_cells, sta_cut_genes = True, False
-            calulate_and_plot_filter.append("total_counts")
-            filename = filename + "tot_count_cut"
-            print(m4)
+        # Calculate cutoffs to plot in the violins
+        for column in obs + var:
+            # compute cutoffs for each column
+            if column in anndata.obs.columns:
+                data = anndata.obs[column].to_numpy() # TODO to_numpy() necessary? NO
+            else:
+                data = anndata.var[column].to_numpy()
 
-        # Other parameters will be evaluated because plot was selected and total count is filtered
-        elif checker.check_cuts(str(act_c_total_counts), id_c_total_counts, id_c_total_counts) is False:  # Total counts was filtered yet.
-            sta_cut_cells, sta_cut_genes = True, True
-            filename = filename + "other_param_cut"
-            for a in cells_genes_list:
-                if a != "total_counts":
-                    calulate_and_plot_filter.append(a)
+            # compute threshold
+            thresholds.loc[column, "threshold"] = analyser.get_threshold(data=data, interval=interval, limit_on="both")
 
-    # Ploting with or without cutoffs
-    if only_plot is True:  # Only plots without cutoff lines will be provided
-        filename = filename
+    # create violinplot
+    plotting.qc_violins(anndata, thresholds, colors=None, filename=filename)
 
-        # Building the dataframe with default cutoffs stablished and the plots
-        # Here will be called the function establishing_cuts from the analyser.py module
-        print(m5)
-        return plotting.qcf_ploting(for_cells_pd, for_genes_pd, anndata.uns[for_cells[0] + "_colors"], df_cuts, PLOT=None, SAVE=save, FILENAME=filename)
-
-    elif only_plot is False:  # Calculate cutoffs and plot in the violins
-        if sta_cut_cells is True:  # For cells
-            for a in for_cells_pd[for_cells[0]].unique().tolist():  # Getting the conditions.
-                adata_cond = for_cells_pd[for_cells_pd[for_cells[0]] == a].copy()
-                for b in for_cells[1:]:
-                    if b in calulate_and_plot_filter:
-                        data = adata_cond[b]
-                        skew_val, kurtosis_val = round(skew(data.to_numpy(), bias=False), 1), int(kurtosis(data.to_numpy(), fisher=False, bias=False))  # Calculating the skewness and kurtosis
-                        kurtosis_val_norm = int(kurtosis_val - 3)  # This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
-                        df_cuts = analyser.establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, b, a)
-
-        if sta_cut_genes is True:  # For genes
-            for a in for_genes:
-                if a in calulate_and_plot_filter:  # Calculate cutoffs only for selected parameters
-                    data = for_genes_pd[a]
-                    skew_val, kurtosis_val = round(skew(data.to_numpy(), bias=False), 1), int(kurtosis(data.to_numpy(), fisher=False, bias=False))  # Calculating the skewness and kurtosis
-                    kurtosis_val_norm = int(kurtosis_val - 3)  # This is a normalization for kurtosis value to identify the excessive kurtosis. Cite: https://www.sciencedirect.com/topics/mathematics/kurtosis
-                    df_cuts = analyser.establishing_cuts(data, interval, skew_val, kurtosis_val_norm, df_cuts, a, None)
-
-        plotting.qcf_ploting(for_cells_pd, for_genes_pd, anndata.uns[for_cells[0] + "_colors"], df_cuts, PLOT=calulate_and_plot_filter, SAVE=save, FILENAME=filename)
-
-        return df_cuts
+    # TODO return anndata containing threshold table instead
+    return thresholds
 
 ######################################################################################
 #                         STEP 2: DEFINING CUSTOM CUTOFFS                            #
