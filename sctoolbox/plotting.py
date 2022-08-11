@@ -583,14 +583,15 @@ def anndata_overview(adatas,
     valid_batch_evaluations = ["X_umap", "X_tsne", "X_pca"]
     invalid_batch_evaluations = set(evaluate_batch_on) - set(valid_batch_evaluations)
     if invalid_batch_evaluations and batch_key:
-        raise ValueError(f"Invalid batch_evaluations specified: {invalid_plots}")
+        raise ValueError(f"Invalid batch_evaluations specified: {invalid_batch_evaluations}")
+
+    if batch_key:
+        plots += evaluate_batch_on
 
     # ---- plotting ---- #
     # setup subplot structure
-    row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
+    row_count = {"PCA-var": 1, "X_umap": 1, "X_tsne": 1, "X_pca": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
-    if batch_key:
-        rows += len(evaluate_batch_on)
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
@@ -634,6 +635,13 @@ def anndata_overview(adatas,
                 elif plot_type == "PCA":
                     sc.pl.pca(adata, ax=ax, **embedding_kwargs)
 
+                elif plot_type in valid_batch_evaluations:
+                    col = f"LISI_score_{plot_type}"
+                    if col not in adata.obs:
+                        raise KeyError(f"Key {col} does not exist in adata object {name}")
+                    boxplot(adata.obs[col], ax=ax)
+                    ax.set_xticklabels([name])
+
                 # Set title for the legend
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
                     ax.legend_.set_title(color)
@@ -649,25 +657,13 @@ def anndata_overview(adatas,
 
                 ax_idx += 1  # increment index for next plot
 
-            if plot_type == "PCA-var":
-                break  # PCA variance is not dependent on color; break off early from color_by loop
+            if plot_type in row_count:
+                break  # If not dependent on color; break off early from color_by loop
 
     # Finalize axes titles and labels
     for i, name in enumerate(adatas):
         fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
-
-    # Add LISI boxplot as last row to the figure
-    if batch_key:
-        for eval in evaluate_batch_on:
-            gs = axs[ax_idx].get_gridspec()
-            for ax in axs[ax_idx:ax_idx + cols]:
-                ax.remove()
-            axbig = fig.add_subplot(gs[ax_idx:ax_idx + cols])
-            lisi_scores = evaluate_batch_effect(adatas, obsm_key=eval, batch_key=batch_key)
-            axbig = boxplot(lisi_scores)
-            annotate_row(axbig, f"LISI {eval}")
-            ax_idx += cols
 
     # save
     save_figure(output)
@@ -677,7 +673,7 @@ def anndata_overview(adatas,
     return axs
 
 
-def boxplot(dt, show_median=True):
+def boxplot(dt, show_median=True, ax=None):
     """
     Generate one plot containing one box per column. The median value is shown.
 
@@ -687,18 +683,25 @@ def boxplot(dt, show_median=True):
         pandas datafame containing numerical values in every column.
     show_median: boolean, default True
         If True show median value as small box inside the boxplot.
+    ax : matplotlib.axes.Axes, optional
+        Axes object to plot on. If None, a new figure is created. Default: None.
 
     Returns
     -------
     AxesSubplot
         containing boxplot for every column.
     """
-    box_plot = sns.boxplot(data=dt)
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        # TODO: check if ax is an ax object
+        pass
+
+    sns.boxplot(data=dt, ax=ax)
 
     if show_median:
         # From:
         # https://stackoverflow.com/questions/49554139/boxplot-of-multiple-columns-of-a-pandas-dataframe-on-the-same-figure-seaborn
-        ax = box_plot.axes
         lines = ax.get_lines()
         categories = ax.get_xticks()
 
@@ -708,4 +711,4 @@ def boxplot(dt, show_median=True):
             ax.text(cat, y, f'{y}', ha='center', va='center', fontweight='bold', size=10, color='white',
                     bbox=dict(facecolor='#445A64'))
 
-    return box_plot
+    return ax

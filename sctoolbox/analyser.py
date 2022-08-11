@@ -1,4 +1,5 @@
 # Loading packages
+from pickle import TRUE
 import scanpy as sc
 import scanpy.external as sce
 from fitter import Fitter
@@ -7,7 +8,6 @@ from kneed import KneeLocator
 from scipy import sparse
 from contextlib import redirect_stderr
 import io
-import pandas as pd
 
 import anndata
 import sctoolbox.creators as cr
@@ -479,23 +479,27 @@ def define_PC(anndata):
     return knee
 
 
-def evaluate_batch_effect(adata_dict, batch_key, obsm_key='X_umap'):
+def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', inplace=False):
     """
     Evaluate batch effect methods using LISI.
 
     Parameters
     ----------
-    adata_dict : dict
-        dictionary containing anndata objects as value and correction method as key.
+    adata : anndata.AnnData
+        Anndata object with PCA and umap/tsne for batch evaluation.
     batch_key : str
         The column in adata.obs containing batch information.
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
+    col_name : str
+        Column name for LISI scor ein .obs.
+    inplace : boolean, default False
+        Whether to work inplace on the anndata object.
 
     Returns
     -------
-    pandas.DataFrame
-        containting LISI scores. Rows -> Cells; Columns -> adatas
+    anndata.Anndata or None:
+        adata with LISI_score added to .obs containting.
 
     Notes
     -----
@@ -506,19 +510,57 @@ def evaluate_batch_effect(adata_dict, batch_key, obsm_key='X_umap'):
     utils.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
 
-    # setup empty pandas data
-    merged_lisi_scores = pd.DataFrame()
+    # Handle inplace option
+    adata_m = adata if inplace else adata.copy()
+
+    # checks
+    if obsm_key not in adata_m.obsm:
+        raise KeyError(f"adata.obsm does not contain the obsm key: {obsm_key}")
+
+    if batch_key not in adata_m.obs:
+        raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
 
     # run LISI on all adata objects
-    for method, adata in adata_dict.items():
+    lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
+    adata.obs[col_name] = lisi_res.flatten()
 
-        if obsm_key not in adata.obsm:
-            raise KeyError(f"adata.obsm of the {method} adata object does not contain the obsm key: {obsm_key}")
+    if not inplace:
+        return adata_m
 
-        if batch_key not in adata.obs:
-            raise KeyError(f"adata.obs of the {method} adata object does not contain the batch key: {batch_key}")
 
-        lisi_res = compute_lisi(adata.obsm[obsm_key], adata.obs, [batch_key])
-        merged_lisi_scores[method] = lisi_res.flatten().tolist()
+def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca','X_umap'], inplace=False):
+    """
+    Calculate batch evaluation score for a dict of anndata objects.
 
-    return merged_lisi_scores
+    Paramters
+    ---------
+
+    adatas : dict of anndata.AnnData
+        Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
+        E.g.: {"bbknn": anndata}
+    batch_key : str
+        The column in adata.obs containing batch information.
+    obsm_key : str or list of str, default ['X_pca','X_umap']
+        Key to coordinates on which the score is calculated
+    inplace : boolean, default False
+        Whether to work inplace on the anndata dict.
+
+    Returns
+    -------
+    dict of anndata.AnnData
+        Dict containing an anndata object for each batch correction method as values with LISI scores added to .obs.
+    """
+    # Handle inplace option
+    adatas_m = adatas if inplace else adatas.copy()
+
+    # Ensure that obsm_key can be looped over
+    if isinstance(obsm_key, str):
+        obsm_key = [obsm_key]
+
+    # Evaluate batch effect for every adata
+    for adata in adatas_m.values():
+        for obsm in obsm_key:
+            evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
+
+    if not inplace:
+        return adatas_m
