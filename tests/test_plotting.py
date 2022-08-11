@@ -4,6 +4,7 @@ import scanpy as sc
 import os
 import tempfile
 import shutil
+import pandas as pd
 
 
 @pytest.fixture
@@ -12,6 +13,13 @@ def adata():
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
     return sc.read_h5ad(f)
+
+
+@pytest.fixture
+def df():
+    """Create and return a pandas dataframe"""
+    return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
+                              'col2': [3, 4, 5, 6, 7]})
 
 
 @pytest.fixture
@@ -125,3 +133,11 @@ def test_anndata_overview_fail_plots(adata):
             output=None,
             dpi=300
         )
+
+
+def test_boxplot(df):
+    """ Test if Axes object is returned. """
+    ax = sctoolbox.plotting.boxplot(df)
+    ax_type = type(ax).__name__
+
+    assert ax_type == "AxesSubplot"

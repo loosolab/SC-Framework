@@ -7,6 +7,7 @@ from kneed import KneeLocator
 from scipy import sparse
 from contextlib import redirect_stderr
 import io
+import pandas as pd
 
 import anndata
 import sctoolbox.creators as cr
@@ -476,3 +477,48 @@ def define_PC(anndata):
     cr.build_infor(anndata, "PCA_knee_threshold", knee)
 
     return knee
+
+
+def evaluate_batch_effect(adata_dict, batch_key, obsm_key='X_umap'):
+    """
+    Evaluate batch effect methods using LISI.
+
+    Parameters
+    ----------
+    adata_dict : dict
+        dictionary containing anndata objects as value and correction method as key.
+    batch_key : str
+        The column in adata.obs containing batch information.
+    obsm_key : str, default 'X_umap'
+        The column in adata.obsm containing coordinates.
+
+    Returns
+    -------
+    pandas.DataFrame
+        containting LISI scores. Rows -> Cells; Columns -> adatas
+
+    Notes
+    -----
+    For further information on LISI:
+    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+    """
+    # Load LISI
+    utils.check_module("harmonypy")
+    from harmonypy.lisi import compute_lisi
+
+    # setup empty pandas data
+    merged_lisi_scores = pd.DataFrame()
+
+    # run LISI on all adata objects
+    for method, adata in adata_dict.items():
+
+        if obsm_key not in adata.obsm:
+            raise KeyError(f"adata.obsm of the {method} adata object does not contain the obsm key: {obsm_key}")
+
+        if batch_key not in adata.obs:
+            raise KeyError(f"adata.obs of the {method} adata object does not contain the batch key: {batch_key}")
+
+        lisi_res = compute_lisi(adata.obsm[obsm_key], adata.obs, [batch_key])
+        merged_lisi_scores[method] = lisi_res.flatten().tolist()
+
+    return merged_lisi_scores

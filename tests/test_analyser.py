@@ -24,6 +24,17 @@ def adata_no_pca(adata):
     return anndata
 
 
+@pytest.fixture
+def adata_batch_dict(adata):
+    """ Adata containing batch column in obs. """
+    anndata_batch = adata.copy()
+
+    # Add batch column
+    anndata_batch.obs['batch'] = ["a", "b"] * 100
+
+    return {"adata": anndata_batch}
+
+
 def test_adata_normalize_total(adata):
     """ Test that data was normalized"""
     an.adata_normalize_total(adata, inplace=True)
@@ -49,3 +60,20 @@ def test_define_PC_error(adata_no_pca):
     """ Test if error without PCA. """
     with pytest.raises(ValueError, match="PCA not found! Please make sure to compute PCA before running this function."):
         an.define_PC(adata_no_pca)
+
+
+def test_evaluate_batch_effect(adata_batch_dict):
+    """ Test if Axes.Subplot is returned. """
+
+    ax = an.evaluate_batch_effect(adata_batch_dict, 'batch')
+    ax_type = type(ax).__name__
+    assert ax_type == "DataFrame"
+
+
+@pytest.mark.parametrize("key", ["a", "b"])
+def test_evaluate_batch_effect_keyerror(adata_batch_dict, key):
+    with pytest.raises(KeyError, match="adata.obsm of the .*"):
+        an.evaluate_batch_effect(adata_batch_dict, batch_key='batch', obsm_key=key)
+
+    with pytest.raises(KeyError, match="adata.obs of the .*"):
+        an.evaluate_batch_effect(adata_batch_dict, batch_key=key)

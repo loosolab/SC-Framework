@@ -12,6 +12,7 @@ import pandas as pd
 
 import sctoolbox.utilities
 from sctoolbox.utilities import save_figure
+from sctoolbox.analyser import evaluate_batch_effect
 
 #############################################################################
 #                     PCA/tSNE/UMAP plotting functions                      #
@@ -503,6 +504,8 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
 def anndata_overview(adatas,
                      color_by,
                      plots=["PCA", "PCA-var", "UMAP"],
+                     batch_key=None,
+                     evaluate_batch_on=['X_pca', 'X_umap'],
                      figsize=None,
                      output=None,
                      dpi=300):
@@ -516,18 +519,21 @@ def anndata_overview(adatas,
         E.g.: {"bbknn": anndata}
     color_by : str or list of str
         Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
-    plots : str or list of str
+    plots : str or list of str, default ["PCA", "PCA-var", "UMAP"]
         Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
         Note: List order is forwarded to plot.
         - UMAP: Plots the UMAP embedding of the data.
         - tSNE: Plots the tSNE embedding of the data.
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
-        Default is: ["PCA", "PCA-var", "UMAP"]
-    figsize : number tuple, optional
-        Size of the plot in inch. Default: None (automatic based on number of columns/rows).
-    output : str, optional
-        Path to plot output file. Default: None (not saved)
+    batch_key: str, default None
+        If set evaluates the batch effect using LISI on given column. The resulting plot is added to the bottom of the figure.
+    evaluate_batch_on: str or list of str, default ['X_pca', 'X_umap']
+        keys for adata.obsm that store the coordinates for with the batch evaluation should be done.
+    figsize : number tuple, default None (automatic based on number of columns/rows)
+        Size of the plot in inch.
+    output : str, default None (not saved)
+        Path to plot output file.
     dpi : number, default 300
         Dots per inch for output
     """
@@ -537,7 +543,22 @@ def anndata_overview(adatas,
     if not isinstance(plots, list):
         plots = [plots]
 
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+    if not isinstance(evaluate_batch_on, list):
+        evaluate_batch_on = [evaluate_batch_on]
+
+    # ---- helper functions ---- #
+    def annotate_row(ax, plot_type):
+        """ Annotate row in figure. """
+        # https://stackoverflow.com/a/25814386
+        ax.annotate(plot_type,
+                    xy=(0, 0.5),
+                    xytext=(-ax.yaxis.labelpad - 5, 0),
+                    xycoords=ax.yaxis.label,
+                    textcoords='offset points',
+                    size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
+                    horizontalalignment='right',
+                    verticalalignment='center',
+                    fontweight='bold')
 
     # ---- checks ---- #
     # dict contains only anndata
@@ -558,10 +579,18 @@ def anndata_overview(adatas,
     if invalid_plots:
         raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
+    # check if batch_evaluations are valid
+    valid_batch_evaluations = ["X_umap", "X_tsne", "X_pca"]
+    invalid_batch_evaluations = set(evaluate_batch_on) - set(valid_batch_evaluations)
+    if invalid_batch_evaluations and batch_key:
+        raise ValueError(f"Invalid batch_evaluations specified: {invalid_plots}")
+
     # ---- plotting ---- #
     # setup subplot structure
     row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
+    if batch_key:
+        rows += len(evaluate_batch_on)
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
@@ -585,16 +614,7 @@ def anndata_overview(adatas,
 
                 # add row label to first plot
                 if i == 0:
-                    # https://stackoverflow.com/a/25814386
-                    ax.annotate(plot_type,
-                                xy=(0, 0.5),
-                                xytext=(-ax.yaxis.labelpad - 5, 0),
-                                xycoords=ax.yaxis.label,
-                                textcoords='offset points',
-                                size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
-                                horizontalalignment='right',
-                                verticalalignment='center',
-                                fontweight='bold')
+                    annotate_row(ax, plot_type)
 
                 # Collect options for plotting
                 embedding_kwargs = {"color": color, "title": "",
@@ -637,9 +657,55 @@ def anndata_overview(adatas,
         fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
+    # Add LISI boxplot as last row to the figure
+    if batch_key:
+        for eval in evaluate_batch_on:
+            gs = axs[ax_idx].get_gridspec()
+            for ax in axs[ax_idx:ax_idx + cols]:
+                ax.remove()
+            axbig = fig.add_subplot(gs[ax_idx:ax_idx + cols])
+            lisi_scores = evaluate_batch_effect(adatas, obsm_key=eval, batch_key=batch_key)
+            axbig = boxplot(lisi_scores)
+            annotate_row(axbig, f"LISI {eval}")
+            ax_idx += cols
+
     # save
     save_figure(output)
     if output:
         plt.savefig(output)
 
     return axs
+
+
+def boxplot(dt, show_median=True):
+    """
+    Generate one plot containing one box per column. The median value is shown.
+
+    Parameter
+    ---------
+    dt : pandas.DataFrame
+        pandas datafame containing numerical values in every column.
+    show_median: boolean, default True
+        If True show median value as small box inside the boxplot.
+
+    Returns
+    -------
+    AxesSubplot
+        containing boxplot for every column.
+    """
+    box_plot = sns.boxplot(data=dt)
+
+    if show_median:
+        # From:
+        # https://stackoverflow.com/questions/49554139/boxplot-of-multiple-columns-of-a-pandas-dataframe-on-the-same-figure-seaborn
+        ax = box_plot.axes
+        lines = ax.get_lines()
+        categories = ax.get_xticks()
+
+        # Add median label
+        for cat in categories:
+            y = round(lines[4 + cat * 6].get_ydata()[0], 2)
+            ax.text(cat, y, f'{y}', ha='center', va='center', fontweight='bold', size=10, color='white',
+                    bbox=dict(facecolor='#445A64'))
+
+    return box_plot

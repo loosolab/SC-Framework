@@ -22,7 +22,9 @@ setup(
         'qnorm',
         'scipy',
         'statsmodels',
-        'tqdm'
+        'tqdm',
+        'pandas',
+        'seaborn'
     ],
     include_package_data=True,
     extras_require={
