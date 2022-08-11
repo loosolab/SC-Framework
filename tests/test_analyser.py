@@ -73,7 +73,7 @@ def test_evaluate_batch_effect(adata_batch_dict):
 @pytest.mark.parametrize("key", ["a", "b"])
 def test_evaluate_batch_effect_keyerror(adata_batch_dict, key):
     with pytest.raises(KeyError, match="adata.obsm of the .*"):
-        an.evaluate_batch_effect(adata_batch_dict, obsm_key=key)
+        an.evaluate_batch_effect(adata_batch_dict, batch_key='batch',obsm_key=key)
 
     with pytest.raises(KeyError, match="adata.obs of the .*"):
         an.evaluate_batch_effect(adata_batch_dict, batch_key=key)
