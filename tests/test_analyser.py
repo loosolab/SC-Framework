@@ -65,7 +65,7 @@ def test_define_PC_error(adata_no_pca):
 def test_evaluate_batch_effect(adata_batch_dict):
     """ Test if Axes.Subplot is returned. """
 
-    ax = an.evaluate_batch_effect(adata_batch_dict)
+    ax = an.evaluate_batch_effect(adata_batch_dict, 'batch')
     ax_type = type(ax).__name__
     assert ax_type == "DataFrame"
 

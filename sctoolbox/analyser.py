@@ -479,7 +479,7 @@ def define_PC(anndata):
     return knee
 
 
-def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
+def evaluate_batch_effect(adata_dict, batch_key, obsm_key='X_umap'):
     """
     Evaluate batch effect methods using LISI.
 
@@ -487,10 +487,10 @@ def evaluate_batch_effect(adata_dict, obsm_key='X_umap', batch_key='batch'):
     ----------
     adata_dict : dict
         dictionary containing anndata objects as value and correction method as key.
+    batch_key : str
+        The column in adata.obs containing batch information.
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
-    batch_key : str, default 'batch'
-        The column in adata.obs containing batch information.
 
     Returns
     -------
