@@ -40,7 +40,7 @@ def adata_batch_dict(adata_batch):
     """ dict containing Adata containing batch column in obs. """
     anndata_batch_dict = adata_batch.copy()
 
-    return {'adata' : anndata_batch_dict}
+    return {'adata': anndata_batch_dict}
 
 
 def test_adata_normalize_total(adata):
