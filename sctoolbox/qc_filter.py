@@ -62,9 +62,6 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     """
     Find thresholds for the given .obs (cell) and .var (gene) columns in anndata.
 
-    1- Definining the cutoffs for QC and filtering steps.
-    2- Ploting anndata obs or anndata var selected for the QC and filtering steps with the cutoffs or not.
-
     Parameters
     ----------
     anndata : anndata.AnnData
