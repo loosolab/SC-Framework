@@ -441,7 +441,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
     color_group_order = set(table[color_by]) if not color_by is None else color_by
 
     # hlines has to be number of list if color_by=None
-    if color_by is None and not hlines is None or isinstance(hlines, (list, int, float)):
+    if not hlines is None and color_by is None and not isinstance(hlines, (list, tuple, int, float)):
         raise ValueError(f"Parameter hlines has to be number or list of numbers for color_by=None. Got type {type(hlines)}.")
 
     # check valid groups in hlines dict
@@ -455,14 +455,18 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
 
     # add horizontal lines
     if hlines:
+        # add color_group_order placeholder
+        if color_by is None:
+            color_group_order = [None]
+
         # make iterable
-        hlines = hlines if isinstance(hlines, list) or isinstance(hlines, dict) else [hlines]
+        hlines = hlines if isinstance(hlines, (list, tuple, dict)) else [hlines]
         
         # make hlines dict
         hlines_dict = hlines if isinstance(hlines, dict) else {}
 
         # horizontal line length computation
-        violin_width = 1 / len(color_group_order)
+        violin_width = len(color_group_order)
         line_length = violin_width - 2 * violin_width * 0.1  # subtract 10% padding
         half_length = line_length / 2
 
@@ -472,18 +476,21 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
 
             # ensure iterable
             line_heights = hlines_dict.setdefault(violin_name, hlines)
-            line_heights = line_heights if isinstance(line_heights, list) else [line_heights]
+            line_heights = line_heights if isinstance(line_heights, (list, tuple)) else [line_heights]
             for line_height in line_heights:
                 # skip if invalid line_height
                 if not isinstance(line_height, (int, float)):
                     continue
-                
-                plot.axhline(y=line_height,
-                             xmin=violin_center - half_length,
-                             xmax=violin_center + half_length,
-                             color="orange",
-                             ls="dashed",
-                             lw=3)
+
+                # add to right axes
+                tmp_ax = ax if ax else plot
+
+                tmp_ax.axhline(y=line_height,
+                               xmin=violin_center - half_length,
+                               xmax=violin_center + half_length,
+                               color="orange",
+                               ls="dashed",
+                               lw=3)
 
     # remove x-axis ticks if color_by=None
     if color_by is None:
@@ -539,7 +546,7 @@ def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None
         table = anndata.var if index in anndata.var.columns else anndata.obs
 
         # create violin
-        violinplot(table=table, y=index, color_by=row[0], hlines=row[1], colors=colors, ax=ax)
+        violinplot(table=table, y=index, hlines=row[0], color_by=row[1], colors=colors, ax=ax)
 
     # Save plot
     if filename:
