@@ -548,6 +548,10 @@ def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None
         # create violin
         violinplot(table=table, y=index, hlines=row[0], color_by=row[1], colors=colors, ax=ax)
 
+    # delete unused subplots
+    for i in range(len(thresholds), len(axs)):
+        fig.delaxes(axs[i])
+
     # Save plot
     if filename:
         save_figure(filename)
