@@ -58,7 +58,7 @@ def loop_question(answer, quit_m, check):
     return answer.lower()
 
 
-def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, obs_color_by=None, only_plot=False, file_name="note2_violin_", save=False):
+def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, obs_color_by=None, show_thresholds=True, output=None):
     """
     Find thresholds for the given .obs (cell) and .var (gene) columns in anndata.
 
@@ -79,18 +79,15 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
         Split anndata.var related violins into color groups using .var column of the given name.
     obs_color_by : str, default None
         Split anndata.obs related violins into color groups using .obs column of the given name.
-    only_plot : bool, default False
-        If true, only a plot with the data without cutoff lines will be provided.
-    file_name : str, default "note2_violin_"
-        Define a name for save a custom filename to save.
-        NOTE: use a syntax at least composing the "note2_". Do not add any file extension.
-    save : bool, default False
-        True, save the figure to the path given in 'save'.
+    show_thresholds : bool, default True
+        If true, compute thresholds and show threshold lines. Returned DataFrame won't contain thresholds if False.
+    output : str or bool, default None
+        Path + filename to save plot to. If True instead of str will save plot to "<project_folder>/qc_violin.pdf".
 
     Returns
     -------
     pandas.DataFrame or None:
-        A pandas dataframe with the defined cutoff parameters. None for only_plot=True.
+        A pandas dataframe with the defined cutoff parameters. Won't contain thresholds for show_thresholds=False.
     """
     # -------------------- checks & setup ------------------- #
     # is interval valid?
@@ -141,13 +138,9 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     # TODO check if data was filtered before
 
     # Creating filenames
-    if save and file_name != "note2_violin_" and not isinstance(file_name, str):  # Here checking is custom name is proper
-        sys.exist("file_name[STRING]")
-    elif save and isinstance(file_name, str):  # Custom name is proper. If custom is not provided, the default is used
-        pathway = anndata.uns["infoprocess"]["Anndata_path"]
-        filename = os.path.join(pathway, file_name)
-    elif not save:
-        filename = None
+    if output is True:
+        # TODO think of a better way instead of hardcoding this.
+        output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "qc_violin.pdf")
 
     # setup thresholds data frame
     thresholds = {'index': [], 'threshold': [], 'color_by': []}
@@ -159,7 +152,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
 
     # Plotting with or without cutoffs
-    if not only_plot:
+    if show_thresholds:
         # Calculate cutoffs to plot in the violins
         for column in obs + var:
             # compute cutoffs for each column
@@ -172,7 +165,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
             thresholds.at[column, "threshold"] = analyser.get_threshold(data=data.to_list(), interval=interval, limit_on="both")
 
     # create violinplot
-    plotting.qc_violins(anndata, thresholds, colors=None, filename=filename)
+    plotting.qc_violins(anndata, thresholds, colors=None, filename=output)
 
     # TODO return anndata containing threshold table instead
     return thresholds
