@@ -1,61 +1,14 @@
-import sys
 import pandas as pd
 from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
 from IPython.display import display
 import numpy as np
 import os
+import click
 
 ###############################################################################
 #                      STEP 1: DEFINING DEFAULT CUTOFFS                       #
 ###############################################################################
-
-
-def loop_question(answer, quit_m, check):
-    """
-    This core check the validity of user's answer.
-
-    Parameters
-    ----------
-    answer : str
-        User's answer
-    quit_m : str
-        Question to be print if the user's answer is invalid
-    check : str
-        Types of questions. The options are "yn", "custdef", or float
-
-    Returns
-    -------
-    str :
-        The user's answer in lower case format
-    """
-    # List and others
-    opt1, opt2, opt3, opt4 = ["q", "quit"], ["y", "yes", "n", "no"], ["custom", "def"], ["custom", "def", "skip"]  # Lists with possible answers for each question
-    options = {"yn": opt2, "custdef": opt3, "custdefskip": opt4}
-
-    if checker.check_options(check, list(options.keys())) is False and type(check) != float:
-        sys.exit("Insert a valid check: " + str(list(options.keys())) + " or float.")
-
-    answer = input(answer).lower()
-    # Check validity of options
-    while checker.check_options(answer, options=opt1 + opt2 + opt3 + opt4) is False and utilities.is_str_numeric(answer) is False:
-        print("Choose one of these options: " + str(opt1 + opt2 + opt3 + opt4))
-        answer = input(answer).lower()
-
-    # In case the input is valid, goes futher
-    if type(check) != float:
-        while checker.check_options(answer, options=opt1 + options[check]) is False:
-            print("Invalid choice! " + quit_m)
-            answer = input()
-            checker.check_options(answer, opt1 + options[check])
-    else:
-        # Checking validity of custom value: >=0 and <= a limit (the CHECK)
-        while checker.check_cuts(answer, 0, check) is False:  # TODO
-            print("Invalid choice! " + quit_m)
-            answer = input()
-            checker.check_cuts(answer, 0, check)  # TODO
-
-    return answer.lower()
 
 
 def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, obs_color_by=None, show_thresholds=True, output=None):
@@ -172,96 +125,114 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
 ######################################################################################
 
 
-def refining_cuts(anndata, def_cut2):
+def refine_cuts(thresholds, inplace=False):
     """
-    Refining the cutoffs to be used in the QC and filtering steps
+    Interactive method to refine the cutoffs used in the QC and filtering steps.
 
     Parameters
     ----------
     anndata : anndata.AnnData
         anndata object
-    def_cut2 : pandas.DataFrame
-        A dataframe with the default cutoffs calculated by the function set_def_cuts of qc_filter.py module
-
-    Notes
-    -----
-    Author: Guilherme Valente
+    thresholds : pandas.DataFrame
+        A dataframe with the default cutoffs produced by the function `find_thresholds`.
+    inplace : bool, default False
+        Adjust the thresholds dataframe inplace.
 
     Returns
     -------
-    pandas.DataFrame :
+    pandas.DataFrame or None :
         Pandas dataframe to be used for the QC and filtering steps
     """
-    # Dataframes and others
-    dfcut = def_cut2.copy()
-    new_df = dfcut[0:0]
-    col0 = dfcut.columns[0]  # data_to_evaluate
-    col1 = dfcut.columns[1]  # parameters
-    col2 = dfcut.columns[2]  # cutoffs
-    col3 = dfcut.columns[3]  # strategy
-    cond_name = anndata.uns["infoprocess"]["data_to_evaluate"]
+    if not inplace:
+        thresholds = thresholds.copy()
 
-    # Questions, and messages
-    q2 = ": custom or def"
-    q3 = ": minimun cutoff [FLOAT or INT]"
-    q4 = ": maximum cutoff [FLOAT or INT]"
-    q5 = ": custom, def or skip"
-    m2 = "The default setting is:"
-    m3 = "\n\n#########################################################\nNOTE. Choose: \n\t1) custom to define new cutoffs\n\t2) def to use the previously defined cutoffs\n#########################################################\n"
-    m4 = "\n\nChoose custom or def\n"
-    m5 = "\n\nType a positive number "
-    m6 = "<= "
-    m7 = "\n"
-    m8 = "\n\n#########################################################\nNOTE. Choose: \n\t1) custom to define new cutoffs\n\t2) def to use the previously defined cutoffs\n\t3) skip to avoid filter this parameter\n#########################################################\n"
-    m9 = "\n\nChoose custom, def or skip\n"
+    # quit value
+    quit = ["Quit"]
 
-    # Checking if the total_counts was already filtered
-    if anndata.obs["total_counts"].sum() == anndata.uns["infoprocess"]["ID_c_total_counts"]:  # If False, means that the total_counts was not filtered yet
-        df_tot_coun = dfcut[dfcut[col1] == "total_counts"].reset_index(drop=True)
-        is_total_count_filt = False
-    else:
-        df_NOT_tot_coun = dfcut[dfcut[col1] != "total_counts"].reset_index(drop=True)
-        is_total_count_filt = True
+    # temporary reset index for easier handling
+    index_name = thresholds.index.name
+    thresholds.reset_index(inplace=True)
 
-    # Executing the main function
-    if is_total_count_filt is False:  # It means that total_counts was not filtered. Then, the dataframe has only total_count information
-        print(m2)
-        display(df_tot_coun)
-        print(m3)
-        for idx, a in dfcut.iterrows():
-            data, param, list_cuts, stra = a[col0], a[col1], a[col2], a[col3]
-            answer = loop_question(data + " " + param + q2, m4, "custdef")  # Custom or default?
-            if answer == "def":
-                new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
-            elif answer == "custom":
-                max_lim = max(anndata.obs[anndata.obs[cond_name] == data][param])
-                min_cut = loop_question(data + " " + param + q3, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
-                max_cut = loop_question(data + " " + param + q4, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
-                list_cuts = sorted([float(min_cut), float(max_cut)], reverse=True)
-                new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
+    def convert_type(val):
+        """ Evaluate string if possible else return string. """
+        try:
+            return eval(val)
+        except:
+            return val
 
-    else:  # It means that total_counts was filtered. Then, the dataframe only has parameters for other information
-        print(m2)
-        display(df_NOT_tot_coun)
-        print(m8)
-        for idx, a in dfcut.iterrows():
-            data, param, list_cuts, stra = a[col0], a[col1], a[col2], a[col3]
-            answer = loop_question(data + " " + param + q5, m9, "custdefskip")  # Custom, default or skip?
-            if answer == "def":
-                new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
-            elif answer == "custom":
-                if stra == "filter_cells":
-                    max_lim = max(anndata.obs[anndata.obs[cond_name] == data][param])
-                elif stra == "filter_genes":
-                    max_lim = max(anndata.var[param])
-                min_cut = loop_question(data + " " + param + q3, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
-                max_cut = loop_question(data + " " + param + q4, m5 + m6 + " " + str(max_lim) + m7, float(max_lim))
-                list_cuts = sorted([float(min_cut), float(max_cut)], reverse=True)
-                new_df = new_df.append({col0: data, col1: param, col2: list_cuts, col3: stra}, ignore_index=True)
-            elif answer == "skip":
-                new_df = new_df.append({col0: data, col1: param, col2: "skip", col3: stra}, ignore_index=True)
+    # start interactive loop
+    while True:
+        # start menu
+        print("""
+              1. Add new threshold row
+              2. Edit threshold row
+              3. Remove threshold row
+              4. Show table
+              5. Quit
+              """)
+        selection = click.prompt("What do you want to do?", choices=click.Choice([1, 2, 3, 4, 5]), show_choices=False)
 
-    return new_df
+        # add new
+        if selection == 1:
+            print("Create new row.")
+            # create row
+            new = {}
+            for column in thresholds.columns:
+                new[column] = click.prompt(f"{column}:")
+
+            # add row
+            thresholds = pd.concat([thresholds, pd.DataFrame(new, index=[0])], ignore_index=True)
+
+        # edit row
+        elif selection == 2:
+            print("Edit row.")
+
+            options = list(thresholds[index_name])
+            for row in options + quit:
+                print(f"    - {row}")
+
+            index = click.prompt("Select row", choices=click.Choice(options + quit))
+
+            if index != quit[0]:
+                for column in thresholds.columns:
+                    # skip index column
+                    if column == index_name:
+                        continue
+
+                    # update value
+                    thresholds.at[index, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[index, column], value_proc=convert_type)
+
+        # remove row
+        elif selection == 3:
+            options = list(thresholds[index_name]) + quit
+            numbers = [i + 1 for i in range(len(options))]
+
+            # show options
+            for i, opt in zip(numbers, options):
+                print(f"{i}. {opt}")
+
+            selection = click.prompt("Select row to remove", choices=click.Choice(options), show_choices=False)
+
+            if selection != numbers[-1]:
+                # remove row
+                thresholds.drop(index=selection, inplace=True)
+
+        # show table
+        elif selection == 4:
+            if utilities._is_notebook():
+                display(thresholds)
+            else:
+                print(thresholds)
+
+        # quit
+        elif selection == 5:
+            if click.confirm("Are you sure you want to quit?"):
+                break
+
+    # re-add index
+    thresholds.set_index(index_name, inplace=True)
+
+    return thresholds if not inplace else None
 
 ###############################################################################
 #                           STEP 3: APPLYING CUTOFFS                          #
