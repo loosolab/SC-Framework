@@ -75,6 +75,10 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
         Anndata.var (gene) columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
     obs : str or list of str, default 'all'
         Anndata.obs (cell) columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
+    var_color_by : str, default None
+        Split anndata.var related violins into color groups using .var column of the given name.
+    obs_color_by : str, default None
+        Split anndata.obs related violins into color groups using .obs column of the given name.
     only_plot : bool, default False
         If true, only a plot with the data without cutoff lines will be provided.
     file_name : str, default "note2_violin_"
@@ -96,6 +100,13 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     # anything selected?
     if var is None and obs is None:
         raise ValueError("Parameters var & obs are empty. Set at least one of them.")
+
+    # check valid obs & var color_by parameters
+    if not var_color_by is None and not var_color_by in anndata.var.columns:
+        raise ValueError("Couldn't find value of var_color_by in anndata.var column names.")
+
+    if not obs_color_by is None and not obs_color_by in anndata.obs.columns:
+        raise ValueError("Couldn't find value of obs_color_by in anndata.obs column names.")
 
     # expand 'all'; get all numeric columns
     if var == "all":
@@ -143,7 +154,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     for column in obs + var:
         thresholds['index'].append(column)
         thresholds['threshold'].append(None)
-        thresholds['color_by'].append(None) # TODO implement color_by
+        thresholds['color_by'].append(obs_color_by if obs_color_by in anndata.obs.columns else var_color_by)
 
     thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
 
