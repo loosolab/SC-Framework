@@ -437,6 +437,10 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
     if y not in table.columns:
         raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
 
+    # check if color_by is valid volumn name
+    if color_by is not None and color_by not in table.columns:
+        raise ValueError(f"Color grouping '{color_by}' not found in column names of table! Use one of {list(table.columns)}")
+
     # set violin order
     color_group_order = set(table[color_by]) if not color_by is None else color_by
 
@@ -466,7 +470,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
         hlines_dict = hlines if isinstance(hlines, dict) else {}
 
         # horizontal line length computation
-        violin_width = len(color_group_order)
+        violin_width = 1 / len(color_group_order)
         line_length = violin_width - 2 * violin_width * 0.1  # subtract 10% padding
         half_length = line_length / 2
 
