@@ -1,5 +1,4 @@
 import sys
-from tabnanny import check
 import pandas as pd
 from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
@@ -154,12 +153,12 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
         for column in obs + var:
             # compute cutoffs for each column
             if column in anndata.obs.columns:
-                data = anndata.obs[column].to_numpy() # TODO to_numpy() necessary? NO
+                data = anndata.obs[column]
             else:
-                data = anndata.var[column].to_numpy()
+                data = anndata.var[column]
 
             # compute threshold
-            thresholds.loc[column, "threshold"] = analyser.get_threshold(data=data, interval=interval, limit_on="both")
+            thresholds.at[column, "threshold"] = analyser.get_threshold(data=data.to_list(), interval=interval, limit_on="both")
 
     # create violinplot
     plotting.qc_violins(anndata, thresholds, colors=None, filename=filename)
