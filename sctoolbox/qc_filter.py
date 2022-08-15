@@ -154,7 +154,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     for column in obs + var:
         thresholds['index'].append(column)
         thresholds['threshold'].append(None)
-        thresholds['color_by'].append(obs_color_by if obs_color_by in anndata.obs.columns else var_color_by)
+        thresholds['color_by'].append(obs_color_by if column in anndata.obs.columns else var_color_by)
 
     thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
 
