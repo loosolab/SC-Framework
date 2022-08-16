@@ -125,7 +125,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
 ######################################################################################
 
 
-def refine_cuts(thresholds, inplace=False):
+def refine_thresholds(thresholds, inplace=False):
     """
     Interactive method to refine the cutoffs used in the QC and filtering steps.
 
