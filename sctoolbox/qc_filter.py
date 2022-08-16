@@ -1,5 +1,5 @@
 import pandas as pd
-from sctoolbox import plotting, creators, checker, analyser, utilities
+from sctoolbox import plotting, checker, analyser, utilities
 import scanpy as sc
 import numpy as np
 import os
@@ -249,130 +249,91 @@ def refine_thresholds(thresholds, inplace=False):
 ###############################################################################
 
 
-def anndata_filter(anndata, go_cut):
+def filter_threshold(anndata, on, min, max, inplace=False):
     """
-    TODO
+    Filter anndata.obs or anndata.var column to given range.
+    
+    Parameters
+    ----------
+    anndata : anndata.AnnData
+        Anndata object to filter.
+    on : str
+        Anndata.obs or anndata.var column to apply filter to.
+    min : float
+        Minimum allowed value. Set None for no threshold.
+    max : float
+        Maximum allowed value. Set None for no threshold.
+    inplace : bool, default False
+        If anndata should be modified inplace.
+
+    Returns
+    -------
+    anndata.AnnData or None :
+        Filtered anndata object.
+    """
+    # check if filter column exists
+    if not on in anndata.obs.columns and not on in anndata.var.columns:
+        raise ValueError(f"Invalid parameter on=`{on}`. Neither found as anndata.obs nor anndata.var column name.")
+
+    # find out where the column is
+    col_in = "obs" if on in anndata.obs.columns else "var"
+    table = anndata.obs if col_in == "obs" else anndata.var
+
+    # don't filter if min or max is None
+    min = np.min(table[on]) if min is None else min
+    max = np.max(table[on]) if max is None else max
+
+    # list of entries to keep
+    filter_bool = (table[on] >= min) & (table[on] <= max)
+
+    # TODO add logging (add info to anndata.uns["infoprocess"])
+
+    if inplace:
+        # NOTE: these are privat anndata functions so they might change without warning!
+        if "obs":
+            anndata._inplace_subset_obs(filter_bool)
+        else:
+            anndata._inplace_subset_var(filter_bool)
+    else:
+        if "obs":
+            return anndata[filter_bool]
+        else:
+            return anndata[:, filter_bool]
+
+
+def anndata_filter(anndata, thresholds, inplace=False):
+    """
+    Filter anndata based on provided threshold table.
 
     Parameters
     ----------
     anndata : anndata.AnnData
-        anndata object
-    go_cut : pandas.DataFrame
-        Pandas dataframe with the samples, parameters, and cutoffs to be used in the filtering process
-
-    Notes
-    -----
-    Author: Guilherme Valente
+        Anndata object to filter.
+    thresholds : pandas.DataFrame
+        Pandas dataframe with filter thresholds for anndata.var & anndata.obs columns. Produced by `find_thresholds()`.
+        Structure (columns):
+            index     = anndata.obs & anndata.var column names
+            threshold = number of list of numbers with thresholds
+            color_by  = corresponding to index .obs or .var column name with categories to split the data. (Not used)
+    inplace : bool, default False
+        If anndata should be modified inplace.
 
     Returns
     -------
-    anndata.AnnData :
-        Filtered anndata
+    anndata.AnnData or None :
+        Filtered anndata object.
         Annotation of filtering parameters in the anndata.uns["infoprocess"]
     """
-    def concatenating(LISTA_ADATA):  # Concatenating adata
-        """ TODO """
-        if len(LISTA_ADATA) > 1:
-            adata_conc = LISTA_ADATA[0].concatenate(LISTA_ADATA[1:], join='inner', batch_key=None)
-        else:
-            adata_conc = LISTA_ADATA[0]
-        return adata_conc
+    if not inplace:
+        anndata = anndata.copy()
 
-    # List, messages and others
-    anndata_CP = anndata.copy()
-    anndata_CP2 = anndata_CP.copy()
-    datamcol, paramcol, cutofcol, stratcol = go_cut.columns[0], go_cut.columns[1], go_cut.columns[2], go_cut.columns[3]
-    act_params = go_cut[paramcol].unique().tolist()
-    act_strate = go_cut[stratcol].unique().tolist()
-    uns_cond = anndata.uns["infoprocess"]["data_to_evaluate"]
-    lst_adata_sub, go_info_cell, go_info_genes = list(), [], []
+    # iterate over thresholds and filter anndata object
+    for index, (threshold, _) in thresholds.iterrows():
+        if threshold:
+            filter_threshold(anndata=anndata, on=index, min=threshold[0], max=threshold[1], inplace=True)
 
-    # Creating the infoprocess
-    if "Cell filter" not in anndata_CP.uns["infoprocess"]:
-        creators.build_infor(anndata_CP, "Cell filter", list())
-    if "Gene filter" not in anndata_CP.uns["infoprocess"]:
-        creators.build_infor(anndata_CP, "Gene filter", list())
-
-    # Filter mitochondrial content first
-    if "pct_counts_is_mitochondrial" in act_params:
-        raw_data = go_cut[go_cut[paramcol] == "pct_counts_is_mitochondrial"]
-        for idx, a in raw_data.iterrows():
-            data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
-            if "skip" in cuts:
-                lst_adata_sub.append(anndata_CP[anndata_CP.obs[uns_cond] == data, :])
-            else:
-                max_cut = max(cuts)
-                m1 = data + " " + param + " max_percent= " + str(max_cut)
-                adata_sub = anndata_CP[anndata_CP.obs[uns_cond] == data, :]
-                lst_adata_sub.append(adata_sub[adata_sub.obs["pct_counts_is_mitochondrial"] < max_cut, :])
-                go_info_cell.append(m1)
-        anndata_CP2 = concatenating(lst_adata_sub)
-        lst_adata_sub = list()
-    else:
-        anndata_CP2 = anndata_CP
-        lst_adata_sub = list()
-
-    # Filtering other cells
-    raw_data = go_cut[go_cut[stratcol] == "filter_cells"]
-    for idx, a in raw_data.iterrows():
-        data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
-        if param != "pct_counts_is_mitochondrial":
-            adata_sub = anndata_CP2[anndata_CP2.obs[uns_cond] == data, :]
-            if "skip" in cuts:
-                lst_adata_sub.append(adata_sub)
-            else:
-                m1 = data + " " + param + " "
-                min_cut, max_cut = min(cuts), max(cuts)
-                if param == "total_counts":
-                    sc.pp.filter_cells(adata_sub, min_counts=min_cut, inplace=True)
-                    sc.pp.filter_cells(adata_sub, max_counts=max_cut, inplace=True)
-                    lst_adata_sub.append(adata_sub)
-                    go_info_cell.append(m1 + "min_counts= " + str(min_cut))
-                    go_info_cell.append(m1 + "max_counts= " + str(max_cut))
-
-                elif param == "n_genes_by_counts":
-                    sc.pp.filter_cells(adata_sub, min_genes=min_cut, inplace=True)
-                    lst_adata_sub.append(adata_sub)
-                    go_info_cell.append(m1 + "min_genes= " + str(min_cut))
-
-    anndata_CP2 = concatenating(lst_adata_sub)
-    lst_adata_sub = list()
-
-    # Filtering genes
-    if "filter_genes" in act_strate:
-        raw_data = go_cut[go_cut[stratcol] == "filter_genes"]
-        adata_sub = anndata_CP2.copy()
-        for idx, a in raw_data.iterrows():
-            data, param, cuts, _ = a[datamcol], a[paramcol], a[cutofcol], a[stratcol]
-            if "skip" in cuts:
-                pass
-            else:
-                min_cut, max_cut = min(cuts), max(cuts)
-                if param == "n_cells_by_counts":
-                    sc.pp.filter_genes(adata_sub, min_cells=min_cut, inplace=True)
-                    go_info_genes.append("n_cells_by_counts min_cells= " + str(min_cut))
-                elif param == "mean_counts":
-                    sc.pp.filter_genes(adata_sub, min_counts=min_cut, inplace=True)
-                    go_info_genes.append("mean_counts min_counts= " + str(min_cut))
-                elif param == "pct_dropout_by_counts":
-                    print("pct_dropout_by_counts filtering is not implemented.")
-        anndata_CP2 = adata_sub
-
-    # Annotating anndata.uns["infoprocess"]
-    if len(anndata_CP.uns["infoprocess"]["Cell filter"]) > 0:
-        anndata_CP.uns["infoprocess"]["Cell filter"] = anndata_CP.uns["infoprocess"]["Cell filter"] + go_info_cell
-    else:
-        anndata_CP.uns["infoprocess"]["Cell filter"] = go_info_cell
-    if len(anndata_CP.uns["infoprocess"]["Gene filter"]) > 0:
-        anndata_CP.uns["infoprocess"]["Gene filter"] = anndata_CP.uns["infoprocess"]["Gene filter"] + go_info_genes
-    else:
-        anndata_CP.uns["infoprocess"]["Gene filter"] = go_info_genes
-
-    anndata_CP2.uns = anndata_CP.uns
-
-    print(anndata)
-    print(anndata_CP2)
-    return anndata_CP2.copy()
+    if not inplace:
+        return anndata
 
 #####################################################################################
 #####################################################################################
