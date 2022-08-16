@@ -1,10 +1,8 @@
 import pandas as pd
 from sctoolbox import plotting, creators, checker, analyser, utilities
 import scanpy as sc
-from IPython.display import display
 import numpy as np
 import os
-import click
 
 ###############################################################################
 #                      STEP 1: DEFINING DEFAULT CUTOFFS                       #
@@ -143,6 +141,9 @@ def refine_thresholds(thresholds, inplace=False):
     pandas.DataFrame or None :
         Pandas dataframe to be used for the QC and filtering steps
     """
+    utilities.check_module("click")
+    import click
+
     if not inplace:
         thresholds = thresholds.copy()
 
@@ -222,6 +223,9 @@ def refine_thresholds(thresholds, inplace=False):
         # show table
         elif selection == 4:
             if utilities._is_notebook():
+                utilities.check_module("IPython")
+                from IPython.display import display
+
                 display(thresholds)
             else:
                 print(thresholds)
