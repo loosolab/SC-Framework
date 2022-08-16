@@ -160,6 +160,7 @@ def refine_cuts(thresholds, inplace=False):
         except:
             return val
 
+    # TODO remove output before each iteration
     # start interactive loop
     while True:
         # start menu
@@ -170,7 +171,7 @@ def refine_cuts(thresholds, inplace=False):
               4. Show table
               5. Quit
               """)
-        selection = click.prompt("What do you want to do?", choices=click.Choice([1, 2, 3, 4, 5]), show_choices=False)
+        selection = int(click.prompt("What do you want to do?", type=click.Choice(["1", "2", "3", "4", "5"]), show_choices=False))
 
         # add new
         if selection == 1:
@@ -178,7 +179,7 @@ def refine_cuts(thresholds, inplace=False):
             # create row
             new = {}
             for column in thresholds.columns:
-                new[column] = click.prompt(f"{column}:")
+                new[column] = click.prompt(f"{column}")
 
             # add row
             thresholds = pd.concat([thresholds, pd.DataFrame(new, index=[0])], ignore_index=True)
@@ -191,7 +192,7 @@ def refine_cuts(thresholds, inplace=False):
             for row in options + quit:
                 print(f"    - {row}")
 
-            index = click.prompt("Select row", choices=click.Choice(options + quit))
+            index = click.prompt("Select row", type=click.Choice(options + quit), show_choices=False)
 
             if index != quit[0]:
                 for column in thresholds.columns:
@@ -200,18 +201,19 @@ def refine_cuts(thresholds, inplace=False):
                         continue
 
                     # update value
-                    thresholds.at[index, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[index, column], value_proc=convert_type)
+                    index_num = thresholds[thresholds[index_name] == index].index[0]
+                    thresholds.at[index_num, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[index_num, column], value_proc=convert_type)
 
         # remove row
         elif selection == 3:
             options = list(thresholds[index_name]) + quit
-            numbers = [i + 1 for i in range(len(options))]
+            numbers = [str(i + 1) for i in range(len(options))]
 
             # show options
             for i, opt in zip(numbers, options):
                 print(f"{i}. {opt}")
 
-            selection = click.prompt("Select row to remove", choices=click.Choice(options), show_choices=False)
+            selection = int(click.prompt("Select row to remove", type=click.Choice(options), show_choices=False))
 
             if selection != numbers[-1]:
                 # remove row
