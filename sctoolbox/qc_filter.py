@@ -160,7 +160,6 @@ def refine_thresholds(thresholds, inplace=False):
         except:
             return val
 
-    # TODO remove output before each iteration
     # start interactive loop
     while True:
         # start menu
