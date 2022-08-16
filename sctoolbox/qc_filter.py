@@ -192,7 +192,7 @@ def refine_thresholds(thresholds, inplace=False):
             for row in options + quit:
                 print(f"    - {row}")
 
-            index = click.prompt("Select row", type=click.Choice(options + quit), show_choices=False)
+            index = click.prompt("Select row to update", type=click.Choice(options + quit), show_choices=False)
 
             if index != quit[0]:
                 for column in thresholds.columns:
@@ -207,17 +207,18 @@ def refine_thresholds(thresholds, inplace=False):
         # remove row
         elif selection == 3:
             options = list(thresholds[index_name]) + quit
-            numbers = [str(i + 1) for i in range(len(options))]
 
             # show options
-            for i, opt in zip(numbers, options):
-                print(f"{i}. {opt}")
+            for opt in options:
+                print(f"    - {opt}")
 
-            selection = int(click.prompt("Select row to remove", type=click.Choice(options), show_choices=False))
+            selection = click.prompt("Select row to remove", type=click.Choice(options), show_choices=False)
 
-            if selection != numbers[-1]:
+            if selection != quit:
+                index_num = thresholds[thresholds[index_name] == selection].index[0]
+
                 # remove row
-                thresholds.drop(index=selection, inplace=True)
+                thresholds.drop(index=index_num, inplace=True)
 
         # show table
         elif selection == 4:
@@ -230,6 +231,10 @@ def refine_thresholds(thresholds, inplace=False):
         elif selection == 5:
             if click.confirm("Are you sure you want to quit?"):
                 break
+
+        if selection != 4:
+            # clear output
+            utilities.clear()
 
     # re-add index
     thresholds.set_index(index_name, inplace=True)
