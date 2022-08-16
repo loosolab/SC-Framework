@@ -3,7 +3,8 @@ from setuptools import setup
 # Module requirements
 converter = ['rpy2==3.4.5', 'anndata2ri']
 atac = ['pysam', 'episcanpy', 'pyyaml', 'ipywidgets']
-all = converter + atac
+interactive = ['click', 'IPython']
+all = converter + atac + interactive
 
 
 setup(
@@ -27,6 +28,7 @@ setup(
     extras_require={
         'all': all,
         'converter': converter,
-        'atac': atac
+        'atac': atac,
+        'interactive': interactive
     }
 )
