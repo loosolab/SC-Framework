@@ -31,9 +31,9 @@ def get_threshold(data, interval, limit_on="both"):
     # fall back to percentile thresholds if true
     fallback = False
     # check limit_on value
-    if not limit_on in ["upper", "lower", "both"]:
+    if limit_on not in ["upper", "lower", "both"]:
         raise ValueError(f"Parameter limit_on has to be one of {['upper', 'lower', 'both']}. Got {limit_on}.")
-    
+
     # compute skew and kurtosis
     # skew and kurtosis are used to identify distribution shape.
     # TODO why is skew rounded?

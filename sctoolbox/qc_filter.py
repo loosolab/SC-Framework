@@ -47,10 +47,10 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
         raise ValueError("Parameters var & obs are empty. Set at least one of them.")
 
     # check valid obs & var color_by parameters
-    if not var_color_by is None and not var_color_by in anndata.var.columns:
+    if var_color_by is not None and var_color_by not in anndata.var.columns:
         raise ValueError("Couldn't find value of var_color_by in anndata.var column names.")
 
-    if not obs_color_by is None and not obs_color_by in anndata.obs.columns:
+    if obs_color_by is not None and obs_color_by not in anndata.obs.columns:
         raise ValueError("Couldn't find value of obs_color_by in anndata.obs column names.")
 
     # expand 'all'; get all numeric columns
@@ -62,7 +62,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     # make iterable
     obs = obs if isinstance(obs, list) else [obs]
     var = var if isinstance(var, list) else [var]
-    
+
     # invalid column name?
     invalid_obs = set(obs) - set(anndata.obs.columns)
     invalid_var = set(var) - set(anndata.var.columns)
@@ -158,7 +158,7 @@ def refine_thresholds(thresholds, inplace=False):
         """ Evaluate string if possible else return string. """
         try:
             return eval(val)
-        except:
+        except Exception:
             return val
 
     # start interactive loop
@@ -252,7 +252,7 @@ def refine_thresholds(thresholds, inplace=False):
 def filter_threshold(anndata, on, min, max, inplace=False):
     """
     Filter anndata.obs or anndata.var column to given range.
-    
+
     Parameters
     ----------
     anndata : anndata.AnnData
@@ -272,7 +272,7 @@ def filter_threshold(anndata, on, min, max, inplace=False):
         Filtered anndata object.
     """
     # check if filter column exists
-    if not on in anndata.obs.columns and not on in anndata.var.columns:
+    if on not in anndata.obs.columns and on not in anndata.var.columns:
         raise ValueError(f"Invalid parameter on=`{on}`. Neither found as anndata.obs nor anndata.var column name.")
 
     # find out where the column is

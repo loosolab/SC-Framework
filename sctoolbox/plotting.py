@@ -412,7 +412,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
     """
     Creates a violinplot. With optional horizontal lines for each violin.
-    
+
     Parameters
     ----------
     table : pandas.DataFrame
@@ -442,10 +442,10 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
         raise ValueError(f"Color grouping '{color_by}' not found in column names of table! Use one of {list(table.columns)}")
 
     # set violin order
-    color_group_order = set(table[color_by]) if not color_by is None else color_by
+    color_group_order = set(table[color_by]) if color_by is not None else color_by
 
     # hlines has to be number of list if color_by=None
-    if not hlines is None and color_by is None and not isinstance(hlines, (list, tuple, int, float)):
+    if hlines is not None and color_by is None and not isinstance(hlines, (list, tuple, int, float)):
         raise ValueError(f"Parameter hlines has to be number or list of numbers for color_by=None. Got type {type(hlines)}.")
 
     # check valid groups in hlines dict
@@ -465,7 +465,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
 
         # make iterable
         hlines = hlines if isinstance(hlines, (list, tuple, dict)) else [hlines]
-        
+
         # make hlines dict
         hlines_dict = hlines if isinstance(hlines, dict) else {}
 
@@ -501,6 +501,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
         plot.tick_params(axis="x", which="both", bottom=False)
 
     return plot
+
 
 def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None, dpi=300):
     """
