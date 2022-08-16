@@ -288,7 +288,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
     return axs
 
 
-def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False, restrict_to=None):
+def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False, restrict_to=None, additional_nodes=None):
     """
     Generate network graph of interactions between clusters.
 
@@ -322,6 +322,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
             Show the interaction count in the hairball.
         restrict_to : list of str, default None
             Only show given clusters provided in list.
+        additional_nodes : list, default None
+            List of additional node names displayed in the hairball.
 
     Returns
     -------
@@ -336,7 +338,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
     # any invalid cluster names
     if restrict_to:
-        valid_clusters = set.union(set(interactions["ligand_cluster"]), set(interactions["receptor_cluster"]))
+        valid_clusters = set.union(set(interactions["ligand_cluster"]), set(interactions["receptor_cluster"]), set(additional_nodes) if additional_nodes else set())
         invalid_clusters = set(restrict_to) - valid_clusters
         if invalid_clusters:
             raise ValueError(f"Invalid cluster in `restrict_to`: {invalid_clusters}")
@@ -400,6 +402,10 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         clusters = restrict_to
     else:
         clusters = list(set(list(interactions["receptor_cluster"]) + list(interactions["ligand_cluster"])))
+
+        # add additional nodes
+        if additional_nodes:
+            clusters += additional_nodes
 
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
