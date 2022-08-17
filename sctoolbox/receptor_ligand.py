@@ -19,6 +19,9 @@ from sklearn.preprocessing import minmax_scale
 import warnings
 
 
+# -------------------------------------------------- setup functions -------------------------------------------------- #
+
+
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False):
     """
     Download table of receptor-ligand interactions and store in adata.
@@ -228,6 +231,9 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
         return modified_adata
 
 
+# -------------------------------------------------- plotting functions -------------------------------------------------- #
+
+
 def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100):
     """
     Generate violin plot of pairwise cluster interactions.
@@ -250,9 +256,8 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
         matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
-    # is interaction table available?
-    if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
-        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+    # check if data is available
+    _check_interactions(adata)
 
     interactions = adata.uns["receptor-ligand"]["interactions"]
 
@@ -330,9 +335,8 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
         matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
-    # is interaction table available?
-    if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
-        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+    # check if data is available
+    _check_interactions(adata)
 
     interactions = adata.uns["receptor-ligand"]["interactions"]
 
@@ -594,9 +598,8 @@ def connectionPlot(adata,
         matplotlib.axes.Axes :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
-    # is interaction table available?
-    if "receptor-ligand" not in adata.uns.keys() or "interactions" not in adata.uns["receptor-ligand"].keys():
-        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+    # check if data is available
+    _check_interactions(adata)
 
     data = adata.uns["receptor-ligand"]["interactions"].copy()
 
@@ -727,3 +730,78 @@ def connectionPlot(adata,
         plt.savefig(output, bbox_inches='tight')
 
     return axs
+
+
+# -------------------------------------------------- helper functions -------------------------------------------------- #
+
+
+def get_interactions(anndata, min_perc=None, interaction_score=None, interaction_perc=None, group_a=None, group_b=None):
+    """
+    Get interaction table from anndata. Apply filters if any.
+
+    Parameters
+    ----------
+    anndata : anndata.AnnData
+        Anndata object to pull interaction table from.
+    min_perc : float, default None
+        Minimum percent of cells in a cluster that express the ligand/ receptor gene. Value from 0-100.
+    interaction_score : float, default None
+        Filter receptor-ligand interactions below given score. Ignored if `interaction_perc` is set.
+    interaction_perc : float, default None
+        Filter receptor-ligand interactions below the given percentile. Overwrite `interaction_score`. Value from 0-100.
+    group_a : list, default None
+        List of cluster names that must be present in any given receptor-ligand interaction.
+    group_b : list, default None
+        List of cluster names that must be present in any given receptor-ligand interaction.
+
+    Returns
+    -------
+    pandas.DataFrame :
+        Table that contains interactions.
+        Columns:
+            receptor_cluster      = name of the receptor cluster
+            ligand_cluster        = name of the ligand cluster
+            receptor_gene         = name of the receptor gene
+            ligand_gene           = name of the ligand gene
+            receptor_score        = zscore of receptor gene cluster mean expression (scaled by cluster size)
+            ligand_score          = zscore of ligand gene cluster mean expression (scaled by cluster size)
+            receptor_percent      = percent of cells in cluster expressing receptor gene
+            ligand_percent        = percent of cells in cluster expressing ligand gene
+            receptor_cluster_size = number of cells in receptor cluster
+            ligand_cluster_size   = number of cells in ligand cluster
+            interaction_score     = sum of receptor_score and ligand_score
+    """
+    # check if data is available
+    _check_interactions(anndata)
+    
+    table = anndata.uns["receptor-ligand"]["interactions"]
+    
+    if min_perc is None:
+        min_perc = 0
+
+    # overwrite interaction_score
+    if interaction_perc:
+        interaction_score = np.percentile(table["interaction_score"], interaction_perc)
+    elif interaction_score is None:
+        interaction_score = min(table["interaction_score"]) - 1
+    
+    subset = table[(table["receptor_percent"] >= min_perc)
+                 & (table["ligand_percent"] >= min_perc)
+                 & (table["interaction_score"] > interaction_score)]
+    
+    if group_a and group_b:
+        subset = subset[(subset["receptor_cluster"].isin(group_a) & subset["ligand_cluster"].isin(group_b))
+                      | (subset["receptor_cluster"].isin(group_b) & subset["ligand_cluster"].isin(group_a))]
+    elif group_a or group_b:
+        group = group_a if group_a else group_b
+        
+        subset = subset[subset["receptor_cluster"].isin(group) | subset["ligand_cluster"].isin(group)]
+    
+    return subset
+
+
+def _check_interactions(anndata):
+    """ Return error message if anndata object doesn't contain interaction data. """
+    # is interaction table available?
+    if "receptor-ligand" not in anndata.uns.keys() or "interactions" not in anndata.uns["receptor-ligand"].keys():
+        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
