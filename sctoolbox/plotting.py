@@ -2,6 +2,7 @@
 Modules for plotting single cell data
 """
 
+from math import ceil
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -408,96 +409,157 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
-def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME=None):
-    '''Violin plot with cutoffs
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
+    """
+    Creates a violinplot. With optional horizontal lines for each violin.
 
     Parameters
-    ------------
-    DEFCELLs : Pandas dataframe
-        Anndata.obs variables to be used for plot. The first colum MUST be the condition or sample description
-    DFGENES : Pandas dataframe
-        Anndata.var variables to be used for plot
-    COLORS : List
-        Name of colors to be used in the plot
-    DFCUTS : Pandas dataframe
-        Dataframe with conditions, parameters and cutoffs as columns for both DEFCELLs and DEFGENEs.
-        The cutoffs must be a list
-    PLOT : List. Default None
-        List of parameters that the cutoff lines will be plotted.
-    SAVE : Boolean
-        True, save the figure. Default: None (figure is not saved).
-    FILENAME : String
-        Path and name of file to be saved. It will be used if SAVE==True. Default: None
-    '''
-    # Author : Guilherme Valente
-    def defin_cut_lnes(NCUTS):  # NCUTS define the number of cuts of X axis
-        range_limits = np.linspace(0, 1, 2 + NCUTS).tolist()
-        list_limits = []
-        index, counter = 0, 1
-        while counter <= NCUTS + 1:
-            minim, maximim = round(range_limits[index], 2), round(range_limits[index + 1], 2)
-            if counter < NCUTS + 1:
-                maximim = maximim - 0.01
-            list_limits.append((minim, maximim))
-            index, counter = index + 1, counter + 1
-        return list_limits
+    ----------
+    table : pandas.DataFrame
+        Values to create the violins from.
+    y : str
+        Column name of table. Values that will be shown on y-axis.
+    color_by : str
+        Column name of table. Used to color group violins.
+    hlines : float/ list or dict of float/ list with color_by categories as keys.
+        Define horizontal lines for each violin.
+    colors : list of str, default None
+        List of colors to use for violins.
+    ax : matplotlib.axes.Axes, default None
+        Axes object to draw the plot on. Otherwise use current axes.
 
-    # Definining the parameters to be ploted
-    lst_dfcuts_cols2 = DFCUTS.columns.tolist()
+    Returns
+    -------
+    matplotlib.axes.Axes :
+        Object containing the violinplot.
+    """
+    # check if valid column name
+    if y not in table.columns:
+        raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
 
-    # Separating dataframes for the anndata obs and var information
-    for_cells, for_genes = DFCUTS[DFCUTS[lst_dfcuts_cols2[3]] == "filter_cells"], DFCUTS[DFCUTS[lst_dfcuts_cols2[3]] == "filter_genes"]
+    # check if color_by is valid volumn name
+    if color_by is not None and color_by not in table.columns:
+        raise ValueError(f"Color grouping '{color_by}' not found in column names of table! Use one of {list(table.columns)}")
 
-    # Defining the X axis lines limits
-    lmts_X_for_cel, lmts_X_for_gen = defin_cut_lnes((len(for_cells[lst_dfcuts_cols2[0]].unique())) - 1), defin_cut_lnes((len(for_genes[lst_dfcuts_cols2[0]].unique())) - 1)
+    # set violin order
+    color_group_order = set(table[color_by]) if color_by is not None else color_by
 
-    # Ploting variables in DEFCELLs and DFGENES separately
-    ncols = 3
-    nrows = (len(DFCELLS.columns) + len(DFCELLS.columns) - 2) / ncols
-    if (nrows % 2) != 0:
-        nrows = int(nrows) + 1
+    # hlines has to be number of list if color_by=None
+    if hlines is not None and color_by is None and not isinstance(hlines, (list, tuple, int, float)):
+        raise ValueError(f"Parameter hlines has to be number or list of numbers for color_by=None. Got type {type(hlines)}.")
 
-    fig, a = plt.subplots(int(nrows), ncols, figsize=(ncols * 5, int(nrows) * 5))
-    labelsize, fontsize, a = 14, 20, a.ravel()
+    # check valid groups in hlines dict
+    if isinstance(hlines, dict):
+        invalid_keys = set(hlines.keys()) - set(table.columns)
+        if invalid_keys:
+            raise ValueError(f"Invalid dict keys in hlines parameter. Key(s) have to match table column names. Invalid keys: {invalid_keys}")
 
-    def plot_cut_lines(a, limits):
-        ax.axhline(y=max(a), xmin=limits[0], xmax=limits[1], c="orange", ls="dashed", lw=3, label=round(max(a), 3))
-        ax.axhline(y=min(a), xmin=limits[0], xmax=limits[1], c="orange", ls="dashed", lw=3, label=round(min(a), 3))
+    # create violinplot
+    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order, color=colors, ax=ax)
 
-    for idx, ax in enumerate(a):
-        if idx <= len(DFCELLS.columns) - 2:
-            lines = for_cells[for_cells[lst_dfcuts_cols2[1]].str.contains(DFCELLS.iloc[:, idx + 1].name)]
-            condi_cut = lines[[lst_dfcuts_cols2[0], lst_dfcuts_cols2[2]]]
-            parameter = ''.join(lines[lst_dfcuts_cols2[1]].unique().tolist())
-            sns.violinplot(x=DFCELLS.iloc[:, 0], y=DFCELLS.iloc[:, idx + 1], ax=ax, palette=COLORS)
-            counter = 0
-            for a in condi_cut[lst_dfcuts_cols2[2]].to_list():
-                if PLOT is not None and parameter in PLOT:
-                    plot_cut_lines(a, lmts_X_for_cel[counter])
-                else:
-                    pass
-                counter = counter + 1
-            ax.set_title("Cells: " + DFCELLS.columns[idx + 1], fontsize=fontsize)
-            ax.set_xlabel("")
-            ax.set_ylabel("")
-            ax.tick_params(labelsize=labelsize)
-        else:
-            lines = for_genes[for_genes[lst_dfcuts_cols2[1]].str.contains(DFGENES.iloc[:, idx - 3].name)]
-            param_cut = lines[[lst_dfcuts_cols2[1], lst_dfcuts_cols2[2]]]
-            parameter = ''.join(lines[lst_dfcuts_cols2[1]].unique().tolist())
-            sns.violinplot(data=DFGENES.iloc[:, idx - 3], ax=ax, color="grey")
-            for a in param_cut[lst_dfcuts_cols2[2]].to_list():
-                if PLOT is not None and parameter in PLOT:
-                    plot_cut_lines(a, lmts_X_for_gen[0])
-                else:
-                    pass
-            ax.set_title("Genes: " + DFGENES.columns[idx - 3], fontsize=fontsize)
-            ax.tick_params(labelsize=labelsize)
-    fig.tight_layout()
+    # add horizontal lines
+    if hlines:
+        # add color_group_order placeholder
+        if color_by is None:
+            color_group_order = [None]
+
+        # make iterable
+        hlines = hlines if isinstance(hlines, (list, tuple, dict)) else [hlines]
+
+        # make hlines dict
+        hlines_dict = hlines if isinstance(hlines, dict) else {}
+
+        # horizontal line length computation
+        violin_width = 1 / len(color_group_order)
+        line_length = violin_width - 2 * violin_width * 0.1  # subtract 10% padding
+        half_length = line_length / 2
+
+        # draw line(s) for each violin
+        for i, violin_name in enumerate(color_group_order):
+            violin_center = violin_width * (i + 1) - violin_width / 2
+
+            # ensure iterable
+            line_heights = hlines_dict.setdefault(violin_name, hlines)
+            line_heights = line_heights if isinstance(line_heights, (list, tuple)) else [line_heights]
+            for line_height in line_heights:
+                # skip if invalid line_height
+                if not isinstance(line_height, (int, float)):
+                    continue
+
+                # add to right axes
+                tmp_ax = ax if ax else plot
+
+                tmp_ax.axhline(y=line_height,
+                               xmin=violin_center - half_length,
+                               xmax=violin_center + half_length,
+                               color="orange",
+                               ls="dashed",
+                               lw=3)
+
+    # remove x-axis ticks if color_by=None
+    if color_by is None:
+        plot.tick_params(axis="x", which="both", bottom=False)
+
+    return plot
+
+
+def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None, dpi=300):
+    """
+    Grid of violinplots with optional cutoffs.
+
+    Parameters
+    ----------
+    anndata : anndata.AnnData
+        Anndata object providing violin data.
+    thresholds : pandas.DataFrame
+        Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
+        Note: Row order defines plot order.
+        Structure:
+            index      - Name of anndata.var or anndata.obs column.
+            1st column - Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
+            2nd column - Name of anndata.var or anndata.obs column used for color grouping or None to disable.
+    ncols : int, default 3
+        Number of violins per row.
+    colors : list of str, default None
+        List of colors for the violins.
+    filename : str, default None
+        Path and name of file to be saved.
+    figsize : int tuple, default None
+        Size of figure in inches.
+    dpi : int, default 300
+        Dots per inch.
+    """
+    # test if threshold indexes are column names in .obs or .var
+    invalid_index = set(thresholds.index) - set(anndata.obs.columns) - set(anndata.var.columns)
+    if invalid_index:
+        raise ValueError(f"Threshold table indices need to be column names of anndata.obs or anndata.var. Indices not found: {invalid_index}")
+
+    ambiguous_index = set(thresholds.index).intersection(set(anndata.obs.columns).intersection(anndata.var.columns))
+    if ambiguous_index:
+        raise ValueError(f"Ambigouous indices! Detected indices present as both anndata.var and anndata.obs column name. {ambiguous_index}")
+
+    # create subplot grid
+    nrows = ceil(len(thresholds) / ncols)
+    figsize = figsize if figsize is not None else (ncols * 4, nrows * 4)
+
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, dpi=dpi, figsize=figsize, constrained_layout=True)
+    axs = axs.flatten()  # flatten to 1d array per row
+
+    # iterate over threshold rows
+    for (index, row), ax in zip(thresholds.iterrows(), axs):
+        # find out if in obs or var
+        table = anndata.var if index in anndata.var.columns else anndata.obs
+
+        # create violin
+        violinplot(table=table, y=index, hlines=row[0], color_by=row[1], colors=colors, ax=ax)
+
+    # delete unused subplots
+    for i in range(len(thresholds), len(axs)):
+        fig.delaxes(axs[i])
 
     # Save plot
-    if SAVE is True:
-        save_figure(FILENAME)
+    if filename:
+        save_figure(filename)
 
 
 def anndata_overview(adatas,

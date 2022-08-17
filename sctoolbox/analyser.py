@@ -5,101 +5,114 @@ import sctoolbox.annotation as an
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
+import scipy.stats
 
-###################################################################################################################
 
-
-def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2, condi2):
+def get_threshold(data, interval, limit_on="both"):
     """
-    Defining cutoffs for anndata.obs and anndata.var parameters
-
-    TODO change param names to be more meaningful
+    Define cutoffs for the given data. Depending on distribution shape either by knee detection or using a percentile.
 
     Parameters
     ----------
-    data2 : pandas.core.series.Series
-        Dataset to be have the cutoffs calculated.
-    interval : int or float
-        A percentage value from 0 to 1 or 100 to be used to calculate the confidence interval or percentile
-    skew_val : int
-        The skew value of the dataset under evaluated
-    kurtosis_norm : int
-        The normalized kurtosis value of the dataset under evaluated
-    df_cuts : pandas.DataFrame
-        An empty dataframe with data_to_evaluate, parameters, cutoff and strategy as columns to be filled.
-        The rows will be the information of each sample analysed by this function.
-    param2 : str
-        The name of anndata.obs or anndata.var parameter to be evaluated by this function
-    condi2 : str
-        The name of anndata.obs sample to be evaluated by this function
+    data : numbers list
+        Data the thresholds will be calculated on.
+    interval : int
+        A percentage value from 0 to 100 to be used to calculate the confidence interval or percentile.
+    limit_on : str, default 'both'
+        Define a threshold for lower, upper or both sides of the distribution. Options: ['lower', 'upper', 'both']
 
     Returns
     -------
-    pandas.DataFrame :
-        Pandas dataframe with cutoffs for each parameter and dataset.
-
-    Notes
-    -----
-    Author: Guilherme Valente
+    number or number tuple:
+        Depending on 'limit_on' will give a single value for the lower or upper threshold or a tuple for both (lower, upper).
+        Lower threshold is defined as `interval`, upper as `100 - interval`.
     """
+    # -------------------- setup -------------------- #
+    # fall back to percentile thresholds if true
+    fallback = False
+    # check limit_on value
+    if limit_on not in ["upper", "lower", "both"]:
+        raise ValueError(f"Parameter limit_on has to be one of {['upper', 'lower', 'both']}. Got {limit_on}.")
 
-    def filling_df_cut(df_cuts2, condi3, param3, lst_cuts, lst_dfcuts_cols):
-        """ TODO add documentation """
-        if condi3 is None:
-            df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: "_", lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_genes"}, ignore_index=True)
-        else:
-            df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: condi3, lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_cells"}, ignore_index=True)
-        return df_cuts2
+    # compute skew and kurtosis
+    # skew and kurtosis are used to identify distribution shape.
+    # TODO why is skew rounded?
+    # TODO why is kurtosis casted to int?
+    # The skew value describes the symmetry of a distribution aka whether it's shifted to left or right.
+    # >0 = right skew; longer tail on the right of its peak
+    #  0 = no skew; symmetrical, equal tails on both sides of the peak
+    # <0 = left skew; longer tail on the left of its peak
+    # See https://www.scribbr.com/statistics/skewness/
+    skew = round(scipy.stats.skew(data, bias=False), 1)
+    # The kurtosis value describes the taildness aka outlier frequency of a distribution.
+    # >3 = frequent outliers; leptokurtic
+    #  3 = moderate outliers; mesokurtic
+    # <3 = infrequent outliers; platykurtic
+    # See https://www.scribbr.com/statistics/kurtosis/
+    kurtosis = int(scipy.stats.kurtosis(data, fisher=False, bias=False))
 
-    # Defining the types of distributions to be evaluated and organizing the data
-    lst_distr, curves, directions = ["uniform", "expon", "powerlaw", "norm"], ["convex", "concave"], ["increasing", "decreasing"]
-    lst_dfcuts_cols, np_data2, lst_data2 = df_cuts.columns.tolist(), data2.to_numpy(), data2.tolist()
-    knns = list()
-
-    # This is a normal distribution
-    if skew_val == 0:
-        cut_right, cut_left = np.percentile(np_data2, (interval * 100)), np.percentile(np_data2, 100 - (interval * 100))  # Percentile
-        join_cuts = [cut_right, cut_left]
-        if 0 in join_cuts:
-            join_cuts = [max(join_cuts)]
-        df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
-
-    # This is a mesokurtic skewed distributed (long tail and not sharp)
-    elif skew_val != 0 and kurtosis_norm == 0:
-        cut_right, cut_left = np.percentile(np_data2, (interval * 100)), np.percentile(np_data2, 100 - (interval * 100))  # Percentile
-        join_cuts = [cut_right, cut_left]
-        if 0 in join_cuts:
-            join_cuts = [max(join_cuts)]
-        df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
-
-    # This is a skewed distribution (long tail), and platykurtic (not extremely sharp, not so long tail) or leptokurtic (extremely sharp, long tail)
-    elif skew_val != 0 and kurtosis_norm != 0:
-        f = Fitter(np_data2, distributions=lst_distr)
+    # -------------------- find thresholds -------------------- #
+    # This is a skewed distribution, and platykurtic (not extremely sharp, not so long but onesided tail)
+    # or
+    # This is a leptokurtic distribution (extremely sharp, long tail)
+    # TODO The comment does not seem to match the if condition.
+    if skew != 0 and kurtosis != 3:
+        # find out kind of distribution through fitting
+        f = Fitter(data, distributions=["uniform", "expon", "powerlaw", "norm"])
         f.fit()
-        best_fit = list(f.get_best().keys())  # Finding the best fit
+        # name of best fit
+        best_fit = list(f.get_best().keys())[0]
 
         # This is the power law or exponential distributed data
-        if "expon" in best_fit or "powerlaw" in best_fit:
-            lst_data2.sort()
-            histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2) / 100), weights=range(0, len(lst_data2), 1))
-            for a in curves:
-                for b in directions:
-                    knns2 = KneeLocator(x=range(1, len(histon2) + 1), y=histon2, curve=a, direction=b)
-                    knn2_converted = bins_built[knns2.knee - 1].item()
-                    if knn2_converted > 0:
-                        knns.append(knn2_converted)
-            kn_selected = [min(knns)]
-            df_cutoffs = filling_df_cut(df_cuts, condi2, param2, kn_selected, lst_dfcuts_cols)
+        if best_fit == "expon" or best_fit == "powerlaw":
+            # set knee as thresholds
+            data.sort()
 
-        # This is the skewed shaped but not like exponential nor powerlaw
+            # TODO why do knee location on binned data instead of raw?
+            # reduce data to histon bins
+            hist, bin_edges = np.histogram(a=data, bins=int(len(data) / 100), weights=range(0, len(data), 1))
+
+            # TODO why have a list of knees?
+            thresholds = []
+            for curve in ["convex", "concave"]:
+                # TODO why do increasing and decreasing?
+                for direction in ["increasing", "decreasing"]:
+                    # find knee
+                    knee_obj = KneeLocator(x=range(1, len(hist) + 1), y=hist, curve=curve, direction=direction)
+
+                    # convert knee (histon number) to bin edge (actual data value)
+                    threshold = bin_edges[knee_obj.knee - 1]
+
+                    # TODO why is this done?
+                    # remove 0 if in thresholds
+                    if threshold > 0:
+                        thresholds.append(threshold)
+
+            # Why only keep lowest value?
+            thresholds = [min(thresholds), None]
         else:
-            cut_right, cut_left = np.percentile(np_data2, (interval * 100)), np.percentile(np_data2, 100 - (interval * 100))  # Percentile
-            join_cuts = [cut_right, cut_left]
-            if 0 in join_cuts:
-                join_cuts = [max(join_cuts)]
-            df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
+            fallback = True
 
-    return df_cutoffs
+    # This is a normal distribution
+    # or
+    # This is a mesokurtic skewed distributed (long tail and not sharp)
+    # or
+    # This is the skewed shaped but not like exponential nor powerlaw
+    # TODO The comment does not seem to match the if condition.
+    if skew == 0 or skew != 0 and kurtosis == 3 or fallback:
+        thresholds = [np.percentile(data, interval), np.percentile(data, 100 - interval)]
+
+        # TODO why is this done?
+        # remove 0 if in thresholds
+        thresholds = [None if t == 0 else t for t in thresholds]
+
+    # return thresholds
+    if limit_on == "both":
+        return tuple(thresholds)
+    elif limit_on == "lower":
+        return thresholds[0]
+    else:
+        return thresholds[1]
 
 
 def qcmetric_calculator(anndata, control_var=False):

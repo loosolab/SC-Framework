@@ -411,3 +411,21 @@ def read_list_file(path):
     f.close()
 
     return lst
+
+
+def clear():
+    """
+    Clear stout of console or jupyter notebook.
+    https://stackoverflow.com/questions/37071230/clear-overwrite-standard-output-in-python
+    """
+    import platform
+
+    if _is_notebook():
+        check_module("IPython")
+        from IPython.display import clear_output
+
+        clear_output(wait=True)
+    elif platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')

@@ -65,47 +65,28 @@ def fetch_info_txt(file_path="./info.txt"):
         return file.readline()
 
 
-def check_cuts(ans, limit1, limit2):  # Checking cutoffs validity
+def in_range(value, limits, include_limits=True):
     """
-    Checking if a given value range into acceptable limits
+    Check if a value is in a given range.
 
     Parameters
     ----------
-    ans : str of int or int
-        The number to check validity described as a string.
-    limit1 : int or float
-        The lower limit number.
-    limit2 : int or float
-        The upper limit number.
+    value : int
+        Number to check if in range.
+    limits : int tuple
+        Lower and upper limits. E.g. (0, 10)
+    include_limits : bool, default True
+        If True includes limits in accepted range.
 
     Returns
     -------
-    str :
-        Returns "valid" if in bounds and "invalid" if out of given bounds.
-
-    Notes
-    -----
-    Author: Guilherme Valente
+    bool :
+        Returns whether the value is between the set limits.
     """
-    quiters = ["q", "quit"]
-
-    # check if the first input is string or not
-    # in the context of pipeline the ans is always coming as STRING,
-    # however it could be provided also as an integer.
-    if isinstance(ans, str):
-        ans = ans.replace('.', "", 1)
-        if not ans.isdigit():
-            if ans in quiters:
-                sys.exit("You quit and lost all modifications")
-            else:
-                sys.exit("You must provide string or number!")
-
-    # Check the range of provided integer input
-    x = float(ans)
-    if x >= limit1 and x <= limit2:
-        return "valid"
+    if include_limits:
+        return value >= limits[0] and value <= limits[1]
     else:
-        return "invalid"
+        return value > limits[0] and value < limits[1]
 
 
 def check_options(answer, options=["q", "quit", "y", "yes", "n", "no"]):
