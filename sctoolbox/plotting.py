@@ -502,9 +502,7 @@ def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME
 
 def anndata_overview(adatas,
                      color_by,
-                     plots=["PCA", "PCA-var", "UMAP"],
-                     batch_key=None,
-                     evaluate_batch_on=['X_pca', 'X_umap'],
+                     plots=["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize=None,
                      output=None,
                      dpi=300):
@@ -517,18 +515,15 @@ def anndata_overview(adatas,
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
     color_by : str or list of str
-        Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
-    plots : str or list of str, default ["PCA", "PCA-var", "UMAP"]
-        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
+        Name of the .obs column to use for coloring in applicable plots (e.g. for UMAP or PCA).
+    plots : str or list of str, default ["PCA", "PCA-var", "UMAP", "LISI"]
+        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
         Note: List order is forwarded to plot.
         - UMAP: Plots the UMAP embedding of the data.
         - tSNE: Plots the tSNE embedding of the data.
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
-    batch_key: str, default None
-        If set evaluates the batch effect using LISI on given column. The resulting plot is added to the bottom of the figure.
-    evaluate_batch_on: str or list of str, default ['X_pca', 'X_umap']
-        keys for adata.obsm that store the coordinates for with the batch evaluation should be done.
+        - LISI: Plots the distribution of any "LISI_score*" scores available in adata.obs
     figsize : number tuple, default None (automatic based on number of columns/rows)
         Size of the plot in inch.
     output : str, default None (not saved)
@@ -541,9 +536,6 @@ def anndata_overview(adatas,
 
     if not isinstance(plots, list):
         plots = [plots]
-
-    if not isinstance(evaluate_batch_on, list):
-        evaluate_batch_on = [evaluate_batch_on]
 
     # ---- helper functions ---- #
     def annotate_row(ax, plot_type):
@@ -565,31 +557,21 @@ def anndata_overview(adatas,
     if wrong_type:
         raise ValueError(f"All items in 'adatas' parameter have to be of type AnnData. Found: {wrong_type}")
 
-    # color_by exists in anndata.obs
-    # TODO more details; what adatas are missing the column?
+    # check if color_by exists in anndata.obs
     for color_group in color_by:
         for name, adata in adatas.items():
             if color_group not in adata.obs.columns and color_group not in adata.var.index:
                 raise ValueError(f"Couldn't find column '{color_group}' in the adata.obs or adata.var for '{name}'")
 
     # check if plots are valid
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
     invalid_plots = set(plots) - set(valid_plots)
     if invalid_plots:
         raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
-    # check if batch_evaluations are valid
-    valid_batch_evaluations = ["X_umap", "X_tsne", "X_pca"]
-    invalid_batch_evaluations = set(evaluate_batch_on) - set(valid_batch_evaluations)
-    if invalid_batch_evaluations and batch_key:
-        raise ValueError(f"Invalid batch_evaluations specified: {invalid_batch_evaluations}")
-
-    if batch_key:
-        plots += evaluate_batch_on
-
     # ---- plotting ---- #
     # setup subplot structure
-    row_count = {"PCA-var": 1, "X_umap": 1, "X_tsne": 1, "X_pca": 1}  # all other plots count for len(color_by)
+    row_count = {"PCA-var": 1, "LISI": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
@@ -598,6 +580,7 @@ def anndata_overview(adatas,
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0
+    LISI_axes = []
     for plot_type in plots:
         for color in color_by:
             for i, (name, adata) in enumerate(adatas.items()):
@@ -634,12 +617,19 @@ def anndata_overview(adatas,
                 elif plot_type == "PCA":
                     sc.pl.pca(adata, ax=ax, **embedding_kwargs)
 
-                elif plot_type in valid_batch_evaluations:
-                    col = f"LISI_score_{plot_type}"
-                    if col not in adata.obs:
-                        raise KeyError(f"Key {col} does not exist in adata object {name}")
-                    boxplot(adata.obs[col], ax=ax)
-                    ax.set_xticklabels([name])
+                elif plot_type == "LISI":
+
+                    # Find any LISI scores in adata.obs
+                    lisi_columns = [col for col in adata.obs.columns if col.startswith("LISI_score")]
+
+                    if len(lisi_columns) == 0:
+                        e = f"No LISI scores found in adata.obs for '{name}'"
+                        e += "Please run 'sctoolbox.analyser.wrap_batch_evaluation()' or remove LISI from the plots list"
+                        raise ValueError(e)
+
+                    # Plot LISI scores
+                    boxplot(adata.obs[lisi_columns], ax=ax)
+                    LISI_axes.append(ax)
 
                 # Set title for the legend
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
@@ -658,6 +648,13 @@ def anndata_overview(adatas,
 
             if plot_type in row_count:
                 break  # If not dependent on color; break off early from color_by loop
+
+    # Set common y-axis limit for LISI plots
+    if len(LISI_axes) > 0:
+        LISI_axes[0].get_shared_y_axes().join(LISI_axes[0], *LISI_axes[1:])
+        LISI_axes[0].autoscale()  # scale all plots to same y-limits
+
+        LISI_axes[0].set_ylabel("Unique batch labels in cell neighborhood")
 
     # Finalize axes titles and labels
     for i, name in enumerate(adatas):
