@@ -120,6 +120,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
     elif method == "mnn":
 
+        var_table = adata.var  # var_table before batch correction
+
         # split adata on batch_key
         batch_categories = list(set(adata.obs[batch_key]))
         adatas = [adata[adata.obs[batch_key] == category] for category in batch_categories]
@@ -137,6 +139,7 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         # Join corrected adatas
         corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
         adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
+        adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.tl.pca(adata)  # rerun pca
