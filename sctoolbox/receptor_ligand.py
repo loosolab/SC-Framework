@@ -259,7 +259,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
     # check if data is available
     _check_interactions(adata)
 
-    interactions = adata.uns["receptor-ligand"]["interactions"]
+    interactions = get_interactions(adata)
 
     rows = len(set(interactions["receptor_cluster"]))
 
@@ -268,10 +268,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
     # generate violins of one cluster vs rest in each iteration
     for i, cluster in enumerate(sorted(set(interactions["receptor_cluster"].tolist() + interactions["ligand_cluster"].tolist()))):
-        cluster_interactions = interactions[((interactions["receptor_cluster"] == cluster)
-                                            | (interactions["ligand_cluster"] == cluster))
-                                            & (interactions["receptor_percent"] >= min_perc)
-                                            & (interactions["ligand_percent"] >= min_perc)].copy()
+        cluster_interactions = get_interactions(adata, min_perc=min_perc, group_a=[cluster])
 
         # get column of not main clusters
         cluster_interactions["Cluster"] = cluster_interactions.apply(lambda x: x[1] if x[0] == cluster else x[0], axis=1).tolist()
@@ -293,7 +290,18 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
     return axs
 
 
-def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output=None, title="Network", color_min=0, color_max=None, cbar_label="Interaction count", show_count=False, restrict_to=None, additional_nodes=None):
+def hairball(adata,
+             min_perc,
+             interaction_score=0,
+             interaction_perc=None,
+             output=None,
+             title="Network",
+             color_min=0,
+             color_max=None,
+             cbar_label="Interaction count",
+             show_count=False,
+             restrict_to=None,
+             additional_nodes=None):
     """
     Generate network graph of interactions between clusters.
 
@@ -338,7 +346,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
     # check if data is available
     _check_interactions(adata)
 
-    interactions = adata.uns["receptor-ligand"]["interactions"]
+    interactions = get_interactions(adata)
 
     # any invalid cluster names
     if restrict_to:
@@ -349,10 +357,6 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
     igraph_scale = 3
     matplotlib_scale = 4
-
-    # overwrite interaction_score
-    if interaction_perc:
-        interaction_score = np.percentile(interactions["interaction_score"], interaction_perc)
 
     # ----- setup class that combines igraph with matplotlib -----
     # from https://stackoverflow.com/a/36154077
@@ -420,11 +424,7 @@ def hairball(adata, min_perc, interaction_score=0, interaction_perc=None, output
 
     # set edges
     for (a, b) in combinations_with_replacement(clusters, 2):
-        subset = interactions[(((interactions["receptor_cluster"] == a) & (interactions["ligand_cluster"] == b))
-                              | ((interactions["receptor_cluster"] == b) & (interactions["ligand_cluster"] == a)))
-                              & (interactions["receptor_percent"] >= min_perc)
-                              & (interactions["ligand_percent"] >= min_perc)
-                              & (interactions["interaction_score"] > interaction_score)]
+        subset = get_interactions(adata, min_perc=min_perc, interaction_score=interaction_score, interaction_perc=interaction_perc, group_a=[a], group_b=[b])
 
         graph.add_edge(a, b, weight=len(subset))
 
@@ -601,7 +601,7 @@ def connectionPlot(adata,
     # check if data is available
     _check_interactions(adata)
 
-    data = adata.uns["receptor-ligand"]["interactions"].copy()
+    data = get_interactions(adata).copy()
 
     # filter interactions
     if filter:
