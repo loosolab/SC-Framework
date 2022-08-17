@@ -531,7 +531,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca', 'X_umap'], inplace=False):
+def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
     """
     Calculate batch evaluation scores for a dict of anndata objects.
 
@@ -542,8 +542,8 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca', 'X_umap'], inpla
         E.g.: {"bbknn": anndata}
     batch_key : str
         The column in adata.obs containing batch information.
-    obsm_key : str or list of str, default ['X_pca', 'X_umap']
-        Key to coordinates on which the score is calculated.
+    obsm_keys : str or list of str, default ['X_pca', 'X_umap']
+        Key(s) to coordinates on which the score is calculated.
     inplace : boolean, default False
         Whether to work inplace on the anndata dict.
 
@@ -552,18 +552,25 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca', 'X_umap'], inpla
     dict of anndata.AnnData
         Dict containing an anndata object for each batch correction method as values with LISI scores added to .obs.
     """
+
+    if utils._is_notebook() is True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+
     # Handle inplace option
     adatas_m = adatas if inplace else copy.deepcopy(adatas)
 
     # Ensure that obsm_key can be looped over
-    if isinstance(obsm_key, str):
-        obsm_key = [obsm_key]
+    if isinstance(obsm_keys, str):
+        obsm_keys = [obsm_keys]
 
     # Evaluate batch effect for every adata
-    for name, adata in adatas_m.items():
-        for obsm in obsm_key:
-            print(f"Evaluating batch effect on '{name}' (obsm key: {obsm})...")
+    pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
+    for adata in adatas_m.values():
+        for obsm in obsm_keys:
             evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
+            pbar.update()
 
     if not inplace:
         return adatas_m
