@@ -301,7 +301,8 @@ def hairball(adata,
              cbar_label="Interaction count",
              show_count=False,
              restrict_to=None,
-             additional_nodes=None):
+             additional_nodes=None,
+             hide_edges=None):
     """
     Generate network graph of interactions between clusters.
 
@@ -337,6 +338,8 @@ def hairball(adata,
             Only show given clusters provided in list.
         additional_nodes : list, default None
             List of additional node names displayed in the hairball.
+        hide_edges : list of tuples, default None
+            List of tuples with node names that should not have an edge shown. Order doesn't matter. E.g. `[("a", "b")]` to omit the edge between node a and b.
 
     Returns
     -------
@@ -424,6 +427,9 @@ def hairball(adata,
 
     # set edges
     for (a, b) in combinations_with_replacement(clusters, 2):
+        if hide_edges and ((a, b) in hide_edges or (b, a) in hide_edges):
+            continue
+
         subset = get_interactions(adata, min_perc=min_perc, interaction_score=interaction_score, interaction_perc=interaction_perc, group_a=[a], group_b=[b])
 
         graph.add_edge(a, b, weight=len(subset))
