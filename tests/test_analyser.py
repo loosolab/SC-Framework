@@ -79,6 +79,27 @@ def test_evaluate_batch_effect(adata_batch):
     assert "LISI_score" in ad.obs
 
 
+@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
+def test_batch_correction(adata_batch, method):
+    """ Test if batch correction returns an anndata """
+
+    adata_corrected = an.batch_correction(adata_batch, batch_key="batch", method=method)
+    adata_type = type(adata_corrected).__name__
+    assert adata_type == "AnnData"
+
+
+def test_wrap_corrections(adata_batch):
+    """ Test if wrapper returns a dict, and that the keys contains the given methods """
+
+    methods = ["mnn", "harmony"]
+    adata_dict = an.wrap_corrections(adata_batch, batch_key="batch", methods=methods)
+
+    assert isinstance(adata_dict, dict)
+
+    keys = set(adata_dict.keys())
+    assert len(set(methods) - keys) == 0
+
+
 @pytest.mark.parametrize("key", ["a", "b"])
 def test_evaluate_batch_effect_keyerror(adata_batch, key):
     with pytest.raises(KeyError, match="adata.obsm .*"):

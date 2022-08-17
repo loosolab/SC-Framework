@@ -495,14 +495,14 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
     col_name : str
-        Column name for LISI scor ein .obs.
+        Column name for storing the LISI score in .obs.
     inplace : boolean, default False
         Whether to work inplace on the anndata object.
 
     Returns
     -------
     anndata.Anndata or None:
-        adata with LISI_score added to .obs containting.
+        if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
     Notes
     -----
@@ -533,18 +533,17 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
 
 def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca', 'X_umap'], inplace=False):
     """
-    Calculate batch evaluation score for a dict of anndata objects.
+    Calculate batch evaluation scores for a dict of anndata objects.
 
-    Paramters
-    ---------
-
+    Parameters
+    ----------
     adatas : dict of anndata.AnnData
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
     batch_key : str
         The column in adata.obs containing batch information.
-    obsm_key : str or list of str, default ['X_pca','X_umap']
-        Key to coordinates on which the score is calculated
+    obsm_key : str or list of str, default ['X_pca', 'X_umap']
+        Key to coordinates on which the score is calculated.
     inplace : boolean, default False
         Whether to work inplace on the anndata dict.
 
@@ -561,8 +560,9 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_key=['X_pca', 'X_umap'], inpla
         obsm_key = [obsm_key]
 
     # Evaluate batch effect for every adata
-    for adata in adatas_m.values():
+    for name, adata in adatas_m.items():
         for obsm in obsm_key:
+            print(f"Evaluating batch effect on '{name}' (obsm key: {obsm})...")
             evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
 
     if not inplace:
