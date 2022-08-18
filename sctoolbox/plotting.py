@@ -419,9 +419,9 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
         Values to create the violins from.
     y : str
         Column name of table. Values that will be shown on y-axis.
-    color_by : str
+    color_by : str, default None
         Column name of table. Used to color group violins.
-    hlines : float/ list or dict of float/ list with color_by categories as keys.
+    hlines : float/ list or dict of float/ list with color_by categories as keys, default None
         Define horizontal lines for each violin.
     colors : list of str, default None
         List of colors to use for violins.
@@ -503,7 +503,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
     return plot
 
 
-def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None, dpi=300):
+def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize=None, dpi=300):
     """
     Grid of violinplots with optional cutoffs.
 
@@ -518,12 +518,12 @@ def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None
             index      - Name of anndata.var or anndata.obs column.
             1st column - Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
             2nd column - Name of anndata.var or anndata.obs column used for color grouping or None to disable.
-    ncols : int, default 3
-        Number of violins per row.
     colors : list of str, default None
         List of colors for the violins.
     filename : str, default None
         Path and name of file to be saved.
+    ncols : int, default 3
+        Number of violins per row.
     figsize : int tuple, default None
         Size of figure in inches.
     dpi : int, default 300
