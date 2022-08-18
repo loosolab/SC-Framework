@@ -564,7 +564,7 @@ def qc_violins(anndata, thresholds, colors, filename=None, ncols=3, figsize=None
 
 def anndata_overview(adatas,
                      color_by,
-                     plots=["PCA", "PCA-var", "UMAP"],
+                     plots=["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize=None,
                      output=None,
                      dpi=300):
@@ -577,19 +577,19 @@ def anndata_overview(adatas,
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
     color_by : str or list of str
-        Name of the .obs column to use for coloring in applicable plots. For example UMAP or PCA.
-    plots : str or list of str
-        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var"]. # TODO
+        Name of the .obs column to use for coloring in applicable plots (e.g. for UMAP or PCA).
+    plots : str or list of str, default ["PCA", "PCA-var", "UMAP", "LISI"]
+        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
         Note: List order is forwarded to plot.
         - UMAP: Plots the UMAP embedding of the data.
         - tSNE: Plots the tSNE embedding of the data.
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
-        Default is: ["PCA", "PCA-var", "UMAP"]
-    figsize : number tuple, optional
-        Size of the plot in inch. Default: None (automatic based on number of columns/rows).
-    output : str, optional
-        Path to plot output file. Default: None (not saved)
+        - LISI: Plots the distribution of any "LISI_score*" scores available in adata.obs
+    figsize : number tuple, default None (automatic based on number of columns/rows)
+        Size of the plot in inch.
+    output : str, default None (not saved)
+        Path to plot output file.
     dpi : number, default 300
         Dots per inch for output
     """
@@ -599,7 +599,19 @@ def anndata_overview(adatas,
     if not isinstance(plots, list):
         plots = [plots]
 
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+    # ---- helper functions ---- #
+    def annotate_row(ax, plot_type):
+        """ Annotate row in figure. """
+        # https://stackoverflow.com/a/25814386
+        ax.annotate(plot_type,
+                    xy=(0, 0.5),
+                    xytext=(-ax.yaxis.labelpad - 5, 0),
+                    xycoords=ax.yaxis.label,
+                    textcoords='offset points',
+                    size=ax.title._fontproperties._size * 1.2,  # increase title fontsize
+                    horizontalalignment='right',
+                    verticalalignment='center',
+                    fontweight='bold')
 
     # ---- checks ---- #
     # dict contains only anndata
@@ -607,30 +619,30 @@ def anndata_overview(adatas,
     if wrong_type:
         raise ValueError(f"All items in 'adatas' parameter have to be of type AnnData. Found: {wrong_type}")
 
-    # color_by exists in anndata.obs
-    # TODO more details; what adatas are missing the column?
+    # check if color_by exists in anndata.obs
     for color_group in color_by:
         for name, adata in adatas.items():
             if color_group not in adata.obs.columns and color_group not in adata.var.index:
                 raise ValueError(f"Couldn't find column '{color_group}' in the adata.obs or adata.var for '{name}'")
 
     # check if plots are valid
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var"]
+    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
     invalid_plots = set(plots) - set(valid_plots)
     if invalid_plots:
         raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
     # ---- plotting ---- #
     # setup subplot structure
-    row_count = {"PCA-var": 1}  # all other plots count for len(color_by)
+    row_count = {"PCA-var": 1, "LISI": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
     cols = len(adatas)
     figsize = figsize if figsize is not None else (cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
-    axs = axs.flatten()  # flatten to 1d array per row
+    axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0
+    LISI_axes = []
     for plot_type in plots:
         for color in color_by:
             for i, (name, adata) in enumerate(adatas.items()):
@@ -638,39 +650,123 @@ def anndata_overview(adatas,
                 ax = axs[ax_idx]
 
                 # Only show legend for the last column
-                if i == 0:
-                    legend_loc = "left"
+                if i == len(adatas) - 1:
+                    legend_loc = "right margin"
+                    colorbar_loc = "right"
                 else:
                     legend_loc = "none"
+                    colorbar_loc = None
+
+                # add row label to first plot
+                if i == 0:
+                    annotate_row(ax, plot_type)
+
+                # Collect options for plotting
+                embedding_kwargs = {"color": color, "title": "",
+                                    "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
+                                    "show": False}
 
                 # Plot depending on type
                 if plot_type == "PCA-var":
                     plot_pca_variance(adata, ax=ax)  # this plot takes no color
 
                 elif plot_type == "UMAP":
-                    sc.pl.umap(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+                    sc.pl.umap(adata, ax=ax, **embedding_kwargs)
 
                 elif plot_type == "tSNE":
-                    sc.pl.tsne(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+                    sc.pl.tsne(adata, ax=ax, **embedding_kwargs)
 
                 elif plot_type == "PCA":
-                    sc.pl.pca(adata, color=color, ax=ax, legend_loc=legend_loc, show=False)
+                    sc.pl.pca(adata, ax=ax, **embedding_kwargs)
+
+                elif plot_type == "LISI":
+
+                    # Find any LISI scores in adata.obs
+                    lisi_columns = [col for col in adata.obs.columns if col.startswith("LISI_score")]
+
+                    if len(lisi_columns) == 0:
+                        e = f"No LISI scores found in adata.obs for '{name}'"
+                        e += "Please run 'sctoolbox.analyser.wrap_batch_evaluation()' or remove LISI from the plots list"
+                        raise ValueError(e)
+
+                    # Plot LISI scores
+                    boxplot(adata.obs[lisi_columns], ax=ax)
+                    LISI_axes.append(ax)
+
+                # Set title for the legend
+                if hasattr(ax, "legend_") and ax.legend_ is not None:
+                    ax.legend_.set_title(color)
+                    fontsize = ax.legend_.get_title()._fontproperties._size * 1.2  # increase fontsize of legend title and text
+                    plt.setp(ax.legend_.get_title(), fontsize=fontsize)
+                    plt.setp(ax.legend_.get_texts(), fontsize=fontsize)
+
+                # Adjust colorbars
+                if hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
+                    ax._colorbars[0].set_title(color, ha="left")
+                    ax._colorbars[0]._colorbar_info["shrink"] = 0.8
+                    ax._colorbars[0]._colorbar_info["pad"] = -0.15  # move colorbar closer to plot
 
                 ax_idx += 1  # increment index for next plot
 
-            if plot_type == "PCA-var":
-                break  # PCA variance is not dependent on color; break off early from color_by loop
+            if plot_type in row_count:
+                break  # If not dependent on color; break off early from color_by loop
+
+    # Set common y-axis limit for LISI plots
+    if len(LISI_axes) > 0:
+        LISI_axes[0].get_shared_y_axes().join(LISI_axes[0], *LISI_axes[1:])
+        LISI_axes[0].autoscale()  # scale all plots to same y-limits
+
+        LISI_axes[0].set_ylabel("Unique batch labels in cell neighborhood")
 
     # Finalize axes titles and labels
     for i, name in enumerate(adatas):
-        axs[i].set_title(name)  # first rows should have the adata names
-
-    # fig.tight_layout()
+        fontsize = axs[i].title._fontproperties._size * 1.2  # increase title fontsize
+        axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
     # save
     save_figure(output)
     if output:
         plt.savefig(output)
 
-    # show plot if in jupyter notebook
-    # TODO
+    return axs
+
+
+def boxplot(dt, show_median=True, ax=None):
+    """
+    Generate one plot containing one box per column. The median value is shown.
+
+    Parameter
+    ---------
+    dt : pandas.DataFrame
+        pandas datafame containing numerical values in every column.
+    show_median: boolean, default True
+        If True show median value as small box inside the boxplot.
+    ax : matplotlib.axes.Axes, optional
+        Axes object to plot on. If None, a new figure is created. Default: None.
+
+    Returns
+    -------
+    AxesSubplot
+        containing boxplot for every column.
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        # TODO: check if ax is an ax object
+        pass
+
+    sns.boxplot(data=dt, ax=ax)
+
+    if show_median:
+        # From:
+        # https://stackoverflow.com/questions/49554139/boxplot-of-multiple-columns-of-a-pandas-dataframe-on-the-same-figure-seaborn
+        lines = ax.get_lines()
+        categories = ax.get_xticks()
+
+        # Add median label
+        for cat in categories:
+            y = round(lines[4 + cat * 6].get_ydata()[0], 2)
+            ax.text(cat, y, f'{y}', ha='center', va='center', fontweight='bold', size=10, color='white',
+                    bbox=dict(facecolor='#445A64'))
+
+    return ax
