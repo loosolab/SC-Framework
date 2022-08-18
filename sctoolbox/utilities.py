@@ -7,6 +7,8 @@ import importlib
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
+from os.path import join, dirname, exists
+from pathlib import Path
 
 
 # ------------------ Type checking ----------------- -#
@@ -429,3 +431,33 @@ def clear():
         os.system('cls')
     else:
         os.system('clear')
+
+
+def setup_R(r_home=None):
+    """
+    Setup R installation for rpy2 use.
+
+    Parameters:
+    -----------
+    r_home : str, default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+
+    """
+    # Set R installation path
+    if not r_home:
+        # https://stackoverflow.com/a/54845971
+        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
+
+    if not exists(r_home):
+        raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
+
+    os.environ['R_HOME'] = r_home
+
+
+def _none2null(none_obj):
+    """ rpy2 converter that translates python 'None' to R 'NULL' """
+    # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    from rpy2.robjects import r
+
+    return r("NULL")

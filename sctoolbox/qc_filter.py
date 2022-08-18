@@ -202,7 +202,7 @@ def thresholds_as_table(threshold_dict):
     return df
 
 
-def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, obs_color_by=None, show_thresholds=True, output=None):
+def find_thresholds(anndata, interval=None, var="all", obs="all", var_color_by=None, obs_color_by=None, output=None):
     """
     Find thresholds for the given .obs (cell) and .var (gene) columns in anndata.
 
@@ -210,8 +210,8 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     ----------
     anndata : anndata.AnnData
         anndata object
-    interval : int or float
-        The percentage (from 0 to 100) to be used to calculate the cutoffs.
+    interval : int or float, default None
+        The percentage (from 0 to 100) to be used to calculate the cutoffs. None to show plots without threshold.
     var : str or list of str, default 'all'
         Anndata.var (gene) columns to find thresholds for. If 'all' will select all numeric columns. Use None to disable.
     obs : str or list of str, default 'all'
@@ -220,19 +220,17 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
         Split anndata.var related violins into color groups using .var column of the given name.
     obs_color_by : str, default None
         Split anndata.obs related violins into color groups using .obs column of the given name.
-    show_thresholds : bool, default True
-        If true, compute thresholds and show threshold lines. Returned DataFrame won't contain thresholds if False.
     output : str or bool, default None
         Path + filename to save plot to. If True instead of str will save plot to "<project_folder>/qc_violin.pdf".
 
     Returns
     -------
     pandas.DataFrame or None:
-        A pandas dataframe with the defined cutoff parameters. Won't contain thresholds for show_thresholds=False.
+        A pandas dataframe with the defined cutoff parameters. None if no interval is set.
     """
     # -------------------- checks & setup ------------------- #
     # is interval valid?
-    if not checker.in_range(interval, (0, 100)):
+    if interval and not checker.in_range(interval, (0, 100)):
         raise ValueError(f"Parameter interval is {interval} but has to be in range 0 - 100!")
 
     # anything selected?
@@ -253,8 +251,14 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
         obs = list(anndata.obs.select_dtypes(np.number).columns)
 
     # make iterable
-    obs = obs if isinstance(obs, list) else [obs]
-    var = var if isinstance(var, list) else [var]
+    if obs:
+        obs = obs if isinstance(obs, list) else [obs]
+    else:
+        obs = []
+    if var:
+        var = var if isinstance(var, list) else [var]
+    else:
+        var = []
 
     # invalid column name?
     invalid_obs = set(obs) - set(anndata.obs.columns)
@@ -293,7 +297,7 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
 
     # Plotting with or without cutoffs
-    if show_thresholds:
+    if interval:
         # Calculate cutoffs to plot in the violins
         for column in obs + var:
             # compute cutoffs for each column
@@ -309,7 +313,8 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     plotting.qc_violins(anndata, thresholds, colors=None, filename=output)
 
     # TODO return anndata containing threshold table instead
-    return thresholds
+    if interval:
+        return thresholds
 
 
 ######################################################################################
@@ -325,8 +330,6 @@ def refine_thresholds(thresholds, inplace=False):
 
     Parameters
     ----------
-    anndata : anndata.AnnData
-        anndata object
     thresholds : pandas.DataFrame
         A dataframe with the default cutoffs produced by the function `find_thresholds`.
     inplace : bool, default False
@@ -518,7 +521,7 @@ def anndata_filter(anndata, thresholds, inplace=False):
     -------
     anndata.AnnData or None :
         Filtered anndata object.
-        Annotation of filtering parameters in the anndata.uns["infoprocess"]
+        TODO Annotation of filtering parameters in the anndata.uns["infoprocess"]
     """
     if not inplace:
         anndata = anndata.copy()
