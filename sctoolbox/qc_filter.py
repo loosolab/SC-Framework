@@ -37,7 +37,7 @@ def find_thresholds(anndata, interval=None, var="all", obs="all", var_color_by=N
     """
     # -------------------- checks & setup ------------------- #
     # is interval valid?
-    if not checker.in_range(interval, (0, 100)):
+    if interval and not checker.in_range(interval, (0, 100)):
         raise ValueError(f"Parameter interval is {interval} but has to be in range 0 - 100!")
 
     # anything selected?
@@ -58,8 +58,14 @@ def find_thresholds(anndata, interval=None, var="all", obs="all", var_color_by=N
         obs = list(anndata.obs.select_dtypes(np.number).columns)
 
     # make iterable
-    obs = obs if isinstance(obs, list) else [obs]
-    var = var if isinstance(var, list) else [var]
+    if obs:
+        obs = obs if isinstance(obs, list) else [obs]
+    else :
+        obs = []
+    if var:
+        var = var if isinstance(var, list) else [var]
+    else:
+        var = []
 
     # invalid column name?
     invalid_obs = set(obs) - set(anndata.obs.columns)
