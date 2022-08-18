@@ -11,15 +11,195 @@ from matplotlib.patches import Rectangle
 import seaborn as sns
 import matplotlib.pyplot as plt
 import ipywidgets
-from IPython.display import display
+#from IPython.display import display
+from sklearn.mixture import GaussianMixture
+from kneed import KneeLocator
 
 # toolbox functions
 import sctoolbox
 from sctoolbox import plotting, checker, analyser, utilities
 
 ###############################################################################
-#                      STEP 1: DEFINING DEFAULT CUTOFFS                       #
+#                      STEP 1: FINDING AUTOMATIC CUTOFFS                      #
 ###############################################################################
+
+def get_thresholds(data,
+                   max_mixtures=5,
+                   n_std=3,
+                   plot=True):
+    """
+    Get automatic min/max thresholds for input data array. The function will fit a gaussian mixture model, and find the threshold
+    based on the mean and standard deviation of the largest mixture in the model.
+
+    Parameters
+    ----------
+    adata : numpy.ndarray
+        Array of data to find thresholds for.
+    max_mixtures : int, default 5
+        Maximum number of gaussian mixtures to fit.
+    n_std : int or float, default 3
+        Number of standard deviations from distribution mean to set as min/max thresholds.
+    plot : bool, default True
+        If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
+
+    Returns
+    --------
+    thresholds : dict
+        Dictionary with min and max thresholds.
+    """
+
+    # Get numpy array if input was pandas series or list
+    data_type = type(data).__name__
+    if data_type == "Series":
+        data = data.values
+    elif data_type == "list":
+        data = np.array(data)
+
+    # Attempt to reshape values
+    data = data.reshape(-1, 1)
+
+    # Fit data with gaussian mixture
+    n_list = list(range(1, max_mixtures + 1))  # 1->max mixtures per model
+    models = [None] * len(n_list)
+    for i, n in enumerate(n_list): 
+        models[i] = GaussianMixture(n).fit(data)
+
+    # Evaluate quality of models
+    # AIC = [m.aic(data) for m in models]
+    BIC = [m.bic(data) for m in models]
+
+    # Choose best number of mixtures
+    kn = KneeLocator(n_list, BIC, curve='convex', direction='decreasing')
+    M_best = models[kn.knee - 1]  # -1 to get index 
+
+    # Which is the largest component? And what are the mean/variance of this distribution?
+    weights = M_best.weights_
+    i = np.argmax(weights)
+    dist_mean = M_best.means_[i][0]
+    dist_std = np.sqrt(M_best.covariances_[i][0][0])
+
+    # Threshold estimation
+    thresholds = {"min": dist_mean - dist_std * n_std,
+                  "max": dist_mean + dist_std * n_std}
+
+    # ------ Plot if chosen -------#
+    if plot:
+
+        plt.figure()
+        # plt.plot(n_list, AIC, color="red", label="AIC")
+        plt.plot(n_list, BIC, color="blue")
+        plt.legend()
+        plt.show()
+
+        min_x = min(data)
+        max_x = max(data)
+
+        x = np.linspace(min_x, max_x, 1000).reshape(-1,1)
+        logprob = M_best.score_samples(x)
+        responsibilities = M_best.predict_proba(x)
+        pdf = np.exp(logprob)
+        pdf_individual = responsibilities * pdf[:, np.newaxis]
+
+        fig, ax = plt.subplots()
+        ax.hist(data, density=True)
+        ax.set_xlabel("Value")
+        ax.set_ylabel("Density")
+        for i in range(M_best.n_components):
+            w = weights[i] * 100
+            ax.plot(x, pdf_individual[:,i], label=f"Component {i+1} ({w:.0f}%)")
+
+        ax.axvline(thresholds["min"], color="red", linestyle="--")
+        ax.axvline(thresholds["max"], color="red", linestyle="--")
+
+        fig.legend()
+        fig.show()
+
+    return thresholds
+
+
+def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
+    """
+    Get automatic thresholds for data in adata.obs or adata.var.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to find thresholds for.
+    which : str, default "obs"
+        Which data to find thresholds for. Either "obs" or "var".
+    groupby : str, default None
+        Group rows by the column given in 'groupby' to find thresholds independently per group
+    columns : list, default None
+        Columns to calculate automatic thresholds for. If None, will take all numeric columns.
+
+    Returns
+    --------
+    dict 
+
+    """
+
+    # Find out which data to find thresholds for
+    if which == "obs":
+        table = adata.obs
+    elif which == "var":
+        table = adata.var
+    else:
+        raise ValueError("'which' must be either 'obs' or 'var'.")
+
+    # Establish which columns to find thresholds for
+    if columns is None:
+        columns = list(table.select_dtypes(np.number).columns)
+
+    # Check groupby
+    if groupby is not None:
+        if groupby not in table.columns:
+            raise ValueError()
+
+    # Get threshold per data column (and groupby if chosen)
+    thresholds = {}
+    for col in columns:
+
+        if groupby is None:
+            data = table[col].values
+            d = get_thresholds(data, plot=False)
+            thresholds[col] = d
+
+        else:
+            thresholds[col] = {}  # initialize to fill in per group
+            for group, subtable in table.groupby(groupby):
+                data = subtable[col].values
+                d = get_thresholds(data, plot=False)
+                thresholds[col][group] = d
+
+    return thresholds
+
+
+def thresholds_as_table(threshold_dict):
+    """ Show the threshold dictionary as a table """
+
+    rows = []
+    for column in threshold_dict:
+
+        if "min" in threshold_dict[column] or "max" in threshold_dict[column]:
+            row = [column, np.nan, threshold_dict[column].get("min", np.nan), threshold_dict[column].get("max", np.nan)]
+            rows.append(row)
+        else:
+            for group in threshold_dict[column]:
+                row = [column, group, threshold_dict[column][group].get("min", np.nan), threshold_dict[column][group].get("max", np.nan)]
+                rows.append(row)
+
+    # Assemble table
+    df = pd.DataFrame(rows)
+    df.columns = ["Parameter", "Group", "Minimum", "Maximum"]
+
+    # Remove group column if no thresholds had groups
+    if df["Group"].isnull().sum() == df.shape[0]:
+        df.drop(columns="Group", inplace=True)
+
+    # Remove duplicate rows
+    df.drop_duplicates(inplace=True)
+
+    return df
 
 
 def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, obs_color_by=None, show_thresholds=True, output=None):
@@ -131,9 +311,12 @@ def find_thresholds(anndata, interval, var="all", obs="all", var_color_by=None, 
     # TODO return anndata containing threshold table instead
     return thresholds
 
+
 ######################################################################################
-#                         STEP 2: DEFINING CUSTOM CUTOFFS                            #
+#                     STEP 2: PLOT AND DEFINE CUSTOM CUTOFFS                         #
 ######################################################################################
+
+
 
 
 def refine_thresholds(thresholds, inplace=False):
@@ -423,9 +606,8 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, **kwargs):
 
 
 # ####################################################################################
-# ####################### More general QC filtering functions ########################
+# ############################ ATAC filtering functions ##############################
 # ####################################################################################
-
 
 def _validate_minmax(d):
     """
@@ -509,7 +691,7 @@ def _link_sliders(sliders):
     return linkage_list
 
 
-def _toggle_linkage(checkbox, l_list):
+def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
     """
     Either link or unlink sliders depending on the new value of the checkbox.
 
@@ -517,18 +699,24 @@ def _toggle_linkage(checkbox, l_list):
     -----------
     checkbox :
 
-    l_list : ..
+    link_list
 
     """
 
     check_bool = checkbox["new"]
 
     if check_bool is True:
-        for linkage in l_list:
+        if linkage_dict[key] is None:  # link sliders if they have not been linked yet
+            linkage_dict[key] = _link_sliders(slider_list)  # overwrite None with the list of links
+
+        for linkage in linkage_dict[key]:
             linkage.link()
+
     elif check_bool is False:
-        for linkage in l_list:
-            linkage.unlink()
+
+        if linkage_dict[key] is not None:  # only unlink if there are links to unlink
+            for linkage in linkage_dict[key]:
+                linkage.unlink()
 
 
 def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
@@ -568,6 +756,7 @@ def quality_violin(adata, columns,
                    title=None,
                    thresholds=None,
                    sliders=True,
+                   global_threshold=True,
                    save=None):
     """
     A function to plot quality measurements for cells in an anndata object.
@@ -598,6 +787,8 @@ def quality_violin(adata, columns,
         Dictionary containing initial min/max thresholds to show in plot.
     sliders : bool, optional
         Whether to show sliders for thresholding. Default: True.
+    global_threshold : bool, default True
+        Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
     save : str, optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
     """
@@ -668,6 +859,7 @@ def quality_violin(adata, columns,
 
     # Plotting data
     slider_dict = {}
+    linkage_dict = {}  # one link list per column
     accordion_content = []
     for i, column in enumerate(columns):
         ax = axes_list[i]
@@ -705,6 +897,11 @@ def quality_violin(adata, columns,
                 tmin = thresholds[column].get("min", data_min)
                 tmax = thresholds[column].get("max", data_max)
 
+            # Cap thresholds just outside of plotting range
+            y_range = ymax - ymin
+            tmin = max(tmin, ymin - y_range * 0.1)
+            tmax = min(tmax, ymax + y_range * 0.1)
+
             # Plot line and shading
             tick = ticks[j]
             x = [tick - 0.5, tick + 0.5]
@@ -712,9 +909,8 @@ def quality_violin(adata, columns,
             min_line = ax.plot(x, [tmin] * 2, color="red", linestyle="--")[0]
             max_line = ax.plot(x, [tmax] * 2, color="red", linestyle="--")[0]
 
-            y1, y2, y3, y4 = sorted([ymin, tmin, tmax, ymax])  # sorted positions of axes and lines from small to large
-            min_shade = ax.add_patch(Rectangle((x[0], y1), x[1] - x[0], y2 - y1, color="grey", alpha=0.2, linewidth=0))
-            max_shade = ax.add_patch(Rectangle((x[0], y4), x[1] - x[0], y3 - y4, color="grey", alpha=0.2, linewidth=0))  # negative height
+            min_shade = ax.add_patch(Rectangle((x[0], ymin), x[1] - x[0], tmin - ymin, color="grey", alpha=0.2, linewidth=0))  # starting at lower left with positive height
+            max_shade = ax.add_patch(Rectangle((x[0], ymax), x[1] - x[0], tmax - ymax, color="grey", alpha=0.2, linewidth=0))  # starting at upper left with negative height
 
             # Add slider to control thresholds
             slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max,
@@ -734,18 +930,24 @@ def quality_violin(adata, columns,
             else:
                 slider_dict[column] = slider
 
+        ax.set_ylim(ymin, ymax)  # set ylim back to original after plotting thresholds
+
         # Link sliders together
-        if len(slider_list) > 0:
-            link_list = _link_sliders(slider_list)
+        if len(slider_list) > 1:
 
             # Toggle linked sliders
-            c = ipywidgets.Checkbox(value=True, description='Global threshold', disabled=False, indent=False)
-            c.observe(functools.partial(_toggle_linkage, l_list=link_list), names=["value"])
+            c = ipywidgets.Checkbox(value=global_threshold, description='Global threshold', disabled=False, indent=False)
+            linkage_dict[column] = _link_sliders(slider_list) if global_threshold is True else None
+
+            c.observe(functools.partial(_toggle_linkage,
+                                        linkage_dict=linkage_dict,
+                                        slider_list=slider_list,
+                                        key=column), names=["value"])
 
             box = ipywidgets.VBox([c] + slider_list)
 
         else:
-            box = ipywidgets.Vbox(slider_list)
+            box = ipywidgets.VBox(slider_list)
 
         accordion_content.append(box)
 
@@ -854,7 +1056,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None):
             if groupby is not None:
                 keys = d.keys()
                 not_found = list(set(keys) - set(groups))
-                if not_found > 0:
+                if len(not_found) > 0:
                     raise ValueError(f"{len(not_found)} groups from thresholds were not found in adata.obs[{groupby}]. These groups are: {not_found}")
 
             else:
@@ -867,6 +1069,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None):
         table = adata.obs if which == "obs" else adata.var
 
         # Collect boolean array of rows to select of table
+        global_threshold = False  # can be overwritten if thresholds are global
         excluded = np.array([False] * len(table))
         if groupby is not None:
             if "min" in d or "max" in d:
