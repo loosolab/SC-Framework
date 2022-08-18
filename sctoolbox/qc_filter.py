@@ -60,7 +60,7 @@ def find_thresholds(anndata, interval=None, var="all", obs="all", var_color_by=N
     # make iterable
     if obs:
         obs = obs if isinstance(obs, list) else [obs]
-    else :
+    else:
         obs = []
     if var:
         var = var if isinstance(var, list) else [var]
