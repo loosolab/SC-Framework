@@ -95,26 +95,27 @@ def find_thresholds(anndata, interval=None, var="all", obs="all", var_color_by=N
         output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "qc_violin.pdf")
 
     # setup thresholds data frame
-    thresholds = {'index': [], 'threshold': [], 'color_by': []}
-    for column in obs + var:
-        thresholds['index'].append(column)
+    thresholds = {'name': [], 'origin': [], 'threshold': [], 'color_by': []}
+    for name, origin in zip(obs + var, ["obs"] * len(obs) + ["var"] * len(var)):
+        thresholds['name'].append(name)
+        thresholds['origin'].append(origin)
         thresholds['threshold'].append(None)
-        thresholds['color_by'].append(obs_color_by if column in anndata.obs.columns else var_color_by)
+        thresholds['color_by'].append(obs_color_by if origin == "obs" else var_color_by)
 
-    thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
+    thresholds = pd.DataFrame.from_dict(thresholds).set_index(["name", "origin"])
 
     # Plotting with or without cutoffs
     if interval:
         # Calculate cutoffs to plot in the violins
-        for column in obs + var:
+        for name, origin in thresholds.index:
             # compute cutoffs for each column
-            if column in anndata.obs.columns:
-                data = anndata.obs[column]
+            if origin == "obs":
+                data = anndata.obs[name]
             else:
-                data = anndata.var[column]
+                data = anndata.var[name]
 
             # compute threshold
-            thresholds.at[column, "threshold"] = analyser.get_threshold(data=data.to_list(), interval=interval, limit_on="both")
+            thresholds.at[(name, origin), "threshold"] = analyser.get_threshold(data=data.to_list(), interval=interval, limit_on="both")
 
     # create violinplot
     plotting.qc_violins(anndata, thresholds, colors=None, filename=output)
