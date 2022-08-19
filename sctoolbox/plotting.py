@@ -409,7 +409,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
-def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
     """
     Creates a violinplot. With optional horizontal lines for each violin.
 
@@ -427,6 +427,10 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
         List of colors to use for violins.
     ax : matplotlib.axes.Axes, default None
         Axes object to draw the plot on. Otherwise use current axes.
+    title : str, default None
+        Title of the plot.
+    ylabel : bool or str, default True
+        Boolean if ylabel should be shown. Or str for custom ylabel.
 
     Returns
     -------
@@ -496,6 +500,16 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
                                ls="dashed",
                                lw=3)
 
+    # add title
+    if title:
+        plot.set(title=title)
+    
+    # adjust y-label
+    if not ylabel:
+        plot.set(ylabel=None)
+    elif isinstance(ylabel, str):
+        plot.set(ylabel=ylabel)
+
     # remove x-axis ticks if color_by=None
     if color_by is None:
         plot.tick_params(axis="x", which="both", bottom=False)
@@ -549,7 +563,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         table = anndata.var if origin == "var" else anndata.obs
 
         # create violin
-        violinplot(table=table, y=name, hlines=row[0], color_by=row[1], colors=colors, ax=ax)
+        violinplot(table=table, y=name, hlines=row[0], color_by=row[1], colors=colors, ax=ax, title=f"{origin}: {name}", ylabel=False)
 
     # delete unused subplots
     for i in range(len(thresholds), len(axs)):
