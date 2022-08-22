@@ -831,6 +831,86 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
 #                         STEP 4: ADDITIONAL FILTERING                        #
 ###############################################################################
 
+def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
+    """
+    Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes.
+    """
+
+    # Decide which element type (genes/cells) we are dealing with
+    if which == "obs":
+        table = adata.obs
+        table_name = "adata.obs"
+        element_name = "cells"
+    else:
+        table = adata.var
+        table_name = "adata.var"
+        element_name = "genes"
+
+    n_before = len(table)
+
+    # genes is either a string (column in .var table) or a list of genes to remove
+    if isinstance(filter, str):
+        if filter not in table.columns:
+            raise ValueError(f"Column {filter} not found in {table_name}.columns")
+
+        boolean = table[filter].values
+        if remove_bool is True:
+            boolean = ~boolean
+
+    else:
+        # Check if all genes/cells are found in adata
+        not_found = list(set(filter) - set(table.index))
+        if len(not_found) > 0:
+            print(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
+
+        boolean = ~table.index.isin(filter).values
+
+    # Remove genes from adata
+    if inplace:
+        if which == "obs":
+            adata._inplace_subset_obs(boolean)
+        elif which == "var":
+            adata._inplace_subset_var(boolean)  # boolean is the included genes
+    else:
+        if which == "obs":
+            adata = adata[boolean]
+        elif which == "var":
+            adata = adata[:, boolean]
+
+    n_after = adata.shape[0] if which == "obs" else adata.shape[1]
+    filtered = n_before - n_after
+    print(f"Filtered out {filtered} {element_name} from adata. New number of genes is: {n_after}")
+
+    if inplace is False:
+        return adata
+
+
+def filter_cells(adata, cells, remove_bool=True, inplace=True):
+    """
+    Remove cells from anndata object.
+
+    Parameters
+    -----------
+    adata : AnnData
+        Anndata object to filter.
+    cells : str or list of str
+        A column in .obs containing boolean indicators or a list of cells to remove from object .obs table.
+    remove_bool : bool, default True
+        Is used if genes is a column in .obs table. If True, remove cells that are True. If False, remove cells that are False.
+    inplace : bool, default True
+        If True, filter inplace. If False, return filtered adata object.
+
+    Returns
+    -------
+    anndata.AnnData or None
+        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
+    """
+
+    ret = _filter_object(adata, cells, which="obs", remove_bool=remove_bool, inplace=inplace)
+
+    return ret  # adata objec or None
+
+
 def filter_genes(adata, genes, remove_bool=True, inplace=True):
     """
     Remove genes from adata object.
@@ -849,39 +929,12 @@ def filter_genes(adata, genes, remove_bool=True, inplace=True):
     Returns
     -------
     anndata.AnnData or None
-        If inplace is False, Anndata object with removed genes. If inplace is True, returns None.
+        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
     """
 
-    n_before = adata.shape[1]
+    ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
 
-    # genes is either a string (column in .var table) or a list of genes to remove
-    if isinstance(genes, str):
-        if genes not in adata.var.columns:
-            raise ValueError(f"{genes} not found in adata.var.columns")
-
-        boolean = adata.var[genes].values
-        if remove_bool is True:
-            boolean = ~boolean
-
-    else:
-        # Check if all genes are found in adata
-        not_found = list(set(genes) - set(adata.var_names))
-        if len(not_found) > 0:
-            print("{0} genes were not found in adata and could therefore not be removed. These genes are: {1}".format(len(not_found), not_found))
-
-        boolean = ~adata.var_names.isin(genes).values
-
-    # Remove genes from adata
-    if inplace:
-        adata._inplace_subset_var(boolean)  # boolean is the included genes
-    else:
-        adata = adata[:, boolean]
-
-    n_after = adata.shape[1]
-    print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before - n_after, n_after))
-
-    if inplace is False:
-        return adata
+    return ret  # adata objec or None
 
 
 ###############################################################################
