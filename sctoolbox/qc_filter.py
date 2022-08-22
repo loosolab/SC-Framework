@@ -3,9 +3,11 @@ import numpy as np
 import pandas as pd
 import functools  # for partial functions
 import scanpy as sc
+import time
 
 # for plotting
 from matplotlib.patches import Rectangle
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 import ipywidgets
@@ -21,7 +23,7 @@ from sctoolbox import plotting, checker, analyser, utilities
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
 
-def estimate_doublets(adata, threshold=0.25, inplace=True, batch_key=None, **kwargs):
+def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, batch_key=None, **kwargs):
     """
     Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
     as well as a "scrublet" key in adata.uns.
@@ -34,6 +36,8 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, batch_key=None, **kwa
         Threshold for doublet detection.
     inplace : bool, default True
         Whether to estimate doublets inplace or not.
+    plot : bool, default True
+        Whether to plot the doublet score distribution.
     batch_key : str, default None
         Key in adata.obs to use for batching during doublet estimation. This option is passed to scanpy.external.pp.scrublet.
     **kwargs :
@@ -52,7 +56,8 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, batch_key=None, **kwa
     adata_scrublet = sc.external.pp.scrublet(adata, threshold=threshold, copy=True, batch_key=batch_key, **kwargs)
 
     # Plot the distribution of scrublet scores
-    sc.external.pl.scrublet_score_distribution(adata_scrublet)
+    if plot is True:
+        sc.external.pl.scrublet_score_distribution(adata_scrublet)
 
     # Save scores to object
     adata.obs["doublet_score"] = adata_scrublet.obs["doublet_score"]
@@ -105,7 +110,7 @@ def get_thresholds(data,
     # Fit data with gaussian mixture
     n_list = list(range(1, max_mixtures + 1))  # 1->max mixtures per model
     models = [None] * len(n_list)
-    for i, n in enumerate(n_list): 
+    for i, n in enumerate(n_list):
         models[i] = GaussianMixture(n).fit(data)
 
     # Evaluate quality of models
@@ -134,7 +139,7 @@ def get_thresholds(data,
     # ------ Plot if chosen -------#
     if plot:
 
-        fig, axarr = plt.subplots(1, 2, figsize=(10, 5))
+        fig, axarr = plt.subplots(1, 2, figsize=(7, 3), constrained_layout=True)
         axarr = axarr.ravel()
 
         # Plot distribution of BIC
@@ -161,7 +166,7 @@ def get_thresholds(data,
 
         axarr[1].axvline(thresholds["min"], color="red", linestyle="--")
         axarr[1].axvline(thresholds["max"], color="red", linestyle="--")
-        axarr[1].legend()
+        axarr[1].legend(bbox_to_anchor=(1.05, 1), loc=2)  # locate legend outside of plot
 
     return thresholds
 
@@ -183,8 +188,8 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
 
     Returns
     --------
-    dict : 
-        A dict containing thresholds for each d
+    dict
+        A dict containing thresholds for each data column, either grouped by groupby or directly containing "min" and "max" per column.
     """
 
     # Find out which data to find thresholds for
@@ -257,7 +262,7 @@ def thresholds_as_table(threshold_dict):
 
 def _validate_minmax(d):
     """
-
+    Validate that the dict 'd' contains the keys 'min' and 'max'.
     """
     allowed = set(["min", "max"])
     keys = set(d.keys())
@@ -290,6 +295,11 @@ def validate_threshold_dict(table, thresholds, groupby=None):
         Dictionary of thresholds to validate.
     groupby : str, optional
         Column for grouping thresholds. Default: None (no grouping)
+
+    Raises
+    ------
+    ValueError
+        If the threshold dict is not valid.
     """
 
     if groupby is not None:
@@ -401,8 +411,8 @@ def quality_violin(adata, columns,
                    color_list=None,
                    title=None,
                    thresholds=None,
-                   sliders=True,
                    global_threshold=True,
+                   interactive=True,
                    save=None):
     """
     A function to plot quality measurements for cells in an anndata object.
@@ -431,10 +441,10 @@ def quality_violin(adata, columns,
         The title of the full plot. Default: None (no title).
     thresholds : dict, optional
         Dictionary containing initial min/max thresholds to show in plot.
-    sliders : bool, optional
-        Whether to show sliders for thresholding. Default: True.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
+    interactive : bool, Default True
+        Whether to show interactive sliders. If False, the static matplotlib plot is shown.
     save : str, optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
 
@@ -443,6 +453,8 @@ def quality_violin(adata, columns,
     tuple of box, dict
         box contains the sliders and figure to show in notebook, and the dictionary contains the sliders determined by sliders
     """
+
+    is_interactive = sctoolbox.utilities._is_interactive()
 
     # ---------------- Test input and get ready --------------#
 
@@ -490,7 +502,13 @@ def quality_violin(adata, columns,
 
     # Setting up output figure
     plt.ioff()  # prevent plot from showing twice in notebook
-    fig, axarr = plt.subplots(nrows, ncols, figsize=(ncols * 3, nrows * 3))
+
+    if is_interactive:
+        figsize = (ncols * 3, nrows * 3)
+    else:
+        figsize = (ncols * 4, nrows * 4)  # static plot can be larger
+
+    fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
     axes_list = axarr.flatten()
 
     # Remove empty axes
@@ -499,9 +517,9 @@ def quality_violin(adata, columns,
 
     # Add title of full plot
     if title is not None:
-        fig.suptitle(title, fontsize=16)
-        print(fig.__dict__)
-        print(fig.get_title()._fontproperties._size * 1.2)
+        fig.suptitle(title)
+        fontsize = fig._suptitle._fontproperties._size * 1.2  # increase fontsize of title
+        plt.setp(fig._suptitle, fontsize=fontsize)
 
     # Add title of individual plots
     for i in range(len(columns)):
@@ -534,6 +552,10 @@ def quality_violin(adata, columns,
             group_names = ["Threshold"]
 
         # Plot thresholds per group
+        y_range = ymax - ymin
+        nothresh_min = ymin - y_range * 0.1  # just outside of y axis range
+        nothresh_max = ymax + y_range * 0.1
+
         data_min = table[column].min()
         data_max = table[column].max()
         slider_list = []
@@ -541,19 +563,14 @@ def quality_violin(adata, columns,
 
             # Establish the threshold to plot
             if column not in thresholds:  # no thresholds given
-                tmin = data_min
-                tmax = data_max
+                tmin = nothresh_min
+                tmax = nothresh_max
             elif group in thresholds[column]:  # thresholds per group
-                tmin = thresholds[column][group].get("min", data_min)
-                tmax = thresholds[column][group].get("max", data_max)
+                tmin = thresholds[column][group].get("min", nothresh_min)
+                tmax = thresholds[column][group].get("max", nothresh_max)
             else:
-                tmin = thresholds[column].get("min", data_min)
-                tmax = thresholds[column].get("max", data_max)
-
-            # Cap thresholds just outside of plotting range
-            y_range = ymax - ymin
-            tmin = max(tmin, ymin - y_range * 0.1)
-            tmax = min(tmax, ymax + y_range * 0.1)
+                tmin = thresholds[column].get("min", nothresh_min)
+                tmax = thresholds[column].get("max", nothresh_max)
 
             # Plot line and shading
             tick = ticks[j]
@@ -566,64 +583,77 @@ def quality_violin(adata, columns,
             max_shade = ax.add_patch(Rectangle((x[0], ymax), x[1] - x[0], tmax - ymax, color="grey", alpha=0.2, linewidth=0))  # starting at upper left with negative height
 
             # Add slider to control thresholds
-            slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max,
-                                                 value=[tmin, tmax],  # initial value
-                                                 continuous_update=False)
+            if is_interactive:
 
-            slider.observe(functools.partial(_update_thresholds,
-                                             fig=fig,
-                                             min_line=min_line,
-                                             min_shade=min_shade,
-                                             max_line=max_line,
-                                             max_shade=max_shade), names=["value"])
+                slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max,
+                                                     value=[tmin, tmax],  # initial value
+                                                     continuous_update=False)
 
-            slider_list.append(slider)
-            if groupby is not None:
-                slider_dict[column][group] = slider
-            else:
-                slider_dict[column] = slider
+                slider.observe(functools.partial(_update_thresholds,
+                                                 fig=fig,
+                                                 min_line=min_line,
+                                                 min_shade=min_shade,
+                                                 max_line=max_line,
+                                                 max_shade=max_shade), names=["value"])
+
+                slider_list.append(slider)
+                if groupby is not None:
+                    slider_dict[column][group] = slider
+                else:
+                    slider_dict[column] = slider
 
         ax.set_ylim(ymin, ymax)  # set ylim back to original after plotting thresholds
 
         # Link sliders together
-        if len(slider_list) > 1:
+        if is_interactive:
 
-            # Toggle linked sliders
-            c = ipywidgets.Checkbox(value=global_threshold, description='Global threshold', disabled=False, indent=False)
-            linkage_dict[column] = _link_sliders(slider_list) if global_threshold is True else None
+            if len(slider_list) > 1:
 
-            c.observe(functools.partial(_toggle_linkage,
-                                        linkage_dict=linkage_dict,
-                                        slider_list=slider_list,
-                                        key=column), names=["value"])
+                # Toggle linked sliders
+                c = ipywidgets.Checkbox(value=global_threshold, description='Global threshold', disabled=False, indent=False)
+                linkage_dict[column] = _link_sliders(slider_list) if global_threshold is True else None
 
-            box = ipywidgets.VBox([c] + slider_list)
+                c.observe(functools.partial(_toggle_linkage,
+                                            linkage_dict=linkage_dict,
+                                            slider_list=slider_list,
+                                            key=column), names=["value"])
 
-        else:
-            box = ipywidgets.VBox(slider_list)
+                box = ipywidgets.VBox([c] + slider_list)
 
-        accordion_content.append(box)
+            else:
+                box = ipywidgets.VBox(slider_list)  # no tickbox needed if there is only one slider per column
+
+            accordion_content.append(box)
 
     fig.tight_layout()
     sctoolbox.utilities.save_figure(save)  # save plot; can be overwritten if thresholds are changed
 
     # Assemble accordion with different measures
-    accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
-    for i in range(len(columns)):
-        accordion.set_title(i, columns[i])
+    if is_interactive:
 
-    # Setup box to hold all widgets
-    fig.canvas.header_visible = False
-    fig.canvas.toolbar_visible = False
-    fig.canvas.resizable = True
-    fig.canvas.width = "auto"
+        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
+        for i in range(len(columns)):
+            accordion.set_title(i, columns[i])
 
-    if sliders is True:
-        full_box = ipywidgets.HBox([accordion, fig.canvas])
+        fig.canvas.header_visible = False
+        fig.canvas.toolbar_visible = False
+        fig.canvas.resizable = True
+        fig.canvas.width = "auto"
+
+        # Hack to force the plot to show
+        # reference: https://github.com/matplotlib/ipympl/issues/290
+        fig.canvas._handle_message(fig.canvas, {'type': 'send_image_mode'}, [])
+        fig.canvas._handle_message(fig.canvas, {'type': 'refresh'}, [])
+        fig.canvas._handle_message(fig.canvas, {'type': 'initialized'}, [])
+        fig.canvas._handle_message(fig.canvas, {'type': 'draw'}, [])
+
+        fig.canvas.draw()
+        figure = ipywidgets.HBox([accordion, fig.canvas])  # Setup box to hold all widgets
+
     else:
-        full_box = fig.canvas
+        figure = fig  # non interactive figure
 
-    return full_box, slider_dict
+    return figure, slider_dict
 
 
 def get_slider_thresholds(slider_dict):
@@ -669,7 +699,7 @@ def get_slider_thresholds(slider_dict):
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
 
-def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None):
+def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=True):
     """
     Apply QC thresholds to anndata object.
 
@@ -692,8 +722,11 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None):
 
     table = adata.obs if which == "obs" else adata.var
 
-    # Create copy of adata
-    adata = adata.copy()
+    # Cells or genes? For naming in log prints
+    if which == "obs":
+        name = "cells"
+    else:
+        name = ".var features"
 
     # Check if all columns are found in adata
     not_found = list(set(thresholds) - set(table.columns))
@@ -758,22 +791,30 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None):
 
         # Apply filtering
         included = ~excluded
-        if which == "obs":
-            adata = adata[included, :]
-            name = "cells"
+
+        if inplace:
+            # NOTE: these are privat anndata functions so they might change without warning!
+            if which == "obs":
+                adata._inplace_subset_obs(included)
+            else:
+                adata._inplace_subset_var(included)
         else:
-            adata = adata[:, included]  # filter on var
-            name = ".var features"
+            if which == "obs":
+                adata = adata[included]
+            else:
+                adata = adata[:, included]  # filter on var
+
         print(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
 
-    return adata
+    if inplace is False:
+        return adata
 
 
 ###############################################################################
 #                         STEP 4: ADDITIONAL FILTERING                        #
 ###############################################################################
 
-def filter_genes(adata, genes):
+def filter_genes(adata, genes, remove_bool=True, inplace=True):
     """
     Remove genes from adata object.
 
@@ -781,26 +822,49 @@ def filter_genes(adata, genes):
     ----------
     adata : anndata.AnnData
         Annotated data matrix object to filter
-    genes : list of str
-        A list of genes to remove from object.
+    genes : str or list of str
+        A column containing boolean indicators or a list of genes to remove from object .var table.
+    remove_bool : bool, default True
+        Is used if genes is a column in .var table. If True, remove genes that are True. If False, remove genes that are False.
+    inplace : bool, default True
+        If True, filter inplace. If False, return filtered adata object.
 
     Returns
     -------
-    anndata.AnnData :
-        Anndata object with removed genes.
+    anndata.AnnData or None
+        If inplace is False, Anndata object with removed genes. If inplace is True, returns None.
     """
-    # Check if all genes are found in adata
-    not_found = list(set(genes) - set(adata.var_names))
-    if len(not_found) > 0:
-        print("{0} genes were not found in adata and could therefore not be removed. These genes are: {1}".format(len(not_found), not_found))
+
+    n_before = adata.shape[1]
+
+    # genes is either a string (column in .var table) or a list of genes to remove
+    if isinstance(genes, str):
+        if genes not in adata.var.columns:
+            raise ValueError(f"{genes} not found in adata.var.columns")
+
+        boolean = adata.var[genes].values
+        if remove_bool is True:
+            boolean = ~boolean
+
+    else:
+        # Check if all genes are found in adata
+        not_found = list(set(genes) - set(adata.var_names))
+        if len(not_found) > 0:
+            print("{0} genes were not found in adata and could therefore not be removed. These genes are: {1}".format(len(not_found), not_found))
+
+        boolean = ~adata.var_names.isin(genes).values
 
     # Remove genes from adata
-    n_before = adata.shape[1]
-    adata = adata[:, ~adata.var_names.isin(genes)]
+    if inplace:
+        adata._inplace_subset_var(boolean)  # boolean is the included genes
+    else:
+        adata = adata[:, boolean]
+
     n_after = adata.shape[1]
     print("Filtered out {0} genes from adata. New number of genes is: {1}.".format(n_before - n_after, n_after))
 
-    return adata
+    if inplace is False:
+        return adata
 
 
 ###############################################################################

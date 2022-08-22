@@ -2,13 +2,45 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import re
 import scanpy as sc
 import importlib
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
+import matplotlib
 from os.path import join, dirname, exists
 from pathlib import Path
+
+
+def get_package_versions():
+    """
+    Utility to get a dictionary of currently installed python packages and versions.
+
+    Returns
+    --------
+    A dict in the form:
+    {"package1": "1.2.1", "package2":"4.0.1", (...)}
+
+    """
+
+    # Import freeze
+    try:
+        from pip._internal.operations import freeze
+    except ImportError:  # pip < 10.0
+        from pip.operations import freeze
+
+    # Get list of packages and versions with freeze
+    package_list = freeze.freeze()
+    package_dict = {}  # dict for collecting versions
+    for s in package_list:
+        try:
+            name, version = re.split("==| @ ", s)
+            package_dict[name] = version
+        except Exception:
+            print(f"Error reading version for package: {s}")
+
+    return package_dict
 
 
 # ------------------ Type checking ----------------- -#
@@ -132,6 +164,24 @@ def _is_notebook():
         _ = get_ipython()
         return True
     except NameError:
+        return False
+
+
+def _is_interactive():
+    """
+    Check if matplotlib backend is interactive.
+
+    Returns
+    -------
+    boolean :
+        True if interactive, False otherwise.
+    """
+
+    backend = matplotlib.get_backend()
+
+    if backend == 'module://ipympl.backend_nbagg':
+        return True
+    else:
         return False
 
 
