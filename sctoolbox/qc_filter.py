@@ -229,8 +229,15 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
 
 def thresholds_as_table(threshold_dict):
     """ Show the threshold dictionary as a table.
-    
-    
+
+    Parameters
+    ----------
+    threshold_dict : dict
+        Dictionary with thresholds.
+
+    Returns
+    -------
+    pandas.DataFrame
     """
 
     rows = []
@@ -336,7 +343,7 @@ def _link_sliders(sliders):
     ------------
     sliders : list of ipywidgets.widgets.Slider
         List of sliders to link.
-    
+
     Returns
     --------
     list : list of ipywidgets.widgets.link

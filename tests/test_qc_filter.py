@@ -101,7 +101,7 @@ def test_filter_genes(adata):
     """ Test whether genes were filtered out based on a boolean column"""
 
     adata.var["gene_bool"] = np.random.choice(a=[False, True], size=adata.shape[1])
-    n_false = sum(adata.var["gene_bool"] is False)
+    n_false = sum(~adata.var["gene_bool"])
     qc.filter_genes(adata, "gene_bool", inplace=True)  # removes all genes with boolean True
 
     assert adata.shape[1] == n_false
