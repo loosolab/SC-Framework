@@ -154,9 +154,9 @@ def refine_thresholds(thresholds, inplace=False):
     # quit value
     quit = ["Quit"]
 
-    # temporary reset index for easier handling
-    index_name = thresholds.index.name
-    thresholds.reset_index(inplace=True)
+    # get index name(s) and column name(s)
+    index_names = [thresholds.index.name] if thresholds.index.nlevels <= 1 else list(thresholds.index.names)
+    column_names = list(thresholds.columns)
 
     def convert_type(val):
         """ Evaluate string if possible else return string. """
@@ -164,6 +164,28 @@ def refine_thresholds(thresholds, inplace=False):
             return eval(val)
         except Exception:
             return val
+
+    def select_row(table, quit="Quit"):
+        """ Select a row to work on. Returns index tuple or False if quit. """
+        index_names = [table.index.name] if table.index.nlevels <= 1 else table.index.names
+
+        # select row by giving every level of index
+        selected_indices = []
+        for index in index_names:
+            options = list(set(table.index.get_level_values(index)))
+
+            print(f"Select {index}:")
+            [print(f"    - {o}") for o in options + [quit]]
+
+            selected_indices.append(
+                click.prompt("", type=click.Choice(options + [quit]), show_choices=False, prompt_suffix="")
+            )
+
+            # go back to main menu if 'quit'
+            if quit == selected_indices[-1]:
+                return False
+
+        return tuple(selected_indices)
 
     # start interactive loop
     while True:
@@ -182,50 +204,42 @@ def refine_thresholds(thresholds, inplace=False):
             print("Create new row.")
             # create row
             new = {}
-            for column in thresholds.columns:
-                new[column] = click.prompt(f"{column}")
+            for column in index_names + column_names:
+                new[column] = [click.prompt(f"Enter value for '{column}' column")]
 
             # add row
-            thresholds = pd.concat([thresholds, pd.DataFrame(new, index=[0])], ignore_index=True)
+            thresholds = pd.concat([thresholds, pd.DataFrame(new).set_index(index_names)])
 
         # edit row
         elif selection == 2:
             print("Edit row.")
 
-            options = list(thresholds[index_name])
-            for row in options + quit:
-                print(f"    - {row}")
-
-            index = click.prompt("Select row to update", type=click.Choice(options + quit), show_choices=False)
-
-            if index != quit[0]:
+            # select row by giving every level of index
+            selection = select_row(table=thresholds, quit=quit[0])
+            print(selection)
+            
+            # update selected row
+            if selection is not False:
                 for column in thresholds.columns:
-                    # skip index column
-                    if column == index_name:
-                        continue
-
                     # update value
-                    index_num = thresholds[thresholds[index_name] == index].index[0]
-                    thresholds.at[index_num, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[index_num, column], value_proc=convert_type)
+                    thresholds.at[selection, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[selection, column], value_proc=convert_type)
 
         # remove row
         elif selection == 3:
-            options = list(thresholds[index_name]) + quit
+            print("Select row to remove:")
 
-            # show options
-            for opt in options:
-                print(f"    - {opt}")
+            # select row by giving every level of index
+            selection = select_row(table=thresholds, quit=quit[0])
 
-            selection = click.prompt("Select row to remove", type=click.Choice(options), show_choices=False)
-
-            if selection != quit:
-                index_num = thresholds[thresholds[index_name] == selection].index[0]
-
+            if selection:
                 # remove row
-                thresholds.drop(index=index_num, inplace=True)
+                thresholds.drop(index=selection, inplace=True)
 
         # show table
         elif selection == 4:
+            # clear output
+            utilities.clear()
+
             if utilities._is_notebook():
                 utilities.check_module("IPython")
                 from IPython.display import display
@@ -242,9 +256,6 @@ def refine_thresholds(thresholds, inplace=False):
         if selection != 4:
             # clear output
             utilities.clear()
-
-    # re-add index
-    thresholds.set_index(index_name, inplace=True)
 
     return thresholds if not inplace else None
 
