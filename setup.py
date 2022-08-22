@@ -25,7 +25,9 @@ setup(
         'statsmodels',
         'tqdm',
         'pandas',
-        'seaborn'
+        'seaborn',
+        'ipympl',
+        'scrublet'
     ],
     include_package_data=True,
     extras_require={
