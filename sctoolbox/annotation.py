@@ -125,7 +125,7 @@ def format_adata(adata):
     elif not condition_2:
         print("Cannot be formatted, index does not match chr_start_stop")
 
-    condition_1 = set(['peak_stop', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
+    condition_1 = set(['peak_end', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
 
     if condition_1:
         print("is formatted")
