@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import functools  # for partial functions
 import scanpy as sc
-import time
 
 # for plotting
 from matplotlib.patches import Rectangle
@@ -229,7 +228,10 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
 
 
 def thresholds_as_table(threshold_dict):
-    """ Show the threshold dictionary as a table """
+    """ Show the threshold dictionary as a table.
+    
+    
+    """
 
     rows = []
     for column in threshold_dict:
@@ -332,9 +334,13 @@ def _link_sliders(sliders):
 
     Parameters
     ------------
-    sliders :
-
-
+    sliders : list of ipywidgets.widgets.Slider
+        List of sliders to link.
+    
+    Returns
+    --------
+    list : list of ipywidgets.widgets.link
+        List of links between sliders.
     """
 
     tup = [(slider, 'value') for slider in sliders]
@@ -353,10 +359,14 @@ def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
 
     Parameters
     -----------
-    checkbox :
-
-    link_list
-
+    checkbox : ipywidgets.widgets.Checkbox
+        Checkbox to toggle linkage.
+    linkage_dict : dict
+        Dictionary of links to link or unlink.
+    slider_list : list of ipywidgets.widgets.Slider
+        List of sliders to link or unlink.
+    key : str
+        Key in linkage_dict for fetching and updating links.
     """
 
     check_bool = checkbox["new"]

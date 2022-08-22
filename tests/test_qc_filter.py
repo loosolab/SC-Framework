@@ -1,5 +1,4 @@
 
-from ast import Return
 import pytest
 import sctoolbox.qc_filter as qc
 import scanpy as sc
@@ -15,6 +14,7 @@ def adata():
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
     return sc.read_h5ad(f)
 
+
 @pytest.fixture
 def adata_qc(adata):
     """ Add qc variables to an adata object """
@@ -27,11 +27,13 @@ def adata_qc(adata):
 
     return adata
 
+
 @pytest.fixture
 def threshold_dict():
     d = {"qc_variable1": {"min": 0.5, "max": 1.5},
          "qc_variable2": {"min": 0.5, "max": 1}}
     return d
+
 
 @pytest.fixture
 def invalid_threshold_dict():
@@ -99,7 +101,7 @@ def test_filter_genes(adata):
     """ Test whether genes were filtered out based on a boolean column"""
 
     adata.var["gene_bool"] = np.random.choice(a=[False, True], size=adata.shape[1])
-    n_false = sum(adata.var["gene_bool"] == False)
+    n_false = sum(adata.var["gene_bool"] is False)
     qc.filter_genes(adata, "gene_bool", inplace=True)  # removes all genes with boolean True
 
     assert adata.shape[1] == n_false
