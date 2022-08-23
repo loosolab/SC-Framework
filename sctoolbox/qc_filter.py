@@ -81,7 +81,7 @@ def get_thresholds(data,
 
     Parameters
     ----------
-    adata : numpy.ndarray
+    data : numpy.ndarray
         Array of data to find thresholds for.
     max_mixtures : int, default 5
         Maximum number of gaussian mixtures to fit.
