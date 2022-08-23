@@ -409,7 +409,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
-def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
     """
     Creates a violinplot. With optional horizontal lines for each violin.
 
@@ -427,6 +427,10 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
         List of colors to use for violins.
     ax : matplotlib.axes.Axes, default None
         Axes object to draw the plot on. Otherwise use current axes.
+    title : str, default None
+        Title of the plot.
+    ylabel : bool or str, default True
+        Boolean if ylabel should be shown. Or str for custom ylabel.
 
     Returns
     -------
@@ -496,6 +500,16 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None):
                                ls="dashed",
                                lw=3)
 
+    # add title
+    if title:
+        plot.set(title=title)
+    
+    # adjust y-label
+    if not ylabel:
+        plot.set(ylabel=None)
+    elif isinstance(ylabel, str):
+        plot.set(ylabel=ylabel)
+
     # remove x-axis ticks if color_by=None
     if color_by is None:
         plot.tick_params(axis="x", which="both", bottom=False)
@@ -515,7 +529,9 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
         Note: Row order defines plot order.
         Structure:
-            index      - Name of anndata.var or anndata.obs column.
+            index (two columns)
+                - Name of anndata.var or anndata.obs column.
+                - Name of origin. Either "obs" or "var".
             1st column - Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
             2nd column - Name of anndata.var or anndata.obs column used for color grouping or None to disable.
     colors : list of str, default None
@@ -530,13 +546,9 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         Dots per inch.
     """
     # test if threshold indexes are column names in .obs or .var
-    invalid_index = set(thresholds.index) - set(anndata.obs.columns) - set(anndata.var.columns)
+    invalid_index = set(thresholds.index.get_level_values(0)) - set(anndata.obs.columns) - set(anndata.var.columns)
     if invalid_index:
         raise ValueError(f"Threshold table indices need to be column names of anndata.obs or anndata.var. Indices not found: {invalid_index}")
-
-    ambiguous_index = set(thresholds.index).intersection(set(anndata.obs.columns).intersection(anndata.var.columns))
-    if ambiguous_index:
-        raise ValueError(f"Ambigouous indices! Detected indices present as both anndata.var and anndata.obs column name. {ambiguous_index}")
 
     # create subplot grid
     nrows = ceil(len(thresholds) / ncols)
@@ -546,12 +558,12 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
     axs = axs.flatten()  # flatten to 1d array per row
 
     # iterate over threshold rows
-    for (index, row), ax in zip(thresholds.iterrows(), axs):
+    for ((name, origin), row), ax in zip(thresholds.iterrows(), axs):
         # find out if in obs or var
-        table = anndata.var if index in anndata.var.columns else anndata.obs
+        table = anndata.var if origin == "var" else anndata.obs
 
         # create violin
-        violinplot(table=table, y=index, hlines=row[0], color_by=row[1], colors=colors, ax=ax)
+        violinplot(table=table, y=name, hlines=row[0], color_by=row[1], colors=colors, ax=ax, title=f"{origin}: {name}", ylabel=False)
 
     # delete unused subplots
     for i in range(len(thresholds), len(axs)):

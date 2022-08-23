@@ -291,64 +291,39 @@ def get_threshold(data, interval, limit_on="both"):
         return thresholds[1]
 
 
-def qcmetric_calculator(anndata, control_var=False):
+def calculate_qc_metrics(anndata, percent_top=None, inplace=False, **kwargs):
     """
-    Calculating the qc metrics using the Scanpy
+    Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`
+
+    TODO add logging
+    TODO we may want to rethink if this function is necessary
 
     Parameters
     ----------
     anndata : anndata.AnnData
         Anndata object the quality metrics are added to.
-    control_var : boolean, default False
-        TODO this parameter is not used!!!
-
-        If True, the adata.uns["infoprocess"]["gene_labeled"] will be used in the qc_var to control the metrics calculation
-        The qc_var of sc.pp.calculate_qc_metrics will use this variable to control the qc metrics calculation (e.g. "is_mito").
-        For details, see qc_vars at https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
-
-    Notes
-    -----
-    Author: Guilherme Valente
+    percent_top : [int], default None
+        Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
+    inplace : bool, default False
+        If the anndata object should be modified in place.
+    ** kwargs :
+        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
 
     Returns
     -------
-    anndata.AnnData:
-        Returns anndata object with added quality metrics.
+    anndata.AnnData or None:
+        Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.
     """
-    # Message and others
-    m1 = "pp.calculate_qc_metrics qc_vars: "
-    m2 = "ID_"
-    obs_info = ['total_counts', 'n_genes_by_counts', 'log1p_total_counts']
-    var_info = ['n_cells_by_counts', 'mean_counts', 'log1p_mean_counts', 'pct_dropout_by_counts']
+    # add metrics to copy of anndata
+    if not inplace:
+        anndata = anndata.copy()
 
-    var = anndata.uns["infoprocess"]["genes_labeled"]
-    if var is not None:
-        qc_metrics = sc.pp.calculate_qc_metrics(adata=anndata, qc_vars=var, inplace=False, log1p=True)
-        for a in var:
-            obs_info.append('total_counts_' + a)
-            obs_info.append('pct_counts_' + a)
-    else:
-        qc_metrics = sc.pp.calculate_qc_metrics(adata=anndata, inplace=False, log1p=True)
+    # compute metrics
+    sc.pp.calculate_qc_metrics(adata=anndata, percent_top=percent_top, inplace=True, **kwargs)
 
-    for a in list(qc_metrics[0].columns.values):
-        if a in obs_info:
-            anndata.obs[a] = qc_metrics[0][a]
-    for a in list(qc_metrics[1].columns.values):
-        if a in var_info:
-            anndata.var[a] = qc_metrics[1][a]
-
-    # Annotating into anndata.uns["infoprocess"] the qc_var parameter for the sc.pp.calculate_qc_metrics
-    cr.build_infor(anndata, m1, var)
-
-    # Storing the original counts
-    for a in obs_info:
-        go_to_id = anndata.obs[a].sum()
-        cr.build_infor(anndata, m2 + "c_" + a, go_to_id)
-    for a in var_info:
-        go_to_id = anndata.var[a].sum()
-        cr.build_infor(anndata, m2 + "g_" + a, go_to_id)
-
-    return anndata
+    # return modified anndata
+    if not inplace:
+        return anndata
 
 
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):

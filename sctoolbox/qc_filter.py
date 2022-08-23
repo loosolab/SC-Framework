@@ -966,9 +966,9 @@ def refine_thresholds(thresholds, inplace=False):
     # quit value
     quit = ["Quit"]
 
-    # temporary reset index for easier handling
-    index_name = thresholds.index.name
-    thresholds.reset_index(inplace=True)
+    # get index name(s) and column name(s)
+    index_names = [thresholds.index.name] if thresholds.index.nlevels <= 1 else list(thresholds.index.names)
+    column_names = list(thresholds.columns)
 
     def convert_type(val):
         """ Evaluate string if possible else return string. """
@@ -976,6 +976,28 @@ def refine_thresholds(thresholds, inplace=False):
             return eval(val)
         except Exception:
             return val
+
+    def select_row(table, quit="Quit"):
+        """ Select a row to work on. Returns index tuple or False if quit. """
+        index_names = [table.index.name] if table.index.nlevels <= 1 else table.index.names
+
+        # select row by giving every level of index
+        selected_indices = []
+        for index in index_names:
+            options = list(set(table.index.get_level_values(index)))
+
+            print(f"Select {index}:")
+            [print(f"    - {o}") for o in options + [quit]]
+
+            selected_indices.append(
+                click.prompt("", type=click.Choice(options + [quit]), show_choices=False, prompt_suffix="")
+            )
+
+            # go back to main menu if 'quit'
+            if quit == selected_indices[-1]:
+                return False
+
+        return tuple(selected_indices)
 
     # start interactive loop
     while True:
@@ -994,50 +1016,42 @@ def refine_thresholds(thresholds, inplace=False):
             print("Create new row.")
             # create row
             new = {}
-            for column in thresholds.columns:
-                new[column] = click.prompt(f"{column}")
+            for column in index_names + column_names:
+                new[column] = [click.prompt(f"Enter value for '{column}' column")]
 
             # add row
-            thresholds = pd.concat([thresholds, pd.DataFrame(new, index=[0])], ignore_index=True)
+            thresholds = pd.concat([thresholds, pd.DataFrame(new).set_index(index_names)])
 
         # edit row
         elif selection == 2:
             print("Edit row.")
 
-            options = list(thresholds[index_name])
-            for row in options + quit:
-                print(f"    - {row}")
+            # select row by giving every level of index
+            selection = select_row(table=thresholds, quit=quit[0])
+            print(selection)
 
-            index = click.prompt("Select row to update", type=click.Choice(options + quit), show_choices=False)
-
-            if index != quit[0]:
+            # update selected row
+            if selection is not False:
                 for column in thresholds.columns:
-                    # skip index column
-                    if column == index_name:
-                        continue
-
                     # update value
-                    index_num = thresholds[thresholds[index_name] == index].index[0]
-                    thresholds.at[index_num, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[index_num, column], value_proc=convert_type)
+                    thresholds.at[selection, column] = click.prompt(f"Update {column} leave empty to keep former value", default=thresholds.at[selection, column], value_proc=convert_type)
 
         # remove row
         elif selection == 3:
-            options = list(thresholds[index_name]) + quit
+            print("Select row to remove:")
 
-            # show options
-            for opt in options:
-                print(f"    - {opt}")
+            # select row by giving every level of index
+            selection = select_row(table=thresholds, quit=quit[0])
 
-            selection = click.prompt("Select row to remove", type=click.Choice(options), show_choices=False)
-
-            if selection != quit:
-                index_num = thresholds[thresholds[index_name] == selection].index[0]
-
+            if selection:
                 # remove row
-                thresholds.drop(index=index_num, inplace=True)
+                thresholds.drop(index=selection, inplace=True)
 
         # show table
         elif selection == 4:
+            # clear output
+            utilities.clear()
+
             if utilities._is_notebook():
                 utilities.check_module("IPython")
                 from IPython.display import display
@@ -1054,9 +1068,6 @@ def refine_thresholds(thresholds, inplace=False):
         if selection != 4:
             # clear output
             utilities.clear()
-
-    # re-add index
-    thresholds.set_index(index_name, inplace=True)
 
     return thresholds if not inplace else None
 
@@ -1147,26 +1158,27 @@ def find_thresholds(anndata, interval=None, var="all", obs="all", var_color_by=N
         output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "qc_violin.pdf")
 
     # setup thresholds data frame
-    thresholds = {'index': [], 'threshold': [], 'color_by': []}
-    for column in obs + var:
-        thresholds['index'].append(column)
+    thresholds = {'name': [], 'origin': [], 'threshold': [], 'color_by': []}
+    for name, origin in zip(obs + var, ["obs"] * len(obs) + ["var"] * len(var)):
+        thresholds['name'].append(name)
+        thresholds['origin'].append(origin)
         thresholds['threshold'].append(None)
-        thresholds['color_by'].append(obs_color_by if column in anndata.obs.columns else var_color_by)
+        thresholds['color_by'].append(obs_color_by if origin == "obs" else var_color_by)
 
-    thresholds = pd.DataFrame.from_dict(thresholds).set_index("index")
+    thresholds = pd.DataFrame.from_dict(thresholds).set_index(["name", "origin"])
 
     # Plotting with or without cutoffs
     if interval:
         # Calculate cutoffs to plot in the violins
-        for column in obs + var:
+        for name, origin in thresholds.index:
             # compute cutoffs for each column
-            if column in anndata.obs.columns:
-                data = anndata.obs[column]
+            if origin == "obs":
+                data = anndata.obs[name]
             else:
-                data = anndata.var[column]
+                data = anndata.var[name]
 
             # compute threshold
-            thresholds.at[column, "threshold"] = analyser.get_threshold(data=data.to_list(), interval=interval, limit_on="both")
+            thresholds.at[(name, origin), "threshold"] = analyser.get_threshold(data=data.to_list(), interval=interval, limit_on="both")
 
     # create violinplot
     plotting.qc_violins(anndata, thresholds, colors=None, filename=output)
