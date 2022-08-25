@@ -16,6 +16,29 @@ import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
 
 
+def rename_categories(series):
+    """
+    Rename categories in a pandas series to numbers between 1-(number of categories).
+
+    Parameters
+    ----------
+    series : pandas.Series
+        Series to rename categories in.
+
+    Returns
+    -------
+    pandas.Series
+        Series with renamed categories.
+    """
+
+    n_categories = series.cat.categories
+    new_names = [str(i) for i in range(1, len(n_categories) + 1)]
+    translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
+    series = series.cat.rename_categories(translate_dict)
+
+    return(series)
+
+
 # --------------------------- Batch correction methods -------------------------- #
 
 def wrap_corrections(adata,

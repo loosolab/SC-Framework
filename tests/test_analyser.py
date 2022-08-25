@@ -1,6 +1,9 @@
 import pytest
 import scanpy as sc
 import os
+import numpy as np
+import pandas as pd
+
 import sctoolbox.analyser as an
 import sctoolbox.utilities as utils
 
@@ -41,6 +44,18 @@ def adata_batch_dict(adata_batch):
     anndata_batch_dict = adata_batch.copy()
 
     return {'adata': anndata_batch_dict}
+
+
+# ------------------------------ TESTS -------------------------------- #
+
+def test_rename_categories():
+    """ Assert if categories were renamed"""
+
+    data = np.random.choice(["C1", "C2", "C3"], size=100)
+    series = pd.Series(data).astype("category")
+    renamed_series = an.rename_categories(series)
+
+    assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
 
 
 def test_adata_normalize_total(adata):
