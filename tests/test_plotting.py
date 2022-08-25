@@ -33,6 +33,16 @@ def tmp_file():
     shutil.rmtree(tmpdir)
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
+def test_sc_colormap():
+    """ Test whether sc_colormap returns a colormap """
+
+    cmap = sctoolbox.plotting.sc_colormap()
+    assert type(cmap).__name__ == "ListedColormap"
+
+
 def test_plot_pca_variance(adata):
     """ Test if Axes object is returned. """
     ax = sctoolbox.plotting.plot_pca_variance(adata)

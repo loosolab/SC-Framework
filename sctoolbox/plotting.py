@@ -11,12 +11,34 @@ import qnorm
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 
+from matplotlib import cm, colors
+from matplotlib.colors import ListedColormap
+
 import sctoolbox.utilities
 from sctoolbox.utilities import save_figure
+
 
 #############################################################################
 #                     PCA/tSNE/UMAP plotting functions                      #
 #############################################################################
+
+def sc_colormap():
+    """
+    Get a colormap with 0-count cells colored grey (to use for embeddings).
+
+    Returns
+    -------
+    cmap : matplotlib.colors.ListedColormap
+        Colormap with 0-count cells colored grey.
+    """
+
+    # Custom colormap for single cells
+    color_cmap = cm.get_cmap('Reds', 200)
+    newcolors = color_cmap(np.linspace(0.2, 0.9, 200))
+    newcolors[0, :] = colors.to_rgba("lightgrey")  # count 0 = grey
+    sc_cmap = ListedColormap(newcolors)
+
+    return(sc_cmap)
 
 
 def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
