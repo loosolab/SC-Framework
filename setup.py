@@ -27,7 +27,8 @@ setup(
         'pandas',
         'seaborn',
         'ipympl',
-        'scrublet'
+        'scrublet',
+        'leidenalg'
     ],
     include_package_data=True,
     extras_require={
