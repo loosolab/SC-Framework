@@ -132,6 +132,8 @@ def search_umap_parameters(adata,
 
     # Figure with rows=spread, cols=dist
     fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
+    axes = np.array(axes).reshape((-1, 1)) if len(dists) == 1 else axes    # reshape 1-column array
+    axes = np.array(axes).reshape((1, -1)) if len(spreads) == 1 else axes  # reshape 1-row array
 
     # Create umap for each combination of spread/dist
     for i, spread in enumerate(spreads):  # rows
@@ -162,7 +164,100 @@ def search_umap_parameters(adata,
     plt.tight_layout()
     save_figure(save)
 
-    plt.show()
+    return axes
+
+
+def search_clustering_parameters(adata,
+                                 method="leiden",
+                                 resolution_range=(0.1, 1, 0.1),
+                                 embedding="X_umap",
+                                 ncols=3,
+                                 verbose=True,
+                                 save=None):
+    """
+    Plot a grid of different resolution parameters for clustering.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str, default: "leiden"
+        Clustering method to use. Can be one of 'leiden' or 'louvain'.
+    resolution_range : tuple, default: (0.1, 1, 0.1)
+        Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
+    embedding : str, default: "X_umap".
+        Embedding method to use. Must be a key in adata.obsm.
+    ncols : int, default: 3
+        Number of columns in the grid.
+    verbose : bool, default: True
+        Print progress to console.
+    save : str, default None
+        Path to save figure.
+
+    Returns
+    -------
+    axarr : array of matplotlib.axes.Axes
+        Array of axes objects containing the plot(s).
+    """
+
+    adata = adata.copy()  # ensure that adata is not changed
+
+    # Check input
+    if len(resolution_range) != 3:
+        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
+
+    # Check validity of parameters
+    res_min, res_max, res_step = resolution_range
+    if res_step > res_max - res_min:
+        raise ValueError("'step' of resolution_range is larger than 'max' - 'min'. Please adjust.")
+
+    # Check that coordinates for embedding is available in .obsm
+    if embedding not in adata.obsm:
+        raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
+
+    # Check that method is valid
+    if method == "leiden":
+        cl_function = sc.tl.leiden
+    elif method == "louvain":
+        cl_function = sc.tl.louvain
+    else:
+        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
+
+    # Setup parameters to loop over
+    res_min, res_max, res_step = resolution_range
+    resolutions = np.arange(res_min, res_max, res_step)
+    resolutions = np.around(resolutions, 2)
+
+    # Figure with given number of cols
+    ncols = min(ncols, len(resolutions))  # number of resolutions caps number of columns
+    nrows = int(np.ceil(len(resolutions) / ncols))
+    fig, axarr = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
+    axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
+
+    axes = axarr.flatten()
+
+    for i, res in enumerate(resolutions):
+
+        if verbose is True:
+            print(f"Plotting umap for resolution={res} ({i} / {len(resolutions)})")
+
+        # Run clustering
+        cl_function(adata, resolution=res, key_added="clustering")
+        n_clusters = len(adata.obs["clustering"].cat.categories)
+
+        # Plot embedding
+        title = f"Resolution: {res} (clusters: {n_clusters})"
+        sc.pl.embedding(adata, embedding, color="clustering", ax=axes[i], legend_loc="on data", title=title, show=False)
+
+    # Hide plots not filled in
+    for ax in axes[len(resolutions):]:
+        ax.axis('off')
+
+    plt.tight_layout()
+    save_figure(save)
+
+    return axarr
 
 
 def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
@@ -670,8 +765,8 @@ def anndata_overview(adatas,
     row_count = {"PCA-var": 1, "LISI": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
     cols = len(adatas)
-    figsize = figsize if figsize is not None else (cols * 4, rows * 4)
-    fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
+    figsize = figsize if figsize is not None else (2 + cols * 4, rows * 4)
+    fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize, constrained_layout=True)
     axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
@@ -758,9 +853,7 @@ def anndata_overview(adatas,
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
     # save
-    save_figure(output)
-    if output:
-        plt.savefig(output)
+    save_figure(output, dpi=dpi)
 
     return axs
 
