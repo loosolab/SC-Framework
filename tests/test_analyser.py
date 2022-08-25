@@ -70,6 +70,14 @@ def test_define_PC_error(adata_no_pca):
         an.define_PC(adata_no_pca)
 
 
+def test_subset_PCA(adata):
+    """ Test whether number of PCA coordinate dimensions was reduced """
+
+    an.subset_PCA(adata, 10)
+
+    assert adata.obsm["X_pca"].shape[1] == 10
+
+
 def test_evaluate_batch_effect(adata_batch):
     """ Test if AnnData containing LISI column in .obs is returned. """
     ad = an.evaluate_batch_effect(adata_batch, 'batch')

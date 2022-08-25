@@ -472,6 +472,36 @@ def define_PC(anndata):
     return knee
 
 
+def subset_PCA(adata, n_pcs, start=0, inplace=True):
+    """
+    Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing the PCA coordinates.
+    n_pcs : int
+        Number of PCs to keep.
+    start : int, default 0
+        Index (0-based) of the first PC to keep. E.g. if start = 1 and n_pcs = 10, you will exclude the first PC to keep 9 PCs.
+    inplace : bool, default True
+        Whether to work inplace on the anndata object.
+
+    Returns
+    --------
+    adata or None
+        Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
+    """
+
+    if inplace is False:
+        adata = adata.copy()
+
+    adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
+
+    if inplace is False:
+        return adata
+
+
 def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', inplace=False):
     """
     Evaluate batch effect methods using LISI.
