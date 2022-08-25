@@ -38,7 +38,7 @@ def sc_colormap():
     newcolors[0, :] = colors.to_rgba("lightgrey")  # count 0 = grey
     sc_cmap = ListedColormap(newcolors)
 
-    return(sc_cmap)
+    return sc_cmap 
 
 
 def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):

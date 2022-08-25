@@ -36,7 +36,7 @@ def rename_categories(series):
     translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
     series = series.cat.rename_categories(translate_dict)
 
-    return(series)
+    return series
 
 
 # --------------------------- Batch correction methods -------------------------- #
