@@ -216,7 +216,7 @@ if _is_notebook():
         -------
         varying or None :
             Output is the executed cell code.
-    
+
         """
         script = f"""
                 var cell = this.closest('.code_cell');
