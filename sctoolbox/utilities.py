@@ -215,8 +215,8 @@ def bgcolor(color, cell=None):
     -------
     varying or None :
         Output is the executed cell code.
-        
-    """    
+ 
+    """
     script = f"""
               var cell = this.closest('.code_cell');
               var editor = cell.querySelector('.CodeMirror-sizer');
@@ -225,9 +225,10 @@ def bgcolor(color, cell=None):
               """
 
     display(HTML(f'<img src onerror="{script}">'))
-    
+
     if cell:
         return exec(cell)
+
 
 # ------------------ I/O functions ----------------- #
 
