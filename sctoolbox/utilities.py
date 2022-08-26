@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 from os.path import join, dirname, exists
 from pathlib import Path
+from IPython.core.magic import register_cell_magic
+from IPython.display import HTML, display
 
 
 def get_package_versions():
@@ -43,7 +45,7 @@ def get_package_versions():
     return package_dict
 
 
-# ------------------ Type checking ----------------- -#
+# ------------------ Type checking ------------------ #
 
 def is_integer_array(arr):
     """
@@ -151,22 +153,6 @@ def remove_suffix(s, suffix):
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
-def _is_notebook():
-    """
-    Utility to check if function is being run from a notebook or a script.
-
-    Returns
-    -------
-    boolean :
-        True if running from a notebook, False otherwise.
-    """
-    try:
-        _ = get_ipython()
-        return True
-    except NameError:
-        return False
-
-
 def _is_interactive():
     """
     Check if matplotlib backend is interactive.
@@ -184,6 +170,64 @@ def _is_interactive():
     else:
         return False
 
+
+# ---------------- jupyter functions --------------- #
+
+def _is_notebook():
+    """
+    Utility to check if function is being run from a notebook or a script.
+
+    Returns
+    -------
+    boolean :
+        True if running from a notebook, False otherwise.
+    """
+    try:
+        _ = get_ipython()
+        return True
+    except NameError:
+        return False
+
+
+@register_cell_magic
+def bgcolor(color, cell=None):
+    """
+    Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
+    Note: Jupyter notebook v6+ needed
+
+    Change color of the cell by either calling the function
+    `bgcolor("yellow")`
+    or with magic (has to be first line in cell!)
+    `%%bgcolor yellow`
+
+    Parameters
+    ----------
+    color : str
+        Background color of the cell. A valid CSS color e.g.:
+            - red
+            - rgb(255,0,0)
+            - #FF0000
+        See https://www.rapidtables.com/web/css/css-color.html
+    cell : str, default None
+        Code of the cell that will be evaluated.
+
+    Returns
+    -------
+    varying or None :
+        Output is the executed cell code.
+        
+    """    
+    script = f"""
+              var cell = this.closest('.code_cell');
+              var editor = cell.querySelector('.CodeMirror-sizer');
+              editor.style.background='{color}';
+              this.parentNode.removeChild(this)
+              """
+
+    display(HTML(f'<img src onerror="{script}">'))
+    
+    if cell:
+        return exec(cell)
 
 # ------------------ I/O functions ----------------- #
 
