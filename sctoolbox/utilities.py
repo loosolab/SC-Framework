@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from os.path import join, dirname, exists
 from pathlib import Path
-from IPython.core.magic import register_cell_magic
+from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 
 
@@ -190,7 +190,7 @@ def _is_notebook():
 
 
 if _is_notebook():
-    @register_cell_magic
+    @register_line_magic
     def bgcolor(color, cell=None):
         """
         Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
@@ -199,7 +199,7 @@ if _is_notebook():
         Change color of the cell by either calling the function
         `bgcolor("yellow")`
         or with magic (has to be first line in cell!)
-        `%%bgcolor yellow`
+        `%bgcolor yellow`
 
         Parameters
         ----------
@@ -211,12 +211,6 @@ if _is_notebook():
             See https://www.rapidtables.com/web/css/css-color.html
         cell : str, default None
             Code of the cell that will be evaluated.
-
-        Returns
-        -------
-        varying or None :
-            Output is the executed cell code.
-
         """
         script = f"""
                 var cell = this.closest('.code_cell');
@@ -226,9 +220,6 @@ if _is_notebook():
                 """
 
         display(HTML(f'<img src onerror="{script}">'))
-
-        if cell:
-            return exec(cell)
 
 
 # ------------------ I/O functions ----------------- #
