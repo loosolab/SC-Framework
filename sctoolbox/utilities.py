@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 from os.path import join, dirname, exists
 from pathlib import Path
-from IPython.core.magic import register_line_magic
-from IPython.display import HTML, display
 
 
 def get_package_versions():
@@ -187,39 +185,6 @@ def _is_notebook():
         return True
     except NameError:
         return False
-
-
-if _is_notebook():
-    @register_line_magic
-    def bgcolor(color, cell=None):
-        """
-        Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
-        Note: Jupyter notebook v6+ needed
-
-        Change color of the cell by either calling the function
-        `bgcolor("yellow")`
-        or with magic (has to be first line in cell!)
-        `%bgcolor yellow`
-
-        Parameters
-        ----------
-        color : str
-            Background color of the cell. A valid CSS color e.g.:
-                - red
-                - rgb(255,0,0)
-                - #FF0000
-            See https://www.rapidtables.com/web/css/css-color.html
-        cell : str, default None
-            Code of the cell that will be evaluated.
-        """
-        script = f"""
-                var cell = this.closest('.code_cell');
-                var editor = cell.querySelector('.CodeMirror-sizer');
-                editor.style.background='{color}';
-                this.parentNode.removeChild(this)
-                """
-
-        display(HTML(f'<img src onerror="{script}">'))
 
 
 # ------------------ I/O functions ----------------- #
