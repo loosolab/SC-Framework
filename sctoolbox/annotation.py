@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import copy
 import os
+import glob
 import multiprocessing as mp
 import re
 
@@ -50,6 +51,42 @@ def gunzip_file(f_in, f_out):
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
 
+
+def make_tmp(temp_dir):
+    """
+
+    :param temp_dir:
+    :return:
+    """
+    current_dir = os.getcwd()
+    if temp_dir == "":
+        temp_dir = os.path.join(current_dir, "tmp")
+
+    else:
+        temp_dir = os.path.join(temp_dir, "tmp")
+
+    try:
+        os.mkdir(temp_dir)
+    except OSError as error:
+        print(error)
+
+    return temp_dir
+
+
+def rm_tmp(temp_dir):
+    """
+
+    :param temp_dir:
+    :return:
+    """
+    try:
+        for f in glob.glob(temp_dir + "/*gtf*"):
+            os.remove(f)
+
+        os.rmdir(temp_dir)
+
+    except OSError as error:
+        print(error)
 
 def format_adata(adata):
 
@@ -139,6 +176,7 @@ def annotate_adata(adata,
                    threads=1,
                    coordinate_cols=None,
                    temp_dir="",
+                   remove_temp=True,
                    verbose=True,
                    inplace=True):
 
@@ -189,6 +227,9 @@ def annotate_adata(adata,
     """
     # Setup verbose print function
     print = sctoolbox.utilities.vprint(verbose)
+
+    # Make temporary directory
+    temp_dir = make_tmp(temp_dir)
 
     # Check that packages are installed
     sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
@@ -287,6 +328,10 @@ def annotate_adata(adata,
 
     print("Finished annotation of features! The results are found in the .var table.")
 
+    # Remove temporary directory
+    if remove_temp:
+        rm_tmp(temp_dir)
+
     if inplace is False:
         return adata  # else returns None
 
@@ -296,10 +341,9 @@ def annotate_narrowPeak(filepath,
                         config=None,
                         best=True,
                         threads=1,
-                        coordinate_cols=None,
                         temp_dir="",
-                        verbose=True,
-                        inplace=True):
+                        remove_temp=True,
+                        verbose=True):
 
     """
     Annotates narrowPeak files with UROPA like the annotate_adata function.
@@ -317,6 +361,9 @@ def annotate_narrowPeak(filepath,
     """
     # Setup verbose print function
     print = sctoolbox.utilities.vprint(verbose)
+
+    # Make temporary directory
+    temp_dir = make_tmp(temp_dir)
 
     # Check that packages are installed
     sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
@@ -351,6 +398,10 @@ def annotate_narrowPeak(filepath,
     annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
     print("annotation done")
+
+    # Remove temporary directory
+    if remove_temp:
+        rm_tmp(temp_dir)
 
     return annotation_table
 
@@ -444,7 +495,6 @@ def prepare_gtf(gtf, temp_dir, print):
             os.close(f.fd)
 
     return gtf
-
 
 def annotate_features(region_dicts,
                       threads,
@@ -617,3 +667,24 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 
     if not inplace:
         return adata_m
+
+if __name__ == '__main__':
+    import anndata as ad
+
+    GTF_PATH = '/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf'
+    INPUT_PATH = '/home/jan/python-workspace/sc-atac/data/anndata'
+    # peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/ENC-1K2DA-070-SM-AZPYJ_snATAC_esophagus_squamous_epithelium_Rep1_peaks.narrowPeak'
+    peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/cropped_testing.narrowPeak'
+
+    # region_dicts = annotate_narrowPeak(peakfile, GTF_PATH)
+
+    filename = 'ENC-1JKYN-146-SM-A8CPH_snATAC_esophagus_muscularis_mucosa_Rep1_clustered.h5ad'
+
+    adata_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata = ad.read(f'{INPUT_PATH}/{filename}')
+    #adata = ad.read('/home/jan/python-workspace/sc-rna/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
+    # #
+    annotate_adata(adata, GTF_PATH)
+    # check = adata.var.copy()
+    print("Finished")
+

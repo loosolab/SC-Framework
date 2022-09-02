@@ -50,3 +50,14 @@ def test_annot_HVG(adata_rna):
     anno.annot_HVG(adata_rna)
 
     assert "highly_variable" in adata_rna.var.columns
+
+def test_make_tmp():
+
+    temp_dir = sctoolbox.annotation.make_tmp("")
+    tmp_exists = os.path.exists(temp_dir)
+
+    sctoolbox.annotation.rm_tmp(temp_dir)
+    tmp_removed = not(os.path.exists(temp_dir))
+
+    assert tmp_exists
+    assert tmp_removed
