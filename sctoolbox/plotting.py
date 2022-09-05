@@ -503,7 +503,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     # add title
     if title:
         plot.set(title=title)
-    
+
     # adjust y-label
     if not ylabel:
         plot.set(ylabel=None)

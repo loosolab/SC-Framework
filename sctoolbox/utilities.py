@@ -2,16 +2,50 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import re
 import scanpy as sc
 import importlib
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
+import matplotlib
 from os.path import join, dirname, exists
 from pathlib import Path
+from IPython.core.magic import register_line_magic
+from IPython.display import HTML, display
 
 
-# ------------------ Type checking ----------------- -#
+def get_package_versions():
+    """
+    Utility to get a dictionary of currently installed python packages and versions.
+
+    Returns
+    --------
+    A dict in the form:
+    {"package1": "1.2.1", "package2":"4.0.1", (...)}
+
+    """
+
+    # Import freeze
+    try:
+        from pip._internal.operations import freeze
+    except ImportError:  # pip < 10.0
+        from pip.operations import freeze
+
+    # Get list of packages and versions with freeze
+    package_list = freeze.freeze()
+    package_dict = {}  # dict for collecting versions
+    for s in package_list:
+        try:
+            name, version = re.split("==| @ ", s)
+            package_dict[name] = version
+        except Exception:
+            print(f"Error reading version for package: {s}")
+
+    return package_dict
+
+
+# ------------------ Type checking ------------------ #
 
 def is_integer_array(arr):
     """
@@ -119,6 +153,26 @@ def remove_suffix(s, suffix):
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
+def _is_interactive():
+    """
+    Check if matplotlib backend is interactive.
+
+    Returns
+    -------
+    boolean :
+        True if interactive, False otherwise.
+    """
+
+    backend = matplotlib.get_backend()
+
+    if backend == 'module://ipympl.backend_nbagg':
+        return True
+    else:
+        return False
+
+
+# ---------------- jupyter functions --------------- #
+
 def _is_notebook():
     """
     Utility to check if function is being run from a notebook or a script.
@@ -133,6 +187,39 @@ def _is_notebook():
         return True
     except NameError:
         return False
+
+
+if _is_notebook():
+    @register_line_magic
+    def bgcolor(color, cell=None):
+        """
+        Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
+        Note: Jupyter notebook v6+ needed
+
+        Change color of the cell by either calling the function
+        `bgcolor("yellow")`
+        or with magic (has to be first line in cell!)
+        `%bgcolor yellow`
+
+        Parameters
+        ----------
+        color : str
+            Background color of the cell. A valid CSS color e.g.:
+                - red
+                - rgb(255,0,0)
+                - #FF0000
+            See https://www.rapidtables.com/web/css/css-color.html
+        cell : str, default None
+            Code of the cell that will be evaluated.
+        """
+        script = f"""
+                var cell = this.closest('.code_cell');
+                var editor = cell.querySelector('.CodeMirror-sizer');
+                editor.style.background='{color}';
+                this.parentNode.removeChild(this)
+                """
+
+        display(HTML(f'<img src onerror="{script}">'))
 
 
 # ------------------ I/O functions ----------------- #
