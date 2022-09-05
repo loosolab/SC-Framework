@@ -41,6 +41,56 @@ def add_cellxgene_annotation(adata, csv):
 #################################################################################
 # ------------------------ Uropa annotation of peaks -------------------------- #
 #################################################################################
+
+def gtf_integrity(gtf, temp_dir, tempfiles):
+    '''
+    Checks the integrity of a gtf file by examining:
+        - header ##format: gtf
+        - number of columns == 9
+        - regex pattern of column 9 matches gtf specific format
+
+    :param gtf:
+    :return: bool
+    '''
+    regex_header = '##.*'
+    regex_format_column = '##format: gtf.*'
+
+    file_ending = is_gtf_file(gtf)
+    format_gtf = False
+    nine_columns = False
+    gene_id_format = False
+
+    first_entry = []
+
+    fp = open(gtf)
+    for line in fp:
+        if re.match(regex_header, line):
+            if re.match(regex_format_column, line):
+                # Check if format information in the header matches gtf
+                format_gtf = True
+        else:
+            first_entry = line.split(sep='\t')
+            break
+    # Check if number of columns matches 9
+    if len(first_entry) == 9:
+        nine_columns = True
+
+    # Extract gene_id information from column 9
+    column_9 = first_entry[8]
+    column_9_split = column_9.split(sep=';')
+    gene_id = column_9_split[0]
+    # gtf specific format of the gene_id column (gff3: gene_id="xxxxx"; gtf: gene_id "xxxxx")
+    regex_gene_id = 'gene_id ".*"'
+    # check match of the pattern
+    if re.match(regex_gene_id, gene_id):
+        gene_id_format = True
+
+    if format_gtf and nine_columns and gene_id_format and file_ending:
+        print("integrity of the gtf file: OK")
+    else:
+        rm_tmp(temp_dir, tempfiles)
+        raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
+
 def is_gtf_file(gtf):
 
     '''
@@ -57,14 +107,15 @@ def is_gtf_file(gtf):
 
     if re.match(regex_gtf, filename):
         print("filetype matches .gtf/.gtf.gz")
+        return True
 
     elif re.match(regex_gff, filename):
         print('filetype matches gff3')
-        raise argparse.ArgumentTypeError('Not a gtf-file, gff3-files are not supported!')
+        return False
 
     else:
         print("invalid filetype")
-        raise argparse.ArgumentTypeError('Not a gtf-file, invalid filetype')
+        return False
 
 def _is_gz_file(filepath):
     with open(filepath, 'rb') as test_f:
@@ -100,6 +151,12 @@ def make_tmp(temp_dir):
 
 def rm_tmp(temp_dir, tempfiles=None):
     """
+    1. Running with tempfiles list:
+    Removing temporary directory by previously removing temporary files from the tempfiles list.
+    If the temporary directory is not empty it will not be removed.
+    2. Running without tempfiles list:
+    All gtf related files will be removed automatically no list of them required.
+    The directory is then removed afterwards.
 
     :param temp_dir:
     :return:
@@ -312,8 +369,6 @@ def annotate_adata(adata,
              "peak_id": idx}
         region_dicts.append(d)
 
-    #Check for file ending gtf/gtf.gz
-    is_gtf_file(gtf)
     #Unzip, sort and index gtf if necessary
     gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
 
@@ -427,8 +482,6 @@ def annotate_narrowPeak(filepath,
 
     region_dicts = load_narrowPeak(filepath, print)
 
-    #Check for file ending gtf/gtf.gz
-    is_gtf_file(gtf)
     #Unzip, sort and index gtf if necessary
     gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
 
@@ -444,7 +497,12 @@ def annotate_narrowPeak(filepath,
 
 
 def load_narrowPeak(filepath, print):
-
+    '''
+    Load narrowPeak file to annotate
+    :param filepath:
+    :param print:
+    :return:
+    '''
     print("load regions_dict from: " + filepath)
     peaks = pd.read_csv(filepath, header=None, sep='\t')
     peaks = peaks.drop([3, 4, 5, 6, 7, 8, 9], axis=1)
@@ -531,6 +589,7 @@ def prepare_gtf(gtf, temp_dir, tempfiles, print):
     tempfiles.append(temp_dir + "/sorted.gtf.gz")
     tempfiles.append(temp_dir + "/sorted.gtf.gz.tbi")
 
+    gtf_integrity(gtf_uncompressed, temp_dir,tempfiles)
     # Force close of gtf file left open; pysam issue 1038
     proc = psutil.Process()
     for f in proc.open_files():
