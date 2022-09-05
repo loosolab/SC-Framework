@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import copy
 import os
+import argparse
 import glob
 import multiprocessing as mp
 import re
@@ -40,6 +41,30 @@ def add_cellxgene_annotation(adata, csv):
 #################################################################################
 # ------------------------ Uropa annotation of peaks -------------------------- #
 #################################################################################
+def is_gtf_file(gtf):
+
+    '''
+    Checks file ending for .gtf or .gff format
+
+    :param gtf:
+    :return: boolean
+    '''
+    filename = os.path.basename(gtf)
+    print(filename)
+
+    regex_gtf = '.*\.(gtf|gtf\.gz)'
+    regex_gff = '.*\.(gff3|gff3\.gz)'
+
+    if re.match(regex_gtf, filename):
+        print("filetype matches .gtf/.gtf.gz")
+
+    elif re.match(regex_gff, filename):
+        print('filetype matches gff3')
+        raise argparse.ArgumentTypeError('Not a gtf-file, gff3-files are not supported!')
+
+    else:
+        print("invalid filetype")
+        raise argparse.ArgumentTypeError('Not a gtf-file, invalid filetype')
 
 def _is_gz_file(filepath):
     with open(filepath, 'rb') as test_f:
@@ -282,6 +307,9 @@ def annotate_adata(adata,
              "peak_id": idx}
         region_dicts.append(d)
 
+    #Check for file ending gtf/gtf.gz
+    is_gtf_file(gtf)
+    #Unzip, sort and index gtf if necessary
     gtf = prepare_gtf(gtf, temp_dir, print)
 
     annotations_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
@@ -393,6 +421,9 @@ def annotate_narrowPeak(filepath,
 
     region_dicts = load_narrowPeak(filepath, print)
 
+    #Check for file ending gtf/gtf.gz
+    is_gtf_file(gtf)
+    #Unzip, sort and index gtf if necessary
     gtf = prepare_gtf(gtf, temp_dir, print)
 
     annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
@@ -671,7 +702,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 if __name__ == '__main__':
     import anndata as ad
 
-    GTF_PATH = '/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf'
+    GTF_PATH = "/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf.gz"
     INPUT_PATH = '/home/jan/python-workspace/sc-atac/data/anndata'
     # peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/ENC-1K2DA-070-SM-AZPYJ_snATAC_esophagus_squamous_epithelium_Rep1_peaks.narrowPeak'
     peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/cropped_testing.narrowPeak'
