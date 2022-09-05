@@ -42,7 +42,9 @@ def add_cellxgene_annotation(adata, csv):
 # ------------------------ Uropa annotation of peaks -------------------------- #
 #################################################################################
 
-def gtf_integrity(gtf, temp_dir, tempfiles):
+def gtf_integrity(gtf,
+                  temp_dir=None,
+                  tempfiles=None):
     '''
     Checks the integrity of a gtf file by examining:
         - header ##format: gtf
@@ -52,10 +54,13 @@ def gtf_integrity(gtf, temp_dir, tempfiles):
     :param gtf:
     :return: bool
     '''
+    if _is_gz_file(gtf):
+        raise argparse.ArgumentTypeError('gtf file is compressed')
     regex_header = '##.*'
     regex_format_column = '##format: gtf.*'
 
     file_ending = is_gtf_file(gtf)
+    header = False
     format_gtf = False
     nine_columns = False
     gene_id_format = False
@@ -65,6 +70,7 @@ def gtf_integrity(gtf, temp_dir, tempfiles):
     fp = open(gtf)
     for line in fp:
         if re.match(regex_header, line):
+            header = True
             if re.match(regex_format_column, line):
                 # Check if format information in the header matches gtf
                 format_gtf = True
@@ -74,6 +80,8 @@ def gtf_integrity(gtf, temp_dir, tempfiles):
     # Check if number of columns matches 9
     if len(first_entry) == 9:
         nine_columns = True
+    else:
+        raise argparse.ArgumentTypeError('Number of columns in the gtf file unequal 9')
 
     # Extract gene_id information from column 9
     column_9 = first_entry[8]
@@ -84,12 +92,28 @@ def gtf_integrity(gtf, temp_dir, tempfiles):
     # check match of the pattern
     if re.match(regex_gene_id, gene_id):
         gene_id_format = True
-
-    if format_gtf and nine_columns and gene_id_format and file_ending:
-        print("integrity of the gtf file: OK")
     else:
-        rm_tmp(temp_dir, tempfiles)
-        raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
+        raise argparse.ArgumentTypeError('gtf file is corrupted')
+    # If a header is present format information is checked too
+    if header:
+        if format_gtf and nine_columns and gene_id_format and file_ending:
+            print("integrity of the gtf file: OK")
+            return True
+        else:
+            if temp_dir != None:
+                rm_tmp(temp_dir, tempfiles)
+            raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
+    # If no header is present format information is leaved out
+    else:
+        if nine_columns and gene_id_format and file_ending:
+            print("integrity of the gtf file: OK")
+            return True
+
+        else:
+            if temp_dir != None:
+                rm_tmp(temp_dir, tempfiles)
+            raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
+
 
 def is_gtf_file(gtf):
 
@@ -111,11 +135,11 @@ def is_gtf_file(gtf):
 
     elif re.match(regex_gff, filename):
         print('filetype matches gff3')
-        return False
+        raise argparse.ArgumentTypeError('Expected filetype gtf not gff3')
 
     else:
         print("invalid filetype")
-        return False
+        raise argparse.ArgumentTypeError('Expected filetype gtf')
 
 def _is_gz_file(filepath):
     with open(filepath, 'rb') as test_f:
@@ -518,12 +542,17 @@ def load_narrowPeak(filepath, print):
     return region_dicts
 
 
-def prepare_gtf(gtf, temp_dir, tempfiles, print):
+def prepare_gtf(gtf,
+                temp_dir,
+                tempfiles,
+                print):
 
     """
 
     :param gtf:
     :param print:
+    :param temp_dir:
+    :param tempfiles:
     :return:
     """
     sctoolbox.utilities.check_module("pysam")

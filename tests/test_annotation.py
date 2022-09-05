@@ -1,3 +1,5 @@
+import argparse
+
 import sctoolbox.annotation
 import pytest
 import sctoolbox.annotation as anno
@@ -59,5 +61,37 @@ def test_make_tmp():
     sctoolbox.annotation.rm_tmp(temp_dir)
     tmp_removed = not(os.path.exists(temp_dir))
 
-    assert tmp_exists
-    assert tmp_removed
+    assert tmp_exists and tmp_removed
+
+def test_gtf_integrity():
+
+    gtf_no_header = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
+    gtf = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf')
+    gff = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')
+    gtf_gz = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf.gz')
+    gtf_missing_col = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_missing_column_gencode.v41.gtf')
+    gtf_corrupted_format = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_corrupted_format_gencode.v41.gtf')
+
+    # Test for passed tests
+    result_gtf_no_header = sctoolbox.annotation.gtf_integrity(gtf_no_header)
+    result_gtf = sctoolbox.annotation.gtf_integrity(gtf)
+    assert result_gtf_no_header and result_gtf
+
+    #Test if exceptions raised
+    with pytest.raises(argparse.ArgumentTypeError) as e_gff_info:
+        sctoolbox.annotation.gtf_integrity(gff)
+
+    with pytest.raises(argparse.ArgumentTypeError) as e_gz_info:
+        sctoolbox.annotation.gtf_integrity(gtf_gz)
+
+    with pytest.raises(argparse.ArgumentTypeError) as e_missing_col_info:
+        sctoolbox.annotation.gtf_integrity(gtf_missing_col)
+
+    with pytest.raises(argparse.ArgumentTypeError) as e_corrupted_info:
+        sctoolbox.annotation.gtf_integrity(gtf_corrupted_format)
+
+    # Check for the exceptions types
+    assert e_gff_info.value.args[0] == 'Expected filetype gtf not gff3'
+    assert e_gz_info.value.args[0] == 'gtf file is compressed'
+    assert e_missing_col_info.value.args[0] == 'Number of columns in the gtf file unequal 9'
+    assert e_corrupted_info.value.args[0] == 'gtf file is corrupted'
