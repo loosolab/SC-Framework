@@ -558,6 +558,7 @@ def prepare_gtf(gtf,
     sctoolbox.utilities.check_module("pysam")
     import pysam
 
+    input_gtf = gtf
     # Prepare .gtf file in terms of index and sorting
     print("Preparing gtf file for annotation...")
     success = 0
@@ -618,7 +619,10 @@ def prepare_gtf(gtf,
     tempfiles.append(temp_dir + "/sorted.gtf.gz")
     tempfiles.append(temp_dir + "/sorted.gtf.gz.tbi")
 
-    gtf_integrity(gtf_uncompressed, temp_dir,tempfiles)
+    if 'gtf_uncompressed' in locals():
+        gtf_integrity(gtf_uncompressed, temp_dir,tempfiles)
+    else:
+        gtf_integrity(input_gtf, temp_dir,tempfiles)
     # Force close of gtf file left open; pysam issue 1038
     proc = psutil.Process()
     for f in proc.open_files():
@@ -802,7 +806,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 if __name__ == '__main__':
     import anndata as ad
 
-    GTF_PATH = "/home/jan/python-workspace/sc-atac/data/genome/gencode.v39.annotation.gtf.gz"
+    GTF_PATH = "/home/jan/python-workspace/sc-rna/data/gencode.v41.annotation.gtf"
     INPUT_PATH = '/home/jan/python-workspace/sc-atac/data/anndata'
     # peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/ENC-1K2DA-070-SM-AZPYJ_snATAC_esophagus_squamous_epithelium_Rep1_peaks.narrowPeak'
     peakfile = '/home/jan/python-workspace/sc-atac/data/peaks/cropped_testing.narrowPeak'
