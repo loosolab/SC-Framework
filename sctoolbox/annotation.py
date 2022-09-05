@@ -98,15 +98,19 @@ def make_tmp(temp_dir):
     return temp_dir
 
 
-def rm_tmp(temp_dir):
+def rm_tmp(temp_dir, tempfiles=None):
     """
 
     :param temp_dir:
     :return:
     """
     try:
-        for f in glob.glob(temp_dir + "/*gtf*"):
-            os.remove(f)
+        if tempfiles == None:
+            for f in glob.glob(temp_dir + "/*gtf*"):
+                os.remove(f)
+        else:
+            for f in tempfiles:
+                os.remove(f)
 
         os.rmdir(temp_dir)
 
@@ -254,6 +258,7 @@ def annotate_adata(adata,
     print = sctoolbox.utilities.vprint(verbose)
 
     # Make temporary directory
+    tempfiles=[]
     temp_dir = make_tmp(temp_dir)
 
     # Check that packages are installed
@@ -310,7 +315,7 @@ def annotate_adata(adata,
     #Check for file ending gtf/gtf.gz
     is_gtf_file(gtf)
     #Unzip, sort and index gtf if necessary
-    gtf = prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
 
     annotations_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -358,7 +363,7 @@ def annotate_adata(adata,
 
     # Remove temporary directory
     if remove_temp:
-        rm_tmp(temp_dir)
+        rm_tmp(temp_dir, tempfiles)
 
     if inplace is False:
         return adata  # else returns None
@@ -391,6 +396,7 @@ def annotate_narrowPeak(filepath,
     print = sctoolbox.utilities.vprint(verbose)
 
     # Make temporary directory
+    tempfiles = []
     temp_dir = make_tmp(temp_dir)
 
     # Check that packages are installed
@@ -424,7 +430,7 @@ def annotate_narrowPeak(filepath,
     #Check for file ending gtf/gtf.gz
     is_gtf_file(gtf)
     #Unzip, sort and index gtf if necessary
-    gtf = prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
 
     annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -432,7 +438,7 @@ def annotate_narrowPeak(filepath,
 
     # Remove temporary directory
     if remove_temp:
-        rm_tmp(temp_dir)
+        rm_tmp(temp_dir, tempfiles)
 
     return annotation_table
 
@@ -454,7 +460,7 @@ def load_narrowPeak(filepath, print):
     return region_dicts
 
 
-def prepare_gtf(gtf, temp_dir, print):
+def prepare_gtf(gtf, temp_dir, tempfiles, print):
 
     """
 
@@ -482,8 +488,9 @@ def prepare_gtf(gtf, temp_dir, print):
 
             # First check if gtf was already gzipped
             try:
-                gtf_gz = gtf + ".gz"
-                pysam.tabix_compress(gtf, gtf_gz)
+                if not _is_gz_file(gtf):
+                    gtf_gz = gtf + ".gz"
+                    pysam.tabix_compress(gtf, gtf_gz)
             except Exception:
                 gtf = gtf_gz  # gtf was already gzipped
 
@@ -519,13 +526,18 @@ def prepare_gtf(gtf, temp_dir, print):
                 else:
                     raise ValueError("Could not read input gtf - please check for the correct format.")
 
+    tempfiles.append(temp_dir + "/uncompressed.gtf")
+    tempfiles.append(temp_dir + "/sorted.gtf")
+    tempfiles.append(temp_dir + "/sorted.gtf.gz")
+    tempfiles.append(temp_dir + "/sorted.gtf.gz.tbi")
+
     # Force close of gtf file left open; pysam issue 1038
     proc = psutil.Process()
     for f in proc.open_files():
         if f.path == os.path.abspath(gtf):
             os.close(f.fd)
 
-    return gtf
+    return gtf, tempfiles
 
 def annotate_features(region_dicts,
                       threads,
