@@ -100,7 +100,7 @@ def gtf_integrity(gtf,
             print("integrity of the gtf file: OK")
             return True
         else:
-            if temp_dir != None:
+            if temp_dir is not None:
                 rm_tmp(temp_dir, tempfiles)
             raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
     # If no header is present format information is leaved out
@@ -110,7 +110,7 @@ def gtf_integrity(gtf,
             return True
 
         else:
-            if temp_dir != None:
+            if temp_dir is not None:
                 rm_tmp(temp_dir, tempfiles)
             raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
 
@@ -126,8 +126,8 @@ def is_gtf_file(gtf):
     filename = os.path.basename(gtf)
     print(filename)
 
-    regex_gtf = '.*\.(gtf|gtf\.gz)'
-    regex_gff = '.*\.(gff3|gff3\.gz)'
+    regex_gtf = r'.*\.(gtf|gtf\.gz)'
+    regex_gff = r'.*\.(gff3|gff3\.gz)'
 
     if re.match(regex_gtf, filename):
         print("filetype matches .gtf/.gtf.gz")
@@ -140,6 +140,7 @@ def is_gtf_file(gtf):
     else:
         print("invalid filetype")
         raise argparse.ArgumentTypeError('Expected filetype gtf')
+
 
 def _is_gz_file(filepath):
     with open(filepath, 'rb') as test_f:
@@ -186,7 +187,7 @@ def rm_tmp(temp_dir, tempfiles=None):
     :return:
     """
     try:
-        if tempfiles == None:
+        if tempfiles is None:
             for f in glob.glob(temp_dir + "/*gtf*"):
                 os.remove(f)
         else:
@@ -197,6 +198,7 @@ def rm_tmp(temp_dir, tempfiles=None):
 
     except OSError as error:
         print(error)
+
 
 def format_adata(adata):
 
@@ -339,7 +341,7 @@ def annotate_adata(adata,
     print = sctoolbox.utilities.vprint(verbose)
 
     # Make temporary directory
-    tempfiles=[]
+    tempfiles = []
     temp_dir = make_tmp(temp_dir)
 
     # Check that packages are installed
@@ -393,7 +395,7 @@ def annotate_adata(adata,
              "peak_id": idx}
         region_dicts.append(d)
 
-    #Unzip, sort and index gtf if necessary
+    # Unzip, sort and index gtf if necessary
     gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
 
     annotations_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
@@ -506,7 +508,7 @@ def annotate_narrowPeak(filepath,
 
     region_dicts = load_narrowPeak(filepath, print)
 
-    #Unzip, sort and index gtf if necessary
+    # Unzip, sort and index gtf if necessary
     gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
 
     annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
@@ -620,9 +622,9 @@ def prepare_gtf(gtf,
     tempfiles.append(temp_dir + "/sorted.gtf.gz.tbi")
 
     if 'gtf_uncompressed' in locals():
-        gtf_integrity(gtf_uncompressed, temp_dir,tempfiles)
+        gtf_integrity(gtf_uncompressed, temp_dir, tempfiles)
     else:
-        gtf_integrity(input_gtf, temp_dir,tempfiles)
+        gtf_integrity(input_gtf, temp_dir, tempfiles)
     # Force close of gtf file left open; pysam issue 1038
     proc = psutil.Process()
     for f in proc.open_files():
@@ -630,6 +632,7 @@ def prepare_gtf(gtf,
             os.close(f.fd)
 
     return gtf, tempfiles
+
 
 def annotate_features(region_dicts,
                       threads,
