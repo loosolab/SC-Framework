@@ -28,6 +28,7 @@ setup(
         'seaborn',
         'ipympl',
         'scrublet',
+        'leidenalg',
         'IPython'
     ],
     include_package_data=True,

@@ -1,6 +1,9 @@
 import pytest
 import scanpy as sc
 import os
+import numpy as np
+import pandas as pd
+
 import sctoolbox.analyser as an
 import sctoolbox.utilities as utils
 
@@ -43,6 +46,18 @@ def adata_batch_dict(adata_batch):
     return {'adata': anndata_batch_dict}
 
 
+# ------------------------------ TESTS -------------------------------- #
+
+def test_rename_categories():
+    """ Assert if categories were renamed"""
+
+    data = np.random.choice(["C1", "C2", "C3"], size=100)
+    series = pd.Series(data).astype("category")
+    renamed_series = an.rename_categories(series)
+
+    assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
+
+
 def test_adata_normalize_total(adata):
     """ Test that data was normalized"""
     an.adata_normalize_total(adata, inplace=True)
@@ -68,6 +83,14 @@ def test_define_PC_error(adata_no_pca):
     """ Test if error without PCA. """
     with pytest.raises(ValueError, match="PCA not found! Please make sure to compute PCA before running this function."):
         an.define_PC(adata_no_pca)
+
+
+def test_subset_PCA(adata):
+    """ Test whether number of PCA coordinate dimensions was reduced """
+
+    an.subset_PCA(adata, 10)
+
+    assert adata.obsm["X_pca"].shape[1] == 10
 
 
 def test_evaluate_batch_effect(adata_batch):

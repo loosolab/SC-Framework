@@ -16,6 +16,29 @@ import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
 
 
+def rename_categories(series):
+    """
+    Rename categories in a pandas series to numbers between 1-(number of categories).
+
+    Parameters
+    ----------
+    series : pandas.Series
+        Series to rename categories in.
+
+    Returns
+    -------
+    pandas.Series
+        Series with renamed categories.
+    """
+
+    n_categories = series.cat.categories
+    new_names = [str(i) for i in range(1, len(n_categories) + 1)]
+    translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
+    series = series.cat.rename_categories(translate_dict)
+
+    return series
+
+
 # --------------------------- Batch correction methods -------------------------- #
 
 def wrap_corrections(adata,
@@ -470,6 +493,36 @@ def define_PC(anndata):
     cr.build_infor(anndata, "PCA_knee_threshold", knee)
 
     return knee
+
+
+def subset_PCA(adata, n_pcs, start=0, inplace=True):
+    """
+    Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing the PCA coordinates.
+    n_pcs : int
+        Number of PCs to keep.
+    start : int, default 0
+        Index (0-based) of the first PC to keep. E.g. if start = 1 and n_pcs = 10, you will exclude the first PC to keep 9 PCs.
+    inplace : bool, default True
+        Whether to work inplace on the anndata object.
+
+    Returns
+    --------
+    adata or None
+        Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
+    """
+
+    if inplace is False:
+        adata = adata.copy()
+
+    adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
+
+    if inplace is False:
+        return adata
 
 
 def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', inplace=False):

@@ -879,7 +879,7 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    print(f"Filtered out {filtered} {element_name} from adata. New number of genes is: {n_after}")
+    print(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
 
     if inplace is False:
         return adata
