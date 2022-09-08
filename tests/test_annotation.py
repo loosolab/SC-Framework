@@ -95,3 +95,11 @@ def test_gtf_integrity():
     assert e_gz_info.value.args[0] == 'gtf file is compressed'
     assert e_missing_col_info.value.args[0] == 'Number of columns in the gtf file unequal 9'
     assert e_corrupted_info.value.args[0] == 'gtf file is corrupted'
+
+
+def test_annot_HVG(adata):
+    """ Test if 'highly_vairable' column is added to adata.var. """
+    sc.pp.log1p(adata)
+    anno.annot_HVG(adata)
+
+    assert "highly_variable" in adata.var.columns

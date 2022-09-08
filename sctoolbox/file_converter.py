@@ -1,8 +1,3 @@
-import os
-from os.path import join, dirname, exists
-import sys
-from pathlib import Path
-
 import sctoolbox.utilities as utils
 
 
@@ -30,15 +25,8 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     anndata.AnnData or None:
         Returns converted anndata object if output is None.
     """
-    # Set R installation path
-    if not r_home:
-        # https://stackoverflow.com/a/54845971
-        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
-
-    if not exists(r_home):
-        raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
-
-    os.environ['R_HOME'] = r_home
+    # Setup R
+    utils.setup_R(r_home)
 
     # Initialize R <-> python interface
     utils.check_module("anndata2ri")
@@ -50,7 +38,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     # create rpy2 None to NULL converter
     # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     none_converter = conversion.Converter("None converter")
-    none_converter.py2rpy.register(type(None), _none2null)
+    none_converter.py2rpy.register(type(None), utils._none2null)
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
@@ -118,11 +106,3 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
         adata.write(filename=output, compression='gzip')
     else:
         return adata
-
-
-def _none2null(none_obj):
-    """ rpy2 converter that translates python 'None' to R 'NULL' """
-    # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
-    from rpy2.robjects import r
-
-    return r("NULL")

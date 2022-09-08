@@ -3,7 +3,7 @@ import anndata
 import sctoolbox.assemblers
 
 def test_from_single_starsolo():
-    
+
     SOLO_DIR = os.path.join(os.path.dirname(__file__), 'data', 'solo')
     adata = sctoolbox.assemblers.from_single_starsolo(SOLO_DIR, dtype="filtered")
 
@@ -19,4 +19,3 @@ def test_from_single_mtx():
     adata = sctoolbox.assemblers.from_single_mtx(MTX_FILENAME, BARCODES_FILENAME, GENES_FILENAME, is_10X=False)
 
     assert isinstance(adata, anndata.AnnData)
-    

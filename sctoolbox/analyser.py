@@ -1,13 +1,187 @@
 # Loading packages
 import scanpy as sc
-import sctoolbox.creators as cr
-import sctoolbox.annotation as an
+import scanpy.external as sce
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
+from scipy import sparse
+from contextlib import redirect_stderr
+import io
+import copy
 
-###################################################################################################################
+import anndata
+import sctoolbox.creators as cr
+import sctoolbox.annotation as an
+import sctoolbox.utilities as utils
 
+
+# --------------------------- Batch correction methods -------------------------- #
+
+def wrap_corrections(adata,
+                     batch_key,
+                     methods=["bbknn", "mnn"],
+                     method_kwargs={}):
+    """
+    Wrapper for calculating multiple batch corrections for adata using the 'batch_correction' function.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An annotated data matrix object to apply corrections to.
+    batch_key : str
+        The column in adata.obs containing batch information.
+    methods : list of str or function
+        The method(s) to use for batch correction. Options are:
+        - bbknn
+        - mnn
+        - harmony
+        - scanorama
+        - combat
+        Or provide a custom batch correction function. See `batch_correction(method)` for more information.
+    method_kwargs : dict, default {}
+        Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).
+
+    Returns
+    -------
+    dict of anndata.Anndata :
+        Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.
+    """
+    # Ensure that methods can be looped over
+    if isinstance(methods, str):
+        methods = [methods]
+
+    # check method_kwargs keys
+    unknown_keys = set(method_kwargs.keys()) - set(methods)
+    if unknown_keys:
+        raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
+
+    # Check the existance of packages before running batch_corrections
+    required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "mnn": "mnnpy", "scanorama": "scanorama"}
+    for method in methods:
+        if method in required_packages:  # not all packages need external tools
+            f = io.StringIO()
+            with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
+                utils.check_module(required_packages[method])
+
+    # Collect batch correction per method
+    anndata_dict = {}
+    for method in methods:
+        anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
+
+    anndata_dict['uncorrected'] = adata
+
+    print("Finished batch correction(s)!")
+
+    return anndata_dict
+
+
+def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
+    """
+    Perform batch correction on the adata object using the 'method' given.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An annotated data matrix object to apply corrections to.
+    batch_key : str
+        The column in adata.obs containing batch information.
+    method : str or function
+        Either one of the predefined methods or a custom function for batch correction.
+        Note: The custom function is expected to accept an anndata object as the first parameter and return the batch corrected anndata.
+
+        Available methods:
+            - bbknn
+            - mnn
+            - harmony
+            - scanorama
+            - combat
+    highly_variable : bool, default True
+        Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
+    **kwargs :
+        Additional arguments will be forwarded to the method function.
+
+    Returns
+    -------
+    anndata.AnnData :
+        A copy of the anndata with applied batch correction.
+    """
+    if not callable(method):
+        method = method.lower()
+
+    print(f"Running batch correction with '{method}'...")
+
+    # Check that batch_key is in adata object
+    if batch_key not in adata.obs.columns:
+        raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
+
+    # Run batch correction depending on method
+    if method == "bbknn":
+        adata = sce.pp.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
+
+    elif method == "mnn":
+
+        var_table = adata.var  # var_table before batch correction
+
+        # split adata on batch_key
+        batch_categories = list(set(adata.obs[batch_key]))
+        adatas = [adata[adata.obs[batch_key] == category] for category in batch_categories]
+
+        # Set highly variable genes as var_subset if chosen (and available)
+        var_subset = None
+        if highly_variable:
+            if "highly_variable" in adata.var.columns:
+                var_subset = adata.var[adata.var.highly_variable].index
+
+        # give individual adatas to mnn_correct
+        corrected_adatas, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, var_subset=var_subset,
+                                                    batch_categories=batch_categories, do_concatenate=False, **kwargs)
+
+        # Join corrected adatas
+        corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
+        adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
+        adata.var = var_table  # add var table back into corrected adata
+
+        sc.pp.scale(adata)  # from the mnnpy github example
+        sc.tl.pca(adata)  # rerun pca
+        sc.pp.neighbors(adata)
+
+    elif method == "harmony":
+        adata = adata.copy()  # there is no copy option for harmony
+
+        sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
+        adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]
+        sc.pp.neighbors(adata)
+
+    elif method == "scanorama":
+        adata = adata.copy()  # there is no copy option for scanorama
+
+        # scanorama expect the batch key in a sorted format
+        # therefore anndata.obs should be sorted based on batch column before this method.
+        adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
+
+        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
+        adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
+        sc.pp.neighbors(adata)
+
+    elif method == "combat":
+
+        corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
+
+        adata = adata.copy()  # make sure adata is not modified
+        adata.X = sparse.csr_matrix(corrected_mat)
+
+        sc.pp.pca(adata)
+        sc.pp.neighbors(adata)
+
+    elif callable(method):
+        adata = method(adata.copy(), **kwargs)
+    else:
+        raise ValueError(f"Method '{method}' is not a valid batch correction method.")
+
+    return adata  # the corrected adata object
+
+
+# --------------------------- Automatic thresholds ------------------------- #
 
 def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2, condi2):
     """
@@ -306,3 +480,97 @@ def define_PC(anndata):
     cr.build_infor(anndata, "PCA_knee_threshold", knee)
 
     return knee
+
+
+def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', inplace=False):
+    """
+    Evaluate batch effect methods using LISI.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object with PCA and umap/tsne for batch evaluation.
+    batch_key : str
+        The column in adata.obs containing batch information.
+    obsm_key : str, default 'X_umap'
+        The column in adata.obsm containing coordinates.
+    col_name : str
+        Column name for storing the LISI score in .obs.
+    inplace : boolean, default False
+        Whether to work inplace on the anndata object.
+
+    Returns
+    -------
+    anndata.Anndata or None:
+        if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
+
+    Notes
+    -----
+    For further information on LISI:
+    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+    """
+    # Load LISI
+    utils.check_module("harmonypy")
+    from harmonypy.lisi import compute_lisi
+
+    # Handle inplace option
+    adata_m = adata if inplace else adata.copy()
+
+    # checks
+    if obsm_key not in adata_m.obsm:
+        raise KeyError(f"adata.obsm does not contain the obsm key: {obsm_key}")
+
+    if batch_key not in adata_m.obs:
+        raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
+
+    # run LISI on all adata objects
+    lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
+    adata_m.obs[col_name] = lisi_res.flatten()
+
+    if not inplace:
+        return adata_m
+
+
+def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
+    """
+    Calculate batch evaluation scores for a dict of anndata objects.
+
+    Parameters
+    ----------
+    adatas : dict of anndata.AnnData
+        Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
+        E.g.: {"bbknn": anndata}
+    batch_key : str
+        The column in adata.obs containing batch information.
+    obsm_keys : str or list of str, default ['X_pca', 'X_umap']
+        Key(s) to coordinates on which the score is calculated.
+    inplace : boolean, default False
+        Whether to work inplace on the anndata dict.
+
+    Returns
+    -------
+    dict of anndata.AnnData
+        Dict containing an anndata object for each batch correction method as values with LISI scores added to .obs.
+    """
+
+    if utils._is_notebook() is True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+
+    # Handle inplace option
+    adatas_m = adatas if inplace else copy.deepcopy(adatas)
+
+    # Ensure that obsm_key can be looped over
+    if isinstance(obsm_keys, str):
+        obsm_keys = [obsm_keys]
+
+    # Evaluate batch effect for every adata
+    pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
+    for adata in adatas_m.values():
+        for obsm in obsm_keys:
+            evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
+            pbar.update()
+
+    if not inplace:
+        return adatas_m
