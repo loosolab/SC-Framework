@@ -47,12 +47,15 @@ def gtf_integrity(gtf,
                   tempfiles=None):
     '''
     Checks the integrity of a gtf file by examining:
+        - file-ending
         - header ##format: gtf
         - number of columns == 9
         - regex pattern of column 9 matches gtf specific format
 
-    :param gtf:
-    :return: bool
+    :param gtf: str
+        Path to .gtf file containing genomic elements for annotation.
+    :return: boolean
+        True if the file passed all tests
     '''
     if _is_gz_file(gtf):
         raise argparse.ArgumentTypeError('gtf file is compressed')
@@ -120,8 +123,10 @@ def is_gtf_file(gtf):
     '''
     Checks file ending for .gtf or .gff format
 
-    :param gtf:
+    :param gtf: str
+        Path to .gtf file containing genomic elements for annotation.
     :return: boolean
+        True if the file ending matches *.gtf*.
     '''
     filename = os.path.basename(gtf)
     print(filename)
@@ -156,8 +161,10 @@ def gunzip_file(f_in, f_out):
 def make_tmp(temp_dir):
     """
 
-    :param temp_dir:
-    :return:
+    :param temp_dir: str
+        Path to the directory where the temporary directory should be created.
+    :return: str
+        Path to the temporary directory.
     """
     current_dir = os.getcwd()
     if temp_dir == "":
@@ -183,8 +190,11 @@ def rm_tmp(temp_dir, tempfiles=None):
     All gtf related files will be removed automatically no list of them required.
     The directory is then removed afterwards.
 
-    :param temp_dir:
-    :return:
+    :param temp_dir: str
+        Path to the temporary directory.
+    :param tempfiles: list of str
+        Paths to files to be deleted before removing the temp directory.
+    :return: None
     """
     try:
         if tempfiles is None:
@@ -214,8 +224,10 @@ def format_adata(adata):
      index: chr*_start_stop
 
      If yes adata.var gets formatted by adding the columns speak_chr, peak_start, peak_stop like described in the index
-    :param adata:
-    :return: adata
+    :param adata: anndata.AnnData
+        The anndata object containing features to annotate.
+    :return: adata: anndata.AnnData
+        The anndata object containing features to annotate.
     '''
 
     adata_regions = adata.var
@@ -310,6 +322,8 @@ def annotate_adata(adata,
         A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates. Default: None (the first three columns are taken).
     threads : int, optional
         Number of threads to use for multiprocessing. Default: 1.
+    remove_temp : boolean, optional
+        option to remove temporary directory after execution. Default: True (clean up)
     verbose : boolean
         Whether to write output to stdout. Default: True.
     temp_dir : str, optional
@@ -460,18 +474,26 @@ def annotate_narrowPeak(filepath,
                         verbose=True):
 
     """
-    Annotates narrowPeak files with UROPA like the annotate_adata function.
+    Annotates narrowPeak files with genes from .gtf using UROPA.
 
-    :param filepath:
-    :param gtf:
-    :param config:
-    :param best:
-    :param threads:
-    :param coordinate_cols:
-    :param temp_dir:
-    :param verbose:
-    :param inplace:
-    :return: annotation_table
+    :param filepath: str
+        Path to the narrowPeak file to be annotated
+    :param gtf: str
+        Path to the .gtf file containing the genes to be annotated
+    :param config: dict, optional
+        A dictionary indicating how regions should be annotated. Default is to annotate feature 'gene' within -10000;1000bp of the gene start. See 'Examples' of how to set up a custom configuration dictionary.
+    :param best: boolean
+        Whether to return the best annotation or all valid annotations. Default: True (only best are kept).
+    :param threads: int, optional
+        Number of threads to perform the annotation.
+    :param temp_dir: str, optional
+        Path to the directory where the temporary directory should be created. Default: location of the script
+    :param remove_temp: boolean, optional
+        option to remove temporary directory after execution. Default: True (clean up)
+    :param verbose: boolean
+        Whether to write output to stdout. Default: True.
+    :return: annotation_table: pandas.Dataframe
+        Dataframe containing the annotations.
     """
     # Setup verbose print function
     print = sctoolbox.utilities.vprint(verbose)
@@ -524,10 +546,14 @@ def annotate_narrowPeak(filepath,
 
 def load_narrowPeak(filepath, print):
     '''
-    Load narrowPeak file to annotate
-    :param filepath:
-    :param print:
-    :return:
+    Load narrowPeak file to annotate.
+
+    :param filepath: str
+        Path to the narrowPeak file.
+    :param print: function
+        Print function for verbose printing.
+    :return: region_dicts: dictionary
+        Dictionary with the peak information.
     '''
     print("load regions_dict from: " + filepath)
     peaks = pd.read_csv(filepath, header=None, sep='\t')
@@ -550,12 +576,20 @@ def prepare_gtf(gtf,
                 print):
 
     """
+    Prepares the .gtf file to use it in the annotation process. Therefore the file properties are checked and if necessary it is sorted, indexed and compressed.
 
-    :param gtf:
-    :param print:
-    :param temp_dir:
-    :param tempfiles:
-    :return:
+    :param gtf: str
+        Path to the .gtf file containing the genes to be annotated.
+    :param print: function
+        Function for verbose printing.
+    :param temp_dir: str
+        Path to the temporary directory.
+    :param tempfiles: list of str
+        List of tempfiles created.
+    :return: gtf: str
+        Path to the gtf file to use in the annotation.
+    :return: tempfiles: list of str
+        List of temporary files created.
     """
     sctoolbox.utilities.check_module("pysam")
     import pysam
@@ -640,7 +674,21 @@ def annotate_features(region_dicts,
                       cfg_dict,
                       best):
 
-    # annotation from regions_dict
+    '''
+
+    :param region_dicts: dictionary
+        dictionary with peak information.
+    :param threads: int
+        number of threads to perform the annotation.
+    :param gtf: str
+        Path to the .gtf file
+    :param cfg_dict:
+        A dictionary indicating how regions should be annotated. Default is to annotate feature 'gene' within -10000;1000bp of the gene start. See 'Examples' of how to set up a custom configuration dictionary.
+    :param best: boolean
+        Whether to return the best annotation or all valid annotations. Default: True (only best are kept).
+    :return: pandas.Dataframe
+        Dataframe with the annotation
+    '''
 
     # split input regions into cores
     n_reg = len(region_dicts)
