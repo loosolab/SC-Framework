@@ -1,15 +1,62 @@
 import pandas as pd
+import numpy as np
 import sys
 import os
 import scanpy as sc
 import importlib
-import matplotlib.pyplot as plt
-
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
+import matplotlib.pyplot as plt
+
+
+# ------------------ Type checking ----------------- -#
+
+def is_integer_array(arr):
+    """
+    Check if all values of arr are integers.
+
+    Parameters
+    ----------
+    x : numpy.array
+        Array of values to be checked.
+
+    Returns
+    -------
+    boolean :
+        True if all values are integers, False otherwise.
+    """
+
+    # https://stackoverflow.com/a/7236784
+    boolean = np.equal(np.mod(arr, 1), 0)
+
+    return np.all(boolean)
 
 
 # ----------------- String functions ---------------- #
+
+def clean_flanking_strings(list_of_strings):
+    """
+    Remove common suffix and prefix from a list of strings, e.g. running the function on
+    ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
+
+    Parameters
+    -----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    ---------
+    List of strings without common suffix and prefix
+    """
+
+    suffix = longest_common_suffix(list_of_strings)
+    prefix = os.path.commonprefix(list_of_strings)
+
+    list_of_strings_clean = [remove_prefix(s, prefix) for s in list_of_strings]
+    list_of_strings_clean = [remove_suffix(s, suffix) for s in list_of_strings_clean]
+
+    return list_of_strings_clean
+
 
 def longest_common_suffix(list_of_strings):
     """
@@ -33,17 +80,52 @@ def longest_common_suffix(list_of_strings):
 
 
 def remove_prefix(s, prefix):
-    """ Remove prefix from a string. """
+    """
+    Remove prefix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    prefix : str
+        Prefix to be removed.
+
+    Returns
+    -------
+    str :
+        String without prefix.
+    """
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
 def remove_suffix(s, suffix):
-    """ Remove suffix from a string. """
+    """
+    Remove suffix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    suffix : str
+        Suffix to be removed.
+
+    Returns
+    -------
+    str :
+        String without suffix.
+    """
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
 def _is_notebook():
-    """ Utility to check if function is being run from a notebook or a script """
+    """
+    Utility to check if function is being run from a notebook or a script.
+
+    Returns
+    -------
+    boolean :
+        True if running from a notebook, False otherwise.
+    """
     try:
         _ = get_ipython()
         return True
@@ -54,16 +136,24 @@ def _is_notebook():
 # ------------------ I/O functions ----------------- #
 
 def create_dir(path):
-    """ Create a directory if it is not existing yet.
+    """
+    Create a directory if it is not existing yet.
+    'path' can be either a direct path of the directory, or a path to a file for which the upper directory should be created.
 
     Parameters
     ----------
     path : str
         Path to the directory to be created.
     """
-    dirname = os.path.dirname(path)  # the last dir of the path
-    if dirname != "":  # if dirname is "", file is in current dir
-        os.makedirs(dirname, exist_ok=True)
+
+    base = os.path.basename(path)
+    if "." in base:  # path is expected to be a file
+        dirname = os.path.dirname(path)  # the last dir of the path
+        if dirname != "":  # if dirname is "", file is in current dir
+            os.makedirs(dirname, exist_ok=True)
+
+    else:
+        os.makedirs(path, exist_ok=True)
 
 
 def is_str_numeric(ans):
@@ -83,12 +173,11 @@ def save_figure(path, dpi=600):
     ----------
     path : str
         Path to the file to be saved.
-        Add the extension (e.g. .tiff) you wanna save your figure in the end of path, e.g., /mnt/*/note2_violin.tiff
+        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff
         The lack of extension indicates the figure will be saved as .png.
-    dpi : int, optional
-        DPI of the figure. Default: 600.
+    dpi : int, default 600
+        Dots per inch. Higher value increases resolution.
     """
-
     if path is not None:
         create_dir(path)  # recursively create parent dir if needed
         plt.savefig(path, dpi=dpi, bbox_inches="tight")
@@ -96,17 +185,21 @@ def save_figure(path, dpi=600):
 
 def vprint(verbose=True):
     """
-    Print the verbose message.
+    Generates a function with given verbosity. Either hides or prints all messages.
 
     Parameters
     ----------
     verbose : boolean, default True
         Set to False to disable the verbose message.
+
+    Returns
+    -------
+        function :
+            Function that expects a single str argument. Will print string depending on verbosity.
     """
     return lambda message: print(message) if verbose is True else None
 
 
-# Requirement for installed tools
 def check_module(module):
     """
     Check if <module> can be imported without error.
@@ -135,12 +228,9 @@ def check_module(module):
         raise ImportError(s)
 
 
-# Loading adata file and adding the information to be evaluated and color list
 def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
     """
-    Load anndata object
-
-    Author: Guilherme Valente
+    Load anndata from a previous notebook.
 
     Parameters
     ----------
@@ -155,9 +245,10 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
     Returns
     -------
     anndata.AnnData :
-        Anndata object
+        Loaded anndata object.
     """
     def loading_adata(NUM):
+        """ TODO add documentation """
         pathway = ch.fetch_info_txt()
         files = os.listdir(''.join(pathway))
         loading = "anndata_" + str(NUM)
@@ -202,46 +293,40 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         return data
 
 
-def saving_anndata(anndata, current_notebook=None):
+def saving_anndata(anndata, current_notebook):
     """
     Save your anndata object
-
-    Author: Guilherme Valente
 
     Parameters
     ----------
     anndata : anndata.AnnData
-        adata object
-    current_notebook : int, default None
+        Anndata object to save.
+    current_notebook : int
         The number of the current notebook.
     """
-    # Messages and others
-    m1 = "Set an current_notebook=[INT], which INT is the number of current notebook."
-    m2 = "Your new anndata object is saved here: "
+    if not isinstance(current_notebook, int):
+        raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
-    try:
-        ch.check_notebook(current_notebook)
-    except TypeError:
-        sys.exit(m1)  # Close if the notebook number is not an integer
-
-    adata_output = anndata.uns["infoprocess"]["Anndata_path"] + "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad"
+    adata_output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Test_number"] + ".h5ad")
     anndata.write(filename=adata_output)
 
-    print(m2 + adata_output)
+    print(f"Your new anndata object is saved here: {adata_output}")
 
 
 def pseudobulk_table(adata, groupby, how="mean"):
     """
     Get a pseudobulk table of values per cluster.
 
+    TODO avoid adata.copy()
+
     Parameters
     ----------
     adata : anndata.AnnData
-        An annotated data matrix containing counts in .X.
+        Anndata object with counts in .X.
     groupby : str
-        Name of a column in adata.obs to cluster the pseudobulks by.
+        Column name in adata.obs from which the pseudobulks are created.
     how : str, default "mean"
-        How to calculate the value per cluster. Can be one of "mean" or "sum".
+        How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
 
     Returns
     -------
@@ -251,7 +336,7 @@ def pseudobulk_table(adata, groupby, how="mean"):
     adata = adata.copy()
     adata.obs[groupby] = adata.obs[groupby].astype('category')
 
-    # Fetch the mean/sum counts across each category in cluster_by
+    # Fetch the mean/ sum counts across each category in cluster_by
     res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)
     for clust in adata.obs[groupby].cat.categories:
 
@@ -260,7 +345,7 @@ def pseudobulk_table(adata, groupby, how="mean"):
         elif how == "sum":
             res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0)
 
-    res = res.T  # transform to genes x clusters
+    res = res.T  # transpose to genes x clusters (switch columns with rows)
     return res
 
 
@@ -285,3 +370,44 @@ def split_list(lst, n):
         chunks.append(lst[i::n])
 
     return chunks
+
+
+def write_list_file(lst, path):
+    """
+    Write a list to a file with one element per line.
+
+    Parameters
+    -----------
+    lst : list
+        A list of values/strings to write to file
+    path : str
+        Path to output file.
+    """
+
+    lst = [str(s) for s in lst]
+    s = "\n".join(lst)
+
+    with open(path, "w") as f:
+        f.write(s)
+
+
+def read_list_file(path):
+    """
+    Read a list from a file with one element per line.
+
+    Parameters
+    ----------
+    path : str
+        Path to read file from.
+
+    Returns
+    -------
+    list :
+        List of strings read from file.
+    """
+
+    f = open(path)
+    lst = f.read().splitlines()  # get lines without "\n"
+    f.close()
+
+    return lst
