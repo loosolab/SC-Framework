@@ -7,7 +7,7 @@ import glob
 import multiprocessing as mp
 import re
 
-import sctoolbox.utilities
+import sctoolbox.utilities as utils
 import psutil
 import subprocess
 import gzip
@@ -42,9 +42,7 @@ def add_cellxgene_annotation(adata, csv):
 # ------------------------ Uropa annotation of peaks -------------------------- #
 #################################################################################
 
-def gtf_integrity(gtf,
-                  temp_dir=None,
-                  tempfiles=None):
+def gtf_integrity(gtf):
     '''
     Checks the integrity of a gtf file by examining:
         - file-ending
@@ -57,20 +55,21 @@ def gtf_integrity(gtf,
     :return: boolean
         True if the file passed all tests
     '''
-    if _is_gz_file(gtf):
-        raise argparse.ArgumentTypeError('gtf file is compressed')
-    regex_header = '##.*'
-    regex_format_column = '##format: gtf.*'
 
-    file_ending = is_gtf_file(gtf)
+    regex_header = '#+.*'
+    regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'
+
+    # Initialize parameters
+    first_entry = []
     header = False
     format_gtf = False
-    nine_columns = False
-    gene_id_format = False
 
-    first_entry = []
+    if _is_gz_file(gtf):
+        fp = gzip.open(gtf, 'rt')  # read text (rt) mode
+    else:
+        fp = open(gtf)
 
-    fp = open(gtf)
+    # Check header (if present) and first entry
     for line in fp:
         if re.match(regex_header, line):
             header = True
@@ -80,71 +79,29 @@ def gtf_integrity(gtf,
         else:
             first_entry = line.split(sep='\t')
             break
+
+    fp.close()  # done reading from file
+
     # Check if number of columns matches 9
-    if len(first_entry) == 9:
-        nine_columns = True
-    else:
+    if len(first_entry) != 9:
         raise argparse.ArgumentTypeError('Number of columns in the gtf file unequal 9')
 
-    # Extract gene_id information from column 9
+    # If there was a header, check that the header matches gtf
+    if header and not format_gtf:
+        raise argparse.ArgumentTypeError('Header in gtf file does not match gtf format')
+
+    # Extract gene_id information from column 9 and check if the format is gtf (not gff)
     column_9 = first_entry[8]
     column_9_split = column_9.split(sep=';')
-    gene_id = column_9_split[0]
+    gene_id = column_9_split[0]  # TODO; it cannot always be assumed that the gene_id is the first entry in column 9
     # gtf specific format of the gene_id column (gff3: gene_id="xxxxx"; gtf: gene_id "xxxxx")
     regex_gene_id = 'gene_id ".*"'
+
     # check match of the pattern
-    if re.match(regex_gene_id, gene_id):
-        gene_id_format = True
-    else:
+    if not re.match(regex_gene_id, gene_id):
         raise argparse.ArgumentTypeError('gtf file is corrupted')
-    # If a header is present format information is checked too
-    if header:
-        if format_gtf and nine_columns and gene_id_format and file_ending:
-            print("integrity of the gtf file: OK")
-            return True
-        else:
-            if temp_dir is not None:
-                rm_tmp(temp_dir, tempfiles)
-            raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
-    # If no header is present format information is leaved out
-    else:
-        if nine_columns and gene_id_format and file_ending:
-            print("integrity of the gtf file: OK")
-            return True
 
-        else:
-            if temp_dir is not None:
-                rm_tmp(temp_dir, tempfiles)
-            raise argparse.ArgumentTypeError('gtf file integrity not passed and/or wrong filetype for gtf')
-
-
-def is_gtf_file(gtf):
-
-    '''
-    Checks file ending for .gtf or .gff format
-
-    :param gtf: str
-        Path to .gtf file containing genomic elements for annotation.
-    :return: boolean
-        True if the file ending matches *.gtf*.
-    '''
-    filename = os.path.basename(gtf)
-    print(filename)
-
-    regex_gtf = r'.*\.(gtf|gtf\.gz)'
-    regex_gff = r'.*\.(gff3|gff3\.gz)'
-
-    if re.match(regex_gtf, filename):
-        print("filetype matches .gtf/.gtf.gz")
-        return True
-
-    elif re.match(regex_gff, filename):
-        print('filetype matches gff3')
-        raise argparse.ArgumentTypeError('Expected filetype gtf not gff3')
-
-    else:
-        print("invalid filetype")
-        raise argparse.ArgumentTypeError('Expected filetype gtf')
+    return True  # the function only returns of no error is raised
 
 
 def _is_gz_file(filepath):
@@ -156,29 +113,6 @@ def gunzip_file(f_in, f_out):
     with gzip.open(f_in, 'rb') as h_in:
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
-
-
-def make_tmp(temp_dir):
-    """
-
-    :param temp_dir: str
-        Path to the directory where the temporary directory should be created.
-    :return: str
-        Path to the temporary directory.
-    """
-    current_dir = os.getcwd()
-    if temp_dir == "":
-        temp_dir = os.path.join(current_dir, "tmp")
-
-    else:
-        temp_dir = os.path.join(temp_dir, "tmp")
-
-    try:
-        os.mkdir(temp_dir)
-    except OSError as error:
-        print(error)
-
-    return temp_dir
 
 
 def rm_tmp(temp_dir, tempfiles=None):
@@ -210,87 +144,98 @@ def rm_tmp(temp_dir, tempfiles=None):
         print(error)
 
 
-def format_adata(adata):
+def validate_regions(adata, coordinate_columns):
+    """ Checks if the regions in adata.var are valid.
 
+    Parameters
+    -----------
+    adata : AnnData
+        AnnData object containing the regions to be checked.
+    coordinate_columns : list of str
+        List of length 3 for column names in adata.var containing chr, start, end coordinates. """
+
+    # Test whether the first three columns are in the right format
+    chr, start, end = coordinate_columns
+
+    # Test if coordinate columns are in adata.var
+    utils.check_columns(adata.var, coordinate_columns, "adata.var")
+
+    # Test whether the first three columns are in the right format
+    for _, line in adata.var.to_dict(orient="index").items():
+        valid = False
+
+        if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
+            if line[start] <= line[end]:  # start must be smaller than end
+                valid = True  # if all tests passed, the line is valid
+
+        if valid is False:
+            raise ValueError("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
+
+
+def format_adata_var(adata,
+                     coordinate_columns=None,
+                     columns_added=["chr", "start", "end"]):
     '''
-    Checks columns and index of adata.var if format matches:
-     -index: chr*_start_stop
-     -column_1 = 'peak_chr'
-     -column_2 = 'peak_start'
-     -column_3 = 'peak_end'
+    Formats the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
+    If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
+    If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
+    "*[_:-]start[_:-]stop"
 
-     If the format matches as described above, nothing will be done.
-     If not the index of adata.var is checked if it matches following describing format:
-     index: chr*_start_stop
+    If the index can be formatted, the formatted columns (columns_added) will be added.
+    If the index cannot be formatted, an error will be raised.
 
-     If yes adata.var gets formatted by adding the columns speak_chr, peak_start, peak_stop like described in the index
-    :param adata: anndata.AnnData
+    :param adata: AnnData
         The anndata object containing features to annotate.
-    :return: adata: anndata.AnnData
-        The anndata object containing features to annotate.
+    :param coordinate_columns: list of str or None
+        List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
+        If None, the index will be formatted.
+    :param columns_added: list of str
+        List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
     '''
 
-    adata_regions = adata.var
-    names = adata_regions.index
+    # Test whether the first three columns are in the right format
+    format_index = True
+    if coordinate_columns is not None:
+        try:
+            validate_regions(adata, coordinate_columns)
+            format_index = False
+        except KeyError:
+            print("The coordinate columns are not found in adata.var. Trying to format the index.")
+        except ValueError:
+            print("The regions in adata.var are not in the correct format. Trying to format the index.")
 
-    # define regex patterns to check index
-    regex_1 = r'chr._+[0-9*]+_+[0-9*]'
-    regex_2 = r'chr.:+[0-9*]+-+[0-9*]'
+    # Format index if needed
+    if format_index:
+        print("formatting adata.var index to coordinate columns:")
+        regex = r'[^_:\-]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'  # matches chr_start_end / chr-start-end / chr:start-end and variations
 
-    # check conditions
-    condition_1 = set(['peak_stop', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
-    condition_2 = bool(re.match(regex_1, names[0])) or bool(re.match(regex_2, names[0]))
-
-    if not condition_1 and condition_2:
-        print("should be formatted")
-        print("formatting: ")
         # Prepare lists to insert
         peak_chr_list = []
         peak_start_list = []
         peak_end_list = []
 
-        # Check index format:
-        if re.match(regex_1, names[0]):
+        names = adata.var.index
+        for name in names:
+            if re.match(regex, name):  # test if name can be split by regex
 
-            for name in names:
-                string_list = name.split("_")
+                # split the name into chr, start, end
+                split_name = re.split(r'[\_\:\-]', name)
+                peak_chr_list.append(split_name[0])
+                peak_start_list.append(int(split_name[1]))
+                peak_end_list.append(int(split_name[2]))
 
-                peak_chr_list.append(string_list[0])
-                peak_start_list.append(string_list[1])
-                peak_end_list.append(string_list[2])
+            else:
+                raise ValueError("Index does not match the format *_start_stop or *:start-stop. Please check your index.")
 
-        if re.match(regex_2, names[0]):
+        adata.var.drop(columns_added, axis=1,
+                       errors='ignore', inplace=True)
 
-            for name in names:
-                string_list = []
+        adata.var.insert(0, columns_added[2], peak_end_list)
+        adata.var.insert(0, columns_added[1], peak_start_list)
+        adata.var.insert(0, columns_added[0], peak_chr_list)
 
-                first_split = name.split(':')
-                string_list.append(first_split[0])
-
-                second_split = first_split[1].split('-')
-                string_list.extend(second_split)
-
-                peak_chr_list.append(string_list[0])
-                peak_start_list.append(string_list[1])
-                peak_end_list.append(string_list[2])
-
-        adata_regions = adata_regions.drop(['peak_end', 'peak_start', 'peak_chr', 'start', 'stop', 'chr'], axis=1,
-                                           errors='ignore')
-
-        adata_regions.insert(0, "peak_end", peak_end_list)
-        adata_regions.insert(0, "peak_start", peak_start_list)
-        adata_regions.insert(0, "peak_chr", peak_chr_list)
-
-        adata.var = adata_regions
-
-    elif not condition_2:
-        print("Cannot be formatted, index does not match chr_start_stop")
-
-    condition_1 = set(['peak_end', 'peak_start', 'peak_chr']).issubset(adata_regions.columns) or set(['stop', 'start', 'chr']).issubset(adata_regions.columns)
-
-    if condition_1:
-        print("is formatted")
-        return adata
+        # Check whether the newly added columns are in the right format
+        validate_regions(adata, columns_added)
 
 
 def annotate_adata(adata,
@@ -352,14 +297,13 @@ def annotate_adata(adata,
                                 config=custom_config)
     """
     # Setup verbose print function
-    print = sctoolbox.utilities.vprint(verbose)
+    print = utils.vprint(verbose)
 
-    # Make temporary directory
-    tempfiles = []
-    temp_dir = make_tmp(temp_dir)
+    # Make temporary directory if needed
+    utils.create_dir(temp_dir)
 
     # Check that packages are installed
-    sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
+    utils.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
 
     # TODO: Check input types
@@ -384,8 +328,6 @@ def annotate_adata(adata,
     cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
     print("Config dictionary: {0}".format(cfg_dict))
 
-    # Format adata.var table if necessary
-    adata = format_adata(adata)
     # Read regions from .var table
     print("Setting up genomic regions to annotate...")
     regions = adata.var.copy()
@@ -394,9 +336,10 @@ def annotate_adata(adata,
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
-        pass
-        # TODO: Check that coordinate_cols are in adata.var
-        # check_type(coordinate_cols, list, "coordinate_cols")
+        utils.check_columns(adata.var, coordinate_cols, "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+
+    # Test the coordinate columns
+    format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
@@ -410,7 +353,7 @@ def annotate_adata(adata,
         region_dicts.append(d)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
+    gtf, tempfiles = prepare_gtf(gtf, temp_dir, print)
 
     annotations_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -487,7 +430,7 @@ def annotate_narrowPeak(filepath,
     :param threads: int, optional
         Number of threads to perform the annotation.
     :param temp_dir: str, optional
-        Path to the directory where the temporary directory should be created. Default: location of the script
+        Path to the directory where the temporary files should be written. Default: location of the script
     :param remove_temp: boolean, optional
         option to remove temporary directory after execution. Default: True (clean up)
     :param verbose: boolean
@@ -496,14 +439,13 @@ def annotate_narrowPeak(filepath,
         Dataframe containing the annotations.
     """
     # Setup verbose print function
-    print = sctoolbox.utilities.vprint(verbose)
+    print = utils.vprint(verbose)
 
     # Make temporary directory
-    tempfiles = []
-    temp_dir = make_tmp(temp_dir)
+    utils.create_dir(temp_dir)
 
     # Check that packages are installed
-    sctoolbox.utilities.check_module("uropa")  # will raise an error if not installed
+    utils.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
 
     # TODO: Check input types
@@ -531,7 +473,7 @@ def annotate_narrowPeak(filepath,
     region_dicts = load_narrowPeak(filepath, print)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = prepare_gtf(gtf, temp_dir, tempfiles, print)
+    gtf, tempfiles = prepare_gtf(gtf, temp_dir, print)
 
     annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -572,29 +514,31 @@ def load_narrowPeak(filepath, print):
 
 def prepare_gtf(gtf,
                 temp_dir,
-                tempfiles,
                 print):
-
     """
     Prepares the .gtf file to use it in the annotation process. Therefore the file properties are checked and if necessary it is sorted, indexed and compressed.
 
     :param gtf: str
         Path to the .gtf file containing the genes to be annotated.
+    :param temp_dir: str
+        Path to the temporary directory for storing .gtf files.
     :param print: function
         Function for verbose printing.
-    :param temp_dir: str
-        Path to the temporary directory.
-    :param tempfiles: list of str
-        List of tempfiles created.
+
     :return: gtf: str
         Path to the gtf file to use in the annotation.
     :return: tempfiles: list of str
         List of temporary files created.
     """
-    sctoolbox.utilities.check_module("pysam")
+    utils.check_module("pysam")
     import pysam
 
-    input_gtf = gtf
+    # input_gtf = gtf
+    # Check integrity of the gtf file
+    gtf_integrity(gtf)  # will raise an error if gtf is not valid
+
+    tempfiles = []
+
     # Prepare .gtf file in terms of index and sorting
     print("Preparing gtf file for annotation...")
     success = 0
@@ -602,7 +546,7 @@ def prepare_gtf(gtf,
     while success == 0:
         try:  # try to open gtf with Tabix
             print("- Reading gtf with Tabix")
-            g = pysam.TabixFile(gtf)
+            g = pysam.TabixFile(gtf)  # gtf can be .gz or not
             g.close()
             success = 1
             print("Done preparing gtf!")
@@ -611,16 +555,19 @@ def prepare_gtf(gtf,
             print("- Index of gtf not found - trying to index gtf")
 
             # First check if gtf was already gzipped
-            try:
-                if not _is_gz_file(gtf):
-                    gtf_gz = gtf + ".gz"
-                    pysam.tabix_compress(gtf, gtf_gz)
-            except Exception:
-                gtf = gtf_gz  # gtf was already gzipped
+            if not _is_gz_file(gtf):
+                base = os.path.basename(gtf)
+                gtf_gz = os.path.join(temp_dir, base + ".gz")
+                pysam.tabix_compress(gtf, gtf_gz, force=True)
+                tempfiles.append(gtf_gz)
+                gtf = gtf_gz
 
             # Try to index
             try:
-                gtf = pysam.tabix_index(gtf, seq_col=0, start_col=3, end_col=4, keep_original=True, force=True, meta_char='#')
+                gtf_index = gtf + ".tbi"
+                gtf = pysam.tabix_index(gtf, seq_col=0, start_col=3, end_col=4, keep_original=True, force=True, meta_char='#', index=gtf_index)
+                tempfiles.append(gtf_index)
+
             except Exception:
                 print("- Indexing failed - the GTF is probably unsorted")
 
@@ -628,12 +575,13 @@ def prepare_gtf(gtf,
                 is_gz = _is_gz_file(gtf)
                 if is_gz:
                     gtf_uncompressed = os.path.join(temp_dir, "uncompressed.gtf")
-                    print(f"- Uncompressing gtf to: {gtf_uncompressed}")
+                    print(f"- Uncompressing {gtf} to: {gtf_uncompressed}")
                     try:
                         gunzip_file(gtf, gtf_uncompressed)
                     except Exception:
                         raise ValueError("Could not uncompress gtf file to sort. Please ensure that the input gtf is sorted.")
                     gtf = gtf_uncompressed
+                    tempfiles.append(gtf_uncompressed)
 
                 # Try to sort gtf
                 if sort_done == 0:  # make sure sort was not already performed
@@ -645,20 +593,12 @@ def prepare_gtf(gtf,
                         _ = subprocess.check_output(sort_call, shell=True)
                         gtf = gtf_sorted  # this gtf will now go to next loop in while
                         sort_done = 1
+
                     except subprocess.CalledProcessError:
                         raise ValueError("Could not sort gtf file using command-line call: {0}".format(sort_call))
                 else:
                     raise ValueError("Could not read input gtf - please check for the correct format.")
 
-    tempfiles.append(temp_dir + "/uncompressed.gtf")
-    tempfiles.append(temp_dir + "/sorted.gtf")
-    tempfiles.append(temp_dir + "/sorted.gtf.gz")
-    tempfiles.append(temp_dir + "/sorted.gtf.gz.tbi")
-
-    if 'gtf_uncompressed' in locals():
-        gtf_integrity(gtf_uncompressed, temp_dir, tempfiles)
-    else:
-        gtf_integrity(input_gtf, temp_dir, tempfiles)
     # Force close of gtf file left open; pysam issue 1038
     proc = psutil.Process()
     for f in proc.open_files():
@@ -686,6 +626,7 @@ def annotate_features(region_dicts,
         A dictionary indicating how regions should be annotated. Default is to annotate feature 'gene' within -10000;1000bp of the gene start. See 'Examples' of how to set up a custom configuration dictionary.
     :param best: boolean
         Whether to return the best annotation or all valid annotations. Default: True (only best are kept).
+
     :return: pandas.Dataframe
         Dataframe with the annotation
     '''

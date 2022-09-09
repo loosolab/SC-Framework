@@ -1,10 +1,16 @@
 import argparse
 
-import sctoolbox.annotation
 import pytest
 import sctoolbox.annotation as anno
+import sctoolbox.utilities as utils
 import scanpy as sc
+import numpy as np
 import os
+
+
+# ------------------------- Fixtures -------------------------#
+
+uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 
 @pytest.fixture
@@ -13,23 +19,20 @@ def adata_atac():
     return sc.read_h5ad(adata_f)
 
 
-def test_annotate_adata(adata_atac):
-
-    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
-
-    sctoolbox.annotation.annotate_adata(adata_atac, gtf=gtf_path)
-
-    assert 'gene_id' in adata_atac.var.columns
+@pytest.fixture
+def adata_atac_emptyvar(adata_atac):
+    adata = adata_atac.copy()
+    adata.var = adata.var.drop(columns=adata.var.columns)
+    return adata
 
 
-def test_annotate_narrowPeak():
-
-    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
-    peaks_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'cropped_testing.narrowPeak')
-
-    annotation_table = sctoolbox.annotation.annotate_narrowPeak(peaks_path, gtf=gtf_path)
-
-    assert 'gene_id' in annotation_table
+@pytest.fixture
+def adata_atac_invalid(adata_atac):
+    adata = adata_atac.copy()
+    adata.var.iloc[0, 1] = 500  # start
+    adata.var.iloc[0, 2] = 100  # end
+    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
+    return adata
 
 
 @pytest.fixture
@@ -38,68 +41,145 @@ def adata_rna():
     return sc.read_h5ad(adata_f)
 
 
+# ------------------------- Tests ------------------------- #
+
 def test_add_cellxgene_annotation(adata_rna):
-    
+    """ Test if 'cellxgene' column is added to adata.obs. """
+
     csv_f = os.path.join(os.path.dirname(__file__), 'data', 'cellxgene_anno.csv')
     anno.add_cellxgene_annotation(adata_rna, csv_f)
 
     assert "cellxgene_clusters" in adata_rna.obs.columns
 
 
-def test_annot_HVG(adata_rna):
+@pytest.mark.parametrize("inplace, threads, config, best, coordinate_cols",
+                         [(True, 1, None, True, None),
+                          (False, 2, uropa_config, False, ["chr", "start", "stop"])])
+def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_cols):
+
+    adata_atac.var["distance_to_gene"] = 100  # initialize distance column to test the warning message
+    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
+
+    out = anno.annotate_adata(adata_atac, gtf=gtf_path, threads=threads, inplace=inplace,
+                              config=config, best=best, coordinate_cols=coordinate_cols)
+
+    if inplace:
+        assert out is None
+        assert 'gene_id' in adata_atac.var.columns
+    else:
+        assert type(out).__name__ == 'AnnData'
+        assert 'gene_id' in out.var.columns
+
+
+@pytest.mark.parametrize("config", [None, uropa_config])
+def test_annotate_narrowPeak(config):
+
+    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
+    peaks_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'cropped_testing.narrowPeak')
+
+    annotation_table = anno.annotate_narrowPeak(peaks_path, gtf=gtf_path, config=config)
+
+    assert 'gene_id' in annotation_table
+
+
+@pytest.mark.parametrize("fixture, expected", [("adata_atac", True),  # expects var tables to be unchanged
+                                               ("adata_atac_emptyvar", False),  # expects var tables to be changed
+                                               ("adata_rna", ValueError),  # expects a valueerror due to missing columns
+                                               ("adata_atac_invalid", ValueError)])  # expects a valueerror due to format of columns
+def test_format_adata_var(fixture, expected, request):
+    """ Test whether adata regions can be formatted (or raise an error if not)"""
+
+    adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
+    adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
+    if type(expected) == type:
+        with pytest.raises(expected):
+            anno.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+
+    else:
+        anno.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
+
+        assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
+
+
+@pytest.mark.parametrize("inplace", [True, False])
+def test_annot_HVG(adata_rna, inplace):
+    """ Test if 'highly_variable' column is added to adata.var. """
 
     sc.pp.log1p(adata_rna)
-    anno.annot_HVG(adata_rna)
+    out = anno.annot_HVG(adata_rna, inplace=inplace)
 
-    assert "highly_variable" in adata_rna.var.columns
-
-def test_make_tmp():
-
-    temp_dir = sctoolbox.annotation.make_tmp("")
-    tmp_exists = os.path.exists(temp_dir)
-
-    sctoolbox.annotation.rm_tmp(temp_dir)
-    tmp_removed = not(os.path.exists(temp_dir))
-
-    assert tmp_exists and tmp_removed
-
-def test_gtf_integrity():
-
-    gtf_no_header = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
-    gtf = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf')
-    gff = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')
-    gtf_gz = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf.gz')
-    gtf_missing_col = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_missing_column_gencode.v41.gtf')
-    gtf_corrupted_format = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_corrupted_format_gencode.v41.gtf')
-
-    # Test for passed tests
-    result_gtf_no_header = sctoolbox.annotation.gtf_integrity(gtf_no_header)
-    result_gtf = sctoolbox.annotation.gtf_integrity(gtf)
-    assert result_gtf_no_header and result_gtf
-
-    #Test if exceptions raised
-    with pytest.raises(argparse.ArgumentTypeError) as e_gff_info:
-        sctoolbox.annotation.gtf_integrity(gff)
-
-    with pytest.raises(argparse.ArgumentTypeError) as e_gz_info:
-        sctoolbox.annotation.gtf_integrity(gtf_gz)
-
-    with pytest.raises(argparse.ArgumentTypeError) as e_missing_col_info:
-        sctoolbox.annotation.gtf_integrity(gtf_missing_col)
-
-    with pytest.raises(argparse.ArgumentTypeError) as e_corrupted_info:
-        sctoolbox.annotation.gtf_integrity(gtf_corrupted_format)
-
-    # Check for the exceptions types
-    assert e_gff_info.value.args[0] == 'Expected filetype gtf not gff3'
-    assert e_gz_info.value.args[0] == 'gtf file is compressed'
-    assert e_missing_col_info.value.args[0] == 'Number of columns in the gtf file unequal 9'
-    assert e_corrupted_info.value.args[0] == 'gtf file is corrupted'
+    if inplace:
+        assert out is None
+        assert "highly_variable" in adata_rna.var.columns
+    else:
+        assert "highly_variable" in out.var.columns
 
 
-def test_annot_HVG(adata):
-    """ Test if 'highly_vairable' column is added to adata.var. """
-    sc.pp.log1p(adata)
-    anno.annot_HVG(adata)
+def touch_file(f):
+    try:
+        open(f, 'x')
+    except FileExistsError:
+        pass
 
-    assert "highly_variable" in adata.var.columns
+
+def test_rm_tmp():
+
+    temp_dir = "tempdir"
+    utils.create_dir(temp_dir)
+    touch_file("tempdir/afile.gtf")
+    touch_file("tempdir/tempfile1.txt")
+    touch_file("tempdir/tempfile2.txt")
+
+    # Remove tempfile in tempdir (but tempdir should still exist)
+    tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
+    anno.rm_tmp(temp_dir, tempfiles)
+
+    dir_exists = os.path.exists(temp_dir)
+    files_removed = sum([os.path.exists(f) for f in tempfiles]) == 0
+
+    assert dir_exists and files_removed
+
+    # Check that tempdir is removed if it is empty
+    anno.rm_tmp(temp_dir)
+    dir_exists = os.path.exists(temp_dir)
+
+    assert dir_exists is False
+
+
+# ------------------------- Tests for gtf formats ------------------------- #
+
+gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf'),
+             "header": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf'),
+             "unsorted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf'),
+             "gtf_gz": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf.gz'),
+             "gtf_missing_col": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_missing_column_gencode.v41.gtf'),
+             "gtf_corrupted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_corrupted_format_gencode.v41.gtf'),
+             "gff": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')}
+
+
+# indirect test of gtf_integrity as well
+@pytest.mark.parametrize("key, gtf", [(key, gtf_files[key]) for key in gtf_files])
+def test_prepare_gtf(key, gtf):
+
+    if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
+        gtf_out, tempfiles = anno.prepare_gtf(gtf, "", print)
+
+        assert os.path.exists(gtf_out)  # assert if output gtf exists as a file
+
+    elif key in ["gtf_missing_col", "gtf_corrupted", "gff"]:  # these gtfs are invalid and should raise an error
+
+        with pytest.raises(argparse.ArgumentTypeError) as err:
+            anno.prepare_gtf(gtf, "", print)
+
+        # Assert if the error message is correct depending on input
+        if key == "gtf_missing_col":
+            assert err.value.args[0] == 'Number of columns in the gtf file unequal 9'
+
+        elif key == "gtf_corrupted":
+            assert err.value.args[0] == 'gtf file is corrupted'
+
+        elif key == "gff":
+            assert err.value.args[0] == 'Header in gtf file does not match gtf format'
+
+    else:
+        raise ValueError("Invalid key: {}".format(key))
