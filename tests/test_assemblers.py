@@ -2,6 +2,7 @@ import os
 import anndata
 import sctoolbox.assemblers
 
+
 def test_from_single_starsolo():
 
     SOLO_DIR = os.path.join(os.path.dirname(__file__), 'data', 'solo')
