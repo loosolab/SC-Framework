@@ -67,6 +67,7 @@ def fetch_info_txt(file_path="./info.txt"):
     except FileNotFoundError:
         print("Create the ./info.text file containing the full path where your anndata file is located: e.g., pipeline_output/results/Test1")
 
+
 def check_cuts(ans, limit1, limit2):  # Checking cutoffs validity
     """
     Checking if a given value range into acceptable limits
