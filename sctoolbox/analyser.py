@@ -386,10 +386,6 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
     log_kwargs : dict, default {}
         Additional parameters forwarded to scanpy.pp.log1p().
 
-    Notes
-    -----
-    Author: Guilherme Valente
-
     Returns
     -------
     anndata.AnnData or None:
@@ -428,10 +424,6 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
     -------
     anndata.Anndata or None:
         Anndata with expression values normalized and log converted and PCA computed.
-
-    Notes
-    -----
-    Author: Guilherme Valente
     """
     adata_m = anndata if inplace else anndata.copy()
 

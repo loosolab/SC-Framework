@@ -61,9 +61,11 @@ def fetch_info_txt(file_path="./info.txt"):
     str :
         Path that was stored in the first line of info.txt.
     """
-    with open(file_path, "r") as file:
-        return file.readline()
-
+    try:
+        with open(file_path, "r") as file:
+            return file.readline()
+    except FileNotFoundError:
+        print("Create the ./info.text file containing the full path where your anndata file is located: e.g., pipeline_output/results/Test1")
 
 def check_cuts(ans, limit1, limit2):  # Checking cutoffs validity
     """
@@ -186,13 +188,14 @@ def check_requirements(anndata, current_notebook, check_previous=True):
         return False
 
     # TODO add missing checks
-    if do_check(current_notebook, 1, check_previous):
+#    if do_check(current_notebook, 1, check_previous):
         # assembling anndata
-        print("Check 1 to be implemented")
+#        print("Check 1 to be implemented")
 
     if do_check(current_notebook, 2, check_previous):
         # qc and filtering
-        print("Check 2 to be implemented")
+        if "condition" not in str(anndata.obs):
+            raise ValueError("This notebook demands one anndata.obs defined as the experimental condition. Run notebook 1, or add that manually.")
 
     if do_check(current_notebook, 3, check_previous):
         # normalization, correction and comparison

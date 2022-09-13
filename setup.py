@@ -23,7 +23,8 @@ setup(
         'statsmodels',
         'tqdm',
         'pandas',
-        'seaborn'
+        'seaborn',
+        'psutil'
     ],
     include_package_data=True,
     extras_require={
