@@ -566,21 +566,21 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
         obsm_keys = [obsm_keys]
 
     # evaluate_batch_effect use compute_lisi to evaluate batch correction methods applied on each adata
-	
-	"""
+    
+    """
     Parameters (inputs needed for compute_lisi)
     ----------
     a matrix of cells (rows) and coordinates (PC scores, UMAP dimensions, etc.)
     a data frame with categorical variables which we want to evaluate [batch_key] (columns) and each cells (rows)
  
- 	LISI score is calculated for each cell and it is between 1-2 for a data-frame with two categorical variables.
+    LISI score is calculated for each cell and it is between 1-2 for a data-frame with two categorical variables.
 
     Returns
     -------
     LISI score: indicates the effective number of different categories represented in the local neighborhood of each cell.
     If the cells are well-mixed, then we expect the LISI score to be near 2 for a data with 2 batches.
 
-	The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
+    The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
     """
 
     pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
