@@ -504,10 +504,18 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
     anndata.Anndata or None:
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
-    Notes
+    NOTES
     -----
-    For further information on LISI:
-    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+    Compute_lisi has two inputs:
+    1. a matrix of cells (rows) and coordinates (PC scores, UMAP dimensions, etc.)
+    2. a data frame with categorical variables which we want to evaluate [batch_key] (columns) and each cells (rows)
+    and Returns: LISI score
+    -------
+    - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
+    - indicates the effective number of different categories represented in the local neighborhood of each cell.
+    - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.
+    - The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
+    - For further information on LISI: https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
     """
 
     # Load LISI
@@ -525,27 +533,10 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
 
     # run LISI on all adata objects
+
     lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
     adata_m.obs[col_name] = lisi_res.flatten()
 
-    """
-    Parameters (compute_lisi)
-    ----------
-    a matrix of cells (rows) and coordinates (PC scores, UMAP dimensions, etc.)
-    a data frame with categorical variables which we want to evaluate [batch_key] (columns) and each cells (rows)
-
-    Returns
-    -------
-    LISI score
-
-    NOTES:
-    -------
-    # LISI score is calculated for each cell and it is between 1-2 for a data-frame with 2 categorical variables.
-    ## indicates the effective number of different categories represented in the local neighborhood of each cell.
-    ### If the cells are well-mixed, then we expect the LISI score to be near 2 for a data with 2 batches.
-    #### The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
-
-    """
 
     if not inplace:
         return adata_m
