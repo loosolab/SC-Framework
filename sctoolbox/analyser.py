@@ -505,11 +505,6 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
     NOTES
-    -----
-    Compute_lisi has two inputs:
-    1. a matrix of cells (rows) and coordinates (PC scores, UMAP dimensions, etc.)
-    2. a data frame with categorical variables which we want to evaluate [batch_key] (columns) and each cells (rows)
-    and Returns: LISI score
     -------
     - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
     - indicates the effective number of different categories represented in the local neighborhood of each cell.
