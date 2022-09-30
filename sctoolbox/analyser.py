@@ -540,6 +540,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
     if not inplace:
         return adata_m
 
+
 def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
     """
     Evaluating batch correction methods for a dict of anndata objects (using LISI score calculation)
