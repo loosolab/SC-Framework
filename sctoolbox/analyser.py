@@ -504,11 +504,15 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
     anndata.Anndata or None:
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
-    Notes
-    -----
-    For further information on LISI:
-    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+    NOTES
+    -------
+    - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
+    - indicates the effective number of different categories represented in the local neighborhood of each cell.
+    - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.
+    - The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
+    - For further information on LISI: https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
     """
+
     # Load LISI
     utils.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
@@ -524,6 +528,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
 
     # run LISI on all adata objects
+
     lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
     adata_m.obs[col_name] = lisi_res.flatten()
 
@@ -533,7 +538,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
 
 def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
     """
-    Calculate batch evaluation scores for a dict of anndata objects.
+    Evaluating batch correction methods for a dict of anndata objects (using LISI score calculation)
 
     Parameters
     ----------
@@ -550,7 +555,8 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
     Returns
     -------
     dict of anndata.AnnData
-        Dict containing an anndata object for each batch correction method as values with LISI scores added to .obs.
+        Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
+
     """
 
     if utils._is_notebook() is True:
@@ -566,6 +572,7 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
         obsm_keys = [obsm_keys]
 
     # Evaluate batch effect for every adata
+
     pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
     for adata in adatas_m.values():
         for obsm in obsm_keys:
