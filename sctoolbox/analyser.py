@@ -537,10 +537,8 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
     lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
     adata_m.obs[col_name] = lisi_res.flatten()
 
-
     if not inplace:
         return adata_m
-
 
 def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
     """
