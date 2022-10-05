@@ -1,4 +1,4 @@
-import generalized_tree
+import sctoolbox.generalized_tree as generalized_tree
 import os
 
 class ATAC_tree(generalized_tree.Tree):
