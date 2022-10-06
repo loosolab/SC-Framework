@@ -4,7 +4,13 @@ import os
 class ATAC_tree(generalized_tree.Tree):
     '''
     Sub-class of Tree.
-    This extends Tree by ATAC related directories
+    This extends Tree by ATAC related directories.
+    To add a path:
+    1. add variable below and initialise it with None
+    2. setup the path in def setupDir
+    3. add the path to the to_build list when it leads to a directory,
+     what should be created automatically
+    4. add property dekorator and setter 
     '''
 
     # directories
@@ -42,6 +48,7 @@ class ATAC_tree(generalized_tree.Tree):
         # list of directories to build if they are not already existing
         to_build = []
         to_build.append(self._qc_plots_dir)
+        to_build.append(self._assembled_anndata_dir)
 
         self.makeDir(to_build)
 
