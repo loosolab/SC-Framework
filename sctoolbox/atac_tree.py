@@ -33,7 +33,7 @@ class ATAC_tree(generalized_tree.Tree):
         # anndata files directory
         self._assembled_anndata_dir = os.path.join(self._assemble_dir, 'anndata')
         # anndata file of the run
-        self._assembled_anndata = os.path.join(self._assembled_anndata_dir, run + '.h5ad')
+        self._assembled_anndata = os.path.join(self._assembled_anndata_dir, self._run + '.h5ad')
 
         # QC notebook related paths
         self._qc_plots_dir = os.path.join(self.qc_dir, 'plots')
