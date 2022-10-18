@@ -104,6 +104,7 @@ def mean_fl_multi_thread(fragment_file, n_threads=4):
         else:
             mean_fl_df = mean_fl_df.add(fl_df, fill_value=0)
 
+    fl_df['mean'] = fl_df['length'] / fl_df['count']
 
     return mean_fl_df
 
@@ -157,30 +158,41 @@ def add_mfl_fragment(fragment, adata):
     # compute mean fragment lengths
     mean_fragment_lengths = mean_fl_multi_thread(fragment, n_threads=4)
     # set barcode as index
-    adata.obs = adata.obs.set_index("barcode")
+    adata.obs = adata.obs.set_index('barcode')
     # Merge with adata.obs
-    mean_fragment_lengths.columns=['mean']
+    # mean_fragment_lengths.columns=['mean']
     adata.obs = adata.obs.merge(mean_fragment_lengths, left_index=True, right_index=True, how="left")
     adata.obs.rename(columns={'mean': 'mean_fragment_length'}, inplace=True)
 
     return adata
+
+def check_mfl(adata):
+    """
+    Check if mean fragment length is in adata.obs
+    """
+    if 'mean_fragment_length' in adata.obs.columns:
+        return True
+    else:
+        return False
 
 if __name__ == "__main__":
 
     import time
     bam = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/cropped_146.bam"
     adata = epi.read("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146.h5ad")
-    fragment_file = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/fragments.bed"
+    fragment_file = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/fragments_cropped_146.bed"
 
-    start = time.time()
-    mean_fl = mean_fragment_length_fragment_file(fragment_file)
-    stop = time.time()
-    print("Benchmark single core: ", stop - start)
+    adata = add_mfl_fragment(fragment_file, adata)
 
-    start = time.time()
-    mean_fl = mean_fl_multi_thread(fragment_file, 8)
-    stop = time.time()
-    print("Benchmark multi core: ", stop - start)
+    # start = time.time()
+    # mean_fl = mean_fragment_length_fragment_file(fragment_file)
+    # stop = time.time()
+    # print("Benchmark single core: ", stop - start)
+    #
+    # start = time.time()
+    # mean_fl = mean_fl_multi_thread(fragment_file, 8)
+    # stop = time.time()
+    # print("Benchmark multi core: ", stop - start)
 
     #adata = add_mean_fragment_length(bam, adata)
 
