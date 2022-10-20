@@ -16,7 +16,7 @@ import pybedtools
 from sinto.fragments import fragments
 
 
-def check_pct_reads_in_promoters(adata):
+def check_pct_fragments_in_promoters(adata):
     """
     Check if percentage of reads in promoters is in adata.obs.
     :param adata: AnnData
@@ -25,7 +25,7 @@ def check_pct_reads_in_promoters(adata):
         True if pct_reads_in_promoters column is in adata.obs, otherwise False.
     """
 
-    if 'pct_reads_in_promoters' in adata.obs.columns:
+    if 'pct_fragments_in_promoters' in adata.obs.columns:
         return True
     else:
         return False
