@@ -17,6 +17,7 @@ from sinto.fragments import fragments
 
 
 def check_pct_fragments_in_promoters(adata):
+
     """
     Check if percentage of reads in promoters is in adata.obs.
     :param adata: AnnData
@@ -50,7 +51,7 @@ def create_fragment_file(bam, nproc=1, out=None):
         path = os.path.splitext(bam)
         out = f"{path[0]}_fragments.bed"
         out_sorted = f"{path[0]}_fragments_sorted.bed"
-        
+
     #sinto = os.path.join('/'.join(sys.executable.split('/')[:-1]),'sinto')
     #create_cmd = f'''{sinto} fragments -b {bam} -p {nproc} -f {out} --barcode_regex "[^:]*"'''
 
@@ -140,7 +141,7 @@ def _overlap_two_beds(bed1, bed2, out=None):
         out_overlap = f"{path[0]}_{name_2}_overlap.bed"
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}.bed')
-    
+
     a = pybedtools.BedTool(bed1)
     b = pybedtools.BedTool(bed2)
     
@@ -155,10 +156,9 @@ def _overlap_two_beds(bed1, bed2, out=None):
     # return path to overlapped file
     return out_overlap
 
-
 def pct_fragments_in_promoters(adata, gtf_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1):
     """
-    This function calculates for each cell, the percentage of fragments in a BAM alignment file 
+    This function calculates for each cell, the percentage of fragments in a BAM alignment file
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
     as a new column 'pct_reads_in_promoters'. 
     
@@ -218,17 +218,21 @@ def pct_fragments_in_promoters(adata, gtf_file, bam_file=None, fragments_file=No
     # get the sum of reads counts in each cell barcode
     df_overlap = df_overlap.groupby('barcode').sum()
     # convert dataframe to dictionary
+
     promoters_count = df_overlap['n_fragments_in_promoters'].to_dict()
     
     
     # read fragments file as dataframe
     fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
     # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
+
     fragments_df.columns=['chr','start','end','barcode','n_total_fragments']
+
     fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
     fragments_df.drop(['chr','start','end'], axis=1, inplace=True)
     fragments_df = fragments_df.groupby('barcode').sum()
     # add column for reads in promoters from promoters_count dict
+
     fragments_df['n_fragments_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
     # calculate percentage
     fragments_df['pct_fragments_in_promoters'] = fragments_df['n_fragments_in_promoters'] / fragments_df['n_total_fragments']
@@ -246,7 +250,7 @@ def pct_fragments_in_promoters(adata, gtf_file, bam_file=None, fragments_file=No
 def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1, 
                       col_added='pct_reads_overlap'):
     """
-    This function calculates for each cell, the percentage of fragments in a BAM alignment file 
+    This function calculates for each cell, the percentage of fragments in a BAM alignment file
     that overlap with regions specified in a BED file. The results are added to the anndata object
     as a new column. 
     
@@ -304,6 +308,7 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
     # get the sum of reads counts in each cell barcode
     df_overlap = df_overlap.groupby('barcode').sum()
     # convert dataframe to dictionary
+
     promoters_count = df_overlap['n_fragments_in_promoters'].to_dict()
 
 
@@ -315,6 +320,7 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
     fragments_df.drop(['chr','start','end'], axis=1, inplace=True)
     fragments_df = fragments_df.groupby('barcode').sum()
     # add column for reads in promoters from promoters_count dict
+
     fragments_df['n_fragments_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
     # calculate percentage
     fragments_df['pct_fragments_in_promoters'] = fragments_df['n_fragments_in_promoters'] / fragments_df['n_total_fragments']
