@@ -150,7 +150,7 @@ def add_mfl_bam(bam, adata):
 
     return adata
 
-def add_mfl_fragment(fragment, adata, n_threads=4):
+def add_mfl_fragment(fragment, adata, n_threads=8):
     """
     Merge mean fragment lengths with adata.obs
     """

@@ -333,3 +333,14 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
         adata.obs = adata.obs.index.merge(fragments_df, how='inner', left_index=True, right_index=True)
 
     print('Done')
+
+if __name__ == '__main__':
+    # test
+    import scanpy as sc
+
+    fragments_file = '/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/fragments_cropped_146.bed'
+    promoters_gtf = '/home/jan/python-workspace/sc-atac/preprocessing/data/homo_sapiens.104.promoters2000.gtf'
+
+    adata = sc.read_h5ad('/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146.h5ad')
+    adata.obs = adata.obs.set_index('barcode')
+    pct_reads_overlap(adata, promoters_gtf,fragments_file=fragments_file, nproc=1)
