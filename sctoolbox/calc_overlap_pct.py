@@ -12,7 +12,8 @@ import os
 import sys
 import pandas as pd
 import anndata as ad
-
+import pybedtools
+from sinto.fragments import fragments
 
 
 def check_pct_reads_in_promoters(adata):
@@ -50,12 +51,13 @@ def create_fragment_file(bam, nproc=1, out=None):
         out = f"{path[0]}_fragments.bed"
         out_sorted = f"{path[0]}_fragments_sorted.bed"
         
-    sinto = os.path.join('/'.join(sys.executable.split('/')[:-1]),'sinto')
-    create_cmd = f'''{sinto} fragments -b {bam} -p {nproc} -f {out} --barcode_regex "[^:]*"'''
+    #sinto = os.path.join('/'.join(sys.executable.split('/')[:-1]),'sinto')
+    #create_cmd = f'''{sinto} fragments -b {bam} -p {nproc} -f {out} --barcode_regex "[^:]*"'''
 
+    fragments(bam, out, readname_barcode="[^:]*")
     
     # execute command
-    os.system(create_cmd)
+    #os.system(create_cmd)
     print('Finished creating fragments file. Now sorting...')
 
     # sort
@@ -139,19 +141,24 @@ def _overlap_two_beds(bed1, bed2, out=None):
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}.bed')
     
-    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]),'bedtools')
-    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
+    a = pybedtools.BedTool(bed1)
+    b = pybedtools.BedTool(bed2)
+    
+    overlap = a.intersect(b, u=True, sorted=True, output=out_overlap)
+
+    #bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]),'bedtools')
+    #intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
     
     # run command
-    os.system(intersect_cmd)
+    #os.system(intersect_cmd)
     
     # return path to overlapped file
     return out_overlap
 
 
-def pct_reads_in_promoters(adata, gtf_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1):
+def pct_fragments_in_promoters(adata, gtf_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1):
     """
-    This function calculates for each cell, the percentage of reads in a BAM alignment file 
+    This function calculates for each cell, the percentage of fragments in a BAM alignment file 
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
     as a new column 'pct_reads_in_promoters'. 
     
@@ -203,7 +210,7 @@ def pct_reads_in_promoters(adata, gtf_file, bam_file=None, fragments_file=None, 
     print('Calculating percentage...')
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
-    df_overlap.columns=['chr','start','end','barcode','n_reads_in_promoter']
+    df_overlap.columns=['chr','start','end','barcode','n_fragments_in_promoters']
     # remove barcodes not found in adata.obs
     df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
     # drop chr start end columns
@@ -211,35 +218,35 @@ def pct_reads_in_promoters(adata, gtf_file, bam_file=None, fragments_file=None, 
     # get the sum of reads counts in each cell barcode
     df_overlap = df_overlap.groupby('barcode').sum()
     # convert dataframe to dictionary
-    promoters_count = df_overlap['n_reads_in_promoter'].to_dict()
+    promoters_count = df_overlap['n_fragments_in_promoters'].to_dict()
     
     
     # read fragments file as dataframe
     fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
     # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
-    fragments_df.columns=['chr','start','end','barcode','n_total_reads']
+    fragments_df.columns=['chr','start','end','barcode','n_total_fragments']
     fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
     fragments_df.drop(['chr','start','end'], axis=1, inplace=True)
     fragments_df = fragments_df.groupby('barcode').sum()
     # add column for reads in promoters from promoters_count dict
-    fragments_df['n_reads_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
+    fragments_df['n_fragments_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
     # calculate percentage
-    fragments_df['pct_reads_in_promoters'] = fragments_df['n_reads_in_promoters'] / fragments_df['n_total_reads']
+    fragments_df['pct_fragments_in_promoters'] = fragments_df['n_fragments_in_promoters'] / fragments_df['n_total_fragments']
     
     print('Adding results to adata object...')
     # add results to adata.obs
     if cb_col:
-        adata.obs['pct_reads_in_promoters'] = adata.obs[cb_col].map(fragments_df['pct_reads_in_promoters'].to_dict())
+        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='inner')
     else:
-        adata.obs['pct_reads_in_promoters'] = adata.obs.index.map(fragments_df['pct_reads_in_promoters'].to_dict())
+        adata.obs = adata.obs.index.merge(fragments_df, how='inner', left_index=True, right_index=True)
         
     print('Done')
 
 
-def pct_reads_overlap(adata, bed_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1, 
+def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1, 
                       col_added='pct_reads_overlap'):
     """
-    This function calculates for each cell, the percentage of reads in a BAM alignment file 
+    This function calculates for each cell, the percentage of fragments in a BAM alignment file 
     that overlap with regions specified in a BED file. The results are added to the anndata object
     as a new column. 
     
@@ -285,11 +292,11 @@ def pct_reads_overlap(adata, bed_file, bam_file=None, fragments_file=None, cb_co
     
     # get unique barcodes from adata.obs
     barcodes = set(barcodes)
-    
+   
     print('Calculating percentage...')
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
-    df_overlap.columns=['chr','start','end','barcode','n_reads_in_promoter']
+    df_overlap.columns=['chr','start','end','barcode','n_fragments_in_promoters']
     # remove barcodes not found in adata.obs
     df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
     # drop chr start end columns
@@ -297,26 +304,26 @@ def pct_reads_overlap(adata, bed_file, bam_file=None, fragments_file=None, cb_co
     # get the sum of reads counts in each cell barcode
     df_overlap = df_overlap.groupby('barcode').sum()
     # convert dataframe to dictionary
-    promoters_count = df_overlap['n_reads_in_promoter'].to_dict()
-    
-    
+    promoters_count = df_overlap['n_fragments_in_promoters'].to_dict()
+
+
     # read fragments file as dataframe
     fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
     # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
-    fragments_df.columns=['chr','start','end','barcode','n_total_reads']
+    fragments_df.columns=['chr','start','end','barcode','n_total_fragments']
     fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
     fragments_df.drop(['chr','start','end'], axis=1, inplace=True)
     fragments_df = fragments_df.groupby('barcode').sum()
     # add column for reads in promoters from promoters_count dict
-    fragments_df['n_reads_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
+    fragments_df['n_fragments_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
     # calculate percentage
-    fragments_df['pct_reads_in_promoters'] = fragments_df['n_reads_in_promoters'] / fragments_df['n_total_reads']
-    
+    fragments_df['pct_fragments_in_promoters'] = fragments_df['n_fragments_in_promoters'] / fragments_df['n_total_fragments']
+
     print('Adding results to adata object...')
     # add results to adata.obs
     if cb_col:
-        adata.obs['pct_reads_in_promoters'] = adata.obs[cb_col].map(fragments_df['pct_reads_in_promoters'].to_dict())
+        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='inner')
     else:
-        adata.obs['pct_reads_in_promoters'] = adata.obs.index.map(fragments_df['pct_reads_in_promoters'].to_dict())
-    
+        adata.obs = adata.obs.index.merge(fragments_df, how='inner', left_index=True, right_index=True)
+
     print('Done')
