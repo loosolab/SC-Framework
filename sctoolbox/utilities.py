@@ -68,6 +68,89 @@ def is_integer_array(arr):
     return np.all(boolean)
 
 
+def check_columns(df, columns, name="dataframe"):
+    """
+    Utility to check whether columns are found within a pandas dataframe.
+
+    Parameters
+    ------------
+    df : pandas.DataFrame
+        A pandas dataframe to check.
+    columns : list
+        A list of column names to check for within 'df'.
+
+    Raises
+    --------
+    KeyError
+        If any of the columns are not in 'df'.
+    """
+
+    df_columns = df.columns
+
+    not_found = []
+    for column in columns:  # for each column to be checked
+        if column is not None:
+            if column not in df_columns:
+                not_found.append(column)
+
+    if len(not_found) > 0:
+        error_str = f"Columns '{not_found}' are not found in {name}. Available columns are: {list(df_columns)}"
+        raise KeyError(error_str)
+
+
+def check_file_ending(file, pattern="gtf"):
+    """
+    Check if a file has a certain file ending.
+
+    Parameters
+    ----------
+    file : str
+        Path to the file.
+    pattern : str or regex
+        File ending to be checked for. If regex, the regex must match the entire string.
+
+    Raises
+    ------
+    ValueError
+        If file does not have the expected file ending.
+    """
+
+    valid = False
+    if is_regex:
+        if re.match(pattern, file):
+            valid = True
+
+    else:
+        if file.endswith(pattern):
+            valid = True
+
+    if not valid:
+        raise ValueError(f"File '{file}' does not have the expected file ending '{pattern}'")
+
+
+def is_regex(regex):
+    """
+    Check if a string is a valid regex.
+
+    Parameters
+    ----------
+    regex : str
+        String to be checked.
+
+    Returns
+    -------
+    boolean :
+        True if string is a valid regex, False otherwise.
+    """
+
+    try:
+        re.compile(regex)
+        return True
+
+    except re.error:
+        return False
+
+
 # ----------------- String functions ---------------- #
 
 def clean_flanking_strings(list_of_strings):
@@ -81,7 +164,7 @@ def clean_flanking_strings(list_of_strings):
         List of strings.
 
     Returns
-    ---------
+    --------
     List of strings without common suffix and prefix
     """
 
@@ -242,7 +325,8 @@ def create_dir(path):
             os.makedirs(dirname, exist_ok=True)
 
     else:
-        os.makedirs(path, exist_ok=True)
+        if path != "":
+            os.makedirs(path, exist_ok=True)
 
 
 def is_str_numeric(ans):
