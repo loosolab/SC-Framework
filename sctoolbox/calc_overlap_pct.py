@@ -324,6 +324,6 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
     if cb_col:
         adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='inner')
     else:
-        adata.obs = adata.obs.index.merge(fragments_df, how='inner', left_index=True, right_index=True)
+        adata.obs = adata.obs.merge(fragments_df, how='inner', left_index=True, right_index=True)
 
     print('Done')
