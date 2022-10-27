@@ -243,12 +243,13 @@ def search_clustering_parameters(adata,
             print(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
 
         # Run clustering
-        cl_function(adata, resolution=res, key_added="clustering")
-        n_clusters = len(adata.obs["clustering"].cat.categories)
+        key_added = method + "_" + str(round(res, 2))
+        cl_function(adata, resolution=res, key_added=key_added)
+        n_clusters = len(adata.obs[key_added].cat.categories)
 
         # Plot embedding
-        title = f"Resolution: {res} (clusters: {n_clusters})"
-        sc.pl.embedding(adata, embedding, color="clustering", ax=axes[i], legend_loc="on data", title=title, show=False)
+        title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
+        sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
 
     # Hide plots not filled in
     for ax in axes[len(resolutions):]:
