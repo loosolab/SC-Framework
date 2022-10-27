@@ -240,7 +240,7 @@ def search_clustering_parameters(adata,
     for i, res in enumerate(resolutions):
 
         if verbose is True:
-            print(f"Plotting umap for resolution={res} ({i} / {len(resolutions)})")
+            print(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
 
         # Run clustering
         cl_function(adata, resolution=res, key_added="clustering")
