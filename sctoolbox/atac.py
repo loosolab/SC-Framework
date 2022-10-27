@@ -349,7 +349,7 @@ def add_insertsize(adata,
 
     elif len(missing) > 0:
         print("WARNING: not all barcodes in adata.obs were represented in the input fragments. The values for these barcodes are set to NaN.")
-        missing_table = pd.DataFrame(index=missing, columns=distribution_table.columns)
+        missing_table = pd.DataFrame(index=list(missing), columns=distribution_table.columns)
         distribution_table = pd.concat([distribution_table, missing_table])
 
     # Merge table to adata.obs and uns

@@ -23,6 +23,7 @@ def test_write_TOBIAS_config():
 def test_add_insertsize_fragments(adata):
     """ Test if add_insertsize adds information from a fragmentsfile """
 
+    adata = adata.copy()
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
     sctoolbox.atac.add_insertsize(adata, fragments=fragments)
 
@@ -43,10 +44,7 @@ def test_add_insertsize_bam(adata):
 def test_insertsize_plotting(adata):
     """ Test if insertsize plotting works """
 
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
-    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
-
-    ax = sctoolbox.atac.plot_insertsize(adata)
+    ax = sctoolbox.atac.plot_insertsize(adata) # adata already contains insertsize distribution from previous tests
 
     ax_type = type(ax).__name__
     assert ax_type == "AxesSubplot"
