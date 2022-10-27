@@ -36,7 +36,7 @@ def test_add_insertsize_bam(adata):
 
     adata = adata.copy()
     bam = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    sctoolbox.atac.add_insertsize(adata, fragments=bam)
+    sctoolbox.atac.add_insertsize(adata, bam=bam)
 
     assert "insertsize_distribution" in adata.uns
     assert "mean_insertsize" in adata.obs.columns

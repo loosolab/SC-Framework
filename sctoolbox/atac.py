@@ -376,7 +376,8 @@ def insertsize_from_bam(bam,
                         barcodes=None,
                         regions='chr1:1-2000000',
                         chunk_size=100000):
-    """ Get fragment insertsize distributions per barcode from bam file.
+    """
+    Get fragment insertsize distributions per barcode from bam file.
 
     Parameters
     -----------
@@ -490,7 +491,8 @@ def insertsize_from_bam(bam,
 
 
 def insertsize_from_fragments(fragments, barcodes=None):
-    """ Get fragment insertsize distributions per barcode from fragments file.
+    """
+    Get fragment insertsize distributions per barcode from fragments file.
 
     Parameters
     -----------
@@ -551,7 +553,8 @@ def insertsize_from_fragments(fragments, barcodes=None):
 
 
 def add_fragment(count_dict, barcode, size, count=1):
-    """ Add fragment of size 'size' to count_dict.
+    """
+    Add fragment of size 'size' to count_dict.
 
     Parameters
     -----------
@@ -561,15 +564,13 @@ def add_fragment(count_dict, barcode, size, count=1):
         Barcode of the read.
     size : int
         Insertsize to add to count_dict.
-    insertsize_max : int
-        Maximum insertsize to collect for distribution.
     count : int, default 1
         Number of reads to add to count_dict.
 
     Returns
     --------
     count_dict : dict
-        Updated count_dict.
+        Updated count_dict
     """
 
     # Initialize if barcode is seen for the first time
