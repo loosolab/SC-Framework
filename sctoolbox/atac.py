@@ -416,7 +416,6 @@ def insertsize_from_bam(bam,
     else:
         check_in = _check_true
 
-
     # Open bamfile
     print("Opening bam file...")
     if not os.path.exists(bam + ".bai"):
@@ -532,7 +531,7 @@ def insertsize_from_fragments(fragments, barcodes=None):
         size = end - start - 9  # length of insertion (-9 due to to shifted cutting of Tn5)
 
         # Only add fragment if check is true
-        if check_in(barcode) is True:
+        if check_in(barcode, barcodes) is True:
             count_dict = add_fragment(count_dict, barcode, size, count)
 
     end_time = datetime.datetime.now()
