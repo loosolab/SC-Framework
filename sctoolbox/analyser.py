@@ -9,6 +9,8 @@ from scipy import sparse
 from contextlib import redirect_stderr
 import io
 import copy
+import multiprocessing as mp
+import time
 
 import anndata
 import sctoolbox.creators as cr
@@ -88,11 +90,9 @@ def wrap_corrections(adata,
                 utils.check_module(required_packages[method])
 
     # Collect batch correction per method
-    anndata_dict = {}
+    anndata_dict = {'uncorrected': adata}
     for method in methods:
         anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
-
-    anndata_dict['uncorrected'] = adata
 
     print("Finished batch correction(s)!")
 
@@ -579,7 +579,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
+def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], threads=1, inplace=False):
     """
     Evaluating batch correction methods for a dict of anndata objects (using LISI score calculation)
 
@@ -592,6 +592,8 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
         The column in adata.obs containing batch information.
     obsm_keys : str or list of str, default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
+    threads : int
+        Number of threads to use for parallelization.
     inplace : boolean, default False
         Whether to work inplace on the anndata dict.
 
@@ -615,12 +617,44 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
         obsm_keys = [obsm_keys]
 
     # Evaluate batch effect for every adata
+    if threads == 1:
 
-    pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
-    for adata in adatas_m.values():
-        for obsm in obsm_keys:
-            evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
-            pbar.update()
+        pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
+        for adata in adatas_m.values():
+            for obsm in obsm_keys:
+                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
+                pbar.update()
+    else:
+        utils.check_module("harmonypy")
+        from harmonypy.lisi import compute_lisi
+
+        pool = mp.Pool(threads)
+        jobs = {}
+        for i, adata in enumerate(adatas_m.values()):
+            for obsm_key in obsm_keys:
+                obsm_matrix = adata.obsm[obsm_key]
+                obs_mat = adata.obs[[batch_key]]
+
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key]))  # callback=lambda x: adata.obs[f"LISI_score_{obsm_key}"] = x.flatten())
+                jobs[(i, obsm_key)] = job
+        pool.close()
+
+        # Wait for all jobs to finish
+        n_ready = sum([job.ready() for job in jobs.values()])
+        pbar = tqdm(total=len(jobs), desc="Calculation progress ")
+        while n_ready < len(jobs):
+            n_ready = sum([job.ready() for job in jobs.values()])
+            if pbar.n != n_ready:
+                pbar.n = n_ready
+                pbar.refresh()
+            time.sleep(1)
+        pbar.close()
+        pool.join()
+
+        # Assign results to adata
+        for adata_i, obsm_key in jobs:
+            adata = list(adatas_m.values())[adata_i]
+            adata.obs[f"LISI_score_{obsm_key}"] = jobs[(adata_i, obsm_key)].get().flatten()
 
     if not inplace:
         return adatas_m
