@@ -123,6 +123,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     if "predicted_sex" in adata.obs.columns:
         adata.obs.drop(columns=["predicted_sex"], inplace=True)
     adata.obs = adata.obs.merge(df, left_on=groupby, right_index=True, how="left")
+    adata.obs[groupby] = adata.obs[groupby].astype("category")  # ensure that groupby is a category
 
     # Plot overview if chosen
     if plot:
