@@ -3,6 +3,7 @@ channels:
     - bioconda
     - conda-forge
 dependencies:
+  - python<3.11 # 3.11 is so new that some packages are not available
   - r-base
   - r-seurat
   - bioconductor-singlecellexperiment
