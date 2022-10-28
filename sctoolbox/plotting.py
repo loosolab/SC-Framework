@@ -15,6 +15,7 @@ from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
 
 import sctoolbox.utilities
+import sctoolbox.analyser
 from sctoolbox.utilities import save_figure
 
 
@@ -200,8 +201,6 @@ def search_clustering_parameters(adata,
         Array of axes objects containing the plot(s).
     """
 
-    adata = adata.copy()  # ensure that adata is not changed
-
     # Check input
     if len(resolution_range) != 3:
         raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
@@ -245,6 +244,7 @@ def search_clustering_parameters(adata,
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
+        adata.obs[key_added] = sctoolbox.analyser.rename_categories(adata.obs[key_added])  # rename to start at 1
         n_clusters = len(adata.obs[key_added].cat.categories)
 
         # Plot embedding
