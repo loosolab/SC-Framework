@@ -146,7 +146,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 #                                   CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT                                     #
 #######################################################################################################################
 
-def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
+def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
     ''' Building adata object from single mtx and two tsv/csv files
 
     Parameters
@@ -157,8 +157,6 @@ def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_i
         Path to cell label file (.obs)
     genes : string
         Path to gene label file (.var)
-    is_10X : boolean
-        Set True if mtx file contains 10X data
     transpose : boolean
         Set True to transpose mtx matrix
     barcode_index : int
@@ -168,17 +166,14 @@ def from_single_mtx(mtx, barcodes, genes, is_10X=True, transpose=True, barcode_i
     delimiter : string
         delimiter of genes and barcodes table
     **kwargs : additional arguments
-        Contains additional arguments for scanpy.read_10x_mtx method
+        Contains additional arguments for scanpy.read_mtx method
 
     Returns
     -------
     anndata object containing the mtx matrix, gene and cell labels
     '''
     # Read mtx file
-    if is_10X:
-        adata = sc.read_10x_mtx(path=mtx, **kwargs)
-    else:
-        adata = sc.read_mtx(filename=mtx, dtype='float32')
+    adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
 
     # Transpose matrix if necessary
     if transpose:
@@ -228,7 +223,7 @@ def from_mtx(mtx, barcodes, genes, **kwargs):
     delimiter : string
         delimiter of genes and barcodes table
     **kwargs : additional arguments
-        Contains additional arguments for scanpy.read_10x_mtx method
+        Contains additional arguments for scanpy.read_mtx method
 
     Returns
     --------
