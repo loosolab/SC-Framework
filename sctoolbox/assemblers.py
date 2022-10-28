@@ -53,7 +53,7 @@ def from_single_starsolo(path, dtype="filtered"):
 
     # Setup main adata object from matrix/barcodes/genes
     print("Setting up adata from solo files")
-    adata = from_single_mtx(matrix_f, barcodes_f, genes_f, is_10X=False)
+    adata = from_single_mtx(matrix_f, barcodes_f, genes_f)
     adata.var.columns = ["gene", "type"]  # specific to the starsolo format
     for col in adata.obs.columns:
         adata.var[col] = adata.var[col].astype("category")
@@ -212,8 +212,6 @@ def from_mtx(mtx, barcodes, genes, **kwargs):
         List of paths to cell barcode files
     genes : list
         List of paths to gene label files
-    is_10X : boolean
-        Set True if mtx file contains 10X data
     transpose : boolean
         Set True to transpose mtx matrix
     barcode_index : int
