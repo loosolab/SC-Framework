@@ -6,7 +6,6 @@ import scanpy as sc
 
 # for plotting
 from matplotlib.patches import Rectangle
-
 import seaborn as sns
 import matplotlib.pyplot as plt
 import ipywidgets
@@ -65,6 +64,96 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, batch_key=
 
     if inplace is False:
         return adata
+
+
+def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True):
+    """
+    Function for predicting sex based on expression of Xist (or another gene).
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        An anndata object to predict sex for.
+    groupby : str
+        Column in adata.obs to group by.
+    gene : str, default "Xist"
+        Name of gene to use for estimating Male/Female split.
+    gene_column : str, optional
+        Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
+    threshold : float, default 0.3
+        Threshold for the minimum fraction of cells expressing the gene for the group to be considered "Female".
+    plot : bool, default True
+        Whether to plot the distribution of Xist expression per group.
+
+    Returns
+    -------
+    None :
+        adata is updated inplace. Adds a column "predicted_sex" to adata.obs.
+    """
+
+    # Normalize data before estimating expression
+    print("Normalizing adata")
+    adata_copy = adata.copy()  # ensure that adata is not changed during normalization
+    sc.pp.normalize_total(adata_copy, target_sum=None)
+    sc.pp.log1p(adata_copy)
+
+    # Get expression of gene per cell
+    if gene_column is None:
+        gene_names_lower = [s.lower() for s in adata_copy.var.index]
+    else:
+        gene_names_lower = [s.lower() for s in adata_copy.var[gene_column]]
+    gene_index = [i for i, gene_name in enumerate(gene_names_lower) if gene_name == gene.lower()][0]
+    adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].todense().A1
+
+    # Estimate which samples are male/female
+    print("Estimating male/female per group")
+    assignment = {}
+    for group, table in adata_copy.obs.groupby(groupby):
+        n_cells = len(table)
+        n_expr = sum(table["gene_expr"] > 0)
+        frac = n_expr / n_cells
+        if frac >= threshold:
+            assignment[group] = "Female"
+        else:
+            assignment[group] = "Male"
+
+    # Add assignment to adata.obs
+    df = pd.DataFrame().from_dict(assignment, orient="index")
+    df.columns = ["predicted_sex"]
+    if "predicted_sex" in adata.obs.columns:
+        adata.obs.drop(columns=["predicted_sex"], inplace=True)
+    adata.obs = adata.obs.merge(df, left_on=groupby, right_index=True, how="left")
+
+    # Plot overview if chosen
+    if plot:
+        print("Plotting violins")
+        groups = adata.obs[groupby].unique()
+        n_groups = len(groups)
+        fig, axarr = plt.subplots(1, 2, sharey=True,
+                                  figsize=[5 + len(groups) / 5, 4],
+                                  gridspec_kw={'width_ratios': [min(4, n_groups), n_groups]})
+
+        # Plot histogram of all values
+        axarr[0].hist(adata_copy.obs["gene_expr"], bins=30, orientation="horizontal", density=True, color="grey")
+        axarr[0].invert_xaxis()
+        axarr[0].set_ylabel(f"Normalized {gene} expression")
+
+        # Plot violins per group + color for female cells
+        sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups)
+        axarr[1].set_xticklabels(groups, rotation=45, ha="right")
+        axarr[1].set_ylabel("")
+        xlim = axarr[1].get_xlim()
+
+        for i, group in enumerate(groups):
+            if assignment[group] == "Female":
+                color = "red"
+                alpha = 0.3
+            else:
+                color = None
+                alpha = 0
+            axarr[1].axvspan(i - 0.5, i + 0.5, color=color, zorder=0, alpha=alpha, linewidth=0)
+        axarr[1].set_xlim(xlim)
+        axarr[1].set_title("Prediction of female groups")
 
 
 ###############################################################################
