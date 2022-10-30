@@ -10,12 +10,14 @@ import scanpy as sc
 import qnorm
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
+import multiprocessing as mp
 
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
 
 import sctoolbox.utilities
 import sctoolbox.analyser
+import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
 
 
@@ -89,7 +91,7 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
 def search_umap_parameters(adata,
                            dist_range=(0.1, 0.4, 0.1),
                            spread_range=(2.0, 3.0, 0.5),
-                           metacol="Sample", n_components=2, verbose=True, save=None):
+                           metacol="Sample", n_components=2, verbose=True, threads=4, save=None):
     """
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -107,9 +109,13 @@ def search_umap_parameters(adata,
         Number of components in UMAP calculation. Default: 2.
     verbose : bool
         Print progress to console. Default: True.
+    threads : int
+        Number of threads to use for UMAP calculation. Default: 4.
+    save : str
+        Path to save the figure to. Default: None.
     """
 
-    adata = adata.copy()
+    adata = sctoolbox.analyser.get_minimal_adata(adata)  # remove data to save memory
 
     if len(dist_range) != 3:
         raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
@@ -131,14 +137,32 @@ def search_umap_parameters(adata,
     spreads = np.arange(spread_min, spread_max, spread_step)
     spreads = np.around(spreads, 2)
 
+    # Calculate umap for each combination of spread/dist
+    pool = mp.Pool(threads)
+    jobs = {}
+    for i, spread in enumerate(spreads):  # rows
+        for j, dist in enumerate(dists):  # columns
+            job = pool.apply_async(sc.tl.umap, args=(adata, ), kwds={"min_dist": dist,
+                                                                     "spread": spread,
+                                                                     "n_components": n_components,
+                                                                     "copy": True})
+            jobs[(i, j)] = job
+    pool.close()
+
+    utils.monitor_jobs(jobs, "Computing UMAPs")
+    pool.join()
+
     # Figure with rows=spread, cols=dist
     fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
     axes = np.array(axes).reshape((-1, 1)) if len(dists) == 1 else axes    # reshape 1-column array
     axes = np.array(axes).reshape((1, -1)) if len(spreads) == 1 else axes  # reshape 1-row array
 
-    # Create umap for each combination of spread/dist
+    # Fill in UMAPs
     for i, spread in enumerate(spreads):  # rows
         for j, dist in enumerate(dists):  # columns
+
+            # Add precalculated UMAP to adata
+            adata.obsm["X_umap"] = jobs[(i, j)].get().obsm["X_umap"]
 
             if verbose is True:
                 print(f"Plotting umap for spread={spread} and dist={dist} ({i*len(dists)+j+1}/{len(dists)*len(spreads)})")
@@ -149,7 +173,6 @@ def search_umap_parameters(adata,
             else:
                 legend_loc = "none"
 
-            sc.tl.umap(adata, min_dist=dist, spread=spread, n_components=n_components)
             sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
