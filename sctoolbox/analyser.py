@@ -596,7 +596,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
         return adata
 
 
-def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', inplace=False):
+def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', max_dims=5, inplace=False):
     """
     Evaluate batch effect methods using LISI.
 
@@ -610,6 +610,8 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         The column in adata.obsm containing coordinates.
     col_name : str
         Column name for storing the LISI score in .obs.
+    max_dims : int, default 5
+        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     inplace : boolean, default False
         Whether to work inplace on the anndata object.
 
@@ -642,15 +644,15 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
 
     # run LISI on all adata objects
-
-    lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
+    obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
+    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key])
     adata_m.obs[col_name] = lisi_res.flatten()
 
     if not inplace:
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], threads=1, inplace=False):
+def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], threads=1, max_dims=5, inplace=False):
     """
     Evaluating batch correction methods for a dict of anndata objects (using LISI score calculation)
 
@@ -663,6 +665,8 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
         The column in adata.obs containing batch information.
     obsm_keys : str or list of str, default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
+    max_dims : int, default 5
+        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     threads : int
         Number of threads to use for parallelization.
     inplace : boolean, default False
@@ -693,7 +697,7 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
         pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
         for adata in adatas_m.values():
             for obsm in obsm_keys:
-                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
+                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, inplace=True)
                 pbar.update()
     else:
         utils.check_module("harmonypy")
@@ -703,23 +707,15 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
         jobs = {}
         for i, adata in enumerate(adatas_m.values()):
             for obsm_key in obsm_keys:
-                obsm_matrix = adata.obsm[obsm_key]
+                obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
                 obs_mat = adata.obs[[batch_key]]
 
-                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key]))  # callback=lambda x: adata.obs[f"LISI_score_{obsm_key}"] = x.flatten())
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key]))
                 jobs[(i, obsm_key)] = job
         pool.close()
 
-        # Wait for all jobs to finish
-        n_ready = sum([job.ready() for job in jobs.values()])
-        pbar = tqdm(total=len(jobs), desc="Calculation progress ")
-        while n_ready < len(jobs):
-            n_ready = sum([job.ready() for job in jobs.values()])
-            if pbar.n != n_ready:
-                pbar.n = n_ready
-                pbar.refresh()
-            time.sleep(1)
-        pbar.close()
+        # Monitor all jobs with a pbar
+        utils.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
         pool.join()
 
         # Assign results to adata
