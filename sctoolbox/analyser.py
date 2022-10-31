@@ -11,6 +11,7 @@ import io
 import copy
 import multiprocessing as mp
 import matplotlib.pyplot as plt
+import warnings
 
 import anndata
 import sctoolbox.creators as cr
@@ -102,13 +103,16 @@ def recluster(adata, column, clusters,
 
     # --- Plot reclustering before/after --- #
     if plot is True:
+        
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
 
-        fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-        sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
-        ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
+            fig, ax = plt.subplots(1, 2, figsize=(8, 4))
+            sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
+            ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
 
-        sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
-        ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
+            sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
+            ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
 
 
 # ----------------------- Fast estimation of multiple umaps --------------------- #

@@ -176,7 +176,9 @@ def search_umap_parameters(adata,
             else:
                 legend_loc = "none"
 
-            sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+                sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
                 axes[i, j].set_ylabel(f"spread: {spread}")
@@ -275,7 +277,9 @@ def search_clustering_parameters(adata,
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
-        sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+            sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
 
     # Hide plots not filled in
     for ax in axes[len(resolutions):]:
@@ -326,6 +330,8 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning, message="Categorical.replace is deprecated")
+            warnings.filterwarnings("ignore", category=FutureWarning, message="In a future version of pandas")
+            warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
 
             # Plot individual embedding
             if embedding == "umap":
