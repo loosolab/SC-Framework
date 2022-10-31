@@ -80,7 +80,8 @@ notebooks:
     default: false  #do not install virtual env for this job
   script:
     - pip install nbconvert
-    - conda env create -f sctoolbox_env.yml
+    - conda install -c conda-forge mamba
+    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
