@@ -54,7 +54,8 @@ cov:
       - pytest.xml
     reports:
       junit: pytest.xml
-
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 pages:
   script:
@@ -70,6 +71,13 @@ pages:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+
+#Test notebooks when code is pushed to main
+notebooks:
+  script:
+    - bash scripts/run_notebooks.sh
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
 
 #test:
 #  script:
