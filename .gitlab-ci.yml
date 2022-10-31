@@ -55,7 +55,7 @@ cov:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
 
 pages:
   script:
@@ -77,7 +77,7 @@ notebooks:
   script:
     - bash scripts/run_notebooks.sh
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 #test:
 #  script:
