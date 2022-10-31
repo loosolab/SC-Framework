@@ -76,6 +76,8 @@ pages:
 notebooks:
   script:
     - pip install nbconvert
+    - conda env create -f sctoolbox_env.yml
+    - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
