@@ -538,8 +538,8 @@ def plot_3D_UMAP(adata, color, save):
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
 
     # Save to file
-    path = save + ".html"
     if save is not None:
+        path = save + ".html"
         fig.write_html(path)
 
     print(f"Plot written to '{path}'")
