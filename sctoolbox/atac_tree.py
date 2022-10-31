@@ -11,7 +11,7 @@ class ATAC_tree(generalized_tree.Tree):
     2. setup the path in def setupDir
     3. add the path to the to_build list when it leads to a directory,
     what should be created automatically
-    4. add property dekorator and setter 
+    4. add property dekorator and setter
     '''
 
     # directories
