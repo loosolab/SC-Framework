@@ -270,7 +270,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
     # Run batch correction depending on method
     if method == "bbknn":
-        adata = sce.pp.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
+        import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
+        adata = bbknn.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
 
