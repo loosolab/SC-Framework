@@ -781,13 +781,16 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         if i < max_iterations and hvg_count < hvg_range[0]:
             min_mean /= step
         elif i < max_iterations and hvg_count > hvg_range[1]:
-            min_mean *= step
+            min_mean *= step + 0.00001  # This .000001 is to avoid an infinit loop if the current mean lie in the above if.
         else:
             break
 
     # warn if outside of range
     if hvg_count < hvg_range[0] or hvg_count > hvg_range[1]:
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
+    else:
+        sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
+        print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
     # Adding info in anndata.uns["infoprocess"]
     cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)
