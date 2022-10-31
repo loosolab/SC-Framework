@@ -9,10 +9,11 @@
 import sctoolbox
 import sctoolbox.utilities as utils
 import os
-import sys
+import sys 
 import pandas as pd
 import anndata as ad
 import pybedtools
+from pathlib import Path
 from sinto.fragments import fragments
 
 
@@ -156,16 +157,18 @@ def _overlap_two_beds(bed1, bed2, out=None):
     return out_overlap
 
 
-def pct_fragments_in_promoters(adata, gtf_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1):
+def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None, 
+                               cb_col=None, species=None, nproc=1):
     """
+    A wrapper function for pct_fragments_overlap.
     This function calculates for each cell, the percentage of fragments in a BAM alignment file 
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
-    as a new column 'pct_reads_in_promoters'. 
+    as new columns (n_total_fragments, n_fragments_in_promoters and pct_fragments_in_promoters). 
     
     :param adata: AnnData
         The anndata object containig cell barcodes in adata.obs.
     :param gtf_file: str
-        Path to GTF file for promoters regions.
+        Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.
     :param bam_file: str
         Path to BAM file. If None, a fragments file must be provided in the parameter 'fragments_file'.
     :param fragments_file: str
@@ -173,87 +176,37 @@ def pct_fragments_in_promoters(adata, gtf_file, bam_file=None, fragments_file=No
         BAM file will be converted into fragments file.
     :param cb_col: str
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
+     :param species: str
+        Name of the species, will only be used if gtf_file is None to use internal GTF files.
+        Species are {bos_taurus, caenorhabditis_elegans, canis_lupus_familiaris, danio_rerio, drosophila_melanogaster, 
+        gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
     :param nproc: int
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
     """
-    
-    if not bam_file and not fragments_file:
-        print("Either BAM file or fragments file has to be given!")
+    # exit if no gtf file and no species 
+    if not gtf_file and not species:
+        print('Please provide a GTF file or specify a species!')
         return
-    
-    # check for column in adata.obs where barcodes are
-    if cb_col:
-        try:
-            barcodes = list(adata.obs[cb_col])
-        except KeyError:
-            print(f"{cb_col} is not in adata.obs!")
-            return 
+    if not gtf_file:
+        promoters_gtf = pkg_resources.resource_filename("sctoolbox", f"data/promoters_gtf/{species}.104.promoters2000.gtf")
     else:
-        barcodes = list(adata.obs.index)
-        
-    # if only bam file is available -> convert to fragments
-    if bam_file and not fragments_file:
-        print('Converting BAM to fragments file! This may take a while...')
-        fragments_file = create_fragment_file(bam_file, nproc=nproc, out=None)
-        
-    # convert gtf to bed and get the path string
-    print('Converting GTF to sorted BED...')
-    promoters_bed_file = _convert_gtf_to_bed(gtf_file, out=None)
-
-    # overlap reads in fragments with promoter regions, return path to overlapped file
-    print('Finding overlaps...')
-    overlap_file = _overlap_two_beds(fragments_file, promoters_bed_file, out=None)
+        promoters_gtf = gtf_file
     
-    # get unique barcodes from adata.obs
-    barcodes = set(barcodes)
-    
-    print('Calculating percentage...')
-    # read overlap file as dataframe
-    df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
-    df_overlap.columns=['chr','start','end','barcode','n_fragments_in_promoters']
-    # remove barcodes not found in adata.obs
-    df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
-    # drop chr start end columns
-    df_overlap.drop(['chr','start','end'], axis=1, inplace=True)
-    # get the sum of reads counts in each cell barcode
-    df_overlap = df_overlap.groupby('barcode').sum()
-    # convert dataframe to dictionary
-    promoters_count = df_overlap['n_fragments_in_promoters'].to_dict()
-    
-    
-    # read fragments file as dataframe
-    fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
-    # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
-    fragments_df.columns=['chr','start','end','barcode','n_total_fragments']
-    fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
-    fragments_df.drop(['chr','start','end'], axis=1, inplace=True)
-    fragments_df = fragments_df.groupby('barcode').sum()
-    # add column for reads in promoters from promoters_count dict
-    fragments_df['n_fragments_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
-    # calculate percentage
-    fragments_df['pct_fragments_in_promoters'] = fragments_df['n_fragments_in_promoters'] / fragments_df['n_total_fragments']
-    
-    print('Adding results to adata object...')
-    # add results to adata.obs
-    if cb_col:
-        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='inner')
-    else:
-        adata.obs = adata.obs.merge(fragments_df, how='inner', left_index=True, right_index=True)
-        
-    print('Done')
+    # call function
+    pct_fragments_overlap(adata, regions_file=promoters_gtf, bam_file=bam_file, fragments_file=fragments_file, 
+                          cb_col=cb_col, nproc=nproc, regions_name='promoters')
 
 
-def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1, 
-                      col_added='pct_reads_overlap'):
+def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1, regions_name='list'):
     """
     This function calculates for each cell, the percentage of fragments in a BAM alignment file 
-    that overlap with regions specified in a BED file. The results are added to the anndata object
-    as a new column. 
+    that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
+    as new columns. 
     
     :param adata: AnnData
         The anndata object containig cell barcodes in adata.obs.
-    :param bed_file: str
-        Path to BED file containing regions of interest.
+    :param regions_file: str
+        Path to BED or GTF file containing regions of interest.
     :param bam_file: str
         Path to BAM file. If None, a fragments file must be provided in the parameter 'fragments_file'.
     :param fragments_file: str
@@ -263,8 +216,9 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
     :param nproc: int
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    :param col_added: int
-        The name of the column to be added to the anndata object. Defaults to 'pct_reads_overlap'
+    :param regions_name: int
+        The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name 
+        to be added to the anndata object (e.g. pct_fragments_in_{regions_name}). Defaults to 'list'
     """
     
     if not bam_file and not fragments_file:
@@ -280,6 +234,15 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
             return 
     else:
         barcodes = list(adata.obs.index)
+        
+    # check if regions file is gtf or bed
+    file_ext = Path(regions_file).suffix
+    if file_ext.lower() == '.gtf':
+        print("Converting GTF to BED...")
+        # convert gtf to bed with columns chr, start, end
+        bed_file = _convert_gtf_to_bed(regions_file, out=None)
+    elif file_ext.lower() == '.bed':
+        bed_file = regions_file
         
     # if only bam file is available -> convert to fragments
     if bam_file and not fragments_file:
@@ -293,10 +256,22 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
     # get unique barcodes from adata.obs
     barcodes = set(barcodes)
    
+
+    # make columns names that will be added to adata.obs
+    col_total_fragments = 'n_total_fragments'
+    # if no name is given or None, set default name
+    if not regions_name:
+        col_n_fragments_in_list = 'n_fragments_in_list'
+        col_pct_fragments = 'pct_fragments_in_list'
+    else:
+        col_n_fragments_in_list = 'n_fragments_in_' + regions_name
+        col_pct_fragments = 'pct_fragments_in_' + regions_name
+    
+    ### calculating percentage ###
     print('Calculating percentage...')
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
-    df_overlap.columns=['chr','start','end','barcode','n_fragments_in_promoters']
+    df_overlap.columns=['chr','start','end','barcode', col_n_fragments_in_list]
     # remove barcodes not found in adata.obs
     df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
     # drop chr start end columns
@@ -304,20 +279,21 @@ def pct_fragments_overlap(adata, bed_file, bam_file=None, fragments_file=None, c
     # get the sum of reads counts in each cell barcode
     df_overlap = df_overlap.groupby('barcode').sum()
     # convert dataframe to dictionary
-    promoters_count = df_overlap['n_fragments_in_promoters'].to_dict()
+    overlap_count = df_overlap[col_n_fragments_in_list].to_dict()
 
 
     # read fragments file as dataframe
     fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
     # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
-    fragments_df.columns=['chr','start','end','barcode','n_total_fragments']
+    
+    fragments_df.columns=['chr','start','end','barcode', col_total_fragments]
     fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
     fragments_df.drop(['chr','start','end'], axis=1, inplace=True)
     fragments_df = fragments_df.groupby('barcode').sum()
     # add column for reads in promoters from promoters_count dict
-    fragments_df['n_fragments_in_promoters'] = fragments_df.index.map(promoters_count).fillna(0)
+    fragments_df[col_n_fragments_in_list] = fragments_df.index.map(overlap_count).fillna(0)
     # calculate percentage
-    fragments_df['pct_fragments_in_promoters'] = fragments_df['n_fragments_in_promoters'] / fragments_df['n_total_fragments']
+    fragments_df[col_pct_fragments] = fragments_df[col_n_fragments_in_list] / fragments_df[col_total_fragments]
 
     print('Adding results to adata object...')
     # add results to adata.obs
