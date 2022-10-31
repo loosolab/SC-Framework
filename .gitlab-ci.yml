@@ -75,6 +75,7 @@ pages:
 #Test notebooks when code is pushed to main
 notebooks:
   script:
+    - pip install nbconvert
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
