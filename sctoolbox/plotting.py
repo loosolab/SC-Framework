@@ -2,6 +2,7 @@
 Modules for plotting single cell data
 """
 
+from math import ceil
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -9,13 +10,38 @@ import scanpy as sc
 import qnorm
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
+import multiprocessing as mp
+
+from matplotlib import cm, colors
+from matplotlib.colors import ListedColormap
 
 import sctoolbox.utilities
+import sctoolbox.analyser
+import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
+
 
 #############################################################################
 #                     PCA/tSNE/UMAP plotting functions                      #
 #############################################################################
+
+def sc_colormap():
+    """
+    Get a colormap with 0-count cells colored grey (to use for embeddings).
+
+    Returns
+    -------
+    cmap : matplotlib.colors.ListedColormap
+        Colormap with 0-count cells colored grey.
+    """
+
+    # Custom colormap for single cells
+    color_cmap = cm.get_cmap('Reds', 200)
+    newcolors = color_cmap(np.linspace(0.2, 0.9, 200))
+    newcolors[0, :] = colors.to_rgba("lightgrey")  # count 0 = grey
+    sc_cmap = ListedColormap(newcolors)
+
+    return sc_cmap
 
 
 def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
@@ -65,7 +91,7 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
 def search_umap_parameters(adata,
                            dist_range=(0.1, 0.4, 0.1),
                            spread_range=(2.0, 3.0, 0.5),
-                           metacol="Sample", n_components=2, verbose=True, save=None):
+                           metacol="Sample", n_components=2, verbose=True, threads=4, save=None):
     """
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -83,9 +109,13 @@ def search_umap_parameters(adata,
         Number of components in UMAP calculation. Default: 2.
     verbose : bool
         Print progress to console. Default: True.
+    threads : int
+        Number of threads to use for UMAP calculation. Default: 4.
+    save : str
+        Path to save the figure to. Default: None.
     """
 
-    adata = adata.copy()
+    adata = sctoolbox.analyser.get_minimal_adata(adata)  # remove data to save memory
 
     if len(dist_range) != 3:
         raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
@@ -107,12 +137,32 @@ def search_umap_parameters(adata,
     spreads = np.arange(spread_min, spread_max, spread_step)
     spreads = np.around(spreads, 2)
 
-    # Figure with rows=spread, cols=dist
-    fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
-
-    # Create umap for each combination of spread/dist
+    # Calculate umap for each combination of spread/dist
+    pool = mp.Pool(threads)
+    jobs = {}
     for i, spread in enumerate(spreads):  # rows
         for j, dist in enumerate(dists):  # columns
+            job = pool.apply_async(sc.tl.umap, args=(adata, ), kwds={"min_dist": dist,
+                                                                     "spread": spread,
+                                                                     "n_components": n_components,
+                                                                     "copy": True})
+            jobs[(i, j)] = job
+    pool.close()
+
+    utils.monitor_jobs(jobs, "Computing UMAPs")
+    pool.join()
+
+    # Figure with rows=spread, cols=dist
+    fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
+    axes = np.array(axes).reshape((-1, 1)) if len(dists) == 1 else axes    # reshape 1-column array
+    axes = np.array(axes).reshape((1, -1)) if len(spreads) == 1 else axes  # reshape 1-row array
+
+    # Fill in UMAPs
+    for i, spread in enumerate(spreads):  # rows
+        for j, dist in enumerate(dists):  # columns
+
+            # Add precalculated UMAP to adata
+            adata.obsm["X_umap"] = jobs[(i, j)].get().obsm["X_umap"]
 
             if verbose is True:
                 print(f"Plotting umap for spread={spread} and dist={dist} ({i*len(dists)+j+1}/{len(dists)*len(spreads)})")
@@ -123,7 +173,6 @@ def search_umap_parameters(adata,
             else:
                 legend_loc = "none"
 
-            sc.tl.umap(adata, min_dist=dist, spread=spread, n_components=n_components)
             sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
@@ -139,7 +188,100 @@ def search_umap_parameters(adata,
     plt.tight_layout()
     save_figure(save)
 
-    plt.show()
+    return axes
+
+
+def search_clustering_parameters(adata,
+                                 method="leiden",
+                                 resolution_range=(0.1, 1, 0.1),
+                                 embedding="X_umap",
+                                 ncols=3,
+                                 verbose=True,
+                                 save=None):
+    """
+    Plot a grid of different resolution parameters for clustering.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str, default: "leiden"
+        Clustering method to use. Can be one of 'leiden' or 'louvain'.
+    resolution_range : tuple, default: (0.1, 1, 0.1)
+        Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
+    embedding : str, default: "X_umap".
+        Embedding method to use. Must be a key in adata.obsm.
+    ncols : int, default: 3
+        Number of columns in the grid.
+    verbose : bool, default: True
+        Print progress to console.
+    save : str, default None
+        Path to save figure.
+
+    Returns
+    -------
+    axarr : array of matplotlib.axes.Axes
+        Array of axes objects containing the plot(s).
+    """
+
+    # Check input
+    if len(resolution_range) != 3:
+        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
+
+    # Check validity of parameters
+    res_min, res_max, res_step = resolution_range
+    if res_step > res_max - res_min:
+        raise ValueError("'step' of resolution_range is larger than 'max' - 'min'. Please adjust.")
+
+    # Check that coordinates for embedding is available in .obsm
+    if embedding not in adata.obsm:
+        raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
+
+    # Check that method is valid
+    if method == "leiden":
+        cl_function = sc.tl.leiden
+    elif method == "louvain":
+        cl_function = sc.tl.louvain
+    else:
+        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
+
+    # Setup parameters to loop over
+    res_min, res_max, res_step = resolution_range
+    resolutions = np.arange(res_min, res_max, res_step)
+    resolutions = np.around(resolutions, 2)
+
+    # Figure with given number of cols
+    ncols = min(ncols, len(resolutions))  # number of resolutions caps number of columns
+    nrows = int(np.ceil(len(resolutions) / ncols))
+    fig, axarr = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
+    axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
+
+    axes = axarr.flatten()
+
+    for i, res in enumerate(resolutions):
+
+        if verbose is True:
+            print(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
+
+        # Run clustering
+        key_added = method + "_" + str(round(res, 2))
+        cl_function(adata, resolution=res, key_added=key_added)
+        adata.obs[key_added] = sctoolbox.analyser.rename_categories(adata.obs[key_added])  # rename to start at 1
+        n_clusters = len(adata.obs[key_added].cat.categories)
+
+        # Plot embedding
+        title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
+        sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
+
+    # Hide plots not filled in
+    for ax in axes[len(resolutions):]:
+        ax.axis('off')
+
+    plt.tight_layout()
+    save_figure(save)
+
+    return axarr
 
 
 def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
@@ -408,96 +550,169 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
-def qcf_ploting(DFCELLS, DFGENES, COLORS, DFCUTS, PLOT=None, SAVE=None, FILENAME=None):
-    '''Violin plot with cutoffs
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
+    """
+    Creates a violinplot. With optional horizontal lines for each violin.
 
     Parameters
-    ------------
-    DEFCELLs : Pandas dataframe
-        Anndata.obs variables to be used for plot. The first colum MUST be the condition or sample description
-    DFGENES : Pandas dataframe
-        Anndata.var variables to be used for plot
-    COLORS : List
-        Name of colors to be used in the plot
-    DFCUTS : Pandas dataframe
-        Dataframe with conditions, parameters and cutoffs as columns for both DEFCELLs and DEFGENEs.
-        The cutoffs must be a list
-    PLOT : List. Default None
-        List of parameters that the cutoff lines will be plotted.
-    SAVE : Boolean
-        True, save the figure. Default: None (figure is not saved).
-    FILENAME : String
-        Path and name of file to be saved. It will be used if SAVE==True. Default: None
-    '''
-    # Author : Guilherme Valente
-    def defin_cut_lnes(NCUTS):  # NCUTS define the number of cuts of X axis
-        range_limits = np.linspace(0, 1, 2 + NCUTS).tolist()
-        list_limits = []
-        index, counter = 0, 1
-        while counter <= NCUTS + 1:
-            minim, maximim = round(range_limits[index], 2), round(range_limits[index + 1], 2)
-            if counter < NCUTS + 1:
-                maximim = maximim - 0.01
-            list_limits.append((minim, maximim))
-            index, counter = index + 1, counter + 1
-        return list_limits
+    ----------
+    table : pandas.DataFrame
+        Values to create the violins from.
+    y : str
+        Column name of table. Values that will be shown on y-axis.
+    color_by : str, default None
+        Column name of table. Used to color group violins.
+    hlines : float/ list or dict of float/ list with color_by categories as keys, default None
+        Define horizontal lines for each violin.
+    colors : list of str, default None
+        List of colors to use for violins.
+    ax : matplotlib.axes.Axes, default None
+        Axes object to draw the plot on. Otherwise use current axes.
+    title : str, default None
+        Title of the plot.
+    ylabel : bool or str, default True
+        Boolean if ylabel should be shown. Or str for custom ylabel.
 
-    # Definining the parameters to be ploted
-    lst_dfcuts_cols2 = DFCUTS.columns.tolist()
+    Returns
+    -------
+    matplotlib.axes.Axes :
+        Object containing the violinplot.
+    """
+    # check if valid column name
+    if y not in table.columns:
+        raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
 
-    # Separating dataframes for the anndata obs and var information
-    for_cells, for_genes = DFCUTS[DFCUTS[lst_dfcuts_cols2[3]] == "filter_cells"], DFCUTS[DFCUTS[lst_dfcuts_cols2[3]] == "filter_genes"]
+    # check if color_by is valid volumn name
+    if color_by is not None and color_by not in table.columns:
+        raise ValueError(f"Color grouping '{color_by}' not found in column names of table! Use one of {list(table.columns)}")
 
-    # Defining the X axis lines limits
-    lmts_X_for_cel, lmts_X_for_gen = defin_cut_lnes((len(for_cells[lst_dfcuts_cols2[0]].unique())) - 1), defin_cut_lnes((len(for_genes[lst_dfcuts_cols2[0]].unique())) - 1)
+    # set violin order
+    color_group_order = set(table[color_by]) if color_by is not None else color_by
 
-    # Ploting variables in DEFCELLs and DFGENES separately
-    ncols = 3
-    nrows = (len(DFCELLS.columns) + len(DFCELLS.columns) - 2) / ncols
-    if (nrows % 2) != 0:
-        nrows = int(nrows) + 1
+    # hlines has to be number of list if color_by=None
+    if hlines is not None and color_by is None and not isinstance(hlines, (list, tuple, int, float)):
+        raise ValueError(f"Parameter hlines has to be number or list of numbers for color_by=None. Got type {type(hlines)}.")
 
-    fig, a = plt.subplots(int(nrows), ncols, figsize=(ncols * 5, int(nrows) * 5))
-    labelsize, fontsize, a = 14, 20, a.ravel()
+    # check valid groups in hlines dict
+    if isinstance(hlines, dict):
+        invalid_keys = set(hlines.keys()) - set(table.columns)
+        if invalid_keys:
+            raise ValueError(f"Invalid dict keys in hlines parameter. Key(s) have to match table column names. Invalid keys: {invalid_keys}")
 
-    def plot_cut_lines(a, limits):
-        ax.axhline(y=max(a), xmin=limits[0], xmax=limits[1], c="orange", ls="dashed", lw=3, label=round(max(a), 3))
-        ax.axhline(y=min(a), xmin=limits[0], xmax=limits[1], c="orange", ls="dashed", lw=3, label=round(min(a), 3))
+    # create violinplot
+    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order, color=colors, ax=ax)
 
-    for idx, ax in enumerate(a):
-        if idx <= len(DFCELLS.columns) - 2:
-            lines = for_cells[for_cells[lst_dfcuts_cols2[1]].str.contains(DFCELLS.iloc[:, idx + 1].name)]
-            condi_cut = lines[[lst_dfcuts_cols2[0], lst_dfcuts_cols2[2]]]
-            parameter = ''.join(lines[lst_dfcuts_cols2[1]].unique().tolist())
-            sns.violinplot(x=DFCELLS.iloc[:, 0], y=DFCELLS.iloc[:, idx + 1], ax=ax, palette=COLORS)
-            counter = 0
-            for a in condi_cut[lst_dfcuts_cols2[2]].to_list():
-                if PLOT is not None and parameter in PLOT:
-                    plot_cut_lines(a, lmts_X_for_cel[counter])
-                else:
-                    pass
-                counter = counter + 1
-            ax.set_title("Cells: " + DFCELLS.columns[idx + 1], fontsize=fontsize)
-            ax.set_xlabel("")
-            ax.set_ylabel("")
-            ax.tick_params(labelsize=labelsize)
-        else:
-            lines = for_genes[for_genes[lst_dfcuts_cols2[1]].str.contains(DFGENES.iloc[:, idx - 3].name)]
-            param_cut = lines[[lst_dfcuts_cols2[1], lst_dfcuts_cols2[2]]]
-            parameter = ''.join(lines[lst_dfcuts_cols2[1]].unique().tolist())
-            sns.violinplot(data=DFGENES.iloc[:, idx - 3], ax=ax, color="grey")
-            for a in param_cut[lst_dfcuts_cols2[2]].to_list():
-                if PLOT is not None and parameter in PLOT:
-                    plot_cut_lines(a, lmts_X_for_gen[0])
-                else:
-                    pass
-            ax.set_title("Genes: " + DFGENES.columns[idx - 3], fontsize=fontsize)
-            ax.tick_params(labelsize=labelsize)
-    fig.tight_layout()
+    # add horizontal lines
+    if hlines:
+        # add color_group_order placeholder
+        if color_by is None:
+            color_group_order = [None]
+
+        # make iterable
+        hlines = hlines if isinstance(hlines, (list, tuple, dict)) else [hlines]
+
+        # make hlines dict
+        hlines_dict = hlines if isinstance(hlines, dict) else {}
+
+        # horizontal line length computation
+        violin_width = 1 / len(color_group_order)
+        line_length = violin_width - 2 * violin_width * 0.1  # subtract 10% padding
+        half_length = line_length / 2
+
+        # draw line(s) for each violin
+        for i, violin_name in enumerate(color_group_order):
+            violin_center = violin_width * (i + 1) - violin_width / 2
+
+            # ensure iterable
+            line_heights = hlines_dict.setdefault(violin_name, hlines)
+            line_heights = line_heights if isinstance(line_heights, (list, tuple)) else [line_heights]
+            for line_height in line_heights:
+                # skip if invalid line_height
+                if not isinstance(line_height, (int, float)):
+                    continue
+
+                # add to right axes
+                tmp_ax = ax if ax else plot
+
+                tmp_ax.axhline(y=line_height,
+                               xmin=violin_center - half_length,
+                               xmax=violin_center + half_length,
+                               color="orange",
+                               ls="dashed",
+                               lw=3)
+
+    # add title
+    if title:
+        plot.set(title=title)
+
+    # adjust y-label
+    if not ylabel:
+        plot.set(ylabel=None)
+    elif isinstance(ylabel, str):
+        plot.set(ylabel=ylabel)
+
+    # remove x-axis ticks if color_by=None
+    if color_by is None:
+        plot.tick_params(axis="x", which="both", bottom=False)
+
+    return plot
+
+
+def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize=None, dpi=300):
+    """
+    Grid of violinplots with optional cutoffs.
+
+    Parameters
+    ----------
+    anndata : anndata.AnnData
+        Anndata object providing violin data.
+    thresholds : pandas.DataFrame
+        Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
+        Note: Row order defines plot order.
+        Structure:
+            index (two columns)
+                - Name of anndata.var or anndata.obs column.
+                - Name of origin. Either "obs" or "var".
+            1st column - Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
+            2nd column - Name of anndata.var or anndata.obs column used for color grouping or None to disable.
+    colors : list of str, default None
+        List of colors for the violins.
+    filename : str, default None
+        Path and name of file to be saved.
+    ncols : int, default 3
+        Number of violins per row.
+    figsize : int tuple, default None
+        Size of figure in inches.
+    dpi : int, default 300
+        Dots per inch.
+    """
+    # test if threshold indexes are column names in .obs or .var
+    invalid_index = set(thresholds.index.get_level_values(0)) - set(anndata.obs.columns) - set(anndata.var.columns)
+    if invalid_index:
+        raise ValueError(f"Threshold table indices need to be column names of anndata.obs or anndata.var. Indices not found: {invalid_index}")
+
+    # create subplot grid
+    nrows = ceil(len(thresholds) / ncols)
+    figsize = figsize if figsize is not None else (ncols * 4, nrows * 4)
+
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, dpi=dpi, figsize=figsize, constrained_layout=True)
+    axs = axs.flatten()  # flatten to 1d array per row
+
+    # iterate over threshold rows
+    for ((name, origin), row), ax in zip(thresholds.iterrows(), axs):
+        # find out if in obs or var
+        table = anndata.var if origin == "var" else anndata.obs
+
+        # create violin
+        violinplot(table=table, y=name, hlines=row[0], color_by=row[1], colors=colors, ax=ax, title=f"{origin}: {name}", ylabel=False)
+
+    # delete unused subplots
+    for i in range(len(thresholds), len(axs)):
+        fig.delaxes(axs[i])
 
     # Save plot
-    if SAVE is True:
-        save_figure(FILENAME)
+    if filename:
+        save_figure(filename)
 
 
 def anndata_overview(adatas,
@@ -574,8 +789,8 @@ def anndata_overview(adatas,
     row_count = {"PCA-var": 1, "LISI": 1}  # all other plots count for len(color_by)
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
     cols = len(adatas)
-    figsize = figsize if figsize is not None else (cols * 4, rows * 4)
-    fig, axs = plt.subplots(nrows=rows, ncols=cols, dpi=dpi, figsize=figsize, constrained_layout=True)
+    figsize = figsize if figsize is not None else (2 + cols * 4, rows * 4)
+    fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize, constrained_layout=True)
     axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
@@ -662,9 +877,7 @@ def anndata_overview(adatas,
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
     # save
-    save_figure(output)
-    if output:
-        plt.savefig(output)
+    save_figure(output, dpi=dpi)
 
     return axs
 

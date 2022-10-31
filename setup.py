@@ -3,8 +3,9 @@ from setuptools import setup
 # Module requirements
 converter = ['rpy2==3.4.5', 'anndata2ri']
 atac = ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets']
+interactive = ['click']
 batch_correction = ['bbknn', 'mnnpy', 'harmonypy', 'scanorama']
-all = converter + atac + batch_correction
+all = converter + atac + interactive + batch_correction
 
 setup(
     name='sc-toolbox',
@@ -23,13 +24,18 @@ setup(
         'statsmodels',
         'tqdm',
         'pandas',
-        'seaborn'
+        'seaborn',
+        'ipympl',
+        'scrublet',
+        'leidenalg',
+        'IPython'
     ],
     include_package_data=True,
     extras_require={
         'all': all,
         'converter': converter,
         'atac': atac,
+        'interactive': interactive,
         'batch_correction': batch_correction
     }
 )
