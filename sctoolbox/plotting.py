@@ -324,13 +324,16 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
 
         ax = axes_list[i]
 
-        # Plot individual embedding
-        if embedding == "umap":
-            sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
-        elif embedding == "tsne":
-            sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
-        elif embedding == "pca":
-            sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning, message="Categorical.replace is deprecated")
+
+            # Plot individual embedding
+            if embedding == "umap":
+                sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+            elif embedding == "tsne":
+                sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+            elif embedding == "pca":
+                sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
 
         ax.set_title(group)
 

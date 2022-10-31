@@ -1,4 +1,5 @@
-jupyter nbconvert --to notebook --execute notebooks/1_assembling_anndata.ipynb
-jupyter nbconvert --to notebook --execute notebooks/2_QC_filtering.ipynb
-jupyter nbconvert --to notebook --execute notebooks/3_batch.ipynb
-jupyter nbconvert --to notebook --execute notebooks/4_clustering.ipynb
+cd notebooks
+papermill --log-output 1_assembling_anndata.ipynb out.ipynb
+papermill --log-output 2_QC_filtering.ipynb out.ipynb
+papermill --log-output 3_batch.ipynb out.ipynb
+papermill --log-output 4_clustering.ipynb out.ipynb

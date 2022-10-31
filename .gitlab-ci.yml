@@ -79,7 +79,7 @@ notebooks:
   inherit:
     default: false  #do not install virtual env for this job
   script:
-    - pip install nbconvert
+    - pip install papermill
     - conda install -c conda-forge mamba
     - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
     - conda init bash
