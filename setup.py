@@ -20,6 +20,7 @@ setup(
         'kneed',
         'fitter',
         'qnorm',
+        'plotly',
         'scipy',
         'statsmodels',
         'tqdm',

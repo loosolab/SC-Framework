@@ -19,6 +19,8 @@ import sctoolbox.utilities
 import sctoolbox.analyser
 import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
+import plotly as po
+import plotly.graph_objects as go
 
 
 #############################################################################
@@ -431,6 +433,116 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
             axes[j, i].set_xlabel("")
 
     # fig.tight_layout()
+
+
+def _get_3d_dotsize(n):
+    """ Utility to get the dotsize for a given number of points. """
+    if n < 1000:
+        size = 12
+    if n < 10000:
+        size = 8
+    else:
+        size = 3
+
+    return size
+
+
+def plot_3D_UMAP(adata, color, save):
+    """ Save 3D UMAP plot to a html file.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    color : str
+        Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
+    save : str
+        Save prefix. Plot will be saved to <save>.html.
+    """
+
+    n_cells = len(adata.obs)
+    size = _get_3d_dotsize(n_cells)
+
+    # Get coordinates
+    coordinates = adata.obsm['X_umap'][:, :3]
+    df = pd.DataFrame(coordinates)
+    df.columns = ["x", "y", "z"]
+
+    # Create plot
+    po.offline.init_notebook_mode(connected=True)  # prints a dict when not run in notebook
+    fig = go.Figure()
+
+    # Plot per group in obs
+    if color in adata.obs.columns and str(adata.obs[color].dtype) == "category":
+
+        df["category"] = adata.obs[color].values
+        categories = df["category"].cat.categories
+        n_groups = len(categories)
+        color_list = sns.color_palette("Set1", n_groups)
+        color_list = list(map(colors.to_hex, color_list))  # convert to hex
+
+        for i, name in enumerate(categories):
+            df_sub = df[df['category'] == name]
+
+            go_plot = go.Scatter3d(x=df_sub['x'],
+                                   y=df_sub['y'],
+                                   z=df_sub['z'],
+                                   name=name,
+                                   hovertemplate=name + '<br>(' + str(len(df_sub)) + ' cells)<extra></extra>',
+                                   showlegend=True,
+                                   mode='markers',
+                                   marker=dict(size=size,
+                                               color=[color_list[i] for _ in range(len(df_sub))],
+                                               opacity=0.8))
+            fig.add_trace(go_plot)
+
+    # Plot a gene expression
+    else:
+
+        # Color is a value column in obs
+        if color in adata.obs.columns:
+            color_values = adata.obs[color]
+
+        # color is a gene
+        elif color in adata.var.index:
+            color_idx = list(adata.var.index).index(color)
+            color_values = adata.X[:, color_idx].todense().A1
+
+        # color was not found
+        else:
+            raise KeyError("The given 'color' attribute was not found in adata.obs columns or adata.var index.")
+
+        # Plot 3d with colorbar
+        go_plot = go.Scatter3d(x=df['x'],
+                               y=df['y'],
+                               z=df['z'],
+                               name='Expression of ' + color,
+                               hovertemplate='Expression of ' + color + '<br>(' + str(len(df)) + ' cells)<extra></extra>',
+                               showlegend=True,
+                               mode='markers',
+                               marker=dict(size=size,
+                                           color=color_values,
+                                           colorscale='Viridis',
+                                           colorbar=dict(thickness=20, lenmode='fraction', len=0.75),
+                                           opacity=0.8))
+        fig.add_trace(go_plot)
+
+    # Finalize plot
+    fig.update_layout(legend={'itemsizing': 'constant'}, legend_title_text='<br><br>' + color)
+    fig.update_scenes(xaxis=dict(showspikes=False),
+                      yaxis=dict(showspikes=False),
+                      zaxis=dict(showspikes=False))
+    fig.update_layout(scene=dict(xaxis_title='UMAP1',
+                                 yaxis_title='UMAP2',
+                                 zaxis_title='UMAP3'))
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
+
+    # Save to file
+    if save is not None:
+        path = save + ".html"
+        fig.write_html(path)
+
+    print(f"Plot written to '{path}'")
 
 
 #############################################################################

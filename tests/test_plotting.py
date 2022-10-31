@@ -174,3 +174,16 @@ def test_boxplot(df):
     ax_type = type(ax).__name__
 
     assert ax_type == "AxesSubplot"
+
+
+def test_plot_3D_UMAP(adata):
+    """ Test if 3d plot is written to html """
+
+    sc.tl.umap(adata, n_components=3)
+
+    # Run 3d plotting
+    color = adata.var.index[0]
+    sctoolbox.plotting.plot_3D_UMAP(adata, color=color, save="3D_test")
+
+    # Assert creation of file
+    assert os.path.isfile("3D_test.html")
