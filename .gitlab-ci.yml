@@ -75,6 +75,9 @@ pages:
 #Test notebooks when code is pushed to main
 notebooks:
   script:
+    - pip install nbconvert
+    - conda env create -f sctoolbox_env.yml
+    - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
