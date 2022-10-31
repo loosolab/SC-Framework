@@ -25,6 +25,8 @@ class Tree:
 
         # 1. Assemble Adata
         self._assemble_dir = None
+        self._assembled_anndata_dir = None
+        self._assembled_anndata = None
 
         # 2. QC
         self._qc_dir = None
@@ -69,6 +71,9 @@ class Tree:
 
         # build notebooks paths
         self._assemble_dir = os.path.join(self._processed_run_dir, 'assembling')
+        self._assembled_anndata_dir = os.path.join(self._assemble_dir, 'anndata')
+        self._assembled_anndata = os.path.join(self._assembled_anndata_dir, self._run + '.h5ad')
+
         self._qc_dir = os.path.join(self._processed_run_dir, 'qc')
         self._norm_correction_dir = os.path.join(self._processed_run_dir, 'norm_correction')
         self._clustering_dir = os.path.join(self._processed_run_dir, 'clustering')
@@ -80,6 +85,7 @@ class Tree:
         # list of directories to build if they are not already existing
         to_build = []
         to_build.append(self.assemble_dir)
+        to_build.append(self._assembled_anndata_dir)
         to_build.append(self._qc_dir)
         to_build.append(self._norm_correction_dir)
         to_build.append(self._clustering_dir)
@@ -130,6 +136,22 @@ class Tree:
     @assemble_dir.setter
     def assemble_dir(self, value):
         self._assemble_dir = value
+
+    @property
+    def assembled_anndata_dir(self):
+        return self._assembled_anndata_dir
+
+    @assembled_anndata_dir.setter
+    def assembled_anndata_dir(self, value):
+        self._assembled_anndata_dir = value
+
+    @property
+    def assembled_anndata(self):
+        return self._assembled_anndata
+
+    @assembled_anndata.setter
+    def assembled_anndata(self, value):
+        self._assembled_anndata = value
 
     @property
     def qc_dir(self):
