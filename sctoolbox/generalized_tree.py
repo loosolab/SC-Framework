@@ -57,6 +57,7 @@ class Tree:
 
                 except Exception as e:
                     print(e)
+        print('all directories existing')
 
     def setupDir(self):
         '''
@@ -106,7 +107,7 @@ class Tree:
         if self._processing_dir is not None:
                 self.setupDir()
         else:
-            print("Warning: process_dir is None")
+            print("Warning: processing_dir is None")
 
     @property
     def processing_dir(self):
