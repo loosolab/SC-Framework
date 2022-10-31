@@ -479,7 +479,18 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         Loaded anndata object.
     """
     def loading_adata(NUM):
-        """ TODO add documentation """
+        """
+        Loading information of pathway where is stored the anndata object.
+
+        Parameters
+        ----------
+        NUM = int
+            The number of a particular notebook that created the latest anndata object.
+
+        Returns
+        -------
+        Str : The name of the latest anndata object with its pathway.
+        """
         pathway = ch.fetch_info_txt()
         files = os.listdir(''.join(pathway))
         loading = "anndata_" + str(NUM)
