@@ -103,7 +103,7 @@ def recluster(adata, column, clusters,
 
     # --- Plot reclustering before/after --- #
     if plot is True:
-        
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
 
