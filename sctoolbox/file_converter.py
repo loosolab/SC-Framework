@@ -1,99 +1,108 @@
-import os
-from os.path import join, dirname, exists
-import sys
-from pathlib import Path
+import sctoolbox.utilities as utils
 
 
-def convertToAdata(file, out, r_home=None):
-    '''
+def convertToAdata(file, output=None, r_home=None, layer=None):
+    """
     Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
-    Parameters:
+    Parameters
     ----------
-        path (str):
-            Path to the .rds or .robj file.
-        out (str):
-            path to save anndata.h5ad file.
-        r_home (str):
-            Path to the R home directory. If None will construct path based on location of python executable.
-            E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+    file : str
+        Path to the .rds or .robj file.
+    output : str, default None
+        Path to output .h5ad file. Won't save if None.
+    r_home : str, default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+    layer : str, default None
+        Provide name of layer to be stored in anndata. By default the main layer is stored.
+        In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
 
-    Returns:
-    ----------
-         anndata.AnnData:
-            Converted anndata object.
-    '''
-
-    # Set R installation path
-    if not r_home:
-        # https://stackoverflow.com/a/54845971
-        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
-
-    if not exists(r_home):
-        raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
-
-    os.environ['R_HOME'] = r_home
+    Returns
+    -------
+    anndata.AnnData or None:
+        Returns converted anndata object if output is None.
+    """
+    # Setup R
+    utils.setup_R(r_home)
 
     # Initialize R <-> python interface
+    utils.check_module("anndata2ri")
     import anndata2ri
-    from rpy2.robjects import r
+    utils.check_module("rpy2")
+    from rpy2.robjects import r, default_converter, conversion, globalenv
     anndata2ri.activate()
 
-    # check if file format is .robj or .Robj -> convert to .rds first
-    if file.split('.')[-1].lower() == 'robj':
+    # create rpy2 None to NULL converter
+    # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    none_converter = conversion.Converter("None converter")
+    none_converter.py2rpy.register(type(None), utils._none2null)
 
-        # convert to rds
-        r(f"""
-                file <- load("{file}")
-                object <- get(file[1])
-                saveRDS(object, file='{out}/tmp.rds')
-               """)
+    # check if Seurat and SingleCellExperiment are installed
+    r("""
+        if (!suppressPackageStartupMessages(require(Seurat))) {
+            stop("R dependency Seurat not found.")
+        }
+        if (!suppressPackageStartupMessages(require(SingleCellExperiment))) {
+            stop("R dependecy SingleCellExperiment not found.")
+        }
+    """)
 
-        file = f'{out}/tmp.rds'
+    # add variables into R
+    with conversion.localconverter(default_converter + none_converter):
+        globalenv["file"] = file
+        globalenv["layer"] = layer
 
-        # convert to adata
-        adata = r(f"""
-                    library(Seurat)
+    # ----- convert to anndata ----- #
+    r("""
+        # ----- load object ----- #
+        if (endsWith(tolower(file), ".robj")) {
+            # load file; returns vector of created variables
+            new_vars <- load(file)
+            # store new variable into another variable to work on
+            object <- get(new_vars[1])
+        } else if (endsWith(tolower(file), ".rds")) {
+            # load object
+            object <- readRDS(file)
+        } else {
+            stop("Unknown file extension. Expected '.robj' or '.rds' got", file)
+        }
 
-                    object <- readRDS("{file}")
+        # ----- convert to SingleCellExperiment ----- #
+        # can only convert Seurat -> SingleCellExperiment -> anndata
+        if (class(object) == "Seurat") {
+            object <- as.SingleCellExperiment(object)
+        } else if (class(object) == "SingleCellExperiment") {
+            object <- object
+        } else {
+            stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+        }
 
-                    # check type and convert if needed
-                    if (class(object) == "Seurat") {{
-                        object <- as.SingleCellExperiment(object)
-                    }} else if (class(object) == "SingleCellExperiment") {{
-                        object <- object
-                    }} else {{
-                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-                    }}
-                   """)
+        # ----- change layer ----- #
+        # adata can only store a single layer
+        if (!is.null(layer)) {
+            layers <- c(mainExpName(object), altExpNames(object))
 
+            # check if layer is valid
+            if (!layer %in% layers) {
+                stop("Invalid layer! Expected one of ", paste(layers, collapse = ", "), " got ", layer)
+            }
+
+            # select layer
+            if (layer != mainExpName(object)) {
+                object <- swapAltExp(object, layer, saved = mainExpName(object), withColData = TRUE)
+            }
+        }
+    """)
+
+    # pull SingleCellExperiment into python
+    # this also converts to anndata
+    adata = globalenv["object"]
+
+    if output:
         # Saving adata.h5ad
-        h5ad_file = out + '/anndata_1.h5ad'
-        adata.write(filename=h5ad_file, compression='gzip')
-
-        # Removing tmp.rds
-        os.remove(out + '/tmp.rds')
-
+        adata.write(filename=output, compression='gzip')
     else:
-        adata = r(f"""
-                    library(Seurat)
-
-                    object <- readRDS("{file}")
-
-                    # check type and convert if needed
-                    if (class(object) == "Seurat") {{
-                        object <- as.SingleCellExperiment(object)
-                    }} else if (class(object) == "SingleCellExperiment") {{
-                        object <- object
-                    }} else {{
-                        stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-                    }}
-                   """)
-
-        # Saving adata.h5ad
-        h5ad_file = out + '/anndata_1.h5ad'
-        adata.write(filename=h5ad_file, compression='gzip')
-
-    return adata
+        return adata

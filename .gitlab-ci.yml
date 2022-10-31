@@ -6,7 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:latest
+image: python:3.9.15  #pin due to numba not available for python 3.11
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -30,14 +30,18 @@ before_script:
   - source venv/bin/activate
   - apt update
   - apt -y install r-base
-  - pip install .
+  - pip install .[all]
   - pip install pytest
   - pip install pytest-cov
+
+# flake8 ignore rules:
+# E501 = Line too long
+# W503 = Line break occurred before a binary operator
 
 lint:
   script:
     - pip install flake8
-    - flake8 sctoolbox --ignore=E501 # ignore line too long
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
 
 cov:
