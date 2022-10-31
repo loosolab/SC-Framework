@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+
 class Tree:
     '''
     Super class to handle sc-framework related directories.
@@ -50,7 +51,7 @@ class Tree:
         '''
 
         for path in to_build:
-            if path != None and not os.path.isdir(path):
+            if path is not None and not os.path.isdir(path):
                 try:
                     Path(path).mkdir(parents=True)
                     print(path + ': NEWLY SETUP')
@@ -94,8 +95,10 @@ class Tree:
         to_build.append(self._complete_report_dir)
 
         self.makeDir(to_build)
+
 ########################################################################################################################
     # CLASS PROPERTIES (GETTER AND SETTER)
+
     @property
     def run(self):
         return self._run
@@ -105,7 +108,7 @@ class Tree:
         self._run = value
         # call setupDir if the processing directorie is defined
         if self._processing_dir is not None:
-                self.setupDir()
+            self.setupDir()
         else:
             print("Warning: processing_dir is None")
 
@@ -118,7 +121,7 @@ class Tree:
         self._processing_dir = value
         # call setupDir if the run name is defined
         if self._run is not None:
-                self.setupDir()
+            self.setupDir()
         else:
             print("Warning: run is None")
 

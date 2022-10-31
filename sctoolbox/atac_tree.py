@@ -1,6 +1,7 @@
 import sctoolbox.generalized_tree as generalized_tree
 import os
 
+
 class ATAC_tree(generalized_tree.Tree):
     '''
     Sub-class of Tree.
@@ -9,7 +10,7 @@ class ATAC_tree(generalized_tree.Tree):
     1. add variable below and initialise it with None
     2. setup the path in def setupDir
     3. add the path to the to_build list when it leads to a directory,
-     what should be created automatically
+    what should be created automatically
     4. add property dekorator and setter 
     '''
 
@@ -41,8 +42,8 @@ class ATAC_tree(generalized_tree.Tree):
 
         self.makeDir(to_build)
 
-
     # INPUT RELATED DIRECTORIES
+
     @property
     def pre_pro_dir(self):
         return self._pre_pro_dir
@@ -58,6 +59,7 @@ class ATAC_tree(generalized_tree.Tree):
     @qc_plots_dir.setter
     def qc_plots_dir(self, value):
         self._qc_plots_dir = value
+
 
 if __name__ == "__main__":
 
