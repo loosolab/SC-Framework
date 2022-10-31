@@ -74,6 +74,7 @@ pages:
 
 #Test notebooks when code is pushed to main
 notebooks:
+  image: continuumio/miniconda3:latest
   script:
     - pip install nbconvert
     - conda env create -f sctoolbox_env.yml
