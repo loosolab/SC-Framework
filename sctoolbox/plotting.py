@@ -11,6 +11,7 @@ import qnorm
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import multiprocessing as mp
+import warnings
 
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
@@ -935,15 +936,6 @@ def anndata_overview(adatas,
                 if plot_type == "PCA-var":
                     plot_pca_variance(adata, ax=ax)  # this plot takes no color
 
-                elif plot_type == "UMAP":
-                    sc.pl.umap(adata, ax=ax, **embedding_kwargs)
-
-                elif plot_type == "tSNE":
-                    sc.pl.tsne(adata, ax=ax, **embedding_kwargs)
-
-                elif plot_type == "PCA":
-                    sc.pl.pca(adata, ax=ax, **embedding_kwargs)
-
                 elif plot_type == "LISI":
 
                     # Find any LISI scores in adata.obs
@@ -955,8 +947,23 @@ def anndata_overview(adatas,
                         raise ValueError(e)
 
                     # Plot LISI scores
-                    boxplot(adata.obs[lisi_columns], ax=ax)
-                    LISI_axes.append(ax)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
+                        boxplot(adata.obs[lisi_columns], ax=ax)
+                        LISI_axes.append(ax)
+
+                else:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+
+                        if plot_type == "UMAP":
+                            sc.pl.umap(adata, ax=ax, **embedding_kwargs)
+
+                        elif plot_type == "tSNE":
+                            sc.pl.tsne(adata, ax=ax, **embedding_kwargs)
+
+                        elif plot_type == "PCA":
+                            sc.pl.pca(adata, ax=ax, **embedding_kwargs)
 
                 # Set title for the legend
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
