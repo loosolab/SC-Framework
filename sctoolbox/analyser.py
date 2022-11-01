@@ -4,15 +4,171 @@ import scanpy.external as sce
 from fitter import Fitter
 import numpy as np
 from kneed import KneeLocator
+import scipy.stats
 from scipy import sparse
 from contextlib import redirect_stderr
 import io
 import copy
+import multiprocessing as mp
+import matplotlib.pyplot as plt
 
 import anndata
 import sctoolbox.creators as cr
 import sctoolbox.annotation as an
 import sctoolbox.utilities as utils
+
+
+def rename_categories(series):
+    """
+    Rename categories in a pandas series to numbers between 1-(number of categories).
+
+    Parameters
+    ----------
+    series : pandas.Series
+        Series to rename categories in.
+
+    Returns
+    -------
+    pandas.Series
+        Series with renamed categories.
+    """
+
+    n_categories = series.cat.categories
+    new_names = [str(i) for i in range(1, len(n_categories) + 1)]
+    translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
+    series = series.cat.rename_categories(translate_dict)
+
+    return series
+
+
+def recluster(adata, column, clusters,
+              task="join", method="leiden", resolution=1, key_added=None, plot=True):
+    """
+    Recluster an anndata object based on an existing clustering column in .obs.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    column : str
+        Column in adata.obs to use for re-clustering.
+    clusters : str or list of str
+        Clusters in `column` to re-cluster.
+    task : str, default "join"
+        Task to perform. Options are:
+        - "join": Join clusters in `clusters` into one cluster.
+        - "split": Split clusters in `clusters` are merged and then reclustered using `method` and `resolution`.
+    method : str, default "leiden"
+        Clustering method to use. Must be one of "leiden" or "louvain".
+    resolution : float, default 1
+        Resolution parameter for clustering.
+    key_added : str, default None
+        Name of the new column in adata.obs. If None, the column name is set to `<column>_recluster`.
+    plot : bool, default True
+        If a plot should be generated of the re-clustering.
+    """
+
+    adata_copy = adata.copy()
+
+    # --- Get ready --- #
+    # check if column is in adata.obs
+    if column not in adata.obs.columns:
+        raise ValueError(f"Column {column} not found in adata.obs")
+
+    # Decide key_added
+    if key_added is None:
+        key_added = f"{column}_recluster"
+
+    # Check that method is valid
+    if method == "leiden":
+        cl_function = sc.tl.leiden
+    elif method == "louvain":
+        cl_function = sc.tl.louvain
+    else:
+        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
+
+    # --- Start reclustering --- #
+    if task == "join":
+        translate = {cluster: clusters[0] for cluster in clusters}
+        adata.obs[key_added] = adata.obs[column].replace(translate)
+
+    elif task == "split":
+        cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
+
+    else:
+        raise ValueError(f"Task '{task}' is not valid. Task must be one of: 'join', 'split'")
+
+    adata.obs[key_added] = rename_categories(adata.obs[key_added])  # rename to start at 1
+
+    # --- Plot reclustering before/after --- #
+    if plot is True:
+
+        fig, ax = plt.subplots(1, 2, figsize=(8, 4))
+        sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
+        ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
+
+        sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
+        ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
+
+
+# ----------------------- Fast estimation of multiple umaps --------------------- #
+
+def get_minimal_adata(adata):
+    """ Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    anndata.AnnData
+        Minimal copy of anndata object.
+    """
+
+    adata_minimal = adata.copy()
+    adata_minimal.X = None
+    adata_minimal.layers = None
+    adata_minimal.raw = None
+
+    return adata_minimal
+
+
+def wrap_umap(adatas, threads=4):
+    """
+    Compute umap for a list of adatas in parallel.
+
+    Parameters
+    ----------
+    adatas : list of anndata.AnnData
+        List of anndata objects to compute umap on.
+    threads : int, default 4
+        Number of threads to use.
+
+    Returns
+    -------
+    None
+        UMAP coordinates are added to each adata.obsm["X_umap"].
+    """
+
+    # TODO: Check that adatas is a list of anndata objects
+    pool = mp.Pool(threads)
+
+    jobs = []
+    for i, adata in enumerate(adatas):
+        adata_minimal = get_minimal_adata(adata)
+        job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds={"copy": True})
+        jobs.append(job)
+    pool.close()
+
+    utils.monitor_jobs(jobs, "Computing UMAPs ")
+    pool.join()
+
+    # Get results and add to adatas
+    for i, adata in enumerate(adatas):
+        adata_return = jobs[i].get()
+        adata.obsm["X_umap"] = adata_return.obsm["X_umap"]
 
 
 # --------------------------- Batch correction methods -------------------------- #
@@ -64,11 +220,9 @@ def wrap_corrections(adata,
                 utils.check_module(required_packages[method])
 
     # Collect batch correction per method
-    anndata_dict = {}
+    anndata_dict = {'uncorrected': adata}
     for method in methods:
         anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
-
-    anndata_dict['uncorrected'] = adata
 
     print("Finished batch correction(s)!")
 
@@ -183,157 +337,146 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
 # --------------------------- Automatic thresholds ------------------------- #
 
-def establishing_cuts(data2, interval, skew_val, kurtosis_norm, df_cuts, param2, condi2):
+def get_threshold(data, interval, limit_on="both"):
     """
-    Defining cutoffs for anndata.obs and anndata.var parameters
-
-    TODO change param names to be more meaningful
+    Define cutoffs for the given data. Depending on distribution shape either by knee detection or using a percentile.
 
     Parameters
     ----------
-    data2 : pandas.core.series.Series
-        Dataset to be have the cutoffs calculated.
-    interval : int or float
-        A percentage value from 0 to 1 or 100 to be used to calculate the confidence interval or percentile
-    skew_val : int
-        The skew value of the dataset under evaluated
-    kurtosis_norm : int
-        The normalized kurtosis value of the dataset under evaluated
-    df_cuts : pandas.DataFrame
-        An empty dataframe with data_to_evaluate, parameters, cutoff and strategy as columns to be filled.
-        The rows will be the information of each sample analysed by this function.
-    param2 : str
-        The name of anndata.obs or anndata.var parameter to be evaluated by this function
-    condi2 : str
-        The name of anndata.obs sample to be evaluated by this function
+    data : numbers list
+        Data the thresholds will be calculated on.
+    interval : int
+        A percentage value from 0 to 100 to be used to calculate the confidence interval or percentile.
+    limit_on : str, default 'both'
+        Define a threshold for lower, upper or both sides of the distribution. Options: ['lower', 'upper', 'both']
 
     Returns
     -------
-    pandas.DataFrame :
-        Pandas dataframe with cutoffs for each parameter and dataset.
-
-    Notes
-    -----
-    Author: Guilherme Valente
+    number or number tuple:
+        Depending on 'limit_on' will give a single value for the lower or upper threshold or a tuple for both (lower, upper).
+        Lower threshold is defined as `interval`, upper as `100 - interval`.
     """
+    # -------------------- setup -------------------- #
+    # fall back to percentile thresholds if true
+    fallback = False
+    # check limit_on value
+    if limit_on not in ["upper", "lower", "both"]:
+        raise ValueError(f"Parameter limit_on has to be one of {['upper', 'lower', 'both']}. Got {limit_on}.")
 
-    def filling_df_cut(df_cuts2, condi3, param3, lst_cuts, lst_dfcuts_cols):
-        """ TODO add documentation """
-        if condi3 is None:
-            df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: "_", lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_genes"}, ignore_index=True)
-        else:
-            df_cuts2 = df_cuts2.append({lst_dfcuts_cols[0]: condi3, lst_dfcuts_cols[1]: param3, lst_dfcuts_cols[2]: lst_cuts, lst_dfcuts_cols[3]: "filter_cells"}, ignore_index=True)
-        return df_cuts2
+    # compute skew and kurtosis
+    # skew and kurtosis are used to identify distribution shape.
+    # TODO why is skew rounded?
+    # TODO why is kurtosis casted to int?
+    # The skew value describes the symmetry of a distribution aka whether it's shifted to left or right.
+    # >0 = right skew; longer tail on the right of its peak
+    #  0 = no skew; symmetrical, equal tails on both sides of the peak
+    # <0 = left skew; longer tail on the left of its peak
+    # See https://www.scribbr.com/statistics/skewness/
+    skew = round(scipy.stats.skew(data, bias=False), 1)
+    # The kurtosis value describes the taildness aka outlier frequency of a distribution.
+    # >3 = frequent outliers; leptokurtic
+    #  3 = moderate outliers; mesokurtic
+    # <3 = infrequent outliers; platykurtic
+    # See https://www.scribbr.com/statistics/kurtosis/
+    kurtosis = int(scipy.stats.kurtosis(data, fisher=False, bias=False))
 
-    # Defining the types of distributions to be evaluated and organizing the data
-    lst_distr, curves, directions = ["uniform", "expon", "powerlaw", "norm"], ["convex", "concave"], ["increasing", "decreasing"]
-    lst_dfcuts_cols, np_data2, lst_data2 = df_cuts.columns.tolist(), data2.to_numpy(), data2.tolist()
-    knns = list()
-
-    # This is a normal distribution
-    if skew_val == 0:
-        cut_right, cut_left = np.percentile(np_data2, (interval * 100)), np.percentile(np_data2, 100 - (interval * 100))  # Percentile
-        join_cuts = [cut_right, cut_left]
-        if 0 in join_cuts:
-            join_cuts = [max(join_cuts)]
-        df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
-
-    # This is a mesokurtic skewed distributed (long tail and not sharp)
-    elif skew_val != 0 and kurtosis_norm == 0:
-        cut_right, cut_left = np.percentile(np_data2, (interval * 100)), np.percentile(np_data2, 100 - (interval * 100))  # Percentile
-        join_cuts = [cut_right, cut_left]
-        if 0 in join_cuts:
-            join_cuts = [max(join_cuts)]
-        df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
-
-    # This is a skewed distribution (long tail), and platykurtic (not extremely sharp, not so long tail) or leptokurtic (extremely sharp, long tail)
-    elif skew_val != 0 and kurtosis_norm != 0:
-        f = Fitter(np_data2, distributions=lst_distr)
+    # -------------------- find thresholds -------------------- #
+    # This is a skewed distribution, and platykurtic (not extremely sharp, not so long but onesided tail)
+    # or
+    # This is a leptokurtic distribution (extremely sharp, long tail)
+    # TODO The comment does not seem to match the if condition.
+    if skew != 0 and kurtosis != 3:
+        # find out kind of distribution through fitting
+        f = Fitter(data, distributions=["uniform", "expon", "powerlaw", "norm"])
         f.fit()
-        best_fit = list(f.get_best().keys())  # Finding the best fit
+        # name of best fit
+        best_fit = list(f.get_best().keys())[0]
 
         # This is the power law or exponential distributed data
-        if "expon" in best_fit or "powerlaw" in best_fit:
-            lst_data2.sort()
-            histon2, bins_built = np.histogram(a=lst_data2, bins=int(len(lst_data2) / 100), weights=range(0, len(lst_data2), 1))
-            for a in curves:
-                for b in directions:
-                    knns2 = KneeLocator(x=range(1, len(histon2) + 1), y=histon2, curve=a, direction=b)
-                    knn2_converted = bins_built[knns2.knee - 1].item()
-                    if knn2_converted > 0:
-                        knns.append(knn2_converted)
-            kn_selected = [min(knns)]
-            df_cutoffs = filling_df_cut(df_cuts, condi2, param2, kn_selected, lst_dfcuts_cols)
+        if best_fit == "expon" or best_fit == "powerlaw":
+            # set knee as thresholds
+            data.sort()
 
-        # This is the skewed shaped but not like exponential nor powerlaw
+            # TODO why do knee location on binned data instead of raw?
+            # reduce data to histon bins
+            hist, bin_edges = np.histogram(a=data, bins=int(len(data) / 100), weights=range(0, len(data), 1))
+
+            # TODO why have a list of knees?
+            thresholds = []
+            for curve in ["convex", "concave"]:
+                # TODO why do increasing and decreasing?
+                for direction in ["increasing", "decreasing"]:
+                    # find knee
+                    knee_obj = KneeLocator(x=range(1, len(hist) + 1), y=hist, curve=curve, direction=direction)
+
+                    # convert knee (histon number) to bin edge (actual data value)
+                    threshold = bin_edges[knee_obj.knee - 1]
+
+                    # TODO why is this done?
+                    # remove 0 if in thresholds
+                    if threshold > 0:
+                        thresholds.append(threshold)
+
+            # Why only keep lowest value?
+            thresholds = [min(thresholds), None]
         else:
-            cut_right, cut_left = np.percentile(np_data2, (interval * 100)), np.percentile(np_data2, 100 - (interval * 100))  # Percentile
-            join_cuts = [cut_right, cut_left]
-            if 0 in join_cuts:
-                join_cuts = [max(join_cuts)]
-            df_cutoffs = filling_df_cut(df_cuts, condi2, param2, join_cuts, lst_dfcuts_cols)
+            fallback = True
 
-    return df_cutoffs
+    # This is a normal distribution
+    # or
+    # This is a mesokurtic skewed distributed (long tail and not sharp)
+    # or
+    # This is the skewed shaped but not like exponential nor powerlaw
+    # TODO The comment does not seem to match the if condition.
+    if skew == 0 or skew != 0 and kurtosis == 3 or fallback:
+        thresholds = [np.percentile(data, interval), np.percentile(data, 100 - interval)]
+
+        # TODO why is this done?
+        # remove 0 if in thresholds
+        thresholds = [None if t == 0 else t for t in thresholds]
+
+    # return thresholds
+    if limit_on == "both":
+        return tuple(thresholds)
+    elif limit_on == "lower":
+        return thresholds[0]
+    else:
+        return thresholds[1]
 
 
-def qcmetric_calculator(anndata, control_var=False):
+def calculate_qc_metrics(anndata, percent_top=None, inplace=False, **kwargs):
     """
-    Calculating the qc metrics using the Scanpy
+    Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`
+
+    TODO add logging
+    TODO we may want to rethink if this function is necessary
 
     Parameters
     ----------
     anndata : anndata.AnnData
         Anndata object the quality metrics are added to.
-    control_var : boolean, default False
-        TODO this parameter is not used!!!
-
-        If True, the adata.uns["infoprocess"]["gene_labeled"] will be used in the qc_var to control the metrics calculation
-        The qc_var of sc.pp.calculate_qc_metrics will use this variable to control the qc metrics calculation (e.g. "is_mito").
-        For details, see qc_vars at https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
-
-    Notes
-    -----
-    Author: Guilherme Valente
+    percent_top : [int], default None
+        Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
+    inplace : bool, default False
+        If the anndata object should be modified in place.
+    ** kwargs :
+        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
 
     Returns
     -------
-    anndata.AnnData:
-        Returns anndata object with added quality metrics.
+    anndata.AnnData or None:
+        Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.
     """
-    # Message and others
-    m1 = "pp.calculate_qc_metrics qc_vars: "
-    m2 = "ID_"
-    obs_info = ['total_counts', 'n_genes_by_counts', 'log1p_total_counts']
-    var_info = ['n_cells_by_counts', 'mean_counts', 'log1p_mean_counts', 'pct_dropout_by_counts']
+    # add metrics to copy of anndata
+    if not inplace:
+        anndata = anndata.copy()
 
-    var = anndata.uns["infoprocess"]["genes_labeled"]
-    if var is not None:
-        qc_metrics = sc.pp.calculate_qc_metrics(adata=anndata, qc_vars=var, inplace=False, log1p=True)
-        for a in var:
-            obs_info.append('total_counts_' + a)
-            obs_info.append('pct_counts_' + a)
-    else:
-        qc_metrics = sc.pp.calculate_qc_metrics(adata=anndata, inplace=False, log1p=True)
+    # compute metrics
+    sc.pp.calculate_qc_metrics(adata=anndata, percent_top=percent_top, inplace=True, **kwargs)
 
-    for a in list(qc_metrics[0].columns.values):
-        if a in obs_info:
-            anndata.obs[a] = qc_metrics[0][a]
-    for a in list(qc_metrics[1].columns.values):
-        if a in var_info:
-            anndata.var[a] = qc_metrics[1][a]
-
-    # Annotating into anndata.uns["infoprocess"] the qc_var parameter for the sc.pp.calculate_qc_metrics
-    cr.build_infor(anndata, m1, var)
-
-    # Storing the original counts
-    for a in obs_info:
-        go_to_id = anndata.obs[a].sum()
-        cr.build_infor(anndata, m2 + "c_" + a, go_to_id)
-    for a in var_info:
-        go_to_id = anndata.var[a].sum()
-        cr.build_infor(anndata, m2 + "g_" + a, go_to_id)
-
-    return anndata
+    # return modified anndata
+    if not inplace:
+        return anndata
 
 
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
@@ -386,10 +529,6 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
     log_kwargs : dict, default {}
         Additional parameters forwarded to scanpy.pp.log1p().
 
-    Notes
-    -----
-    Author: Guilherme Valente
-
     Returns
     -------
     anndata.AnnData or None:
@@ -428,10 +567,6 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
     -------
     anndata.Anndata or None:
         Anndata with expression values normalized and log converted and PCA computed.
-
-    Notes
-    -----
-    Author: Guilherme Valente
     """
     adata_m = anndata if inplace else anndata.copy()
 
@@ -482,7 +617,37 @@ def define_PC(anndata):
     return knee
 
 
-def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', inplace=False):
+def subset_PCA(adata, n_pcs, start=0, inplace=True):
+    """
+    Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing the PCA coordinates.
+    n_pcs : int
+        Number of PCs to keep.
+    start : int, default 0
+        Index (0-based) of the first PC to keep. E.g. if start = 1 and n_pcs = 10, you will exclude the first PC to keep 9 PCs.
+    inplace : bool, default True
+        Whether to work inplace on the anndata object.
+
+    Returns
+    --------
+    adata or None
+        Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
+    """
+
+    if inplace is False:
+        adata = adata.copy()
+
+    adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
+
+    if inplace is False:
+        return adata
+
+
+def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', max_dims=5, inplace=False):
     """
     Evaluate batch effect methods using LISI.
 
@@ -496,6 +661,8 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         The column in adata.obsm containing coordinates.
     col_name : str
         Column name for storing the LISI score in .obs.
+    max_dims : int, default 5
+        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     inplace : boolean, default False
         Whether to work inplace on the anndata object.
 
@@ -528,15 +695,15 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         raise KeyError(f"adata.obs does not contain the batch key: {batch_key}")
 
     # run LISI on all adata objects
-
-    lisi_res = compute_lisi(adata_m.obsm[obsm_key], adata_m.obs, [batch_key])
+    obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
+    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key])
     adata_m.obs[col_name] = lisi_res.flatten()
 
     if not inplace:
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inplace=False):
+def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], threads=1, max_dims=5, inplace=False):
     """
     Evaluating batch correction methods for a dict of anndata objects (using LISI score calculation)
 
@@ -549,6 +716,10 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
         The column in adata.obs containing batch information.
     obsm_keys : str or list of str, default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
+    max_dims : int, default 5
+        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
+    threads : int
+        Number of threads to use for parallelization.
     inplace : boolean, default False
         Whether to work inplace on the anndata dict.
 
@@ -572,12 +743,36 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], inpl
         obsm_keys = [obsm_keys]
 
     # Evaluate batch effect for every adata
+    if threads == 1:
 
-    pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
-    for adata in adatas_m.values():
-        for obsm in obsm_keys:
-            evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, inplace=True)
-            pbar.update()
+        pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
+        for adata in adatas_m.values():
+            for obsm in obsm_keys:
+                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, inplace=True)
+                pbar.update()
+    else:
+        utils.check_module("harmonypy")
+        from harmonypy.lisi import compute_lisi
+
+        pool = mp.Pool(threads)
+        jobs = {}
+        for i, adata in enumerate(adatas_m.values()):
+            for obsm_key in obsm_keys:
+                obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
+                obs_mat = adata.obs[[batch_key]]
+
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key]))
+                jobs[(i, obsm_key)] = job
+        pool.close()
+
+        # Monitor all jobs with a pbar
+        utils.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
+        pool.join()
+
+        # Assign results to adata
+        for adata_i, obsm_key in jobs:
+            adata = list(adatas_m.values())[adata_i]
+            adata.obs[f"LISI_score_{obsm_key}"] = jobs[(adata_i, obsm_key)].get().flatten()
 
     if not inplace:
         return adatas_m

@@ -5,6 +5,7 @@ import os
 import tempfile
 import shutil
 import pandas as pd
+import numpy as np
 
 
 @pytest.fixture
@@ -33,6 +34,16 @@ def tmp_file():
     shutil.rmtree(tmpdir)
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
+def test_sc_colormap():
+    """ Test whether sc_colormap returns a colormap """
+
+    cmap = sctoolbox.plotting.sc_colormap()
+    assert type(cmap).__name__ == "ListedColormap"
+
+
 def test_plot_pca_variance(adata):
     """ Test if Axes object is returned. """
     ax = sctoolbox.plotting.plot_pca_variance(adata)
@@ -48,6 +59,28 @@ def test_plot_pca_variance_fail(adata):
 
     with pytest.raises(KeyError):
         sctoolbox.plotting.plot_pca_variance(adata, method=invalid)
+
+
+def test_search_umap_parameters(adata):
+    """ Test if search_umap_parameters returns an array of axes. """
+
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+    axarr = sctoolbox.plotting.search_umap_parameters(adata,
+                                                      metacol="condition",
+                                                      dist_range=(0.1, 0.2, 0.1),
+                                                      spread_range=(2.0, 2.5, 0.5))
+
+    assert type(axarr).__name__ == "ndarray"
+    assert axarr.shape == (1, 1)
+
+
+def test_search_clustering_parameters(adata):
+    """ Test if search_clustering_parameters returns an array of axes. """
+
+    axarr = sctoolbox.plotting.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1))
+
+    assert type(axarr).__name__ == "ndarray"
+    assert axarr.shape == (1, 2)
 
 
 def test_anndata_overview(adata, tmp_file):
@@ -141,3 +174,16 @@ def test_boxplot(df):
     ax_type = type(ax).__name__
 
     assert ax_type == "AxesSubplot"
+
+
+def test_plot_3D_UMAP(adata):
+    """ Test if 3d plot is written to html """
+
+    sc.tl.umap(adata, n_components=3)
+
+    # Run 3d plotting
+    color = adata.var.index[0]
+    sctoolbox.plotting.plot_3D_UMAP(adata, color=color, save="3D_test")
+
+    # Assert creation of file
+    assert os.path.isfile("3D_test.html")

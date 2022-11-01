@@ -1,6 +1,7 @@
 import sctoolbox.generalized_tree as generalized_tree
 import os
 
+
 class ATAC_tree(generalized_tree.Tree):
     '''
     Sub-class of Tree.
@@ -9,17 +10,13 @@ class ATAC_tree(generalized_tree.Tree):
     1. add variable below and initialise it with None
     2. setup the path in def setupDir
     3. add the path to the to_build list when it leads to a directory,
-     what should be created automatically
-    4. add property dekorator and setter 
+    what should be created automatically
+    4. add property dekorator and setter
     '''
 
     # directories
     _pre_pro_dir = None
-    _assembled_anndata_dir = None
     _qc_plots_dir = None
-
-    # files
-    _assembled_anndata = None
 
     def setupDir(self):
         '''
@@ -35,12 +32,6 @@ class ATAC_tree(generalized_tree.Tree):
         ################################################################################################################
         # setup ATAC related directories:
 
-        # Assembling notebook related paths
-        # anndata files directory
-        self._assembled_anndata_dir = os.path.join(self._assemble_dir, 'anndata')
-        # anndata file of the run
-        self._assembled_anndata = os.path.join(self._assembled_anndata_dir, self._run + '.h5ad')
-
         # QC notebook related paths
         self._qc_plots_dir = os.path.join(self.qc_dir, 'plots')
         # ADD ATAC PATHS
@@ -48,12 +39,11 @@ class ATAC_tree(generalized_tree.Tree):
         # list of directories to build if they are not already existing
         to_build = []
         to_build.append(self._qc_plots_dir)
-        to_build.append(self._assembled_anndata_dir)
 
         self.makeDir(to_build)
 
-
     # INPUT RELATED DIRECTORIES
+
     @property
     def pre_pro_dir(self):
         return self._pre_pro_dir
@@ -63,28 +53,13 @@ class ATAC_tree(generalized_tree.Tree):
         self._pre_pro_dir = value
 
     @property
-    def assembled_anndata_dir(self):
-        return self._assembled_anndata_dir
-
-    @assembled_anndata_dir.setter
-    def assembled_anndata_dir(self, value):
-        self._assembled_anndata_dir = value
-
-    @property
-    def assembled_anndata(self):
-        return self._assembled_anndata
-
-    @assembled_anndata.setter
-    def assembled_anndata(self, value):
-        self._assembled_anndata = value
-
-    @property
     def qc_plots_dir(self):
         return self._qc_plots_dir
 
     @qc_plots_dir.setter
     def qc_plots_dir(self, value):
         self._qc_plots_dir = value
+
 
 if __name__ == "__main__":
 
