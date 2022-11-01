@@ -163,8 +163,8 @@ def _overlap_two_beds(bed1, bed2, out=None):
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
 
-    a = pybedtools.BedTool(bed1)
-    b = pybedtools.BedTool(bed2)
+    # a = pybedtools.BedTool(bed1)
+    # b = pybedtools.BedTool(bed2)
 
     # overlap = a.intersect(b, u=True, sorted=True, output=out_overlap)
 
@@ -211,7 +211,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
         Set to True if the provided BAM file is not sorted.
     """
 
-    # exit if no gtf file and no species 
+    # exit if no gtf file and no species
     if not gtf_file and not species:
         raise ValueError('Please provide a GTF file or specify a species!')
     if not gtf_file:
@@ -227,7 +227,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None,
                           regions_name='list', nproc=1, sort_bam=False, sort_regions=False):
     """
-    This function calculates for each cell, the percentage of fragments in a BAM alignment file 
+    This function calculates for each cell, the percentage of fragments in a BAM alignment file
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
     as new columns.
 
@@ -303,7 +303,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
         col_n_fragments_in_list = 'n_fragments_in_' + regions_name
         col_pct_fragments = 'pct_fragments_in_' + regions_name
 
-    ### calculating percentage ###
+    # calculating percentage
     print('Calculating percentage...')
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
