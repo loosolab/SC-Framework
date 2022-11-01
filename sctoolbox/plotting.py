@@ -594,24 +594,27 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
     counts_wide_percent = counts_wide.div(counts_wide.sum(axis=1), axis=0) * 100
 
     # Plot barplots
-    fig, axarr = plt.subplots(1, 2, figsize=figsize)
+    if groupby is not None:
+        _, axarr = plt.subplots(1, 2, figsize=figsize)
+    else:
+        _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
+        axarr = [axarr]
 
     counts_wide.plot.bar(stacked=True, ax=axarr[0], legend=False)
     axarr[0].set_title("Number of cells")
     axarr[0].set_xticklabels(axarr[0].get_xticklabels(), rotation=45, ha="right")
-
-    counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
-    axarr[1].set_title("Percentage of cells")
-    axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
-
     axarr[0].grid(False)
-    axarr[1].grid(False)
 
-    # Set location of legend
-    if groupby is None:
-        axarr[1].get_legend().remove()
+    if groupby is not None:
+        counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
+        axarr[1].set_title("Percentage of cells")
+        axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
+        axarr[1].grid(False)
+
+        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))  # Set location of legend
+
     else:
-        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))
+        axarr[-1].get_legend().remove()
 
     save_figure(save)
     plt.show()
