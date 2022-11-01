@@ -15,6 +15,7 @@ setup(
     python_requires='>=3',
     install_requires=[
         'matplotlib',
+        'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'numpy',
         'scanpy',
         'kneed',
