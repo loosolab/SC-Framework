@@ -129,6 +129,8 @@ def _convert_gtf_to_bed(gtf, out=None):
         with open(out_unsorted, "w") as out_file:
             for row in file:
                 row = row.decode("utf-8")  # convert binary to string
+                if row.startswith('#'):  # skip if header
+                    continue
                 row = row.split('\t')
                 line = row[0] + '\t' + row[3] + '\t' + row[4] + '\n'
                 out_file.write(line)
@@ -174,7 +176,13 @@ def _overlap_two_beds(bed1, bed2, out=None):
     b = pybedtools.BedTool(bed2)
     
     overlap = a.intersect(b, u=True, sorted=True, output=out_overlap)
-
+    
+    # check if there is an overlap
+    bed_file = pybedtools.BedTool(out_overlap)
+    if len(bed_file) == 0:
+        return False
+    
+    
     #bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]),'bedtools')
     #intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
     
@@ -216,8 +224,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
     
     # exit if no gtf file and no species 
     if not gtf_file and not species:
-        print('Please provide a GTF file or specify a species!')
-        return
+        raise ValueError('Please provide a GTF file or specify a species!')
     if not gtf_file:
         promoters_gtf = pkg_resources.resource_filename("sctoolbox", f"data/promoters_gtf/{species}.104.promoters2000.gtf")
     else:
@@ -229,7 +236,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 
 
 def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None, 
-                          regions_name='list', nproc=1, sort_bam=False):
+                          regions_name='list', nproc=1, sort_bam=False, sort_regions=False):
     """
     This function calculates for each cell, the percentage of fragments in a BAM alignment file 
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
@@ -275,7 +282,10 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
         # convert gtf to bed with columns chr, start, end
         bed_file = _convert_gtf_to_bed(regions_file, out=None)
     elif file_ext.lower() == '.bed':
-        bed_file = regions_file
+        bed_file = os.path.splitext(regions_file)[0] + '_sorted.bed'
+        if sort_regions:
+            sort_cmd = f'sort -k1,1 -k2,2n {regions_file} > {bed_file}'
+            os.system(sort_cmd)
         
     # if only bam file is available -> convert to fragments
     if bam_file and not fragments_file:
@@ -285,6 +295,11 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # overlap reads in fragments with promoter regions, return path to overlapped file
     print('Finding overlaps...')
     overlap_file = _overlap_two_beds(fragments_file, bed_file, out=None)
+    
+    # check if there was an overlap
+    if not overlap_file:
+        print("There was no overlap!")
+        return
     
     # get unique barcodes from adata.obs
     barcodes = set(barcodes)
@@ -304,6 +319,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     print('Calculating percentage...')
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
+    # check if there is no overlap
     df_overlap.columns=['chr','start','end','barcode', col_n_fragments_in_list]
     # remove barcodes not found in adata.obs
     df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
@@ -331,8 +347,8 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     print('Adding results to adata object...')
     # add results to adata.obs
     if cb_col:
-        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='inner')
+        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='left').fillna(0)
     else:
-        adata.obs = adata.obs.merge(fragments_df, how='inner', left_index=True, right_index=True)
+        adata.obs = adata.obs.merge(fragments_df, how='left', left_index=True, right_index=True).fillna(0)
 
     print('Done')
