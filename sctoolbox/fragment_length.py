@@ -1,10 +1,9 @@
 import math
-from collections import defaultdict
 import pandas as pd
 import episcanpy as epi
-import pysam
 import multiprocessing as mp
 import sctoolbox.bam
+
 
 def mean_fragment_length(bam_obj):
     """
@@ -17,18 +16,18 @@ def mean_fragment_length(bam_obj):
     q = None
     previous_barcode = None
     for read in bam_obj:
-        l = read.template_length
-        l = math.sqrt(l**2)
+        length = read.template_length
+        length = math.sqrt(length**2)
         barcode = read.qname.split(":")[0].upper()
         if barcode != previous_barcode:
             if q is not None:
                 mean_fragment_lengths[previous_barcode] = sum(fragment_lengths) / len(fragment_lengths)
             fragment_lengths = []
-            fragment_lengths.append(l)
+            fragment_lengths.append(length)
             previous_barcode = barcode
         else:
             if q != read.query_name:
-                fragment_lengths.append(l)
+                fragment_lengths.append(length)
 
         q = read.query_name
 
@@ -55,8 +54,8 @@ def mean_fragment_length_fragment_file(fragment_file):
             start = fragment[1]
             stop = fragment[2]
             barcode = fragment[3]
-            l = stop - start
-            length = math.sqrt(l**2)
+            length = stop - start
+            length = math.sqrt(length**2)
 
             if fl_df is None:
                 fl_df = pd.DataFrame({'barcode': [barcode], 'length': [length], 'count': [0]}).set_index('barcode')
