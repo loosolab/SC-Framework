@@ -10,6 +10,7 @@ import sctoolbox
 import sctoolbox.utilities as utils
 import os
 import sys 
+import pkg_resources
 import pandas as pd
 import anndata as ad
 import pybedtools
@@ -17,22 +18,22 @@ from pathlib import Path
 from sinto.fragments import fragments
 
 
-def check_pct_fragments_in_promoters(adata):
+def check_pct_fragments_in_promoters(adata, qc_col):
     """
     Check if percentage of reads in promoters is in adata.obs.
-    :param adata: AnnData
+    :param adata: anndata.AnnData
         AnnData object
     :return boolean
         True if pct_reads_in_promoters column is in adata.obs, otherwise False.
     """
 
-    if 'pct_fragments_in_promoters' in adata.obs.columns:
+    if qc_col in adata.obs.columns:
         return True
     else:
         return False
 
 
-def create_fragment_file(bam, nproc=1, out=None):
+def create_fragment_file(bam, out=None, nproc=1, sort_bam=False):
     """
     Create fragments file out of a BAM file using the package sinto
 
@@ -42,32 +43,59 @@ def create_fragment_file(bam, nproc=1, out=None):
         Number of threads for parallelization.
     :param out: str
         Path to save fragments file. If none, the file will be saved in the same folder as tha BAM file.
-    
+    :param sort_bam: boolean
+        Set to True if the provided BAM file is not sorted.
     :return: str
         Path to fragments file.
     """
 
+    utils.check_module("pysam")
+    import pysam
+
+    
+    # extract bam file name and path
+    
     if not out:
-        path = os.path.splitext(bam)
-        out = f"{path[0]}_fragments.bed"
+        path = os.path.splitext(bam) 
+        out_unsorted = f"{path[0]}_fragments.bed"
         out_sorted = f"{path[0]}_fragments_sorted.bed"
+        if sort_bam:
+            bam_sorted = f"{path[0]}_sorted.bam"
+    else:
+        name = os.path.basename(bam).split('.')[0]
+        out_unsorted = os.path.join(out, f"{name}_fragments.bed")
+        out_sorted = os.path.join(out, f"{name}_fragments_sorted.bed")
+        if sort_bam:
+            bam_sorted = os.path.join(out, f"{name}_sorted.bam")
         
+    # sort bam if not sorted
+    if sort_bam:
+        print("Sorting BAM file...")
+        pysam.sort("-o", bam_sorted, bam)
+        bam = bam_sorted
+        
+    # check for bam index file
+    if not os.path.exists(bam + ".bai"):
+        print("Bamfile has no index - trying to index with pysam...")
+        pysam.index(bam)
+
     #sinto = os.path.join('/'.join(sys.executable.split('/')[:-1]),'sinto')
     #create_cmd = f'''{sinto} fragments -b {bam} -p {nproc} -f {out} --barcode_regex "[^:]*"'''
-
-    fragments(bam, out, readname_barcode="[^:]*")
-    
     # execute command
     #os.system(create_cmd)
+    
+    fragments(bam, out_unsorted, nproc=nproc, readname_barcode="[^:]*")
+    
+    
     print('Finished creating fragments file. Now sorting...')
 
     # sort
-    sort_cmd = f'sort -k1,1 -k2,2n {out} > {out_sorted}'
+    sort_cmd = f'sort -k1,1 -k2,2n {out_unsorted} > {out_sorted}'
     os.system(sort_cmd)
     print('Finished sorting fragments')
     
     # remove unsorted
-    os.remove(out)
+    os.remove(out_unsorted)
     
     # return path to sorted fragments file
     return out_sorted
@@ -140,7 +168,7 @@ def _overlap_two_beds(bed1, bed2, out=None):
         path = os.path.splitext(bed1)
         out_overlap = f"{path[0]}_{name_2}_overlap.bed"
     else:
-        out_overlap = os.path.join(out, f'{name_1}_{name_2}.bed')
+        out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
     
     a = pybedtools.BedTool(bed1)
     b = pybedtools.BedTool(bed2)
@@ -158,14 +186,14 @@ def _overlap_two_beds(bed1, bed2, out=None):
 
 
 def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None, 
-                               cb_col=None, species=None, nproc=1):
+                               cb_col=None, species=None, nproc=1, sort_bam=False):
     """
     A wrapper function for pct_fragments_overlap.
     This function calculates for each cell, the percentage of fragments in a BAM alignment file 
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
     as new columns (n_total_fragments, n_fragments_in_promoters and pct_fragments_in_promoters). 
     
-    :param adata: AnnData
+    :param adata: anndata.AnnData
         The anndata object containig cell barcodes in adata.obs.
     :param gtf_file: str
         Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.
@@ -182,7 +210,10 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
         gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
     :param nproc: int
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
+    :param sort_bam: boolean
+        Set to True if the provided BAM file is not sorted.
     """
+    
     # exit if no gtf file and no species 
     if not gtf_file and not species:
         print('Please provide a GTF file or specify a species!')
@@ -194,16 +225,17 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
     
     # call function
     pct_fragments_overlap(adata, regions_file=promoters_gtf, bam_file=bam_file, fragments_file=fragments_file, 
-                          cb_col=cb_col, nproc=nproc, regions_name='promoters')
+                          cb_col=cb_col, regions_name='promoters', nproc=nproc, sort_bam=sort_bam)
 
 
-def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None, nproc=1, regions_name='list'):
+def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None, 
+                          regions_name='list', nproc=1, sort_bam=False):
     """
     This function calculates for each cell, the percentage of fragments in a BAM alignment file 
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
     as new columns. 
     
-    :param adata: AnnData
+    :param adata: anndata.AnnData
         The anndata object containig cell barcodes in adata.obs.
     :param regions_file: str
         Path to BED or GTF file containing regions of interest.
@@ -214,26 +246,27 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
         BAM file will be converted into fragments file.
     :param cb_col: str
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
-    :param nproc: int
-        Number of threads for parallelization. Will be used to convert BAM to fragments file.
     :param regions_name: int
         The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name 
-        to be added to the anndata object (e.g. pct_fragments_in_{regions_name}). Defaults to 'list'
+        to be added to the anndata object (e.g. pct_fragments_in_{regions_name}). Defaults to 'list'.
+    :param nproc: int
+        Number of threads for parallelization. Will be used to convert BAM to fragments file.
+    :param sort_bam: boolean
+        Set to True if the provided BAM file is not sorted.
     """
     
     if not bam_file and not fragments_file:
-        print("Either BAM file or fragments file has to be given!")
-        return
+        raise ValueError("Either BAM file or fragments file has to be provided!")
     
     # check for column in adata.obs where barcodes are
     if cb_col:
         try:
-            barcodes = list(adata.obs[cb_col])
+            barcodes = adata.obs[cb_col].to_list()
         except KeyError:
             print(f"{cb_col} is not in adata.obs!")
             return 
     else:
-        barcodes = list(adata.obs.index)
+        barcodes = adata.obs.index.to_list()
         
     # check if regions file is gtf or bed
     file_ext = Path(regions_file).suffix
@@ -247,7 +280,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # if only bam file is available -> convert to fragments
     if bam_file and not fragments_file:
         print('Converting BAM to fragments file! This may take a while...')
-        fragments_file = create_fragment_file(bam_file, nproc=nproc, out=None)
+        fragments_file = create_fragment_file(bam_file, out=None, nproc=nproc, sort_bam=sort_bam)
 
     # overlap reads in fragments with promoter regions, return path to overlapped file
     print('Finding overlaps...')
