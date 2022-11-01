@@ -56,8 +56,8 @@ def mean_fragment_length_fragment_file(fragment_file):
             start = fragment[1]
             stop = fragment[2]
             barcode = fragment[3]
-            l = stop - start
-            length = math.sqrt(l**2)
+            length = stop - start
+            length = math.sqrt(length**2)
 
             if fl_df is None:
                 fl_df = pd.DataFrame({'barcode': [barcode], 'length': [length], 'count': [0]}).set_index('barcode')
@@ -105,7 +105,7 @@ def mean_fl_multi_thread(fragment_file, n_threads=4):
         else:
             mean_fl_df = mean_fl_df.add(fl_df, fill_value=0)
 
-    fl_df['mean'] = fl_df['length'] / fl_df['count']
+    mean_fl_df['mean'] = mean_fl_df['length'] / mean_fl_df['count']
 
     return mean_fl_df
 
@@ -153,17 +153,19 @@ def add_mfl_bam(bam, adata):
 
     return adata
 
-
-def add_mfl_fragment(fragment, adata):
+def add_mfl_fragment(fragment, adata, n_threads=8):
     """
     Merge mean fragment lengths with adata.obs
     """
     # compute mean fragment lengths
-    mean_fragment_lengths = mean_fl_multi_thread(fragment, n_threads=4)
-    # set barcode as index
-    adata.obs = adata.obs.set_index('barcode')
+    mean_fragment_lengths = mean_fl_multi_thread(fragment, n_threads=n_threads)
+    # remove the columns we don't need
+    mean_fragment_lengths.pop('length')
+    mean_fragment_lengths.pop('count')
+    # check if the barcodes are the index of the adata.obs
+    if not adata.obs.index.name == "barcode":
+        adata.obs = adata.obs.set_index("barcode")
     # Merge with adata.obs
-    # mean_fragment_lengths.columns=['mean']
     adata.obs = adata.obs.merge(mean_fragment_lengths, left_index=True, right_index=True, how="left")
     adata.obs.rename(columns={'mean': 'mean_fragment_length'}, inplace=True)
 
@@ -184,10 +186,14 @@ if __name__ == "__main__":
 
     import time
     bam = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/cropped_146.bam"
-    adata = epi.read("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146.h5ad")
+    adata = epi.read_h5ad("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146.h5ad")
     fragment_file = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/fragments_cropped_146.bed"
 
+    start = time.time()
     adata = add_mfl_fragment(fragment_file, adata)
+    end = time.time()
+    print("Time: ", end - start)
+    print(adata.obs.head())
 
     # start = time.time()
     # mean_fl = mean_fragment_length_fragment_file(fragment_file)
