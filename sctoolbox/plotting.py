@@ -309,7 +309,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     """
 
     # Get categories
-    groups = adata.obs[groupby].cat.categories
+    groups = adata.obs[groupby].astype("category").cat.categories
     n_groups = len(groups)
 
     # Find out how many rows are needed
@@ -352,7 +352,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     # Save figure
     save_figure(save)
 
-    plt.show()
+    return axarr
 
 
 def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None, **kwargs):
@@ -443,6 +443,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
             axes[j, i].set_xlabel("")
 
     # fig.tight_layout()
+    return axes
 
 
 def _get_3d_dotsize(n):
@@ -559,7 +560,7 @@ def plot_3D_UMAP(adata, color, save):
 #                   Other overview plots for expression                     #
 #############################################################################
 
-def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
+def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -569,10 +570,12 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
         Annotated data matrix object.
     x : str
         Name of the column in adata.obs to group by on the x axis.
-    groupby : str
-        Name of the column in adata.obs to created stacked bars on the y axis. Default: None (the bars are not split).
-    save : str
-        Path to save the plot. Default: None (plot is not saved).
+    groupby : str, default None
+        Name of the column in adata.obs to created stacked bars on the y axis. If None, the bars are not split.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved. 
+    figsize : tuple, default None
+        Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     """
 
     # Get cell counts for groups or all
@@ -594,6 +597,9 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
     counts_wide_percent = counts_wide.div(counts_wide.sum(axis=1), axis=0) * 100
 
     # Plot barplots
+    if figsize is None:
+        figsize = (5 + 5*(groupby is not None), 3)  # if groupby is not None, add 5 to width
+
     if groupby is not None:
         _, axarr = plt.subplots(1, 2, figsize=figsize)
     else:
@@ -613,11 +619,9 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
 
         axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))  # Set location of legend
 
-    else:
-        axarr[-1].get_legend().remove()
-
     save_figure(save)
-    plt.show()
+
+    return axarr
 
 
 def group_expression_boxplot(adata, gene_list, groupby, figsize=None):

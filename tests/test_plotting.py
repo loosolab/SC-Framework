@@ -12,8 +12,15 @@ import numpy as np
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    adata = sc.read_h5ad(f)
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
 
-    return sc.read_h5ad(f)
+    sc.tl.umap(adata)
+    sc.tl.tsne(adata)
+    sc.tl.pca(adata)
+
+    return adata
 
 
 @pytest.fixture
@@ -64,14 +71,48 @@ def test_plot_pca_variance_fail(adata):
 def test_search_umap_parameters(adata):
     """ Test if search_umap_parameters returns an array of axes. """
 
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     axarr = sctoolbox.plotting.search_umap_parameters(adata,
                                                       metacol="condition",
-                                                      dist_range=(0.1, 0.2, 0.1),
-                                                      spread_range=(2.0, 2.5, 0.5))
+                                                      dist_range=(0.1, 0.3, 0.1),
+                                                      spread_range=(2.0, 3.0, 0.5))
 
     assert type(axarr).__name__ == "ndarray"
-    assert axarr.shape == (1, 1)
+    assert axarr.shape == (2, 2)
+
+
+@pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
+def test_search_umap_parameters_ranges(adata, range):
+
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.search_umap_parameters(adata,
+                                                metacol="condition",
+                                                dist_range=range)
+
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.search_umap_parameters(adata,
+                                                    metacol="condition",
+                                                    spread_range=range)
+
+
+@pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
+def test_plot_group_embeddings(adata, embedding):
+
+    axarr = sctoolbox.plotting.plot_group_embeddings(adata, groupby="condition", embedding=embedding, ncols=2)
+
+    assert axarr.shape == (2, 2)
+
+
+@pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
+def test_compare_embeddings(adata, embedding):
+
+    adata_cp = adata.copy()
+    adata_cp.obs.drop(columns=["condition"], inplace=True)  # check that function can deal with missing vars
+
+    adata_list = [adata, adata_cp]
+    var_list = [adata.var.index[0], "condition"]
+    axarr = sctoolbox.plotting.compare_embeddings(adata_list, var_list, embedding=embedding)
+
+    assert axarr.shape == (2, 2)
 
 
 def test_search_clustering_parameters(adata):
@@ -187,3 +228,14 @@ def test_plot_3D_UMAP(adata):
 
     # Assert creation of file
     assert os.path.isfile("3D_test.html")
+
+
+@pytest.mark.parametrize("groupby", [None, "condition"])
+def test_n_cells_barplot(adata, groupby):
+
+    axarr = sctoolbox.plotting.n_cells_barplot(adata, "clustering", groupby=groupby)
+
+    if groupby is None:
+        assert len(axarr) == 1
+    else:
+        assert len(axarr) == 2
