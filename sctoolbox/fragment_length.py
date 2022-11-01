@@ -1,10 +1,9 @@
 import math
-from collections import defaultdict
 import pandas as pd
 import episcanpy as epi
-import pysam
 import multiprocessing as mp
 import sctoolbox.bam
+
 
 def mean_fragment_length(bam_obj):
     """
@@ -14,21 +13,22 @@ def mean_fragment_length(bam_obj):
     :return:
     """
     mean_fragment_lengths = {}
+    fragment_lengths = []
     q = None
     previous_barcode = None
     for read in bam_obj:
-        l = read.template_length
-        l = math.sqrt(l**2)
+        length = read.template_length
+        length = math.sqrt(length**2)
         barcode = read.qname.split(":")[0].upper()
         if barcode != previous_barcode:
             if q is not None:
                 mean_fragment_lengths[previous_barcode] = sum(fragment_lengths) / len(fragment_lengths)
-            fragment_lengths = []
-            fragment_lengths.append(l)
+            fragment_lengths.clear()
+            fragment_lengths.append(length)
             previous_barcode = barcode
         else:
             if q != read.query_name:
-                fragment_lengths.append(l)
+                fragment_lengths.append(length)
 
         q = read.query_name
 
@@ -36,6 +36,7 @@ def mean_fragment_length(bam_obj):
     mean_fragment_lengths_df = pd.DataFrame.from_dict(mean_fragment_lengths, orient="index")
 
     return mean_fragment_lengths_df
+
 
 def mean_fragment_length_fragment_file(fragment_file):
     """
@@ -55,8 +56,8 @@ def mean_fragment_length_fragment_file(fragment_file):
             start = fragment[1]
             stop = fragment[2]
             barcode = fragment[3]
-            l = stop - start
-            length = math.sqrt(l**2)
+            length = stop - start
+            length = math.sqrt(length**2)
 
             if fl_df is None:
                 fl_df = pd.DataFrame({'barcode': [barcode], 'length': [length], 'count': [0]}).set_index('barcode')
@@ -75,6 +76,7 @@ def mean_fragment_length_fragment_file(fragment_file):
             mean_fl_df = mean_fl_df.add(fl_df, fill_value=0)
 
     return mean_fl_df
+
 
 def mean_fl_multi_thread(fragment_file, n_threads=4):
     """
@@ -95,7 +97,7 @@ def mean_fl_multi_thread(fragment_file, n_threads=4):
         jobs.append(job)
     pool.close()
 
-    #collect results
+    # collect results
     for job in jobs:
         fl_df = job.get()
         if mean_fl_df is None:
@@ -106,6 +108,7 @@ def mean_fl_multi_thread(fragment_file, n_threads=4):
     mean_fl_df['mean'] = mean_fl_df['length'] / mean_fl_df['count']
 
     return mean_fl_df
+
 
 def calc_chunk(chunk, fl_df):
     '''
@@ -118,8 +121,8 @@ def calc_chunk(chunk, fl_df):
         start = fragment[1]
         stop = fragment[2]
         barcode = fragment[3]
-        l = stop - start
-        length = math.sqrt(l ** 2)
+        length = stop - start
+        length = math.sqrt(length ** 2)
 
         if fl_df is None:
             fl_df = pd.DataFrame({'barcode': [barcode], 'length': [length], 'count': [0]}).set_index('barcode')
@@ -144,11 +147,12 @@ def add_mfl_bam(bam, adata):
     # set barcode as index
     adata.obs = adata.obs.set_index("barcode")
     # Merge with adata.obs
-    mean_fragment_lengths.columns=['mean']
+    mean_fragment_lengths.columns = ['mean']
     adata.obs = adata.obs.merge(mean_fragment_lengths, left_index=True, right_index=True, how="left")
     adata.obs.rename(columns={'mean': 'mean_fragment_length'}, inplace=True)
 
     return adata
+
 
 def add_mfl_fragment(fragment, adata, n_threads=8):
     """
@@ -168,6 +172,7 @@ def add_mfl_fragment(fragment, adata, n_threads=8):
 
     return adata
 
+
 def check_mfl(adata):
     """
     Check if mean fragment length is in adata.obs
@@ -176,6 +181,7 @@ def check_mfl(adata):
         return True
     else:
         return False
+
 
 if __name__ == "__main__":
 
@@ -200,10 +206,10 @@ if __name__ == "__main__":
     # stop = time.time()
     # print("Benchmark multi core: ", stop - start)
 
-    #adata = add_mean_fragment_length(bam, adata)
+    # adata = add_mean_fragment_length(bam, adata)
 
-# write adata to h5ad
-    #adata.write("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146_fl.h5ad")
+    # write adata to h5ad
+    # adata.write("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146_fl.h5ad")
 
-#for read1, read2 in read_pair_generator(bam_obj):
-#    print(read1, read2)
+    # for read1, read2 in read_pair_generator(bam_obj):
+    #    print(read1, read2)
