@@ -8,6 +8,9 @@ dependencies:
   - r-seurat
   - bioconductor-singlecellexperiment
   - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
+  - scanpy>=1.9
+  - mnnpy
+  - python-annoy
   - pip
   - pip:
     - -e ".[all]" # install sctoolbox from local repository, has to be in current directory!

@@ -85,13 +85,13 @@ def test_search_clustering_parameters(adata):
 
 def test_anndata_overview(adata, tmp_file):
     """ Test anndata_overview success and file generation. """
-    adatas = {"raw": adata}
+    adatas = {"raw": adata, "corrected": adata}
 
     assert not os.path.exists(tmp_file)
 
     sctoolbox.plotting.anndata_overview(
         adatas=adatas,
-        color_by=list(adata.obs.columns),
+        color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
         plots=["PCA", "PCA-var", "UMAP"],
         figsize=None,
         output=None,

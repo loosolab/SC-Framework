@@ -11,6 +11,7 @@ import io
 import copy
 import multiprocessing as mp
 import matplotlib.pyplot as plt
+import warnings
 
 import anndata
 import sctoolbox.creators as cr
@@ -103,12 +104,15 @@ def recluster(adata, column, clusters,
     # --- Plot reclustering before/after --- #
     if plot is True:
 
-        fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-        sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
-        ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
 
-        sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
-        ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
+            fig, ax = plt.subplots(1, 2, figsize=(8, 4))
+            sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
+            ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
+
+            sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
+            ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
 
 
 # ----------------------- Fast estimation of multiple umaps --------------------- #
@@ -270,7 +274,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
     # Run batch correction depending on method
     if method == "bbknn":
-        adata = sce.pp.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
+        import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
+        adata = bbknn.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
 

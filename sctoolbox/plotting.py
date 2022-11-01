@@ -11,6 +11,7 @@ import qnorm
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import multiprocessing as mp
+import warnings
 
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
@@ -175,7 +176,9 @@ def search_umap_parameters(adata,
             else:
                 legend_loc = "none"
 
-            sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+                sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
                 axes[i, j].set_ylabel(f"spread: {spread}")
@@ -274,7 +277,9 @@ def search_clustering_parameters(adata,
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
-        sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+            sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
 
     # Hide plots not filled in
     for ax in axes[len(resolutions):]:
@@ -323,13 +328,18 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
 
         ax = axes_list[i]
 
-        # Plot individual embedding
-        if embedding == "umap":
-            sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
-        elif embedding == "tsne":
-            sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
-        elif embedding == "pca":
-            sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning, message="Categorical.replace is deprecated")
+            warnings.filterwarnings("ignore", category=FutureWarning, message="In a future version of pandas")
+            warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+
+            # Plot individual embedding
+            if embedding == "umap":
+                sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+            elif embedding == "tsne":
+                sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+            elif embedding == "pca":
+                sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
 
         ax.set_title(group)
 
@@ -935,15 +945,6 @@ def anndata_overview(adatas,
                 if plot_type == "PCA-var":
                     plot_pca_variance(adata, ax=ax)  # this plot takes no color
 
-                elif plot_type == "UMAP":
-                    sc.pl.umap(adata, ax=ax, **embedding_kwargs)
-
-                elif plot_type == "tSNE":
-                    sc.pl.tsne(adata, ax=ax, **embedding_kwargs)
-
-                elif plot_type == "PCA":
-                    sc.pl.pca(adata, ax=ax, **embedding_kwargs)
-
                 elif plot_type == "LISI":
 
                     # Find any LISI scores in adata.obs
@@ -955,8 +956,23 @@ def anndata_overview(adatas,
                         raise ValueError(e)
 
                     # Plot LISI scores
-                    boxplot(adata.obs[lisi_columns], ax=ax)
-                    LISI_axes.append(ax)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
+                        boxplot(adata.obs[lisi_columns], ax=ax)
+                        LISI_axes.append(ax)
+
+                else:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
+
+                        if plot_type == "UMAP":
+                            sc.pl.umap(adata, ax=ax, **embedding_kwargs)
+
+                        elif plot_type == "tSNE":
+                            sc.pl.tsne(adata, ax=ax, **embedding_kwargs)
+
+                        elif plot_type == "PCA":
+                            sc.pl.pca(adata, ax=ax, **embedding_kwargs)
 
                 # Set title for the legend
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
