@@ -1,7 +1,5 @@
 from sctoolbox import calc_overlap_pct as overlap
-import sctoolbox.utilities as utils
 import os
-import sys
 import pytest
 import anndata as ad
 
@@ -117,7 +115,7 @@ regions_1 = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'hg38.blackl
 
 @pytest.mark.parametrize("regions, name", [(regions_1, 'blacklist')])
 def test_pct_fragments_overlap(test_adata, regions, test_bam, name):
-    overlap.pct_fragments_overlap(adata=test_adata, regions_file=regions, bam_file=test_bam, 
+    overlap.pct_fragments_overlap(adata=test_adata, regions_file=regions, bam_file=test_bam,
                                   regions_name=name, sort_bam=True, sort_regions=True)
 
     col_total_fragments = 'n_total_fragments'
