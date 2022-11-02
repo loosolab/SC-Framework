@@ -5,6 +5,24 @@ import anndata
 from matplotlib import pyplot as plt
 
 
+def get_keys(adata, manual_thresholds):
+    """
+    get the keys of the obs columns
+    :param adata:
+    :return:
+    """
+    m_thresholds = {}
+    legend = adata.uns["legend"]
+    for key, value in manual_thresholds.items():
+        if key in legend:
+            obs_key = legend[key]
+            m_thresholds[obs_key] = value
+        else:
+            print('column: ' + key + ' not found in adata.obs')
+
+    return m_thresholds
+
+
 def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=True):
     """
     return the thresholds for the filtering
@@ -13,6 +31,8 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=T
     :param automatic_thresholds:
     :return:
     """
+    manual_thresholds = get_keys(adata, manual_thresholds)
+
     if automatic_thresholds:
         keys = list(manual_thresholds.keys())
         automatic_thresholds = qc_filter.automatic_thresholds(adata, columns=keys)
