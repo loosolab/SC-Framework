@@ -78,6 +78,7 @@ def filter_n_fragments(adata, upper_threshold=1000000, lower_threshold=100000, c
 
     return adata
 
+
 def filter_chrM_fragments(adata, upper_threshold=1000, lower_threshold=0, col="UM"):
     """
     filter the number of total fragments per barcode
