@@ -334,23 +334,24 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     print('Adding results to adata object...')
     # add results to adata.obs
     if cb_col:
-        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='left') # .fillna(0)
+        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='left')  # .fillna(0)
     else:
-        adata.obs = adata.obs.merge(fragments_df, how='left', left_index=True, right_index=True) # .fillna(0)
+        adata.obs = adata.obs.merge(fragments_df, how='left', left_index=True, right_index=True)  # .fillna(0)
 
     print('Done')
+
 
 if __name__ == '__main__':
 
-    import episcanpy as epi
-    # read adata
-    adata = epi.read_h5ad('adata.h5ad')
-
-    bam_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/sorted_cropped_146.bam'
-    fragments = '/home/jan/python-workspace/sc-atac/data/bamfiles/fragments_cropped_146.bed'
-
-    promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
-    species = None
-
-    pct_fragments_in_promoters(adata, promoters_gtf, species=species, bam_file=bam_file, cb_col=None, nproc=1)
-    print('Done')
+    # import episcanpy as epi
+    # # read adata
+    # adata = epi.read_h5ad('adata.h5ad')
+    #
+    # bam_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/sorted_cropped_146.bam'
+    # fragments = '/home/jan/python-workspace/sc-atac/data/bamfiles/fragments_cropped_146.bed'
+    #
+    # promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
+    # species = None
+    #
+    # pct_fragments_in_promoters(adata, promoters_gtf, species=species, bam_file=bam_file, cb_col=None, nproc=1)
+    # print('Done')
