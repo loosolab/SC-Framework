@@ -2,6 +2,7 @@ import episcanpy as epi
 import scanpy as sc
 from matplotlib import pyplot as plt
 
+
 def plot_ov_hist(adata, threshold_features=1000):
     """
     plot as overview of the adata object the coverage of the number of cells and features (peaks)
@@ -19,9 +20,10 @@ def plot_ov_hist(adata, threshold_features=1000):
 
     epi.pp.coverage_features(adata, binary=True, log=False, bins=50,
                              threshold=None)
-    #epi.pp.coverage_features(adata, binary=True, log=10, bins=50, threshold=None)
+    # epi.pp.coverage_features(adata, binary=True, log=10, bins=50, threshold=None)
 
     epi.pp.cal_var(adata)
+
 
 def plot_obs_violin(adata, obs_cols):
     """
@@ -35,6 +37,7 @@ def plot_obs_violin(adata, obs_cols):
         sc.pl.violin(adata, col, show=False)
 
     plt.show()
+
 
 if __name__ == '__main__':
 
