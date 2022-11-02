@@ -342,7 +342,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 if __name__ == '__main__':
-
+    pass
     # import episcanpy as epi
     # # read adata
     # adata = epi.read_h5ad('adata.h5ad')
