@@ -4,7 +4,7 @@ import sctoolbox.qc_filter as qc_filter
 
 def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=True):
     """
-    filter the adata object based on the thresholds
+    return the thresholds for the filtering
     :param adata:
     :param manual_thresholds:
     :param automatic_thresholds:
@@ -14,7 +14,6 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=T
         keys = list(manual_thresholds.keys())
         automatic_thresholds = qc_filter.automatic_thresholds(adata, columns=keys)
         return automatic_thresholds
-        # qc_filter.apply_qc_thresholds(adata, automatic_thresholds)
     else:
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
@@ -22,7 +21,7 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=T
                 auto_thr = qc_filter.automatic_thresholds(adata, columns=[key])
                 manual_thresholds[key] = auto_thr[key]
         return manual_thresholds
-        # qc_filter.apply_qc_thresholds(adata, manual_thresholds)
+
 
 def filter_mis(adata, upper_threshold=160, lower_threshold=80, col="mean_insertsize"):
     """
