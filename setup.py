@@ -30,6 +30,7 @@ setup(
         'ipympl',
         'scrublet',
         'leidenalg',
+        'louvain',
         'IPython'
     ],
     include_package_data=True,
