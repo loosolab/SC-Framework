@@ -1056,3 +1056,53 @@ def boxplot(dt, show_median=True, ax=None):
                     bbox=dict(facecolor='#445A64'))
 
     return ax
+
+
+def grouped_violin(adata, gene, x, groupby=None, save=None):
+    """
+    Create violinplot of gene expression across cells grouped by x and 'groupby'.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    gene : str
+        Gene name to plot expression for. Must be found in adata.var.index.
+    x : str
+        Column name in adata.obs to group by on the x-axis.
+    groupby : str, default None
+        Column name in adata.obs to create grouped violings. If None, a single violin is plotted per group in 'x'.
+    save : str, default None
+        Path to save the figure to. If None, the figure is not saved.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+
+    # Check if gene is in adata.var
+    available_genes = adata.var.index.tolist()
+    if gene not in available_genes:
+        raise ValueError(f"Gene '{gene}' not found in adata.var.index.")
+    gene_idx = np.argwhere(adata.var.index == gene)[0][0]
+    vals = adata.X[:, gene_idx].todense().A1
+
+    # Create dataframe with expression values per cell
+    obs_table = adata.obs.copy()
+    obs_table["expr"] = vals
+
+    # Plot expression from obs table
+    ax = sns.violinplot(obs_table, y="expr", x=x, hue=groupby)
+    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_ylabel(f"{gene} expression")
+
+    title = f"Expression of {gene} across {x}"
+    if groupby is not None:
+        title += f"\n grouped by {groupby}"
+    _ = ax.set_title(title)
+
+    # save figure if output is given
+    save_figure(save)
+
+    plt.show()
+    return ax
