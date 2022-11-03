@@ -24,6 +24,10 @@ import plotly as po
 import plotly.graph_objects as go
 
 
+def _make_square():
+    """ Utility function to set the aspect ratio of a plot to be a square """
+
+
 #############################################################################
 #                     PCA/tSNE/UMAP plotting functions                      #
 #############################################################################
@@ -1061,6 +1065,59 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
+def gene_expression_violins(adata, genes, groupby=None, title=None, save=None):
+    """
+    Create violinplot of gene expression per cell with genes on the x-axis and expression on the y-axis (optionally grouped by groupby).
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    genes : list
+        List of genes to plot. Must be present in adata.var_names.
+    groupby : str, default None
+        Column in adata.obs to consider as grouping. If None, all cells are shown without split
+    title : str, default None
+        Title of the plot. If None, no title is set.
+    save : str, default None
+        Path to save the figure to. If None, the figure is not saved
+
+    Returns
+    -------
+    AxesSubplot
+    """
+
+    # Create dataframe with expression values per cell
+    obs_table = adata.obs.copy()
+    for gene in genes:
+        gene_idx = np.argwhere(adata.var.index == gene)[0][0]
+        vals = adata.X[:, gene_idx].todense().A1
+        obs_table[gene] = vals
+
+    # Convert table to long format
+    index_name = obs_table.index.name
+    id_vars = [index_name] if groupby is None else [index_name, groupby]
+    obs_table.reset_index(inplace=True)
+    long_table = obs_table.melt(id_vars=id_vars, value_vars=genes,
+                                var_name="gene", value_name="expression")
+
+    # Plot
+    ax = sns.violinplot(long_table, y="expression", x="gene", hue=groupby)
+    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_ylabel("Gene expression")
+    ax.set_xlabel("Genes")
+    ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend
+    ax.set_title(title)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # save figure if path is given
+    save_figure(save)
+
+    return(ax)
+
+
 def grouped_violin(adata, gene, x, groupby=None, save=None):
     """
     Create violinplot of gene expression across cells grouped by x and 'groupby'.
@@ -1107,5 +1164,4 @@ def grouped_violin(adata, gene, x, groupby=None, save=None):
     # save figure if output is given
     save_figure(save)
 
-    plt.show()
     return ax

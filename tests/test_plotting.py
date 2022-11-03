@@ -18,7 +18,7 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
 
-    sc.tl.umap(adata)
+    sc.tl.umap(adata, n_components=3)
     sc.tl.tsne(adata)
     sc.tl.pca(adata)
 
@@ -221,6 +221,13 @@ def test_anndata_overview_fail_plots(adata):
         )
 
 
+def test_gene_expression_violins(adata):
+    """ Test if gene_expression_violins returns a plot """
+
+    ax = sctoolbox.plotting.gene_expression_violins(adata, genes=adata.var_names.tolist()[:3])
+    assert type(ax).__name__ == "AxesSubplot"
+
+
 def test_group_expression_boxplot(adata):
     """ Test if group_expression_boxplot returns a plot """
     gene_list = adata.var_names.tolist()[:10]
@@ -240,8 +247,6 @@ def test_boxplot(df):
 @pytest.mark.parametrize("color", ["ENSMUSG00000102693", "clustering", "qc_float"])
 def test_plot_3D_UMAP(adata, color):
     """ Test if 3d plot is written to html """
-
-    sc.tl.umap(adata, n_components=3)
 
     # Run 3d plotting
     sctoolbox.plotting.plot_3D_UMAP(adata, color=color, save="3D_test")
