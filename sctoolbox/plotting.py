@@ -382,6 +382,9 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         all_vars.update(set(adata.obs.columns))
 
     # Subset var list to those available in any of the adata objects
+    if isinstance(var_list, str):
+        var_list = [var_list]
+
     not_found = set(var_list) - all_vars
     if len(not_found) == len(var_list):
         raise ValueError("None of the variables from var_list were found in the adata objects.")
@@ -484,10 +487,10 @@ def plot_3D_UMAP(adata, color, save):
     fig = go.Figure()
 
     # Plot per group in obs
-    if color in adata.obs.columns and str(adata.obs[color].dtype) == "category":
+    if color in adata.obs.columns and isinstance(adata.obs[color][0], str):
 
-        df["category"] = adata.obs[color].values
-        categories = df["category"].cat.categories
+        df["category"] = adata.obs[color].values  # color should be interpreted as a categrical variable
+        categories = df["category"].astype("category").cat.categories
         n_groups = len(categories)
         color_list = sns.color_palette("Set1", n_groups)
         color_list = list(map(colors.to_hex, color_list))  # convert to hex
@@ -573,7 +576,7 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
     groupby : str, default None
         Name of the column in adata.obs to created stacked bars on the y axis. If None, the bars are not split.
     save : str, default None
-        Path to save the plot. If None, the plot is not saved. 
+        Path to save the plot. If None, the plot is not saved.
     figsize : tuple, default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     """
@@ -598,7 +601,7 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
 
     # Plot barplots
     if figsize is None:
-        figsize = (5 + 5*(groupby is not None), 3)  # if groupby is not None, add 5 to width
+        figsize = (5 + 5 * (groupby is not None), 3)  # if groupby is not None, add 5 to width
 
     if groupby is not None:
         _, axarr = plt.subplots(1, 2, figsize=figsize)
