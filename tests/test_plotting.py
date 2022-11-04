@@ -264,3 +264,12 @@ def test_n_cells_barplot(adata, groupby):
         assert len(axarr) == 1
     else:
         assert len(axarr) == 2
+
+
+def test_grouped_violin(adata):
+
+    gene = adata.var.index[0]
+    ax = sctoolbox.plotting.grouped_violin(adata, gene, "clustering", groupby="condition")
+    ax_type = type(ax).__name__
+
+    assert ax_type == "AxesSubplot"
