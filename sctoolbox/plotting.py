@@ -30,7 +30,7 @@ def _make_square(ax):
     xrange = np.diff(ax.get_xlim())[0]
     yrange = np.diff(ax.get_ylim())[0]
 
-    aspect =  xrange / yrange
+    aspect = xrange / yrange
     ax.set_aspect(aspect)
 
 
