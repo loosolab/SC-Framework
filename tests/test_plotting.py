@@ -221,13 +221,6 @@ def test_anndata_overview_fail_plots(adata):
         )
 
 
-def test_gene_expression_violins(adata):
-    """ Test if gene_expression_violins returns a plot """
-
-    ax = sctoolbox.plotting.gene_expression_violins(adata, genes=adata.var_names.tolist()[:3])
-    assert type(ax).__name__ == "AxesSubplot"
-
-
 def test_group_expression_boxplot(adata):
     """ Test if group_expression_boxplot returns a plot """
     gene_list = adata.var_names.tolist()[:10]
@@ -266,10 +259,12 @@ def test_n_cells_barplot(adata, groupby):
         assert len(axarr) == 2
 
 
-def test_grouped_violin(adata):
+@pytest.mark.parametrize("x,y,groupby", [("clustering", "ENSMUSG00000102693", "condition"),
+                                         ("ENSMUSG00000102693", None, "condition"),
+                                         ("clustering", "qc_float", "condition")])
+def test_grouped_violin(adata, x, y, groupby):
 
-    gene = adata.var.index[0]
-    ax = sctoolbox.plotting.grouped_violin(adata, gene, "clustering", groupby="condition")
+    ax = sctoolbox.plotting.grouped_violin(adata, x=x, y=y, groupby=groupby)
     ax_type = type(ax).__name__
 
     assert ax_type == "AxesSubplot"

@@ -24,8 +24,14 @@ import plotly as po
 import plotly.graph_objects as go
 
 
-def _make_square():
+def _make_square(ax):
     """ Utility function to set the aspect ratio of a plot to be a square """
+
+    xrange = np.diff(ax.get_xlim())[0]
+    yrange = np.diff(ax.get_ylim())[0]
+
+    aspect =  xrange / yrange
+    ax.set_aspect(aspect)
 
 
 #############################################################################
@@ -1065,73 +1071,27 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
-def gene_expression_violins(adata, genes, groupby=None, title=None, save=None):
+def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, save=None):
     """
-    Create violinplot of gene expression per cell with genes on the x-axis and expression on the y-axis (optionally grouped by groupby).
+    Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
+    Can for example show the expression of one gene across groups (x = obs_group, y = gene),
+    expression of multiple genes grouped by cell type (x = gene_list, groupby = obs_cell_type),
+    or values from adata.obs across cells (x = obs_group, y = obs_column).
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
-    genes : list
-        List of genes to plot. Must be present in adata.var_names.
-    groupby : str, default None
-        Column in adata.obs to consider as grouping. If None, all cells are shown without split
-    title : str, default None
-        Title of the plot. If None, no title is set.
-    save : str, default None
-        Path to save the figure to. If None, the figure is not saved
-
-    Returns
-    -------
-    AxesSubplot
-    """
-
-    # Create dataframe with expression values per cell
-    obs_table = adata.obs.copy()
-    for gene in genes:
-        gene_idx = np.argwhere(adata.var.index == gene)[0][0]
-        vals = adata.X[:, gene_idx].todense().A1
-        obs_table[gene] = vals
-
-    # Convert table to long format
-    index_name = obs_table.index.name
-    id_vars = [index_name] if groupby is None else [index_name, groupby]
-    obs_table.reset_index(inplace=True)
-    long_table = obs_table.melt(id_vars=id_vars, value_vars=genes,
-                                var_name="gene", value_name="expression")
-
-    # Plot
-    ax = sns.violinplot(long_table, y="expression", x="gene", hue=groupby)
-    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-    ax.set_ylabel("Gene expression")
-    ax.set_xlabel("Genes")
-    ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend
-    ax.set_title(title)
-
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-
-    # save figure if path is given
-    save_figure(save)
-
-    return(ax)
-
-
-def grouped_violin(adata, gene, x, groupby=None, save=None):
-    """
-    Create violinplot of gene expression across cells grouped by x and 'groupby'.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    gene : str
-        Gene name to plot expression for. Must be found in adata.var.index.
-    x : str
-        Column name in adata.obs to group by on the x-axis.
+    x : str or list
+        Column name in adata.obs or gene name(s) in adata.var.index to group by on the x-axis. Multiple gene names can be given in a list.
+    y : str, default None
+        A column name in adata.obs or a gene in adata.var.index to plot values for. Only needed if x is a column in adata.obs.
     groupby : str, default None
         Column name in adata.obs to create grouped violings. If None, a single violin is plotted per group in 'x'.
+    figsize : tuple, default None
+        Figure size.
+    title : str, default None
+        Title of the plot. If None, no title is shown.
     save : str, default None
         Path to save the figure to. If None, the figure is not saved.
 
@@ -1140,26 +1100,81 @@ def grouped_violin(adata, gene, x, groupby=None, save=None):
     matplotlib.axes.Axes
     """
 
-    # Check if gene is in adata.var
-    available_genes = adata.var.index.tolist()
-    if gene not in available_genes:
-        raise ValueError(f"Gene '{gene}' not found in adata.var.index.")
-    gene_idx = np.argwhere(adata.var.index == gene)[0][0]
-    vals = adata.X[:, gene_idx].todense().A1
+    if isinstance(x, str):
+        x = [x]
+    x = list(x)  # convert to list incase x was a numpy array or other iterable
 
-    # Create dataframe with expression values per cell
-    obs_table = adata.obs.copy()
-    obs_table["expr"] = vals
+    # Establish if x is a column in adata.obs or a gene in adata.var.index
+    x_assignment = []
+    for element in x:
+        if element not in adata.obs.columns and element not in adata.var.index:
+            raise ValueError(f"{element} is not a column in adata.obs or a gene in adata.var.index")
+        else:
+            if element in adata.obs.columns:
+                x_assignment.append("obs")
+            else:
+                x_assignment.append("var")
+
+    if len(set(x_assignment)) > 1:
+        raise ValueError("x must be either a column in adata.obs or all genes in adata.var.index")
+    else:
+        x_assignment = x_assignment[0]
+
+    # Establish if y is a column in adata.obs or a gene in adata.var.index
+    if x_assignment == "obs" and y is None:
+        raise ValueError("Because 'x' is a column in obs, 'y' must be given as parameter")
+
+    if y is not None:
+        if y in adata.obs.columns:
+            y_assignment = "obs"
+        elif y in adata.var.index:
+            y_assignment = "var"
+        else:
+            raise ValueError(f"y' ({y}) was not found in either adata.obs or adata.var.index")
+
+    # Create obs table with column
+    obs_cols = [col for col in [x[0], y, groupby] if col is not None and col in adata.obs.columns]
+    obs_table = adata.obs.copy()[obs_cols]  # creates a copy
+
+    for element in x + [y]:
+        if element in adata.var.index:
+            gene_idx = np.argwhere(adata.var.index == element)[0][0]
+            vals = adata.X[:, gene_idx].todense().A1
+            obs_table[element] = vals
+
+    # Convert table to long format if the x-axis contains gene expressions
+    if x_assignment == "var":
+        index_name = obs_table.index.name
+        id_vars = [index_name, groupby]
+        id_vars = id_vars + x if x_assignment == "obs" else id_vars
+        id_vars = [v for v in id_vars if v is not None]
+
+        obs_table.reset_index(inplace=True)
+        obs_table = obs_table.melt(id_vars=id_vars, value_vars=x,
+                                   var_name="gene", value_name="expression")
+        x_var = "gene"
+        y_var = "expression"
+
+    else:
+        x_var = x[0]
+        y_var = y
 
     # Plot expression from obs table
-    ax = sns.violinplot(obs_table, y="expr", x=x, hue=groupby)
-    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-    ax.set_ylabel(f"{gene} expression")
+    _, ax = plt.subplots(figsize=figsize)
+    sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, scale='width')
 
-    title = f"Expression of {gene} across {x}"
     if groupby is not None:
-        title += f"\n grouped by {groupby}"
-    _ = ax.set_title(title)
+        ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend
+
+    # Final adjustments of labels
+    if x_assignment == "obs" and y_assignment == "var":
+        ax.set_ylabel(ax.get_ylabel() + " expression")
+
+    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_title(title)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
 
     # save figure if output is given
     save_figure(save)
