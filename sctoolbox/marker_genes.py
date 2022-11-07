@@ -88,7 +88,10 @@ def label_genes(adata,
 
     # Get organism from the adata object
     if species is None:
-        species = adata.uns['infoprocess']['species']
+        try:
+            species = adata.uns['infoprocess']['species']
+        except KeyError:
+            raise ValueError("Species not provided and could not be found in adata.uns['infoprocess']['species']")
     species = species.lower()
 
     # Get the full list of genes from adata

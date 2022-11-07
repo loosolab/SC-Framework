@@ -31,7 +31,8 @@ setup(
         'scrublet',
         'leidenalg',
         'louvain',
-        'IPython'
+        'IPython',
+        'openpyxl'
     ],
     include_package_data=True,
     extras_require={
