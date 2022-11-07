@@ -28,9 +28,12 @@ class Tree:
         self._assemble_dir = None
         self._assembled_anndata_dir = None
         self._assembled_anndata = None
+        self._qc_plots = None
 
         # 2. QC
         self._qc_dir = None
+        self._qc_anndata_dir = None
+        self._qc_anndata = None
 
         # 3. Norm, correction and comparison
         self._norm_correction_dir = None
@@ -77,6 +80,10 @@ class Tree:
         self._assembled_anndata = os.path.join(self._assembled_anndata_dir, self._run + '.h5ad')
 
         self._qc_dir = os.path.join(self._processed_run_dir, 'qc')
+        self._qc_anndata_dir = os.path.join(self._qc_dir, 'anndata')
+        self._qc_anndata = os.path.join(self._qc_anndata_dir, self._run + '.h5ad')
+        self._qc_plots = os.path.join(self._qc_dir, 'plots')
+
         self._norm_correction_dir = os.path.join(self._processed_run_dir, 'norm_correction')
         self._clustering_dir = os.path.join(self._processed_run_dir, 'clustering')
         self._annotation_dir = os.path.join(self._processed_run_dir, 'annotation')
@@ -89,6 +96,8 @@ class Tree:
         to_build.append(self.assemble_dir)
         to_build.append(self._assembled_anndata_dir)
         to_build.append(self._qc_dir)
+        to_build.append(self._qc_anndata_dir)
+        to_build.append(self._qc_plots)
         to_build.append(self._norm_correction_dir)
         to_build.append(self._clustering_dir)
         to_build.append(self._annotation_dir)
@@ -164,6 +173,30 @@ class Tree:
     @qc_dir.setter
     def qc_dir(self, value):
         self._qc_dir = value
+
+    @property
+    def qc_anndata_dir(self):
+        return self._qc_anndata_dir
+
+    @qc_anndata_dir.setter
+    def qc_anndata_dir(self, value):
+        self._qc_anndata_dir = value
+
+    @property
+    def qc_anndata(self):
+        return self._qc_anndata
+
+    @qc_anndata.setter
+    def qc_anndata(self, value):
+        self._qc_anndata = value
+
+    @property
+    def qc_plots(self):
+        return self._qc_plots
+
+    @qc_plots.setter
+    def qc_plots(self, value):
+        self._qc_plots = value
 
     @property
     def norm_correction_dir(self):
