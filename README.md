@@ -16,9 +16,9 @@ git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
 ```
 cd loosolab_sc_rna_framework
 ```
-3. Install analysis environment. Speed up installation by replacing `conda` with `mamba` (has to be installed).
+3. Install analysis environment. Note: using `mamba` is faster than `conda`, but this requires mamba to be installed.
 ```
-conda env create -f sctoolbox_env.yml
+mamba env create -f sctoolbox_env.yml
 ```
 4. Activate the environment.
 ```
