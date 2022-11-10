@@ -24,7 +24,11 @@ mamba env create -f sctoolbox_env.yml
 ```
 conda activate sctoolbox
 ```
-5. Register the environment as a jupyter kernel.
+5. If "jupyter-notebook" command is not available at this point: install notebook package.
+```
+pip install notebook
+```
+6. Register the environment as a jupyter kernel.
 ```
 python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
