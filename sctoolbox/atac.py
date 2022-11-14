@@ -7,6 +7,7 @@ import pandas as pd
 import gzip
 import re
 import datetime
+import copy
 
 import episcanpy as epi
 import matplotlib.pyplot as plt
@@ -358,7 +359,8 @@ def add_insertsize(adata,
     else:
         adata.obs = adata.obs.merge(mean_table, left_on=barcode_col, right_index=True, how="left")
 
-    adata.uns["insertsize_distribution"] = distribution_table.loc[adata_barcodes]  # ensures correct order of barcodes in table
+    adata.uns["insertsize_distribution"] = distribution_table.loc[adata_barcodes]
+    adata.uns['insertsize_distribution'].columns = adata.uns['insertsize_distribution'].columns.astype(str)# ensures correct order of barcodes in table
 
     print("Added insertsize information to adata.obs[[\"insertsize_count\", \"mean_insertsize\"]] and adata.uns[\"insertsize_distribution\"].")
 
@@ -616,14 +618,17 @@ def plot_insertsize(adata, barcodes=None):
     if "insertsize_distribution" not in adata.uns:
         raise ValueError("adata.uns['insertsize_distribution'] not found!")
 
+    insertsize_distribution = copy.deepcopy(adata.uns['insertsize_distribution'])
+    insertsize_distribution.columns = insertsize_distribution.columns.astype(int)
+
     # Subset barcodes if a list is given
     if barcodes is not None:
         # Convert to list if only barcode is given
         if isinstance(barcodes, str):
             barcodes = [barcodes]
-        table = adata.uns["insertsize_distribution"].loc[barcodes].sum(axis=0)
+        table = insertsize_distribution.loc[barcodes].sum(axis=0)
     else:
-        table = adata.uns["insertsize_distribution"].sum(axis=0)
+        table = insertsize_distribution.sum(axis=0)
 
     # Plot
     ax = sns.lineplot(x=table.index, y=table.values)

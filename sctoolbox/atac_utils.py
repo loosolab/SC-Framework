@@ -1,9 +1,48 @@
 import scanpy as sc
 import sctoolbox.qc_filter as qc_filter
+import sctoolbox.creators as cr
 import episcanpy as epi
 import anndata
 from matplotlib import pyplot as plt
 
+def assemble_from_h5ad(h5ad_files, qc_columns, conditions=None):
+
+    adata_sum = None
+    counter = 0
+    for h5ad_path in h5ad_files:
+        counter += 1
+
+        sample = 'sample' + counter
+
+        adata = epi.read_h5ad(h5ad_path)
+
+        # Add information to the infoprocess
+        cr.build_infor(adata, "Input_for_assembling", h5ad_path)
+        cr.build_infor(adata, "Strategy", "Read from h5ad")
+
+        print('add existing adata.obs columns to infoprocess:')
+        print()
+        for key, value in qc_columns.items():
+            if value is not None:
+                print(key + ':' + value)
+                if value in adata.obs.columns:
+                    build_legend(adata, key, value)
+                else:
+                    print('column:  ' + value + ' is not in adata.obs')
+
+        if not adata.obs.index.name == "barcode":
+            print('setting adata.obs.index = adata.obs[barcode]')
+            adata.obs = adata.obs.set_index("barcode")
+        else:
+            print('barcodes are already the index')
+
+        adata.obs = adata.obs.assign(sample=sample)
+        adata.obs = adata.obs.assign(file=h5ad_path)
+
+        # Add conditions
+
+        if adata_sum:
+            adata_sum.concat()
 
 def get_keys(adata, manual_thresholds):
     """
@@ -104,84 +143,12 @@ def plot_obs_violin(adata, obs_cols):
     plt.show()
 
 
-def filter_mis(adata, upper_threshold=160, lower_threshold=80, col="mean_insertsize"):
-    """
-    filter the mean fragment length
-    :param adata:
-    :param upper_threshold:
-    :param lower_threshold:
-    :return:
-    """
-    adata = adata[adata.obs[col] < upper_threshold, :]
-    adata = adata[adata.obs[col] > lower_threshold, :]
-
-    return adata
-
-
-def filter_pct_fragments_in_promoters(adata, upper_threshold=0.5, lower_threshold=0.1, col="pct_fragments_in_promoters"):
-    """
-    filter the percentage of fragments in promoters
-    :param adata:
-    :param upper_threshold:
-    :param lower_threshold:
-    :return:
-    """
-    adata = adata[adata.obs[col] < upper_threshold, :]
-    adata = adata[adata.obs[col] > lower_threshold, :]
-
-    return adata
-
-
-def filter_n_fragments_in_promoters(adata, upper_threshold=100000, lower_threshold=10000, col="n_fragments_in_promoters"):
-    """
-    filter the number of fragments in promoters
-    :param adata:
-    :param upper_threshold:
-    :param lower_threshold:
-    :return:
-    """
-    adata = adata[adata.obs[col] < upper_threshold, :]
-    adata = adata[adata.obs[col] > lower_threshold, :]
-
-    return adata
-
-
-def filter_n_fragments(adata, upper_threshold=1000000, lower_threshold=100000, col="TN"):
-    """
-    filter the number of total fragments per barcode
-    :param adata:
-    :param upper_threshold:
-    :param lower_threshold:
-    :return:
-    """
-    adata = adata[adata.obs[col] < upper_threshold, :]
-    adata = adata[adata.obs[col] > lower_threshold, :]
-
-    return adata
-
-
-def filter_chrM_fragments(adata, upper_threshold=1000, lower_threshold=0, col="UM"):
-    """
-    filter the number of total fragments per barcode
-    :param adata:
-    :param upper_threshold:
-    :param lower_threshold:
-    :return:
-    """
-    adata = adata[adata.obs[col] < upper_threshold, :]
-    adata = adata[adata.obs[col] > lower_threshold, :]
-
-    return adata
-
-
 if __name__ == '__main__':
 
     import plotting_atac as pa
     adata = sc.read_h5ad("/home/jan/python-workspace/sc-atac/processed_data/cropped_146/assembling/anndata/cropped_146.h5ad")
     pa.plot_obs_violin(adata, ["mean_fragment_length"])
-    adata = filter_mis(adata, upper_threshold=160, lower_threshold=85)
+
     pa.plot_obs_violin(adata, ["mean_fragment_length"])
 
     adata = sc.read_h5ad("/home/jan/python-workspace/sc-atac/processed_data/cropped_146/assembling/anndata/cropped_146.h5ad")
-    plot_ov_hist(adata, threshold_features=1000)
-    plot_obs_violin(adata, ["mean_fragment_length", "pct_fragments_in_promoters", "n_fragments_in_promoters", "n_total_fragments"])
