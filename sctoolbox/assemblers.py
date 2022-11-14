@@ -197,21 +197,26 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes
     adata.obs = barcode_csv
     adata.var = genes_csv
 
+    # Add filename to .obs
+    adata.obs["Filename"] = os.path.basename(mtx)
+
     return adata
 
 
-def from_mtx(mtx, barcodes, genes, **kwargs):
+def from_mtx(path, mtx = "*_matrix.mtx*", barcodes = "*_barcodes.tsv*", genes = "*_genes.tsv*", **kwargs):
     '''
     Building adata object from list of mtx, barcodes and genes files
 
     Parameters
     ----------
-    mtx : list
-        List of paths to mtx files
-    barcodes : list
-        List of paths to cell barcode files
-    genes : list
-        List of paths to gene label files
+    path: string
+        Path to data files
+    mtx : string, optional
+        String for glob to find matrix files. Default: '*_matrix.mtx*'
+    barcodes : string, optional
+        String for glob to find barcode files. Default: '*_barcodes.mtx*'
+    genes : string, optional
+        String for glob to find gene label files. Default: '*_genes.mtx*'
     transpose : boolean
         Set True to transpose mtx matrix
     barcode_index : int
@@ -228,7 +233,14 @@ def from_mtx(mtx, barcodes, genes, **kwargs):
     merged anndata object containing the mtx matrix, gene and cell labels
     '''
 
-    adata_objects = [from_single_mtx(m, barcodes[i], genes[i], **kwargs) for i, m in enumerate(mtx)]
+    mtx = glob.glob(os.path.join(path, mtx))
+    barcodes = glob.glob(os.path.join(path, barcodes))
+    genes = glob.glob(os.path.join(path, genes))
+
+    adata_objects = [ ]
+    for i, m in enumerate(mtx):
+        print(f"Reading files: {i+1} of {len(mtx)} ")
+        adata_objects.append(from_single_mtx(m, barcodes[i], genes[i], **kwargs))
 
     if len(adata_objects) > 1:
         adata = adata_objects[0].concatenate(*adata_objects[1:], join="outer")
