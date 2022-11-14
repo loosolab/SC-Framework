@@ -45,7 +45,7 @@ lint:
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
 
-cov:
+test coverage:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
