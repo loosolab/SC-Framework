@@ -55,8 +55,6 @@ def from_single_starsolo(path, dtype="filtered"):
     print("Setting up adata from solo files")
     adata = from_single_mtx(matrix_f, barcodes_f, genes_f)
     adata.var.columns = ["gene", "type"]  # specific to the starsolo format
-    for col in adata.obs.columns:
-        adata.var[col] = adata.var[col].astype("category")
 
     # Add in velocity information
     print("Adding velocity information from spliced/unspliced/ambiguous")
@@ -198,7 +196,8 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes
     adata.var = genes_csv
 
     # Add filename to .obs
-    adata.obs["Filename"] = os.path.basename(mtx)
+    adata.obs["filename"] = os.path.basename(mtx)
+    adata.obs["filename"] = adata.obs["filename"].astype("category")
 
     return adata
 
