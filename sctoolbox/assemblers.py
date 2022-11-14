@@ -202,7 +202,7 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes
     return adata
 
 
-def from_mtx(path, mtx = "*_matrix.mtx*", barcodes = "*_barcodes.tsv*", genes = "*_genes.tsv*", **kwargs):
+def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs):
     '''
     Building adata object from list of mtx, barcodes and genes files
 
@@ -236,7 +236,7 @@ def from_mtx(path, mtx = "*_matrix.mtx*", barcodes = "*_barcodes.tsv*", genes = 
     barcodes = glob.glob(os.path.join(path, barcodes))
     genes = glob.glob(os.path.join(path, genes))
 
-    adata_objects = [ ]
+    adata_objects = []
     for i, m in enumerate(mtx):
         print(f"Reading files: {i+1} of {len(mtx)} ")
         adata_objects.append(from_single_mtx(m, barcodes[i], genes[i], **kwargs))
