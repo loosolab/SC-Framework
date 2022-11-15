@@ -44,6 +44,8 @@ lint:
     - pip install flake8
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
 
 test coverage:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
