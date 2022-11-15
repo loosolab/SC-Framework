@@ -7,6 +7,24 @@ import anndata as ad
 from matplotlib import pyplot as plt
 
 def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None):
+    '''
+    Function to assemble multiple adata files into a single adata object with a sample column in the
+    adata.obs table. This concatenates adata.obs and merges adata.uns.
+
+    Parameters
+    ----------
+    h5ad_files: list of str
+        list of h5ad_files
+    qc_columns: dictionary
+        dictionary of adata.obs columns and related thresholds
+    column: str
+        column name to store sample identifier
+    conditions: None
+
+    Returns
+    -------
+
+    '''
 
     adata_dict = {}
     counter = 0
@@ -65,7 +83,7 @@ def get_keys(adata, manual_thresholds):
     return m_thresholds
 
 
-def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=True):
+def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
     :param adata:
@@ -77,7 +95,7 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=T
 
     if automatic_thresholds:
         keys = list(manual_thresholds.keys())
-        automatic_thresholds = qc_filter.automatic_thresholds(adata, columns=keys)
+        automatic_thresholds = qc_filter.automatic_thresholds(adata, columns=keys, groupby=groupby)
         return automatic_thresholds
     else:
         # thresholds which are not set by the user are set automatically
@@ -176,4 +194,62 @@ def barcode_index(adata):
 
 if __name__ == '__main__':
 
-    pass
+    adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+
+    # if this is True thresholds below are ignored
+    only_automatic_thresholds = False  # True or False; to use automatic thresholds
+
+    # FIXME: NO function in the apply_qc_thresholds function (currently has to be turned off)
+    # if thresholds None they are set automatically
+    n_features_filter = True  # True or False; filtering out cells with numbers of features not in the range defined below
+    # default values n_features
+    min_features = 5
+    max_features = 10000
+
+    mean_insertsize_filter = True  # True or False; filtering out cells with mean insertsize not in the range defined below
+    # default mean_insertsize
+    upper_threshold_mis = 160
+    lower_threshold_mis = 80
+
+    filter_pct_fp = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    # default promotor enrichment
+    upper_threshold_pct_fp = 0.4
+    lower_threshold_pct_fp = 0.1
+
+    filter_n_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    # default number of fragments
+    upper_thr_fragments = 200000
+    lower_thr_fragments = 0
+
+    filter_chrM_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    # default number of fragments in chrM
+    upper_thr_chrM_fragments = 10000
+    lower_thr_chrM_fragments = 0
+
+    filter_uniquely_mapped_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    # default number of uniquely mapped fragments
+    upper_thr_um = 20000
+    lower_thr_um = 0
+
+    manual_thresholds = {}
+    if n_features_filter:
+        manual_thresholds['n_features_by_counts'] = {'min': min_features, 'max': max_features}
+
+    if mean_insertsize_filter:
+        manual_thresholds['mean_insertsize'] = {'min': lower_threshold_mis, 'max': upper_threshold_mis}
+
+    if filter_pct_fp:
+        manual_thresholds['pct_fragments_in_promoters'] = {'min': lower_threshold_pct_fp, 'max': upper_threshold_pct_fp}
+
+    if filter_n_fragments:
+        manual_thresholds['TN'] = {'min': lower_thr_fragments, 'max': upper_thr_fragments}
+
+    if filter_chrM_fragments:
+        manual_thresholds['CM'] = {'min': lower_thr_chrM_fragments, 'max': upper_thr_chrM_fragments}
+
+    if filter_uniquely_mapped_fragments:
+        manual_thresholds['UM'] = {'min': lower_thr_um, 'max': upper_thr_um}
+
+    thresholds = get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds)
+
+    print(thresholds)
