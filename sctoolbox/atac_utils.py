@@ -1,18 +1,19 @@
 import scanpy as sc
+import re
 import sctoolbox.qc_filter as qc_filter
 import sctoolbox.creators as cr
 import episcanpy as epi
-import anndata
+import anndata as ad
 from matplotlib import pyplot as plt
 
-def assemble_from_h5ad(h5ad_files, qc_columns, conditions=None):
+def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None):
 
-    adata_sum = None
+    adata_dict = {}
     counter = 0
     for h5ad_path in h5ad_files:
         counter += 1
 
-        sample = 'sample' + counter
+        sample = 'sample' + str(counter)
 
         adata = epi.read_h5ad(h5ad_path)
 
@@ -30,19 +31,21 @@ def assemble_from_h5ad(h5ad_files, qc_columns, conditions=None):
                 else:
                     print('column:  ' + value + ' is not in adata.obs')
 
-        if not adata.obs.index.name == "barcode":
-            print('setting adata.obs.index = adata.obs[barcode]')
-            adata.obs = adata.obs.set_index("barcode")
-        else:
-            print('barcodes are already the index')
+        # check if the barcode is the index otherwise set it
+        barcode_index(adata)
 
-        adata.obs = adata.obs.assign(sample=sample)
+        #adata.obs = adata.obs.assign(sample=sample)
         adata.obs = adata.obs.assign(file=h5ad_path)
 
         # Add conditions
+        
+        adata_dict[sample] = adata
 
-        if adata_sum:
-            adata_sum.concat()
+    adata = ad.concat(adata_dict, label=column, index_unique="_")
+    adata.uns = ad.concat(adata_dict, uns_merge='same').uns
+
+    return adata
+
 
 def get_keys(adata, manual_thresholds):
     """
@@ -94,7 +97,7 @@ def build_legend(adata, key, value, inplace=True):
     :param inplace:
     :return:
     """
-    if type(adata) != anndata.AnnData:
+    if type(adata) != ad.AnnData:
         raise TypeError("Invalid data type. AnnData object is required.")
 
     m_adata = adata if inplace else adata.copy()
@@ -143,12 +146,34 @@ def plot_obs_violin(adata, obs_cols):
     plt.show()
 
 
+def barcode_index(adata):
+    """
+    check if the barcode is the index
+    :param adata:
+    :return:
+    """
+    # regex for any barcode
+    regex = re.compile(r'([ATCG]{8,16})')
+    # get first index element
+    first_index = adata.obs.index[0]
+    # check if the first index element is a barcode
+    if regex.match(first_index):
+        index_is_barcode = True
+    else:
+        index_is_barcode = False
+
+    if not adata.obs.index.name == "barcode" and not index_is_barcode:
+        # check if the barcode column is in the obs
+        if 'barcode' in adata.obs.columns:
+            print('setting adata.obs.index = adata.obs[barcode]')
+            adata.obs = adata.obs.set_index("barcode")
+    elif not adata.obs.index.name == "barcode" and index_is_barcode:
+        print('setting adata.obs.index.name = barcode')
+        adata.obs.index.name = 'barcode'
+    else:
+        print('barcodes are already the index')
+
+
 if __name__ == '__main__':
 
-    import plotting_atac as pa
-    adata = sc.read_h5ad("/home/jan/python-workspace/sc-atac/processed_data/cropped_146/assembling/anndata/cropped_146.h5ad")
-    pa.plot_obs_violin(adata, ["mean_fragment_length"])
-
-    pa.plot_obs_violin(adata, ["mean_fragment_length"])
-
-    adata = sc.read_h5ad("/home/jan/python-workspace/sc-atac/processed_data/cropped_146/assembling/anndata/cropped_146.h5ad")
+    pass
