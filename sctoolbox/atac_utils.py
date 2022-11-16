@@ -6,6 +6,7 @@ import episcanpy as epi
 import anndata as ad
 from matplotlib import pyplot as plt
 
+
 def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None):
     '''
     Function to assemble multiple adata files into a single adata object with a sample column in the
@@ -52,16 +53,15 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None)
         # check if the barcode is the index otherwise set it
         barcode_index(adata)
 
-        #adata.obs = adata.obs.assign(sample=sample)
         adata.obs = adata.obs.assign(file=h5ad_path)
 
         # Add conditions
-        
+
         adata_dict[sample] = adata
 
     adata = ad.concat(adata_dict, label=column)
     adata.uns = ad.concat(adata_dict, uns_merge='same').uns
-
+    
     return adata
 
 

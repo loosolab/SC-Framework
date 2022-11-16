@@ -360,7 +360,7 @@ def add_insertsize(adata,
         adata.obs = adata.obs.merge(mean_table, left_on=barcode_col, right_index=True, how="left")
 
     adata.uns["insertsize_distribution"] = distribution_table.loc[adata_barcodes]
-    adata.uns['insertsize_distribution'].columns = adata.uns['insertsize_distribution'].columns.astype(str)# ensures correct order of barcodes in table
+    adata.uns['insertsize_distribution'].columns = adata.uns['insertsize_distribution'].columns.astype(str)  # ensures correct order of barcodes in table
 
     print("Added insertsize information to adata.obs[[\"insertsize_count\", \"mean_insertsize\"]] and adata.uns[\"insertsize_distribution\"].")
 
