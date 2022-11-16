@@ -55,13 +55,13 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None)
 
         adata.obs = adata.obs.assign(file=h5ad_path)
 
-        # Add conditions
+        # Add conditions here
 
         adata_dict[sample] = adata
 
     adata = ad.concat(adata_dict, label=column)
     adata.uns = ad.concat(adata_dict, uns_merge='same').uns
-    
+
     return adata
 
 
