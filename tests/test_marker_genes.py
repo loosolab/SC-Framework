@@ -44,6 +44,7 @@ def test_label_genes(adata, species, gene_column):
     if species is None:
         with pytest.raises(ValueError):
             sctoolbox.marker_genes.label_genes(adata, species=species)  # no species given, and it cannot be found in infoprocess
+
     else:
         sctoolbox.marker_genes.label_genes(adata, gene_column=gene_column, species=species)
 

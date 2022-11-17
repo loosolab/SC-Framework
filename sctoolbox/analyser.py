@@ -88,6 +88,9 @@ def recluster(adata, column, clusters,
     else:
         raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
+    #TODO: Check if clusters are found in column
+    
+
     # --- Start reclustering --- #
     if task == "join":
         translate = {cluster: clusters[0] for cluster in clusters}
