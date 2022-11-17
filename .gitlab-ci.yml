@@ -46,7 +46,7 @@ lint:
   allow_failure: false
 
 cov:
-  coverage: ^TOTAL.+?(\d+.\d+\%)$
+  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
   artifacts:
