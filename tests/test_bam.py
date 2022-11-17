@@ -44,3 +44,14 @@ def test_split_bam_clusters(bam_handle):
     n_reads_output = sum([sctoolbox.bam.get_bam_reads(handle) for handle in handles])
 
     assert n_reads_input == n_reads_output  # this is true because all groups are represented in the bam
+
+
+if False:  # todo: fix bedgraphtobigwig requirement
+
+    def test_bam_to_bigwig():
+        """ Test whether the bigwig is written. """
+
+        bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
+        bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_f)
+
+        assert os.path.exists(bigwig_f)

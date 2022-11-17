@@ -4,6 +4,7 @@ import re
 import os
 import multiprocessing
 import sctoolbox.utilities as utils
+import warnings
 
 
 def split_bam_clusters(adata,
@@ -554,3 +555,85 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
     except Exception as e:
         print(e.message)
         raise e
+
+
+def bam_to_bigwig(bam, output=None, scale=True, overwrite=True, tempdir=".", remove_temp=True):
+    """
+    Convert reads in a bam-file to bigwig format.
+
+    Parameters
+    ----------
+    bam : str
+        Path to bam file.
+    output : str, default None
+        Path to output file. If None, output is written to same directory as bam file with same name and .bw extension.
+    scale : bool, default True
+        Scale output depth to reads per million mapped reads.
+    overwrite : bool, default True
+        Overwrite output file if it already exists.
+    tempdir : str, default "."
+        Path to directory where temporary files are written.
+    remove_temp : bool, default True
+        Remove temporary files after conversion.
+
+    Returns
+    -------
+    str : Path to output file.
+    """
+
+    # Set output name and check if bigwig already exists
+    if output is None:
+        output = bam.replace(".bam", ".bw")
+
+    if os.path.exists(output) and overwrite is False:
+        warnings.warn("Output file already exists. Set overwrite=True to overwrite.")
+        return output
+
+    # Check required modules
+    utils.check_module("pysam")
+    import pysam
+
+    bedtools_path = utils.get_binary_path("bedtools")
+    bgtobw_path = utils.get_binary_path("bedGraphToBigWig")
+
+    # Get size of genome and write a chromsizes file
+    bamobj = pysam.AlignmentFile(bam, "rb")
+    chromsizes = {chrom: bamobj.lengths[i] for i, chrom in enumerate(bamobj.references)}
+    chromsizes_file = utils.get_temporary_filename(tempdir)
+
+    with open(chromsizes_file, "w") as f:
+        for chrom, size in chromsizes.items():
+            f.write(f"{chrom}\t{size}\n")
+
+    # Get number of mapped reads in file for normalization
+    scaling_factor = 0
+    if scale:
+        n_reads = get_bam_reads(bamobj)
+        scaling_factor = 1 / (n_reads / 1e6)
+        scaling_factor = round(scaling_factor, 5)
+    bamobj.close()
+
+    # Convert bam to bedgraph
+    bedgraph_out = utils.get_temporary_filename(tempdir)
+    cmd = f"{bedtools_path} genomecov -bg -ibam {bam} > {bedgraph_out}"
+    print("Running: " + cmd)
+    os.system(cmd)
+
+    # Sort and scale input
+    bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
+    cmd = f"sort -k1,1 -k2,2n {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
+    print("Running: " + cmd)
+    os.system(cmd)
+
+    # Convert bedgraph to bigwig
+    cmd = f"{bgtobw_path} {bedgraph_out_sorted} {chromsizes_file} {output}"
+    print("Running: " + cmd)
+    os.system(cmd)
+
+    # Remove all temp files
+    if remove_temp is True:
+        utils.remove_files([chromsizes_file, bedgraph_out, bedgraph_out_sorted])
+
+    print(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
+
+    return output
