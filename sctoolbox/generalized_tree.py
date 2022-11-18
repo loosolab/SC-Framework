@@ -28,12 +28,12 @@ class Tree:
         self._assemble_dir = None
         self._assembled_anndata_dir = None
         self._assembled_anndata = None
-        self._qc_plots = None
 
         # 2. QC
         self._qc_dir = None
         self._qc_anndata_dir = None
         self._qc_anndata = None
+        self._qc_plots = None
 
         # 3. Norm, correction and comparison
         self._norm_correction_dir = None
