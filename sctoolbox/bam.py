@@ -621,7 +621,7 @@ def bam_to_bigwig(bam, output=None, scale=True, overwrite=True, tempdir=".", rem
 
     # Sort and scale input
     bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
-    cmd = f"sort -k1,1 -k2,2n {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
+    cmd = f"sort -k1,1 -k2,2n -T {tempdir} {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
     print("Running: " + cmd)
     os.system(cmd)
 
