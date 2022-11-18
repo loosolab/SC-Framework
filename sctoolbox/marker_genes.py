@@ -146,7 +146,7 @@ def label_genes(adata,
     creators.build_infor(adata, "genes_labeled", added)
 
 
-def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, save_excel=None):
+def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
     Parameters
@@ -165,6 +165,16 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
     dict :
         A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
     """
+
+    # Check input type
+    if not isinstance(var_columns, list):
+        raise ValueError("var_columns must be a list of strings.")
+
+    # Check that all given columns are valid
+    if len(var_columns) > 0:
+        for col in var_columns:
+            if col not in adata.var.columns:
+                raise ValueError(f"Column '{col}' not found in adata.var.columns.")
 
     # Read structure in .uns to pandas dataframes
     tables = {}
@@ -218,8 +228,11 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
             group_tables[group]["out_group_fraction"] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
-
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
+
+            # Add additional columns to table
+            if len(var_columns) > 0:
+                group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
     # If chosen: Save tables to joined excel
     if save_excel is not None:
