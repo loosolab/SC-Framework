@@ -83,7 +83,40 @@ def get_keys(adata, manual_thresholds):
     return m_thresholds
 
 
-def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=True, groupby=None):
+def build_default_thresholds(adata, manual_thresholds, groupby=None):
+    '''
+    This builds a dictionary from the manual set thresholds in the format to use it later
+    Parameters
+    ----------
+    manual_tresholds
+    groupby
+    columns
+
+    Returns
+    -------
+
+    '''
+    if groupby is not None:
+        samples = []
+        current_sample = None
+        for sample in adata.obs[groupby]:
+            if current_sample != sample:
+                samples.append(sample)
+
+        thresholds = {}
+        for key, value in manual_thresholds.items():
+            sample_dict = {}
+            for sample in samples:
+                sample_dict[sample] = {key, value}
+            thresholds[key] = sample_dict
+
+    else:
+        thresholds = manual_thresholds
+
+    return thresholds
+
+
+def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
     :param adata:
@@ -93,15 +126,17 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, automatic_thresholds=T
     """
     manual_thresholds = get_keys(adata, manual_thresholds)
 
-    if automatic_thresholds:
+    if only_automatic_thresholds:
         keys = list(manual_thresholds.keys())
-        automatic_thresholds = qc_filter.automatic_thresholds(adata, columns=keys, groupby=groupby)
-        return automatic_thresholds
+        i = type(keys[0])
+        thresholds = qc_filter.automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
+        return thresholds
     else:
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
             if value['min'] is None or value['max'] is None:
-                auto_thr = qc_filter.automatic_thresholds(adata, columns=[key])
+                i = type(key)
+                auto_thr = qc_filter.automatic_thresholds(adata, which="obs",columns=[key], groupby=groupby)
                 manual_thresholds[key] = auto_thr[key]
         return manual_thresholds
 
@@ -196,41 +231,46 @@ if __name__ == '__main__':
 
     adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
 
-    # if this is True thresholds below are ignored
-    only_automatic_thresholds = False  # True or False; to use automatic thresholds
 
-    # FIXME: NO function in the apply_qc_thresholds function (currently has to be turned off)
-    # if thresholds None they are set automatically
+    # Filter to use:
     n_features_filter = True  # True or False; filtering out cells with numbers of features not in the range defined below
-    # default values n_features
-    min_features = 5
-    max_features = 10000
-
     mean_insertsize_filter = True  # True or False; filtering out cells with mean insertsize not in the range defined below
-    # default mean_insertsize
-    upper_threshold_mis = 160
-    lower_threshold_mis = 80
-
     filter_pct_fp = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    filter_n_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    filter_chrM_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    filter_uniquely_mapped_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined
+
+    # if this is True thresholds below are ignored
+    only_automatic_thresholds = True  # True or False; to use automatic thresholds
+
+    ############################# set default values #######################################
+    #
+    # This will be applied to all samples the thresholds can be changed manually when plotted
+    # if thresholds None they are set automatically
+
+    # default values n_features
+    min_features = None
+    max_features = None
+
+    # default mean_insertsize
+    upper_threshold_mis = None
+    lower_threshold_mis = None
+
     # default promotor enrichment
     upper_threshold_pct_fp = 0.4
     lower_threshold_pct_fp = 0.1
 
-    filter_n_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
     # default number of fragments
     upper_thr_fragments = 200000
     lower_thr_fragments = 0
 
-    filter_chrM_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
     # default number of fragments in chrM
     upper_thr_chrM_fragments = 10000
     lower_thr_chrM_fragments = 0
 
-    filter_uniquely_mapped_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
     # default number of uniquely mapped fragments
     upper_thr_um = 20000
     lower_thr_um = 0
-
     manual_thresholds = {}
     if n_features_filter:
         manual_thresholds['n_features_by_counts'] = {'min': min_features, 'max': max_features}
@@ -250,6 +290,7 @@ if __name__ == '__main__':
     if filter_uniquely_mapped_fragments:
         manual_thresholds['UM'] = {'min': lower_thr_um, 'max': upper_thr_um}
 
+    #adata.obs = adata.obs.fillna(0)
     thresholds = get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds)
 
     print(thresholds)
