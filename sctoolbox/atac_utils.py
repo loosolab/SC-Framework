@@ -7,7 +7,7 @@ import anndata as ad
 from matplotlib import pyplot as plt
 
 
-def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None):
+def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', atac=True, conditions=None):
     '''
     Function to assemble multiple adata files into a single adata object with a sample column in the
     adata.obs table. This concatenates adata.obs and merges adata.uns.
@@ -35,6 +35,8 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', conditions=None)
         sample = 'sample' + str(counter)
 
         adata = epi.read_h5ad(h5ad_path)
+        if atac:
+            adata.var = adata.var.set_index('name')
 
         # Add information to the infoprocess
         cr.build_infor(adata, "Input_for_assembling", h5ad_path)
@@ -229,7 +231,25 @@ def barcode_index(adata):
 
 if __name__ == '__main__':
 
-    adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+    qc_columns = {}
+    qc_columns['n_features_by_counts'] = None
+    qc_columns['log1p_n_features_by_counts'] = None
+    qc_columns['total_counts'] = None
+    qc_columns['log1p_total_counts'] = None
+    qc_columns['mean_insertsize'] = None
+    qc_columns['n_total_fragments'] = None
+    qc_columns['n_fragments_in_promoters'] = None
+    qc_columns['pct_fragments_in_promoters'] = None
+    qc_columns['blacklist_overlaps'] = None
+    qc_columns['TN'] = 'TN'
+    qc_columns['UM'] = 'UM'
+    qc_columns['PP'] = 'PP'
+    qc_columns['UQ'] = 'UQ'
+    qc_columns['CM'] = 'CM'
+
+
+    adata = assemble_from_h5ad(['/mnt/workspace/jdetlef/data/anndata/cropped_146.h5ad'], qc_columns, column='sample', conditions=None)
+    #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
 
 
     # Filter to use:
