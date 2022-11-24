@@ -567,8 +567,6 @@ def pseudobulk_table(adata, groupby, how="mean"):
     """
     Get a pseudobulk table of values per cluster.
 
-    TODO avoid adata.copy()
-
     Parameters
     ----------
     adata : anndata.AnnData
@@ -583,19 +581,18 @@ def pseudobulk_table(adata, groupby, how="mean"):
     pandas.DataFrame :
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
     """
-    adata = adata.copy()
-    adata.obs[groupby] = adata.obs[groupby].astype('category')
+
+    groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
     # Fetch the mean/ sum counts across each category in cluster_by
-    res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)
-    for clust in adata.obs[groupby].cat.categories:
+    res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
+    for clust in groupby_categories:
 
         if how == "mean":
-            res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.mean(0)
+            res[clust] = adata[adata.obs[groupby].isin([clust]), :].X.mean(0).A1
         elif how == "sum":
-            res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0)
+            res[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0).A1
 
-    res = res.T  # transpose to genes x clusters (switch columns with rows)
     return res
 
 

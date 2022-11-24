@@ -672,6 +672,53 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #                          Quality control plotting                         #
 #############################################################################
 
+def group_correlation(adata, groupby, method="spearman", save=None):
+    """
+    Plot correlation matrix between groups in `groupby`. 
+    The function expects the count data in .X to be normalized across cells.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    groupby : str
+        Name of the column in adata.obs to group cells by.
+    method : str, default "spearman"
+        Correlation method to use. See pandas.DataFrame.corr for options.
+
+    Returns
+    -------
+    ClusterGrid object
+    """
+
+    # Calculate correlation of groups
+    count_table = utils.pseudobulk_table(adata, groupby=groupby)
+    corr = count_table.corr(numeric_only=False, method=method)
+
+    # Plot clustermap
+    g = sns.clustermap(corr, figsize=(4, 4),
+                       xticklabels=True,
+                       yticklabels=True,
+                       cmap="Reds",
+                       cbar_kws={'orientation': 'horizontal', 'label': method})
+    g.ax_heatmap.set_facecolor("grey")
+
+    # Adjust cbar
+    n = len(corr)
+    pos = g.ax_heatmap.get_position()
+    cbar_h = pos.height / n / 2
+    g.ax_cbar.set_position([pos.x0, pos.y0 - 3 * cbar_h, pos.width, cbar_h])
+
+    # Final adjustments
+    g.ax_col_dendrogram.set_visible(False)
+    g.ax_heatmap.xaxis.tick_top()
+    _ = g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="left")
+
+    utils.save_figure(save)
+
+    return(g)
+
+
 def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
     """
     Creates a violinplot. With optional horizontal lines for each violin.
