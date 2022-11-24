@@ -56,55 +56,52 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     if inplace is False:
         adata = adata.copy()
 
-    # Split data into batches if requested
-    adata_list = [adata]
-    if groupby is not None:
-        all_groups = adata.obs[groupby].astype("category").cat.categories.tolist()
-        adata_list = [adata[adata.obs[groupby] == group] for group in all_groups]
-
     # Estimate doublets
-    if len(adata_list) > 1:
+    if groupby is not None:
+
+        all_groups = adata.obs[groupby].astype("category").cat.categories.tolist()
         if threads > 1:
-            pool = mp.Pool(threads)
+            pool = mp.Pool(threads, maxtasksperchild=1)  # maxtasksperchild to avoid memory leaks
 
             # Run scrublet for each sub data
-            print("Sending {0} batches to {1} threads".format(len(adata_list), threads))
+            print("Sending {0} batches to {1} threads".format(len(all_groups), threads))
             jobs = []
-            for sub in adata_list:
+            for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
                 job = pool.apply_async(run_scrublet, (sub,), {"threshold": threshold, "verbose": False, **kwargs})
                 jobs.append(job)
+            pool.close()
 
             sctoolbox.utilities.monitor_jobs(jobs, "Scrublet per group")
-            adata_list = [job.get() for job in jobs]  # update adata_list with scrublet results
+            results = [job.get() for job in jobs]
 
         else:
-            for i, sub in enumerate(adata_list):
-                print("Scrublet per group: {}/{}".format(i + 1, len(adata_list)))
-                run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)  # sub is changed in place
+            results = []
+            for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
+                print("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
+                res = run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)
+                results.append(res)
+
+        # Collect results for each element in tuples
+        all_obs = [res[0] for res in results]
+        all_uns = [res[1] for res in results]
 
         # Merge all simulated scores
         uns_dict = {"threshold": threshold, "doublet_scores_sim": np.array([])}
-        for sub in adata_list:
-            uns_dict["doublet_scores_sim"] = np.concatenate((uns_dict["doublet_scores_sim"], sub.uns["scrublet"]["doublet_scores_sim"]))
+        for uns in all_uns:
+            uns_dict["doublet_scores_sim"] = np.concatenate((uns_dict["doublet_scores_sim"], uns["doublet_scores_sim"]))
 
         # Merge all obs tables
-        obs_table_merged = pd.concat([an.obs for an in adata_list])
-        obs_table_merged = obs_table_merged.loc[adata.obs_names.tolist(), :]  # Sort obs to match original order
-
-        # Save scores to object
-        adata.obs["doublet_score"] = obs_table_merged["doublet_score"]
-        adata.obs["predicted_doublet"] = obs_table_merged["predicted_doublet"]
-        adata.uns["scrublet"] = uns_dict
+        obs_table = pd.concat(all_obs)
+        obs_table = obs_table.loc[adata.obs_names.tolist(), :]  # Sort obs to match original order
 
     else:
         # Run scrublet on adata
-        adata_scrublet = adata_list[0]  # there is only one adata
-        run_scrublet(adata_scrublet, threshold=threshold, **kwargs)
+        obs_table, uns_dict = run_scrublet(adata, threshold=threshold, **kwargs)
 
-        # Save scores to object
-        adata.obs["doublet_score"] = adata_scrublet.obs["doublet_score"]
-        adata.obs["predicted_doublet"] = adata_scrublet.obs["predicted_doublet"]
-        adata.uns["scrublet"] = adata_scrublet.uns["scrublet"]
+    # Save scores to object
+    adata.obs["doublet_score"] = obs_table["doublet_score"]
+    adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
+    adata.uns["scrublet"] = uns_dict
 
     # Plot the distribution of scrublet scores
     if plot is True:
@@ -123,13 +120,13 @@ def run_scrublet(adata, **kwargs):
     ----------
     adata : anndata.AnnData
         Anndata object to estimate doublets for.
-    **kwargs :
+    **kwargs : arguments
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
     Returns
     -------
-    anndata.AnnData
-        Anndata object with scrublet results.
+    tuple : (obs, uns)
+        Tuple containing .obs and .uns["scrublet"] of the adata object after scrublet.
     """
 
     with warnings.catch_warnings():
@@ -137,7 +134,7 @@ def run_scrublet(adata, **kwargs):
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute `.obs`*")  # because adata is a view
         sc.external.pp.scrublet(adata, copy=False, **kwargs)
 
-    return adata
+    return (adata.obs, adata.uns["scrublet"])
 
 
 def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True):
