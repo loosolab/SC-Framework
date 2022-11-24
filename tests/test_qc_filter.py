@@ -1,5 +1,4 @@
 
-from lib2to3.pgen2.pgen import generate_grammar
 import pytest
 import sctoolbox.qc_filter as qc
 import scanpy as sc
