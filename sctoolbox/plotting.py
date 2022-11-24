@@ -674,7 +674,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
 def group_correlation(adata, groupby, method="spearman", save=None):
     """
-    Plot correlation matrix between groups in `groupby`. 
+    Plot correlation matrix between groups in `groupby`.
     The function expects the count data in .X to be normalized across cells.
 
     Parameters
