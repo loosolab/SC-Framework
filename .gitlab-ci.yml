@@ -41,6 +41,8 @@ default:
 
 lint:
   stage: test
+  tags:
+    - coverage
   script:
     - pip install flake8
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
@@ -50,6 +52,8 @@ lint:
 
 test coverage:
   stage: test
+  tags:
+    - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
@@ -64,6 +68,8 @@ test coverage:
 
 pages:
   stage: deploy
+  tags:
+    - coverage
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
