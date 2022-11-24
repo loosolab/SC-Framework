@@ -76,6 +76,9 @@ pages:
 #Test notebooks when code is pushed to main
 notebooks:
   image: continuumio/miniconda3:latest
+  tags:
+    - gwdg
+    - gwdg-shared
   inherit:
     default: false  #do not install virtual env for this job
   script:
