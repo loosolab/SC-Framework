@@ -88,6 +88,9 @@ pages:
 notebooks:
   stage: deploy
   image: continuumio/miniconda3:latest
+  tags:
+    - gwdg
+    - gwdg-shared
   inherit:
     default: false  #do not install virtual env for this job
   script:
