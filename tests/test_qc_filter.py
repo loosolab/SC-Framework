@@ -13,7 +13,7 @@ def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
-    adata.obs['sample'] = 'sample1'
+    adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
     return adata
 
 
@@ -46,9 +46,10 @@ def invalid_threshold_dict():
 
 # --------------------------- Tests --------------------------------- #
 
-def test_estimate_doublets(adata):
+@pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1), ("sample", 4)])
+def test_estimate_doublets(adata, groupby, threads):
     """ Test whether 'doublet_score' was added to adata.obs """
-    qc.estimate_doublets(adata, plot=False)  # turn plot off to avoid block during testing
+    qc.estimate_doublets(adata, groupby=groupby, plot=False, threads=threads, n_prin_comps=10)  # turn plot off to avoid block during testing
 
     assert "doublet_score" in adata.obs.columns
 

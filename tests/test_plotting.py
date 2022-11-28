@@ -12,8 +12,10 @@ import numpy as np
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    adata = sc.read_h5ad(f)
+    adata.obs["sample"] = np.random.choice(["S1", "S2", "S3"], size=adata.shape[0])
 
-    return sc.read_h5ad(f)
+    return adata
 
 
 @pytest.fixture
@@ -187,3 +189,15 @@ def test_plot_3D_UMAP(adata):
 
     # Assert creation of file
     assert os.path.isfile("3D_test.html")
+    os.remove("3D_test.html")
+
+
+def test_group_correlation(adata):
+    """ Test if plot is written to pdf """
+
+    # Run group correlation
+    sctoolbox.plotting.group_correlation(adata, groupby="sample", save="group_correlation.pdf")
+
+    # Assert creation of file
+    assert os.path.isfile("group_correlation.pdf")
+    os.remove("group_correlation.pdf")
