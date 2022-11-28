@@ -18,6 +18,7 @@ from kneed import KneeLocator
 # toolbox functions
 import sctoolbox
 from sctoolbox import plotting, checker, analyser, utilities
+from sctoolbox.utilities import save_figure
 
 
 ###############################################################################
@@ -137,7 +138,7 @@ def run_scrublet(adata, **kwargs):
     return (adata.obs, adata.uns["scrublet"])
 
 
-def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True):
+def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True, save=None):
     """
     Function for predicting sex based on expression of Xist (or another gene).
 
@@ -148,13 +149,13 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     groupby : str
         Column in adata.obs to group by.
     gene : str, default "Xist"
-        Name of gene to use for estimating Male/Female split.
+        Name of a female-specific gene to use for estimating Male/Female split.
     gene_column : str, optional
         Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
     threshold : float, default 0.3
         Threshold for the minimum fraction of cells expressing the gene for the group to be considered "Female".
     plot : bool, default True
-        Whether to plot the distribution of Xist expression per group.
+        Whether to plot the distribution of gene expression per group.
 
     Returns
     -------
@@ -229,6 +230,8 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
             axarr[1].axvspan(i - 0.5, i + 0.5, color=color, zorder=0, alpha=alpha, linewidth=0)
         axarr[1].set_xlim(xlim)
         axarr[1].set_title("Prediction of female groups")
+
+        save_figure(save)
 
 
 ###############################################################################
