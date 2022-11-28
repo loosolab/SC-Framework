@@ -246,6 +246,18 @@ def test_plot_3D_UMAP(adata, color):
 
     # Assert creation of file
     assert os.path.isfile("3D_test.html")
+    os.remove("3D_test.html")
+
+
+def test_group_correlation(adata):
+    """ Test if plot is written to pdf """
+
+    # Run group correlation
+    sctoolbox.plotting.group_correlation(adata, groupby="condition", save="group_correlation.pdf")
+
+    # Assert creation of file
+    assert os.path.isfile("group_correlation.pdf")
+    os.remove("group_correlation.pdf")
 
 
 @pytest.mark.parametrize("groupby", [None, "condition"])
