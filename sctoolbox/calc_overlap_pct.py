@@ -163,10 +163,10 @@ def _overlap_two_beds(bed1, bed2, out=None):
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
 
-    # a = pybedtools.BedTool(bed1)
-    # b = pybedtools.BedTool(bed2)
+    a = pybedtools.BedTool(bed1)
+    b = pybedtools.BedTool(bed2)
 
-    # overlap = a.intersect(b, u=True, sorted=True, output=out_overlap)
+    a.intersect(b, u=True, sorted=True, output=out_overlap)
 
     # check if there is an overlap
     bed_file = pybedtools.BedTool(out_overlap)
@@ -342,16 +342,58 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 if __name__ == '__main__':
-    pass
-    # import episcanpy as epi
-    # # read adata
-    # adata = epi.read_h5ad('adata.h5ad')
-    #
-    # bam_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/sorted_cropped_146.bam'
-    # fragments = '/home/jan/python-workspace/sc-atac/data/bamfiles/fragments_cropped_146.bed'
-    #
-    # promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
-    # species = None
-    #
-    # pct_fragments_in_promoters(adata, promoters_gtf, species=species, bam_file=bam_file, cb_col=None, nproc=1)
-    # print('Done')
+    #pass
+    import episcanpy as epi
+    import atac_utils as atac
+
+    # Manually set existing QC Columns
+    n_features_by_counts = None
+    log1p_n_features_by_counts = None
+    total_counts = None
+    log1p_total_counts = None
+    mean_insertsize = None
+    insertsize_count = None
+    n_total_fragments = None
+    n_fragments_in_promoters = None
+    variable_pct_fragments_in_promoters = None
+    blacklist_overlaps = None
+    # total_number_of_fragments
+    TN = 'TN'
+    # uniquely_mapped_fragments
+    UM = 'UM'
+    # properly_paired_fragments
+    PP = 'PP'
+    # uniq_fragments
+    UQ = 'UQ'
+    # chrM_fragments
+    CM = 'CM'
+
+    qc_columns = {}
+    qc_columns["n_features_by_counts"] = n_features_by_counts
+    qc_columns["log1p_n_features_by_counts"] = log1p_n_features_by_counts
+    qc_columns["total_counts"] = total_counts
+    qc_columns["log1p_total_counts"] = log1p_total_counts
+    qc_columns["mean_insertsize"] = mean_insertsize
+    qc_columns['n_total_fragments'] = n_total_fragments
+    qc_columns['n_fragments_in_promoters'] = n_fragments_in_promoters
+    qc_columns['pct_fragments_in_promoters'] = variable_pct_fragments_in_promoters
+    qc_columns["blacklist_overlaps"] = blacklist_overlaps
+    qc_columns["TN"] = TN
+    qc_columns["UM"] = UM
+    qc_columns["PP"] = PP
+    qc_columns["UQ"] = UQ
+    qc_columns["CM"] = CM
+
+    h5ad_files = ['/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad']
+    adata = atac.assemble_from_h5ad(h5ad_files=h5ad_files, qc_columns=qc_columns)
+    # read adata
+    #adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad')
+
+    bam_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted.bam'
+    fragments_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted_fragments_sorted.bed'
+
+    promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
+    species = None
+
+    pct_fragments_in_promoters(adata, promoters_gtf, species=species, fragments_file=fragments_file, cb_col=None, nproc=1)
+    print('Done')
