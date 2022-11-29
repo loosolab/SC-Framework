@@ -248,7 +248,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     the_len = len(next(it))
     if not all(len(list_len) == the_len for list_len in it):
         raise ValueError('Found different quantitys of mtx, genes, barcode files.\n'
-            + 'Please check given suffixes or filenames')
+                        + 'Please check given suffixes or filenames')
 
     if not mtx:
         raise ValueError('No files were found with the given directory and suffixes')
