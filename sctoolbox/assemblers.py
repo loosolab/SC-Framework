@@ -14,7 +14,7 @@ from scipy.io import mmread
 #                                ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS                                         #
 #######################################################################################################################
 
-def from_single_starsolo(path, dtype="filtered"):
+def from_single_starsolo(path, dtype="filtered", header='infer'):
     '''
     This will assemble an anndata object from the starsolo folder.
 
@@ -24,6 +24,8 @@ def from_single_starsolo(path, dtype="filtered"):
         Path to the "solo" folder from starsolo.
     dtype : str, optional
         The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
+    header : int, list of int, None
+        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
     '''
     # Author : Guilherme Valente & Mette Bentsen
 
@@ -53,7 +55,7 @@ def from_single_starsolo(path, dtype="filtered"):
 
     # Setup main adata object from matrix/barcodes/genes
     print("Setting up adata from solo files")
-    adata = from_single_mtx(matrix_f, barcodes_f, genes_f)
+    adata = from_single_mtx(matrix_f, barcodes_f, genes_f, header=header)
     adata.var.columns = ["gene", "type"]  # specific to the starsolo format
 
     # Add in velocity information
