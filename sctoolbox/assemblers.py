@@ -244,9 +244,9 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     # https://stackoverflow.com/questions/35791051/better-way-to-check-if-all-lists-in-a-list-are-the-same-length
     it = iter([mtx, barcodes, genes])
     the_len = len(next(it))
-    if not all(len(l) == the_len for l in it):
-        raise ValueError('Found different quantitys of mtx, genes, barcode files.\n' +
-            'Please check given suffixes or filenames')
+    if not all(len(list_len) == the_len for list_len in it):
+        raise ValueError('Found different quantitys of mtx, genes, barcode files.\n'
+            + 'Please check given suffixes or filenames')
 
     if not mtx:
         raise ValueError('No files were found with the given directory and suffixes')
