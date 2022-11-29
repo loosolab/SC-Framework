@@ -15,6 +15,8 @@ import warnings
 
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
 
 import sctoolbox.utilities
 import sctoolbox.analyser
@@ -1227,3 +1229,181 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sav
     save_figure(save)
 
     return ax
+
+
+#############################################################################
+# ------------------------------ Dotplot ---------------------------------- #
+#############################################################################
+
+def scale_values(array, mini, maxi):
+    val_range = array.max() - array.min()
+    a = (array - array.min()) / val_range
+    return a * (maxi - mini) + mini
+
+
+def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
+    """ Fill in an axis with a legend for the dotplot size scale.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axis to plot the legend on.
+    val_min : float
+        Minimum value of the scale.
+    val_max : float
+        Maximum value of the scale.
+    radius_min : float
+        Minimum radius of the dots.
+    radius_max : float
+        Maximum radius of the dots.
+    """
+
+    # Current issue: The sizes start at 0, which means there are dots for 0 values.
+    # the majority of this code is from the scanpy dotplot function
+
+    n_dots = 4
+    radius_list = np.linspace(radius_min, radius_max, n_dots)
+    value_list = np.linspace(val_min, val_max, n_dots)
+
+    # plot size bar
+    x_list = np.arange(n_dots) + 0.5
+    x_list *= 3  # extend space between points
+
+    circles = [plt.Circle((x, 0.5), radius=r) for x, r in zip(x_list, radius_list)]
+    col = PatchCollection(circles, color="gray", edgecolor='gray')
+    ax.add_collection(col)
+
+    ax.set_xticks(x_list)
+    labels = ["{:.1f}".format(v) for v in value_list]  # todo: make this more flexible with regards to integers
+    ax.set_xticklabels(labels, fontsize=8)
+
+    # remove y ticks and labels
+    ax.tick_params(axis='y', left=False, labelleft=False, labelright=False)
+
+    # remove surrounding lines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.grid(False)
+
+    pad = 0.15
+    ax.set_ylim(0 - 2 * pad, 1 + pad)
+    x0, x1 = ax.get_xlim()
+    ax.set_xlim(x0 - radius_min - pad, x1 + radius_max + pad)
+    ax.set_xlabel(title, fontsize=8)
+    ax.xaxis.set_label_position('top')
+    ax.set_aspect('equal')
+
+
+def clustermap_dotplot(table, x, y, color, size, save=None):
+    """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        Dataframe containing the data to plot.
+    x : str
+        Column in table to plot on the x-axis.
+    y : str
+        Column in table to plot on the y-axis.
+    color : str
+        Column in table to use for the color of the dots.
+    size : str
+        Column in table to use for the size of the dots.
+    save : str, default None
+        If given, the figure will be saved to this path.
+    """
+
+    # This code is very hacky
+    # Major todo is to get better control of location of legends
+    # automatic scaling of figsize
+    # and to make the code more flexible, potentially using a class
+
+    # Create pivots with colors/size
+    color_pivot = pd.pivot(table, index=y, columns=x, values=color)
+    size_pivot = pd.pivot(table, index=y, columns=x, values=size)
+
+    # Get outliers for color
+    color_min = np.percentile(color_pivot.values, 1)
+    color_max = np.percentile(color_pivot.values, 99)
+
+    # Plot clustermap of values
+    g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
+                       vmin=color_min, vmax=color_max,
+                       figsize=(5, 12),
+                       cbar_kws={'label': color, "orientation": "horizontal"}
+                       )
+
+    g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_yticklabels(), fontsize=7)
+    g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), fontsize=7, rotation=45, ha="right")
+
+    # Turn off existing heatmap
+    g.ax_heatmap._children[0]._visible = False
+
+    # Add dots on top of cells
+    data_ordered = g.__dict__["data2d"]
+    nrows, ncols = data_ordered.shape
+    x, y = np.meshgrid(np.arange(0.5, ncols + 0.5, 1), np.arange(0.5, nrows + 0.5, 1))
+
+    color_mat = data_ordered.values
+    color_mat[color_mat > color_max] = color_max
+    color_mat[color_mat < -3] = -3
+
+    size_ordered = size_pivot.loc[data_ordered.index, data_ordered.columns]
+    size_mat = size_ordered.values
+    radius_mat = scale_values(size_mat, 0.05, 0.5)
+
+    circles = [plt.Circle((j, i), radius=r) for r, j, i in zip(radius_mat.flat, x.flat, y.flat)]
+    col = PatchCollection(circles, array=color_mat.flatten(), cmap="bwr")
+    g.ax_heatmap.add_collection(col)
+
+    # Adjust size of individual cells and dendrograms
+    g.ax_heatmap.set_aspect('equal')
+
+    f = plt.gcf()
+    f.canvas.draw()
+
+    # trans_data = g.ax_heatmap.transData
+    # trans_data_inv = trans_data.inverted()
+
+    dend_row_pos = g.ax_row_dendrogram.get_position()
+    # dend_col_pos = g.ax_col_dendrogram.get_position()
+    heatmap_pos = g.ax_heatmap.get_position()
+
+    cell_width = heatmap_pos.height / data_ordered.shape[0]
+    den_size = cell_width * 5
+    pad = cell_width * 0.1
+
+    # Resize dendrograms
+    g.ax_row_dendrogram.set_position([heatmap_pos.x0 - den_size - pad, dend_row_pos.y0,
+                                      den_size, dend_row_pos.height])
+    g.ax_col_dendrogram.set_position([heatmap_pos.x0, heatmap_pos.y0 + heatmap_pos.height + pad,
+                                      heatmap_pos.width, den_size])
+
+    # TODO: get right bounds for y-axis labels to correctly place legends
+    # texts = g.ax_heatmap.get_yticklabels()
+    # bboxes = [t.get_window_extent(renderer=f.canvas.renderer) for t in texts]
+    # right_bound = max([bbox.x1 for bbox in bboxes])
+
+    # Move colorbar
+    max_txt_width = cell_width * 25
+    hm_pos = g.ax_heatmap.get_position()
+    g.ax_cbar.set_position([hm_pos.x1 + max_txt_width, hm_pos.y0, cell_width * 20, cell_width])
+    g.ax_cbar.set_xticklabels(g.ax_cbar.get_xticklabels(), fontsize=7)
+
+    g.ax_cbar.set_xlabel(g.ax_cbar.get_xlabel(), fontsize=8)
+    g.ax_cbar.xaxis.set_label_position('top')
+
+    # Add size legend manually
+    cbar_pos = g.ax_cbar.get_position()
+    ax_size = f.add_axes([cbar_pos.x0, cbar_pos.y1 + cbar_pos.height * 5, cbar_pos.width, cell_width])
+    _plot_size_legend(ax_size, np.min(size_mat), np.max(size_mat), np.min(radius_mat), np.max(radius_mat), title=size)
+
+    # Add border to heatmap
+    g.ax_heatmap.add_patch(Rectangle((0, 0), ncols, nrows, fill=False, edgecolor='grey', lw=1))
+
+    # Save figure
+    utils.save_figure(save)
+
+    return g
