@@ -3,6 +3,17 @@ import os
 import numpy as np
 import shutil
 import sctoolbox.utilities as utils
+import scanpy as sc
+
+
+@pytest.fixture
+def adata():
+    """ Returns adata object with 3 groups """
+
+    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+    return adata
 
 
 @pytest.fixture
@@ -117,3 +128,13 @@ def test_write_list_file(berries):
 
     assert os.path.isfile(path)
     os.remove(path)  # clean up after tests
+
+
+def test_get_adata_subsets(adata):
+    """ Test if adata subsets are returned correctly """
+
+    subsets = utils.get_adata_subsets(adata, "group")
+
+    for group, sub_adata in subsets.items():
+        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].nunique() == 1

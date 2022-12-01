@@ -706,3 +706,26 @@ def _none2null(none_obj):
     from rpy2.robjects import r
 
     return r("NULL")
+
+
+def get_adata_subsets(adata, groupby):
+    """
+    Split an anndata object into a dict of sub-anndata objects based on a grouping column.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to split.
+    groupby : str
+        Column name in adata.obs to split by.
+
+    Returns
+    -------
+    dict :
+        Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
+    """
+
+    group_names = adata.obs[groupby].astype("category").cat.categories.tolist()
+    adata_subsets = {name: adata[adata.obs[groupby] == name] for name in group_names}
+
+    return adata_subsets
