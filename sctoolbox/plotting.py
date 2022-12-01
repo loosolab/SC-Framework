@@ -1428,10 +1428,72 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
         text._horizontalalignment = "left"
 
     fig.tight_layout()
-
     plt.subplots_adjust(wspace=0.2)
 
     # Save figure
     utils.save_figure(save)
 
     return axarr
+
+
+def umap_pub(adata, color=None, title=None, save=None):
+    """
+    Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
+
+    Parameters
+    ----------
+    adata :anndata.AnnData
+        Annotated data matrix.
+    color : str or lst of str, default None
+        Key for annotation of observations/cells or variables/genes.
+    title : str, default None
+        Title of the plot. Default is no title.
+    save : str, default None
+        Filename to save the figure.
+    """
+
+    axarr = sc.pl.umap(adata, color=color, show=False)
+
+    if not isinstance(axarr, list):
+        axarr = [axarr]
+        color = [color]
+
+    for i, ax in enumerate(axarr):
+
+        # Set legend
+        legend = ax.get_legend()
+        legend.set_title(color[i])
+
+        ax.set_title(title)
+
+        # Remove all spines (axes lines)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        # Move x and y-labels to the start of axes
+        label = ax.xaxis.get_label()
+        label.set_horizontalalignment('left')
+        x_lab_pos, y_lab_pos = label.get_position()
+        label.set_position([0, y_lab_pos])
+
+        label = ax.yaxis.get_label()
+        label.set_horizontalalignment('left')
+        x_lab_pos, y_lab_pos = label.get_position()
+        label.set_position([x_lab_pos, 0])
+
+        # Draw UMAP coordinate arrows
+        ymin, ymax = ax.get_ylim()
+        xmin, xmax = ax.get_xlim()
+        yrange = ymax - ymin
+        arrow_len = yrange * 0.15
+
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len), arrowprops=dict(arrowstyle="<-", shrinkB=0))
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))
+
+        # Adjust aspect ratio
+        _make_square(ax)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return ax
