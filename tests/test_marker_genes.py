@@ -66,3 +66,17 @@ def test_get_rank_genes_tables(adata):
 
     assert len(tables) == 3
     assert os.path.exists("rank_genes.xlsx")
+
+
+def test_mask_rank_genes(adata):
+    """ Test if genes are masked in adata.uns['rank_genes_groups'] """
+
+    sc.tl.rank_genes_groups(adata, groupby="condition")
+
+    genes = adata.var.index.tolist()[:10]
+    sctoolbox.marker_genes.mask_rank_genes(adata, genes)
+    tables = sctoolbox.marker_genes.get_rank_genes_tables(adata)
+
+    for key in tables:
+        table_names = tables[key]["names"].tolist()
+        assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked

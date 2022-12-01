@@ -3,6 +3,8 @@ import re
 import glob
 import pkg_resources
 import pandas as pd
+import numpy as np
+import scanpy as sc
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -247,3 +249,43 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                 table.to_excel(writer, sheet_name=f'{group}', index=False)
 
     return group_tables
+
+
+def mask_rank_genes(adata, genes, key="rank_genes_groups"):
+    """
+    Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing ranked genes.
+    genes : list
+        List of genes to be masked.
+    key : str, default: "rank_genes_groups"
+        The key in adata.uns to be used for fetching ranked genes.
+    """
+
+    # Check input
+    if not isinstance(genes, list):
+        raise ValueError("genes must be a list of strings.")
+
+    # Mask genes
+    for group in adata.uns["rank_genes_groups"]["names"].dtype.names:
+        adata.uns[key]["names"][group] = np.where(np.isin(adata.uns[key]["names"][group], genes), np.nan, adata.uns[key]["names"][group])
+
+
+def run_rank_genes(adata, groupby,
+                   method=None,
+                   min_in_group_fraction=0.25,
+                   min_fold_change=0.5,
+                   max_out_group_fraction=0.8):
+    """ Run rank_genes_groups  """
+
+    sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
+    sc.tl.filter_rank_genes_groups(adata,
+                                   min_in_group_fraction=min_in_group_fraction,
+                                   min_fold_change=min_fold_change,
+                                   max_out_group_fraction=max_out_group_fraction)
+
+    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
+    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
