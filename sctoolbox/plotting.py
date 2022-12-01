@@ -738,7 +738,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
 
     utils.save_figure(save)
 
-    return(g)
+    return g
 
 
 def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
