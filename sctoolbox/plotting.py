@@ -1407,3 +1407,31 @@ def clustermap_dotplot(table, x, y, color, size, save=None):
     utils.save_figure(save)
 
     return g
+
+
+def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
+    """ Plot an overview of marker genes and clustering """
+
+    fig, axarr = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 2]})
+
+    # Plot UMAP colored by groupby on the left
+    sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
+    axarr[0].set_aspect('equal')
+
+    # Plot marker gene expression on the right
+    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[1])
+    ax["mainplot_ax"].set_ylabel(groupby)
+    ax["mainplot_ax"].set_xticklabels(ax["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
+
+    for text in ax["gene_group_ax"]._children:
+        text._rotation = 45
+        text._horizontalalignment = "left"
+
+    fig.tight_layout()
+
+    plt.subplots_adjust(wspace=0.2)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return axarr
