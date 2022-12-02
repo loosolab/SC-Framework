@@ -321,8 +321,9 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
     # read fragments file as dataframe
     fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
+    # drop columns we dont need
+    fragments_df.drop(fragments_df.iloc[:,5:], axis=1)
     # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
-
     fragments_df.columns = ['chr', 'start', 'end', 'barcode', col_total_fragments]
     fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
     fragments_df.drop(['chr', 'start', 'end'], axis=1, inplace=True)
