@@ -307,7 +307,8 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     print('Calculating percentage...')
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
-    # check if there is no overlap
+    # drop columns we dont need
+    df_overlap.drop(df_overlap.iloc[:,5:], axis=1, inplace=True)
     df_overlap.columns = ['chr', 'start', 'end', 'barcode', col_n_fragments_in_list]
     # remove barcodes not found in adata.obs
     df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
