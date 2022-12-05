@@ -7,7 +7,7 @@ import anndata as ad
 from matplotlib import pyplot as plt
 
 
-def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', atac=True, conditions=None):
+def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', from_snapatac=True, peak_columns=None, conditions=None):
     '''
     Function to assemble multiple adata files into a single adata object with a sample column in the
     adata.obs table. This concatenates adata.obs and merges adata.uns.
@@ -35,8 +35,26 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', atac=True, condi
         sample = 'sample' + str(counter)
 
         adata = epi.read_h5ad(h5ad_path)
-        if atac:
+        if from_snapatac:
             adata.var = adata.var.set_index('name')
+            # split the peak column into chromosome start and end
+            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
+            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+            # remove start_end column
+            adata.var.drop('start_end', axis=1, inplace=True)
+
+            # exclude the b' and ' from the chromosome
+            adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("b'", "")
+            adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("'", "")
+
+        else:
+            if peak_columns is not None:
+                # rename adata.var columns to peak_chr, peak_start, peak_end
+                adata.var.rename(columns=peak_columns, inplace=True)
+
+            else:
+                # raise warning if peak_columns is not set
+                print('peak_columns is not set. Please set peak_columns to rename adata.var columns to peak_chr, peak_start, peak_end')
 
         # Add information to the infoprocess
         cr.build_infor(adata, "Input_for_assembling", h5ad_path)
