@@ -1,3 +1,4 @@
+import pandas as pd
 import scanpy as sc
 import re
 import sctoolbox.qc_filter as qc_filter
@@ -36,7 +37,7 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', from_snapatac=Tr
 
         adata = epi.read_h5ad(h5ad_path)
         if from_snapatac:
-            adata.var = adata.var.set_index('name')
+
             # split the peak column into chromosome start and end
             adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
             adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
@@ -46,6 +47,8 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', from_snapatac=Tr
             # exclude the b' and ' from the chromosome
             adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("b'", "")
             adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("'", "")
+
+            adata.var = adata.var.set_index('name')
 
         else:
             if peak_columns is not None:
@@ -81,6 +84,8 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', from_snapatac=Tr
 
     adata = ad.concat(adata_dict, label=column)
     adata.uns = ad.concat(adata_dict, uns_merge='same').uns
+    for value in adata_dict.values():
+        adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
 
     return adata
 
@@ -284,28 +289,28 @@ def scatter_HVF_distribution(adata):
 if __name__ == '__main__':
 
 
-    adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/processed_data/Esophagus/norm_correction/anndata/Esophagus.h5ad')
-    violin_HVF_distribution(adata)
-    scatter_HVF_distribution(adata)
+    #adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/processed_data/Esophagus/norm_correction/anndata/Esophagus.h5ad')
+    #violin_HVF_distribution(adata)
+    #scatter_HVF_distribution(adata)
 
-    # qc_columns = {}
-    # qc_columns['n_features_by_counts'] = None
-    # qc_columns['log1p_n_features_by_counts'] = None
-    # qc_columns['total_counts'] = None
-    # qc_columns['log1p_total_counts'] = None
-    # qc_columns['mean_insertsize'] = None
-    # qc_columns['n_total_fragments'] = None
-    # qc_columns['n_fragments_in_promoters'] = None
-    # qc_columns['pct_fragments_in_promoters'] = None
-    # qc_columns['blacklist_overlaps'] = None
-    # qc_columns['TN'] = 'TN'
-    # qc_columns['UM'] = 'UM'
-    # qc_columns['PP'] = 'PP'
-    # qc_columns['UQ'] = 'UQ'
-    # qc_columns['CM'] = 'CM'
-    #
-    #
-    # adata = assemble_from_h5ad(['/mnt/workspace/jdetlef/data/anndata/cropped_146.h5ad'], qc_columns, column='sample', conditions=None)
+    qc_columns = {}
+    qc_columns['n_features_by_counts'] = None
+    qc_columns['log1p_n_features_by_counts'] = None
+    qc_columns['total_counts'] = None
+    qc_columns['log1p_total_counts'] = None
+    qc_columns['mean_insertsize'] = None
+    qc_columns['n_total_fragments'] = None
+    qc_columns['n_fragments_in_promoters'] = None
+    qc_columns['pct_fragments_in_promoters'] = None
+    qc_columns['blacklist_overlaps'] = None
+    qc_columns['TN'] = 'TN'
+    qc_columns['UM'] = 'UM'
+    qc_columns['PP'] = 'PP'
+    qc_columns['UQ'] = 'UQ'
+    qc_columns['CM'] = 'CM'
+
+
+    adata = assemble_from_h5ad(['/mnt/workspace/jdetlef/data/anndata/Esophagus.h5ad'], qc_columns, column='sample', from_snapatac=True, conditions=None)
     # #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
     #
     #
