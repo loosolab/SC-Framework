@@ -18,6 +18,7 @@ class ATAC_tree(generalized_tree.Tree):
     _pre_pro_dir = None
     _qc_plots_dir = None
 
+
     def setupDir(self):
         '''
         Extends the setupDir() function of the super-class Tree from generalized_tree.py.

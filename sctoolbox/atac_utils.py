@@ -175,12 +175,12 @@ def plot_ov_hist(adata, threshold_features=1000):
     #min_features = threshold_features
 
     epi.pp.coverage_cells(adata, binary=True, log=False, bins=50)
-    epi.pp.coverage_cells(adata, binary=True, log=10, bins=50)
+    # epi.pp.coverage_cells(adata, binary=True, log=10, bins=50)
 
     # show numbers of cells sharing features
 
     epi.pp.coverage_features(adata, binary=True, log=False, bins=50)
-    epi.pp.coverage_features(adata, binary=True, log=10, bins=50)
+    # epi.pp.coverage_features(adata, binary=True, log=10, bins=50)
 
     epi.pp.cal_var(adata)
 
