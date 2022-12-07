@@ -27,6 +27,7 @@ import sctoolbox.bam
 
 
 # muon package
+
 def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
     """Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
     TF: peak counts are normalised by total number of counts per cell.
@@ -126,11 +127,12 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.uns["pca"] = {"stdev": stdev}
 
 
-def atac_norm(adata):
+def atac_norm(adata, condition_col='nb_features'):
     """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
     calculates PCA and UMAP and plots both UMAPs.
 
     :param anndata.AnnData adata: AnnData object with peak counts.
+    :param str condition_col: Name of the column to use as color in the umap plot
     :return anndata.AnnData: Two AnnData objects with normalized matrices (Total and TFIDF) and UMAP.
     """
     adata_tfidf = adata.copy()
@@ -140,7 +142,7 @@ def atac_norm(adata):
     print('Performing TFIDF and LSI...')
     tfidf(adata_tfidf)
     lsi(adata_tfidf)
-    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_lsi')
+    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
     sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
     print('Done')
     
@@ -157,8 +159,8 @@ def atac_norm(adata):
     print('Plotting UMAP...')
     fig, axarr = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
     axes = axarr.flatten()
-    sc.pl.umap(adata_tfidf, color='sample', title='TFIDF', legend_loc = 'none', ax=axes[0], show=False)
-    sc.pl.umap(adata_total, color='sample', title='Total', legend_loc = 'right margin', ax=axes[1], show=False)
+    sc.pl.umap(adata_tfidf, color=condition_col, title='TFIDF', legend_loc = 'none', ax=axes[0], show=False)
+    sc.pl.umap(adata_total, color=condition_col, title='Total', legend_loc = 'right margin', ax=axes[1], show=False)
     
     plt.tight_layout()
 
