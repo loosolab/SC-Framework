@@ -1,5 +1,6 @@
 import scipy
 from scipy import sparse
+from scipy.sparse.linalg import svds
 import numpy as np
 import os
 import yaml
@@ -8,14 +9,160 @@ import gzip
 import re
 import datetime
 import copy
+from glob import glob
 
 import episcanpy as epi
+import scanpy as sc
+from anndata import AnnData
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 import sctoolbox.utilities as utils
 import sctoolbox.annotation as anno
 import sctoolbox.bam
+
+#from scanpy import logging
+#import pkgutil
+#from typing import List, Union, Optional, Callable, Iterable
+
+
+# muon package
+def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
+    """Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
+    TF: peak counts are normalised by total number of counts per cell.
+    DF: total number of counts for each peak.
+    IDF: number of cells divided by DF.
+    By default, log(TF) * log(IDF) is returned.
+
+    Note: Function is from the muon package.
+
+    :param anndata.AnnData data: AnnData object with peak counts.
+    :param bool log_tf: Log-transform TF term, defaults to True.
+    :param bool log_idf: Log-transform IDF term, defaults to True.
+    :param bool log_tfidf: Log-transform TF*IDF term. Can only be used when log_tf and log_idf are False, defaults to False.
+    :param int scale_factor: Scale factor to multiply the TF-IDF matrix by, defaults to 1e4.
+    :raises TypeError: data must be anndata object.
+    :raises AttributeError: log(TF*IDF) requires log(TF) and log(IDF) to be False.
+    """
+    if isinstance(data, AnnData):
+        adata = data
+    else:
+        raise TypeError("Expected AnnData object!")
+
+    if log_tfidf and (log_tf or log_idf):
+        raise AttributeError(
+            "When returning log(TF*IDF), \
+            applying neither log(TF) nor log(IDF) is possible."
+        )
+
+    if sparse.issparse(adata.X):
+        n_peaks = np.asarray(adata.X.sum(axis=1)).reshape(-1)
+        n_peaks = sparse.dia_matrix((1.0 / n_peaks, 0), shape=(n_peaks.size, n_peaks.size))
+        # This prevents making TF dense
+        tf = np.dot(n_peaks, adata.X)
+    else:
+        n_peaks = np.asarray(adata.X.sum(axis=1)).reshape(-1, 1)
+        tf = adata.X / n_peaks
+    if scale_factor is not None and scale_factor != 0 and scale_factor != 1:
+        tf = tf * scale_factor
+    if log_tf:
+        tf = np.log1p(tf)
+
+    idf = np.asarray(adata.shape[0] / adata.X.sum(axis=0)).reshape(-1)
+    if log_idf:
+        idf = np.log1p(idf)
+
+    if sparse.issparse(tf):
+        idf = sparse.dia_matrix((idf, 0), shape=(idf.size, idf.size))
+        tf_idf = np.dot(tf, idf)
+    else:
+        tf_idf = np.dot(sparse.csr_matrix(tf), sparse.csr_matrix(np.diag(idf)))
+
+    if log_tfidf:
+        tf_idf = np.log1p(tf_idf)
+
+    adata.X = np.nan_to_num(tf_idf, 0)
+
+
+def lsi(data, scale_embeddings=True, n_comps=50):
+    """Run Latent Semantic Indexing.
+
+    Note: Function is from muon package.
+
+    :param anndata.AnnData data: AnnData object with peak counts.
+    :param bool scale_embeddings: Scale embeddings to zero mean and unit variance, defaults to True.
+    :param int n_comps: Number of components to calculate with SVD, defaults to 50.
+    :raises TypeError: data must be anndata object.
+    """
+    if isinstance(data, AnnData):
+        adata = data
+    else:
+        raise TypeError("Expected AnnData object!")
+
+    # In an unlikely scnenario when there are less 50 features, set n_comps to that value
+    n_comps = min(n_comps, adata.X.shape[1])
+
+    #logging.info("Performing SVD")
+    cell_embeddings, svalues, peaks_loadings = svds(adata.X, k=n_comps)
+
+    # Re-order components in the descending order
+    cell_embeddings = cell_embeddings[:, ::-1]
+    svalues = svalues[::-1]
+    peaks_loadings = peaks_loadings[::-1, :]
+
+    if scale_embeddings:
+        cell_embeddings = (cell_embeddings - cell_embeddings.mean(axis=0)) / cell_embeddings.std(
+            axis=0
+        )
+
+    stdev = svalues / np.sqrt(adata.X.shape[0] - 1)
+
+    adata.obsm["X_lsi"] = cell_embeddings
+    adata.uns["lsi"] = {"stdev": stdev}
+    adata.varm["LSI"] = peaks_loadings.T
+    
+    adata.obsm["X_pca"] = cell_embeddings
+    adata.varm["PCs"] = peaks_loadings.T
+    adata.uns["pca"] = {"stdev": stdev}
+
+
+def atac_norm(adata):
+    """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
+    calculates PCA and UMAP and plots both UMAPs.
+
+    :param anndata.AnnData adata: AnnData object with peak counts.
+    :return anndata.AnnData: Two AnnData objects with normalized matrices (Total and TFIDF) and UMAP.
+    """
+    adata_tfidf = adata.copy()
+    adata_total = adata.copy()
+    
+    # perform tfidf and latent semantic indexing 
+    print('Performing TFIDF and LSI...')
+    tfidf(adata_tfidf)
+    lsi(adata_tfidf)
+    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_lsi')
+    sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
+    print('Done')
+    
+    # perform total normalization and pca
+    print('Performing total normalization and PCA...')
+    sc.pp.normalize_total(adata_total)
+    adata_total.layers['normalised'] = adata_total.X.copy()
+    epi.pp.log1p(adata_total)
+    sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=True)
+    sc.pp.neighbors(adata_total, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean')
+    sc.tl.umap(adata_total, min_dist=0.1, spread=2)
+    print('Done')
+
+    print('Plotting UMAP...')
+    fig, axarr = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+    axes = axarr.flatten()
+    sc.pl.umap(adata_tfidf, color='sample', title='TFIDF', legend_loc = 'none', ax=axes[0], show=False)
+    sc.pl.umap(adata_total, color='sample', title='Total', legend_loc = 'right margin', ax=axes[1], show=False)
+    
+    plt.tight_layout()
+
+    return adata_tfidf, adata_total
 
 
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
