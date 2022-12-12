@@ -151,17 +151,19 @@ def atac_norm(adata, condition_col='nb_features'):
     sc.pp.normalize_total(adata_total)
     adata_total.layers['normalised'] = adata_total.X.copy()
     epi.pp.log1p(adata_total)
-    sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=True)
+    sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=False)
     sc.pp.neighbors(adata_total, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean')
     sc.tl.umap(adata_total, min_dist=0.1, spread=2)
     print('Done')
 
     print('Plotting UMAP...')
-    fig, axarr = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+    fig, axarr = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
     axes = axarr.flatten()
-    sc.pl.umap(adata_tfidf, color=condition_col, title='TFIDF', legend_loc = 'none', ax=axes[0], show=False)
-    sc.pl.umap(adata_total, color=condition_col, title='Total', legend_loc = 'right margin', ax=axes[1], show=False)
-    
+    sc.pl.pca(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[0], show=False)
+    sc.pl.pca(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[1], show=False)
+    sc.pl.umap(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[2], show=False)
+    sc.pl.umap(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[3], show=False)
+
     plt.tight_layout()
 
     return adata_tfidf, adata_total
