@@ -563,7 +563,7 @@ def saving_anndata(anndata, current_notebook):
     print(f"Your new anndata object is saved here: {adata_output}")
 
 
-def pseudobulk_table(adata, groupby, how="mean"):
+def pseudobulk_table(adata, groupby, how="mean", layer=None):
     """
     Get a pseudobulk table of values per cluster.
 
@@ -584,14 +584,19 @@ def pseudobulk_table(adata, groupby, how="mean"):
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
+    if layer is not None:
+        mat = adata.layers[layer]
+    else:
+        mat = adata.X
+
     # Fetch the mean/ sum counts across each category in cluster_by
     res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
     for clust in groupby_categories:
 
         if how == "mean":
-            res[clust] = adata[adata.obs[groupby].isin([clust]), :].X.mean(0).A1
+            res[clust] = mat[adata.obs[groupby].isin([clust]), :].mean(0).A1
         elif how == "sum":
-            res[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0).A1
+            res[clust] = mat[adata.obs[groupby].isin([clust]), :].sum(0).A1
 
     return res
 
@@ -729,3 +734,28 @@ def get_adata_subsets(adata, groupby):
     adata_subsets = {name: adata[adata.obs[groupby] == name] for name in group_names}
 
     return adata_subsets
+
+
+def write_excel(table_dict, filename, index=False):
+    """
+    Write a dictionary of tables to a single excel file with one table per sheet.
+
+    Parameters
+    ----------
+    table_dict : dict
+        Dictionary of tables in the format {<sheet_name1>: table, <sheet_name2>: table, (...)}.
+    filename : str
+        Path to output file.
+    index : bool, default False
+        Whether to include the index of the tables in file.
+    """
+
+    # Check if tables are pandas dataframes
+    for name, table in table_dict.items():
+        if not isinstance(table, pd.DataFrame):
+            raise Exception(f"Table {name} is not a pandas DataFrame!")
+
+    # Write to excel
+    with pd.ExcelWriter(filename) as writer:
+        for name, table in table_dict.items():
+            table.to_excel(writer, sheet_name=f'{name}', index=index)
