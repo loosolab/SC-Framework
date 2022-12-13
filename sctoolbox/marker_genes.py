@@ -289,3 +289,140 @@ def run_rank_genes(adata, groupby,
 
     adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
     adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+
+
+def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
+    """
+    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
+
+    Note: Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    sample_col : str
+        Column name in adata.obs containing sample names.
+    condition_col : str
+        Column name in adata.obs containing condition names to be compared.
+    confounders : list, default: None
+        List of additional column names in adata.obs containing confounders to be included in the model.
+    layer : str, default: None
+        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
+
+    Returns
+    -----------
+    """
+
+    utils.setup_R()
+    from diffexpr.py_deseq import py_DESeq2
+
+    # Setup the design formula
+    if confounders is None:
+        confounders = []
+    elif not isinstance(confounders, list):
+        confounders = [confounders]
+
+    design_formula = "~ " + " + ".join(confounders + [condition_col])
+
+    # Build sample_df
+    cols = [sample_col, condition_col] + confounders
+    sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
+    sample_df.set_index(sample_col, inplace=True)
+
+    conditions = sample_df[condition_col].unique()
+    samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
+
+    # Build count matrix
+    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer)
+    count_table.index.name = "gene"
+    count_table.reset_index(inplace=True)
+
+    # Run DEseq2
+    dds = py_DESeq2(count_matrix=count_table,
+                    design_matrix=sample_df,
+                    design_formula=design_formula,
+                    gene_column='gene')
+    dds.run_deseq()
+    dds.get_deseq_result()
+
+    # Normalizing counts
+    dds.normalized_count()
+
+    # Reformatting result tables
+    dds.deseq_result.drop(columns="gene", inplace=True)
+    dds.normalized_count_df.drop(columns="gene", inplace=True)
+    dds.normalized_count_df.columns = dds.samplenames
+
+    # Add condition count to results
+    for condition in conditions:
+        samples = samples_per_cond[condition]
+        mean_values = dds.normalized_count_df[samples].mean(axis=1)
+        dds.deseq_result.insert(0, condition + "_mean", mean_values)
+
+    dds.deseq_result.sort_values("pvalue", inplace=True)
+
+    adata.uns["deseq_result"] = dds.deseq_result
+    adata.uns["deseq_normalized"] = dds.normalized_count_df
+
+    return dds
+
+
+def get_celltype_assignment(adata, clustering, marker_genes_dict):
+    """
+    Get cell type assignment based on marker genes.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    clustering : str
+        Name of clustering column to use for cell type assignment.
+    marker_genes_dict : dict
+        Dictionary containing cell type names as keys and lists of marker genes as values.
+    """
+
+    # todo: make this more robust
+
+    marker_genes_list = [[gene] if isinstance(gene, str) else gene for gene in marker_genes_dict.values()]
+    marker_genes_list = sum(marker_genes_list, [])
+    sub = adata[:, marker_genes_list]
+
+    # Get long marker genes table
+    markers = []
+    for celltype, gene_list in marker_genes_dict.items():
+        for gene in gene_list:
+            markers.append({"celltype": celltype, "gene": gene})
+
+    marker_genes_table = pd.DataFrame(markers)
+
+    # Get pseudobulk table
+    table = utils.pseudobulk_table(sub, clustering)
+    table.index.name = "genes"
+    table.reset_index(inplace=True)
+
+    table_long = table.melt(id_vars=["genes"], var_name=clustering)
+    table_long.sort_values("value", ascending=False)
+
+    table_long = table_long.merge(marker_genes_table, left_on="genes", right_on="gene")
+    table_long = table_long.drop(columns="gene")
+
+    cluster2celltype = {}
+    celltype_count = {}
+    for idx, sub in table_long.groupby(clustering):
+        mu = sub.groupby("celltype").mean(numeric_only=True).sort_values("value", ascending=False)
+        cluster2celltype[idx] = mu.index[0]
+
+    # Make unique
+    celltype_count = {}
+    celltypes = list(cluster2celltype.values())
+    for cluster in cluster2celltype:
+        celltype = cluster2celltype[cluster]
+        celltype_count[celltype] = celltype_count.get(celltype, 0) + 1
+
+        if celltypes.count(celltype) > 1:
+            cluster2celltype[cluster] = f"{celltype} {celltype_count[celltype]}"
+
+    table = pd.DataFrame().from_dict(cluster2celltype, orient="index")
+
+    return cluster2celltype
