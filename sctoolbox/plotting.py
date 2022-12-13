@@ -1296,7 +1296,7 @@ def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
     ax.set_aspect('equal')
 
 
-def clustermap_dotplot(table, x, y, color, size, save=None):
+def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
     """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
 
     Parameters
@@ -1313,6 +1313,8 @@ def clustermap_dotplot(table, x, y, color, size, save=None):
         Column in table to use for the size of the dots.
     save : str, default None
         If given, the figure will be saved to this path.
+    kwargs : arguments
+        Additional arguments to pass to seaborn.clustermap.
     """
 
     # This code is very hacky
@@ -1324,16 +1326,12 @@ def clustermap_dotplot(table, x, y, color, size, save=None):
     color_pivot = pd.pivot(table, index=y, columns=x, values=color)
     size_pivot = pd.pivot(table, index=y, columns=x, values=size)
 
-    # Get outliers for color
-    color_min = np.percentile(color_pivot.values, 1)
-    color_max = np.percentile(color_pivot.values, 99)
-
     # Plot clustermap of values
     g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
-                       vmin=color_min, vmax=color_max,
+                       # vmin=color_min, vmax=color_max, #should be given as kwargs
                        figsize=(5, 12),
-                       cbar_kws={'label': color, "orientation": "horizontal"}
-                       )
+                       cbar_kws={'label': color, "orientation": "horizontal"},
+                       **kwargs)
 
     g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_yticklabels(), fontsize=7)
     g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), fontsize=7, rotation=45, ha="right")
@@ -1346,9 +1344,15 @@ def clustermap_dotplot(table, x, y, color, size, save=None):
     nrows, ncols = data_ordered.shape
     x, y = np.meshgrid(np.arange(0.5, ncols + 0.5, 1), np.arange(0.5, nrows + 0.5, 1))
 
+    # todo: get control of the min/max values of the color scale
     color_mat = data_ordered.values
-    color_mat[color_mat > color_max] = color_max
-    color_mat[color_mat < -3] = -3
+    if "vmin" in kwargs:
+        color_min = kwargs["vmin"]
+        color_mat[color_mat < color_min] = color_min
+
+    if "vmax" in kwargs:
+        color_max = kwargs["vmax"]
+        color_mat[color_mat > color_max] = color_max
 
     size_ordered = size_pivot.loc[data_ordered.index, data_ordered.columns]
     size_mat = size_ordered.values
@@ -1436,7 +1440,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
     return axarr
 
 
-def umap_pub(adata, color=None, title=None, save=None):
+def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     """
     Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
 
@@ -1450,9 +1454,11 @@ def umap_pub(adata, color=None, title=None, save=None):
         Title of the plot. Default is no title.
     save : str, default None
         Filename to save the figure.
+    kwargs : dict
+        Additional arguments passed to `sc.pl.umap`.
     """
 
-    axarr = sc.pl.umap(adata, color=color, show=False)
+    axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
 
     if not isinstance(axarr, list):
         axarr = [axarr]
@@ -1462,7 +1468,8 @@ def umap_pub(adata, color=None, title=None, save=None):
 
         # Set legend
         legend = ax.get_legend()
-        legend.set_title(color[i])
+        if legend is not None:
+            legend.set_title(color[i])
 
         ax.set_title(title)
 
@@ -1485,10 +1492,12 @@ def umap_pub(adata, color=None, title=None, save=None):
         ymin, ymax = ax.get_ylim()
         xmin, xmax = ax.get_xlim()
         yrange = ymax - ymin
-        arrow_len = yrange * 0.15
+        xrange = xmax - xmin
+        arrow_len_y = yrange * 0.15
+        arrow_len_x = xrange * 0.15
 
-        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len), arrowprops=dict(arrowstyle="<-", shrinkB=0))
-        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
 
         # Adjust aspect ratio
         _make_square(ax)
