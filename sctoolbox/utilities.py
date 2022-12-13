@@ -759,3 +759,24 @@ def write_excel(table_dict, filename, index=False):
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
             table.to_excel(writer, sheet_name=f'{name}', index=index)
+
+
+def add_expr_to_obs(adata, gene):
+    """
+    Add expression of a gene from adata.X to adata.obs as a new column.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to add expression to.
+    gene : str
+        Gene name to add expression of.
+    """
+
+    boolean = adata.var.index == gene
+    if sum(boolean) == 0:
+        raise Exception(f"Gene {gene} not found in adata.var.index")
+
+    else:
+        idx = np.argwhere(boolean)[0][0]
+        adata.obs[gene] = adata.X[:, idx].todense().A1
