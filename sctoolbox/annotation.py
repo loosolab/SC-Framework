@@ -736,7 +736,7 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     return (all_valid_annotations)
 
 
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, **kwargs):
+def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
 
@@ -757,6 +757,8 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         Value min_mean is adjusted by in each iteration. Will divide min_value (below range) or multiply (above range) by this value.
     inplace : boolean, default False
         Whether the anndata object is modified inplace.
+    save : str, default None
+        Path to save the plot to. If None, the plot is not saved.
     **kwargs :
         Additional arguments forwarded to scanpy.pp.highly_variable_genes().
 
@@ -790,6 +792,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
     else:
         sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
+        utils.save_figure(save)
         print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
     # Adding info in anndata.uns["infoprocess"]
