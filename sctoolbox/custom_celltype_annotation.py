@@ -2,6 +2,8 @@ import math
 import os
 import statistics
 import sys
+import pandas as pd
+from IPython.display import display
 
 
 def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, cluster_path=None, cluster_column=None, rank_genes_column=None, sample="sample", ct_column="cell_types", tissue="all", db="panglao", inplace=True):
@@ -39,10 +41,10 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
     Returns
     --------
-    If inplace == True, the annotation is added to adata.var in place. 
+    If inplace == True, the annotation is added to adata.obs in place. 
     Else, a copy of the adata object is returned with the annotations added.
-
     """
+
     if inplace == False:
         adata = adata.copy()
 
@@ -98,6 +100,68 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
         else:
             pass
+
+
+def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_column="leiden", cell_type_column="cell_types", inplace=True):
+    """
+    This function can be used to make subsequent changes to cell types that were previously annotated with the annot_ct() function. 
+    For each annotated cluster, a choice of 10 possible alternative assignments is presented.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData, default None
+        The anndata object containing cell type assignments from the annot_ct() function.
+    resolutions : list of strings, default None
+        The available clustering resolutions.
+    annotation_dir : string, default None
+        The path where the annotation files are being stored (should be the same path as the output_path parameter of the annot_ct function).
+    clustering_column : string, default "leiden"
+        The prefix of the clustering columns if resolutions != None, else the complete name of the clustering column.
+    cell_type_column : string, defaul "cell_types"
+        The prefix of the cell type annotation columns if resolutions != None, else the complete name of the cell type annotation column.
+    inplace : boolean, default True
+        Whether to add the new cell type assignments to the adata object in place.
+
+    Returns
+    --------
+    If inplace == True, the modified annotation is added to adata.obs in place. 
+    Else, a copy of the adata object is returned with the annotations added.
+    """
+    
+    if inplace == False:
+        adata = adata.copy()
+    
+    if resolutions:
+        for res in resolutions:
+            adata.obs[f'{cell_type_column}_mod_{res}'] = adata.obs[f'{cell_type_column}_{res}']
+
+        modify = True
+        while modify:
+            res = float(input("Enter cluster resolution: "))
+            cluster = int(input("Enter the number of the cluster you'd like to modify: "))
+            df = pd.read_csv(f'{annotation_dir}/ranked/output/{clustering_column}_{res}/ranks/cluster_{cluster}', sep='\t', names=["Cell type", "Score", "Hits", "Number of marker genes", "Mean of UI"])
+            display(df.head(10))
+            new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
+            adata.obs[f'{cell_type_column}_mod_{res}'] = adata.obs[f'{cell_type_column}_mod_{res}'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
+            print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
+            modify = input("Would you like to modify another cluster? Enter yes or no: ")
+            modify = True if modify == "yes" else False
+    else:
+        adata.obs[f'{cell_type_column}_mod'] = adata.obs[f'{cell_type_column}']
+
+        modify = True
+        while modify:
+            cluster = int(input("Enter the number of the cluster you'd like to modify: "))
+            df = pd.read_csv(f'{annotation_dir}/ranked/output/{clustering_column}/ranks/cluster_{cluster}', sep='\t', names=["Cell type", "Score", "Hits", "Number of marker genes", "Mean of UI"])
+            display(df.head(10))
+            new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
+            adata.obs[f'{cell_type_column}_mod'] = adata.obs[f'{cell_type_column}_mod'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
+            print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
+            modify = input("Would you like to modify another cluster? Enter yes or no: ")
+            modify = True if modify == "yes" else False
+            
+    if inplace == False:
+        return adata
 
 
 def get_panglao(path, tissue="all"):
@@ -234,7 +298,6 @@ def get_cell_types(cluster_path, db_path, tissue="all", db="panglao"):
     """
 
     if db == "panglao":
-        print("Loading PanglaoDB")
         db_dict = get_panglao(db_path, tissue=tissue)
     else:
         print("DB " + db + " not supported.")
