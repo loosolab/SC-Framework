@@ -300,6 +300,9 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
 
+        # Make sure that the batch_key is still a categorical
+        adata.obs[batch_key] = adata.obs[batch_key].astype("category")
+
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.tl.pca(adata)  # rerun pca
         sc.pp.neighbors(adata)
