@@ -164,10 +164,38 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
         return adata
 
 
+def show_tables(annotation_dir=None, resolution=None, clustering_column="leiden"):
+    """
+    Show dataframes of each cluster which shows score, hits, number of genes and mean of the UI of every potential cell type.
+
+    Parameters
+    ----------
+    annotation_dir : string, default None
+        The path where the annotation files are being stored (should be the same path as the output_path parameter of the annot_ct function).
+    resolutions : list of strings, default None
+        The available clustering resolutions.
+    clustering_column : string, default "leiden"
+        The prefix of the clustering columns if resolutions != None, else the complete name of the clustering column.
+    """
+
+    if resolution:
+        path = f'{annotation_dir}/ranked/output/{clustering_column}_{resolution}/ranks'
+    else:
+        path = f'{annotation_dir}/ranked/output/{clustering_column}/ranks'
+
+    files = os.listdir(path)
+    for file in files:
+        cluster = file.split("_")[1]
+        df = pd.read_csv(f'{path}/{file}', sep='\t', names=[f"Cluster {cluster}: Cell type", "Score", "Hits", "Number of marker genes", "Mean of UI"])
+        display(df.head(10))
+
+
 def get_panglao(path, tissue="all"):
     """
     Read and parse the panglao cell type marker gene database file.
 
+    Parameters
+    ----------
     path : string
         The path to the panglao cell type marker gene database file.
 
@@ -266,9 +294,14 @@ def calc_ranks(cm_dict, annotated_clusters):
                     ub_scores.append(ub_score)
                     count += 1
 
+            # ranks = sorted(ranks, reverse=True)
+
+            # if count >= 10:
+            #     ranks = ranks[:10]
+
             if count > 4:
                 ub_mean = round(statistics.mean(ub_scores))
-                ct_dict[c][celltype] = [round(sum(ranks) / math.sqrt(count)), count, gene_count,
+                ct_dict[c][celltype] = [round(sum(ranks) / math.sqrt(len(ranks))), count, gene_count,
                                         ub_mean]
 
     return ct_dict
