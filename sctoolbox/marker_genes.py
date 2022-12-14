@@ -271,7 +271,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups"):
 
     # Mask genes
     for group in adata.uns["rank_genes_groups"]["names"].dtype.names:
-        adata.uns[key]["names"][group] = np.where(np.isin(adata.uns[key]["names"][group], genes), np.nan, adata.uns[key]["names"][group])
+        adata.uns[key]["names"][group] = np.where(np.isin(adata.uns[key]["names"][group], genes), float('nan'), adata.uns[key]["names"][group])
 
 
 def run_rank_genes(adata, groupby,
@@ -287,8 +287,8 @@ def run_rank_genes(adata, groupby,
                                    min_fold_change=min_fold_change,
                                    max_out_group_fraction=max_out_group_fraction)
 
-    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+    # adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
+    # adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
