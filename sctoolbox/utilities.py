@@ -624,6 +624,30 @@ def split_list(lst, n):
     return chunks
 
 
+def split_list_size(lst, max_size):
+    """
+    Split list into chunks of max_size.
+
+    Parameters
+    -----------
+    lst : list
+        List to be chunked
+    max_size : int
+        Max size of chunks.
+
+    Returns
+    -------
+    list :
+        List of lists (chunks).
+    """
+
+    chunks = []
+    for i in range(0, len(lst), max_size):
+        chunks.append(lst[i:i + max_size])
+
+    return chunks
+
+
 def write_list_file(lst, path):
     """
     Write a list to a file with one element per line.
