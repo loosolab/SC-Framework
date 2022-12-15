@@ -534,6 +534,88 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
         fig.savefig(output)
 
 
+def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster, ligand_cluster, figsize=(4, 4), dpi=100, output=None):
+    """
+    Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
+
+    Parameters
+    ----------
+    datalist : list of Anndata
+        List of anndata objects.
+    datalabel : list of str
+        List of labels for the given datalist.
+    receptor : str
+        Name of the receptor gene.
+    ligand : str
+        Name of the ligand gene.
+    receptor_cluster : str
+        Name of the receptor cluster.
+    ligand_cluster : str
+        Name of the ligand cluster.
+    figsize : number tuple, default (4, 4)
+        Figure size in inch.
+    dpi : int, default 100
+        Dots per inch.
+    output : str, default None
+        Path to output file.
+    
+    Returns
+    -------
+    matplotlib.Axes
+        The plotting object.
+    
+    """
+    # TODO add checks & error messages
+
+    table = []
+    
+    for data, label in zip(datalist, datalabel):
+        # interactions
+        inter = data.uns["receptor-ligand"]["interactions"]
+        
+        # select interaction
+        inter = inter[
+            (inter["receptor_cluster"] == receptor_cluster) &
+            (inter["ligand_cluster"] == ligand_cluster) &
+            (inter["receptor_gene"] == receptor) &
+            (inter["ligand_gene"] == ligand)
+        ].copy()
+        
+        # add datalabel
+        inter["name"] = label
+        
+        table.append(inter)
+        
+    table = pd.concat(table)
+    
+    # plot    
+    with plt.rc_context({"figure.figsize": figsize, "figure.dpi": dpi}):        
+        plot = sns.barplot(
+            data=table,
+            x="name",
+            y="interaction_score"
+        )
+
+        plot.set(
+            title=f"{receptor} - {ligand}\n{receptor_cluster} - {ligand_cluster}",
+            ylabel="Interaction Score",
+            xlabel=""
+        )
+
+        plot.set_xticklabels(
+            plot.get_xticklabels(),
+            rotation=90, 
+            horizontalalignment='right'
+        )
+    
+    plt.tight_layout()
+    
+    if output:
+        plt.savefig(output)
+
+    return plot
+
+
 def connectionPlot(adata,
                    restrict_to=None,
                    figsize=(10, 15),
