@@ -14,7 +14,7 @@ from scipy.io import mmread
 #                                ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS                                         #
 #######################################################################################################################
 
-def from_single_starsolo(path, dtype="filtered"):
+def from_single_starsolo(path, dtype="filtered", header='infer'):
     '''
     This will assemble an anndata object from the starsolo folder.
 
@@ -24,6 +24,8 @@ def from_single_starsolo(path, dtype="filtered"):
         Path to the "solo" folder from starsolo.
     dtype : str, optional
         The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
+    header : int, list of int, None
+        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
     '''
     # Author : Guilherme Valente & Mette Bentsen
 
@@ -53,7 +55,7 @@ def from_single_starsolo(path, dtype="filtered"):
 
     # Setup main adata object from matrix/barcodes/genes
     print("Setting up adata from solo files")
-    adata = from_single_mtx(matrix_f, barcodes_f, genes_f)
+    adata = from_single_mtx(matrix_f, barcodes_f, genes_f, header=header)
     adata.var.columns = ["gene", "type"]  # specific to the starsolo format
 
     # Add in velocity information
@@ -144,7 +146,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 #                                   CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT                                     #
 #######################################################################################################################
 
-def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
+def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
     ''' Building adata object from single mtx and two tsv/csv files
 
     Parameters
@@ -156,13 +158,15 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes
     genes : string
         Path to gene label file (.var)
     transpose : boolean
-        Set True to transpose mtx matrix
+        Set True to transpose mtx matrix. Default: True
+    header : int, list of int, None
+        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
     barcode_index : int
-        Column which contains the cell barcodes (Default: 0 -> Takes first column)
+        Column which contains the cell barcodes. Default: 0 -> Takes first column
     genes_index : int
-        Column h contains the gene IDs (Default: 0 -> Takes first column)
+        Column h contains the gene IDs. Default: 0 -> Takes first column
     delimiter : string
-        delimiter of genes and barcodes table
+        delimiter of genes and barcodes table. Default: '\t'
     **kwargs : additional arguments
         Contains additional arguments for scanpy.read_mtx method
 
@@ -178,10 +182,10 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, barcode_index=0, genes
         adata = adata.transpose()
 
     # Read in gene and cell annotation
-    barcode_csv = pd.read_csv(barcodes, header=None, index_col=barcode_index, delimiter=delimiter)
+    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
     barcode_csv.index.names = ['index']
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
-    genes_csv = pd.read_csv(genes, header=None, index_col=genes_index, delimiter=delimiter)
+    genes_csv = pd.read_csv(genes, header=header, index_col=genes_index, delimiter=delimiter)
     genes_csv.index.names = ['index']
     genes_csv.columns = [str(c) for c in genes_csv.columns]  # convert to string
 
@@ -213,9 +217,11 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     mtx : string, optional
         String for glob to find matrix files. Default: '*_matrix.mtx*'
     barcodes : string, optional
-        String for glob to find barcode files. Default: '*_barcodes.mtx*'
+        String for glob to find barcode files. Default: '*_barcodes.tsv*'
     genes : string, optional
-        String for glob to find gene label files. Default: '*_genes.mtx*'
+        String for glob to find gene label files. Default: '*_genes.tsv*'
+    barcode_index : int
+        Column which contains the cell barcodes. Default: 0 -> Takes first column
     transpose : boolean
         Set True to transpose mtx matrix
     barcode_index : int
@@ -235,6 +241,16 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     mtx = glob.glob(os.path.join(path, mtx))
     barcodes = glob.glob(os.path.join(path, barcodes))
     genes = glob.glob(os.path.join(path, genes))
+
+    # Check if lists are same length
+    # https://stackoverflow.com/questions/35791051/better-way-to-check-if-all-lists-in-a-list-are-the-same-length
+    it = iter([mtx, barcodes, genes])
+    the_len = len(next(it))
+    if not all(len(list_len) == the_len for list_len in it):
+        raise ValueError("Found different quantitys of mtx, genes, barcode files.\n Please check given suffixes or filenames")
+
+    if not mtx:
+        raise ValueError('No files were found with the given directory and suffixes')
 
     adata_objects = []
     for i, m in enumerate(mtx):
