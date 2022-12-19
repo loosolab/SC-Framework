@@ -127,12 +127,13 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.uns["pca"] = {"stdev": stdev}
 
 
-def atac_norm(adata, condition_col='nb_features'):
+def atac_norm(adata, condition_col='nb_features', remove_pc1=True):
     """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
     calculates PCA and UMAP and plots both UMAPs.
 
     :param anndata.AnnData adata: AnnData object with peak counts.
-    :param str condition_col: Name of the column to use as color in the umap plot
+    :param str condition_col: Name of the column to use as color in the umap plot, defaults to 'nb_features'
+    :param bool remove_pc1: Removing first component after TFIDF normalization and LSI, defaults to True
     :return anndata.AnnData: Two AnnData objects with normalized matrices (Total and TFIDF) and UMAP.
     """
     adata_tfidf = adata.copy()
@@ -142,7 +143,16 @@ def atac_norm(adata, condition_col='nb_features'):
     print('Performing TFIDF and LSI...')
     tfidf(adata_tfidf)
     lsi(adata_tfidf)
-    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
+    if remove_pc1:
+        adata_tfidf.obsm['X_lsi'] = adata_tfidf.obsm['X_lsi'][:,1:]
+        adata_tfidf.varm["LSI"] = adata_tfidf.varm["LSI"][:,1:]
+        adata_tfidf.uns["lsi"]["stdev"] = adata_tfidf.uns["lsi"]["stdev"][1:]
+        adata_tfidf.obsm['X_pca'] = adata_tfidf.obsm['X_pca'][:,1:]
+        adata_tfidf.varm["PCs"] = adata_tfidf.varm["PCs"][:,1:]
+        adata_tfidf.uns["pca"]["stdev"] = adata_tfidf.uns["pca"]["stdev"][1:]
+        sc.pp.neighbors(adata_tfidf, n_neighbors=10, n_pcs=30, method='umap', metric='euclidean', use_rep='X_pca')
+    else:
+        sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
     sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
     print('Done')
     
@@ -161,8 +171,8 @@ def atac_norm(adata, condition_col='nb_features'):
     axes = axarr.flatten()
     sc.pl.pca(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[0], show=False)
     sc.pl.pca(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[1], show=False)
-    sc.pl.umap(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[2], show=False)
-    sc.pl.umap(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[3], show=False)
+    sc.pl.umap(adata_tfidf, color=condition_col, title='', legend_loc='none', ax=axes[2], show=False)
+    sc.pl.umap(adata_total, color=condition_col, title='', legend_loc='right margin', ax=axes[3], show=False)
 
     plt.tight_layout()
 
