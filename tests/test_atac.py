@@ -22,6 +22,7 @@ def tfidf_x():
     adata_X = ad.AnnData(x)
     return adata_X
 
+
 # adapted from muon package
 def test_tfidf(tfidf_x):
     sctoolbox.atac.tfidf(tfidf_x, log_tf=True, log_idf=True)
@@ -33,12 +34,13 @@ def test_lsi(adata):
     sctoolbox.atac.tfidf(adata)
     sctoolbox.atac.lsi(adata)
     assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
-    
+
 
 def test_atac_norm(adata):
     adata_tfidf, adata_total = sctoolbox.atac.atac_norm(adata, condition_col='Sample')
     assert "X_lsi" in adata_tfidf.obsm and "lsi" in adata_tfidf.uns and "LSI" in adata_tfidf.varm
     assert "X_pca" in adata_total.obsm and "pca" in adata_total.uns and "PCs" in adata_total.varm
+
 
 def test_write_TOBIAS_config():
 
