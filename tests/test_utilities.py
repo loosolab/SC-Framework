@@ -138,3 +138,14 @@ def test_get_adata_subsets(adata):
     for group, sub_adata in subsets.items():
         assert sub_adata.obs["group"][0] == group
         assert sub_adata.obs["group"].nunique() == 1
+
+
+def test_remove_files():
+    """ Remove files from list """
+
+    os.mknod("afile.txt")
+
+    files = ["afile.txt", "notfound.txt"]
+    utils.remove_files(files)
+
+    assert os.path.isfile("afile.txt") is False

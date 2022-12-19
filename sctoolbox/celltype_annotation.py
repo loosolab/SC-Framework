@@ -1,12 +1,12 @@
-import os
 import sys
 import pandas as pd
 import pkg_resources
-import sctoolbox.utilities
 import copy
 import gzip
 from pickle import load
 import subprocess
+
+import sctoolbox.utilities as utils
 
 
 def read_scsa_database(species):
@@ -260,7 +260,7 @@ def run_scsa(adata,
 
     # ---- building the SCSA command ---- #
     results_path = "./scsa_results.txt"
-    sctoolbox.utilities.create_dir(results_path)  # make sure the full path to results exists
+    utils.create_dir(results_path)  # make sure the full path to results exists
 
     if species == 'Human' or species == 'Mouse':
         scsa_cmd = f"{python_path} {scsa_path} -d {wholedb_path} -i {csv} -s scanpy -k {tissue} -b -g {species} -f {fc} -p {pvalue} -o {results_path} -m txt"
@@ -313,9 +313,8 @@ def run_scsa(adata,
                               "cmd": scsa_cmd}}
 
     # Remove the temporary files
-    os.remove(csv)
-    os.remove(results_path)
-    os.remove(results_path + ".go")
+    files = [csv, results_path, results_path + ".go"]
+    utils.remove_files(files)
 
     # Add the annotated celltypes to the anndata-object
     if inplace:

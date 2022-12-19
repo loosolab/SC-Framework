@@ -10,6 +10,7 @@ import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 import matplotlib
 import time
+import warnings
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -385,6 +386,16 @@ def create_dir(path):
     else:
         if path != "":
             os.makedirs(path, exist_ok=True)
+
+
+def remove_files(file_list):
+    """ Delete all files in a file list. Prints a warning if deletion was not possible """
+
+    for f in file_list:
+        try:
+            os.remove(f)
+        except Exception as e:
+            warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
 
 def is_str_numeric(ans):
