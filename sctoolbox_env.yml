@@ -3,10 +3,15 @@ channels:
     - bioconda
     - conda-forge
 dependencies:
+  - python<3.11 # 3.11 is so new that some packages are not available
   - r-base
   - r-seurat
   - bioconductor-singlecellexperiment
   - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
+  - scanpy>=1.9
+  - mnnpy
+  - python-annoy
+  - notebook
   - pip
   - pip:
     - -e ".[all]" # install sctoolbox from local repository, has to be in current directory!

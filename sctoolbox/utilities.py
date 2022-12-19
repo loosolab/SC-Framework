@@ -2,14 +2,108 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import re
 import scanpy as sc
 import importlib
 import sctoolbox.checker as ch
 import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
+import matplotlib
+import time
+
+from os.path import join, dirname, exists
+from pathlib import Path
+from IPython.core.magic import register_line_magic
+from IPython.display import HTML, display
 
 
-# ------------------ Type checking ----------------- -#
+def get_package_versions():
+    """
+    Utility to get a dictionary of currently installed python packages and versions.
+
+    Returns
+    --------
+    A dict in the form:
+    {"package1": "1.2.1", "package2":"4.0.1", (...)}
+
+    """
+
+    # Import freeze
+    try:
+        from pip._internal.operations import freeze
+    except ImportError:  # pip < 10.0
+        from pip.operations import freeze
+
+    # Get list of packages and versions with freeze
+    package_list = freeze.freeze()
+    package_dict = {}  # dict for collecting versions
+    for s in package_list:
+        try:
+            name, version = re.split("==| @ ", s)
+            package_dict[name] = version
+        except Exception:
+            print(f"Error reading version for package: {s}")
+
+    return package_dict
+
+
+def get_pbar(total, description):
+    """
+    Get a progress bar depending on whether the user is using a notebook or not.
+
+    Parameters
+    ----------
+    total : int
+        Total number elements to be shown in the progress bar.
+    description : str
+        Description to be shown in the progress bar.
+
+    Returns
+    -------
+    tqdm
+        A progress bar object.
+    """
+
+    if _is_notebook() is True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+
+    pbar = tqdm(total=total, desc=description)
+    return pbar
+
+
+def monitor_jobs(jobs, description="Progress"):
+    """
+    Monitor the status of jobs submitted to a pool.
+
+    Parameters
+    ----------
+    jobs : list of job objects
+        List of job objects, e.g. as returned by pool.map_async().
+    description : str, default "Progress"
+        Description to be shown in the progress bar.
+    """
+
+    if isinstance(jobs, dict):
+        jobs = list(jobs.values())
+
+    # Wait for all jobs to finish
+    n_ready = sum([job.ready() for job in jobs])
+    pbar = get_pbar(len(jobs), description)
+    while n_ready != len(jobs):
+        if n_ready != pbar.n:
+            pbar.n = n_ready
+            pbar.refresh()
+        time.sleep(1)
+        n_ready = sum([job.ready() for job in jobs])
+
+    pbar.n = n_ready  # update progress bar to 100%
+    pbar.refresh()
+    pbar.close()
+
+
+# ------------------ Type checking ------------------ #
 
 def is_integer_array(arr):
     """
@@ -32,6 +126,89 @@ def is_integer_array(arr):
     return np.all(boolean)
 
 
+def check_columns(df, columns, name="dataframe"):
+    """
+    Utility to check whether columns are found within a pandas dataframe.
+
+    Parameters
+    ------------
+    df : pandas.DataFrame
+        A pandas dataframe to check.
+    columns : list
+        A list of column names to check for within 'df'.
+
+    Raises
+    --------
+    KeyError
+        If any of the columns are not in 'df'.
+    """
+
+    df_columns = df.columns
+
+    not_found = []
+    for column in columns:  # for each column to be checked
+        if column is not None:
+            if column not in df_columns:
+                not_found.append(column)
+
+    if len(not_found) > 0:
+        error_str = f"Columns '{not_found}' are not found in {name}. Available columns are: {list(df_columns)}"
+        raise KeyError(error_str)
+
+
+def check_file_ending(file, pattern="gtf"):
+    """
+    Check if a file has a certain file ending.
+
+    Parameters
+    ----------
+    file : str
+        Path to the file.
+    pattern : str or regex
+        File ending to be checked for. If regex, the regex must match the entire string.
+
+    Raises
+    ------
+    ValueError
+        If file does not have the expected file ending.
+    """
+
+    valid = False
+    if is_regex:
+        if re.match(pattern, file):
+            valid = True
+
+    else:
+        if file.endswith(pattern):
+            valid = True
+
+    if not valid:
+        raise ValueError(f"File '{file}' does not have the expected file ending '{pattern}'")
+
+
+def is_regex(regex):
+    """
+    Check if a string is a valid regex.
+
+    Parameters
+    ----------
+    regex : str
+        String to be checked.
+
+    Returns
+    -------
+    boolean :
+        True if string is a valid regex, False otherwise.
+    """
+
+    try:
+        re.compile(regex)
+        return True
+
+    except re.error:
+        return False
+
+
 # ----------------- String functions ---------------- #
 
 def clean_flanking_strings(list_of_strings):
@@ -45,7 +222,7 @@ def clean_flanking_strings(list_of_strings):
         List of strings.
 
     Returns
-    ---------
+    --------
     List of strings without common suffix and prefix
     """
 
@@ -117,6 +294,26 @@ def remove_suffix(s, suffix):
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
+def _is_interactive():
+    """
+    Check if matplotlib backend is interactive.
+
+    Returns
+    -------
+    boolean :
+        True if interactive, False otherwise.
+    """
+
+    backend = matplotlib.get_backend()
+
+    if backend == 'module://ipympl.backend_nbagg':
+        return True
+    else:
+        return False
+
+
+# ---------------- jupyter functions --------------- #
+
 def _is_notebook():
     """
     Utility to check if function is being run from a notebook or a script.
@@ -131,6 +328,39 @@ def _is_notebook():
         return True
     except NameError:
         return False
+
+
+if _is_notebook():
+    @register_line_magic
+    def bgcolor(color, cell=None):
+        """
+        Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
+        Note: Jupyter notebook v6+ needed
+
+        Change color of the cell by either calling the function
+        `bgcolor("yellow")`
+        or with magic (has to be first line in cell!)
+        `%bgcolor yellow`
+
+        Parameters
+        ----------
+        color : str
+            Background color of the cell. A valid CSS color e.g.:
+                - red
+                - rgb(255,0,0)
+                - #FF0000
+            See https://www.rapidtables.com/web/css/css-color.html
+        cell : str, default None
+            Code of the cell that will be evaluated.
+        """
+        script = f"""
+                var cell = this.closest('.code_cell');
+                var editor = cell.querySelector('.CodeMirror-sizer');
+                editor.style.background='{color}';
+                this.parentNode.removeChild(this)
+                """
+
+        display(HTML(f'<img src onerror="{script}">'))
 
 
 # ------------------ I/O functions ----------------- #
@@ -153,7 +383,8 @@ def create_dir(path):
             os.makedirs(dirname, exist_ok=True)
 
     else:
-        os.makedirs(path, exist_ok=True)
+        if path != "":
+            os.makedirs(path, exist_ok=True)
 
 
 def is_str_numeric(ans):
@@ -248,7 +479,18 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         Loaded anndata object.
     """
     def loading_adata(NUM):
-        """ TODO add documentation """
+        """
+        Loading information of pathway where is stored the anndata object.
+
+        Parameters
+        ----------
+        NUM = int
+            The number of a particular notebook that created the latest anndata object.
+
+        Returns
+        -------
+        Str : The name of the latest anndata object with its pathway.
+        """
         pathway = ch.fetch_info_txt()
         files = os.listdir(''.join(pathway))
         loading = "anndata_" + str(NUM)
@@ -268,16 +510,22 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
     m4 = "Correct the pathway or filename or type q to quit."
     opt1 = ["q", "quit"]
 
-    if isinstance(data_to_evaluate, str) is False:  # Close if the anndata.obs is not correct
-        sys.exit(m2)
+    if data_to_evaluate is not None:
+        if isinstance(data_to_evaluate, str) is False:  # Close if the anndata.obs is not correct
+            sys.exit(m2)
+
     if is_from_previous_note is True:  # Load anndata object from previous notebook
         try:
             ch.check_notebook(which_notebook)
         except TypeError:
             sys.exit(m1)
+
         file_path = loading_adata(which_notebook)
         data = sc.read_h5ad(filename=file_path)  # Loading the anndata
-        cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
+
+        if data_to_evaluate is not None:
+            cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
+
         return data
 
     elif is_from_previous_note is False:  # Load anndata object from other source
@@ -288,8 +536,10 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
             print(m4)
             answer = input(m4)
         data = sc.read_h5ad(filename=answer)  # Loading the anndata
-        cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
+        if data_to_evaluate is not None:
+            cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
         cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0])  # Annotating the anndata path
+
         return data
 
 
@@ -411,3 +661,51 @@ def read_list_file(path):
     f.close()
 
     return lst
+
+
+def clear():
+    """
+    Clear stout of console or jupyter notebook.
+    https://stackoverflow.com/questions/37071230/clear-overwrite-standard-output-in-python
+    """
+    import platform
+
+    if _is_notebook():
+        check_module("IPython")
+        from IPython.display import clear_output
+
+        clear_output(wait=True)
+    elif platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
+
+
+def setup_R(r_home=None):
+    """
+    Setup R installation for rpy2 use.
+
+    Parameters:
+    -----------
+    r_home : str, default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+
+    """
+    # Set R installation path
+    if not r_home:
+        # https://stackoverflow.com/a/54845971
+        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
+
+    if not exists(r_home):
+        raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
+
+    os.environ['R_HOME'] = r_home
+
+
+def _none2null(none_obj):
+    """ rpy2 converter that translates python 'None' to R 'NULL' """
+    # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    from rpy2.robjects import r
+
+    return r("NULL")
