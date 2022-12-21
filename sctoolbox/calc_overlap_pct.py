@@ -163,20 +163,19 @@ def _overlap_two_beds(bed1, bed2, out=None):
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
 
-    a = pybedtools.BedTool(bed1)
-    b = pybedtools.BedTool(bed2)
+    #a = pybedtools.BedTool(bed1)
+    #b = pybedtools.BedTool(bed2)
+    #a.intersect(b, u=True, sorted=True, output=out_overlap)
 
-    a.intersect(b, u=True, sorted=True, output=out_overlap)
+    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]),'bedtools')
+    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
+    # run command
+    os.system(intersect_cmd)
 
     # check if there is an overlap
     bed_file = pybedtools.BedTool(out_overlap)
     if len(bed_file) == 0:
         return False
-
-    # bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]),'bedtools')
-    # intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
-    # run command
-    # os.system(intersect_c
 
     # return path to overlapped file
     return out_overlap
