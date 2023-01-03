@@ -102,7 +102,10 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         gene_names_lower = [s.lower() for s in adata_copy.var.index]
     else:
         gene_names_lower = [s.lower() for s in adata_copy.var[gene_column]]
-    gene_index = [i for i, gene_name in enumerate(gene_names_lower) if gene_name == gene.lower()][0]
+    gene_index = [i for i, gene_name in enumerate(gene_names_lower) if gene_name == gene.lower()]
+    if len(gene_index) == 0:
+        print("Selected gene is not present in the data. Prediction is skipped.")
+        return
     adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].todense().A1
 
     # Estimate which samples are male/female

@@ -12,7 +12,9 @@ import os
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
-    return sc.read_h5ad(f)
+    adata = sc.read_h5ad(f)
+    adata.obs['sample'] = 'sample1'
+    return adata
 
 
 @pytest.fixture
@@ -115,3 +117,14 @@ def test_filter_cells(adata):
     qc.filter_cells(adata, "cell_bool", inplace=True)  # removes all genes with boolean True
 
     assert adata.shape[0] == n_false
+
+
+def test_predict_sex(capsys, adata):
+    # gene not in data
+    qc.predict_sex(adata, groupby='sample')
+    captured = capsys.readouterr()
+    assert "Selected gene is not present in the data. Prediction is skipped." in captured.out.strip()
+
+    # gene in data
+    qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample')
+    assert 'predicted_sex' in adata.obs.columns

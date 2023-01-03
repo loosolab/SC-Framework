@@ -40,12 +40,20 @@ default:
 # W503 = Line break occurred before a binary operator
 
 lint:
+  stage: test
+  tags:
+    - coverage
   script:
     - pip install flake8
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
 
-cov:
+test coverage:
+  stage: test
+  tags:
+    - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
@@ -59,6 +67,9 @@ cov:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
 
 pages:
+  stage: deploy
+  tags:
+    - coverage
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
@@ -75,7 +86,11 @@ pages:
 
 #Test notebooks when code is pushed to main
 notebooks:
+  stage: deploy
   image: continuumio/miniconda3:latest
+  tags:
+    - gwdg
+    - gwdg-shared
   inherit:
     default: false  #do not install virtual env for this job
   script:
