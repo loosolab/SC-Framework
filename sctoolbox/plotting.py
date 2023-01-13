@@ -501,7 +501,7 @@ def plot_3D_UMAP(adata, color, save):
     # Plot per group in obs
     if color in adata.obs.columns and isinstance(adata.obs[color][0], str):
 
-        df["category"] = adata.obs[color].values  # color should be interpreted as a categrical variable
+        df["category"] = adata.obs[color].values  # color should be interpreted as a categorical variable
         categories = df["category"].astype("category").cat.categories
         n_groups = len(categories)
         color_list = sns.color_palette("Set1", n_groups)
