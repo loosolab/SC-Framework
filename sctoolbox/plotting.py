@@ -1136,7 +1136,7 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sav
     y : str, default None
         A column name in adata.obs or a gene in adata.var.index to plot values for. Only needed if x is a column in adata.obs.
     groupby : str, default None
-        Column name in adata.obs to create grouped violings. If None, a single violin is plotted per group in 'x'.
+        Column name in adata.obs to create grouped violins. If None, a single violin is plotted per group in 'x'.
     figsize : tuple, default None
         Figure size.
     title : str, default None
