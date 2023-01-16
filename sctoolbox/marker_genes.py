@@ -278,7 +278,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
     return group_tables
 
 
-def mask_rank_genes(adata, genes, key="rank_genes_groups"):
+def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
     """
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
 
@@ -290,7 +290,17 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups"):
         List of genes to be masked.
     key : str, default: "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
+    inplace : bool, default True
+        If True, modifies adata.uns[key]["names"] in place. Otherwise, returns a copy of adata.
+
+    Returns
+    -------
+    anndata.AnnData or None
+        If inplace = True, modifies adata.uns[key]["names"] in place and returns None. Otherwise, returns a copy of adata.
     """
+
+    if not inplace:
+        adata = adata.copy()
 
     # Check input
     if not isinstance(genes, list):
@@ -299,6 +309,9 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups"):
     # Mask genes
     for group in adata.uns["rank_genes_groups"]["names"].dtype.names:
         adata.uns[key]["names"][group] = np.where(np.isin(adata.uns[key]["names"][group], genes), float('nan'), adata.uns[key]["names"][group])
+
+    if not inplace:
+        return adata
 
 
 def run_rank_genes(adata, groupby,
