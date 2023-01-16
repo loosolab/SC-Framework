@@ -1244,7 +1244,19 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 # ------------------------------ Dotplot ---------------------------------- #
 #############################################################################
 
-def scale_values(array, mini, maxi):
+def _scale_values(array, mini, maxi):
+    """
+    Small utility to scale values in array to a given range.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to scale.
+    mini : float
+        Minimum value of the scale.
+    maxi : float
+        Maximum value of the scale.
+    """
     val_range = array.max() - array.min()
     a = (array - array.min()) / val_range
     return a * (maxi - mini) + mini
@@ -1365,7 +1377,7 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
 
     size_ordered = size_pivot.loc[data_ordered.index, data_ordered.columns]
     size_mat = size_ordered.values
-    radius_mat = scale_values(size_mat, 0.05, 0.5)
+    radius_mat = _scale_values(size_mat, 0.05, 0.5)
 
     circles = [plt.Circle((j, i), radius=r) for r, j, i in zip(radius_mat.flat, x.flat, y.flat)]
     col = PatchCollection(circles, array=color_mat.flatten(), cmap="bwr")
