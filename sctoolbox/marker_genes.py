@@ -306,7 +306,7 @@ def run_rank_genes(adata, groupby,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
                    max_out_group_fraction=0.8):
-    """ Run rank_genes_groups  """
+    """ Run scanpy rank_genes_groups and filter_rank_genes_groups """
 
     sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
     sc.tl.filter_rank_genes_groups(adata,
