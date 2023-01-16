@@ -1120,7 +1120,7 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
-def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, save=None):
+def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin", save=None, **kwargs):
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
     Can for example show the expression of one gene across groups (x = obs_group, y = gene),
@@ -1141,8 +1141,12 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sav
         Figure size.
     title : str, default None
         Title of the plot. If None, no title is shown.
+    style : str, default "violin"
+        Plot style. Either "violin" or "boxplot".
     save : str, default None
         Path to save the figure to. If None, the figure is not saved.
+    kwargs : arguments, optional
+        Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
 
     Returns
     -------
@@ -1210,7 +1214,12 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sav
 
     # Plot expression from obs table
     _, ax = plt.subplots(figsize=figsize)
-    sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, scale='width')
+    if style == "violin":
+        sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, scale='width', **kwargs)
+    elif style == "boxplot":
+        sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
+    else:
+        raise ValueError(f"Style '{style}' is not valid for this function. Style must be one of 'violin' or 'boxplot'")
 
     if groupby is not None:
         ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend

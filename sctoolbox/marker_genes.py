@@ -148,6 +148,33 @@ def label_genes(adata,
     creators.build_infor(adata, "genes_labeled", added)
 
 
+def add_gene_expression(adata, gene):
+    """
+    Add values of gene/feature per cell to the adata.obs dataframe.
+
+    Parameters
+    ------------
+    adata : anndata.AnnData
+        Anndata object containing gene expression/counts.
+    gene : str
+        Name of the gene/feature from the adata.var index to be added to adata.obs.
+
+    Returns
+    -----------
+    None
+        A column named "<gene>_values" is added to adata.obs with the expression/count values from .X
+    """
+
+    # Get expression
+    if gene in adata.var.index:
+        gene_idx = np.argwhere(adata.var.index == gene)[0][0]
+        vals = adata.X[:, gene_idx].todense().A1
+        adata.obs[gene + "_values"] = vals
+
+    else:
+        raise ValueError(f"Gene '{gene}' was not found in adata.var.index")
+
+
 def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
