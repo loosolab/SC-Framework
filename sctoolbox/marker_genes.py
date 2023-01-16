@@ -352,6 +352,8 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
 
     Returns
     -----------
+    A py_DESeq2 object containing the results of the DESeq2 analysis.
+    Also adds the dataframes to adata.uns["deseq_result"] and adata.uns["deseq_normalized"].
     """
 
     utils.setup_R()
