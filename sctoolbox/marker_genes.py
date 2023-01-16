@@ -410,7 +410,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
     return dds
 
 
-def get_celltype_assignment(adata, clustering, marker_genes_dict):
+def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
     """
     Get cell type assignment based on marker genes.
 
@@ -422,6 +422,13 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict):
         Name of clustering column to use for cell type assignment.
     marker_genes_dict : dict
         Dictionary containing cell type names as keys and lists of marker genes as values.
+    column_name : str, default: "celltype"
+        Name of column to add to adata.obs containing cell type assignment.
+
+    Returns
+    -----------
+    Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
+    Also adds the cell type assignment to adata.obs[<column_name>] in place.
     """
 
     # todo: make this more robust
@@ -465,6 +472,9 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict):
         if celltypes.count(celltype) > 1:
             cluster2celltype[cluster] = f"{celltype} {celltype_count[celltype]}"
 
+    # Add assigned celltype to adata.obs
     table = pd.DataFrame().from_dict(cluster2celltype, orient="index")
+    table.columns = [column_name]
+    adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
 
     return cluster2celltype
