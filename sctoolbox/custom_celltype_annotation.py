@@ -374,7 +374,7 @@ def get_annotated_clusters(cluster_path):
                 split = line.split("\t")
                 if len(split) == 2:
                     annotated_dict[cname].append(
-                        [split[0], float(split[1].rstrip())])
+                        [split[0].upper(), float(split[1].rstrip())])
 
         sum_dict = {}
         for gene in annotated_dict[cname]:
