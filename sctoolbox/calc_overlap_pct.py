@@ -10,6 +10,7 @@ import os
 import pkg_resources
 import pandas as pd
 import pybedtools
+import sys
 from pathlib import Path
 from sinto.fragments import fragments
 
