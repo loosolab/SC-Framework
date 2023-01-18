@@ -108,7 +108,6 @@ class Tree:
         self._annotation_anndata = os.path.join(self._annotation_anndata_dir, self._run + '.h5ad')
         self._annotation_plots = os.path.join(self._annotation_dir, 'plots')
 
-
         # complete report dir
         self._complete_report_dir = os.path.join(self._processed_run_dir, 'complete_report')
 

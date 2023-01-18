@@ -9,7 +9,6 @@ import gzip
 import re
 import datetime
 import copy
-from glob import glob
 
 import episcanpy as epi
 import scanpy as sc
@@ -21,12 +20,6 @@ import sctoolbox.utilities as utils
 import sctoolbox.annotation as anno
 import sctoolbox.bam
 
-#from scanpy import logging
-#import pkgutil
-#from typing import List, Union, Optional, Callable, Iterable
-
-
-# muon package
 
 def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
     """Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
@@ -103,7 +96,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
     n_comps = min(n_comps, adata.X.shape[1])
 
-    #logging.info("Performing SVD")
+    # logging.info("Performing SVD")
     cell_embeddings, svalues, peaks_loadings = svds(adata.X, k=n_comps)
 
     # Re-order components in the descending order
@@ -121,7 +114,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.obsm["X_lsi"] = cell_embeddings
     adata.uns["lsi"] = {"stdev": stdev}
     adata.varm["LSI"] = peaks_loadings.T
-    
+
     adata.obsm["X_pca"] = cell_embeddings
     adata.varm["PCs"] = peaks_loadings.T
     adata.uns["pca"] = {"stdev": stdev}
@@ -138,24 +131,24 @@ def atac_norm(adata, condition_col='nb_features', remove_pc1=True):
     """
     adata_tfidf = adata.copy()
     adata_total = adata.copy()
-    
-    # perform tfidf and latent semantic indexing 
+
+    # perform tfidf and latent semantic indexing
     print('Performing TFIDF and LSI...')
     tfidf(adata_tfidf)
     lsi(adata_tfidf)
     if remove_pc1:
-        adata_tfidf.obsm['X_lsi'] = adata_tfidf.obsm['X_lsi'][:,1:]
-        adata_tfidf.varm["LSI"] = adata_tfidf.varm["LSI"][:,1:]
+        adata_tfidf.obsm['X_lsi'] = adata_tfidf.obsm['X_lsi'][:, 1:]
+        adata_tfidf.varm["LSI"] = adata_tfidf.varm["LSI"][:, 1:]
         adata_tfidf.uns["lsi"]["stdev"] = adata_tfidf.uns["lsi"]["stdev"][1:]
-        adata_tfidf.obsm['X_pca'] = adata_tfidf.obsm['X_pca'][:,1:]
-        adata_tfidf.varm["PCs"] = adata_tfidf.varm["PCs"][:,1:]
+        adata_tfidf.obsm['X_pca'] = adata_tfidf.obsm['X_pca'][:, 1:]
+        adata_tfidf.varm["PCs"] = adata_tfidf.varm["PCs"][:, 1:]
         adata_tfidf.uns["pca"]["stdev"] = adata_tfidf.uns["pca"]["stdev"][1:]
         sc.pp.neighbors(adata_tfidf, n_neighbors=10, n_pcs=30, method='umap', metric='euclidean', use_rep='X_pca')
     else:
         sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
     sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
     print('Done')
-    
+
     # perform total normalization and pca
     print('Performing total normalization and PCA...')
     sc.pp.normalize_total(adata_total)

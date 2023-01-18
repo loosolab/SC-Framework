@@ -164,11 +164,11 @@ def _overlap_two_beds(bed1, bed2, out=None):
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
 
-    #a = pybedtools.BedTool(bed1)
-    #b = pybedtools.BedTool(bed2)
-    #a.intersect(b, u=True, sorted=True, output=out_overlap)
+    # a = pybedtools.BedTool(bed1)
+    # b = pybedtools.BedTool(bed2)
+    # a.intersect(b, u=True, sorted=True, output=out_overlap)
 
-    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]),'bedtools')
+    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
     intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
     # run command
     os.system(intersect_cmd)
@@ -308,7 +308,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # read overlap file as dataframe
     df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
     # drop columns we dont need
-    df_overlap.drop(df_overlap.iloc[:,5:], axis=1, inplace=True)
+    df_overlap.drop(df_overlap.iloc[:, 5:], axis=1, inplace=True)
     df_overlap.columns = ['chr', 'start', 'end', 'barcode', col_n_fragments_in_list]
     # remove barcodes not found in adata.obs
     df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
@@ -322,7 +322,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # read fragments file as dataframe
     fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
     # drop columns we dont need
-    fragments_df.drop(fragments_df.iloc[:,5:], axis=1, inplace=True)
+    fragments_df.drop(fragments_df.iloc[:, 5:], axis=1, inplace=True)
     # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
     fragments_df.columns = ['chr', 'start', 'end', 'barcode', col_total_fragments]
     fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
@@ -344,8 +344,8 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 if __name__ == '__main__':
-    #pass
-    import episcanpy as epi
+
+    # pass
     import atac_utils as atac
 
     # Manually set existing QC Columns
@@ -389,7 +389,7 @@ if __name__ == '__main__':
     h5ad_files = ['/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad']
     adata = atac.assemble_from_h5ad(h5ad_files=h5ad_files, qc_columns=qc_columns)
     # read adata
-    #adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad')
+    # adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad')
 
     bam_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted.bam'
     fragments_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted_fragments_sorted.bed'

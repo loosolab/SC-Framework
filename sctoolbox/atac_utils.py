@@ -153,15 +153,13 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresho
 
     if only_automatic_thresholds:
         keys = list(manual_thresholds.keys())
-        i = type(keys[0])
         thresholds = qc_filter.automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
         return thresholds
     else:
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
             if value['min'] is None or value['max'] is None:
-                i = type(key)
-                auto_thr = qc_filter.automatic_thresholds(adata, which="obs",columns=[key], groupby=groupby)
+                auto_thr = qc_filter.automatic_thresholds(adata, which="obs", columns=[key], groupby=groupby)
                 manual_thresholds[key] = auto_thr[key]
         return manual_thresholds
 
@@ -186,28 +184,6 @@ def build_legend(adata, key, value, inplace=True):
 
     if not inplace:
         return m_adata
-
-
-def plot_ov_hist(adata, threshold_features=1000):
-    """
-    plot as overview of the adata object the coverage of the number of cells and features (peaks)
-    :param adata:
-    :return:
-    """
-    # show open features per cell
-    #min_features = threshold_features
-
-    epi.pp.coverage_cells(adata, binary=True, log=False, bins=50)
-    # epi.pp.coverage_cells(adata, binary=True, log=10, bins=50)
-
-    # show numbers of cells sharing features
-
-    # epi.pp.coverage_features(adata, binary=True, log=False, bins=50)
-    # epi.pp.coverage_features(adata, binary=True, log=10, bins=50)
-
-    epi.pp.cal_var(adata)
-
-    return adata
 
 
 def plot_obs_violin(adata, obs_cols):
@@ -288,10 +264,9 @@ def scatter_HVF_distribution(adata):
 
 if __name__ == '__main__':
 
-
-    #adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/processed_data/Esophagus/norm_correction/anndata/Esophagus.h5ad')
-    #violin_HVF_distribution(adata)
-    #scatter_HVF_distribution(adata)
+    # adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/processed_data/Esophagus/norm_correction/anndata/Esophagus.h5ad')
+    # violin_HVF_distribution(adata)
+    # scatter_HVF_distribution(adata)
 
     qc_columns = {}
     qc_columns['n_features_by_counts'] = None
