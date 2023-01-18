@@ -235,7 +235,7 @@ def violin_HVF_distribution(adata):
     :return:
     """
     # get the number of cells per highly variable feature
-    hvf_var = adata.var[adata.var['highly_variable'] == True]
+    hvf_var = adata.var[adata.var['highly_variable'] is True]
     n_cells = hvf_var['n_cells_by_counts']
     n_cells.reset_index(drop=True, inplace=True)
     # violin plot
@@ -283,7 +283,6 @@ if __name__ == '__main__':
     qc_columns['PP'] = 'PP'
     qc_columns['UQ'] = 'UQ'
     qc_columns['CM'] = 'CM'
-
 
     adata = assemble_from_h5ad(['/mnt/workspace/jdetlef/data/anndata/Esophagus.h5ad'], qc_columns, column='sample', from_snapatac=True, conditions=None)
     # #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
