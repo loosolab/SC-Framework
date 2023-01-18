@@ -17,7 +17,7 @@ def merge_anndata(anndata_dict):
     -------
     merged anndata.AnnData object
     """
-    #ToDo Add outer merge for obs
+    # ToDo Add outer merge for obs
 
     # Copy dict to prevent changes in original anndata objects
     anndata_dict = copy.deepcopy(anndata_dict)
@@ -38,7 +38,6 @@ def merge_anndata(anndata_dict):
     merged_X_var = ad.concat(anndata_dict, join="inner", label="source", axis=1)
 
     # Merge obs
-    keys = list(anndata_dict.keys())
     merged_X_var.obs = reduce(lambda left, right: pd.merge(left, right,
                                                            how='inner',
                                                            left_index=True,
