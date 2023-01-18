@@ -28,7 +28,7 @@ def merge_anndata(anndata_dict):
         # prefix to obsm
         adata.obsm = {f"X_{label}_{key.removeprefix('X_')}": val for key, val in adata.obsm.items()}
         # prefix to var index
-        adata.var.index = [f"{label}_{i}" for i in adata.var.index]
+        adata.var.index = label + "_" + adata.var.index
         # prefix to obs columns
         adata.obs.columns = label + "_" + adata.obs.columns
         # save obs in list
