@@ -320,4 +320,3 @@ class Tree:
     @annotation_plots.setter
     def annotation_plots(self, value):
         self._annotation_plots = value
-        
