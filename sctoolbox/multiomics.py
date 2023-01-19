@@ -2,6 +2,7 @@ import copy
 import anndata as ad
 import pandas as pd
 from functools import reduce
+import warnings
 
 
 def merge_anndata(anndata_dict):
@@ -47,5 +48,9 @@ def merge_anndata(anndata_dict):
     for adata in anndata_dict.values():
         for obsm_key, value in dict(adata.obsm).items():
             merged_X_var.obsm[obsm_key] = value[0:obs_len]
+    
+    if len(merged_X_var.var) > 50:
+        warnings.warn("The adata object contains less than 51 genes/var entries. " +
+                      "CellxGene will not work. Please add dummy genes to the var table.")
 
     return merged_X_var
