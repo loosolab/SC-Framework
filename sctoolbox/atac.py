@@ -9,7 +9,6 @@ import gzip
 import re
 import datetime
 import copy
-from glob import glob
 
 import episcanpy as epi
 import scanpy as sc
@@ -21,12 +20,6 @@ import sctoolbox.utilities as utils
 import sctoolbox.annotation as anno
 import sctoolbox.bam
 
-#from scanpy import logging
-#import pkgutil
-#from typing import List, Union, Optional, Callable, Iterable
-
-
-# muon package
 
 def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
     """Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
@@ -103,7 +96,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
     n_comps = min(n_comps, adata.X.shape[1])
 
-    #logging.info("Performing SVD")
+    # logging.info("Performing SVD")
     cell_embeddings, svalues, peaks_loadings = svds(adata.X, k=n_comps)
 
     # Re-order components in the descending order
@@ -121,7 +114,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.obsm["X_lsi"] = cell_embeddings
     adata.uns["lsi"] = {"stdev": stdev}
     adata.varm["LSI"] = peaks_loadings.T
-    
+
     adata.obsm["X_pca"] = cell_embeddings
     adata.varm["PCs"] = peaks_loadings.T
     adata.uns["pca"] = {"stdev": stdev}
@@ -138,24 +131,24 @@ def atac_norm(adata, condition_col='nb_features', remove_pc1=True):
     """
     adata_tfidf = adata.copy()
     adata_total = adata.copy()
-    
-    # perform tfidf and latent semantic indexing 
+
+    # perform tfidf and latent semantic indexing
     print('Performing TFIDF and LSI...')
     tfidf(adata_tfidf)
     lsi(adata_tfidf)
     if remove_pc1:
-        adata_tfidf.obsm['X_lsi'] = adata_tfidf.obsm['X_lsi'][:,1:]
-        adata_tfidf.varm["LSI"] = adata_tfidf.varm["LSI"][:,1:]
+        adata_tfidf.obsm['X_lsi'] = adata_tfidf.obsm['X_lsi'][:, 1:]
+        adata_tfidf.varm["LSI"] = adata_tfidf.varm["LSI"][:, 1:]
         adata_tfidf.uns["lsi"]["stdev"] = adata_tfidf.uns["lsi"]["stdev"][1:]
-        adata_tfidf.obsm['X_pca'] = adata_tfidf.obsm['X_pca'][:,1:]
-        adata_tfidf.varm["PCs"] = adata_tfidf.varm["PCs"][:,1:]
+        adata_tfidf.obsm['X_pca'] = adata_tfidf.obsm['X_pca'][:, 1:]
+        adata_tfidf.varm["PCs"] = adata_tfidf.varm["PCs"][:, 1:]
         adata_tfidf.uns["pca"]["stdev"] = adata_tfidf.uns["pca"]["stdev"][1:]
         sc.pp.neighbors(adata_tfidf, n_neighbors=10, n_pcs=30, method='umap', metric='euclidean', use_rep='X_pca')
     else:
         sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
     sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
     print('Done')
-    
+
     # perform total normalization and pca
     print('Performing total normalization and PCA...')
     sc.pp.normalize_total(adata_total)
@@ -274,9 +267,9 @@ def apply_svd(adata, layer=None):
     return adata
 
 
-def get_variable_features(adata, min_score=None, show=True, inplace=True):
+def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True):
     """
-    Get the highly variable features of anndata object. Adds the columns "highly_variable" and "variability_score" to adata.obs. If show is True, the plot is shown.
+    Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.var. If show is True, the plot is shown.
 
     Parameters
     -----------
@@ -303,57 +296,44 @@ def get_variable_features(adata, min_score=None, show=True, inplace=True):
     if inplace is False:
         adata = adata.copy()
 
-    # Calculate variability
-    epi.pp.cal_var(adata, show=False)
+    # get number of cells per feature
+    n_cells = adata.var['n_cells_by_counts'].sort_values(ascending=False)
+    x = np.arange(len(n_cells))
 
-    # Set threshold
-    if min_score is None:
-
-        # Get input data to fit
-        scores = adata.var["variability_score"].sort_values(ascending=False)
-        x = np.arange(len(scores))
-
+    if max_cells is None:
         # Subset data to reduce computational time
         target = 10000
-        step = int(len(scores) / target)
+        step = int(len(n_cells) / target)
         if step > 0:
-            idx_selection = np.arange(len(scores), step=step)
-            scores = scores[idx_selection]
+            idx_selection = np.arange(len(n_cells), step=step)
+            n_cells = n_cells[idx_selection]
             x = x[idx_selection]
 
         # Smooth using lowess (prevents early finding of knees due to noise)
-        scores = sm.nonparametric.lowess(scores, x, return_sorted=False, frac=0.05)
+        n_cells = sm.nonparametric.lowess(n_cells, x, return_sorted=False, frac=0.05)
 
         # Find knee
-        kneedle = KneeLocator(x, scores, curve="convex", direction="decreasing", online=False)
-        min_score = kneedle.knee_y
+        kneedle = KneeLocator(x, n_cells, curve="convex", direction="decreasing", online=False)
+        max_cells = kneedle.knee_y
 
     # Set "highly_variable" column in var
-    adata.var["highly_variable"] = adata.var["variability_score"] >= min_score
-    n_variable = adata.var["highly_variable"].sum()
+    adata.var["highly_variable"] = (adata.var['n_cells_by_counts'] <= max_cells) & (adata.var['n_cells_by_counts'] >= min_cells)
 
     # Create plot
     if show is True:
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
+        ax.set_xlabel("Ranked features")
+        ax.set_ylabel("Number of cells")
 
-        # Plot distribution of scores
-        scores = adata.var["variability_score"].sort_values(ascending=False)
-        x = np.arange(len(scores))
-        ax.plot(x, scores)
+        ax.plot(x, n_cells)
 
         # Horizontal line at knee
-        ax.axhline(min_score, linestyle="--", color="r")
+        ax.axhline(max_cells, linestyle="--", color="r")
         xlim = ax.get_xlim()
-        ax.text(xlim[1], min_score, " {0:.2f}".format(min_score), fontsize=12, ha="left", va="center", color="red")
+        ax.text(xlim[1], max_cells, " {0:.2f}".format(max_cells), fontsize=12, ha="left", va="center", color="red")
 
-        # Vertical line at knee
-        ax.axvline(n_variable, linestyle="--", color="r")
-        ylim = ax.get_ylim()
-        ax.text(n_variable, ylim[1], " {0:.0f}".format(n_variable), fontsize=12, ha="left", va="bottom", color="red")
-
-        ax.set_xlabel("Ranked features")
-        ax.set_ylabel("Variability score")
-
+        ax.axhline(min_cells, linestyle="--", color="b")
+        ax.text(xlim[1], min_cells, " {0:.2f}".format(min_cells), fontsize=12, ha="left", va="center", color="blue")
     # Return the copy of the adata
     if inplace is False:
         return adata

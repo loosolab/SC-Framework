@@ -43,11 +43,11 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
     Returns
     --------
-    If inplace == True, the annotation is added to adata.obs in place. 
+    If inplace == True, the annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
 
-    if inplace == False:
+    if inplace is False:
         adata = adata.copy()
 
     if output_path and db_path:
@@ -55,7 +55,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
         ct_path = f"{output_path}/{cluster_column}/"
 
         print("Output folder: " + ct_path, "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}",
-        "\nTissue: " + tissue, "\nDB: " + db)
+              "\nTissue: " + tissue, "\nDB: " + db)
         if adata and genes_adata and cluster_column:
             # Create folders containing the annotation assignment table aswell as the detailed scoring files per cluster
             if not os.path.exists(f'{output_path}/ranked/clusters/{cluster_column}'):
@@ -90,12 +90,12 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
             print(f"Finished cell type annotation! The results are found in the .obs table {ct_column}.")
 
-            if inplace == False:
+            if inplace is False:
                 return adata
 
         elif cluster_path:
             print("Output folder: " + output_path, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
-                    "\nTissue: " + tissue, "\nDB: " + db)
+                  "\nTissue: " + tissue, "\nDB: " + db)
             perform_cell_type_annotation(
                 f"{output_path}/ranked/output/{cluster_column}/", db_path, cluster_path, tissue, db=db)
             print(f"Cell type annotation of output path {output_path} finished.")
@@ -106,7 +106,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
 def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_column="leiden", cell_type_column="cell_types", inplace=True):
     """
-    This function can be used to make subsequent changes to cell types that were previously annotated with the annot_ct() function. 
+    This function can be used to make subsequent changes to cell types that were previously annotated with the annot_ct() function.
     For each annotated cluster, a choice of 10 possible alternative assignments is presented.
 
     Parameters
@@ -126,13 +126,13 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
 
     Returns
     --------
-    If inplace == True, the modified annotation is added to adata.obs in place. 
+    If inplace == True, the modified annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
-    
-    if inplace == False:
+
+    if inplace is False:
         adata = adata.copy()
-    
+
     if resolutions:
         for res in resolutions:
             adata.obs[f'{cell_type_column}_mod_{res}'] = adata.obs[f'{cell_type_column}_{res}']
@@ -161,8 +161,8 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
             print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
             modify = input("Would you like to modify another cluster? Enter yes or no: ")
             modify = True if modify == "yes" else False
-            
-    if inplace == False:
+
+    if inplace is False:
         return adata
 
 
@@ -374,7 +374,7 @@ def get_annotated_clusters(cluster_path):
                 split = line.split("\t")
                 if len(split) == 2:
                     annotated_dict[cname].append(
-                        [split[0], float(split[1].rstrip())])
+                        [split[0].upper(), float(split[1].rstrip())])
 
         sum_dict = {}
         for gene in annotated_dict[cname]:

@@ -49,6 +49,9 @@ class Tree:
 
         # 5. Annotation
         self._annotation_dir = None
+        self._annotation_anndata_dir = None
+        self._annotation_anndata = None
+        self._annotation_plots = None
 
         self._complete_report_dir = None
 
@@ -101,6 +104,9 @@ class Tree:
         self._clustering_plots = os.path.join(self._clustering_dir, 'plots')
 
         self._annotation_dir = os.path.join(self._processed_run_dir, 'annotation')
+        self._annotation_anndata_dir = os.path.join(self._annotation_dir, 'anndata')
+        self._annotation_anndata = os.path.join(self._annotation_anndata_dir, self._run + '.h5ad')
+        self._annotation_plots = os.path.join(self._annotation_dir, 'plots')
 
         # complete report dir
         self._complete_report_dir = os.path.join(self._processed_run_dir, 'complete_report')
@@ -119,6 +125,8 @@ class Tree:
         to_build.append(self._clustering_anndata_dir)
         to_build.append(self._clustering_plots)
         to_build.append(self._annotation_dir)
+        to_build.append(self._annotation_anndata_dir)
+        to_build.append(self._annotation_plots)
         to_build.append(self._complete_report_dir)
 
         self.makeDir(to_build)
@@ -286,4 +294,28 @@ class Tree:
 
     @annotation_dir.setter
     def annotation_dir(self, value):
-        self.annotation_dir = value
+        self._annotation_dir = value
+
+    @property
+    def annotation_anndata_dir(self):
+        return self._annotation_anndata_dir
+
+    @annotation_anndata_dir.setter
+    def annotation_anndata_dir(self, value):
+        self._annotation_anndata_dir = value
+
+    @property
+    def annotation_anndata(self):
+        return self._annotation_anndata
+
+    @annotation_anndata.setter
+    def annotation_anndata(self, value):
+        self._annotation_anndata = value
+
+    @property
+    def annotation_plots(self):
+        return self._annotation_plots
+
+    @annotation_plots.setter
+    def annotation_plots(self, value):
+        self._annotation_plots = value
