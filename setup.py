@@ -2,7 +2,7 @@ from setuptools import setup
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto'],
+                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'mnnpy', 'harmonypy', 'scanorama'],
 
