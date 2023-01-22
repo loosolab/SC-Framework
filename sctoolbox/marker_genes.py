@@ -5,6 +5,7 @@ import pkg_resources
 import pandas as pd
 import numpy as np
 import scanpy as sc
+import itertools
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -336,6 +337,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Note: Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
+    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
 
     Parameters
     -----------
@@ -371,6 +373,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
     cols = [sample_col, condition_col] + confounders
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
     sample_df.set_index(sample_col, inplace=True)
+    sample_df.sort_index(inplace=True)
 
     conditions = sample_df[condition_col].unique()
     samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
@@ -386,28 +389,40 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
                     design_formula=design_formula,
                     gene_column='gene')
     dds.run_deseq()
-    dds.get_deseq_result()
 
     # Normalizing counts
     dds.normalized_count()
-
-    # Reformatting result tables
-    dds.deseq_result.drop(columns="gene", inplace=True)
     dds.normalized_count_df.drop(columns="gene", inplace=True)
     dds.normalized_count_df.columns = dds.samplenames
 
-    # Add condition count to results
-    for condition in conditions:
+    # Create result table with mean values per condition
+    deseq_table = pd.DataFrame(index=dds.normalized_count_df.index)
+
+    for i, condition in enumerate(conditions):
         samples = samples_per_cond[condition]
         mean_values = dds.normalized_count_df[samples].mean(axis=1)
-        dds.deseq_result.insert(0, condition + "_mean", mean_values)
+        deseq_table.insert(i, condition + "_mean", mean_values)
 
-    dds.deseq_result.sort_values("pvalue", inplace=True)
+    # Get results per contrast
+    contrasts = list(itertools.combinations(conditions, 2))
+    for C1, C2 in contrasts:
 
-    adata.uns["deseq_result"] = dds.deseq_result
-    adata.uns["deseq_normalized"] = dds.normalized_count_df
+        dds.get_deseq_result(contrast=[condition_col, C2, C1])
+        dds.deseq_result.drop(columns="gene", inplace=True)
 
-    return dds
+        # Rename and add to deseq_table
+        dds.deseq_result.drop(columns=["lfcSE", "stat"], inplace=True)
+        dds.deseq_result.columns = [C2 + "/" + C1 + "_" + col for col in dds.deseq_result.columns]
+        deseq_table = deseq_table.merge(dds.deseq_result, left_index=True, right_index=True)
+
+    # Add normalized individual sample counts to the back of table
+    deseq_table = deseq_table.merge(dds.normalized_count_df, left_index=True, right_index=True)
+
+    # Sort by p-value of first contrast
+    C1, C2 = contrasts[0]
+    deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
+
+    return deseq_table
 
 
 def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
@@ -430,6 +445,9 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
     Also adds the cell type assignment to adata.obs[<column_name>] in place.
     """
+
+    if column_name in adata.obs.columns:
+        raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
 
     # todo: make this more robust
 
