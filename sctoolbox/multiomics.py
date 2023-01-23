@@ -5,6 +5,8 @@ from functools import reduce
 import numpy as np
 import warnings
 
+import sctoolbox.utilities as utils
+
 
 def merge_anndata(anndata_dict, join="inner"):
     """
@@ -24,6 +26,7 @@ def merge_anndata(anndata_dict, join="inner"):
     -------
     merged anndata.AnnData object
     """
+
     if join not in ["inner", "outer"]:
         raise ValueError(f"Invalid join value: {join}. Set to 'inner' or 'outer'")
 
@@ -50,6 +53,9 @@ def merge_anndata(anndata_dict, join="inner"):
                                                            how=join,
                                                            left_index=True,
                                                            right_index=True), obs_list)
+    utils.fill_na(merged_X_var.obs)
+    utils.fill_na(merged_X_var.var)
+
     # Build new obsm
     obs_len = merged_X_var.shape[0]
     for adata in anndata_dict.values():
