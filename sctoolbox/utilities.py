@@ -720,7 +720,7 @@ def fill_na(df, inplace=True):
     df : pandas.DataFrame
         DataFrame object with NA values over multiple columns
     inplace : boolean, default True
-        Whether the DataFrame object is modified inplace.  
+        Whether the DataFrame object is modified inplace.
     """
 
     if not inplace:

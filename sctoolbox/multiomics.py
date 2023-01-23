@@ -64,10 +64,10 @@ def merge_anndata(anndata_dict, join="inner"):
                 dummy_coordinates = [value[0] * [0] for _ in range(abs(obs_len - len(value)))]
                 merged_X_var.obsm[obsm_key] = np.append(value[0:obs_len], np.asarray(dummy_coordinates), axis=0)
             else:
-                merged_X_var.obsm[obsm_key] = value[0:obs_len]  
+                merged_X_var.obsm[obsm_key] = value[0:obs_len]
 
     if len(merged_X_var.var) <= 50:
-        warnings.warn("The adata object contains less than 51 genes/var entries. " +
-                      "CellxGene will not work. Please add dummy genes to the var table.")
+        warnings.warn("The adata object contains less than 51 genes/var entries. "
+                      + "CellxGene will not work. Please add dummy genes to the var table.")
 
     return merged_X_var
