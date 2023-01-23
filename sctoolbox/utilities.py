@@ -10,6 +10,7 @@ import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 import matplotlib
 import time
+import warnings
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -387,6 +388,16 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
+def remove_files(file_list):
+    """ Delete all files in a file list. Prints a warning if deletion was not possible """
+
+    for f in file_list:
+        try:
+            os.remove(f)
+        except Exception as e:
+            warnings.warn(f"Could not remove file {f}. Exception was: {e}")
+
+
 def is_str_numeric(ans):
     """ Check if string can be converted to number. """
     try:
@@ -563,11 +574,9 @@ def saving_anndata(anndata, current_notebook):
     print(f"Your new anndata object is saved here: {adata_output}")
 
 
-def pseudobulk_table(adata, groupby, how="mean"):
+def pseudobulk_table(adata, groupby, how="mean", layer=None):
     """
     Get a pseudobulk table of values per cluster.
-
-    TODO avoid adata.copy()
 
     Parameters
     ----------
@@ -583,19 +592,23 @@ def pseudobulk_table(adata, groupby, how="mean"):
     pandas.DataFrame :
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
     """
-    adata = adata.copy()
-    adata.obs[groupby] = adata.obs[groupby].astype('category')
+
+    groupby_categories = adata.obs[groupby].astype('category').cat.categories
+
+    if layer is not None:
+        mat = adata.layers[layer]
+    else:
+        mat = adata.X
 
     # Fetch the mean/ sum counts across each category in cluster_by
-    res = pd.DataFrame(columns=adata.var_names, index=adata.obs[groupby].cat.categories)
-    for clust in adata.obs[groupby].cat.categories:
+    res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
+    for clust in groupby_categories:
 
         if how == "mean":
-            res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.mean(0)
+            res[clust] = mat[adata.obs[groupby].isin([clust]), :].mean(0).A1
         elif how == "sum":
-            res.loc[clust] = adata[adata.obs[groupby].isin([clust]), :].X.sum(0)
+            res[clust] = mat[adata.obs[groupby].isin([clust]), :].sum(0).A1
 
-    res = res.T  # transpose to genes x clusters (switch columns with rows)
     return res
 
 
@@ -618,6 +631,30 @@ def split_list(lst, n):
     chunks = []
     for i in range(0, n):
         chunks.append(lst[i::n])
+
+    return chunks
+
+
+def split_list_size(lst, max_size):
+    """
+    Split list into chunks of max_size.
+
+    Parameters
+    -----------
+    lst : list
+        List to be chunked
+    max_size : int
+        Max size of chunks.
+
+    Returns
+    -------
+    list :
+        List of lists (chunks).
+    """
+
+    chunks = []
+    for i in range(0, len(lst), max_size):
+        chunks.append(lst[i:i + max_size])
 
     return chunks
 
@@ -709,3 +746,72 @@ def _none2null(none_obj):
     from rpy2.robjects import r
 
     return r("NULL")
+
+
+def get_adata_subsets(adata, groupby):
+    """
+    Split an anndata object into a dict of sub-anndata objects based on a grouping column.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to split.
+    groupby : str
+        Column name in adata.obs to split by.
+
+    Returns
+    -------
+    dict :
+        Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
+    """
+
+    group_names = adata.obs[groupby].astype("category").cat.categories.tolist()
+    adata_subsets = {name: adata[adata.obs[groupby] == name] for name in group_names}
+
+    return adata_subsets
+
+
+def write_excel(table_dict, filename, index=False):
+    """
+    Write a dictionary of tables to a single excel file with one table per sheet.
+
+    Parameters
+    ----------
+    table_dict : dict
+        Dictionary of tables in the format {<sheet_name1>: table, <sheet_name2>: table, (...)}.
+    filename : str
+        Path to output file.
+    index : bool, default False
+        Whether to include the index of the tables in file.
+    """
+
+    # Check if tables are pandas dataframes
+    for name, table in table_dict.items():
+        if not isinstance(table, pd.DataFrame):
+            raise Exception(f"Table {name} is not a pandas DataFrame!")
+
+    # Write to excel
+    with pd.ExcelWriter(filename) as writer:
+        for name, table in table_dict.items():
+            table.to_excel(writer, sheet_name=f'{name}', index=index)
+
+
+def add_expr_to_obs(adata, gene):
+    """
+    Add expression of a gene from adata.X to adata.obs as a new column.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to add expression to.
+    gene : str
+        Gene name to add expression of.
+    """
+
+    boolean = adata.var.index == gene
+    if sum(boolean) == 0:
+        raise Exception(f"Gene {gene} not found in adata.var.index")
+
+    else:
+        idx = np.argwhere(boolean)[0][0]
+        adata.obs[gene] = adata.X[:, idx].todense().A1
