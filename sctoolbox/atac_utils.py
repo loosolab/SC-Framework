@@ -235,7 +235,7 @@ def violin_HVF_distribution(adata):
     :return:
     """
     # get the number of cells per highly variable feature
-    hvf_var = adata.var[adata.var['highly_variable'] is True]
+    hvf_var = adata.var[adata.var['highly_variable'] == True]
     n_cells = hvf_var['n_cells_by_counts']
     n_cells.reset_index(drop=True, inplace=True)
     # violin plot
