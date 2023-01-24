@@ -4,6 +4,7 @@ Modules for creating files or directories
 import os
 import sctoolbox.checker as ch
 import anndata
+import pathlib
 
 
 def add_color_set(adata, inplace=True):
@@ -118,3 +119,91 @@ def create_dir(outpath, test):
 
     # Creating storing information for next
     ch.write_info_txt(path_value=output_dir)  # Printing the output dir detailed in the info.txt
+
+
+def gitlab_download(repo, internal_path, branch="main", commit="latest", out_path="./", cred=None):
+    """
+    Download file or dir from gitlab
+
+    Parameters
+    ----------
+    repo : str
+        Link to repository
+    internal_path :  str
+        Dir or file in repository to download
+    branch :  str, default 'main'
+        What branch to use
+    commit : str, default 'latest'
+        What commit to use
+    out_path : str, default './'
+        Where the fike/dir should be downloaded to
+    cred : str, default None
+        Credentials in case of private repository
+
+    Returns
+    -------
+    None
+    """
+    pass
+
+
+def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
+    """
+    Create initial folder structure
+
+    Parameters
+    ----------
+    dest :  str
+        Path to new experiment
+    dir : list, default ['raw', 'preprocessing']
+        Internal folders to create
+
+    Returns
+    -------
+    None
+    """
+    print("Setting up experiment:")
+    if pathlib.Path(dest).exists():
+        raise Exception(f"Directory '{dest}' already exists. "
+                        + "Please make sure you are not going to "
+                        + "overwrite an existing project. Exiting..")
+
+    for dir in dirs:
+        path_to_build = pathlib.Path(dest) / dir
+        path_to_build.mkdir(parents=True, exist_ok=True)
+        print(f"Build: {path_to_build}")
+
+
+def add_analysis(dest, analysis_name,
+                 dirs=['figures', 'data', 'notebooks', 'logs'],
+                 starts_with=1, **kwargs):
+    """
+    Create and add a new analysis
+
+    Parameter
+    ---------
+    dest : str
+        Path to experiment
+    analysis_name : str
+        Name of the new analysis run
+    dirs : list, default ['figures', 'data', 'notebooks', 'logs']
+        Internal folders to create
+    start_with : int, default 1
+        Notebook the analysis will start with
+    kwargs : kwargs
+        forwarded to gitlab_download
+
+    Returns
+    -------
+    None
+    """
+    analysis_path = pathlib.Path(dest) / "Analysis"
+    if not analysis_path.exists():
+        raise FileNotFoundError("Analysis directory not found."
+                                + "Please check if you entered the right "
+                                + "directory or if it was setup correctly.")
+    run_path = analysis_path / analysis_name
+
+    setup_experiment(run_path, dirs=dirs)
+
+    #ToDo Download Notebook to notebook directory
