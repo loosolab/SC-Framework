@@ -534,6 +534,8 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         file_path = loading_adata(which_notebook)
         data = sc.read_h5ad(filename=file_path)  # Loading the anndata
 
+        print(f"Source: {file_path}")
+
         if data_to_evaluate is not None:
             cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
 
@@ -547,6 +549,9 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
             print(m4)
             answer = input(m4)
         data = sc.read_h5ad(filename=answer)  # Loading the anndata
+
+        print(f"Source: {file_path}")
+
         if data_to_evaluate is not None:
             cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
         cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0])  # Annotating the anndata path
