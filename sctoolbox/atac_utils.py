@@ -87,6 +87,10 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', from_snapatac=Tr
     for value in adata_dict.values():
         adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
 
+    # Remove name of indexes for cellxgene compatibility
+    adata.obs.index.name = None
+    adata.var.index.name = None
+
     return adata
 
 
