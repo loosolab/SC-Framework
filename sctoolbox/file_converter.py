@@ -74,7 +74,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
 
         # if both .robj and .rds failed throw error
         if (class(object) == "try-error") {
-            stop("Unknown file extension. Expected '.robj' or '.rds' got", file)
+            stop("Unknown file. Expected '.robj' or '.rds' got", file)
         }
 
         # ----- convert to SingleCellExperiment ----- #
