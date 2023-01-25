@@ -334,7 +334,7 @@ def sanitize_string(s, char_list, replace="_"):
 
     for char in char_list:
         s = s.replace(char, replace)
-    
+
     return s
 
 
@@ -356,7 +356,8 @@ def sanitize_sheetname(s, replace="_"):
         Valid excel sheetname
     """
 
-    return sanitize_string(s, char_list=["\\" , "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
+    return sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
+
 
 # ---------------- jupyter functions --------------- #
 
