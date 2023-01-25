@@ -32,9 +32,9 @@ pip install notebook
 ```
 python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
-7. (optional) If you want to push changes to notebooks, you need to add the custom .gitconfig to enable clearing of notebook outputs:
+7. (optional) If you want to push changes to notebooks, you need to add the custom .gitconfig to the local .git config-file in order to enable clearing of notebook outputs:
 ```
-git config --local include.path .gitconfig
+cat .gitconfig >> .git/config
 ```
 
 # How to access the notebooks
