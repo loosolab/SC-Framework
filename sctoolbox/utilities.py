@@ -313,6 +313,52 @@ def _is_interactive():
         return False
 
 
+def sanitize_string(s, char_list, replace="_"):
+    """
+    Replace every occurrence of given substrings.
+
+    Parameters
+    ----------
+    s : str
+        String to sanitize
+    char_list : list of str
+        Strings that should be replaced.
+    replace : str, default "_"
+        Replacement of substrings.
+
+    Returns
+    -------
+    str :
+        Sanitized string.
+    """
+
+    for char in char_list:
+        s = s.replace(char, replace)
+
+    return s
+
+
+def sanitize_sheetname(s, replace="_"):
+    """
+    Alters given string to produce a valid excel sheetname.
+    https://www.excelcodex.com/2012/06/worksheets-naming-conventions/
+
+    Parameters
+    ----------
+    s : str
+        String to sanitize
+    replace : str, default "_"
+        Replacement of substrings.
+
+    Returns
+    -------
+    str :
+        Valid excel sheetname
+    """
+
+    return sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
+
+
 # ---------------- jupyter functions --------------- #
 
 def _is_notebook():
@@ -534,6 +580,8 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
         file_path = loading_adata(which_notebook)
         data = sc.read_h5ad(filename=file_path)  # Loading the anndata
 
+        print(f"Source: {file_path}")
+
         if data_to_evaluate is not None:
             cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
 
@@ -547,6 +595,9 @@ def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evalua
             print(m4)
             answer = input(m4)
         data = sc.read_h5ad(filename=answer)  # Loading the anndata
+
+        print(f"Source: {file_path}")
+
         if data_to_evaluate is not None:
             cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
         cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0])  # Annotating the anndata path
@@ -793,7 +844,7 @@ def write_excel(table_dict, filename, index=False):
     # Write to excel
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
-            table.to_excel(writer, sheet_name=f'{name}', index=index)
+            table.to_excel(writer, sheet_name=sanitize_sheetname(f'{name}'), index=index)
 
 
 def add_expr_to_obs(adata, gene):
