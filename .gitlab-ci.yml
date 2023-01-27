@@ -104,6 +104,9 @@ notebooks:
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
+      when: manual
 
 #test:
 #  script:
