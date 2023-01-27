@@ -45,7 +45,7 @@ lint:
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
   rules:
-  - if: $CI_PIPELINE_SOURCE == "merge_request_event" 
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 cov:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
@@ -58,7 +58,7 @@ cov:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 pages:
   script:
@@ -73,7 +73,7 @@ pages:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
 
 #Test notebooks when code is pushed to main
 notebooks:
@@ -93,7 +93,7 @@ notebooks:
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
 #test:
 #  script:
