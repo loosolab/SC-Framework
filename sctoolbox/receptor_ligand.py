@@ -881,7 +881,7 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
 
     if group_a and group_b:
         subset = subset[(subset["receptor_cluster"].isin(group_a) & subset["ligand_cluster"].isin(group_b))
-                        (subset["receptor_cluster"].isin(group_b) & subset["ligand_cluster"].isin(group_a))]
+                        | (subset["receptor_cluster"].isin(group_b) & subset["ligand_cluster"].isin(group_a))]
     elif group_a or group_b:
         group = group_a if group_a else group_b
 
