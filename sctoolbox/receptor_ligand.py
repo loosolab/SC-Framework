@@ -873,9 +873,11 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
     elif interaction_score is None:
         interaction_score = min(table["interaction_score"]) - 1
 
-    subset = table[(table["receptor_percent"] >= min_perc)
-                    & (table["ligand_percent"] >= min_perc)
-                    & (table["interaction_score"] > interaction_score)]
+    subset = table[
+        (table["receptor_percent"] >= min_perc)
+        & (table["ligand_percent"] >= min_perc)
+        & (table["interaction_score"] > interaction_score)
+    ]
 
     if group_a and group_b:
         subset = subset[(subset["receptor_cluster"].isin(group_a) & subset["ligand_cluster"].isin(group_b))
