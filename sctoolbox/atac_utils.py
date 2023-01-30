@@ -11,8 +11,8 @@ from matplotlib import pyplot as plt
 
 def assemble_from_h5ad(h5ad_files,
                        qc_columns,
-                       column='sample',
-                       coordinate_cols=['chr', 'start', 'end'],
+                       merge_column='sample',
+                       coordinate_cols=None,
                        set_index=True,
                        index_from=None):
     '''
@@ -24,10 +24,15 @@ def assemble_from_h5ad(h5ad_files,
     h5ad_files: list of str
         list of h5ad_files
     qc_columns: dictionary
-        dictionary of adata.obs columns and related thresholds
-    column: str
+        dictionary of existing adata.obs column to add to infoprocess legend
+    merge_column: str
         column name to store sample identifier
-    conditions: None
+    coordinate_cols: list of str
+        location information of the peaks
+    set_index: boolean
+        True: index will be formatted and can be set by a given column
+    index_from: str
+        column to build the index from
 
     Returns
     -------
@@ -44,27 +49,6 @@ def assemble_from_h5ad(h5ad_files,
         adata = epi.read_h5ad(h5ad_path)
         if set_index:
             format_index(adata, index_from)
-
-        #     # split the peak column into chromosome start and end
-        #     adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
-        #     adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
-        #     # remove start_end column
-        #     adata.var.drop('start_end', axis=1, inplace=True)
-        #
-        #     # exclude the b' and ' from the chromosome
-        #     adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("b'", "")
-        #     adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("'", "")
-        #
-        #     adata.var = adata.var.set_index('name')
-        #
-        # else:
-        #     if peak_columns is not None:
-        #         # rename adata.var columns to peak_chr, peak_start, peak_end
-        #         adata.var.rename(columns=peak_columns, inplace=True)
-        #
-        #     else:
-        #         # raise warning if peak_columns is not set
-        #         print('peak_columns is not set. Please set peak_columns to rename adata.var columns to peak_chr, peak_start, peak_end')
 
         # Establish columns for coordinates
         if coordinate_cols is None:
@@ -98,7 +82,7 @@ def assemble_from_h5ad(h5ad_files,
 
         adata_dict[sample] = adata
 
-    adata = ad.concat(adata_dict, label=column)
+    adata = ad.concat(adata_dict, label=merge_column)
     adata.uns = ad.concat(adata_dict, uns_merge='same').uns
     for value in adata_dict.values():
         adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
@@ -123,16 +107,18 @@ def format_index(adata, from_column=None):
         index_type = get_index_type(entry)
 
         if index_type == 'snapatac':
+            adata.var['name'] = adata.var['name'].str.replace("b'", "")
+            adata.var['name'] = adata.var['name'].str.replace("'", "")
 
             # split the peak column into chromosome start and end
             adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
             adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+            # set types
+            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
+            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
+            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
             # remove start_end column
             adata.var.drop('start_end', axis=1, inplace=True)
-
-            # exclude the b' and ' from the chromosome
-            adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("b'", "")
-            adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("'", "")
 
             adata.var = adata.var.set_index('name')
 
@@ -145,20 +131,22 @@ def format_index(adata, from_column=None):
             adata.var.set_index('new_index', inplace=True)
 
     else:
-        entry = list(adata.var[from_column])
+        entry = list(adata.var[from_column])[0]
         index_type = get_index_type(entry)
 
         if index_type == 'snapatac':
+            adata.var['name'] = adata.var['name'].str.replace("b'", "")
+            adata.var['name'] = adata.var['name'].str.replace("'", "")
 
             # split the peak column into chromosome start and end
             adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
             adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+            # set types
+            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
+            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
+            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
             # remove start_end column
             adata.var.drop('start_end', axis=1, inplace=True)
-
-            # exclude the b' and ' from the chromosome
-            adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("b'", "")
-            adata.var['peak_chr'] = adata.var['peak_chr'].str.replace("'", "")
 
             adata.var = adata.var.set_index('name')
 
@@ -229,12 +217,13 @@ def build_default_thresholds(adata, manual_thresholds, groupby=None):
         for sample in adata.obs[groupby]:
             if current_sample != sample:
                 samples.append(sample)
+                current_sample = sample
 
         thresholds = {}
         for key, value in manual_thresholds.items():
             sample_dict = {}
             for sample in samples:
-                sample_dict[sample] = {key, value}
+                sample_dict[sample] = {key: value}
             thresholds[key] = sample_dict
 
     else:
@@ -461,89 +450,98 @@ def format_adata_var(adata,
 
 if __name__ == '__main__':
 
-    # adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/processed_data/Esophagus/norm_correction/anndata/Esophagus.h5ad')
+
     # violin_HVF_distribution(adata)
     # scatter_HVF_distribution(adata)
 
-    qc_columns = {}
-    qc_columns['n_features_by_counts'] = None
-    qc_columns['log1p_n_features_by_counts'] = None
-    qc_columns['total_counts'] = None
-    qc_columns['log1p_total_counts'] = None
-    qc_columns['mean_insertsize'] = None
-    qc_columns['n_total_fragments'] = None
-    qc_columns['n_fragments_in_promoters'] = None
-    qc_columns['pct_fragments_in_promoters'] = None
-    qc_columns['blacklist_overlaps'] = None
-    qc_columns['TN'] = 'TN'
-    qc_columns['UM'] = 'UM'
-    qc_columns['PP'] = 'PP'
-    qc_columns['UQ'] = 'UQ'
-    qc_columns['CM'] = 'CM'
-
-    adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
+    # qc_columns = {}
+    # qc_columns['n_features_by_counts'] = None
+    # qc_columns['log1p_n_features_by_counts'] = None
+    # qc_columns['total_counts'] = None
+    # qc_columns['log1p_total_counts'] = None
+    # qc_columns['mean_insertsize'] = None
+    # qc_columns['n_total_fragments'] = None
+    # qc_columns['n_fragments_in_promoters'] = None
+    # qc_columns['pct_fragments_in_promoters'] = None
+    # qc_columns['blacklist_overlaps'] = None
+    # qc_columns['TN'] = 'TN'
+    # qc_columns['UM'] = 'UM'
+    # qc_columns['PP'] = 'PP'
+    # qc_columns['UQ'] = 'UQ'
+    # qc_columns['CM'] = 'CM'
+    #
+    # adata = assemble_from_h5ad(['/mnt/workspace/jdetlef/data/anndata/Esophagus.h5ad'],
+    #                    qc_columns=qc_columns,
+    #                    merge_column='sample',
+    #                    coordinate_cols=None,
+    #                    set_index=True,
+    #                    index_from='name')
+    #adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
     # #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
     #
     #
-    # # Filter to use:
-    # n_features_filter = True  # True or False; filtering out cells with numbers of features not in the range defined below
-    # mean_insertsize_filter = True  # True or False; filtering out cells with mean insertsize not in the range defined below
-    # filter_pct_fp = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
-    # filter_n_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
-    # filter_chrM_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
-    # filter_uniquely_mapped_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined
+    adata = epi.read_h5ad('/mnt/workspace/jdetlef/ext_ana/processed/all/assembling/anndata/all.h5ad')
+    # Filter to use:
+    n_features_filter = True  # True or False; filtering out cells with numbers of features not in the range defined below
+    mean_insertsize_filter = True  # True or False; filtering out cells with mean insertsize not in the range defined below
+    filter_pct_fp = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    filter_n_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    filter_chrM_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined below
+    filter_uniquely_mapped_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined
+
+    # if this is True thresholds below are ignored
+    only_automatic_thresholds = True  # True or False; to use automatic thresholds
+
+    ############################# set default values #######################################
     #
-    # # if this is True thresholds below are ignored
-    # only_automatic_thresholds = True  # True or False; to use automatic thresholds
-    #
-    # ############################# set default values #######################################
-    # #
-    # # This will be applied to all samples the thresholds can be changed manually when plotted
-    # # if thresholds None they are set automatically
-    #
-    # # default values n_features
-    # min_features = None
-    # max_features = None
-    #
-    # # default mean_insertsize
-    # upper_threshold_mis = None
-    # lower_threshold_mis = None
-    #
-    # # default promotor enrichment
-    # upper_threshold_pct_fp = 0.4
-    # lower_threshold_pct_fp = 0.1
-    #
-    # # default number of fragments
-    # upper_thr_fragments = 200000
-    # lower_thr_fragments = 0
-    #
-    # # default number of fragments in chrM
-    # upper_thr_chrM_fragments = 10000
-    # lower_thr_chrM_fragments = 0
-    #
-    # # default number of uniquely mapped fragments
-    # upper_thr_um = 20000
-    # lower_thr_um = 0
-    # manual_thresholds = {}
-    # if n_features_filter:
-    #     manual_thresholds['n_features_by_counts'] = {'min': min_features, 'max': max_features}
-    #
-    # if mean_insertsize_filter:
-    #     manual_thresholds['mean_insertsize'] = {'min': lower_threshold_mis, 'max': upper_threshold_mis}
-    #
-    # if filter_pct_fp:
-    #     manual_thresholds['pct_fragments_in_promoters'] = {'min': lower_threshold_pct_fp, 'max': upper_threshold_pct_fp}
-    #
-    # if filter_n_fragments:
-    #     manual_thresholds['TN'] = {'min': lower_thr_fragments, 'max': upper_thr_fragments}
-    #
-    # if filter_chrM_fragments:
-    #     manual_thresholds['CM'] = {'min': lower_thr_chrM_fragments, 'max': upper_thr_chrM_fragments}
-    #
-    # if filter_uniquely_mapped_fragments:
-    #     manual_thresholds['UM'] = {'min': lower_thr_um, 'max': upper_thr_um}
-    #
-    # #adata.obs = adata.obs.fillna(0)
-    # thresholds = get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds)
-    #
-    # print(thresholds)
+    # This will be applied to all samples the thresholds can be changed manually when plotted
+    # if thresholds None they are set automatically
+
+    # default values n_features
+    min_features = None
+    max_features = None
+
+    # default mean_insertsize
+    upper_threshold_mis = None
+    lower_threshold_mis = None
+
+    # default promotor enrichment
+    upper_threshold_pct_fp = 0.4
+    lower_threshold_pct_fp = 0.1
+
+    # default number of fragments
+    upper_thr_fragments = 200000
+    lower_thr_fragments = 0
+
+    # default number of fragments in chrM
+    upper_thr_chrM_fragments = 10000
+    lower_thr_chrM_fragments = 0
+
+    # default number of uniquely mapped fragments
+    upper_thr_um = 20000
+    lower_thr_um = 0
+    manual_thresholds = {}
+    if n_features_filter:
+        manual_thresholds['n_features_by_counts'] = {'min': min_features, 'max': max_features}
+
+    if mean_insertsize_filter:
+        manual_thresholds['mean_insertsize'] = {'min': lower_threshold_mis, 'max': upper_threshold_mis}
+
+    if filter_pct_fp:
+        manual_thresholds['pct_fragments_in_promoters'] = {'min': lower_threshold_pct_fp, 'max': upper_threshold_pct_fp}
+
+    if filter_n_fragments:
+        manual_thresholds['TN'] = {'min': lower_thr_fragments, 'max': upper_thr_fragments}
+
+    if filter_chrM_fragments:
+        manual_thresholds['CM'] = {'min': lower_thr_chrM_fragments, 'max': upper_thr_chrM_fragments}
+
+    if filter_uniquely_mapped_fragments:
+        manual_thresholds['UM'] = {'min': lower_thr_um, 'max': upper_thr_um}
+
+    #adata.obs = adata.obs.fillna(0)
+
+    default_thresholds = build_default_thresholds(adata, manual_thresholds, groupby="Sample")
+    thresholds = get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds)
+
+    print(thresholds)

@@ -8,6 +8,7 @@ import multiprocessing as mp
 import re
 
 import sctoolbox.utilities as utils
+import sctoolbox.atac_utils as atac_utils
 import psutil
 import subprocess
 import gzip
@@ -198,7 +199,7 @@ def format_adata_var(adata,
     print(coordinate_columns)
     if coordinate_columns is not None:
         try:
-            validate_regions(adata, coordinate_columns)
+            atac_utils.validate_regions(adata, coordinate_columns)
             format_index = False
         except KeyError:
             print("The coordinate columns are not found in adata.var. Trying to format the index.")
@@ -236,7 +237,7 @@ def format_adata_var(adata,
         adata.var.insert(0, columns_added[0], peak_chr_list)
 
         # Check whether the newly added columns are in the right format
-        validate_regions(adata, columns_added)
+        atac_utils.validate_regions(adata, columns_added)
 
 
 def annotate_adata(adata,
@@ -340,7 +341,7 @@ def annotate_adata(adata,
         utils.check_columns(adata.var, coordinate_cols, "coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
-    format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
+    atac_utils.format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
