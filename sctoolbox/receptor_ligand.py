@@ -558,38 +558,38 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
         Dots per inch.
     output : str, default None
         Path to output file.
-    
+
     Returns
     -------
     matplotlib.Axes
         The plotting object.
-    
+
     """
     # TODO add checks & error messages
 
     table = []
-    
+
     for data, label in zip(datalist, datalabel):
         # interactions
         inter = data.uns["receptor-ligand"]["interactions"]
-        
+
         # select interaction
         inter = inter[
-            (inter["receptor_cluster"] == receptor_cluster) &
-            (inter["ligand_cluster"] == ligand_cluster) &
-            (inter["receptor_gene"] == receptor) &
-            (inter["ligand_gene"] == ligand)
+            (inter["receptor_cluster"] == receptor_cluster)
+            & (inter["ligand_cluster"] == ligand_cluster)
+            & (inter["receptor_gene"] == receptor)
+            & (inter["ligand_gene"] == ligand)
         ].copy()
-        
+
         # add datalabel
         inter["name"] = label
-        
+
         table.append(inter)
-        
+
     table = pd.concat(table)
-    
-    # plot    
-    with plt.rc_context({"figure.figsize": figsize, "figure.dpi": dpi}):        
+
+    # plot
+    with plt.rc_context({"figure.figsize": figsize, "figure.dpi": dpi}):
         plot = sns.barplot(
             data=table,
             x="name",
@@ -604,12 +604,12 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
 
         plot.set_xticklabels(
             plot.get_xticklabels(),
-            rotation=90, 
+            rotation=90,
             horizontalalignment='right'
         )
-    
+
     plt.tight_layout()
-    
+
     if output:
         plt.savefig(output)
 
@@ -861,9 +861,9 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
     """
     # check if data is available
     _check_interactions(anndata)
-    
+
     table = anndata.uns["receptor-ligand"]["interactions"]
-    
+
     if min_perc is None:
         min_perc = 0
 
@@ -872,19 +872,19 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
         interaction_score = np.percentile(table["interaction_score"], interaction_perc)
     elif interaction_score is None:
         interaction_score = min(table["interaction_score"]) - 1
-    
+
     subset = table[(table["receptor_percent"] >= min_perc)
-                 & (table["ligand_percent"] >= min_perc)
-                 & (table["interaction_score"] > interaction_score)]
-    
+                    & (table["ligand_percent"] >= min_perc)
+                    & (table["interaction_score"] > interaction_score)]
+
     if group_a and group_b:
         subset = subset[(subset["receptor_cluster"].isin(group_a) & subset["ligand_cluster"].isin(group_b))
-                      | (subset["receptor_cluster"].isin(group_b) & subset["ligand_cluster"].isin(group_a))]
+                        (subset["receptor_cluster"].isin(group_b) & subset["ligand_cluster"].isin(group_a))]
     elif group_a or group_b:
         group = group_a if group_a else group_b
-        
+
         subset = subset[subset["receptor_cluster"].isin(group) | subset["ligand_cluster"].isin(group)]
-    
+
     return subset
 
 
