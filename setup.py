@@ -8,7 +8,6 @@ batch_correction = ['bbknn', 'mnnpy', 'harmonypy', 'scanorama']
 receptor_ligand = ['sklearn', 'igraph', 'cairocffi']  # cairocffi needed for cairo backend
 all = converter + atac + interactive + batch_correction + receptor_ligand
 
-
 setup(
     name='sc-toolbox',
     description='Custom modules for single cell analysis',
