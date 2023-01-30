@@ -6,7 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:latest
+image: python:3.9.15  #pin due to numba not available for python 3.11
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -23,28 +23,37 @@ cache:
     - .cache/pip
     - venv/
 
-before_script:
-  - python --version  # For debugging
-  - pip install virtualenv
-  - virtualenv venv
-  - source venv/bin/activate
-  - apt update
-  - apt -y install r-base
-  - pip install .[all]
-  - pip install pytest
-  - pip install pytest-cov
+default:
+  before_script:
+    - python --version  # For debugging
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - apt update
+    - apt -y install r-base
+    - pip install .[all]
+    - pip install pytest
+    - pip install pytest-cov
 
 # flake8 ignore rules:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 
 lint:
+  stage: test
+  tags:
+    - coverage
   script:
     - pip install flake8
-    - flake8 sctoolbox --ignore=E501,W503 --exclude sctoolbox/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
 
-cov:
+test coverage:
+  stage: test
+  tags:
+    - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
@@ -54,9 +63,13 @@ cov:
       - pytest.xml
     reports:
       junit: pytest.xml
-
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
 
 pages:
+  stage: deploy
+  tags:
+    - coverage
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
@@ -70,6 +83,27 @@ pages:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+
+#Test notebooks when code is pushed to main
+notebooks:
+  stage: deploy
+  image: continuumio/miniconda3:latest
+  tags:
+    - gwdg
+    - gwdg-shared
+  inherit:
+    default: false  #do not install virtual env for this job
+  script:
+    - pip install papermill
+    - conda install -c conda-forge mamba
+    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
+    - conda init bash
+    - source ~/.bashrc
+    - conda activate sctoolbox
+    - python -m ipykernel install --user --name sctoolbox
+    - bash scripts/run_notebooks.sh
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 #test:
 #  script:
