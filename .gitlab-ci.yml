@@ -39,6 +39,12 @@ default:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 
+pass: #a rule that always passes for branches without jobs being run
+  inherit:
+    default: false
+  script:
+     - 'echo "Branch: $CI_COMMIT_BRANCH"'
+
 lint:
   stage: test
   tags:
