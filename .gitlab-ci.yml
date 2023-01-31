@@ -30,6 +30,7 @@ default:
     - virtualenv venv
     - source venv/bin/activate
     - apt update
+    - pip install --upgrade setuptools  # make sure setuptools is available for install
 #   - apt -y install r-base
 
 # flake8 ignore rules:
