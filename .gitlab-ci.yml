@@ -39,6 +39,15 @@ default:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 
+#this is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
+pass:
+  inherit:
+    default: false
+  script:
+     - 'echo passed'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+
 lint:
   stage: test
   tags:
@@ -48,7 +57,11 @@ lint:
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
   allow_failure: false
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+      changes:
+      - setup.py
+      - tests/*.py
+      - sctoolbox/*.py
 
 test coverage:
   stage: test
@@ -64,7 +77,7 @@ test coverage:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
       - tests/*.py
       - sctoolbox/*.py
@@ -85,7 +98,7 @@ pages:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
 
 #Test notebooks when code is pushed to main
 notebooks:
@@ -106,7 +119,7 @@ notebooks:
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: always
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
