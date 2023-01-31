@@ -125,7 +125,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     # test if database gene columns overlap with adata.var genes
     if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
             or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)):
-        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.uns['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
+        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
