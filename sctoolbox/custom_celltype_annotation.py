@@ -44,7 +44,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
     Returns
     --------
-    If inplace is True, the annotation is added to adata.obs in place. 
+    If inplace is True, the annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
 
