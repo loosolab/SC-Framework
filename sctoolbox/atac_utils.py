@@ -205,38 +205,38 @@ def get_keys(adata, manual_thresholds):
     return m_thresholds
 
 
-def build_default_thresholds(adata, manual_thresholds, groupby=None):
-    '''
-    This builds a dictionary from the manual set thresholds in the format to use it later
-    Parameters
-    ----------
-    manual_tresholds
-    groupby
-    columns
-
-    Returns
-    -------
-
-    '''
-    if groupby is not None:
-        samples = []
-        current_sample = None
-        for sample in adata.obs[groupby]:
-            if current_sample != sample:
-                samples.append(sample)
-                current_sample = sample
-
-        thresholds = {}
-        for key, value in manual_thresholds.items():
-            sample_dict = {}
-            for sample in samples:
-                sample_dict[sample] = {key: value}
-            thresholds[key] = sample_dict
-
-    else:
-        thresholds = manual_thresholds
-
-    return thresholds
+# def build_default_thresholds(adata, manual_thresholds, groupby=None):
+#     '''
+#     This builds a dictionary from the manual set thresholds in the format to use it later
+#     Parameters
+#     ----------
+#     manual_tresholds
+#     groupby
+#     columns
+#
+#     Returns
+#     -------
+#
+#     '''
+#     if groupby is not None:
+#         samples = []
+#         current_sample = None
+#         for sample in adata.obs[groupby]:
+#             if current_sample != sample:
+#                 samples.append(sample)
+#                 current_sample = sample
+#
+#         thresholds = {}
+#         for key, value in manual_thresholds.items():
+#             sample_dict = {}
+#             for sample in samples:
+#                 sample_dict[sample] = {key: value}
+#             thresholds[key] = sample_dict
+#
+#     else:
+#         thresholds = manual_thresholds
+#
+#     return thresholds
 
 
 def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
@@ -254,11 +254,24 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresho
         thresholds = qc_filter.automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
         return thresholds
     else:
+        samples = []
+        current_sample = None
+        for sample in adata.obs[groupby]:
+            if current_sample != sample:
+                samples.append(sample)
+                current_sample = sample
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
             if value['min'] is None or value['max'] is None:
                 auto_thr = qc_filter.automatic_thresholds(adata, which="obs", columns=[key], groupby=groupby)
                 manual_thresholds[key] = auto_thr[key]
+            else:
+                thresholds = {}
+                for sample in samples:
+                    thresholds[sample] = {key: value}
+
+                manual_thresholds[key] = thresholds
+
         return manual_thresholds
 
 
@@ -553,11 +566,11 @@ if __name__ == '__main__':
     #                    index_from='name')
     # adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
     #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
-    adata = epi.read_h5ad('/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
+    #adata = epi.read_h5ad('/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
     # bamfile = '/mnt/workspace/jdetlef/data/bamfiles/sorted_Esophagus.bam'
-    bamfile = '/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/homo_sapiens_liver.bam'
+    #bamfile = '/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/homo_sapiens_liver.bam'
 
-    check_barcode_tag(adata, bamfile, cb_col='CB')
+#    check_barcode_tag(adata, bamfile, cb_col='CB')
     #
     #
     adata = epi.read_h5ad('/mnt/workspace/jdetlef/ext_ana/processed/all/assembling/anndata/all.h5ad')
@@ -570,7 +583,7 @@ if __name__ == '__main__':
     filter_uniquely_mapped_fragments = True  # True or False; filtering out cells with promotor_enrichment not in the range defined
 
     # if this is True thresholds below are ignored
-    only_automatic_thresholds = True  # True or False; to use automatic thresholds
+    only_automatic_thresholds = False  # True or False; to use automatic thresholds
 
     ############################# set default values #######################################
     #
@@ -578,8 +591,8 @@ if __name__ == '__main__':
     # if thresholds None they are set automatically
 
     # default values n_features
-    min_features = None
-    max_features = None
+    min_features = 10
+    max_features = 100
 
     # default mean_insertsize
     upper_threshold_mis = None
@@ -621,7 +634,9 @@ if __name__ == '__main__':
 
     #adata.obs = adata.obs.fillna(0)
 
-    default_thresholds = build_default_thresholds(adata, manual_thresholds, groupby="Sample")
-    thresholds = get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds)
+
+    auto_thr = qc_filter.automatic_thresholds(adata, which="obs", columns=['n_features_by_counts', 'mean_insertsize'], groupby="Sample")
+    # default_thresholds = build_default_thresholds(adata, manual_thresholds, groupby="Sample")
+    thresholds = get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds, groupby="Sample")
 
     print(thresholds)
