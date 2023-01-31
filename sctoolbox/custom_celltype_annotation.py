@@ -44,7 +44,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
     Returns
     --------
-    If inplace is True, the annotation is added to adata.obs in place. 
+    If inplace is True, the annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
 
@@ -151,7 +151,7 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
             new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
             adata.obs[f'{cell_type_column}_mod_{res}'] = adata.obs[f'{cell_type_column}_mod_{res}'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
             print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
-            umap = input("Would you like to see the updated UMAP?")
+            umap = input("Would you like to see the updated UMAP? Enter yes or no: ")
             umap = True if umap == "yes" else False
             if umap:
                 sc.pl.umap(adata, color=[f'{cell_type_column}_mod_{res}', f'{cell_type_column}_{res}'], wspace=0.5)
@@ -168,7 +168,7 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
             new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
             adata.obs[f'{cell_type_column}_mod'] = adata.obs[f'{cell_type_column}_mod'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
             print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
-            umap = input("Would you like to see the updated UMAP?")
+            umap = input("Would you like to see the updated UMAP? Enter yes or no: ")
             umap = True if umap == "yes" else False
             if umap:
                 sc.pl.umap(adata, color=[f'{cell_type_column}_mod', f'{cell_type_column}'], wspace=0.5)
