@@ -6,7 +6,6 @@
 """
 from collections import Counter
 import sctoolbox.utilities as utils
-import sctoolbox.mp_calc_ov_pct as mp_pct
 import os
 import pkg_resources
 import pandas as pd
@@ -297,12 +296,104 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     overlap_file = _overlap_two_beds(fragments_file, bed_file, out=None)
 
     #
-    mp_calc_pct = mp_pct.MPOverlapPct()
+    mp_calc_pct = MPOverlapPct()
     adata = mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
     #
     print('Adding results to adata object...')
 
     print('Done')
+
+
+class MPOverlapPct():
+
+
+    def __init__(self):
+
+        self.merged_dict = None
+
+    def calc_pct(self,
+                 overlap_file,
+                 fragments_file,
+                 barcodes,
+                 adata,
+                 regions_name='list',
+                 n_threads=8):
+
+        # check if there was an overlap
+        if not overlap_file:
+            print("There was no overlap!")
+            return
+
+        # get unique barcodes from adata.obs
+        barcodes = set(barcodes)
+
+        # make columns names that will be added to adata.obs
+        col_total_fragments = 'n_total_fragments'
+        # if no name is given or None, set default name
+        if not regions_name:
+            col_n_fragments_in_list = 'n_fragments_in_list'
+            col_pct_fragments = 'pct_fragments_in_list'
+        else:
+            col_n_fragments_in_list = 'n_fragments_in_' + regions_name
+            col_pct_fragments = 'pct_fragments_in_' + regions_name
+
+        # calculating percentage
+        print('Calculating percentage...')
+        # read overlap file as dataframe
+        ov_fragments = pd.read_csv(overlap_file, sep="\t", header=None, chunksize=1000000)
+        merged_ov_dict = self.mp_counter(ov_fragments, barcodes=barcodes, column=col_n_fragments_in_list, n_threads=n_threads)
+        fragments = pd.read_csv(fragments_file, sep="\t", header=None, chunksize=1000000)
+        merged_fl_dict = self.mp_counter(fragments, barcodes=barcodes, column=col_total_fragments, n_threads=n_threads)
+
+        # add to adata.obs
+        adata.obs[col_n_fragments_in_list] = adata.obs.index.map(merged_ov_dict).fillna(0)
+        adata.obs[col_total_fragments] = adata.obs.index.map(merged_fl_dict).fillna(0)
+
+        # calc pct
+        adata.obs[col_pct_fragments] = adata.obs[col_n_fragments_in_list] / adata.obs[col_total_fragments]
+
+        return adata
+
+
+    def get_barcodes_sum(self, df, barcodes, col_name):
+        # drop columns we dont need
+        df.drop(df.iloc[:, 5:], axis=1, inplace=True)
+        df.columns = ['chr', 'start', 'end', 'barcode', col_name]
+        # remove barcodes not found in adata.obs
+        df = df.loc[df['barcode'].isin(barcodes)]
+        # drop chr start end columns
+        df.drop(['chr', 'start', 'end'], axis=1, inplace=True)
+        # get the sum of reads counts in each cell barcode
+        df = df.groupby('barcode').sum()
+
+        count_dict = df[col_name].to_dict()
+
+        return count_dict
+
+
+    def log_result(self, result):
+        if self.merged_dict:
+            self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
+            # print('merging')
+        else:
+            self.merged_dict = result
+
+
+    def mp_counter(self, fragments, barcodes, column, n_threads=8):
+
+        pool = mp.Pool(n_threads, maxtasksperchild=48)
+        jobs = []
+        for chunk in fragments:
+            job = pool.apply_async(self.get_barcodes_sum, args=(chunk, barcodes, column), callback=self.log_result)
+            jobs.append(job)
+        utils.monitor_jobs(jobs, description="Progress")
+        pool.close()
+        pool.join()
+        # reset settings
+        returns = self.merged_dict
+        self.merged_dict = None
+
+        return returns
 
 
 if __name__ == '__main__':
@@ -315,8 +406,9 @@ if __name__ == '__main__':
 
     adata = epi.read_h5ad(h5ad_file)
     barcodes = adata.obs['barcode']
+    adata.obs.set_index('barcode', inplace=True)
    # barcodes = set(barcodes)
-    mp_calc_pct = mp_pct.MPOverlapPct()
+    mp_calc_pct = MPOverlapPct()
     adata = mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name='list', n_threads=8)
 
     # ov_fragments = pd.read_csv(fragments_file, sep="\t", header=None, chunksize=1000000)
