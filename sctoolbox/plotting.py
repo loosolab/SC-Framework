@@ -1485,12 +1485,19 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
         axarr = [axarr]
         color = [color]
 
+    colorbar_count = 0
     for i, ax in enumerate(axarr):
 
         # Set legend
         legend = ax.get_legend()
-        if legend is not None:
+        if legend is not None:  # legend of categorical variables
             legend.set_title(color[i])
+        else:                   # legend of continuous variables
+            colorbar_idx = i + colorbar_count + 1
+            local_axes = ax.figure._localaxes
+            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
+                local_axes[colorbar_idx].set_title(color[i])
+                colorbar_count += 1
 
         ax.set_title(title)
 
@@ -1526,4 +1533,4 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     # Save figure
     utils.save_figure(save)
 
-    return ax
+    return axarr
