@@ -5,7 +5,7 @@ converter = ['rpy2==3.4.5', 'anndata2ri']
 atac = ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets']
 interactive = ['click']
 batch_correction = ['bbknn', 'mnnpy', 'harmonypy', 'scanorama']
-receptor_ligand = ['scikit-learn', 'igraph', 'cairocffi']  # cairocffi needed for cairo backend
+receptor_ligand = ['scikit-learn', 'igraph']
 all = converter + atac + interactive + batch_correction + receptor_ligand
 
 setup(

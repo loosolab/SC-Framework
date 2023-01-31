@@ -306,12 +306,6 @@ def hairball(adata,
     """
     Generate network graph of interactions between clusters.
 
-    Note: The dimensions of the jupyter view often differ from what is saved to the file.
-
-    KNOWN ISSUE: The network graph will not show up in jupyter unless first running `matplotlib.use("cairo")`.
-    Afterwards run `matplotlib.use("module://matplotlib_inline.backend_inline")` in a new cell or the other plots won't work.
-    TODO: this may be fixable when igraph>=0.10 is released. https://github.com/igraph/python-igraph/issues/426
-
     Parameters
     ----------
         adata : anndata.AnnData
@@ -358,57 +352,10 @@ def hairball(adata,
         if invalid_clusters:
             raise ValueError(f"Invalid cluster in `restrict_to`: {invalid_clusters}")
 
-    igraph_scale = 3
-    matplotlib_scale = 4
-
-    # ----- setup class that combines igraph with matplotlib -----
-    # from https://stackoverflow.com/a/36154077
-    # makes igraph compatible with matplotlib
-    # so a colorbar can be added
-    class GraphArtist(Artist):
-        """
-        Matplotlib artist class that draws igraph graphs.
-
-        Only Cairo-based backends are supported.
-        """
-
-        def __init__(self, graph, bbox, palette=None, *args, **kwds):
-            """
-            Constructs a graph artist that draws the given graph within
-            the given bounding box.
-
-            `graph` must be an instance of `igraph.Graph`.
-            `bbox` must either be an instance of `igraph.drawing.BoundingBox`
-            or a 4-tuple (`left`, `top`, `width`, `height`). The tuple
-            will be passed on to the constructor of `BoundingBox`.
-            `palette` is an igraph palette that is used to transform
-            numeric color IDs to RGB values. If `None`, a default grayscale
-            palette is used from igraph.
-
-            All the remaining positional and keyword arguments are passed
-            on intact to `igraph.Graph.__plot__`.
-            """
-            Artist.__init__(self)
-
-            if not isinstance(graph, Graph):
-                raise TypeError("expected igraph.Graph, got %r" % type(graph))
-
-            self.graph = graph
-            self.palette = palette or palettes["gray"]
-            self.bbox = BoundingBox(bbox)
-            self.args = args
-            self.kwds = kwds
-
-        def draw(self, renderer):
-            from matplotlib.backends.backend_cairo import RendererCairo
-            if not isinstance(renderer, RendererCairo):
-                raise TypeError("graph plotting is supported only on Cairo backends")
-            self.graph.__plot__(renderer.gc.ctx, self.bbox, self.palette, *self.args, **self.kwds)
-
     # ----- create igraph -----
     graph = ig.Graph()
 
-    # set nodes
+    # --- set nodes ---
     if restrict_to:
         clusters = restrict_to
     else:
@@ -420,12 +367,12 @@ def hairball(adata,
 
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
-    graph.vs['size'] = 45
-    graph.vs['label_size'] = 30
-    graph.vs['label_dist'] = 2
-    graph.vs['label_angle'] = 4
+    graph.vs['size'] = 0.1 # node size
+    graph.vs['label_size'] = 12 # label size
+    graph.vs['label_dist'] = 2 # distance of label to node # not working
+    graph.vs['label_angle'] = 1.5708 # rad = 90 degree # not working
 
-    # set edges
+    # --- set edges ---
     for (a, b) in combinations_with_replacement(clusters, 2):
         if hide_edges and ((a, b) in hide_edges or (b, a) in hide_edges):
             continue
@@ -440,37 +387,18 @@ def hairball(adata,
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
     for e in graph.es:
         e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
-        e["width"] = (e["weight"] / max_weight) * 10
+        e["width"] = (e["weight"] / max_weight) #* 10
         # show weights in plot
         if show_count and e["weight"] > 0:
             e["label"] = e["weight"]
             e["label_size"] = 25
 
-    # ----- setup matplotlib plot and combine with igraph -----
-    # Make Matplotlib use a Cairo backend
-    matplotlib.use("cairo")
-
+    # ----- plotting -----
     # Create the figure
-    fig, axes = plt.subplots(1, 2, figsize=(8 * matplotlib_scale, 6 * matplotlib_scale), gridspec_kw={'width_ratios': [20, 1]})
-    fig.suptitle(title, fontsize=12 * matplotlib_scale)
+    fig, axes = plt.subplots(1, 2, figsize=(8, 6), gridspec_kw={'width_ratios': [20, 1]})
+    fig.suptitle(title, fontsize=12)
 
-    # hide axis under network graph
-    axes[0].axis('off')
-
-    # Draw the graph over the plot
-    # Two points to note here:
-    # 1) we add the graph to the axes, not to the figure. This is because
-    #    the axes are always drawn on top of everything in a matplotlib
-    #    figure, and we want the graph to be on top of the axes.
-    # 2) we set the z-order of the graph to infinity to ensure that it is
-    #    drawn above all the curves drawn by the axes object itself.
-    left = 250
-    top = 150
-    width = 500 * igraph_scale + left
-    height = 500 * igraph_scale + top
-    graph_artist = GraphArtist(graph, (left, top, width, height), layout=graph.layout_circle(order=sorted(clusters)))
-    graph_artist.set_zorder(float('inf'))
-    axes[0].artists.append(graph_artist)
+    ig.plot(obj=graph, layout=graph.layout_circle(order=sorted(clusters)), target=axes[0])
 
     # add colorbar
     cb = matplotlib.colorbar.ColorbarBase(axes[1],
@@ -480,8 +408,8 @@ def hairball(adata,
                                                                            max_weight)
                                           )
 
-    cb.ax.tick_params(labelsize=10 * matplotlib_scale)
-    cb.ax.set_title(cbar_label, fontsize=10 * matplotlib_scale)
+    cb.ax.tick_params(labelsize=10)
+    cb.ax.set_title(cbar_label, fontsize=10)
 
     # prevent label clipping out of picture
     plt.tight_layout()
