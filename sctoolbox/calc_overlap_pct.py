@@ -4,7 +4,7 @@
     reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
     as first columns.
 """
-
+from collections import Counter
 import sctoolbox.utilities as utils
 import os
 import pkg_resources
@@ -13,6 +13,7 @@ import pybedtools
 import sys
 from pathlib import Path
 from sinto.fragments import fragments
+import multiprocessing as mp
 
 
 def check_pct_fragments_in_promoters(adata, qc_col):
@@ -294,6 +295,19 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     print('Finding overlaps...')
     overlap_file = _overlap_two_beds(fragments_file, bed_file, out=None)
 
+    #
+    adata = calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name='list', n_threads=8)
+    #
+    print('Adding results to adata object...')
+    # add results to adata.obs
+    # if cb_col:
+    #     adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='left')  # .fillna(0)
+    # else:
+    #     adata.obs = adata.obs.merge(fragments_df, how='left', left_index=True, right_index=True)  # .fillna(0)
+
+    print('Done')
+
+def calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name='list', n_threads=8):
     # check if there was an overlap
     if not overlap_file:
         print("There was no overlap!")
@@ -315,96 +329,199 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # calculating percentage
     print('Calculating percentage...')
     # read overlap file as dataframe
-    df_overlap = pd.read_csv(overlap_file, sep='\t', header=None)
+    ov_fragments = pd.read_csv(overlap_file, sep="\t", header=None, chunksize=1000000)
+    merged_ov_dict = mp_counter(ov_fragments, barcodes=barcodes, column=col_n_fragments_in_list)
+    fragments = pd.read_csv(fragments_file, sep="\t", header=None, chunksize=1000000)
+    merged_fl_dict = mp_counter(fragments, barcodes=barcodes, column=col_total_fragments)
+
+    # add to adata.obs
+    adata.obs[col_n_fragments_in_list] = adata.obs.index.map(merged_ov_dict).fillna(0)
+    adata.obs[col_total_fragments] = adata.obs.index.map(merged_fl_dict).fillna(0)
+
+    # calc pct
+    adata.obs[col_pct_fragments] = adata.obs[col_n_fragments_in_list] / adata.obs[col_total_fragments]
+
+    return adata
+
+
+# def mp_counter(fragments, barcodes, column, n_threads=8):
+#
+#     pool = mp.Pool(n_threads)
+#     jobs = []
+#     i = 0
+#     merged_dict = None
+#     for chunk in fragments:
+#         job = pool.apply_async(get_barcodes_sum, args=(chunk, barcodes, column))
+#         jobs.append(job)
+#         i += 1
+#         if i == 48:
+#             pool.close()
+#             pool.join()
+#             for job in jobs:
+#                 count_dict = job.get()
+#                 if merged_dict:
+#                     merged_dict = dict(Counter(merged_dict) + Counter(count_dict))
+#                 else:
+#                     merged_dict = count_dict
+#             jobs = []
+#             pool = mp.Pool(n_threads)
+#             i = 0
+#     try:
+#         pool.close()
+#         for job in jobs:
+#             count_dict = job.get()
+#             if merged_dict:
+#                 merged_dict = dict(Counter(merged_dict) + Counter(count_dict))
+#             else:
+#                 merged_dict = count_dict
+#
+#     except Exception as e: print(e)
+#
+#     return merged_dict
+
+
+def get_barcodes_sum(df, barcodes, col_name):
     # drop columns we dont need
-    df_overlap.drop(df_overlap.iloc[:, 5:], axis=1, inplace=True)
-    df_overlap.columns = ['chr', 'start', 'end', 'barcode', col_n_fragments_in_list]
+    df.drop(df.iloc[:, 5:], axis=1, inplace=True)
+    df.columns = ['chr', 'start', 'end', 'barcode', col_name]
     # remove barcodes not found in adata.obs
-    df_overlap = df_overlap.loc[df_overlap['barcode'].isin(barcodes)]
+    df = df.loc[df['barcode'].isin(barcodes)]
     # drop chr start end columns
-    df_overlap.drop(['chr', 'start', 'end'], axis=1, inplace=True)
+    df.drop(['chr', 'start', 'end'], axis=1, inplace=True)
     # get the sum of reads counts in each cell barcode
-    df_overlap = df_overlap.groupby('barcode').sum()
-    # convert dataframe to dictionary
-    overlap_count = df_overlap[col_n_fragments_in_list].to_dict()
+    df = df.groupby('barcode').sum()
 
-    # read fragments file as dataframe
-    fragments_df = pd.read_csv(fragments_file, sep='\t', header=None)
-    # drop columns we dont need
-    fragments_df.drop(fragments_df.iloc[:, 5:], axis=1, inplace=True)
-    # rename columns, remove barcodes not in adata.obs, drop unwanted columns and sum read counts for each cell
-    fragments_df.columns = ['chr', 'start', 'end', 'barcode', col_total_fragments]
-    fragments_df = fragments_df.loc[fragments_df['barcode'].isin(barcodes)]
-    fragments_df.drop(['chr', 'start', 'end'], axis=1, inplace=True)
-    fragments_df = fragments_df.groupby('barcode').sum()
-    # add column for reads in promoters from promoters_count dict
-    fragments_df[col_n_fragments_in_list] = fragments_df.index.map(overlap_count).fillna(0)
-    # calculate percentage
-    fragments_df[col_pct_fragments] = fragments_df[col_n_fragments_in_list] / fragments_df[col_total_fragments]
+    count_dict = df[col_name].to_dict()
 
-    print('Adding results to adata object...')
-    # add results to adata.obs
-    if cb_col:
-        adata.obs = adata.obs.merge(fragments_df, left_on=cb_col, right_index=True, how='left')  # .fillna(0)
-    else:
-        adata.obs = adata.obs.merge(fragments_df, how='left', left_index=True, right_index=True)  # .fillna(0)
+    return count_dict
 
-    print('Done')
+
+def mp_counter(fragments, barcodes, column, n_threads=8):
+
+    pool = mp.Pool(n_threads)
+    jobs = []
+    counter = 0
+    merged_dict = None
+    for chunk in fragments:
+        print(chunk[:][0], barcodes[0], column)
+        job = pool.apply_async(get_barcodes_sum, args=(chunk, barcodes, column))
+        jobs.append(job)
+        counter += 1
+        if counter == 48:
+            pool.close()
+            pool.join()
+            for job in jobs:
+                count_dict = job.get()
+                if merged_dict:
+                    merged_dict = dict(Counter(merged_dict) + Counter(count_dict))
+                else:
+                    merged_dict = count_dict
+            jobs = []
+            pool._cache.clear()
+            pool.join()
+            try:
+                pool = mp.Pool(n_threads)
+            except Exception as e:
+                print(e)
+            print('reset pool')
+            counter = 0
+    try:
+        pool.close()
+        for job in jobs:
+            count_dict = job.get()
+            if merged_dict:
+                merged_dict = dict(Counter(merged_dict) + Counter(count_dict))
+            else:
+                merged_dict = count_dict
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+    return merged_dict
 
 
 if __name__ == '__main__':
 
-    # pass
-    import atac_utils as atac
+    import episcanpy as epi
 
-    # Manually set existing QC Columns
-    n_features_by_counts = None
-    log1p_n_features_by_counts = None
-    total_counts = None
-    log1p_total_counts = None
-    mean_insertsize = None
-    insertsize_count = None
-    n_total_fragments = None
-    n_fragments_in_promoters = None
-    variable_pct_fragments_in_promoters = None
-    blacklist_overlaps = None
-    # total_number_of_fragments
-    TN = 'TN'
-    # uniquely_mapped_fragments
-    UM = 'UM'
-    # properly_paired_fragments
-    PP = 'PP'
-    # uniq_fragments
-    UQ = 'UQ'
-    # chrM_fragments
-    CM = 'CM'
+    fragments_file = '/mnt/workspace/yalayou/scATAC_seq/framework/data/test/fragments_Esophagus_sorted.bed'
+    overlap_file = '/mnt/workspace/jdetlef/ext_ana/ext442/sample1.filter_fragments_sorted_mus_musculus.104.promoters2000.gtf_sorted_overlap.bed'
+    h5ad_file = '/mnt/workspace/jdetlef/data/anndata/Esophagus.h5ad'
 
-    qc_columns = {}
-    qc_columns["n_features_by_counts"] = n_features_by_counts
-    qc_columns["log1p_n_features_by_counts"] = log1p_n_features_by_counts
-    qc_columns["total_counts"] = total_counts
-    qc_columns["log1p_total_counts"] = log1p_total_counts
-    qc_columns["mean_insertsize"] = mean_insertsize
-    qc_columns['n_total_fragments'] = n_total_fragments
-    qc_columns['n_fragments_in_promoters'] = n_fragments_in_promoters
-    qc_columns['pct_fragments_in_promoters'] = variable_pct_fragments_in_promoters
-    qc_columns["blacklist_overlaps"] = blacklist_overlaps
-    qc_columns["TN"] = TN
-    qc_columns["UM"] = UM
-    qc_columns["PP"] = PP
-    qc_columns["UQ"] = UQ
-    qc_columns["CM"] = CM
+    adata = epi.read_h5ad(h5ad_file)
+    barcodes = adata.obs['barcode']
+   # barcodes = set(barcodes)
 
-    h5ad_files = ['/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad']
-    adata = atac.assemble_from_h5ad(h5ad_files=h5ad_files, qc_columns=qc_columns)
+    adata = calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name='list', n_threads=8)
+
+    # ov_fragments = pd.read_csv(fragments_file, sep="\t", header=None, chunksize=1000000)
+    # merged_ov_dict = mp_counter(ov_fragments, barcodes, column='n_total_fragments')
+
+    # # pass
+    # import atac_utils as atac
+    #
+    # # For option 1: The path to an existing .h5ad file
+    # h5ad_files = ['/mnt/workspace/jdetlef/data/anndata/Esophagus.h5ad']
+    # # h5ad_files = ['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad']
+    # merge_column = 'sample'  # (str) If multiple h5ad files merged this is an identifier from which file it originates
+    # coordinate_cols = None  # (list:str)Columns where peak location data is stored (['chr', 'start', 'end'])
+    # set_index = True  # (boolean) Should the Index be formatted, that it matches chr:start-stop
+    # index_from = 'name'  # (str) Should the index be generated from a certain column
+    #
+    # # Manually set existing QC Columns
+    # n_features_by_counts = None
+    # log1p_n_features_by_counts = None
+    # total_counts = None
+    # log1p_total_counts = None
+    # mean_insertsize = None
+    # insertsize_count = None
+    # n_total_fragments = None
+    # n_fragments_in_promoters = None
+    # variable_pct_fragments_in_promoters = None
+    # blacklist_overlaps = None
+    # # total_number_of_fragments
+    # TN = 'TN'
+    # # uniquely_mapped_fragments
+    # UM = 'UM'
+    # # properly_paired_fragments
+    # PP = 'PP'
+    # # uniq_fragments
+    # UQ = 'UQ'
+    # # chrM_fragments
+    # CM = 'CM'
+    #
+    # qc_columns = {}
+    # qc_columns["n_features_by_counts"] = n_features_by_counts
+    # qc_columns["log1p_n_features_by_counts"] = log1p_n_features_by_counts
+    # qc_columns["total_counts"] = total_counts
+    # qc_columns["log1p_total_counts"] = log1p_total_counts
+    # qc_columns["mean_insertsize"] = mean_insertsize
+    # qc_columns['n_total_fragments'] = n_total_fragments
+    # qc_columns['n_fragments_in_promoters'] = n_fragments_in_promoters
+    # qc_columns['pct_fragments_in_promoters'] = variable_pct_fragments_in_promoters
+    # qc_columns["blacklist_overlaps"] = blacklist_overlaps
+    # qc_columns["TN"] = TN
+    # qc_columns["UM"] = UM
+    # qc_columns["PP"] = PP
+    # qc_columns["UQ"] = UQ
+    # qc_columns["CM"] = CM
+    #
+    # h5ad_files = ['/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad']
+
     # read adata
     # adata = epi.read_h5ad('/home/jan/python-workspace/sc-atac/data/anndata/Esophagus.h5ad')
 
-    bam_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted.bam'
+    gtf_sorted = '/mnt/workspace/jdetlef/ext_ana/mus_musculus.104.promoters2000.gtf_sorted.bed'
     fragments_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted_fragments_sorted.bed'
 
-    promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
-    species = None
+    _overlap_two_beds(fragments_file, gtf_sorted, out='/mnt/workspace/jdetlef/ext_ana')
 
-    pct_fragments_in_promoters(adata, promoters_gtf, species=species, fragments_file=fragments_file, cb_col=None, nproc=1)
+
+
+
+    # promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
+    # species = None
+    #
+    # pct_fragments_in_promoters(adata, promoters_gtf, species=species, fragments_file=fragments_file, cb_col=None, nproc=1)
     print('Done')
