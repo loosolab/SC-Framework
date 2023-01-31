@@ -65,6 +65,9 @@ test coverage:
       junit: pytest.xml
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"
+      changes:
+      - tests/*.py
+      - sctoolbox/*.py
 
 pages:
   stage: deploy
@@ -104,6 +107,10 @@ notebooks:
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+      when: always
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
+      when: manual
+      allow_failure: True  # the manual rule is allowed to fail
 
 #test:
 #  script:
