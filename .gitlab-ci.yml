@@ -39,11 +39,12 @@ default:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 
-pass: #a rule that always passes for branches without jobs being run
+#this is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
+pass:
   inherit:
     default: false
   script:
-     - 'echo "Branch: $CI_COMMIT_BRANCH"'
+     - 'echo passed'
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
