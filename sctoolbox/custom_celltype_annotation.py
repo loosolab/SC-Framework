@@ -3,6 +3,7 @@ import os
 import statistics
 import sys
 import pandas as pd
+import scanpy as sc
 from IPython.display import display
 
 
@@ -43,11 +44,11 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
     Returns
     --------
-    If inplace == True, the annotation is added to adata.obs in place.
+    If inplace is True, the annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
 
-    if inplace is False:
+    if not inplace:
         adata = adata.copy()
 
     if output_path and db_path:
@@ -90,7 +91,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
             print(f"Finished cell type annotation! The results are found in the .obs table {ct_column}.")
 
-            if inplace is False:
+            if not inplace:
                 return adata
 
         elif cluster_path:
@@ -126,11 +127,11 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
 
     Returns
     --------
-    If inplace == True, the modified annotation is added to adata.obs in place.
+    If inplace is True, the modified annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
 
-    if inplace is False:
+    if not inplace:
         adata = adata.copy()
 
     if resolutions:
@@ -139,13 +140,21 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
 
         modify = True
         while modify:
-            res = float(input("Enter cluster resolution: "))
+            if len(resolutions) > 1:
+                res = float(input("Enter clustering resolution: "))
+            else:
+                res = resolutions[0]
+
             cluster = int(input("Enter the number of the cluster you'd like to modify: "))
             df = pd.read_csv(f'{annotation_dir}/ranked/output/{clustering_column}_{res}/ranks/cluster_{cluster}', sep='\t', names=["Cell type", "Score", "Hits", "Number of marker genes", "Mean of UI"])
             display(df.head(10))
             new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
             adata.obs[f'{cell_type_column}_mod_{res}'] = adata.obs[f'{cell_type_column}_mod_{res}'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
             print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
+            umap = input("Would you like to see the updated UMAP? Enter yes or no: ")
+            umap = True if umap == "yes" else False
+            if umap:
+                sc.pl.umap(adata, color=[f'{cell_type_column}_mod_{res}', f'{cell_type_column}_{res}'], wspace=0.5)
             modify = input("Would you like to modify another cluster? Enter yes or no: ")
             modify = True if modify == "yes" else False
     else:
@@ -159,10 +168,14 @@ def modify_ct(adata=None, resolutions=None, annotation_dir=None, clustering_colu
             new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
             adata.obs[f'{cell_type_column}_mod'] = adata.obs[f'{cell_type_column}_mod'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
             print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
+            umap = input("Would you like to see the updated UMAP? Enter yes or no: ")
+            umap = True if umap == "yes" else False
+            if umap:
+                sc.pl.umap(adata, color=[f'{cell_type_column}_mod', f'{cell_type_column}'], wspace=0.5)
             modify = input("Would you like to modify another cluster? Enter yes or no: ")
             modify = True if modify == "yes" else False
 
-    if inplace is False:
+    if not inplace:
         return adata
 
 
