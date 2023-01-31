@@ -19,7 +19,7 @@ def adata():
     # add cluster column
     def repeat_items(list, count):
         """ Repeat list until size reached. https://stackoverflow.com/a/54864336/19870975 """
-        return list * (count // len(list)) + l[:(count % len(list))]
+        return list * (count // len(list)) + list[:(count % len(list))]
 
     obj.obs["cluster"] = repeat_items([f"cluster {i}" for i in range(10)], len(obj))
 
