@@ -2,12 +2,20 @@ import pytest
 import os
 import pandas as pd
 import numpy as np
+import scanpy as sc
 
 import sctoolbox.receptor_ligand as rl
-from test_analyser import adata
 
 
 # ------------------------------ FIXTURES -------------------------------- #
+
+@pytest.fixture
+def adata():
+    """ Load and returns an anndata object. """
+    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+
+    return sc.read_h5ad(f)
+
 
 @pytest.fixture
 def db_file():
@@ -91,14 +99,15 @@ def test_get_interactions(adata_inter):
     # output is a pandas table
     assert isinstance(interactions_table, pd.DataFrame)
 
+
 def test_check_interactions(adata, adata_db, adata_inter):
     """ Assert that interaction test is properly checked """
     # raise error without rl info
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         rl._check_interactions(adata)
 
     # raise error with incomplete rl info
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         rl._check_interactions(adata_db)
 
     # accept
@@ -136,7 +145,7 @@ def test_hairball(adata_inter):
 
 def test_connectionPlot(adata_inter):
     """ Test if connectionPlot is working """
-    plot = rl.connectionPlot(adata=adata_inter, 
+    plot = rl.connectionPlot(adata=adata_inter,
                              restrict_to=None,
                              figsize=(5, 10),
                              dpi=100,
