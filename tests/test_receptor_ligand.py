@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import scanpy as sc
+import random
 
 import sctoolbox.receptor_ligand as rl
 
@@ -46,7 +47,15 @@ def adata_db(adata, db_file):
 @pytest.fixture
 def adata_inter(adata_db):
     """ Adds interaction scores to adata """
-    return rl.calculate_interaction_table(adata=adata_db,
+    obj = adata_db.copy()
+
+    # replace with random interactions
+    obj.uns["receptor-ligand"]["database"] = pd.DataFrame({
+        "ligand_gene_symbol": random.sample(obj.var["gene"].tolist(), k=len(obj.var) // 2),
+        "receptor_gene_symbol": random.sample(obj.var["gene"].tolist(), k=len(obj.var) // 2)
+    })
+
+    return rl.calculate_interaction_table(adata=obj,
                                           cluster_column="cluster",
                                           gene_index="gene",
                                           normalize=1000,
@@ -88,6 +97,21 @@ def test_interaction_table(adata_db):
     assert "interactions" not in obj.uns["receptor-ligand"]
 
     # compute rl scores
+    with pytest.raises(Exception):
+        # raises error because no interactions are found
+        rl.calculate_interaction_table(adata=obj,
+                                       cluster_column="cluster",
+                                       gene_index="gene",
+                                       normalize=1000,
+                                       inplace=True,
+                                       overwrite=False)
+
+    # replace with random interactions
+    obj.uns["receptor-ligand"]["database"] = pd.DataFrame({
+        "ligand_gene_symbol": random.sample(obj.var["gene"].tolist(), k=len(obj.var) // 2),
+        "receptor_gene_symbol": random.sample(obj.var["gene"].tolist(), k=len(obj.var) // 2)
+    })
+
     rl.calculate_interaction_table(adata=obj,
                                    cluster_column="cluster",
                                    gene_index="gene",
