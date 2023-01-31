@@ -251,7 +251,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
     Returns
     -------
-        matplotlib.axes.Axes :
+        numpy array of matplotlib.axes._subplots.AxesSubplot :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
     # check if data is available
@@ -335,7 +335,7 @@ def hairball(adata,
 
     Returns
     -------
-        matplotlib.axes.Axes :
+        numpy array of matplotlib.axes._subplots.AxesSubplot :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
     # check if data is available
@@ -609,7 +609,7 @@ def connectionPlot(adata,
 
     Returns
     -------
-        matplotlib.axes.Axes :
+        numpy array of matplotlib.axes._subplots.AxesSubplot :
             Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
     # check if data is available
