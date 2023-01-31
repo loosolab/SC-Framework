@@ -4,9 +4,11 @@ import re
 import sctoolbox.qc_filter as qc_filter
 import sctoolbox.creators as cr
 import sctoolbox.utilities as utils
+import sctoolbox.bam as bam_utils
 import episcanpy as epi
 import anndata as ad
 from matplotlib import pyplot as plt
+import warnings
 
 
 def assemble_from_h5ad(h5ad_files,
@@ -161,6 +163,7 @@ def format_index(adata, from_column=None):
                 new_index.append(re.search(coordinate_pattern, line).group(0))
             adata.var['new_index'] = new_index
             adata.var.set_index('new_index', inplace=True)
+
 
 def get_index_type(entry):
     """
@@ -452,6 +455,74 @@ def format_adata_var(adata,
         validate_regions(adata, columns_added)
 
 
+def bam_adata_ov(adata, bamfile, cb_col):
+    """
+    Check if adata.obs barcodes existing in a column of a bamfile
+    Parameters
+    ----------
+    adata: anndata.AnnData
+        adata object where adata.obs is stored
+    bamfile: str
+        path of the bamfile to investigate
+    cb_col: str
+        bamfile column to extract the barcodes from
+
+    Returns
+    -------
+
+    """
+
+    bam_obj = bam_utils.open_bam(bamfile, "rb", require_index=True)
+
+    sample = []
+    counter = 0
+    iterations = 1000
+    for read in bam_obj:
+        tag = read.get_tag(cb_col)
+        sample.append(tag)
+        if counter == iterations:
+            break
+        counter += 1
+
+    barcodes_df = pd.DataFrame(adata.obs.index)
+    count_table = barcodes_df.isin(sample)
+    hits = count_table.sum()
+    hitrate = hits[0] / iterations
+
+    return hitrate
+
+
+def check_barcode_tag(adata, bamfile, cb_col):
+    """
+    Check for the possibilty that the wrong barcode is used
+    Parameters
+    ----------
+    adata: anndata.AnnData
+        adata object where adata.obs is stored
+    bamfile: str
+        path of the bamfile to investigate
+    cb_col: str
+        bamfile column to extract the barcodes from
+
+    Returns
+    -------
+
+    """
+    hitrate = bam_adata_ov(adata, bamfile, cb_col)
+
+    if hitrate <= 0.05:
+        warnings.warn('Less than 5% of the barcodes from the bamfile found in the .obs table. \n'
+                      'Consider if you are using the wrong column for cb-tag or bamfile. \n'
+                      'The following process can take several hours')
+    elif hitrate == 0:
+        warnings.warn('None of the barcodes from the bamfile found in the .obs table. \n'
+                      'Consider if you are using the wrong column cb-tag or bamfile. \n'
+                      'The following process can take several hours')
+
+    if hitrate > 0.05:
+        print('Barcode tag: OK')
+
+
 if __name__ == '__main__':
 
 
@@ -480,8 +551,12 @@ if __name__ == '__main__':
     #                    coordinate_cols=None,
     #                    set_index=True,
     #                    index_from='name')
-    #adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
-    # #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+    # adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
+    adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+    # bamfile = '/mnt/workspace/jdetlef/data/bamfiles/sorted_Esophagus.bam'
+    bamfile = '/mnt/workspace/jdetlef/data/bamfiles/sorted_stomach_229.bam'
+
+    check_barcode_tag(adata, bamfile, cb_col='CB')
     #
     #
     adata = epi.read_h5ad('/mnt/workspace/jdetlef/ext_ana/processed/all/assembling/anndata/all.h5ad')
