@@ -52,6 +52,8 @@ lint:
   stage: test
   tags:
     - coverage
+  inherit:
+    default: false  #no need to install virtualenv for linting
   script:
     - pip install flake8
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
