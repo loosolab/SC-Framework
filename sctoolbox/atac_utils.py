@@ -254,22 +254,26 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresho
         thresholds = qc_filter.automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
         return thresholds
     else:
-        samples = []
-        current_sample = None
-        for sample in adata.obs[groupby]:
-            if current_sample != sample:
-                samples.append(sample)
-                current_sample = sample
+        if groupby:
+            samples = []
+            current_sample = None
+            for sample in adata.obs[groupby]:
+                if current_sample != sample:
+                    samples.append(sample)
+                    current_sample = sample
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
             if value['min'] is None or value['max'] is None:
                 auto_thr = qc_filter.automatic_thresholds(adata, which="obs", columns=[key], groupby=groupby)
                 manual_thresholds[key] = auto_thr[key]
             else:
-                thresholds = {}
-                for sample in samples:
-                    thresholds[sample] = {key: value}
-
+                if groupby:
+                    thresholds = {}
+                    for sample in samples:
+                        thresholds[sample] = {key: value}
+                else:
+                    thresholds = {key: value}
+                    
                 manual_thresholds[key] = thresholds
 
         return manual_thresholds
