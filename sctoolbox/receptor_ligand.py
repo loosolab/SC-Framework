@@ -365,10 +365,10 @@ def hairball(adata,
 
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
-    graph.vs['size'] = 0.1 # node size
-    graph.vs['label_size'] = 12 # label size
-    graph.vs['label_dist'] = 2 # distance of label to node # not working
-    graph.vs['label_angle'] = 1.5708 # rad = 90 degree # not working
+    graph.vs['size'] = 0.1  # node size
+    graph.vs['label_size'] = 12  # label size
+    graph.vs['label_dist'] = 2  # distance of label to node # not working
+    graph.vs['label_angle'] = 1.5708  # rad = 90 degree # not working
 
     # --- set edges ---
     for (a, b) in combinations_with_replacement(clusters, 2):
@@ -385,7 +385,7 @@ def hairball(adata,
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
     for e in graph.es:
         e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
-        e["width"] = (e["weight"] / max_weight) #* 10
+        e["width"] = (e["weight"] / max_weight)  # * 10
         # show weights in plot
         if show_count and e["weight"] > 0:
             e["label"] = e["weight"]
