@@ -44,6 +44,8 @@ pass: #a rule that always passes for branches without jobs being run
     default: false
   script:
      - 'echo "Branch: $CI_COMMIT_BRANCH"'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 lint:
   stage: test
