@@ -13,13 +13,13 @@ import sctoolbox.receptor_ligand as rl
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
-    
+
     obj = sc.read_h5ad(f)
-    
+
     # add cluster column
-    def repeat_items(l, c):
+    def repeat_items(list, count):
         """ Repeat list until size reached. https://stackoverflow.com/a/54864336/19870975 """
-        return l * (c // len(l)) + l[:(c % len(l))]
+        return list * (count // len(list)) + l[:(count % len(list))]
 
     obj.obs["cluster"] = repeat_items([f"cluster {i}" for i in range(10)], len(obj))
 
@@ -89,8 +89,8 @@ def test_interaction_table(adata_db):
 
     # compute rl scores
     rl.calculate_interaction_table(adata=obj,
-                                   cluster_column="louvain",
-                                   gene_index=None,
+                                   cluster_column="cluster",
+                                   gene_index="gene",
                                    normalize=1000,
                                    inplace=True,
                                    overwrite=False)
