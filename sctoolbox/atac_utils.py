@@ -472,7 +472,7 @@ def bam_adata_ov(adata, bamfile, cb_col):
 
     """
 
-    bam_obj = bam_utils.open_bam(bamfile, "rb", require_index=True)
+    bam_obj = bam_utils.open_bam(bamfile, "rb")
 
     sample = []
     counter = 0
@@ -552,9 +552,10 @@ if __name__ == '__main__':
     #                    set_index=True,
     #                    index_from='name')
     # adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
-    adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+    #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+    adata = epi.read_h5ad('/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
     # bamfile = '/mnt/workspace/jdetlef/data/bamfiles/sorted_Esophagus.bam'
-    bamfile = '/mnt/workspace/jdetlef/data/bamfiles/sorted_stomach_229.bam'
+    bamfile = '/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/homo_sapiens_liver.bam'
 
     check_barcode_tag(adata, bamfile, cb_col='CB')
     #
