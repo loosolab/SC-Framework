@@ -12,7 +12,9 @@ import os
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
-    return sc.read_h5ad(f)
+    adata = sc.read_h5ad(f)
+    adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
+    return adata
 
 
 @pytest.fixture
@@ -44,9 +46,10 @@ def invalid_threshold_dict():
 
 # --------------------------- Tests --------------------------------- #
 
-def test_estimate_doublets(adata):
+@pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1), ("sample", 4)])
+def test_estimate_doublets(adata, groupby, threads):
     """ Test whether 'doublet_score' was added to adata.obs """
-    qc.estimate_doublets(adata, plot=False)  # turn plot off to avoid block during testing
+    qc.estimate_doublets(adata, groupby=groupby, plot=False, threads=threads, n_prin_comps=10)  # turn plot off to avoid block during testing
 
     assert "doublet_score" in adata.obs.columns
 
@@ -115,3 +118,14 @@ def test_filter_cells(adata):
     qc.filter_cells(adata, "cell_bool", inplace=True)  # removes all genes with boolean True
 
     assert adata.shape[0] == n_false
+
+
+def test_predict_sex(capsys, adata):
+    # gene not in data
+    qc.predict_sex(adata, groupby='sample')
+    captured = capsys.readouterr()
+    assert "Selected gene is not present in the data. Prediction is skipped." in captured.out.strip()
+
+    # gene in data
+    qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample')
+    assert 'predicted_sex' in adata.obs.columns

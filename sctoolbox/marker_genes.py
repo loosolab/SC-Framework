@@ -3,6 +3,9 @@ import re
 import glob
 import pkg_resources
 import pandas as pd
+import numpy as np
+import scanpy as sc
+import itertools
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -88,7 +91,10 @@ def label_genes(adata,
 
     # Get organism from the adata object
     if species is None:
-        species = adata.uns['infoprocess']['species']
+        try:
+            species = adata.uns['infoprocess']['species']
+        except KeyError:
+            raise ValueError("Species not provided and could not be found in adata.uns['infoprocess']['species']")
     species = species.lower()
 
     # Get the full list of genes from adata
@@ -143,7 +149,34 @@ def label_genes(adata,
     creators.build_infor(adata, "genes_labeled", added)
 
 
-def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, save_excel=None):
+def add_gene_expression(adata, gene):
+    """
+    Add values of gene/feature per cell to the adata.obs dataframe.
+
+    Parameters
+    ------------
+    adata : anndata.AnnData
+        Anndata object containing gene expression/counts.
+    gene : str
+        Name of the gene/feature from the adata.var index to be added to adata.obs.
+
+    Returns
+    -----------
+    None
+        A column named "<gene>_values" is added to adata.obs with the expression/count values from .X
+    """
+
+    # Get expression
+    if gene in adata.var.index:
+        gene_idx = np.argwhere(adata.var.index == gene)[0][0]
+        vals = adata.X[:, gene_idx].todense().A1
+        adata.obs[gene + "_values"] = vals
+
+    else:
+        raise ValueError(f"Gene '{gene}' was not found in adata.var.index")
+
+
+def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
     Parameters
@@ -162,6 +195,16 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
     dict :
         A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
     """
+
+    # Check input type
+    if not isinstance(var_columns, list):
+        raise ValueError("var_columns must be a list of strings.")
+
+    # Check that all given columns are valid
+    if len(var_columns) > 0:
+        for col in var_columns:
+            if col not in adata.var.columns:
+                raise ValueError(f"Column '{col}' not found in adata.var.columns.")
 
     # Read structure in .uns to pandas dataframes
     tables = {}
@@ -215,8 +258,11 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
             group_tables[group]["out_group_fraction"] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
-
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
+
+            # Add additional columns to table
+            if len(var_columns) > 0:
+                group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
     # If chosen: Save tables to joined excel
     if save_excel is not None:
@@ -228,6 +274,225 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                 table["scores"] = table["scores"].round(3)
                 table["logfoldchanges"] = table["logfoldchanges"].round(3)
 
-                table.to_excel(writer, sheet_name=f'{group}', index=False)
+                table.to_excel(writer, sheet_name=utils.sanitize_sheetname(f'{group}'), index=False)
 
     return group_tables
+
+
+def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
+    """
+    Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing ranked genes.
+    genes : list
+        List of genes to be masked.
+    key : str, default: "rank_genes_groups"
+        The key in adata.uns to be used for fetching ranked genes.
+    inplace : bool, default True
+        If True, modifies adata.uns[key]["names"] in place. Otherwise, returns a copy of adata.
+
+    Returns
+    -------
+    anndata.AnnData or None
+        If inplace = True, modifies adata.uns[key]["names"] in place and returns None. Otherwise, returns a copy of adata.
+    """
+
+    if not inplace:
+        adata = adata.copy()
+
+    # Check input
+    if not isinstance(genes, list):
+        raise ValueError("genes must be a list of strings.")
+
+    # Mask genes
+    for group in adata.uns["rank_genes_groups"]["names"].dtype.names:
+        adata.uns[key]["names"][group] = np.where(np.isin(adata.uns[key]["names"][group], genes), float('nan'), adata.uns[key]["names"][group])
+
+    if not inplace:
+        return adata
+
+
+def run_rank_genes(adata, groupby,
+                   method=None,
+                   min_in_group_fraction=0.25,
+                   min_fold_change=0.5,
+                   max_out_group_fraction=0.8):
+    """ Run scanpy rank_genes_groups and filter_rank_genes_groups """
+
+    sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
+    sc.tl.filter_rank_genes_groups(adata,
+                                   min_in_group_fraction=min_in_group_fraction,
+                                   min_fold_change=min_fold_change,
+                                   max_out_group_fraction=max_out_group_fraction)
+
+    # adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
+    # adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+
+
+def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
+    """
+    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
+
+    Note: Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
+    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    sample_col : str
+        Column name in adata.obs containing sample names.
+    condition_col : str
+        Column name in adata.obs containing condition names to be compared.
+    confounders : list, default: None
+        List of additional column names in adata.obs containing confounders to be included in the model.
+    layer : str, default: None
+        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
+
+    Returns
+    -----------
+    A py_DESeq2 object containing the results of the DESeq2 analysis.
+    Also adds the dataframes to adata.uns["deseq_result"] and adata.uns["deseq_normalized"].
+    """
+
+    utils.setup_R()
+    from diffexpr.py_deseq import py_DESeq2
+
+    # Setup the design formula
+    if confounders is None:
+        confounders = []
+    elif not isinstance(confounders, list):
+        confounders = [confounders]
+
+    design_formula = "~ " + " + ".join(confounders + [condition_col])
+
+    # Build sample_df
+    cols = [sample_col, condition_col] + confounders
+    sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
+    sample_df.set_index(sample_col, inplace=True)
+    sample_df.sort_index(inplace=True)
+
+    conditions = sample_df[condition_col].unique()
+    samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
+
+    # Build count matrix
+    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer)
+    count_table.index.name = "gene"
+    count_table.reset_index(inplace=True)
+
+    # Run DEseq2
+    dds = py_DESeq2(count_matrix=count_table,
+                    design_matrix=sample_df,
+                    design_formula=design_formula,
+                    gene_column='gene')
+    dds.run_deseq()
+
+    # Normalizing counts
+    dds.normalized_count()
+    dds.normalized_count_df.drop(columns="gene", inplace=True)
+    dds.normalized_count_df.columns = dds.samplenames
+
+    # Create result table with mean values per condition
+    deseq_table = pd.DataFrame(index=dds.normalized_count_df.index)
+
+    for i, condition in enumerate(conditions):
+        samples = samples_per_cond[condition]
+        mean_values = dds.normalized_count_df[samples].mean(axis=1)
+        deseq_table.insert(i, condition + "_mean", mean_values)
+
+    # Get results per contrast
+    contrasts = list(itertools.combinations(conditions, 2))
+    for C1, C2 in contrasts:
+
+        dds.get_deseq_result(contrast=[condition_col, C2, C1])
+        dds.deseq_result.drop(columns="gene", inplace=True)
+
+        # Rename and add to deseq_table
+        dds.deseq_result.drop(columns=["lfcSE", "stat"], inplace=True)
+        dds.deseq_result.columns = [C2 + "/" + C1 + "_" + col for col in dds.deseq_result.columns]
+        deseq_table = deseq_table.merge(dds.deseq_result, left_index=True, right_index=True)
+
+    # Add normalized individual sample counts to the back of table
+    deseq_table = deseq_table.merge(dds.normalized_count_df, left_index=True, right_index=True)
+
+    # Sort by p-value of first contrast
+    C1, C2 = contrasts[0]
+    deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
+
+    return deseq_table
+
+
+def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
+    """
+    Get cell type assignment based on marker genes.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    clustering : str
+        Name of clustering column to use for cell type assignment.
+    marker_genes_dict : dict
+        Dictionary containing cell type names as keys and lists of marker genes as values.
+    column_name : str, default: "celltype"
+        Name of column to add to adata.obs containing cell type assignment.
+
+    Returns
+    -----------
+    Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
+    Also adds the cell type assignment to adata.obs[<column_name>] in place.
+    """
+
+    if column_name in adata.obs.columns:
+        raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
+
+    # todo: make this more robust
+
+    marker_genes_list = [[gene] if isinstance(gene, str) else gene for gene in marker_genes_dict.values()]
+    marker_genes_list = sum(marker_genes_list, [])
+    sub = adata[:, marker_genes_list]
+
+    # Get long marker genes table
+    markers = []
+    for celltype, gene_list in marker_genes_dict.items():
+        for gene in gene_list:
+            markers.append({"celltype": celltype, "gene": gene})
+
+    marker_genes_table = pd.DataFrame(markers)
+
+    # Get pseudobulk table
+    table = utils.pseudobulk_table(sub, clustering)
+    table.index.name = "genes"
+    table.reset_index(inplace=True)
+
+    table_long = table.melt(id_vars=["genes"], var_name=clustering)
+    table_long.sort_values("value", ascending=False)
+
+    table_long = table_long.merge(marker_genes_table, left_on="genes", right_on="gene")
+    table_long = table_long.drop(columns="gene")
+
+    cluster2celltype = {}
+    celltype_count = {}
+    for idx, sub in table_long.groupby(clustering):
+        mu = sub.groupby("celltype").mean(numeric_only=True).sort_values("value", ascending=False)
+        cluster2celltype[idx] = mu.index[0]
+
+    # Make unique
+    celltype_count = {}
+    celltypes = list(cluster2celltype.values())
+    for cluster in cluster2celltype:
+        celltype = cluster2celltype[cluster]
+        celltype_count[celltype] = celltype_count.get(celltype, 0) + 1
+
+        if celltypes.count(celltype) > 1:
+            cluster2celltype[cluster] = f"{celltype} {celltype_count[celltype]}"
+
+    # Add assigned celltype to adata.obs
+    table = pd.DataFrame().from_dict(cluster2celltype, orient="index")
+    table.columns = [column_name]
+    adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
+
+    return cluster2celltype

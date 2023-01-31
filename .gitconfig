@@ -1,0 +1,7 @@
+# git filter to strip notebook output
+[filter "strip-notebook-output"]
+    clean = "jupyter nbconvert --ClearOutputPreprocessor.enabled=True --ClearMetadataPreprocessor.enabled=True --to=notebook --stdin --stdout --log-level=ERROR"
+
+# ignore filemode changes
+[core]
+    filemode = false

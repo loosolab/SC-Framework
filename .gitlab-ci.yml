@@ -40,6 +40,9 @@ default:
 # W503 = Line break occurred before a binary operator
 
 lint:
+  stage: test
+  tags:
+    - coverage
   script:
     - pip install flake8
     - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
@@ -47,7 +50,10 @@ lint:
   rules:
   - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
-cov:
+test coverage:
+  stage: test
+  tags:
+    - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
@@ -59,8 +65,14 @@ cov:
       junit: pytest.xml
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+      changes:
+      - tests/*.py
+      - sctoolbox/*.py
 
 pages:
+  stage: deploy
+  tags:
+    - coverage
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
@@ -77,6 +89,7 @@ pages:
 
 #Test notebooks when code is pushed to main
 notebooks:
+  stage: deploy
   image: continuumio/miniconda3:latest
   tags:
     - gwdg
@@ -94,6 +107,10 @@ notebooks:
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
+      when: always
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
+      when: manual
+      allow_failure: True  # the manual rule is allowed to fail
 
 #test:
 #  script:
