@@ -13,8 +13,17 @@ import sctoolbox.receptor_ligand as rl
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    
+    obj = sc.read_h5ad(f)
+    
+    # add cluster column
+    def repeat_items(l, c):
+        """ Repeat list until size reached. https://stackoverflow.com/a/54864336/19870975 """
+        return l * (c // len(l)) + l[:(c % len(l))]
 
-    return sc.read_h5ad(f)
+    obj.obs["cluster"] = repeat_items([f"cluster {i}" for i in range(10)], len(obj))
+
+    return obj
 
 
 @pytest.fixture
@@ -38,8 +47,8 @@ def adata_db(adata, db_file):
 def adata_inter(adata_db):
     """ Adds interaction scores to adata """
     return rl.calculate_interaction_table(adata=adata_db,
-                                          cluster_column="louvain",
-                                          gene_index=None,
+                                          cluster_column="cluster",
+                                          gene_index="gene",
                                           normalize=1000,
                                           inplace=False,
                                           overwrite=False)
@@ -57,7 +66,7 @@ def test_download_db(adata, db_file):
     assert "receptor-ligand" not in obj.uns
 
     # add database
-    rl.download_db(adata=adata,
+    rl.download_db(adata=obj,
                    db_path=db_file,
                    ligand_column='ligand_gene_symbol',
                    receptor_column='receptor_gene_symbol',
