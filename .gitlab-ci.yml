@@ -56,6 +56,7 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - pip install rpy2  # rpy2 is needed to install diffexpr
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
   artifacts:
     when: always
