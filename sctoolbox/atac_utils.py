@@ -87,6 +87,10 @@ def assemble_from_h5ad(h5ad_files, qc_columns, column='sample', from_snapatac=Tr
     for value in adata_dict.values():
         adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
 
+    # Remove name of indexes for cellxgene compatibility
+    adata.obs.index.name = None
+    adata.var.index.name = None
+
     return adata
 
 
@@ -235,7 +239,7 @@ def violin_HVF_distribution(adata):
     :return:
     """
     # get the number of cells per highly variable feature
-    hvf_var = adata.var[adata.var['highly_variable'] == True]
+    hvf_var = adata.var[adata.var['highly_variable']]  # 'highly_variable' is a boolean column
     n_cells = hvf_var['n_cells_by_counts']
     n_cells.reset_index(drop=True, inplace=True)
     # violin plot
