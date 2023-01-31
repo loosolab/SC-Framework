@@ -270,10 +270,10 @@ def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresho
                 if groupby:
                     thresholds = {}
                     for sample in samples:
-                        thresholds[sample] = {key: value}
+                        thresholds[sample] = value
                 else:
                     thresholds = {key: value}
-                    
+
                 manual_thresholds[key] = thresholds
 
         return manual_thresholds
