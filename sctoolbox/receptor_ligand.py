@@ -220,6 +220,10 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
     # clean up columns
     interactions.drop(columns=["receptor_scale_factor", "ligand_scale_factor"], inplace=True)
 
+    # no interactions found error
+    if not len(interactions):
+        raise Exception("Failed to find any receptor-ligand interactions. Consider using a different database.")
+
     # add to adata
     modified_adata = adata if inplace else adata.copy()
 
