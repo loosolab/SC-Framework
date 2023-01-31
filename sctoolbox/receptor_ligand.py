@@ -10,8 +10,6 @@ import igraph as ig
 from itertools import combinations_with_replacement
 from matplotlib import cm
 from tqdm import tqdm
-from matplotlib.artist import Artist
-from igraph import BoundingBox, Graph, palettes
 import matplotlib
 from matplotlib.patches import ConnectionPatch
 import matplotlib.lines as lines
