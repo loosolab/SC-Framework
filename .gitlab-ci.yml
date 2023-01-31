@@ -30,6 +30,7 @@ default:
     - virtualenv venv
     - source venv/bin/activate
     - apt update
+    - apt -y install r-base
     #- apt-get install -y python3-setuptools  # make sure setuptools is available for install
 
 # flake8 ignore rules:
@@ -66,7 +67,6 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
-    - apt -y install r-base
     - pip install pytest
     - pip install pytest-cov
     - pip install .[all]
@@ -92,7 +92,7 @@ pages:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
-    - pip install nbsphinx_link 
+    - pip install nbsphinx_link
     - cd docs
     - make html
     - mv build/html/ ../public/
