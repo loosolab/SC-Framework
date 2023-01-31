@@ -30,8 +30,7 @@ default:
     - virtualenv venv
     - source venv/bin/activate
     - apt update
-    - apt -y install r-base
-    #- apt-get install -y python3-setuptools  # make sure setuptools is available for install
+    - apt -y install r-base  # needed for rpy2 install
 
 # flake8 ignore rules:
 # E501 = Line too long
@@ -126,19 +125,3 @@ notebooks:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
-
-#test:
-#  script:
-#    - python setup.py test
-#    - pip install tox flake8  # you can also use tox
-#    - tox -e py36,flake8
-
-#run:
-#  script:
-#    - python setup.py bdist_wheel
-#    # an alternative approach is to install and run:
-#    - pip install dist/*
-#    # run the command here
-#  artifacts:
-#    paths:
-#      - dist/*.whl
