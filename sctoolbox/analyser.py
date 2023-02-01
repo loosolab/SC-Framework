@@ -88,6 +88,8 @@ def recluster(adata, column, clusters,
     else:
         raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
+    # TODO: Check if clusters are found in column
+
     # --- Start reclustering --- #
     if task == "join":
         translate = {cluster: clusters[0] for cluster in clusters}
@@ -300,6 +302,9 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
 
+        # Make sure that the batch_key is still a categorical
+        adata.obs[batch_key] = adata.obs[batch_key].astype("category")
+
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.tl.pca(adata)  # rerun pca
         sc.pp.neighbors(adata)
@@ -449,22 +454,19 @@ def get_threshold(data, interval, limit_on="both"):
         return thresholds[1]
 
 
-def calculate_qc_metrics(anndata, percent_top=None, inplace=False, **kwargs):
+def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
     Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`
 
-    TODO add logging
-    TODO we may want to rethink if this function is necessary
-
     Parameters
     ----------
-    anndata : anndata.AnnData
+    adata : anndata.AnnData
         Anndata object the quality metrics are added to.
     percent_top : [int], default None
         Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
     inplace : bool, default False
         If the anndata object should be modified in place.
-    ** kwargs :
+    **kwargs :
         Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
 
     Returns
@@ -474,14 +476,21 @@ def calculate_qc_metrics(anndata, percent_top=None, inplace=False, **kwargs):
     """
     # add metrics to copy of anndata
     if not inplace:
-        anndata = anndata.copy()
+        adata = adata.copy()
+
+    # remove n_genes from metrics before recalculation
+    to_remove = [col for col in adata.obs.columns if col in ["n_genes", "log1p_n_genes"]]
+    adata.obs.drop(columns=to_remove, inplace=True)
 
     # compute metrics
-    sc.pp.calculate_qc_metrics(adata=anndata, percent_top=percent_top, inplace=True, **kwargs)
+    sc.pp.calculate_qc_metrics(adata=adata, percent_top=percent_top, inplace=True, **kwargs)
+
+    # Rename metrics
+    adata.obs.rename(columns={"n_genes_by_counts": "n_genes", "log1p_n_genes_by_counts": "log1p_n_genes"}, inplace=True)
 
     # return modified anndata
     if not inplace:
-        return anndata
+        return adata
 
 
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
