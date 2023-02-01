@@ -120,7 +120,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.uns["pca"] = {"stdev": stdev}
 
 
-def atac_norm(adata, condition_col='nb_features', remove_pc1=True):
+def atac_norm(adata, condition_col='nb_features'):
     """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
     calculates PCA and UMAP and plots both UMAPs.
 
@@ -136,16 +136,8 @@ def atac_norm(adata, condition_col='nb_features', remove_pc1=True):
     print('Performing TFIDF and LSI...')
     tfidf(adata_tfidf)
     lsi(adata_tfidf)
-    if remove_pc1:
-        adata_tfidf.obsm['X_lsi'] = adata_tfidf.obsm['X_lsi'][:, 1:]
-        adata_tfidf.varm["LSI"] = adata_tfidf.varm["LSI"][:, 1:]
-        adata_tfidf.uns["lsi"]["stdev"] = adata_tfidf.uns["lsi"]["stdev"][1:]
-        adata_tfidf.obsm['X_pca'] = adata_tfidf.obsm['X_pca'][:, 1:]
-        adata_tfidf.varm["PCs"] = adata_tfidf.varm["PCs"][:, 1:]
-        adata_tfidf.uns["pca"]["stdev"] = adata_tfidf.uns["pca"]["stdev"][1:]
-        sc.pp.neighbors(adata_tfidf, n_neighbors=10, n_pcs=30, method='umap', metric='euclidean', use_rep='X_pca')
-    else:
-        sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
+
+    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
     sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
     print('Done')
 
