@@ -91,7 +91,7 @@ def mean_fl_multi_thread(fragment_file, n_threads=4):
     pool = mp.Pool(n_threads)
     jobs = []
     # loop over chunks
-    i = 0
+
     for chunk in fragments:
         fl_df = None
         job = pool.apply_async(calc_chunk, args=(chunk, fl_df))
