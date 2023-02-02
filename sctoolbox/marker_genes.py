@@ -274,7 +274,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                 table["scores"] = table["scores"].round(3)
                 table["logfoldchanges"] = table["logfoldchanges"].round(3)
 
-                table.to_excel(writer, sheet_name=f'{group}', index=False)
+                table.to_excel(writer, sheet_name=utils.sanitize_sheetname(f'{group}'), index=False)
 
     return group_tables
 
