@@ -143,6 +143,7 @@ def get_variable_features(adata, min_score=None, show=True, inplace=True):
 
     # Calculate variability
     epi.pp.cal_var(adata, show=False)
+    adata.var["variability_score"] = [val if val >= 0 else 0 for val in adata.var["variability_score"]]  # remove negative values
 
     # Set threshold
     if min_score is None:
