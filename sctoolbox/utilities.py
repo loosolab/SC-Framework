@@ -781,6 +781,7 @@ def fill_na(df, inplace=True):
     if not inplace:
         return df
 
+
 def get_adata_subsets(adata, groupby):
     """
     Split an anndata object into a dict of sub-anndata objects based on a grouping column.
