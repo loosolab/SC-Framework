@@ -729,17 +729,17 @@ def fill_na(df, inplace=True):
     for nan_col in df.columns[df.isna().any()]:
         col_type = df[nan_col].dtype.name
         if col_type == "category":
-            df[nan_col].cat.add_categories("").fillna("")
+            df[nan_col].cat.add_categories("").fillna("", inplace=True)
         elif col_type.startswith("float") or col_type.startswith("int"):
-            df[nan_col].fillna(0)
+            df[nan_col].fillna(0, inplace=True)
         elif col_type == "object":
             o_type = type(df[nan_col][0]).__name__ if not pd.isna(df[nan_col][0]) else type(df[nan_col][-1]).__name__
             if o_type == "bool":
-                df[nan_col].fillna(False)
+                df[nan_col].fillna(False, inplace=True)
             elif o_type == "str":
-                df[nan_col].fillna("-")
+                df[nan_col].fillna("-", inplace=True)
             elif o_type == "float" or o_type == "int":
-                df[nan_col].fillna(0)
+                df[nan_col].fillna(0, inplace=True)
             # Other datatypes possible??
     if not inplace:
         return df
