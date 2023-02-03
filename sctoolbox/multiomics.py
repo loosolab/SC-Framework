@@ -2,7 +2,6 @@ import copy
 import anndata as ad
 import pandas as pd
 from functools import reduce
-import numpy as np
 import warnings
 import scipy.sparse
 
@@ -67,7 +66,7 @@ def merge_anndata(anndata_dict, join="inner"):
         obsm_dict |= new_order_obsm
 
         # Reorder X
-        # ToDo work on sparse directly instead of converting 
+        # ToDo work on sparse directly instead of converting
         X_df = pd.DataFrame.sparse.from_spmatrix(adata.X)
         X_df_re = X_df.reindex(adata_obs_order)
         X_df_re.index = list(range(len(X_df_re)))

@@ -1,6 +1,5 @@
 import pytest
 import os
-import pandas as pd
 import anndata
 import scanpy as sc
 import numpy as np
