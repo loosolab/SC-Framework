@@ -2,12 +2,29 @@ import pytest
 import os
 import numpy as np
 import shutil
+import pandas as pd
 import sctoolbox.utilities as utils
 
 
 @pytest.fixture
 def berries():
     return ["blueberry", "strawberry", "blackberry"]
+
+
+@pytest.fixture
+def na_dataframe():
+    data = {'int': [3, 2, 1, np.nan],
+            'float': [1.2, 3.4, 5.6, np.nan],
+            'string': ['a', 'b', 'c', np.nan],
+            'boolean': [True, False, True, np.nan],
+            'category_str': ['cat1', 'cat2', 'cat3', np.nan],
+            'category_num': [10, 20, 30, np.nan]}
+    df = pd.DataFrame.from_dict(data)
+
+    df['category_str'].astype('category')
+    df['category_num'].astype('category')
+
+    return df
 
 
 arr_ints = np.random.randint(10, size=(10, 10))
@@ -117,3 +134,10 @@ def test_write_list_file(berries):
 
     assert os.path.isfile(path)
     os.remove(path)  # clean up after tests
+
+
+def test_fill_na(na_dataframe):
+    """ Test if na values in dataframe are filled correctly """
+    utils.fill_na(na_dataframe)
+    assert not na_dataframe.isna().any().any()
+    assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '-', 0.0]
