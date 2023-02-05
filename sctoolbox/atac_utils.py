@@ -108,7 +108,7 @@ def format_index(adata, from_column=None):
     -------
 
     """
-    if from_column == None:
+    if from_column is None:
         entry = adata.var.index[0]
         index_type = get_index_type(entry)
 
@@ -177,9 +177,8 @@ def get_index_type(entry):
 
     """
 
-    regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+" # matches: b'chr1':12324-56757
-    regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+" # matches: some_name-chr1:12343-76899
-
+    regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
+    regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
 
     if re.match(regex_snapatac, entry):
         return 'snapatac'
@@ -542,7 +541,6 @@ def check_barcode_tag(adata, bamfile, cb_col):
 
 if __name__ == '__main__':
 
-
     # violin_HVF_distribution(adata)
     # scatter_HVF_distribution(adata)
 
@@ -569,12 +567,12 @@ if __name__ == '__main__':
     #                    set_index=True,
     #                    index_from='name')
     # adata = assemble_from_h5ad(['/mnt/agnerds/PROJECTS/extern/ext442_scATAC_Glaser_11_22/preprocessing_output/data/all_annotated_peaks.h5ad'], qc_columns, coordinate_cols=['peak_chr', 'peak_start', 'peak_end'], column='sample')
-    #adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
-    #adata = epi.read_h5ad('/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
+    # adata = epi.read_h5ad('/mnt/workspace/jdetlef/processed_data/Esophagus/assembling/anndata/Esophagus.h5ad')
+    # adata = epi.read_h5ad('/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/mm10_atac.h5ad')
     # bamfile = '/mnt/workspace/jdetlef/data/bamfiles/sorted_Esophagus.bam'
-    #bamfile = '/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/homo_sapiens_liver.bam'
+    # bamfile = '/mnt/workspace/jdetlef/loosolab_sc_rna_framework/tests/data/atac/homo_sapiens_liver.bam'
 
-#    check_barcode_tag(adata, bamfile, cb_col='CB')
+    # check_barcode_tag(adata, bamfile, cb_col='CB')
     #
     #
     adata = epi.read_h5ad('/mnt/workspace/jdetlef/ext_ana/processed/all/assembling/anndata/all.h5ad')
@@ -589,7 +587,7 @@ if __name__ == '__main__':
     # if this is True thresholds below are ignored
     only_automatic_thresholds = False  # True or False; to use automatic thresholds
 
-    ############################# set default values #######################################
+    # ############################ set default values #######################################
     #
     # This will be applied to all samples the thresholds can be changed manually when plotted
     # if thresholds None they are set automatically
@@ -636,8 +634,7 @@ if __name__ == '__main__':
     if filter_uniquely_mapped_fragments:
         manual_thresholds['UM'] = {'min': lower_thr_um, 'max': upper_thr_um}
 
-    #adata.obs = adata.obs.fillna(0)
-
+    # adata.obs = adata.obs.fillna(0)
 
     auto_thr = qc_filter.automatic_thresholds(adata, which="obs", columns=['n_features_by_counts', 'mean_insertsize'], groupby="Sample")
     # default_thresholds = build_default_thresholds(adata, manual_thresholds, groupby="Sample")

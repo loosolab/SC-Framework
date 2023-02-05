@@ -306,7 +306,6 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 class MPOverlapPct():
 
-
     def __init__(self):
 
         self.merged_dict = None
@@ -354,7 +353,6 @@ class MPOverlapPct():
 
         return adata
 
-
     def get_barcodes_sum(self, df, barcodes, col_name):
         # drop columns we dont need
         df.drop(df.iloc[:, 5:], axis=1, inplace=True)
@@ -370,14 +368,12 @@ class MPOverlapPct():
 
         return count_dict
 
-
     def log_result(self, result):
         if self.merged_dict:
             self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
             # print('merging')
         else:
             self.merged_dict = result
-
 
     def mp_counter(self, fragments, barcodes, column, n_threads=8):
 
@@ -407,7 +403,7 @@ if __name__ == '__main__':
     adata = epi.read_h5ad(h5ad_file)
     barcodes = adata.obs['barcode']
     adata.obs.set_index('barcode', inplace=True)
-   # barcodes = set(barcodes)
+    # barcodes = set(barcodes)
     mp_calc_pct = MPOverlapPct()
     adata = mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name='list', n_threads=8)
 
@@ -472,9 +468,6 @@ if __name__ == '__main__':
     fragments_file = '/home/jan/python-workspace/sc-atac/data/bamfiles/Esophagus_sorted_fragments_sorted.bed'
 
     _overlap_two_beds(fragments_file, gtf_sorted, out='/mnt/workspace/jdetlef/ext_ana')
-
-
-
 
     # promoters_gtf = '/home/jan/python-workspace/sc-atac/data/homo_sapiens.104.promoters2000.gtf'
     # species = None
