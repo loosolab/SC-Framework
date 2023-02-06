@@ -31,7 +31,7 @@ def test_merge_anndata(adata, adata2):
 
     new_obs_index = list(set(adata.obs.index) & set(adata2.obs.index))
     new_obs_cols, new_obsm_entries, new_var_index = list(), list(), list()
-    new_var_cols = ["source"] 
+    new_var_cols = ["source"]
     for key, value in adata_to_merge.items():
         new_var_cols += [f"{key}_{i}" for i in value.var.columns]
         new_obs_cols += [f"{key}_{i}" for i in value.obs.columns]
