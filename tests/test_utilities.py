@@ -4,6 +4,17 @@ import numpy as np
 import shutil
 import pandas as pd
 import sctoolbox.utilities as utils
+import scanpy as sc
+
+
+@pytest.fixture
+def adata():
+    """ Returns adata object with 3 groups """
+
+    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+    return adata
 
 
 @pytest.fixture
@@ -141,3 +152,24 @@ def test_fill_na(na_dataframe):
     utils.fill_na(na_dataframe)
     assert not na_dataframe.isna().any().any()
     assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '-', 0.0]
+
+
+def test_get_adata_subsets(adata):
+    """ Test if adata subsets are returned correctly """
+
+    subsets = utils.get_adata_subsets(adata, "group")
+
+    for group, sub_adata in subsets.items():
+        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].nunique() == 1
+
+
+def test_remove_files():
+    """ Remove files from list """
+
+    os.mknod("afile.txt")
+
+    files = ["afile.txt", "notfound.txt"]
+    utils.remove_files(files)
+
+    assert os.path.isfile("afile.txt") is False

@@ -58,16 +58,23 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     # ----- convert to anndata ----- #
     r("""
         # ----- load object ----- #
-        if (endsWith(tolower(file), ".robj")) {
+        # try loading .robj
+        object <- try({
             # load file; returns vector of created variables
             new_vars <- load(file)
             # store new variable into another variable to work on
-            object <- get(new_vars[1])
-        } else if (endsWith(tolower(file), ".rds")) {
+            get(new_vars[1])
+        }, silent = TRUE)
+
+        # if .robj failed try .rds
+        if (class(object) == "try-error") {
             # load object
-            object <- readRDS(file)
-        } else {
-            stop("Unknown file extension. Expected '.robj' or '.rds' got", file)
+            object <- try(readRDS(file), silent = TRUE)
+        }
+
+        # if both .robj and .rds failed throw error
+        if (class(object) == "try-error") {
+            stop("Unknown file. Expected '.robj' or '.rds' got", file)
         }
 
         # ----- convert to SingleCellExperiment ----- #
