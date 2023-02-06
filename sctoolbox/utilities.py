@@ -814,6 +814,11 @@ def fill_na(df, inplace=True):
     if not inplace:
         df = df.copy()
 
+    replace = {"bool": False,
+               "str": "-",
+               "float": 0,
+               "int": 0}
+
     for nan_col in df.columns[df.isna().any()]:
         col_type = df[nan_col].dtype.name
         if col_type == "category":
@@ -822,13 +827,7 @@ def fill_na(df, inplace=True):
             df[nan_col].fillna(0, inplace=True)
         elif col_type == "object":
             o_type = type(df[nan_col][0]).__name__ if not pd.isna(df[nan_col][0]) else type(df[nan_col][-1]).__name__
-            if o_type == "bool":
-                df[nan_col].fillna(False, inplace=True)
-            elif o_type == "str":
-                df[nan_col].fillna("-", inplace=True)
-            elif o_type == "float" or o_type == "int":
-                df[nan_col].fillna(0, inplace=True)
-            # Other datatypes possible??
+            df[nan_col].fillna(replace[o_type], inplace=True)
     if not inplace:
         return df
 
