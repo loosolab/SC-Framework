@@ -16,19 +16,19 @@ def merge_anndata(anndata_dict, join="inner"):
     ----------
     anndata_dict : dict
         dictionary with labels as keys and anndata objects as values
-    join : string, deafult 'inner'
+    join : string, default 'inner'
         set how to join cells of the adata objects: ['inner', 'outer']
         This only affects the cells since the var/gene section is simply added
         'inner': only keep overlapping cells
         'outer': keep all cells. This will add placeholder cells/dots to plots
-                 currently disabled
+                 NOT IMPLEMENTED
 
     Returns
     -------
     merged anndata.AnnData object
     """
     if join == "outer":
-        warnings.warn("'outer' join is currently disabled. SEt to inner merge")
+        warnings.warn("'outer' join is currently disabled. Proceeding with 'inner' merge")
         join = "inner"
 
     if join not in ["inner", "outer"]:
@@ -52,7 +52,7 @@ def merge_anndata(anndata_dict, join="inner"):
         adata.obs.columns = label + "_" + adata.obs.columns
 
         # With this line outer join not possible anymore
-        # Revise to enable outer join
+        # TODO Revise to enable outer join
         adata = adata[adata.obs.index.isin(f_adata.obs.index)]
 
         # Reorder obs
