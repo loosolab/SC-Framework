@@ -78,7 +78,7 @@ def merge_anndata(anndata_dict, join="inner"):
         obs_list.append(adata.obs)
 
     # Merge X and var
-    merged_X_var = ad.concat(anndata_dict, join=join, label="source", axis=1)
+    merged_X_var = ad.concat(anndata_dict, join="outer", label="source", axis=1)
 
     # Merge obs
     merged_X_var.obs = reduce(lambda left, right: pd.merge(left, right,
