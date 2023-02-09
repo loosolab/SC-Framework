@@ -25,11 +25,11 @@ def berries():
 @pytest.fixture
 def na_dataframe():
     data = {'int': [3, 2, 1, np.nan],
-                'float': [1.2, 3.4, 5.6, np.nan],
-                'string': ['a', 'b', 'c', np.nan],
-                'boolean': [True, False, True, np.nan],
-                'category_str': ['cat1', 'cat2', 'cat3', np.nan],
-                'category_num': [10, 20, 30, np.nan]}
+            'float': [1.2, 3.4, 5.6, np.nan],
+            'string': ['a', 'b', 'c', np.nan],
+            'boolean': [True, False, True, np.nan],
+            'category_str': ['cat1', 'cat2', 'cat3', np.nan],
+            'category_num': [10, 20, 30, np.nan]}
     df = pd.DataFrame.from_dict(data)
 
     df['category_str'] = df['category_str'].astype('category')

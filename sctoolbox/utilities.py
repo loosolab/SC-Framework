@@ -833,7 +833,7 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         elif col_type.startswith("int"):
             df[nan_col].fillna(replace["int"], inplace=True)
         elif col_type == "object":
-            value_set = list({x for x in set(df[nan_col]) if x==x})
+            value_set = list({x for x in set(df[nan_col]) if x == x})
             o_type = type(value_set[0]).__name__ if value_set else "str"
             df[nan_col].fillna(replace[o_type], inplace=True)
     if not inplace:
