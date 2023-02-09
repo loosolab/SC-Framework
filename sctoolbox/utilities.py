@@ -799,7 +799,7 @@ def _none2null(none_obj):
     return r("NULL")
 
 
-def fill_na(df, inplace=True):
+def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):
     """
     Fill all NA values in pandas depending on the column data type
 
@@ -809,24 +809,32 @@ def fill_na(df, inplace=True):
         DataFrame object with NA values over multiple columns
     inplace : boolean, default True
         Whether the DataFrame object is modified inplace.
+    replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
+        dict that contains default values to replace nas depedning on data type
     """
 
     if not inplace:
         df = df.copy()
 
-    replace = {"bool": False,
-               "str": "-",
-               "float": 0,
-               "int": 0}
+    # Set default of missing replace value
+    replace_def = {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
+    for t in ["bool", "str", "float", "int", "category"]:
+        if t not in replace:
+            warnings.warn(f"Value for replace key '{t}' not given. Set to default value: '{replace_def[t]}'")
+            replace[t] = replace_def[t]
 
     for nan_col in df.columns[df.isna().any()]:
         col_type = df[nan_col].dtype.name
         if col_type == "category":
-            df[nan_col].cat.add_categories("").fillna("", inplace=True)
-        elif col_type.startswith("float") or col_type.startswith("int"):
-            df[nan_col].fillna(0, inplace=True)
+            df[nan_col].cat.add_categories(replace[col_type], inplace=True)
+            df[nan_col].fillna(replace[col_type], inplace=True)
+        elif col_type.startswith("float"):
+            df[nan_col].fillna(replace["float"], inplace=True)
+        elif col_type.startswith("int"):
+            df[nan_col].fillna(replace["int"], inplace=True)
         elif col_type == "object":
-            o_type = type(df[nan_col][0]).__name__ if not pd.isna(df[nan_col][0]) else type(df[nan_col][-1]).__name__
+            value_set = list({x for x in set(df[nan_col]) if x==x})
+            o_type = type(value_set[0]).__name__ if value_set else "str"
             df[nan_col].fillna(replace[o_type], inplace=True)
     if not inplace:
         return df
