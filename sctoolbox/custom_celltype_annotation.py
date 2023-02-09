@@ -47,43 +47,59 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
     If inplace is True, the annotation is added to adata.obs in place.
     Else, a copy of the adata object is returned with the annotations added.
     """
+    go_on = True
 
     if not inplace:
         adata = adata.copy()
 
     if output_path and db_path:
-        cluster_path = f"{output_path}/ranked/clusters/{cluster_column}/"
-        ct_path = f"{output_path}/{cluster_column}/"
+        cluster_path = f"{output_path}/ranked/clusters/{cluster_column}"
+        ct_path = f"{output_path}/ranked/output/{cluster_column}"
 
-        print("Output folder: " + ct_path, "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}",
+        for folder in [cluster_path, ct_path]:
+            if os.path.exists(folder):
+                print(f"Warning: The path {folder}/ already exists!\nAll files will be overritten.")
+                go_on = False
+        
+        if not go_on:
+            go_on = input("Do you want to continue? Enter yes or no: ")
+            go_on = True if go_on == "yes" else False
+
+            if not go_on:
+                print("Cell type annotation has been aborted.")
+                
+                return
+
+        print(f"Output folder: {ct_path}/", "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}/",
               "\nTissue: " + tissue, "\nDB: " + db)
         if adata and genes_adata and cluster_column:
             # Create folders containing the annotation assignment table aswell as the detailed scoring files per cluster
-            if not os.path.exists(f'{output_path}/ranked/clusters/{cluster_column}'):
-                os.makedirs(f'{output_path}/ranked/clusters/{cluster_column}')
-                print(f'Created folder: {output_path}/ranked/clusters/{cluster_column}')
+            if not os.path.exists(f'{cluster_path}'):
+                os.makedirs(f'{cluster_path}')
+                print(f'Created folder: {cluster_path}')
 
-            if not os.path.exists(f'{output_path}/ranked/output/{cluster_column}'):
-                os.makedirs(f'{output_path}/ranked/output/{cluster_column}')
-                print(f'Created folder: {output_path}/ranked/output/{cluster_column}')
+            if not os.path.exists(f'{ct_path}'):
+                os.makedirs(f'{ct_path}')
+                print(f'Created folder: {ct_path}')
 
             # Write one file per cluster containing gene names and ranked gene scores
             print("Writing one file per cluster containing gene names and ranked gene scores.")
             for cluster in adata.obs[f'{cluster_column}'].unique():
-                with open(f'{output_path}/ranked/clusters/{cluster_column}/{sample}.{cluster}', 'w') as file:
+                with open(f'{cluster_path}/{sample}.{cluster}', 'w') as file:
                     for index, gene in enumerate(genes_adata.uns[f'{rank_genes_column}']['names'][cluster]):
                         score = genes_adata.uns[f'{rank_genes_column}']['scores'][cluster][index]
                         file.write(f'{gene.split("_")[0]}\t{score}\n')
 
             # Perform the actual cell type annotation per clustering resolution
             print("Starting cell type annotation.")
+            print(output_path, ct_path, cluster_column)
             perform_cell_type_annotation(
-                f"{output_path}/ranked/output/{cluster_column}/", db_path, cluster_path, tissue, db=db, species=species)
+                f"{ct_path}/", db_path, f"{cluster_path}/", tissue, db=db, species=species)
 
             # Add information to the adata object
             print("Adding information to the adata object.")
             cta_dict = {}
-            with open(f'{output_path}/ranked/output/{cluster_column}/annotation.txt') as file:
+            with open(f'{ct_path}/annotation.txt') as file:
                 for line in file:
                     cluster, ct = line.split('\t')
                     cta_dict[cluster] = ct.rstrip()
@@ -99,7 +115,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
                   "\nTissue: " + tissue, "\nDB: " + db)
             perform_cell_type_annotation(
                 f"{output_path}/ranked/output/{cluster_column}/", db_path, cluster_path, tissue, db=db)
-            print(f"Cell type annotation of output path {output_path} finished.")
+            print(f"Cell type annotation of output path {ct_path}/ finished.")
 
         else:
             pass
@@ -262,6 +278,9 @@ def calc_ranks(cm_dict, annotated_clusters):
     """
 
     ct_dict = {}
+    data_genes = []
+    data_hits = []
+    db_genes = []
 
     for key in annotated_clusters.keys():
         ct_dict[key] = {}
@@ -274,7 +293,9 @@ def calc_ranks(cm_dict, annotated_clusters):
             ub_scores = []
 
             for mgene in annotated_clusters[c].keys():
+                data_genes.append(mgene)
                 if mgene in cm_dict[celltype].keys():
+                    data_hits.append(mgene)
                     gene_score, ub_score = annotated_clusters[c][mgene], cm_dict[celltype][mgene]
                     gene_score = gene_score * ub_score
                     ranks.append(gene_score)
@@ -290,6 +311,18 @@ def calc_ranks(cm_dict, annotated_clusters):
                 ub_mean = round(statistics.mean(ub_scores))
                 ct_dict[c][celltype] = [round(sum(ranks) / math.sqrt(len(ranks))), count, gene_count,
                                         ub_mean]
+
+    for ct in cm_dict.keys():
+        for gene in cm_dict[ct].keys():
+            db_genes.append(gene)
+
+    data_genes = list(set(data_genes))
+    data_hits = list(set(data_hits))
+    db_genes = list(set(db_genes))
+
+    print(f"The database contains {str(len(db_genes))} different genes.\
+          \nThe input data contains {str(len(data_genes))} different genes.\
+          \nThe genes of the input data overlap with {str(len(data_hits))} genes in total, {str(round(len(data_hits) / len(db_genes), 2) * 100)} percent.")
 
     return ct_dict
 
