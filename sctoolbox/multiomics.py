@@ -10,7 +10,16 @@ import sctoolbox.utilities as utils
 
 def merge_anndata(anndata_dict, join="inner"):
     """
-    Merge two h5ad files for dual cellxgene deplyoment
+    Merge multiple anndata objects to enable an easy comparsion via cellxgene.
+    This function is designed for multiomics data. All input anndata objects need to have
+    identical cell barcodes stored in the obs index or at least have some barcodes overlapping.
+    The genes and column names are labeled based on their source anndata object.
+    This allows for an easy comparison between the different -omics datasets.
+
+    ######################################################################################
+    WARNIG: After merging the anndata object can only be used for cellxgene deplyoments!!!
+            The merged anndata object cannot be used for further analysis!!!
+    ######################################################################################
 
     Parameters
     ----------
