@@ -153,7 +153,7 @@ def modify_ct(adata=None, annotation_dir=None, clustering_column="leiden_0.1", c
         return adata
 
 
-def show_tables(annotation_dir=None, resolution=None, clustering_column="leiden"):
+def show_tables(annotation_dir=None, n=5, clustering_column="leiden_0.1"):
     """
     Show dataframes of each cluster which shows score, hits, number of genes and mean of the UI of every potential cell type.
 
@@ -161,22 +161,19 @@ def show_tables(annotation_dir=None, resolution=None, clustering_column="leiden"
     ----------
     annotation_dir : string, default None
         The path where the annotation files are being stored (should be the same path as the output_path parameter of the annot_ct function).
-    resolutions : list of strings, default None
-        The available clustering resolutions.
+    n : int, default 5
+        The maximum number of rows to show
     clustering_column : string, default "leiden"
-        The prefix of the clustering columns if resolutions != None, else the complete name of the clustering column.
+        The clustering column of the obs table which has been used for cell type annotation.
     """
 
-    if resolution:
-        path = f'{annotation_dir}/ranked/output/{clustering_column}_{resolution}/ranks'
-    else:
-        path = f'{annotation_dir}/ranked/output/{clustering_column}/ranks'
+    path = f'{annotation_dir}/ranked/output/{clustering_column}/ranks'
 
     files = os.listdir(path)
     for file in files:
         cluster = file.split("_")[1]
         df = pd.read_csv(f'{path}/{file}', sep='\t', names=[f"Cluster {cluster}: Cell type", "Score", "Hits", "Number of marker genes", "Mean of UI"])
-        display(df.head(10))
+        display(df.head(n))
 
 
 def get_panglao(path, tissue="all", species="Hs"):
