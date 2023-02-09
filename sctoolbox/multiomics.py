@@ -98,6 +98,8 @@ def merge_anndata(anndata_dict, join="inner"):
     utils.fill_na(merged_X_var.obs)
     utils.fill_na(merged_X_var.var)
 
+    # Keep until not fixed
+    # https://github.com/chanzuckerberg/cellxgene/issues/2597
     if len(merged_X_var.var) <= 50:
         warnings.warn("The adata object contains less than 51 genes/var entries. "
                       + "CellxGene will not work. Please add dummy genes to the var table.")
