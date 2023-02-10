@@ -75,14 +75,14 @@ def merge_anndata(anndata_dict, join="inner"):
         obsm_dict |= new_order_obsm
 
         # Reorder X
-        # ToDo work on sparse directly instead of converting
-        X_df = pd.DataFrame.sparse.from_spmatrix(adata.X)
-        X_df_re = X_df.reindex(adata_obs_order)
-        X_df_re.index = list(range(len(X_df_re)))
-        adata.X = scipy.sparse.csr_matrix(X_df_re.values)
-
+        # source: https://stackoverflow.com/questions/60318598/re-ordering-of-the-rows-and-columns-in-a-csr-matrix/63058622#63058622
+        new_X = adata.X
+        I = sparse.eye(adata.X.shape[0]).tocoo()
+        I.row = I.row[adata_obs_order]
+        adata.X = I.dot(new_X)
+        
+        # save new adata to dict
         anndata_dict[label] = adata
-
         # save obs in list
         obs_list.append(adata.obs)
 
