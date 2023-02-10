@@ -3,7 +3,7 @@ import anndata as ad
 import pandas as pd
 from functools import reduce
 import warnings
-import scipy.sparse
+from scipy import sparse
 
 import sctoolbox.utilities as utils
 
@@ -77,10 +77,10 @@ def merge_anndata(anndata_dict, join="inner"):
         # Reorder X
         # source: https://stackoverflow.com/questions/60318598/re-ordering-of-the-rows-and-columns-in-a-csr-matrix/63058622#63058622
         new_X = adata.X
-        I = sparse.eye(adata.X.shape[0]).tocoo()
-        I.row = I.row[adata_obs_order]
-        adata.X = I.dot(new_X)
-        
+        coo_X = sparse.eye(adata.X.shape[0]).tocoo()
+        coo_X.row = coo_X.row[adata_obs_order]
+        adata.X = coo_X.dot(new_X)
+
         # save new adata to dict
         anndata_dict[label] = adata
         # save obs in list
