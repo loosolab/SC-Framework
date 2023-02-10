@@ -506,7 +506,8 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     sc.pp.calculate_qc_metrics(adata=adata, percent_top=percent_top, inplace=True, **kwargs)
 
     # Rename metrics
-    adata.obs.rename(columns={"n_genes_by_counts": "n_genes", "log1p_n_genes_by_counts": "log1p_n_genes"}, inplace=True)
+    adata.obs.rename(columns={"n_genes_by_counts": "n_genes", "log1p_n_genes_by_counts": "log1p_n_genes",
+                              "n_features_by_counts": "n_features", "log1p_n_features_by_counts": "log1p_n_features"}, inplace=True)
 
     # return modified anndata
     if not inplace:
