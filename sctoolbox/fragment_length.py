@@ -267,27 +267,27 @@ class Merge():
                 output.write(read)
             self.l.release()
         return True
-# def add_SB_tag(samfile, output, label, tag="CB"):
-#
-#     print('Looping')
-#     sentinel = True
-#     while sentinel:
-#         readls = []
-#         for i in range(10000):
-#             try:
-#                 read = next(samfile)
-#             except StopIteration:
-#                 sentinel = False
-#                 break
-#             CB_tag = read.get_tag(tag)
-#             SB_tag = CB_tag + "-" + str(label)
-#             read.set_tag("SB", SB_tag)
-#             readls.append(read)
-#
-#         # self.l.acquire()
-#         for read in readls:
-#             output.write(read)
-#     print('finish')
+def add_SB_tag(samfile, output, label, tag="CB"):
+
+    print('Looping')
+    sentinel = True
+    while sentinel:
+        readls = []
+        for i in range(10000):
+            try:
+                read = next(samfile)
+            except StopIteration:
+                sentinel = False
+                break
+            CB_tag = read.get_tag(tag)
+            SB_tag = CB_tag + "-" + str(label)
+            read.set_tag("SB", SB_tag)
+            readls.append(read)
+
+        # self.l.acquire()
+        for read in readls:
+            output.write(read)
+    print('finish')
 
 
 if __name__ == "__main__":
@@ -302,13 +302,13 @@ if __name__ == "__main__":
     n_threads= 8
 
     merge = Merge(n_threads=n_threads)
-    merge.merge_bamfiles(bamfiles, "/mnt/workspace/jdetlef/data/bamfiles/test_merge.bam", labels=labels, tag=tag)
+#    merge.merge_bamfiles(bamfiles, "/mnt/workspace/jdetlef/data/bamfiles/test_merge.bam", labels=labels, tag=tag)
 
     samfile = sctoolbox.bam.open_bam("/mnt/workspace/jdetlef/data/bamfiles/stomach_95_small.bam", "rb", verbosity=0)
     output = pysam.AlignmentFile("/mnt/workspace/jdetlef/data/bamfiles/test_merge.bam", "wb", template=samfile)
     label = 1
 
-    #add_SB_tag(samfile, output, label, tag="CB")
+    add_SB_tag(samfile, output, label, tag="CB")
         #self.l.release()
     # for i in range(5):
     #
