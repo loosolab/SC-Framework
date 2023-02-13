@@ -5,6 +5,18 @@ import multiprocessing as mp
 import sctoolbox.bam
 
 
+def merge_bamfiles(bamfiles, output, labels=None, n_threads=4):
+    """
+    Merge bam files
+
+    :param bamfiles:
+    :param output:
+    :param labels:
+    :param n_threads:
+    :return:
+    """
+    pass
+
 def mean_fragment_length(bam_obj):
     """
     Calculate the mean fragment length of barcodes in a bam file
@@ -184,18 +196,172 @@ def check_mfl(adata):
         return False
 
 
+class Merge():
+
+    def __init__(self, n_threads=8):
+
+        self.l = mp.Lock()
+        self.n_threads = n_threads
+
+    def merge_bamfiles(self, bamfiles, output, labels=None, tag="CB"):
+
+        # Check if labels are set if not set labels to counter
+        if labels is None:
+            labels = []
+            for i in range(len(bamfiles)):
+                labels.append(i)
+
+        # Check if number of bam files and labels are equal
+        if len(bamfiles) != len(labels):
+            raise ValueError("Number of bam files and labels must be equal")
+
+        # Check if Barcode tag is present
+        n_reads = {}
+        for path in bamfiles:
+            handle = sctoolbox.bam.open_bam(path, "rb", verbosity=0)
+            # get single read from handle
+            read = next(handle)
+            if not read.has_tag(tag):
+                raise ValueError("Barcode tag not found in bam file")
+            # n_reads[path] = sctoolbox.bam.get_bam_reads(handle)
+            handle.close()
+
+        # Open bam files
+        samfiles = {}
+        for bam, label in zip(bamfiles, labels):
+            samfile = sctoolbox.bam.open_bam(bam, "rb", verbosity=0)
+            samfiles[label] = samfile
+
+        # Open output bam file
+        output = pysam.AlignmentFile(output, "wb", template=samfiles[label])
+
+        # prepare multiprocessing
+        pool = mp.Pool(n_threads)
+        jobs = []
+        for label, file in samfiles.items():
+            job = pool.apply_async(self.add_SB_tag, args=(file, output, label, tag))
+            jobs.append(job)
+        pool.close()
+        pool.join()
+        print('Bam files merged')
+
+
+    def add_SB_tag(self, samfile, output, label, tag="CB"):
+        print('Looping')
+        sentinel = True
+        while sentinel:
+            readls = []
+            for i in range(10000):
+                try:
+                    read = next(samfile)
+                except StopIteration:
+                    sentinel = False
+                    break
+                CB_tag = read.get_tag(tag)
+                SB_tag = CB_tag + "-" + str(label)
+                read.set_tag("SB", SB_tag)
+                readls.append(read)
+
+            self.l.acquire()
+            for read in readls:
+                output.write(read)
+            self.l.release()
+        return True
+# def add_SB_tag(samfile, output, label, tag="CB"):
+#
+#     print('Looping')
+#     sentinel = True
+#     while sentinel:
+#         readls = []
+#         for i in range(10000):
+#             try:
+#                 read = next(samfile)
+#             except StopIteration:
+#                 sentinel = False
+#                 break
+#             CB_tag = read.get_tag(tag)
+#             SB_tag = CB_tag + "-" + str(label)
+#             read.set_tag("SB", SB_tag)
+#             readls.append(read)
+#
+#         # self.l.acquire()
+#         for read in readls:
+#             output.write(read)
+#     print('finish')
+
+
 if __name__ == "__main__":
 
-    import time
-    bam = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/cropped_146.bam"
-    adata = epi.read_h5ad("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146.h5ad")
-    fragment_file = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/fragments_cropped_146.bed"
 
-    start = time.time()
-    adata = add_mfl_fragment(fragment_file, adata)
-    end = time.time()
-    print("Time: ", end - start)
-    print(adata.obs.head())
+    import time
+    import pysam
+    bamfiles = ["/mnt/workspace/jdetlef/data/bamfiles/stomach_288_CB_tagged.bam", "/mnt/workspace/jdetlef/data/bamfiles/stomach_95_CB_tagged.bam", "/mnt/workspace/jdetlef/data/bamfiles/stomach_229_CB_tagged.bam"]
+    # sctoolbox.bam.open_bam(bam, "rb", verbosity=0)
+    labels=None
+    tag="CB"
+    n_threads= 8
+
+    merge = Merge(n_threads=n_threads)
+    merge.merge_bamfiles(bamfiles, "/mnt/workspace/jdetlef/data/bamfiles/test_merge.bam", labels=labels, tag=tag)
+
+    samfile = sctoolbox.bam.open_bam("/mnt/workspace/jdetlef/data/bamfiles/stomach_95_small.bam", "rb", verbosity=0)
+    output = pysam.AlignmentFile("/mnt/workspace/jdetlef/data/bamfiles/test_merge.bam", "wb", template=samfile)
+    label = 1
+
+    #add_SB_tag(samfile, output, label, tag="CB")
+        #self.l.release()
+    # for i in range(5):
+    #
+    #     slice = itertools.islice(samfiles[label], 0, 5)
+    #
+    #     for read in slice:
+    #         print(read
+
+    #
+    # slices = []
+    # while True:
+    #     try:
+    #         slice = itertools.islice(samfile, 0, 50000)
+    #         count = 0
+    #         for read in slice:
+    #             count += 1
+    #         print(count)
+    #         # slices.append(slice)
+    #
+    #         print(next(samfile))
+    #     except StopIteration:
+    #         break
+    #
+    # slices.append(samfile)
+    #
+    # for slice in slices:
+    #     for read in slice:
+    #         print(read)
+
+    # for read in slice:
+    #     print(read)
+    #
+    # print("slice")
+    #
+    # count = 0
+    # for read in samfiles[label]:
+    #     # execute loop 5 times to get the first 5 reads
+    #     if count == 25:
+    #         break
+    #
+    #     count += 1
+    #     print(read)
+    #
+    # print("samfile")
+
+    # adata = epi.read_h5ad("/home/jan/python-workspace/sc-atac/preprocessing/data/anndata/cropped_146.h5ad")
+    # fragment_file = "/home/jan/python-workspace/sc-atac/preprocessing/data/bamfiles/fragments_cropped_146.bed"
+    #
+    # start = time.time()
+    # adata = add_mfl_fragment(fragment_file, adata)
+    # end = time.time()
+    # print("Time: ", end - start)
+    # print(adata.obs.head())
 
     # start = time.time()
     # mean_fl = mean_fragment_length_fragment_file(fragment_file)
