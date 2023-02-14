@@ -499,7 +499,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
         adata = adata.copy()
 
     # remove n_genes from metrics before recalculation
-    to_remove = [col for col in adata.obs.columns if col in ["n_genes", "log1p_n_genes"]]
+    to_remove = [col for col in adata.obs.columns if col in ["n_genes", "log1p_n_genes", "n_features", "log1p_n_features"]]
     adata.obs.drop(columns=to_remove, inplace=True)
 
     # compute metrics
