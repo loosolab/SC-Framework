@@ -68,6 +68,11 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
             print("Sending {0} batches to {1} threads".format(len(all_groups), threads))
             jobs = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
+
+                # Clean up adata before sending to thread
+                sub.uns = {}
+                sub.layers = None
+
                 job = pool.apply_async(run_scrublet, (sub,), {"threshold": threshold, "verbose": False, **kwargs})
                 jobs.append(job)
             pool.close()
@@ -100,6 +105,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
         obs_table, uns_dict = run_scrublet(adata, threshold=threshold, **kwargs)
 
     # Save scores to object
+    #ImplicitModificationWarning
     adata.obs["doublet_score"] = obs_table["doublet_score"]
     adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
     adata.uns["scrublet"] = uns_dict
@@ -757,6 +763,10 @@ def quality_violin(adata, columns,
             else:
                 tmin = thresholds[column].get("min", nothresh_min)
                 tmax = thresholds[column].get("max", nothresh_max)
+
+            # Replace None with nothresh
+            tmin = nothresh_min if tmin is None else tmin
+            tmax = nothresh_max if tmax is None else tmax
 
             # Plot line and shading
             tick = ticks[j]
