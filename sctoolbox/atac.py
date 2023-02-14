@@ -109,18 +109,22 @@ def lsi(data, scale_embeddings=True, n_comps=50):
             axis=0
         )
 
+    var_explained = np.round(svalues ** 2 / np.sum(svalues ** 2), decimals=3)
     stdev = svalues / np.sqrt(adata.X.shape[0] - 1)
 
     adata.obsm["X_lsi"] = cell_embeddings
-    adata.uns["lsi"] = {"stdev": stdev}
     adata.varm["LSI"] = peaks_loadings.T
+    adata.uns["lsi"] = {"stdev": stdev,
+                        "variance": svalues,
+                        "variance_ratio": var_explained}
 
-    adata.obsm["X_pca"] = cell_embeddings
-    adata.varm["PCs"] = peaks_loadings.T
-    adata.uns["pca"] = {"stdev": stdev}
+    # Save to PCA to make it compatible with scanpy
+    adata.obsm["X_pca"] = adata.obsm["X_lsi"]
+    adata.varm["PCs"] = adata.varm["LSI"]
+    adata.uns["pca"] = adata.uns["lsi"]
 
 
-def atac_norm(adata, condition_col='nb_features'):
+def atac_norm(adata, method):  # , condition_col='nb_features'):
     """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
     calculates PCA and UMAP and plots both UMAPs.
 
@@ -129,13 +133,29 @@ def atac_norm(adata, condition_col='nb_features'):
     :param bool remove_pc1: Removing first component after TFIDF normalization and LSI, defaults to True
     :return anndata.AnnData: Two AnnData objects with normalized matrices (Total and TFIDF) and UMAP.
     """
-    adata_tfidf = adata.copy()
-    adata_total = adata.copy()
 
+    adata = adata.copy()  # make sure the original data is not modified
+
+    if method == "total":  # perform total normalization and pca
+        print('Performing total normalization and PCA...')
+        sc.pp.normalize_total(adata)
+        epi.pp.log1p(adata)
+        sc.pp.pca(adata)
+
+    elif method == "tfidf":
+        print('Performing TFIDF and LSI...')
+        tfidf(adata)
+        lsi(adata)  # corresponds to PCA
+
+    else:
+        raise ValueError("Method must be either 'total' or 'tfidf'")
+
+    return adata
+
+
+"""
     # perform tfidf and latent semantic indexing
     print('Performing TFIDF and LSI...')
-    tfidf(adata_tfidf)
-    lsi(adata_tfidf)
 
     sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
     sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
@@ -162,6 +182,7 @@ def atac_norm(adata, condition_col='nb_features'):
     plt.tight_layout()
 
     return adata_tfidf, adata_total
+"""
 
 
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
