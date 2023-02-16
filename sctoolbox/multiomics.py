@@ -3,7 +3,6 @@ import anndata as ad
 import pandas as pd
 from functools import reduce
 import warnings
-from scipy import sparse
 
 import sctoolbox.utilities as utils
 
@@ -37,7 +36,7 @@ def merge_anndata(anndata_dict, join="inner"):
     merged anndata.AnnData object
     """
     if join == "outer":
-        warnings.warn("'outer' join is currently disabled. Proceeding with 'inner' merge")
+        warnings.warn("'outer' join is currently disabled. SEt to inner merge")
         join = "inner"
 
     if join not in ["inner", "outer"]:
@@ -46,10 +45,13 @@ def merge_anndata(anndata_dict, join="inner"):
     # Copy dict to prevent changes in original anndata objects
     anndata_dict = copy.deepcopy(anndata_dict)
 
-    f_adata = list(anndata_dict.values())[0]
+    all_obs_indices = [single_adata.obs.index for single_adata in list(anndata_dict.values())]
+    obs_intersection = set.intersection(*map(set, all_obs_indices))
+    obs_intersection = sorted(list(obs_intersection))
 
     obs_list = list()
     obsm_dict = dict()
+
     # Add prefix to obsm dict keys, var index and obs columns
     for label, adata in anndata_dict.items():
         # prefix to obsm
@@ -60,29 +62,15 @@ def merge_anndata(anndata_dict, join="inner"):
         # prefix to obs columns
         adata.obs.columns = label + "_" + adata.obs.columns
 
-        # With this line outer join not possible anymore
-        # TODO Revise to enable outer join
-        adata = adata[adata.obs.index.isin(f_adata.obs.index)]
+        # Reorder adata cells
+        adata = adata[obs_intersection, :]
 
-        # Reorder obs
-        adata_obs_order = [list(adata.obs.index).index(i) for i in f_adata.obs.index]
-        adata.obs = adata.obs.reindex(list(f_adata.obs.index))
-
-        # Reorder obsm
-        new_order_obsm = dict(adata.obsm)
-        for obsm_key, value in new_order_obsm.items():
-            new_order_obsm[obsm_key] = value[adata_obs_order]
-        obsm_dict |= new_order_obsm
-
-        # Reorder X
-        # source: https://stackoverflow.com/questions/60318598/re-ordering-of-the-rows-and-columns-in-a-csr-matrix/63058622#63058622
-        new_X = adata.X
-        coo_X = sparse.eye(adata.X.shape[0]).tocoo()
-        coo_X.row = coo_X.row[adata_obs_order]
-        adata.X = coo_X.dot(new_X)
+        for obsm_key, matrix in adata.obsm.items():
+            obsm_dict[obsm_key] = matrix
 
         # save new adata to dict
         anndata_dict[label] = adata
+
         # save obs in list
         obs_list.append(adata.obs)
 
