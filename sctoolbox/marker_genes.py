@@ -352,7 +352,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     layer : str, default: None
         Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
     percentile_range : tuple, default: (0, 100)
-        Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation 
+        Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
 
     Returns

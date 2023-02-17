@@ -644,7 +644,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
         Is used to limit the effect of individual cell outliers, e.g. by setting (0,95) to exclude high values in the calculation.
     chunk_size : int, default 1000
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
-        
+
     Returns
     -------
     pandas.DataFrame :
