@@ -483,7 +483,3 @@ def main():
         print("Please use three, five, six or seven parameters only!")
         print("Example: python3 cell_type_annotation.py output_path panglao_path cluster_path all panglao")
         exit(1)
-
-
-if __name__ == '__main__':
-    main()
