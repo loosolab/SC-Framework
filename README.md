@@ -16,35 +16,61 @@ git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
 ```
 cd loosolab_sc_rna_framework
 ```
-3. Install analysis environment. Speed up installation by replacing `conda` with `mamba` (has to be installed).
+3. Install analysis environment. Note: using `mamba` is faster than `conda`, but this requires mamba to be installed.
 ```
-conda env create -f sctoolbox_env.yml
+mamba env create -f sctoolbox_env.yml
 ```
 4. Activate the environment.
 ```
 conda activate sctoolbox
 ```
-5. Register the environment as a jupyter kernel.
+5. If "jupyter-notebook" command is not available at this point: install notebook package.
+```
+pip install notebook
+```
+6. Register the environment as a jupyter kernel.
 ```
 python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
+7. (optional) If you want to push changes to notebooks, you need to add the custom .gitconfig to the local .git config-file in order to enable clearing of notebook outputs:
+```
+cat .gitconfig >> .git/config
+```
+
+# How to access the notebooks
+1. Go to your local notebook folder - most likely in /home/\<user\>/notebooks:
+```
+cd ~/notebooks/
+```
+
+2. Create a symbolic link to the location where you cloned the framework
+```
+ln -s <path to loosolab_sc_rna_framework>
+```
+
+3. Get the notebook server URL by running:
+```
+jupyter notebook list
+```
+
+4. Copy the output URL from the previous command into your browser. 
+
+5. You can now navigate to the `loosolab_sc_rna_framework/notebooks` folder containing the notebooks!
+
 
 # Usage
-1. Open your notebook and set the `sctoolbox` kernel
+1. Open the first notebook (`1_assembling_anndata.ipynb`) and set the `sctoolbox` kernel. You can use the included test dataset (or follow the instructions to set input data).
 
-2. Open the first notebook (`1_assembling_anndata.ipynb`) and follow the instructions of the first two cells.
+2. Carry on with the notebooks in increasing order 2, 3, 4. etc. to analyze your data!
 
-3. Example files to run the notebooks are available here:
+
+Additional example files to run the notebooks are available here:
 ```
 /mnt/agnerds/loosolab_SC_RNA_framework/examples/assembling_10_velocity
 ```
 
-4. The marker genes are stored here:
-```
-/mnt/agnerds/loosolab_SC_RNA_framework/marker_genes
-```
 
-# Notebooks
+# Notebook overview
 The main parts of the analysis workflow are provided as jupyter notebooks. They can be found in the `notebooks` directory.
 
 ## Notebook 1 (1_assembling_anndata.ipynb)

@@ -3,6 +3,17 @@ import os
 import numpy as np
 import shutil
 import sctoolbox.utilities as utils
+import scanpy as sc
+
+
+@pytest.fixture
+def adata():
+    """ Returns adata object with 3 groups """
+
+    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+    return adata
 
 
 @pytest.fixture
@@ -119,6 +130,16 @@ def test_write_list_file(berries):
     os.remove(path)  # clean up after tests
 
 
+def test_get_adata_subsets(adata):
+    """ Test if adata subsets are returned correctly """
+
+    subsets = utils.get_adata_subsets(adata, "group")
+
+    for group, sub_adata in subsets.items():
+        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].nunique() == 1
+
+
 def test_remove_files():
     """ Remove files from list """
 
@@ -128,3 +149,12 @@ def test_remove_files():
     utils.remove_files(files)
 
     assert os.path.isfile("afile.txt") is False
+
+
+def test_pseudubulk_table(adata):
+    """ Test if pseudobulk table is returned correctly """
+
+    pseudobulk = utils.pseudobulk_table(adata, "group")
+
+    assert pseudobulk.shape[0] == adata.shape[0]
+    assert pseudobulk.shape[1] == 3  # number of groups
