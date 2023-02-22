@@ -91,6 +91,53 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     print(f"Wrote {written} reads to output bam")
 
 
+def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4):
+
+    # check then load modules
+    utils.check_module("tqdm")
+    if utils._is_notebook() is True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+    utils.check_module("pysam")
+
+    # Open files
+    bam_in_obj = open_bam(bam_in, "rb", verbosity=0, threads=pysam_threads)
+    bam_out_obj = open_bam(bam_out, "wb", template=bam_in_obj, threads=pysam_threads, verbosity=0)
+
+    barcodes = set(barcodes)
+
+    # Update progress based on total number of reads
+    total = get_bam_reads(bam_in_obj)
+    pbar = tqdm(total=total, desc="Reading... ", unit="reads")
+    step = int(total / 10000)  # 10000 total updates
+
+    # Iterate over reads
+    i = 0
+    written = 0
+    for read in bam_in_obj:
+        i += 1
+        if read.has_tag(read_tag):
+            bc = read.get_tag(read_tag)
+        else:
+            bc = None
+
+        # Update step manually - there is an overhead to update per read with hundreds of million reads
+        if i == step:
+            pbar.update(step)
+            pbar.refresh()
+            i = 0
+
+        if bc in barcodes:
+            bam_out_obj.write(read)
+            written += 1
+
+    # close progressbar
+    pbar.close()
+
+    print(f"Wrote {written} reads to cluster files")
+
+
 def split_bam_clusters(adata,
                        bams,
                        groupby,
