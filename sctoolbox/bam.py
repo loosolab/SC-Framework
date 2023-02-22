@@ -557,7 +557,14 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
         raise e
 
 
-def bam_to_bigwig(bam, output=None, scale=True, overwrite=True, tempdir=".", remove_temp=True):
+def bam_to_bigwig(bam,
+                  output=None,
+                  scale=True,
+                  overwrite=True,
+                  tempdir=".",
+                  remove_temp=True,
+                  bedtools_path=None,
+                  bgtobw_path=None):
     """
     Convert reads in a bam-file to bigwig format.
 
@@ -575,6 +582,10 @@ def bam_to_bigwig(bam, output=None, scale=True, overwrite=True, tempdir=".", rem
         Path to directory where temporary files are written.
     remove_temp : bool, default True
         Remove temporary files after conversion.
+    bedtools_path : str, default None
+        Path to bedtools binary. If None, the function will search for the binary in the path.
+    bgtobw_path : str, default None
+        Path to bedGraphToBigWig binary. If None, the function will search for the binary in the path.
 
     Returns
     -------
@@ -593,8 +604,11 @@ def bam_to_bigwig(bam, output=None, scale=True, overwrite=True, tempdir=".", rem
     utils.check_module("pysam")
     import pysam
 
-    bedtools_path = utils.get_binary_path("bedtools")
-    bgtobw_path = utils.get_binary_path("bedGraphToBigWig")
+    if bedtools_path is None:
+        bedtools_path = utils.get_binary_path("bedtools")
+
+    if bgtobw_path is None:
+        bgtobw_path = utils.get_binary_path("bedGraphToBigWig")
 
     # Get size of genome and write a chromsizes file
     bamobj = pysam.AlignmentFile(bam, "rb")
