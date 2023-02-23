@@ -69,4 +69,6 @@ def test_deep_merge_anndata(adata, adata2):
 
         assert (list(merged_adata.obsm["X_1_umap"][m_index]) == list(adata.obsm["X_umap"][r_index]))
         assert (list(merged_adata.obsm["X_2_umap"][m_index]) == list(adata2.obsm["X_umap"][c_index]))
+        assert merged_adata.obs.index[m_index] == adata.obs.index[r_index]
+        assert merged_adata.obs.index[m_index] == adata2.obs.index[c_index]
         assert (m[:len(r)] == r) and (m[-len(c):] == c)
