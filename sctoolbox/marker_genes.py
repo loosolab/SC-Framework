@@ -332,7 +332,7 @@ def run_rank_genes(adata, groupby,
     # adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
-def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
+def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
@@ -351,11 +351,18 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
         List of additional column names in adata.obs containing confounders to be included in the model.
     layer : str, default: None
         Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
+    percentile_range : tuple, default: (0, 100)
+        Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
+        to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
 
     Returns
     -----------
     A py_DESeq2 object containing the results of the DESeq2 analysis.
     Also adds the dataframes to adata.uns["deseq_result"] and adata.uns["deseq_normalized"].
+
+    See also
+    -----------
+    sctoolbox.utils.pseudobulk_table
     """
 
     utils.setup_R()
@@ -379,11 +386,15 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None):
     samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
 
     # Build count matrix
-    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer)
+    print("Building count matrix")
+    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
+                                         percentile_range=percentile_range)
+    count_table = count_table.astype(int)  # DESeq2 requires integer counts
     count_table.index.name = "gene"
     count_table.reset_index(inplace=True)
 
     # Run DEseq2
+    print("Running DESeq2")
     dds = py_DESeq2(count_matrix=count_table,
                     design_matrix=sample_df,
                     design_formula=design_formula,
