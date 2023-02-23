@@ -654,6 +654,7 @@ def define_PC(anndata):
 def subset_PCA(adata, n_pcs, start=0, inplace=True):
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
+    Additionally, subset the PCs in adata.varm["PCs"] and the variance ratio in adata.uns["pca"]["variance_ratio"].
 
     Parameters
     -----------
@@ -676,6 +677,10 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
         adata = adata.copy()
 
     adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
+    adata.varm["PCs"] = adata.varm["PCs"][:, start:n_pcs]
+
+    if "variance_ratio" in adata.uns.get("pca", {}):
+        adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][start:n_pcs]
 
     if inplace is False:
         return adata
