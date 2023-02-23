@@ -50,3 +50,23 @@ def test_merge_anndata(adata, adata2):
     assert all(elem in new_var_index for elem in merged_adata.var.index)
     # Check if merged obs index is merged properly
     assert all(elem in new_obs_index for elem in merged_adata.obs.index)
+
+
+def test_deep_merge_anndata(adata, adata2):
+    """ Test if anndata are merged correctly by checking obsm coordinates and matrix values for each cell"""
+    adata_to_merge = {"1": adata, "2": adata2}
+    merged_adata = multi.merge_anndata(adata_to_merge)
+
+    for cell_id in merged_adata.obs.index:
+        m_index = list(merged_adata.obs.index).index(cell_id)
+        r_index = list(adata.obs.index).index(cell_id)
+        c_index = list(adata2.obs.index).index(cell_id)
+        m = merged_adata.X.tocsr()[m_index, :].todense().tolist()[0]
+        r = adata.X.tocsr()[r_index, :].todense().tolist()[0]
+        c = adata2.X.tocsr()[c_index, :].todense().tolist()[0]
+
+        adata2.obsm["X_umap"][c_index]
+
+        assert (list(merged_adata.obsm["X_1_umap"][m_index]) == list(adata.obsm["X_umap"][r_index]))
+        assert (list(merged_adata.obsm["X_2_umap"][m_index]) == list(adata2.obsm["X_umap"][c_index]))
+        assert (m[:len(r)] == r) and (m[-len(c):] == c)
