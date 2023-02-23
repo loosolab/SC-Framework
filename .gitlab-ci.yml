@@ -66,14 +66,16 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - apt-get install bedtools  #needed for some tests
     - pip install pytest
     - pip install pytest-cov
     - pip install .[all]
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
+    - pytest --cov-report=term --cov=sctoolbox --junitxml=pytest.xml --cov-report html:htmlcov .
   artifacts:
     when: always
     paths:
       - pytest.xml
+      - htmlcov
     reports:
       junit: pytest.xml
   rules:

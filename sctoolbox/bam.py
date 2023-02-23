@@ -7,8 +7,25 @@ import sctoolbox.utilities as utils
 import warnings
 
 
-def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4):
+def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False):
+    """
+    Subset a bam file based on a list of barcodes.
 
+    Parameters
+    ----------
+    bam_in : str
+        Path to input bam file.
+    bam_out : str
+        Path to output bam file.
+    barcodes : list of str
+        List of barcodes to keep.
+    read_tag : str, default "CB"
+        Tag in bam file to use for barcode.
+    pysam_threads : int, default 4
+        Number of threads to use for pysam.
+    overwrite : bool, default False
+        Overwrite output file if it exists.
+    """
     # check then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
@@ -16,6 +33,13 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4):
     else:
         from tqdm import tqdm
     utils.check_module("pysam")
+
+    # Create output dir if needed
+    utils.create_dir(bam_out)
+
+    if os.path.exists(bam_out) and overwrite is False:
+        warnings.warn(f"Output file {bam_out} exists. Skipping.")
+        return
 
     # Open files
     bam_in_obj = open_bam(bam_in, "rb", verbosity=0, threads=pysam_threads)
@@ -25,33 +49,46 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4):
 
     # Update progress based on total number of reads
     total = get_bam_reads(bam_in_obj)
-    pbar = tqdm(total=total, desc="Reading... ", unit="reads")
+    print(' ', end='', flush=True)  # hack for making progress bars work in notebooks; https://github.com/tqdm/tqdm/issues/485#issuecomment-473338308
+    pbar_reading = tqdm(total=total, desc="Reading... ", unit="reads")
+    pbar_writing = tqdm(total=total, desc="% written from input", unit="reads")
     step = int(total / 10000)  # 10000 total updates
 
     # Iterate over reads
-    i = 0
+    writing_i = 0
+    reading_i = 0
     written = 0
     for read in bam_in_obj:
-        i += 1
+        reading_i += 1
         if read.has_tag(read_tag):
             bc = read.get_tag(read_tag)
         else:
             bc = None
 
         # Update step manually - there is an overhead to update per read with hundreds of million reads
-        if i == step:
-            pbar.update(step)
-            pbar.refresh()
-            i = 0
+        if reading_i == step:
+            pbar_reading.update(step)
+            pbar_reading.refresh()
+            reading_i = 0
 
+        # Write read to output bam if barcode is in barcodes
         if bc in barcodes:
             bam_out_obj.write(read)
             written += 1
 
-    # close progressbar
-    pbar.close()
+            if writing_i == step:
+                pbar_writing.update(step)
+                pbar_writing.refresh()
+                writing_i = 0
 
-    print(f"Wrote {written} reads to cluster files")
+    # close progressbars
+    pbar_reading.close()
+    pbar_writing.close()
+
+    # Close bamfiles
+    bam_in_obj.close()
+    bam_out_obj.close()
+    print(f"Wrote {written} reads to output bam")
 
 
 def split_bam_clusters(adata,
@@ -669,6 +706,7 @@ def bam_to_bigwig(bam,
             f.write(f"{chrom}\t{size}\n")
 
     # Get number of mapped reads in file for normalization
+    print("Getting scaling factor")
     scaling_factor = 0
     if scale:
         n_reads = get_bam_reads(bamobj)
