@@ -88,7 +88,8 @@ notebook-output-check:
     default: false
   stage: test
   script:
-    python scripts/check_notebooks.py */*.ipynb
+    - python --version
+    - python scripts/check_notebooks.py */*.ipynb
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
