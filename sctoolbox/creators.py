@@ -130,9 +130,12 @@ def gitlab_download(internal_path, host="https://gitlab.gwdg.de/",
                     load_token=pathlib.Path.home() / ".gitlab_token",
                     save_token=pathlib.Path.home() / ".gitlab_token", overwrite=False):
     """
-    Download file from gitlab
-
-    # Token pjUryDmqmxXS1xLewUYZ
+    Download file from gitlab.
+    Requires project access token if the project is private.
+    The token needs following scopes:
+    - read_api
+    - read_repository
+    - read registry
 
     Parameters
     ----------
@@ -166,8 +169,8 @@ def gitlab_download(internal_path, host="https://gitlab.gwdg.de/",
         branch = commit
 
     if private:
-        load_token_file = pathlib.Path(load_token)
-        if load_token_file.is_file():
+        load_token_file = pathlib.Path(load_token).is_file() if load_token else False
+        if load_token_file:
             with open(load_token, 'r') as token_file:
                 token = token_file.readline().strip()
         else:
