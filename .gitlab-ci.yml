@@ -84,6 +84,7 @@ test coverage:
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
+  image: python:3.9.15
   inherit:
     default: false
   stage: test
