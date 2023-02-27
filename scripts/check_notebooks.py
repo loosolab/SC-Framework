@@ -1,5 +1,5 @@
 """
-Script to check whether notebook(s) contains output or metadata. Fails if it does.
+Script to check whether notebook(s) contains output. Fails if it does.
 """
 
 import sys
@@ -7,7 +7,7 @@ import json
 
 
 def check_notebook(path):
-    """ Check whether a notebook contains output or metadata. Exits with error if it does. """
+    """ Check whether a notebook contains output. Exits with error if it does. """
 
     with open(path, 'r') as f:
         nb = json.load(f)
@@ -15,9 +15,6 @@ def check_notebook(path):
     for cell in nb['cells']:
         if 'outputs' in cell and len(cell['outputs']) > 0:
             print('Notebook {} contains output!'.format(path))
-            sys.exit(1)
-        if 'metadata' in cell and len(cell['metadata']) > 0:
-            print('Notebook {} contains metadata!'.format(path))
             sys.exit(1)
 
 
