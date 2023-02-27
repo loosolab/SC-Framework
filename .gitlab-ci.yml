@@ -82,6 +82,16 @@ test coverage:
       - tests/*.py
       - sctoolbox/*.py
 
+# test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
+notebook-output-check:
+  inherit:
+    default: false
+  stage: test
+  script:
+    python scripts/check_notebooks.py */*.ipynb
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+
 pages:
   stage: deploy
   tags:
