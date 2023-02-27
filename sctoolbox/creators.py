@@ -5,6 +5,9 @@ import os
 import sctoolbox.checker as ch
 import anndata
 import pathlib
+import gitlab
+from getpass import getpass
+import warnings
 
 
 def add_color_set(adata, inplace=True):
@@ -121,30 +124,75 @@ def create_dir(outpath, test):
     ch.write_info_txt(path_value=output_dir)  # Printing the output dir detailed in the info.txt
 
 
-def gitlab_download(repo, internal_path, branch="main", commit="latest", out_path="./", cred=None):
+def gitlab_download(internal_path, host="https://gitlab.gwdg.de/",
+                    repo="loosolab_SC_RNA_framework", branch="main",
+                    commit=None, out_path="./", private=False,
+                    load_token=pathlib.Path.home() / ".gitlab_token",
+                    save_token=pathlib.Path.home() / ".gitlab_token", overwrite=False):
     """
-    Download file or dir from gitlab
+    Download file from gitlab
+
+    # Token pjUryDmqmxXS1xLewUYZ
 
     Parameters
     ----------
-    repo : str
-        Link to repository
     internal_path :  str
         Dir or file in repository to download
+    host : str, default 'https://gitlab.gwdg.de/'
+        Link to host
+    repo : str, default 'loosolab_SC_RNA_framework'
+        Name of the repository
     branch :  str, default 'main'
         What branch to use
-    commit : str, default 'latest'
-        What commit to use
+    commit : str, default None
+        What commit to use, overwrites branch
     out_path : str, default './'
         Where the fike/dir should be downloaded to
-    cred : str, default None
-        Credentials in case of private repository
+    private, boolean, default False
+        Set true if repo is private
+    load_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
+        Load token from file. Set to None for new token
+    save_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
+        Save token to file
+    overwrite : boolean, default False
+        Overwrite file if it exsits in the directory
 
     Returns
     -------
     None
     """
-    pass
+    token = None
+    if commit:
+        branch = commit
+
+    if private:
+        load_token_file = pathlib.Path(load_token)
+        if load_token_file.is_file():
+            with open(load_token, 'r') as token_file:
+                token = token_file.readline().strip()
+        else:
+            token = getpass("Please enter your token: ")
+            if save_token:
+                with open(save_token, 'w') as token_file:
+                    token_file.write(token)
+
+    try:
+        gl = gitlab.Gitlab(host, private_token=token)
+        pl = gl.projects.list(search=repo)
+        for p in pl:
+            if p.name == repo:
+                project = p
+                break
+        if project:
+            with open(out_path, 'wb') as f:
+                if not pathlib.Path(out_path).is_file() or overwrite:
+                    project.files.raw(file_path=internal_path, ref=branch, streamed=True, action=f.write)
+                else:
+                    warnings.warn("File already existis. Use overwrite parameter to overwrite file.")
+        else:
+            raise ValueError("Reposiotry not found")
+    except Exception as e:
+        print("Error:", e)
 
 
 def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
@@ -155,7 +203,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
     ----------
     dest :  str
         Path to new experiment
-    dir : list, default ['raw', 'preprocessing']
+    dir : list, default ['raw', 'preprocessing', 'Analysis']
         Internal folders to create
 
     Returns
