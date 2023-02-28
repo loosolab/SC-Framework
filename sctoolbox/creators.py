@@ -192,6 +192,8 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
     try:
         gl = gitlab.Gitlab(host, private_token=token)
         pl = gl.projects.list(search=repo)
+        if not pl:
+            raise ValueError("Could not find repository. Is the repository private?")
         for p in pl:
             if p.name == repo:
                 project = p
@@ -202,18 +204,17 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
 
         items = project.repository_tree(path=internal_path, ref=branch)
         for item in items:
-            print(file_regex)
-            print(item["name"])
             if item["type"] != "blob" or not re.search(file_regex, item["name"]):
                 continue
             out = pathlib.Path(out_path) / item["name"]
             file_path = item["path"]
-            with open(out, 'wb') as f:
-                if not out.is_file() or overwrite:
-                    with rate_limiter:
+            print(out)
+            if not out.is_file() or overwrite:
+                with rate_limiter:
+                    with open(out, 'wb') as f:
                         project.files.raw(file_path=str(file_path), ref=branch, streamed=True, action=f.write)
-                else:
-                    warnings.warn("File already exists. Use overwrite parameter to overwrite file.")
+            else:
+                warnings.warn("File already exists. Use overwrite parameter to overwrite file.")
     except Exception as e:
         print("Error:", e)
 
@@ -282,7 +283,7 @@ def add_analysis(dest, analysis_name,
     setup_experiment(run_path, dirs=dirs + ["notebooks"])
     # Build notebook regex
     regex = build_notebooks_regex(starts_with)
-    print(regex)
+
     # Download notebooks
     print("Downloading notebooks..")
     gitlab_download("notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
@@ -291,7 +292,7 @@ def add_analysis(dest, analysis_name,
 def build_notebooks_regex(starts_with):
     """
     Build regex for notebooks starting with given number.
-    Note: Only works up to 89. If we reach notebook 100 this function
+    Note: Only works up to 89. If we reach notebook 90 this function
           needs to be adjusted.
 
     @ToDo Move to utilities.py when cleaned up
@@ -312,6 +313,6 @@ def build_notebooks_regex(starts_with):
     elif 10 <= starts_with < 90:
         regex = f"[0]*([{str(starts_with)[0]}][{str(starts_with)[1]}-9]|[{str(starts_with+10)[0]}-9][0-9]).*.ipynb"
     else:
-        # Needs change if we ever reach 100+ Notebooks
-        raise ValueError("starts_with needs to be lower than 100")
+        # Needs change if we ever reach 90+ Notebooks
+        raise ValueError("starts_with needs to be lower than 90")
     return regex
