@@ -37,7 +37,9 @@ setup(
         'leidenalg',
         'louvain',
         'IPython',
-        'openpyxl'
+        'openpyxl',
+        'ratelimiter',
+        'gitlab'
     ],
     include_package_data=True,
     extras_require=extras_require
