@@ -748,40 +748,6 @@ def _none2null(none_obj):
     return r("NULL")
 
 
-def fill_na(df, inplace=True):
-    """
-    Fill all NA values in pandas depending on the column data type
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        DataFrame object with NA values over multiple columns
-    inplace : boolean, default True
-        Whether the DataFrame object is modified inplace.
-    """
-
-    if not inplace:
-        df = df.copy()
-
-    for nan_col in df.columns[df.isna().any()]:
-        col_type = df[nan_col].dtype.name
-        if col_type == "category":
-            df[nan_col].cat.add_categories("").fillna("")
-        elif col_type.startswith("float") or col_type.startswith("int"):
-            df[nan_col].fillna(0)
-        elif col_type == "object":
-            o_type = type(df[nan_col][0]).__name__ if not pd.isna(df[nan_col][0]) else type(df[nan_col][-1]).__name__
-            if o_type == "bool":
-                df[nan_col].fillna(False)
-            elif o_type == "str":
-                df[nan_col].fillna("-")
-            elif o_type == "float" or o_type == "int":
-                df[nan_col].fillna(0)
-            # Other datatypes possible??
-    if not inplace:
-        return df
-
-
 def get_adata_subsets(adata, groupby):
     """
     Split an anndata object into a dict of sub-anndata objects based on a grouping column.
