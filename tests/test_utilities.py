@@ -149,3 +149,12 @@ def test_remove_files():
     utils.remove_files(files)
 
     assert os.path.isfile("afile.txt") is False
+
+
+def test_pseudubulk_table(adata):
+    """ Test if pseudobulk table is returned correctly """
+
+    pseudobulk = utils.pseudobulk_table(adata, "group")
+
+    assert pseudobulk.shape[0] == adata.shape[0]
+    assert pseudobulk.shape[1] == 3  # number of groups
