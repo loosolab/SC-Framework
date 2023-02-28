@@ -207,12 +207,10 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
             if item["type"] != "blob" or not re.search(file_regex, item["name"]):
                 continue
             out = pathlib.Path(out_path) / item["name"]
-            file_path = item["path"]
-            print(out)
             if not out.is_file() or overwrite:
                 with rate_limiter:
                     with open(out, 'wb') as f:
-                        project.files.raw(file_path=str(file_path), ref=branch, streamed=True, action=f.write)
+                        project.files.raw(file_path=item["path"], ref=branch, streamed=True, action=f.write)
             else:
                 warnings.warn("File already exists. Use overwrite parameter to overwrite file.")
     except Exception as e:
