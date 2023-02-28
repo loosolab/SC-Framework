@@ -2,6 +2,9 @@ import sctoolbox.creators as creator
 import anndata
 import pytest
 import pandas as pd
+from glob import glob
+from pathlib import Path
+import shutil
 
 
 @pytest.fixture
@@ -115,3 +118,23 @@ def test_add_color_set_no_anndata(invalid_type):
     """ Test error on not anndata input. """
     with pytest.raises(TypeError, match="Invalid data type. AnnData object is required."):
         creator.add_color_set(invalid_type)
+
+
+def test_setup_experiment():
+    """ Test experiment setup function"""
+    dirs = ['raw', 'preprocessing', 'Analysis']
+    creator.setup_experiment("./tmp/exp1", dirs=dirs)
+    f = glob("./tmp/exp1/*/")
+    shutil.rmtree("./tmp/")
+    assert [Path(file).name for file in f] == dirs
+
+
+def test_add_analysis():
+    pass
+
+
+@pytest.mark.parametrize("starts,regex", [(1, '[0]*[1-9].*.ipynb'), (5, '[0]*[5-9].*.ipynb'),
+                                          (10, '[0]*([1][0-9]|[2-9][0-9]).*.ipynb'), (21, '[0]*([2][1-9]|[3-9][0-9]).*.ipynb')])
+def test_build_notebooks_regex(starts, regex):
+    """ Test build notebook regex function"""
+    assert creator.build_notebooks_regex(starts) == regex
