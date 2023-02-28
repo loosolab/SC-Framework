@@ -8,6 +8,9 @@ import pathlib
 import gitlab
 from getpass import getpass
 import warnings
+import re
+from ratelimiter import RateLimiter
+import time
 
 
 def add_color_set(adata, inplace=True):
@@ -124,23 +127,21 @@ def create_dir(outpath, test):
     ch.write_info_txt(path_value=output_dir)  # Printing the output dir detailed in the info.txt
 
 
-def gitlab_download(internal_path, host="https://gitlab.gwdg.de/",
+def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                     repo="loosolab_SC_RNA_framework", branch="main",
                     commit=None, out_path="./", private=False,
                     load_token=pathlib.Path.home() / ".gitlab_token",
-                    save_token=pathlib.Path.home() / ".gitlab_token", overwrite=False):
+                    save_token=pathlib.Path.home() / ".gitlab_token",
+                    overwrite=False, max_calls=5, period=60):
     """
-    Download file from gitlab.
-    Requires project access token if the project is private.
-    The token needs following scopes:
-    - read_api
-    - read_repository
-    - read registry
+    Download file(s) from gitlab
 
     Parameters
     ----------
     internal_path :  str
-        Dir or file in repository to download
+        path to directory in repository
+    file_regex : str
+        regex for target file(s)
     host : str, default 'https://gitlab.gwdg.de/'
         Link to host
     repo : str, default 'loosolab_SC_RNA_framework'
@@ -159,11 +160,20 @@ def gitlab_download(internal_path, host="https://gitlab.gwdg.de/",
         Save token to file
     overwrite : boolean, default False
         Overwrite file if it exsits in the directory
+    max_calls : int, default 5
+        limit file download rate per period
+    period : int, deafult 60
+        period length in seconds
 
     Returns
     -------
     None
     """
+    def limited(until):
+        duration = int(round(until - time.time()))
+        print('Rate limited, sleeping for {:d} seconds'.format(duration))
+
+    rate_limiter = RateLimiter(max_calls=max_calls, period=period, callback=limited)
     token = None
     if commit:
         branch = commit
@@ -186,14 +196,24 @@ def gitlab_download(internal_path, host="https://gitlab.gwdg.de/",
             if p.name == repo:
                 project = p
                 break
-        if project:
-            with open(out_path, 'wb') as f:
-                if not pathlib.Path(out_path).is_file() or overwrite:
-                    project.files.raw(file_path=internal_path, ref=branch, streamed=True, action=f.write)
-                else:
-                    warnings.warn("File already existis. Use overwrite parameter to overwrite file.")
-        else:
+
+        if not project:
             raise ValueError("Reposiotry not found")
+
+        items = project.repository_tree(path=internal_path, ref=branch)
+        for item in items:
+            print(file_regex)
+            print(item["name"])
+            if item["type"] != "blob" or not re.search(file_regex, item["name"]):
+                continue
+            out = pathlib.Path(out_path) / item["name"]
+            file_path = item["path"]
+            with open(out, 'wb') as f:
+                if not out.is_file() or overwrite:
+                    with rate_limiter:
+                        project.files.raw(file_path=str(file_path), ref=branch, streamed=True, action=f.write)
+                else:
+                    warnings.warn("File already exists. Use overwrite parameter to overwrite file.")
     except Exception as e:
         print("Error:", e)
 
@@ -226,10 +246,13 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
 
 
 def add_analysis(dest, analysis_name,
-                 dirs=['figures', 'data', 'notebooks', 'logs'],
+                 dirs=['figures', 'data', 'logs'],
                  starts_with=1, **kwargs):
     """
-    Create and add a new analysis
+    Create and add a new analysis/run
+
+    Note: Only works for Notebooks until number 99.
+    Needs to be adjusted if we exceed 89 notebooks.
 
     Parameter
     ---------
@@ -237,8 +260,8 @@ def add_analysis(dest, analysis_name,
         Path to experiment
     analysis_name : str
         Name of the new analysis run
-    dirs : list, default ['figures', 'data', 'notebooks', 'logs']
-        Internal folders to create
+    dirs : list, default ['figures', 'data', 'logs']
+        Internal folders to create. Notebook directory is required.
     start_with : int, default 1
         Notebook the analysis will start with
     kwargs : kwargs
@@ -255,6 +278,40 @@ def add_analysis(dest, analysis_name,
                                 + "directory or if it was setup correctly.")
     run_path = analysis_path / analysis_name
 
-    setup_experiment(run_path, dirs=dirs)
+    # Setup run directorys
+    setup_experiment(run_path, dirs=dirs + ["notebooks"])
+    # Build notebook regex
+    regex = build_notebooks_regex(starts_with)
+    print(regex)
+    # Download notebooks
+    print("Downloading notebooks..")
+    gitlab_download("notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
 
-    #ToDo Download Notebook to notebook directory
+
+def build_notebooks_regex(starts_with):
+    """
+    Build regex for notebooks starting with given number.
+    Note: Only works up to 89. If we reach notebook 100 this function
+          needs to be adjusted.
+
+    @ToDo Move to utilities.py when cleaned up
+
+    Parameters
+    ----------
+    starts_with, int
+        Starting number
+
+    Returns
+    -------
+    notebook regex
+    """
+    if starts_with < 1:
+        raise ValueError("starts_with needs to be at least 1")
+    elif 1 <= starts_with < 10:
+        regex = f"[0]*[{starts_with}-9].*.ipynb"
+    elif 10 <= starts_with < 90:
+        regex = f"[0]*([{str(starts_with)[0]}][{str(starts_with)[1]}-9]|[{str(starts_with+10)[0]}-9][0-9]).*.ipynb"
+    else:
+        # Needs change if we ever reach 100+ Notebooks
+        raise ValueError("starts_with needs to be lower than 100")
+    return regex
