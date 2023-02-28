@@ -126,7 +126,7 @@ def test_setup_experiment():
     creator.setup_experiment("./tmp/exp1", dirs=dirs)
     f = glob("./tmp/exp1/*/")
     shutil.rmtree("./tmp/")
-    assert [Path(file).name for file in f] == dirs
+    assert set([Path(file).name for file in f]) == set(dirs)
 
 
 def test_add_analysis():
