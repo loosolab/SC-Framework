@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import time
 import warnings
+from scipy.sparse import issparse
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -625,7 +626,8 @@ def saving_anndata(anndata, current_notebook):
     print(f"Your new anndata object is saved here: {adata_output}")
 
 
-def pseudobulk_table(adata, groupby, how="mean", layer=None):
+def pseudobulk_table(adata, groupby, how="mean", layer=None,
+                     percentile_range=(0, 100), chunk_size=1000):
     """
     Get a pseudobulk table of values per cluster.
 
@@ -637,6 +639,11 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None):
         Column name in adata.obs from which the pseudobulks are created.
     how : str, default "mean"
         How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
+    percentile_range : tuple of 2 values, default (0,100)
+        The percentile of cells used to calculate the mean/sum for each feature.
+        Is used to limit the effect of individual cell outliers, e.g. by setting (0,95) to exclude high values in the calculation.
+    chunk_size : int, default 1000
+        If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
 
     Returns
     -------
@@ -646,6 +653,9 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None):
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
+    if isinstance(percentile_range, tuple) is False:
+        raise TypeError("percentile_range has to be a tuple of two values.")
+
     if layer is not None:
         mat = adata.layers[layer]
     else:
@@ -653,12 +663,43 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None):
 
     # Fetch the mean/ sum counts across each category in cluster_by
     res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
-    for clust in groupby_categories:
+    for column_i, clust in enumerate(groupby_categories):
 
-        if how == "mean":
-            res[clust] = mat[adata.obs[groupby].isin([clust]), :].mean(0).A1
-        elif how == "sum":
-            res[clust] = mat[adata.obs[groupby].isin([clust]), :].sum(0).A1
+        cluster_values = mat[adata.obs[groupby].isin([clust]), :]
+
+        if percentile_range == (0, 100):  # uses all cells
+            if how == "mean":
+                vals = cluster_values.mean(0)
+                res[clust] = vals.A1 if issparse(cluster_values) else vals
+            elif how == "sum":
+                vals = cluster_values.sum(0)
+                res[clust] = vals.A1 if issparse(cluster_values) else vals
+        else:
+
+            n_features = cluster_values.shape[1]
+
+            # Calculate mean individually per gene/feature
+            for i in range(0, n_features, chunk_size):
+
+                chunk_values = cluster_values[:, i:i + chunk_size]
+                chunk_values = chunk_values.A if issparse(chunk_values) else chunk_values
+                chunk_values = chunk_values.astype(float)
+
+                # Calculate the lower and upper limits for each feature
+                limits = np.percentile(chunk_values, percentile_range, axis=0, method="lower")
+                lower_limits = limits[0]
+                upper_limits = limits[1]
+
+                # Set values outside the limits to nan and calculate mean/sum
+                bool_filter = (chunk_values < lower_limits) | (chunk_values > upper_limits)
+                chunk_values[bool_filter] = np.nan
+
+                if how == "mean":
+                    vals = np.nanmean(chunk_values, axis=0)
+                elif how == "sum":
+                    vals = np.nansum(chunk_values, axis=0)
+
+                res.iloc[i:i + chunk_size, column_i] = vals
 
     return res
 

@@ -1,7 +1,12 @@
 # git filter to strip notebook output
 [filter "strip-notebook-output"]
-    clean = "jupyter nbconvert --ClearOutputPreprocessor.enabled=True --ClearMetadataPreprocessor.enabled=True --to=notebook --stdin --stdout --log-level=ERROR"
+	clean = "jupyter nbconvert --ClearOutputPreprocessor.enabled=True \
+							   --ClearMetadataPreprocessor.enabled=True \
+							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=tags \
+							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=editable \
+							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=hide_input \
+							   --to=notebook --stdin --stdout --log-level=ERROR "
 
 # ignore filemode changes
 [core]
-    filemode = false
+	filemode = false
