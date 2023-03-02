@@ -10,8 +10,8 @@ import sctoolbox.utilities as utils
 def merge_anndata(anndata_dict, join="inner"):
     """
     Merge two h5ad files for dual cellxgene deplyoment.
-    Depending on the input datasets this function needs a tremendous amout of RAM,
-    e.g. merging two anndata
+    Important: Depending on the size of the anndata objects the function takes
+    around 90 to 300 GB of RAM!
 
     Parameters
     ----------
