@@ -29,7 +29,7 @@ def merge_anndata(anndata_dict, join="inner"):
     merged anndata.AnnData object
     """
     if join == "outer":
-        warnings.warn("'outer' join is currently disabled. SEt to inner merge")
+        warnings.warn("'outer' join is currently disabled. Set to inner merge")
         join = "inner"
 
     if join not in ["inner", "outer"]:
