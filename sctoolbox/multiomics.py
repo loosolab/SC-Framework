@@ -1,4 +1,3 @@
-import copy
 import anndata as ad
 import pandas as pd
 from functools import reduce
@@ -11,7 +10,10 @@ def merge_anndata(anndata_dict, join="inner"):
     """
     Merge two h5ad files for dual cellxgene deplyoment.
     Important: Depending on the size of the anndata objects the function takes
-    around 90 to 300 GB of RAM!
+    around 60 to 300 GB of RAM!
+
+    To save RAM and runtime the function generates a minimal anndata object.
+    Only .X, .var, .obs and .obsm are kept. Layers, .varm, etc is removed.
 
     Parameters
     ----------
@@ -35,9 +37,20 @@ def merge_anndata(anndata_dict, join="inner"):
     if join not in ["inner", "outer"]:
         raise ValueError(f"Invalid join value: {join}. Set to 'inner' or 'outer'")
 
-    # Copy dict to prevent changes in original anndata objects
-    anndata_dict = copy.deepcopy(anndata_dict)
+    # Generate minimal anndata objects
+    for label, adata in anndata_dict.items():
 
+        if not adata.obs.index.is_unique:
+            warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
+            adata.obs_names_make_unique()
+
+        if not adata.var.index.is_unique:
+            warnings.warn(f"Var index of {label} dataset is not unqiue. Running .var_names_make_unique()..")
+            adata.var_names_make_unique()
+
+        anndata_dict[label] = ad.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=adata.obsm)
+
+    # Get cell barcode (obs) intersection
     all_obs_indices = [single_adata.obs.index for single_adata in list(anndata_dict.values())]
     obs_intersection = set.intersection(*map(set, all_obs_indices))
     obs_intersection = sorted(list(obs_intersection))
@@ -47,24 +60,6 @@ def merge_anndata(anndata_dict, join="inner"):
 
     # Add prefix to obsm dict keys, var index and obs columns
     for label, adata in anndata_dict.items():
-
-        if adata.layers:
-            warnings.warn(f"Multiple layers affect the merging. Deleting layers of {label} dataset..")
-            adata.layers = {}
-
-        if adata.varm:
-            warnings.warn(f"varm can affect the merging. Deleting .varm of {label} dataset..")
-            adata.varm = {}
-
-        if not adata.obs.index.is_unique:
-            warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
-            adata.obs_names_make_unique()
-            anndata_dict[label] = adata
-
-        if not adata.var.index.is_unique:
-            warnings.warn(f"Var index of {label} dataset is not unqiue. Running .var_names_make_unique()..")
-            adata.var_names_make_unique()
-            anndata_dict[label] = adata
 
         # prefix to obsm
         adata.obsm = {f"X_{label}_{key.removeprefix('X_')}": val for key, val in adata.obsm.items()}
