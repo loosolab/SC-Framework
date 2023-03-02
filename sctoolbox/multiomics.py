@@ -39,7 +39,7 @@ def merge_anndata(anndata_dict, join="inner"):
     anndata_dict = copy.deepcopy(anndata_dict)
 
     all_obs_indices = [single_adata.obs.index for single_adata in list(anndata_dict.values())]
-    obs_intersection = set.intersection(*map(set,all_obs_indices))
+    obs_intersection = set.intersection(*map(set, all_obs_indices))
     obs_intersection = sorted(list(obs_intersection))
 
     obs_list = list()
@@ -99,7 +99,7 @@ def merge_anndata(anndata_dict, join="inner"):
     utils.fill_na(merged_X_var.var)
 
     if len(merged_X_var.var) <= 50:
-        warnings.warn("The adata object contains less than 51 genes/var entries. " +
-                      "CellxGene will not work. Please add dummy genes to the var table.")
+        warnings.warn("The adata object contains less than 51 genes/var entries. "
+                      + "CellxGene will not work. Please add dummy genes to the var table.")
 
     return merged_X_var
