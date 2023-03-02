@@ -9,27 +9,20 @@ import sctoolbox.utilities as utils
 
 def merge_anndata(anndata_dict, join="inner"):
     """
-    Merge multiple anndata objects to enable an easy comparsion via cellxgene.
-    This function is designed for multiomics data. All input anndata objects need to have
-    identical cell barcodes stored in the obs index or at least have some barcodes overlapping.
-    The genes and column names are labeled based on their source anndata object.
-    This allows for an easy comparison between the different -omics datasets.
-
-    ######################################################################################
-    WARNIG: After merging the anndata object can only be used for cellxgene deplyoments!!!
-            The merged anndata object cannot be used for further analysis!!!
-    ######################################################################################
+    Merge two h5ad files for dual cellxgene deplyoment.
+    Depending on the input datasets this function needs a tremendous amout of RAM,
+    e.g. merging two anndata
 
     Parameters
     ----------
     anndata_dict : dict
         dictionary with labels as keys and anndata objects as values
-    join : string, default 'inner'
+    join : string, deafult 'inner'
         set how to join cells of the adata objects: ['inner', 'outer']
         This only affects the cells since the var/gene section is simply added
         'inner': only keep overlapping cells
         'outer': keep all cells. This will add placeholder cells/dots to plots
-                 NOT IMPLEMENTED
+                 currently disabled
 
     Returns
     -------
@@ -46,7 +39,7 @@ def merge_anndata(anndata_dict, join="inner"):
     anndata_dict = copy.deepcopy(anndata_dict)
 
     all_obs_indices = [single_adata.obs.index for single_adata in list(anndata_dict.values())]
-    obs_intersection = set.intersection(*map(set, all_obs_indices))
+    obs_intersection = set.intersection(*map(set,all_obs_indices))
     obs_intersection = sorted(list(obs_intersection))
 
     obs_list = list()
@@ -54,6 +47,25 @@ def merge_anndata(anndata_dict, join="inner"):
 
     # Add prefix to obsm dict keys, var index and obs columns
     for label, adata in anndata_dict.items():
+
+        if adata.layers:
+            warnings.warn(f"Multiple layers affect the merging. Deleting layers of {label} dataset..")
+            adata.layers = {}
+
+        if adata.varm:
+            warnings.warn(f"varm can affect the merging. Deleting .varm of {label} dataset..")
+            adata.varm = {}
+
+        if not adata.obs.index.is_unique:
+            warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
+            adata.obs_names_make_unique()
+            anndata_dict[label] = adata
+
+        if not adata.var.index.is_unique:
+            warnings.warn(f"Var index of {label} dataset is not unqiue. Running .var_names_make_unique()..")
+            adata.var_names_make_unique()
+            anndata_dict[label] = adata
+
         # prefix to obsm
         adata.obsm = {f"X_{label}_{key.removeprefix('X_')}": val for key, val in adata.obsm.items()}
         # prefix to var index
@@ -70,7 +82,6 @@ def merge_anndata(anndata_dict, join="inner"):
 
         # save new adata to dict
         anndata_dict[label] = adata
-
         # save obs in list
         obs_list.append(adata.obs)
 
@@ -83,13 +94,12 @@ def merge_anndata(anndata_dict, join="inner"):
                                                            left_index=True,
                                                            right_index=True), obs_list)
     merged_X_var.obsm = obsm_dict
+
     utils.fill_na(merged_X_var.obs)
     utils.fill_na(merged_X_var.var)
 
-    # Keep until fixed
-    # https://github.com/chanzuckerberg/cellxgene/issues/2597
     if len(merged_X_var.var) <= 50:
-        warnings.warn("The adata object contains less than 51 genes/var entries. "
-                      + "CellxGene will not work. Please add dummy genes to the var table.")
+        warnings.warn("The adata object contains less than 51 genes/var entries. " +
+                      "CellxGene will not work. Please add dummy genes to the var table.")
 
     return merged_X_var
