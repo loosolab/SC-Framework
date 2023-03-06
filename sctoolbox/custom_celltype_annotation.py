@@ -85,7 +85,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
             # Write one file per cluster containing gene names and ranked gene scores
             print("Writing one file per cluster containing gene names and ranked gene scores.")
             for cluster in adata.obs[f'{cluster_column}'].unique():
-                with open(f'{cluster_path}/{sample}.{cluster}', 'w') as file:
+                with open(f'{cluster_path}/{sample}.cluster_{cluster}', 'w') as file:
                     for index, gene in enumerate(genes_adata.uns[f'{rank_genes_column}']['names'][cluster]):
                         score = genes_adata.uns[f'{rank_genes_column}']['scores'][cluster][index]
                         file.write(f'{gene.split("_")[0]}\t{score}\n')
@@ -382,7 +382,7 @@ def get_annotated_clusters(cluster_path):
     annotated_clusters = {}
     files = os.listdir(cluster_path)
     for file in [x for x in files if not x.startswith(".")]:
-        cname = file.split(".")[1]
+        cname = file.split(".cluster_")[1]
         annotated_dict = {}
         with open(cluster_path + file) as cfile:
             annotated_dict[cname] = []
