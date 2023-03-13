@@ -867,7 +867,7 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
     for nan_col in df.columns[df.isna().any()]:
         col_type = df[nan_col].dtype.name
         if col_type == "category":
-            df[nan_col].cat.add_categories(replace[col_type], inplace=True)
+            df[nan_col] = df[nan_col].cat.add_categories(replace[col_type])
             df[nan_col].fillna(replace[col_type], inplace=True)
         elif col_type.startswith("float"):
             df[nan_col].fillna(replace["float"], inplace=True)
