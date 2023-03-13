@@ -4,6 +4,7 @@
 							   --ClearMetadataPreprocessor.enabled=True \
 							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=tags \
 							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=editable \
+							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=init_cell \
 							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=hide_input \
 							   --to=notebook --stdin --stdout --log-level=ERROR "
 
