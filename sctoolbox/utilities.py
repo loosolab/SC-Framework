@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import time
 import warnings
+from scipy.stats import zscore
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -866,3 +867,30 @@ def add_expr_to_obs(adata, gene):
     else:
         idx = np.argwhere(boolean)[0][0]
         adata.obs[gene] = adata.X[:, idx].todense().A1
+
+
+def table_zscore(table, how="row"):
+    """
+    Z-score a table.
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        Table to z-score.
+    how : str, default "row"
+        Whether to z-score rows or columns.
+
+    Returns
+    -------
+    pandas.DataFrame :
+        Z-scored table.
+    """
+
+    if how == "row":
+        counts_z = table.T.apply(zscore).T
+    elif how == "col":
+        counts_z = table.apply(zscore)
+    else:
+        raise Exception(f"'{how}' is invalid for 'how' - it must be 'row' or 'col'.")
+
+    return counts_z

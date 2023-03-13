@@ -690,6 +690,46 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     return g
 
 
+def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
+    """ Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene
+
+    Parameters
+    ----------
+    adata : anndata.AnnData object
+        An annotated data matrix object containing counts in .X.
+    groupby : str
+        A column in .obs for grouping cells into groups on the x-axis
+    gene_list : list, optional
+        A list of genes to show expression for. Default: None (all genes)
+    save : str, optional
+        Save the figure to a file. Default: None (do not save)
+    figsize : tuple, optional
+        Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+
+    Returns
+    -------
+    g : seaborn.clustermap
+        The seaborn clustermap object
+    """
+
+    # Obtain pseudobulk
+    gene_table = sctoolbox.utilities.pseudobulk_table(adata, groupby)
+
+    # Subset to input gene list
+    if gene_list is not None:
+        gene_table = gene_table[gene_list]
+
+    # Z-score
+    gene_table = utils.table_zscore(gene_table)
+
+    # Plot heatmap
+    g = sns.heatmap(gene_table, figsize=figsize, xticklabels=True, yticklabels=True, cmap="RdBu_r", center=0)  # center=0, vmin=-2, vmax=2)
+
+    utils.save_figure(save)
+
+    return g
+
+
 #############################################################################
 #                          Quality control plotting                         #
 #############################################################################
@@ -1434,17 +1474,42 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
     return g
 
 
-def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
-    """ Plot an overview of marker genes and clustering """
+def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
+    """ Plot an overview of marker genes and clustering.
 
-    fig, axarr = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 2]})
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groupby : `str`
+        Key in `adata.obs` for which to plot the clustering.
+    marker_genes_dict : `dict`
+        Dictionary of marker genes to plot. Keys are the names of the groups and values are lists of marker genes.
+    show_umap : `bool`, optional (default: `True`)
+        Whether to show a UMAP plot on the left.
+    save : `str`, optional (default: `None`)
+        If given, save the figure to this path.
+    figsize : `tuple`, optional (default: `None`)
+        Size of the figure. If `None`, use default size.
+    """
 
-    # Plot UMAP colored by groupby on the left
-    sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
-    axarr[0].set_aspect('equal')
+    if show_umap:
+        figsize = (12, 6) if figsize is None else figsize
+        fig, axarr = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1, 2]})
+    else:
+        figsize = (6, 6) if figsize is None else figsize
+        fig, axarr = plt.subplots(1, 1, figsize=figsize)
+        axarr = [axarr]  # Make sure axarr can be indexed
+
+    i = 0
+    if show_umap:
+        # Plot UMAP colored by groupby on the left
+        sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
+        axarr[i].set_aspect('equal')
+        i += 1
 
     # Plot marker gene expression on the right
-    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[1])
+    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])
     ax["mainplot_ax"].set_ylabel(groupby)
     ax["mainplot_ax"].set_xticklabels(ax["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
 
