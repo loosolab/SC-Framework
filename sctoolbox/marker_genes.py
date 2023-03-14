@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import itertools
+from pathlib import Path
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -507,3 +508,53 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
 
     return cluster2celltype
+
+
+def score_genes(adata, gene_set, score_name, inplace=True, **kwargs):
+    """
+    Assign a score to each cell depending on the expression of a set of genes.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    gene_set : str or list
+        A list of genes or path to a file containing a list of genes. The file should have one gene per row.
+    score_name : str
+        Name of the column in obs table where the score will be added.
+    inplace : bool, default: True
+        Adds the new column to the original anndata object.
+
+    Returns
+    -----------
+    If inplace is False, return a copy of anndata object with the new column in the obs table.
+    """
+
+    allowed_types = ['.txt', '.csv', '.tsv']
+    # check if list is in a file
+    if isinstance(gene_set, str):
+        # check if type is allowed
+        if Path(gene_set).suffix not in allowed_types:
+            s1 = 'File type is not allowed! provide gene list in: '
+            s2 = ", ".join(allowed_types)
+            raise ValueError(s1 + s2)
+        # check if file exists
+        if os.path.exists(gene_set):
+            gene_list = [x.strip() for x in open(gene_set)]
+    # check if gene set is a list
+    elif isinstance(gene_set, list):
+        gene_list = gene_set
+    else:
+        raise ValueError('Please provide genes either as a list or txt file!')
+
+    # scale data
+    sdata = sc.pp.scale(adata, copy=True)
+
+    # Score the cells
+    if inplace:
+        sc.tl.score_genes(sdata, gene_list=gene_list, score_name=score_name)
+        adata.obs[score_name] = sdata.obs[score_name]
+    else:
+        adata = sc.tl.score_genes(sdata, gene_list=gene_list, score_name=score_name, copy=True)
+
+        return adata
