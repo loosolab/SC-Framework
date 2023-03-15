@@ -68,6 +68,7 @@ test coverage:
   script:
     - pip install pytest
     - pip install pytest-cov
+    - pip install rpy2
     - pip install .[all]
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
   artifacts:

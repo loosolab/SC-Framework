@@ -1,8 +1,9 @@
 import math
 import pandas as pd
-import episcanpy as epi
+# import episcanpy as epi
 import multiprocessing as mp
 import sctoolbox.bam
+import pysam
 
 
 def merge_bamfiles(bamfiles, output, labels=None, n_threads=4):
@@ -16,6 +17,7 @@ def merge_bamfiles(bamfiles, output, labels=None, n_threads=4):
     :return:
     """
     pass
+
 
 def mean_fragment_length(bam_obj):
     """
@@ -200,10 +202,10 @@ class Merge():
 
     def __init__(self, n_threads=8):
 
-        self.l = mp.Lock()
+        self.lock = mp.Lock()
         self.n_threads = n_threads
 
-    def merge_bamfiles(self, bamfiles, output, labels=None, tag="CB"):
+    def merge_bamfiles(self, bamfiles, output, labels=None, tag="CB", n_threads=8):
 
         # Check if labels are set if not set labels to counter
         if labels is None:
@@ -216,7 +218,7 @@ class Merge():
             raise ValueError("Number of bam files and labels must be equal")
 
         # Check if Barcode tag is present
-        n_reads = {}
+        # n_reads = {}
         for path in bamfiles:
             handle = sctoolbox.bam.open_bam(path, "rb", verbosity=0)
             # get single read from handle
@@ -245,7 +247,6 @@ class Merge():
         pool.join()
         print('Bam files merged')
 
-
     def add_SB_tag(self, samfile, output, label, tag="CB"):
         print('Looping')
         sentinel = True
@@ -262,11 +263,13 @@ class Merge():
                 read.set_tag("SB", SB_tag)
                 readls.append(read)
 
-            self.l.acquire()
+            self.lock.acquire()
             for read in readls:
                 output.write(read)
-            self.l.release()
+            self.lock.release()
         return True
+
+
 def add_SB_tag(samfile, output, label, tag="CB"):
 
     print('Looping')
