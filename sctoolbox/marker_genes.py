@@ -519,7 +519,8 @@ def score_genes(adata, gene_set, score_name, inplace=True, **kwargs):
     adata : anndata.AnnData
         Anndata object containing raw counts.
     gene_set : str or list
-        A list of genes or path to a file containing a list of genes. The file should have one gene per row.
+        A list of genes or path to a file containing a list of genes.
+        The txt file should have one gene per row.
     score_name : str
         Name of the column in obs table where the score will be added.
     inplace : bool, default: True
@@ -541,6 +542,8 @@ def score_genes(adata, gene_set, score_name, inplace=True, **kwargs):
         # check if file exists
         if os.path.exists(gene_set):
             gene_list = [x.strip() for x in open(gene_set)]
+        else:
+            raise FileNotFoundError('The list was not found!')
     # check if gene set is a list
     elif isinstance(gene_set, list):
         gene_list = gene_set
@@ -551,10 +554,8 @@ def score_genes(adata, gene_set, score_name, inplace=True, **kwargs):
     sdata = sc.pp.scale(adata, copy=True)
 
     # Score the cells
-    if inplace:
-        sc.tl.score_genes(sdata, gene_list=gene_list, score_name=score_name)
-        adata.obs[score_name] = sdata.obs[score_name]
-    else:
-        adata = sc.tl.score_genes(sdata, gene_list=gene_list, score_name=score_name, copy=True)
+    sc.tl.score_genes(sdata, gene_list=gene_list, score_name=score_name)
+    # add score to adata.obs
+    adata.obs[score_name] = sdata.obs[score_name]
 
-        return adata
+    return adata if not inplace else None
