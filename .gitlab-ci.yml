@@ -68,7 +68,8 @@ test coverage:
   script:
     - pip install pytest
     - pip install pytest-cov
-    - pip install rpy2
+    - pip install rpy2   # resolve dependencies for diffexpr
+    - pip install numpy  # resolve dependencies for diffexpr
     - pip install .[all]
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
   artifacts:
