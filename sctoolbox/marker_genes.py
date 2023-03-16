@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import itertools
+import warnings
+from anndata import ImplicitModificationWarning
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -238,7 +240,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
             expressed.columns = ["names", "n_expr"]
 
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-            group_tables[group]["in_group_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
+            group_tables[group][group + "_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
 
             # Fraction of cells for individual groups
             if out_group_fractions is True:
@@ -255,9 +257,15 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
             s = (adata[~adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0).A1
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_out_expr"]
-
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-            group_tables[group]["out_group_fraction"] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
+
+            # If there are only two groups, out_group_fraction -> name of the other group
+            if len(groups) == 2:
+                out_group_name = [g for g in groups if g != group][0] + "_fraction"
+            else:
+                out_group_name = "out_group_fraction"
+
+            group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 
             # Add additional columns to table
@@ -320,16 +328,27 @@ def run_rank_genes(adata, groupby,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
                    max_out_group_fraction=0.8):
-    """ Run scanpy rank_genes_groups and filter_rank_genes_groups """
+    """ Run scanpy rank_genes_groups and filter_rank_genes_groups. """
 
-    sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
+    # Check that adata is an AnnData object
+    # if not isinstance(adata, AnnData):
+    #     raise ValueError("adata must be an AnnData object.")
+
+    adata.uns['log1p'] = {'base': None}  # set log1p base to None to avoid error in rank_genes_groups
+
+    # Catch ImplicitModificationWarning from scanpy
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute*")
+        sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
+
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
                                    max_out_group_fraction=max_out_group_fraction)
 
-    # adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    # adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+    # Copy rank_genes_groups to rank_genes_<groupby>
+    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
+    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
@@ -507,3 +526,8 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
 
     return cluster2celltype
+
+
+# ----------------------------------------------------------------------------------------------- #
+# ----------------------------------- Plotting of marker genes ---------------------------------- #
+# ----------------------------------------------------------------------------------------------- #
