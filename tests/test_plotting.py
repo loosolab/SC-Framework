@@ -58,7 +58,7 @@ def test_plot_pca_variance(adata):
     ax = sctoolbox.plotting.plot_pca_variance(adata)
     ax_type = type(ax).__name__
 
-    assert ax_type == "AxesSubplot"
+    assert ax_type.startswith("Axes")
 
 
 def test_plot_pca_variance_fail(adata):
@@ -225,8 +225,9 @@ def test_group_expression_boxplot(adata):
     """ Test if group_expression_boxplot returns a plot """
     gene_list = adata.var_names.tolist()[:10]
     ax = sctoolbox.plotting.group_expression_boxplot(adata, gene_list, groupby="condition")
+    ax_type = type(ax).__name__
 
-    assert type(ax).__name__ == "AxesSubplot"
+    assert ax_type.startswith("Axes")  # depending on matplotlib version, it can be either AxesSubplot or Axes
 
 
 def test_boxplot(df):
@@ -234,7 +235,7 @@ def test_boxplot(df):
     ax = sctoolbox.plotting.boxplot(df)
     ax_type = type(ax).__name__
 
-    assert ax_type == "AxesSubplot"
+    assert ax_type.startswith("Axes")
 
 
 @pytest.mark.parametrize("color", ["ENSMUSG00000102693", "clustering", "qc_float"])
@@ -279,4 +280,4 @@ def test_grouped_violin(adata, x, y, groupby):
     ax = sctoolbox.plotting.grouped_violin(adata, x=x, y=y, groupby=groupby)
     ax_type = type(ax).__name__
 
-    assert ax_type == "AxesSubplot"
+    assert ax_type.startswith("Axes")
