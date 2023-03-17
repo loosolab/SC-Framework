@@ -1546,6 +1546,9 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
 
     axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
 
+    if not isinstance(title, list):
+        title = [title]
+
     if not isinstance(axarr, list):
         axarr = [axarr]
         color = [color]
@@ -1564,7 +1567,7 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
                 local_axes[colorbar_idx].set_title(color[i])
                 colorbar_count += 1
 
-        ax.set_title(title)
+        ax.set_title(title[i])
 
         # Remove all spines (axes lines)
         for spine in ax.spines.values():
