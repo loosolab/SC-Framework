@@ -1244,9 +1244,9 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 
         obs_table.reset_index(inplace=True)
         obs_table = obs_table.melt(id_vars=id_vars, value_vars=x,
-                                   var_name="gene", value_name="expression")
-        x_var = "gene"
-        y_var = "expression"
+                                   var_name="Gene", value_name="Expression")
+        x_var = "Gene"
+        y_var = "Expression"
 
     else:
         x_var = x[0]
@@ -1255,7 +1255,7 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
     # Plot expression from obs table
     _, ax = plt.subplots(figsize=figsize)
     if style == "violin":
-        sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, scale='width', **kwargs)
+        sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "boxplot":
         sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     else:
@@ -1599,3 +1599,9 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     utils.save_figure(save)
 
     return axarr
+
+
+def add_figure_title(axarr):
+    """ Add a figure title to the top of a multi-axes figure """
+
+    pass
