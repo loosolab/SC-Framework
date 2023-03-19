@@ -935,3 +935,27 @@ def table_zscore(table, how="row"):
         raise Exception(f"'{how}' is invalid for 'how' - it must be 'row' or 'col'.")
 
     return counts_z
+
+
+def shuffle_cells(adata):
+    """
+    Shuffle cells in an adata object to improve plotting.
+    Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object to shuffle cells in.
+
+    Returns
+    -------
+    anndata.AnnData :
+        Anndata object with shuffled cells.
+    """
+
+    from random import sample
+
+    shuffled_barcodes = sample(adata.obs.index.tolist(), len(adata))
+    adata = adata[shuffled_barcodes]
+
+    return adata
