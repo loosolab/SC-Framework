@@ -521,10 +521,10 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     species : str
         The species of data. Available species are: human, mouse, rat and zebrafish.
     s_genes : str or list
-        If no species is given or desired species is not supported, you can provide 
+        If no species is given or desired species is not supported, you can provide
         a list of genes for the S-phase or a txt file containing genes in each row.
     g2m_genes : str or list
-        If no species is given or desired species is not supported, you can provide 
+        If no species is given or desired species is not supported, you can provide
         a list of genes for the G2M-phase or a txt file containing genes in each row.
     inplace : bool, default: True
         if True, add new columns to the original anndata object.
@@ -576,7 +576,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         # get cellcylce genes lists
         path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
         if os.path.exists(path_cellcycle_genes):
-            cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None, sep="\t", names=['gene','phase']).set_index('gene')
+            cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None, sep="\t", names=['gene', 'phase']).set_index('gene')
             s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
             g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
 
