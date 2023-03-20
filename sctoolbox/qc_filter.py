@@ -381,6 +381,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
 
         if groupby is None:
             data = table[col].values
+            data[np.isnan(data)] = 0
             d = get_thresholds(data, plot=False)
             thresholds[col] = d
 
@@ -388,6 +389,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
             thresholds[col] = {}  # initialize to fill in per group
             for group, subtable in table.groupby(groupby):
                 data = subtable[col].values
+                data[np.isnan(data)] = 0
                 d = get_thresholds(data, plot=False)
                 thresholds[col][group] = d
 
