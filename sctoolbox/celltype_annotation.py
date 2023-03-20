@@ -69,9 +69,9 @@ def check_genes_databses(all_genes, gene_db, source):
     Parameters
     -----------
     all_genes : list
-        List of input genes withou duplicates
+        List of input genes without duplicates
     genes_db : list
-        list of marker genes
+        List of marker genes
     source : str
         Where genes_db originated from: wholeDB or user_db
     """
@@ -81,7 +81,9 @@ def check_genes_databses(all_genes, gene_db, source):
     if len(gene_overlap) == 0:
         raise ValueError(f"No match found between input genes and {source} database. Adjust 'gene_column' to control input genes and 'gene_symbol' to control the switch between name/id.")
     perc_overlap = round(len(gene_overlap) / len(all_genes) * 100, 1)
+    perc_db_coverage = round(len(gene_overlap) / len(gene_db) * 100, 1)
     print(f"{len(gene_overlap)}/{len(all_genes)} ({perc_overlap}%) input genes were found in {source} database (total genes in database: {len(gene_db)})")
+    print(f"{len(gene_overlap)}/{len(gene_db)} ({perc_db_coverage}%) of genes in {source} database were used for annotation")
 
 
 def run_scsa(adata,
