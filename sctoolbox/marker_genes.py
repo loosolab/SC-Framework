@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import itertools
+from pathlib import Path
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -507,3 +508,91 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
 
     return cluster2celltype
+
+
+def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
+    """
+    Assign a score and a phase to each cell depending on the expression of cell cycle genes.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    species : str
+        The species of data. Available species are: human, mouse, rat and zebrafish.
+    s_genes : str or list
+        If no species is given or desired species is not supported, you can provide 
+        a list of genes for the S-phase or a txt file containing genes in each row.
+    g2m_genes : str or list
+        If no species is given or desired species is not supported, you can provide 
+        a list of genes for the G2M-phase or a txt file containing genes in each row.
+    inplace : bool, default: True
+        if True, add new columns to the original anndata object.
+
+    Returns
+    -----------
+    If inplace is False, return a copy of anndata object with the new column in the obs table.
+    """
+
+    if not inplace:
+        adata = adata.copy()
+
+    # if two lists are give, use both and ignore species
+    if s_genes is not None and g2m_genes is not None:
+        species = None
+        allowed_types = ['.txt', '.csv', '.tsv']
+        # check if s_genes is a file
+        if isinstance(s_genes, str):
+            # check if type is allowed
+            if Path(s_genes).suffix not in allowed_types:
+                raise ValueError(f"File '{s_genes}' does not have the expected file ending: {allowed_types}")
+            # check if file exists
+            if os.path.exists(s_genes):
+                s_genes = utils.read_list_file(s_genes)
+            else:
+                raise FileNotFoundError(f'The list {s_genes} was not found!')
+        # check if g2m_genes is a file
+        if isinstance(g2m_genes, str):
+            # check if type is allowed
+            if Path(g2m_genes).suffix not in allowed_types:
+                raise ValueError(f"File '{g2m_genes}' does not have the expected file ending: {allowed_types}")
+            # check if file exists
+            if os.path.exists(g2m_genes):
+                g2m_genes = utils.read_list_file(g2m_genes)
+            else:
+                raise FileNotFoundError(f'The list {g2m_genes} was not found!')
+
+    # get gene list for species
+    elif species is not None:
+        species = species.lower()
+        genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
+
+        # check if given species is available
+        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
+        available_species = utils.clean_flanking_strings(available_files)
+        if species not in available_species:
+            raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
+
+        # get cellcylce genes lists
+        path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
+        if os.path.exists(path_cellcycle_genes):
+            cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None, sep="\t", names=['gene','phase']).set_index('gene')
+            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
+            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
+
+    else:
+        raise ValueError("Please provide either a supported species or lists of genes!")
+
+    # Scale the date before scoring
+    sdata = sc.pp.scale(adata, copy=True)
+
+    # Score the cells by s phase or g2m phase
+    sc.tl.score_genes_cell_cycle(sdata, s_genes=s_genes, g2m_genes=g2m_genes)
+
+    # add results to adata
+    adata.obs['S_score'] = sdata.obs['S_score']
+    adata.obs['G2M_score'] = sdata.obs['G2M_score']
+    adata.obs['phase'] = sdata.obs['phase']
+
+    if not inplace:
+        return adata
