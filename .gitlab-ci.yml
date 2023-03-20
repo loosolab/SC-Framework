@@ -68,12 +68,18 @@ test coverage:
   script:
     - pip install pytest
     - pip install pytest-cov
+    - pip install pytest-html
+    - pip install rpy2   # resolve dependencies for diffexpr
+    - pip install numpy  # resolve dependencies for diffexpr
+    - pip install pandas # resolve dependencies for diffexpr
     - pip install .[all]
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html
   artifacts:
     when: always
     paths:
       - pytest.xml
+      - pytest.html
+      - htmlcov
     reports:
       junit: pytest.xml
   rules:
@@ -81,6 +87,19 @@ test coverage:
       changes:
       - tests/*.py
       - sctoolbox/*.py
+    - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
+
+# test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
+notebook-output-check:
+  image: python:3.9.15
+  inherit:
+    default: false
+  stage: test
+  script:
+    - python --version
+    - python scripts/check_notebooks.py */*.ipynb
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 pages:
   stage: deploy

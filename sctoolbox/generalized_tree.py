@@ -31,15 +31,27 @@ class Tree:
 
         # 2. QC
         self._qc_dir = None
+        self._qc_anndata_dir = None
+        self._qc_anndata = None
+        self._qc_plots = None
 
         # 3. Norm, correction and comparison
         self._norm_correction_dir = None
+        self._norm_correction_anndata_dir = None
+        self._norm_correction_anndata = None
+        self._norm_correction_plots = None
 
         # 4. Clustering
         self._clustering_dir = None
+        self._clustering_anndata_dir = None
+        self._clustering_anndata = None
+        self._clustering_plots = None
 
         # 5. Annotation
         self._annotation_dir = None
+        self._annotation_anndata_dir = None
+        self._annotation_anndata = None
+        self._annotation_plots = None
 
         self._complete_report_dir = None
 
@@ -77,9 +89,24 @@ class Tree:
         self._assembled_anndata = os.path.join(self._assembled_anndata_dir, self._run + '.h5ad')
 
         self._qc_dir = os.path.join(self._processed_run_dir, 'qc')
+        self._qc_anndata_dir = os.path.join(self._qc_dir, 'anndata')
+        self._qc_anndata = os.path.join(self._qc_anndata_dir, self._run + '.h5ad')
+        self._qc_plots = os.path.join(self._qc_dir, 'plots')
+
         self._norm_correction_dir = os.path.join(self._processed_run_dir, 'norm_correction')
+        self._norm_correction_anndata_dir = os.path.join(self._norm_correction_dir, 'anndata')
+        self._norm_correction_anndata = os.path.join(self._norm_correction_anndata_dir, self._run + '.h5ad')
+        self._norm_correction_plots = os.path.join(self._norm_correction_dir, 'plots')
+
         self._clustering_dir = os.path.join(self._processed_run_dir, 'clustering')
+        self._clustering_anndata_dir = os.path.join(self._clustering_dir, 'anndata')
+        self._clustering_anndata = os.path.join(self._clustering_anndata_dir, self.run + '.h5ad')
+        self._clustering_plots = os.path.join(self._clustering_dir, 'plots')
+
         self._annotation_dir = os.path.join(self._processed_run_dir, 'annotation')
+        self._annotation_anndata_dir = os.path.join(self._annotation_dir, 'anndata')
+        self._annotation_anndata = os.path.join(self._annotation_anndata_dir, self._run + '.h5ad')
+        self._annotation_plots = os.path.join(self._annotation_dir, 'plots')
 
         # complete report dir
         self._complete_report_dir = os.path.join(self._processed_run_dir, 'complete_report')
@@ -89,9 +116,17 @@ class Tree:
         to_build.append(self.assemble_dir)
         to_build.append(self._assembled_anndata_dir)
         to_build.append(self._qc_dir)
+        to_build.append(self._qc_anndata_dir)
+        to_build.append(self._qc_plots)
         to_build.append(self._norm_correction_dir)
+        to_build.append(self._norm_correction_anndata_dir)
+        to_build.append(self._norm_correction_plots)
         to_build.append(self._clustering_dir)
+        to_build.append(self._clustering_anndata_dir)
+        to_build.append(self._clustering_plots)
         to_build.append(self._annotation_dir)
+        to_build.append(self._annotation_anndata_dir)
+        to_build.append(self._annotation_plots)
         to_build.append(self._complete_report_dir)
 
         self.makeDir(to_build)
@@ -166,12 +201,60 @@ class Tree:
         self._qc_dir = value
 
     @property
+    def qc_anndata_dir(self):
+        return self._qc_anndata_dir
+
+    @qc_anndata_dir.setter
+    def qc_anndata_dir(self, value):
+        self._qc_anndata_dir = value
+
+    @property
+    def qc_anndata(self):
+        return self._qc_anndata
+
+    @qc_anndata.setter
+    def qc_anndata(self, value):
+        self._qc_anndata = value
+
+    @property
+    def qc_plots(self):
+        return self._qc_plots
+
+    @qc_plots.setter
+    def qc_plots(self, value):
+        self._qc_plots = value
+
+    @property
     def norm_correction_dir(self):
         return self._norm_correction_dir
 
     @norm_correction_dir.setter
     def norm_correction_dir(self, value):
         self._norm_correction_dir = value
+
+    @property
+    def norm_correction_anndata_dir(self):
+        return self._norm_correction_anndata_dir
+
+    @norm_correction_anndata_dir.setter
+    def norm_correction_anndata_dir(self, value):
+        self._norm_correction_anndata_dir = value
+
+    @property
+    def norm_correction_anndata(self):
+        return self._norm_correction_anndata
+
+    @norm_correction_anndata.setter
+    def norm_correction_anndata(self, value):
+        self._norm_correction_anndata = value
+
+    @property
+    def norm_correction_plots(self):
+        return self._norm_correction_plots
+
+    @norm_correction_plots.setter
+    def norm_correction_plots(self, value):
+        self._norm_correction_plots = value
 
     @property
     def clustering_dir(self):
@@ -182,9 +265,57 @@ class Tree:
         self._clustering_dir = value
 
     @property
+    def clustering_anndata_dir(self):
+        return self._clustering_anndata_dir
+
+    @clustering_anndata_dir.setter
+    def clustering_anndata_dir(self, value):
+        self._clustering_anndata_dir = value
+
+    @property
+    def clustering_anndata(self):
+        return self._clustering_anndata
+
+    @clustering_anndata.setter
+    def clustering_anndata(self, value):
+        self._clustering_anndata = value
+
+    @property
+    def clustering_plots(self):
+        return self._clustering_plots
+
+    @clustering_plots.setter
+    def clustering_plots(self, value):
+        self._clustering_plots = value
+
+    @property
     def annotation_dir(self):
         return self._annotation_dir
 
     @annotation_dir.setter
     def annotation_dir(self, value):
-        self.annotation_dir = value
+        self._annotation_dir = value
+
+    @property
+    def annotation_anndata_dir(self):
+        return self._annotation_anndata_dir
+
+    @annotation_anndata_dir.setter
+    def annotation_anndata_dir(self, value):
+        self._annotation_anndata_dir = value
+
+    @property
+    def annotation_anndata(self):
+        return self._annotation_anndata
+
+    @annotation_anndata.setter
+    def annotation_anndata(self, value):
+        self._annotation_anndata = value
+
+    @property
+    def annotation_plots(self):
+        return self._annotation_plots
+
+    @annotation_plots.setter
+    def annotation_plots(self, value):
+        self._annotation_plots = value
