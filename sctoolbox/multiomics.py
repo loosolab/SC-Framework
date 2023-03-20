@@ -54,9 +54,9 @@ def merge_anndata(anndata_dict, join="inner"):
     obs_intersection = set.intersection(*map(set, all_obs_indices))
     obs_intersection = sorted(list(obs_intersection))
 
-        if not obs_intersection:
-            raise ValueError("No overlapping indices among the .obs tables. "
-                             + "The barcodes of the cells must be identical for all datasets")
+    if not obs_intersection:
+        raise ValueError("No overlapping indices among the .obs tables. "
+                         + "The barcodes of the cells must be identical for all datasets")
 
     obs_list = list()
     obsm_dict = dict()
