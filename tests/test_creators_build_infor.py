@@ -5,7 +5,7 @@ import pandas as pd
 from glob import glob
 from pathlib import Path
 import shutil
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, Mock
 
 
 @pytest.fixture
@@ -150,10 +150,10 @@ def test_gitlab_download():
     missing_file = Path("./tmp-test_add_analysis/FileX.py")
     result_file.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with patch("gitlab.Gitlab", return_value=mock):
-                gitlab_download("notebooks", file_regex=".*.ipynb", out_path = "./tmp-test_add_analysis/")
-                assert result_file.is_file()
-                assert not missing_file.is_file()
+        with patch("creator.gitlab_download", return_value=mock):
+            creator.gitlab_download("notebooks", file_regex=".*.ipynb", out_path="./tmp-test_add_analysis/")
+            assert result_file.is_file()
+            assert not missing_file.is_file()
     except Exception as e:
         print(e)
     finally:
