@@ -80,6 +80,10 @@ def recluster(adata, column, clusters,
     if key_added is None:
         key_added = f"{column}_recluster"
 
+    # Check that clusters is a list
+    if isinstance(clusters, str):
+        clusters = [clusters]
+
     # Check that method is valid
     if method == "leiden":
         cl_function = sc.tl.leiden
