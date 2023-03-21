@@ -937,7 +937,7 @@ def table_zscore(table, how="row"):
     return counts_z
 
 
-def shuffle_cells(adata):
+def shuffle_cells(adata, seed=42):
     """
     Shuffle cells in an adata object to improve plotting.
     Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
@@ -951,11 +951,17 @@ def shuffle_cells(adata):
     -------
     anndata.AnnData :
         Anndata object with shuffled cells.
+    seed : int, default 42
+        Seed for random number generator.
     """
 
-    from random import sample
+    import random
+    state = random.getstate()
 
-    shuffled_barcodes = sample(adata.obs.index.tolist(), len(adata))
+    random.seed(seed)
+    shuffled_barcodes = random.sample(adata.obs.index.tolist(), len(adata))
     adata = adata[shuffled_barcodes]
+
+    random.setstate(state)  # reset random state
 
     return adata
