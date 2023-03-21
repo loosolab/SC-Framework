@@ -575,7 +575,9 @@ def plot_3D_UMAP(adata, color, save):
 #                   Other overview plots for expression                     #
 #############################################################################
 
-def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
+def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None, 
+                    add_labels=False, 
+                    **kwargs):
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -587,10 +589,16 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
         Name of the column in adata.obs to group by on the x axis.
     groupby : str, default None
         Name of the column in adata.obs to created stacked bars on the y axis. If None, the bars are not split.
+    stacked : bool, default True
+        Whether to stack the bars or not.
     save : str, default None
         Path to save the plot. If None, the plot is not saved.
     figsize : tuple, default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
+    add_labels : bool, default False
+        Whether to add labels to the bars giving the number/percentage of cells.
+    **kwargs
+        Additional arguments passed to pandas.DataFrame.plot.bar.
     """
 
     # Get cell counts for groups or all
@@ -621,18 +629,42 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
         _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
         axarr = [axarr]
 
-    counts_wide.plot.bar(stacked=True, ax=axarr[0], legend=False)
+    counts_wide.plot.bar(stacked=stacked, ax=axarr[0], legend=False, **kwargs)
     axarr[0].set_title("Number of cells")
     axarr[0].set_xticklabels(axarr[0].get_xticklabels(), rotation=45, ha="right")
     axarr[0].grid(False)
 
     if groupby is not None:
-        counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
+        counts_wide_percent.plot.bar(stacked=stacked, ax=axarr[1], **kwargs)
         axarr[1].set_title("Percentage of cells")
         axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
         axarr[1].grid(False)
 
-        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))  # Set location of legend
+        # Set location of legend
+        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1), frameon=False,
+                        handlelength=1, handleheight=1  # make legend markers square
+                        )
+
+        # Draw line at 100% if values are stacked
+        if stacked is True:
+            axarr[1].axhline(100, color='black', linestyle='--', linewidth=0.5, zorder=0)
+
+    # Add labels to bars
+    if add_labels:
+        for i, ax in enumerate(axarr):
+            for c in ax.containers:
+                labels = [v.get_height() if v.get_height() > 0 else '' for v in c]  # no label if segment is 0
+                if i == 0:
+                    labels = [str(int(v)) for v in labels]  # convert to int
+                else:
+                    labels = ["%.1f" % v + "%" for v in labels]  # round and add % sign
+                    labels = [label.replace(".0", "") for label in labels]  # remove .0 from 100.0%
+                ax.bar_label(c, labels=labels, label_type='center')
+
+    # Remove spines
+    for ax in axarr:
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
 
     save_figure(save)
 
@@ -1546,7 +1578,7 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
 
     axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
 
-    if not isinstance(title, list):
+    if title is not None and not isinstance(title, list):
         title = [title]
 
     if not isinstance(axarr, list):
@@ -1567,7 +1599,10 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
                 local_axes[colorbar_idx].set_title(color[i])
                 colorbar_count += 1
 
-        ax.set_title(title[i])
+        # Remove automatic title
+        ax.set_title("")
+        if title is not None:
+            ax.set_title(title[i])
 
         # Remove all spines (axes lines)
         for spine in ax.spines.values():
@@ -1604,7 +1639,42 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     return axarr
 
 
-def add_figure_title(axarr):
-    """ Add a figure title to the top of a multi-axes figure """
+def add_figure_title(axarr, title, y=1.3, fontsize=16):
+    """
+    Add a figure title to the top of a multi-axes figure.
 
-    pass
+    Parameters
+    ----------
+    axarr : `list` of `matplotlib.axes.Axes`
+        List of axes to add the title to.
+    title : `str`
+        Title to add at the top of plot.
+    y : `float`, optional (default: `1.3`)
+        Vertical position of the title in relation to the content. Larger number moves the title further up.
+    fontsize : `int`, optional (default: `16`)
+        Font size of the title.
+
+    Returns
+    -------
+    None - adds a title to the figure directly.
+    """
+
+    # Get figure
+    fig = plt.gcf()
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+
+    # Get bounding box of axes in relation to first axes
+    trans_data_inv = axarr[0].transData.inverted()  # from display to data
+    bbox_list = [ax.get_window_extent(renderer=renderer).transformed(trans_data_inv) for ax in axarr]
+
+    # FInx y/x positions based on bboxes
+    ty = np.max([bbox.y1 for bbox in bbox_list])
+    ty *= y
+
+    xmin = np.min([bbox.x0 for bbox in bbox_list])
+    xmax = np.max([bbox.x1 for bbox in bbox_list])
+    tx = np.mean([xmin, xmax])
+
+    # Add text
+    _ = axarr[0].text(tx, ty, title, va="bottom", ha="center", fontsize=fontsize)
