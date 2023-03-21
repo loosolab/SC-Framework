@@ -326,11 +326,15 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
         # scanorama expect the batch key in a sorted format
         # therefore anndata.obs should be sorted based on batch column before this method.
+        original_order = adata.obs.index
         adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
 
         sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
         sc.pp.neighbors(adata)
+
+        # sort the adata back to the original order
+        adata = adata[original_order]
 
     elif method == "combat":
 
