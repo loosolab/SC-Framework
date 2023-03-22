@@ -30,7 +30,8 @@ author = 'Loosolab'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
+extensions = ['matplotlib.sphinxext.plot_directive',
+              'sphinx.ext.autodoc',
               'sphinx.ext.autosummary',
               'sphinx.ext.napoleon',
               'sphinx.ext.viewcode',
@@ -50,20 +51,20 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-#Mock modules imported within sctoolbox - prevents failure of documentation build
-autodoc_mock_imports = ['scanpy', 'uropa', 'anndata', 'numpy', 'matplotlib', 'pandas', 'glob', 'scipy', 'sklearn', 'seaborn', 
-                        'qnorm', 'pylab', 'episcanpy']
+# Mock modules imported within sctoolbox - prevents failures of documentation build
+# modules are needed to build the example figures in the documentation, so they should not be mocked
+autodoc_mock_imports = []  # 'uropa', 'anndata', 'numpy', 'matplotlib',
+                           # 'glob', 'sklearn', 'seaborn',
+                           # 'qnorm', 'pylab', 'episcanpy']
 
-#--- Create nblink files for notebooks ----------------------------------------
+# --- Create nblink files for notebooks ----------------------------------------
 
-# -- Create nblink files  -------------------------------------------------
-
-#Remove all previous .nblink files
+# Remove all previous .nblink files
 links = glob.glob("notebooks/*.nblink")
-for l in links:
-    os.remove(l) 
+for link in links:
+    os.remove(link)
 
-#Create nblinks for current notebooks
+# Create nblinks for current notebooks
 notebooks = glob.glob("../../notebooks/*.ipynb")
 for f in notebooks:
     f_name = os.path.basename(f).replace(".ipynb", "")
@@ -74,12 +75,22 @@ for f in notebooks:
 
 nbsphinx_execute = 'never'
 
+# -- Options for automatic plots in docs -------------------------------------
+
+plot_include_source = True
+plot_html_show_source_link = False
+plot_formats = [("png", 90)]
+plot_html_show_formats = False
+
+plot_rcparams = {'savefig.bbox': 'tight'}  # make sure plots are not cut off in the docs
+plot_apply_rcparams = True                 # if context option is used
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-#html_theme = 'alabaster'
+# html_theme = 'alabaster'
 html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
