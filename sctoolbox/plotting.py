@@ -1033,8 +1033,9 @@ def anndata_overview(adatas,
             # Iterate over adatas to find all possible categories for 'color'
             categories = []
             for adata in adatas.values():
-                if adata.obs[color].dtype.name == "category":
-                    categories += list(adata.obs[color].cat.categories)
+                if color in adata.obs.columns:  # color can also be an index in var
+                    if adata.obs[color].dtype.name == "category":
+                        categories += list(adata.obs[color].cat.categories)
             categories = sorted(list(set(categories)))
 
             # Create color palette equal for all columns
