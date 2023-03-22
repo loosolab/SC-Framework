@@ -1,5 +1,26 @@
 """
 Modules for plotting single cell data
+
+
+Loading the module
+-------------------
+.. plot ::
+    :context: close-figs
+
+    import sctoolbox.plotting as pl
+
+
+Loading example data
+--------------------
+
+.. plot ::
+    :context: close-figs
+
+    import numpy as np
+    import scanpy as sc
+
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 """
 
 from math import ceil
@@ -128,6 +149,15 @@ def search_umap_parameters(adata,
         Number of threads to use for UMAP calculation. Default: 4.
     save : str
         Path to save the figure to. Default: None.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
+                                         spread_range=(2.0, 3.0, 0.5),
+                                         metacol="bulk_labels")
     """
 
     adata = sctoolbox.analyser.get_minimal_adata(adata)  # remove data to save memory
@@ -591,6 +621,13 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
         Path to save the plot. If None, the plot is not saved.
     figsize : tuple, default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
@@ -1509,6 +1546,13 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
         Filename to save the figure.
     kwargs : dict
         Additional arguments passed to `sc.pl.umap`.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.umap_pub(adata, color="louvain", title="Louvain clusters")
     """
 
     axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
