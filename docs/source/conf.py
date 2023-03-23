@@ -60,7 +60,7 @@ autodoc_mock_imports = []  # 'uropa', 'anndata', 'numpy', 'matplotlib',
 # --- Create nblink files for notebooks ----------------------------------------
 
 # Remove all previous .nblink files
-links = glob.glob("notebooks/*.nblink")
+links = glob.glob("*notebooks/*.nblink")
 for link in links:
     os.remove(link)
 
