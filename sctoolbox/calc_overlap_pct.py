@@ -72,6 +72,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False):
         print("Sorting BAM file...")
         pysam.sort("-o", bam_sorted, bam)
         bam = bam_sorted
+        pysam.index(bam)
 
     # check for bam index file
     if not os.path.exists(bam + ".bai"):
@@ -297,7 +298,8 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
     #
     mp_calc_pct = MPOverlapPct()
-    adata = mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
+    mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
+
     #
     print('Adding results to adata object...')
 

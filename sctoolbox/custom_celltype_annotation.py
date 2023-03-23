@@ -60,14 +60,14 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
             if os.path.exists(folder):
                 print(f"Warning: The path {folder}/ already exists!\nAll files will be overritten.")
                 go_on = False
-        
+
         if not go_on:
             go_on = input("Do you want to continue? Enter yes or no: ")
             go_on = True if go_on == "yes" else False
 
             if not go_on:
                 print("Cell type annotation has been aborted.")
-                
+
                 return
 
         print(f"Output folder: {ct_path}/", "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}/",

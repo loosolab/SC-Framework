@@ -82,4 +82,4 @@ def test_insertsize_plotting(adata):
     ax = sctoolbox.atac.plot_insertsize(adata)
 
     ax_type = type(ax).__name__
-    assert ax_type == "AxesSubplot"
+    assert ax_type.startswith("Axes")
