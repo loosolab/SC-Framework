@@ -65,12 +65,16 @@ for link in links:
     os.remove(link)
 
 # Create nblinks for current notebooks
-notebooks = glob.glob("../../notebooks/*.ipynb")
+notebooks = glob.glob("../../*notebooks/*.ipynb")  # captures both rna-notebooks, atac-notebooks etc.
 for f in notebooks:
+
+    notebook_folder = f.split("/")[-2] + "/"
+    os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
+
     f_name = os.path.basename(f).replace(".ipynb", "")
 
-    d = {"path": "../" + f} 
-    with open("notebooks/" + f_name + ".nblink", 'w') as fp:
+    d = {"path": "../" + f}
+    with open(notebook_folder + f_name + ".nblink", 'w') as fp:
         json.dump(d, fp)
 
 nbsphinx_execute = 'never'
