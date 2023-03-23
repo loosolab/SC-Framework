@@ -622,8 +622,13 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
     figsize : tuple, default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
 
-    Example
+    Examples
     --------
+    .. plot::
+        :context: close-figs
+
+        pl.n_cells_barplot(adata, x="louvain")
+
     .. plot::
         :context: close-figs
 
@@ -976,6 +981,18 @@ def anndata_overview(adatas,
         Path to plot output file.
     dpi : number, default 300
         Dots per inch for output
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        adatas = {}  # dictionary of adata objects
+        adatas["standard"] = adata
+        adatas["parameter1"] = sc.tl.umap(adata, min_dist=1, copy=True)
+        adatas["parameter2"] = sc.tl.umap(adata, min_dist=2, copy=True)
+
+        pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
     if not isinstance(color_by, list):
         color_by = [color_by]
