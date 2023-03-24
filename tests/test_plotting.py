@@ -90,7 +90,7 @@ def test_search_dim_red_parameters_ranges(adata, range):
         sctoolbox.plotting.search_dim_red_parameters(adata,
                                                      method="umap",
                                                      metacol="condition",
-                                                     dist_range=range)
+                                                     min_dist_range=range)
 
     with pytest.raises(ValueError):
         sctoolbox.plotting.search_dim_red_parameters(adata,
