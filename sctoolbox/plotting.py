@@ -149,7 +149,7 @@ def search_umap_parameters(adata,
         Number of threads to use for UMAP calculation. Default: 4.
     save : str
         Path to save the figure to. Default: None.
-    
+
     Returns
     -------
     2D numpy array of axis objects
@@ -218,11 +218,9 @@ def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lear
     if method == "umap":
         range_1 = ["min_dist_range"] + list(min_dist_range)
         range_2 = ["spread_range"] + list(spread_range)
-        #n_comp = "n_components"
     elif method == "tsne":
         range_1 = ["perplexity_range"] + list(perplexity_range)
         range_2 = ["learning_rate_range"] + list(learning_rate_range)
-        #n_comp = "n_pcs"
     else:
         raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
 
