@@ -1,492 +1,1125 @@
-# Larger parts of the code used here come from the repository of the Applied Data Analysis module 2022/2023
 
-# Import libraries
+import sctoolbox.atac as atac
 import numpy as np
-import logging
 import pandas as pd
-import math
-import time
+import matplotlib.pyplot as plt
+import pywt
+import multiprocessing as mp
+from scipy.signal import find_peaks
 
 
-def add_chromatin_conditions(adata, fragment_file, bins=30, penalty=200):
+def moving_average(series, adapter=0, n=10):
     """
-    This method adds the chromatin conditions to the anndata object.
-    :param adata: anndata object.
-    :param fragment_file: path to the fragment file.
-    :param bins: resolution of the calculated distribution further calculations based on.
-    :param penalty: penalty for the score calculation.
+    Moving average filter to smooth out data. This implementation ensures that the smoothed data has no shift and
+    local maxima remain at the same position.
+
+    Parameters
+    ----------
+    series: array
+        Array of data to be smoothed
+    adapter: int
+        Number of zeros to be added to the beginning of the array (default=0)
+    n: int
+        Number of steps to the left and right of the current step to be averaged (default=10)
+
+    Returns: array
+        Smoothed array
+    -------
+
+    """
+    for i in range(adapter):
+        series = np.insert(series, 0, 0)
+
+    list(series)
+    smoothed = []
+    for i in range(len(series)):
+        sumPerStep = 0
+        if i > n and i <= (len(series) - n):
+            for j in range(-n, n):
+                sumPerStep += series[i + j]
+            smoothed.append(sumPerStep / (n * 2))
+        elif i > (len(series) - n):
+            smoothed.append(series[i])
+        elif i < n:
+            smoothed.append(series[i])
+
+    smoothed = np.array(smoothed)
+
+    return smoothed
+
+
+def multi_ma(series, n=2, window_size=10, n_threads=8):
+    """
+    Multiprocessing wrapper for moving average filter
+
+    Parameters
+    ----------
+    series: array
+        Array of data to be smoothed
+    n: int
+        Number of times to apply the filter
+    window_size: int
+        Number of steps to the left and right of the current step to be averaged (default=10)
+    n_threads: int
+        Number of threads to be used for multiprocessing (default=8)
+
+    Returns: array
+        Smoothed array
+    -------
+
+    """
+    # smooth
+    for i in range(n):
+
+        smooth_series = []
+        # init pool
+        pool = mp.Pool(n_threads)
+        jobs = []
+        # loop over chunks
+
+        for dist in series:
+            job = pool.apply_async(moving_average, args=(dist, 0, window_size))
+            jobs.append(job)
+        pool.close()
+
+        # collect results
+        for job in jobs:
+            smooth_series.append(job.get())
+
+        series = np.array(smooth_series)
+
+    return series
+
+
+def scale(series_arr):
+    """
+    Scales a series array to a range of 0 to 1. If the array is 2D, the scaling is done on axis=1.
+
+    Parameters
+    ----------
+    series_arr: array
+        Array of data to be scaled 1D or 2D
+
+    Returns: array
+        Scaled array
+    -------
+
+    """
+    if len(series_arr.shape) == 1:
+        max_v = np.max(series_arr)
+        scaled_arr = series_arr / max_v
+
+        return scaled_arr
+
+    elif len(series_arr.shape) == 2:
+        # Scale as sum off all features within cell match one
+        maxis = np.max(series_arr, axis=1)  # total features per cell
+        scaled_arr = np.divide(series_arr.T, maxis).T
+
+        return scaled_arr
+
+
+def calc_densities(features):
+    """
+    This function calculates the density of a feature array, for each feature.
+    The density is stored in a matrice of size (n_features, 1000).
+
+    Parameters
+    ----------
+    features: array
+        Array of features to calculate the density for
+
+    Returns: array
+        Array of densities
+    -------
+
+    """
+    # calculate densities for a binned grid X,y of size original bins / 1000
+    densities = []
+    for i in range(0, len(features[0])):
+        column = features[:, i]
+        scaled_1000 = np.around(column * 1000).astype(int)
+        gradient = np.bincount(scaled_1000, minlength=1001)
+        densities.append(gradient)
+    densities = np.array(densities)
+
+    return densities
+
+
+def call_peaks(data, n_threads=4, distance=50, width=10):
+    """
+    Multiprocessing wrapper for scipy.signal.find_peaks to process multiple arrays at once
+
+    Parameters
+    ----------
+    data: array
+        Array of arrays to find peaks in (2D)
+    n_threads: int
+        Number of threads to be used for multiprocessing (default=4)
+    distance: int
+        Minimum distance between peaks
+    width: int
+        Minimum width of peaks
+
+    Returns: array
+        Array of peaks (index of data)
+    -------
+
+    """
+    peaks = []
+
+    pool = mp.Pool(n_threads)
+    jobs = []
+
+    for array in data:
+        job = pool.apply_async(call_peaks_worker, args=(array, distance, width))
+        jobs.append(job)
+    pool.close()
+
+    # collect results
+    for job in jobs:
+        peak_list = job.get()
+        peaks.append(peak_list)
+
+    peaks = np.array(peaks)
+
+    return peaks
+
+
+def call_peaks_worker(array, distance=50, width=10):
+    """
+    Worker function for multiprocessing of scipy.signal.find_peaks
+    Parameters
+    ----------
+    array: array
+        Array of data to find peaks in
+    distance: int
+        Minimum distance between peaks
+    width: int
+        Minimum width of peaks
+
+    Returns: array
+        Array of peaks (index of data)
+    -------
+
+    """
+    peaks, _ = find_peaks(array, distance=distance, width=width)
+
+    return peaks
+
+
+def filter_peaks(peaks, reference, peaks_thr, operator='bigger'):
+    """
+    Filter peaks based on a reference array and a threshold. The operator can be 'bigger' or 'smaller'
+
+    Parameters
+    ----------
+    peaks: array
+        Array of peaks to be filtered
+    reference: array
+        Array of reference values (e.g. data were peaks were found)
+    peaks_thr: float
+        Threshold for filtering
+    operator: str
+        Operator for filtering (default='bigger')
+
+    Returns: array
+        Filtered array of peaks
+    -------
+
+    """
+    filtered_peaks = []
+
+    if operator == "bigger":
+        if len(reference.shape) == 1:
+            filtered_peaks = peaks[np.where(reference[peaks] >= peaks_thr)]
+        if len(reference.shape) == 2:
+            for i, index in enumerate(peaks):
+                filtered_peaks.append(index[np.where(reference[i, index] >= peaks_thr)])
+
+    if operator == "smaller":
+        if len(reference.shape) == 1:
+            filtered_peaks = peaks[np.where(reference[peaks] <= peaks_thr)]
+        if len(reference.shape) == 2:
+            for i, index in enumerate(peaks):
+                filtered_peaks.append(index[np.where(reference[i, index] <= peaks_thr)])
+
+    return filtered_peaks
+
+
+######################## Momentum ##############################
+
+def momentum_diff(data, remove=150, shift=80, smooth=True):
+    """
+    Calculates the momentum of a series by subtracting the original series with a shifted version of itself.
+
+    Parameters
+    ----------
+    data: array
+        Array of data to calculate the momentum for
+    shift: int
+        Number of samples to shift the series
+    remove: int
+        Number of samples to remove from the beginning of the series
+    smooth: bool
+        Smooth the momentum series (default=True)
+
+    Returns
+    -------
+
+    """
+    if len(data.shape) == 1:
+        shifted_data = data[remove:]
+        a = shifted_data[:-shift]
+        b = shifted_data[shift:]
+        momentum = a - b
+    if len(data.shape) == 2:
+        shifted_data = data[:, remove:]
+        a = shifted_data[:, :-shift]
+        b = shifted_data[:, shift:]
+        momentum = a - b
+
+    if smooth:
+        momentum = multi_ma(momentum, n=1, window_size=10, n_threads=8)
+
+    return momentum, a, b
+
+
+def score_by_momentum(data,
+                      shift=80,
+                      remove=100,
+                      sample_to_inspect=0,
+                      peaks_thr=0.03,
+                      period=160,
+                      penalty_scale=100,
+                      plotting=True):
+
+    """
+    Calculate momentum and score cells based on the number of peaks and the distance between them
+
+    Parameters
+    ----------
+    data: array
+        Array of data to calculate the momentum for
+    shift: int
+        Number of samples to shift the series
+    remove: int
+        Number of samples to remove from the beginning of the series
+    sample_to_inspect: int
+        Index of sample to inspect as reference
+    peaks_thr: float
+        Threshold for filtering peaks
+    period: int
+        expected peak period
+    penalty_scale: int
+        penalty factor for each peak that is not in the expected period
+    plotting: bool
+        Plot the momentum and the peaks of the reference sample (default=True)
+
+    Returns: array
+        Array of scores
+    -------
+
+    """
+    print('calculate momentum...')
+    momentum, shift_l, shift_r = momentum_diff(data=data, remove=remove, shift=shift)
+    print('find peaks...')
+    peaks = call_peaks(momentum, n_threads=8)
+    print('filter peaks...')
+    peaks = filter_peaks(peaks,
+                         reference=momentum,
+                         peaks_thr=peaks_thr,
+                         operator='bigger')
+
+    if plotting:
+        print('plot single cell...')
+        plot_single_momentum_ov(peaks=peaks,
+                                momentum=momentum,
+                                data=data,
+                                shift_l=shift_l,
+                                shift_r=shift_r,
+                                sample_n=sample_to_inspect,
+                                shift=shift,
+                                remove=remove)
+
+    print('calc scores...')
+    scores = []
+    for i in range(len(peaks)):
+        peak_list = peaks[i]
+        single_momentum = momentum[i]
+
+        if len(peak_list) == 0:
+            score = 0
+        elif len(peak_list) == 1:
+            score = single_momentum[peak_list[0]] / 100
+        elif len(peak_list) > 1:
+            corrected_scores = []
+            for j in range(1, len(peak_list)):
+                amplitude = single_momentum[peak_list[j]] * 2
+
+                diff = peak_list[j] - peak_list[j - 1]
+                corrected_score = amplitude - (abs(diff - period) / penalty_scale)
+                if corrected_score < 0:
+                    corrected_score = 0
+
+                corrected_scores.append(corrected_score)
+
+            score = float(np.sum(np.array(corrected_scores))) + 0
+
+        scores.append(score)
+
+    scores = np.array(scores)
+
+    if plotting:
+        fig, ax = plt.subplots()
+        ax.hist(scores, bins=100, log=True)
+        ax.set_title('Scores')
+        ax.set_xlabel('Score')
+        ax.set_ylabel('Abundance')
+
+    return scores
+
+
+############################ CWT ###############################
+
+def add_adapters(features, shift=250, smooth=False, window_size=30):
+    """
+    Add adapters to the beginning of the features array for transient oscillations
+
+    Parameters
+    ----------
+    features: array
+        Array of features
+    shift: int
+        Length of the adapter
+    smooth: bool
+        Smooth the features after adding the adapters (default=False)
+    window_size: int
+        Window size for smoothing (default=30)
+
+    Returns: array
+        Array of features with adapters
+    -------
+
+    """
+    if shift != 0:
+        for i in range(shift):
+            features = np.insert(features, 0, 0, axis=1)
+
+    if smooth:
+        features = multi_ma(features, n=1, window_size=window_size)
+
+    return features
+
+
+def cross_point_shift(peaks, reference, convergence=0.01):
+    """
+    Cross point shift peaks to the left to the first point where the reference is below the convergence threshold
+
+    Parameters
+    ----------
+    peaks: array
+        Array of peaks
+    reference: array
+        Array of reference
+    convergence: float
+        Convergence threshold
+
+    Returns: array
+        Array of corrected peaks
+    -------
+
+    """
+    corrected_peaks = []
+    latest = 0
+    for peak in peaks:
+        shift = 0
+        for gradient in reversed(reference[latest:peak]):
+            if gradient <= convergence:
+                corrected_peaks.append(peak - shift)
+                break
+            else:
+                shift += 1
+
+        latest = peak
+    corrected_peaks = np.delete(corrected_peaks, np.where(np.array(corrected_peaks) > len(reference)))
+
+    return corrected_peaks
+
+
+def single_cwt_ov(features,
+                  shift=250,
+                  sample=0,
+                  freq=4,
+                  peaks_thr=0.5,
+                  perform_cross_point_shift=True,
+                  convergence=0.1):
+    """
+    Apply Continues Wavelet Transformation (CWT) to a single sample and plot the results
+
+    Parameters
+    ----------
+    features: array
+        Array of arrays of the fragment length distribution
+    shift: int
+        Number of samples to shift the series (length of the adapter)
+    sample: int
+        Index of the sample to inspect
+    freq: int
+        Frequency to inspect
+    peaks_thr: float
+        Threshold for filtering peaks
+    perform_cross_point_shift: bool
+        Perform cross point shift (default=True)
+    convergence: float
+        Convergence threshold
+
+    Returns: array
+        Array of coefficients
+    -------
+
     """
 
-    # load data
-    df = load_data(fragment_file, bins=bins, penalty=penalty)
+    feature = features[sample]
+    if shift != 0:
+        for i in range(shift):
+            feature = np.insert(feature, 0, 0)
 
-    # add data to anndata object
-    adata = add_df_to_adata(adata, df)
+    wavelet = "gaus1"
+    scales = np.array([2 ** x for x in range(1, 10)])
+
+    coef, freqs = pywt.cwt(feature, scales, wavelet)
+
+    peaks, _ = find_peaks(coef[freq], distance=50, width=10)
+
+    filtered_peaks = filter_peaks(peaks, reference=coef[freq], peaks_thr=peaks_thr, operator='bigger')
+
+    plot_wavl_ov(feature,
+                 filtered_peaks,
+                 coef, freq=freq,
+                 plot_peaks=True,
+                 perform_cross_point_shift=perform_cross_point_shift,
+                 convergence=convergence)
+
+    return coef
+
+
+def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8):
+    """
+    Multiprocess Continues Wavelet Transformation (CWT)
+
+    Parameters
+    ----------
+    features: array
+        Array of arrays of the fragment length distribution
+    wavelet: str
+        Wavelet to use
+    scales: int / or array of ints
+        Scales for the CWT (default=16)
+    n_threads: int
+        Number of threads to use
+
+    Returns: array
+        Array of coefficients
+    -------
+    """
+    coef_arr = []
+    # init pool
+    pool = mp.Pool(n_threads)
+    jobs = []
+    # loop over chunks
+
+    for feature in features:
+        job = pool.apply_async(cwt_worker, args=(feature, wavelet, scales))
+        jobs.append(job)
+    pool.close()
+
+    # collect results
+    for job in jobs:
+        coef_arr.append(job.get()[0])
+
+    coef_arr = np.array(coef_arr)
+
+    return coef_arr
+
+
+def cwt_worker(feature, wavelet="gaus1", scales=16):
+    """
+    Worker function for mp_cwt(). This performs the CWT on a single feature.
+
+    Parameters
+    ----------
+    feature: array
+        Array of the fragment length distribution
+    wavelet: str
+        Wavelet to use
+    scales: int / or array of ints
+        Scales for the CWT (default=16)
+
+    Returns: array
+        Array of coefficients
+    -------
+
+    """
+    coef, freqs = pywt.cwt(feature, scales, wavelet)
+
+    return coef
+
+
+def wrap_cwt(data,
+             adapter=250,
+             wavelet='gaus1',
+             scales=16,
+             n_threads=8,
+             peaks_thr=0.1,
+             convergence=0.01):
+    """
+    Finds peaks in multiple fragment length distributions using CWT and
+    scipy.signal.find_peaks performed on a single frequency.
+    Peaks are filtered by a threshold and shifted to the left to the first point
+    where the reference is below the convergence threshold.
+
+    Parameters
+    ----------
+    data: array
+        Array of arrays of the fragment length distributions
+    adapter: int
+        Number of zeros to attach to the left of the series (length of the adapter)
+    wavelet: str
+        Wavelet to use
+    scales: int
+        Scale for the CWT (default=16)
+    n_threads: int
+        Number of threads to use
+    peaks_thr: float
+        Threshold for filtering peaks
+    convergence: float
+        Convergence point
+
+    Returns
+    -------
+
+    """
+    wav_features = add_adapters(data, shift=adapter)
+    coefs = mp_cwt(wav_features, wavelet=wavelet, scales=scales, n_threads=n_threads)
+    peaks = call_peaks(coefs, n_threads=n_threads)
+    peaks = filter_peaks(peaks, reference=coefs, peaks_thr=peaks_thr, operator='bigger')
+
+    cp_shifted = []
+    for i in range(len(peaks)):
+        cp_shifted.append(cross_point_shift(peaks[i], reference=coefs[i], convergence=convergence))
+
+    # remove adapter
+    peaks = np.array(peaks)
+    shifted_peaks = peaks - adapter
+
+    nn_peaks = []
+    for peak_list in shifted_peaks:
+        peak_list[np.where(peak_list < 0)] = 0
+        nn_peaks.append(peak_list)
+
+    wav_features = wav_features[:, adapter:]
+    coefs = coefs[:, adapter:]
+
+    return nn_peaks, wav_features, coefs
+
+
+def score_by_cwt(data,
+                 plot_sample=0,
+                 plotting=True,
+                 adapter=250,
+                 wavelet='gaus1',
+                 scales=16,
+                 peaks_thr=0.05,
+                 penalty_scale=100,
+                 period=160,
+                 n_threads=8):
+    """
+    calculate scores for each cell using CWT.
+    The score is calculated as the sum of the peak amplitudes in the coefficient array
+    and corrected by the peak - peak distance given by the argument period and a scaling factor.
+
+    Parameters
+    ----------
+    data: array
+        Array of arrays of the fragment length distributions
+    plot_sample: int
+        Index of the sample to plot
+    plotting: bool
+        Plot the sample (default=True)
+    adapter: int
+        Number of zeros to attach to the left of the series (length of the adapter)
+    wavelet: str
+        Wavelet to use
+    scales: int
+        Scale for the CWT (default=16)
+    peaks_thr: float
+        Threshold for filtering peaks
+    penalty_scale: float
+        Scaling factor for the penalty
+    period: int
+        Period of the peaks
+    n_threads: int
+        Number of threads to use
+
+    Returns: array
+        Array of scores
+    -------
+
+    """
+
+    print('performing CWT on: ' + str(len(data)) + ' cells')
+    print('using wavelet type: ' + wavelet)
+    print('with scale: ' + str(scales))
+    shifted_peaks, wav_features, coefs = wrap_cwt(data=data,
+                                                  adapter=adapter,
+                                                  wavelet=wavelet,
+                                                  scales=scales,
+                                                  n_threads=n_threads,
+                                                  peaks_thr=peaks_thr)
+
+    if plotting:
+        print('plotting single cell...')
+        plot_wavl_ov(wav_features[plot_sample],
+                     shifted_peaks[plot_sample],
+                     [coefs[plot_sample]], freq=0,
+                     plot_peaks=True,
+                     perform_cross_point_shift=True,
+                     convergence=0)
+
+    print('calculate scores...')
+
+    scores = []
+    for i in range(len(shifted_peaks)):
+        peak_list = shifted_peaks[i]
+        coef = coefs[i]
+
+        if len(peak_list) == 0:
+            score = 0
+        elif len(peak_list) == 1:
+            score = 0
+        elif len(peak_list) > 1:
+            corrected_scores = []
+            for j in range(1, len(peak_list)):
+                amplitude = coef[peak_list[j]]
+
+                diff = peak_list[j] - peak_list[j - 1]
+                corrected_score = amplitude - (abs(diff - period) / penalty_scale)
+                if corrected_score < 0:
+                    corrected_score = 0
+
+                corrected_scores.append(corrected_score)
+            score = float(np.sum(np.array(corrected_scores))) + 0
+
+        scores.append(score)
+
+    scores = np.array(scores)
+
+    if plotting:
+        fig, ax = plt.subplots()
+        ax.hist(scores, bins=100, log=True)
+        ax.set_title('Scores')
+        ax.set_xlabel('Score')
+        ax.set_ylabel('Abundance')
+
+    return scores
+
+
+######################### Plotting #############################
+
+def density_plot(scaled, densities):
+    """
+    Plot the density of the fragment length distributions
+
+    Parameters
+    ----------
+    scaled: array
+        Array of arrays of the scaled fragment length distributions
+    densities: array
+        2D array of the densities
+
+    Returns: None
+    -------
+
+    """
+    # plot density
+    normalized = np.log2(densities)  # normalize log2
+    rotated = np.rot90(normalized, k=3)  # rotate 90'
+    rotated = np.flip(rotated, axis=1)
+    stretch = len(rotated[0]) / len(rotated[:, 0])  # calculate stretch for good visibility
+    mean = scaled.sum(axis=0) / len(scaled)
+    scaled_mean = scale(mean) * 1000
+
+    fig, ax = plt.subplots()
+    ax.set_title('Fragment Size Density Plot')
+    ax.set_xlabel('Fragment Length', color='blue')
+    ax.set_ylabel('Abundance')
+    ax.imshow(rotated[:-1, :], cmap='viridis', interpolation='nearest', aspect=stretch)
+    ax.plot(scaled_mean, color="red", markersize=1)
+    plt.gca().invert_yaxis()
+    plt.show()
+
+
+def plot_single_momentum_ov(peaks,
+                            momentum,
+                            data,
+                            shift_l,
+                            shift_r,
+                            sample_n=0,
+                            shift=80,
+                            remove=150):
+    """
+    Plot the momentum of a single sample with found peaks and the original data
+
+    Parameters
+    ----------
+    peaks: array
+        Array of arrays of the found peaks
+    momentum: array
+        Array of arrays of the momentum
+    data: array
+        Array of arrays of the fragment length distributions
+    shift_l: array
+        Array of arrays of the left shifts
+    shift_r: array
+        Array of arrays of the right shifts
+    sample_n: int
+        Index of the sample to plot
+    shift: int
+        Shift to apply to the peaks to plot with the original data
+    remove: int
+        Number of bases removed from the left of the fragment length distribution
+
+    Returns: None
+    -------
+
+    """
+    single_m = momentum[sample_n]
+    single_d = data[sample_n]
+    sample_peaks = peaks[sample_n]
+
+    a = shift_l[sample_n]
+    b = shift_r[sample_n]
+
+    points_x = sample_peaks
+    points_y = single_m[sample_peaks]
+
+    points_x_corrected = sample_peaks - int(shift / 2)
+
+    points_ori_x = points_x_corrected + remove
+    points_ori_y = single_d[points_ori_x]
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+    ax1.set_title('sample: ' + str(sample_n))
+    ax1.set_ylabel('Amplitude')
+    ax1.set_xlabel('Fragment Length - ' + str(remove) + 'bp-shift', color='blue')
+    ax1.plot(a)
+    ax1.plot(b)
+
+    ax2.set_ylabel('Momentum')
+    ax2.set_xlabel('Fragment Length - ' + str(remove) + 'bp-shift', color='blue')
+    ax2.plot(single_m)
+    ax2.scatter(points_x, points_y, color='red', zorder=2)
+
+    ax3.set_ylabel('scaled abundance')
+    ax3.set_xlabel('Fragment Length', color='blue')
+    ax3.plot(single_d)
+    ax3.scatter(points_ori_x, points_ori_y, color='red', zorder=2)
+
+
+def plot_wavl_ov(feature,
+                 peaks,
+                 coef,
+                 freq=6,
+                 plot_peaks=True,
+                 perform_cross_point_shift=True,
+                 convergence=0.1):
+    """
+    Plots the original data, the wavelet transformation and the found peaks as an overview.
+
+    Parameters
+    ----------
+    feature: array
+        Array of arrays of the fragment length distributions
+    peaks: array
+        Array of arrays of the found peaks
+    coef: array
+        Array of coefficients of the wavelet transformation
+    freq: int
+        Index of the frequency to plot
+    plot_peaks: bool
+        If true, the found peaks are plotted
+    perform_cross_point_shift: bool
+        If true, the found peaks are shifted to the cross point
+    convergence: float
+        Convergence value for the cross point shift
+
+    Returns: None
+    -------
+
+    """
+    # index frequence of interest
+    coef_freq = coef[freq]
+
+    if len(peaks) != 0:
+        # define the new points to add
+        x_values_freq = peaks
+        y_values_freq = coef_freq[peaks]
+
+        # define points for the original abundances
+        if perform_cross_point_shift:
+            peaks = cross_point_shift(peaks, reference=coef[freq], convergence=convergence)
+        x_values = peaks
+        y_values = feature[peaks]
+    else:
+        plot_peaks = False
+
+    '''Plots the close prices, returns in a single plot and the wavelet transformation in a plot below'''
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
+
+    ax1.set_title('Frequency Chart')
+    ax1.plot(coef_freq, color='blue')
+    ax1.set_ylabel('Amplitude')
+    ax1.set_xlabel('Fragment Length', color='blue')
+    if plot_peaks:
+        ax1.scatter(x_values_freq, y_values_freq, color='red', zorder=2)
+
+    ax2.set_title('Fragment Lengths Chart')
+    ax2.plot(feature, color='green')
+    ax2.set_xlabel('Fragment Length')
+    ax2.set_ylabel('Abundances', color='blue')
+    if plot_peaks:
+        ax2.scatter(x_values, y_values, color='red', zorder=2)
+
+    ax3.set_title('Continues Wavelet Transformation (CWT)')
+    ax3.imshow(coef, aspect='auto', cmap='hot')
+    ax3.set_xlabel('Fragment Length')
+    ax3.set_ylabel('Frequencies', color='blue')
+
+    fig.tight_layout()
+    plt.show()
+
+
+def add_insertsize_metrics(adata,
+                           bam=None,
+                           fragments=None,
+                           barcode_col=None,
+                           barcode_tag="CB",
+                           regions=None,
+                           use_momentum=True,
+                           use_cwt=True,
+                           peaks_thr_mom=0.03,
+                           peaks_thr_cwt=0.05):
+
+    adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
+
+    if bam is not None and fragments is not None:
+        raise ValueError("Please provide either a bam file or a fragments file - not both.")
+
+    elif bam is not None:
+        count_table = atac.insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
+
+    elif fragments is not None:
+        count_table = atac.insertsize_from_fragments(fragments, barcodes=adata_barcodes)
+
+    dist = count_table[[c for c in count_table.columns if isinstance(c, int)]]
+    dists_arr = dist.to_numpy()
+    dists_arr = np.nan_to_num(dists_arr)
+
+    # scale the data
+    scaled_ori = scale(dists_arr)
+
+    # plot the densityplot of the fragment length distribution
+    print("plotting density...")
+    densities = calc_densities(scaled_ori)
+    density_plot(scaled_ori, densities)
+
+    if use_momentum:
+        # prepare the data to be used for the momentum method
+        # smooth the data
+        print("smoothing data...")
+        smooth = multi_ma(dists_arr, n=2, window_size=10)
+        # scale the data
+        scaled = scale(smooth)
+
+        # calculate scores using the momentum method
+        print("calculating scores using the momentum method...")
+        momentum_scores = score_by_momentum(data=scaled,
+                                            shift=80,
+                                            remove=100,
+                                            sample_to_inspect=0,
+                                            peaks_thr=peaks_thr_mom,
+                                            period=160,
+                                            penalty_scale=100,
+                                            plotting=True)
+
+    if use_cwt:
+        # calculate scores using the continues wavelet transformation
+        print("calculating scores using the continues wavelet transformation...")
+        cwt_scores = score_by_cwt(data=scaled_ori,
+                                  plot_sample=0,
+                                  plotting=True,
+                                  adapter=250,
+                                  wavelet='gaus1',
+                                  scales=16,
+                                  n_threads=8,
+                                  peaks_thr=peaks_thr_cwt,
+                                  penalty_scale=100,
+                                  period=160)
+
+    # select total inserts count and mean from count table
+    inserts_table = count_table[[c for c in count_table.columns if isinstance(c, str)]]
+
+    if use_momentum:
+        inserts_table['nucleosomal_score_momentum'] = momentum_scores
+
+    if use_cwt:
+        inserts_table['nucleosomal_score_cwt'] = cwt_scores
+
+    adata.obs = adata.obs.join(inserts_table)
+
+    if use_momentum:
+        adata.obs['nucleosomal_score_momentum'] = adata.obs['nucleosomal_score_momentum'].fillna(0)
+
+    if use_cwt:
+        adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
 
     return adata
-
-
-def load_data(path: str, bins=30, penalty=200):
-    """
-    This method creates an dataframe with cell barcode as index and colums
-    for fragment lengths ('Fragments'), fragment count ('Fragment-Count'),
-    fragment length distribution ('Distribution'), maxima position ('Maxima'),
-    maxima count ('Maxima-Count') und einen quality score ('Score').
-    :param path: path to a .bed file.
-    :param bins: resolution of the calculated distribution further calculations based on.
-    :return: dataframe with the colums specified above.
-    """
-
-    time_point_1 = time.time()
-
-    # loding fragment_file and creating dataframe with fragments, fragment_count, mean and median
-    print('loading fragments...')
-    fragments = read_fragment_file(path)
-    df = create_dataframe(fragments)
-    df['Fragment-Count'] = [len(x) for x in df['Fragments']]
-
-    time_point_2 = time.time()
-    print("Time for loading fragments: ", str(time_point_2 - time_point_1))
-
-    # calculate distribution in predifined bins and add it to the dataframe
-    print('calculate distribution...')
-    df['Distribution'] = get_distribution(df, bins=bins)
-
-    time_point_3 = time.time()
-    print("Time for calculating distribution: ", str(time_point_3 - time_point_2))
-
-    # calculate maxima and their count and add them to the dataframe
-    print('calculate maxima...')
-    df['Maxima'] = get_maxima(df)
-    df['Maxima-Count'] = [len(x) for x in df['Maxima']]
-
-    time_point_4 = time.time()
-    print("Time for calculating maxima: ", str(time_point_4 - time_point_3))
-
-    # calculate score and add it to the dataframe
-    print('calculate score...')
-    get_score(df, bins=bins, penalty=penalty)
-
-    time_point_5 = time.time()
-    print("Time for calculating score: ", str(time_point_5 - time_point_4))
-
-    return df
-
-
-def read_fragment_file(abs_path: str):
-    """
-    This method reads a fragment file (.bed) and returns
-    a dictionary with the cellbarcodes as keys and the
-    computed fragment lengths as the corresponding values.
-    The fragment lengths are stored as a list.
-    Returns None when file extension is not .bed.
-    :param abs_path: (absolute) path to the .bed file.
-    :return: dictionary (keys=cellbarcode/values=list of fragment lengths)
-    """
-
-    # Check if the file extension is .bed
-    if abs_path[-4:] != ".bed":
-        logging.warning("provided file does not have '.bed' extension:\t"+abs_path)
-        return None
-
-    # Get file from disk
-    fragment_file = open(abs_path, "r")
-
-    # Create dictionary
-    frag_dictionary = {}
-
-    # Read file
-    for line in fragment_file:
-
-        # Split current line
-        line_values = line.split()
-
-        # Get cell barcode
-        cellbarcode = line_values[3]
-
-        # Get both fragments
-        start = int(line_values[1])
-        stop = int(line_values[2])
-
-        # Check if cellbarcode key is in dictionary
-        if cellbarcode in frag_dictionary:
-            # Append list of fragment lengths
-            frag_dictionary[cellbarcode].append(calculate_fragment_length(start, stop))
-        else:
-            # Create new Key/Value (Cellbarcode/Fragment length list)
-            frag_dictionary[cellbarcode] = [calculate_fragment_length(start, stop)]
-
-    # Close open access to file
-    fragment_file.close()
-
-    # Return dictionary
-    return frag_dictionary
-
-
-def create_dataframe(frag_dictionary: dict, tissue=""):
-    """
-    This method creates a new dataframe object with the values
-    taken from the input dictionary. The resulting object only
-    contains the cellbarcode from the dictionary as an index and
-    the corresponding mean/median values as well as the fragment lists
-    from the provided frag_dictionary.
-    :param frag_dictionary: dictionary from which the object is created from.
-    :param tissue: string of the belonging tissue.
-    :return: dataframe object with cellbarcodes, means, medians and fragment length lists.
-    """
-
-    # Create empty dictionary
-    mean_median_dictionary = {}
-
-    # Iterate over keys in frag_dictionary
-    if tissue == "":
-        for cellbarcode in frag_dictionary:
-            mean_median_dictionary[cellbarcode] = {}
-            mean_median_dictionary[cellbarcode]["Mean-Fragment-Length"] = calculate_mean(frag_dictionary[cellbarcode])
-            mean_median_dictionary[cellbarcode]["Median-Fragment-Length"] = calculate_median(frag_dictionary[cellbarcode])
-            mean_median_dictionary[cellbarcode]["Fragments"] = frag_dictionary[cellbarcode]
-    else:
-        for cellbarcode in frag_dictionary:
-            mean_median_dictionary[tissue+"+"+cellbarcode] = {}
-            mean_median_dictionary[tissue+"+"+cellbarcode]["Mean-Fragment-Length"] = calculate_mean(frag_dictionary[cellbarcode])
-            mean_median_dictionary[tissue+"+"+cellbarcode]["Median-Fragment-Length"] = calculate_median(frag_dictionary[cellbarcode])
-            mean_median_dictionary[cellbarcode]["Fragments"] = frag_dictionary[cellbarcode]
-
-    # Transform dictionary into dataframe
-    data_frame = pd.DataFrame(mean_median_dictionary).T
-
-    # Return dataframe
-    return data_frame
-
-
-def get_distribution(df, bins=30):
-    """
-    This method scales a given dataframe with a column of fragment lengths and binnes them
-    to get the y-values of the distribution.
-    :param df: dataframe with a column for fragment lengths.
-    :param bins: resolution of the calculated distribution further calculations based on.
-    """
-
-    # calculate list of bin_indexes over the range of fragment lengths
-    min_value = min(df['Fragments'].apply(min))
-    max_value = max(df['Fragments'].apply(max))
-    value_range = max_value - min_value
-    bin_scale = value_range / bins
-    bin_index = [x for x in np.arange(min_value, max_value, bin_scale)]
-
-    # digitize fragment length vor every dataframe index into predefined bins
-    distribution = []
-    for i in df['Fragments']:
-        inds = np.digitize(i, bin_index)
-
-        # count the elements in every bin to get the y-value every point in the distribution
-        y_values = []
-        for x in range(len(bin_index)):
-            y_values.append(np.count_nonzero(inds == x + 1))
-        distribution.append(y_values)
-    return distribution
-
-
-def get_maxima(df, distribution='Distribution'):
-    """
-    This method calculates the local maxima for every index in a dataframe.
-    :param df: dataframe with a kind of distribution column
-    :param distribution: column in a dataframe with arrays of values to calculate the maximas from
-    """
-
-    # itterate over whole dataframe
-    maxima = []
-    for i in df[distribution]:
-
-        # filter empty cells in the dataframe
-        if i is np.nan:
-            maxima.append(np.nan)
-        else:
-            # calculate local maxima
-            maxima.append(calculate_maxima(i))
-
-    return maxima
-
-
-def get_score(df, bins=30, penalty=200):
-    """
-    Computes a score for each row of the dataframe and adds
-    a corresponding column "Score" containing each individual score.
-    The dataframe needs to have a column "Distribution" with
-    lists of numerical values to enable a reliable scoring.
-    If a score of a row could not be calculated, the value in
-    the new cell will be NaN.
-    :param dataframe: the dataframe to be extended
-    """
-
-    # Check if column "Distribution" exists
-    if "Distribution" not in df.columns:
-        print("Dataframe does not have a column Distribution!")
-        return
-
-    # Check if column "Score" exists, if not add it
-    if "nucleosomal-score" not in df.columns:
-        df["nucleosomal-score"] = np.NaN
-
-    # Calculate bin_size
-    min_frag = min(df['Fragments'].apply(min))
-    max_frag = max(df['Fragments'].apply(max))
-    bin_size = (max_frag - min_frag) / bins
-
-    # Create empty score list
-    score_list = []
-
-    # Iterate over dataframe rows
-    for index, frame in df.iterrows():
-
-        # Compute Score for this row
-        score = calculate_score(calculate_maxima(df["Distribution"][index]), min_frag, bin_size, bins=bins)
-
-        # add penalty for fragment count
-        if df['Fragment-Count'][index] < penalty:
-            score = score + (penalty - df['Fragment-Count'][index])
-        score = score * (1 / np.log(df['Fragment-Count'][index]))
-
-        # Append score list with computed value
-        score_list.append(score)
-
-    # Set the values of the column "Score" in the dataframe
-    df["nucleosomal-score"] = score_list
-    return score_list
-
-
-def add_df_to_adata(adata, df, remove_tmp=True):
-    """
-    This method adds a dataframe to an anndata object.
-    :param adata: anndata object to add the dataframe to.
-    :param df: dataframe to be added.
-    """
-    if remove_tmp:
-        df.pop('Maxima')
-        df.pop('Maxima-Count')
-    # add dataframe to anndata object
-    adata.obs = adata.obs.join(df)
-    adata.obs = adata.obs.fillna(0)
-
-    # convert tables to string
-    adata.obs['Fragments'] = adata.obs['Fragments'].astype(str)
-    adata.obs['Distribution'] = adata.obs['Distribution'].astype(str)
-    adata.obs['Maxima'] = adata.obs['Maxima'].astype(str)
-
-    return adata
-############################################################################################
-# calculation
-############################################################################################
-
-def calculate_fragment_length(start: int, stop: int):
-    """
-    This method simply calculates the fragment length of the
-    two specified start/stop base pairs.
-    :param start: start position of the fragment (bp).
-    :param stop: stop position of the fragment (bp).
-    :return: length of the fragment.
-    """
-    return abs(start-stop)
-
-def calculate_maxima(value_list):
-    """
-    This method computes all local maxima in a given list of numerical
-    values using a "sliding window" to filter false-positive local maxima
-    resulting from noisy data. This window has a fixed size of 5.
-    A list of all indices of such local maxima found in the provided
-    value list is then returned.
-    :param value_list: list of numerical values
-    :return: list of indices of all local maxima
-    """
-
-    # Create local maxima list
-    local_maxima = []
-
-    # Store length of distribution parameter
-    distr_len = len(value_list)
-
-    # Iterate over distribution
-    for index, count in enumerate(value_list):
-
-        # Create "empty" sliding window
-        window = np.array([None, None, None, None, None])
-
-        # Set window
-        if index - 2 >= 0:
-            window[0] = value_list[index - 2]
-        if index - 1 >= 0:
-            window[1] = value_list[index - 1]
-        if index >= 0:
-            window[2] = value_list[index]
-        if index + 1 <= distr_len - 1:
-            window[3] = value_list[index + 1]
-        if index + 2 <= distr_len - 1:
-            window[4] = value_list[index + 2]
-
-        # Check if value in window is local maxima
-        poss_maxima = window[2]
-        is_maxima = False
-        # If window[1] is None, then window[0] is also None
-        if window[1] is None:
-            if poss_maxima > window[3] and poss_maxima > window[4]:
-                is_maxima = True
-        # Check if only window[0] is None
-        elif window[0] is None:
-            if window[1] < poss_maxima and poss_maxima > window[3] and poss_maxima > window[4]:
-                is_maxima = True
-        # Check if window[4] is not None, then window[3] must also be not None
-        # This is the usual case
-        elif window[4] is not None:
-            if window[0] < poss_maxima and window[1] < poss_maxima and poss_maxima > window[3] and poss_maxima > window[4]:
-                is_maxima = True
-
-        # Check if possible maxima is a real local maxima
-        # If yes, then append it to local_maxima list
-        if is_maxima:
-            local_maxima.append(index)
-
-    # Return list of all local maxima
-    return local_maxima
-
-
-def calculate_score(peaks, min_frag, bin_size, bins=30, period=160):
-    """
-    Computes the average difference between the provided peak indices and
-    the specified period. The calculation is divided into three cases:
-
-    1. The peak list is empty:
-        -> Return (positive) infinity
-    2. The peak list contains just one peak:
-        -> Return absolute difference between peak and period+min_frag
-    3. The peak list contains more than one peak:
-        -> Return average difference between all peaks w.r.t. specified period
-
-    Hence, the closer this value conforms to 0 the better, making 0 the best possible
-    value.
-    :param peaks: list of peaks indices
-    :param period: period in which the peaks should occur
-    :param min_frag: length of the smallest fragment
-    :param bin_size: size of each bin
-    :param bins: number of bins the peak indices will be mapped to
-    """
-
-    # Create list for later computation
-    temp = range(0, bins + 1)
-
-    # Create empty list for computed locations
-    peak_bins = []
-
-
-    for i in temp:
-        if temp.index(i) in peaks:
-            peak_bins.append(i * bin_size + min_frag)
-
-    # Compare Difference
-    diff = 0
-
-    # Check for 0 peaks
-    if len(peaks) == 0:
-        return np.inf
-
-    # Check for 1 peak
-    if len(peaks) == 1:
-        peak_diff = abs(peak_bins[0] - (period + min_frag))
-        return round(peak_diff, 2)
-
-    # More than 1 peak
-    for index in range(len(peak_bins) - 1):
-        bin_diff = abs(peak_bins[index] - peak_bins[index + 1])
-        diff += abs(bin_diff - period)
-
-    diff /= len(peaks) - 1
-
-    return round(diff, 2)
-
-
-def calculate_mean(value_list: list, decimal_places=2):
-    """
-    This method computes the mean value out of a list
-    of values. The result is rounded to two decimal places.
-    :param value_list: list of values.
-    :param decimal_places: rounded to these decimal places.
-    :return: mean of the given list of values.
-    """
-
-    # Create variable to be returned
-    mean = 0
-
-    # Iterate over value list
-    for length in value_list:
-        mean += length
-
-    mean = round(mean / len(value_list), decimal_places)
-
-    return mean
-
-
-def calculate_median(value_list: list):
-    """
-    This method computes the median value out of a list
-    of values.
-    :param value_list: list of values.
-    :return: median of the given list of values.
-    """
-
-    # Create sorted copy of list
-    sorted_list = sorted(value_list)
-
-    # Check if list length is even or odd
-    if is_even(sorted_list) is False:
-        # return middle value
-        middle_index = int(math.ceil(len(sorted_list)/2))
-        return sorted_list[middle_index-1]
-    else:
-        # Get the two values above/below middle index
-        middle_index = int(len(sorted_list)/2)
-
-        below = sorted_list[middle_index-1]
-        above = sorted_list[middle_index]
-
-        # return median value
-        return (above+below)/2
-
-def is_even(value_list: list):
-    """
-    This method checks if the length of a list is even.
-    :param value_list: list of values.
-    :return: True, if the length of the list is even, odd otherwise.
-    """
-    if len(value_list) % 2 == 0:
-        return True
-    return False
 
 if __name__ == '__main__':
 
     import time
     import episcanpy as epi
-
-    #fragnment_file = "/mnt/workspace/jdetlef/data/bamfiles/sorted_esophagus_muscularis_146_0.01_fragments_sorted.bed"
-    fragnment_file = "/mnt/workspace/jdetlef/data/bamfiles/cropped_esophagus_146_fragments.bed"
-    out_file = "/mnt/workspace/jdetlef/processed_data/Esophagus_146_0.01.h5ad"
-    h5ad_file = "/mnt/workspace/jdetlef/processed_data/Esophagus_146_0.01/annotation/anndata/Esophagus_146_0.01.h5ad"
+    fragment_file = "/mnt/workspace/jdetlef/data/bamfiles/sorted_esophagus_muscularis_146_0.01_fragments_sorted.bed"
+    h5ad_file = "/mnt/workspace/jdetlef/processed_data/Esophagus_146_0.01/assembling/anndata/Esophagus_146_0.01.h5ad"
     adata = epi.read_h5ad(h5ad_file)
-    # get start time
-    start = time.time()
 
-    # print start time
-    print("Start: " + str(start))
+    adata = add_insertsize_metrics(adata, fragments=fragment_file, use_momentum=True, use_cwt=True)
 
-    # load data and calc score
-    #df = load_data(fragnment_file)
-    adata = add_chromatin_conditions(adata, fragnment_file)
+    print(adata.obs)
 
-    # get end time
-    end = time.time()
+    def add_insertsize_metrics(adata,
+                               bam=None,
+                               fragments=None,
+                               barcode_col=None,
+                               barcode_tag="CB",
+                               regions=None,
+                               use_momentum=True,
+                               use_cwt=True):
 
-    #adata.obs = adata.obs.fillna(0)
-    adata.write(out_file)
+        adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
 
-    # print time
-    print("Time: " + str(end - start))
+        if bam is not None and fragments is not None:
+            raise ValueError("Please provide either a bam file or a fragments file - not both.")
 
-    print("finished")
+        elif bam is not None:
+            count_table = atac.insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
+
+        elif fragments is not None:
+            count_table = atac.insertsize_from_fragments(fragments, barcodes=adata_barcodes)
+
+        print("Loading data and build count table...")
+        dist = count_table[[c for c in count_table.columns if isinstance(c, int)]]
+        dists_arr = dist.to_numpy()
+        dists_arr = np.nan_to_num(dists_arr)
+
+        # scale the data
+        scaled_ori = scale(dists_arr)
+
+        # plot the densityplot of the fragment length distribution
+        print("plotting density...")
+        densities = calc_densities(scaled_ori)
+        density_plot(scaled_ori, densities)
+
+        if use_momentum:
+            # prepare the data to be used for the momentum method
+            # smooth the data
+            print("smoothing data...")
+            smooth = multi_ma(dists_arr, n=2, window_size=10)
+            # scale the data
+            scaled = scale(smooth)
+
+            # calculate scores using the momentum method
+            print("calculating scores using the momentum method...")
+            momentum_scores = score_by_momentum(data=scaled,
+                                                shift=80,
+                                                remove=100,
+                                                sample_to_inspect=0,
+                                                peaks_thr=0.03,
+                                                period=160,
+                                                penalty_scale=100,
+                                                plotting=True)
+
+        if use_cwt:
+            # calculate scores using the continues wavelet transformation
+            print("calculating scores using the continues wavelet transformation...")
+            cwt_scores = score_by_cwt(data=scaled_ori,
+                                  plot_sample=0,
+                                  plotting=True,
+                                  adapter=250,
+                                  wavelet='gaus1',
+                                  scales=16,
+                                  n_threads=8,
+                                  peaks_thr=0.05,
+                                  penalty_scale=100,
+                                  period=160)
+
+        # select total inserts count and mean from count table
+        inserts_table = count_table[[c for c in count_table.columns if isinstance(c, str)]]
+
+        if use_momentum:
+            inserts_table['nucleosomal_score_momentum'] = momentum_scores
+
+        if use_cwt:
+            inserts_table['nucleosomal_score_cwt'] = cwt_scores
+
+        adata.obs = adata.obs.join(inserts_table)
+
+        if use_momentum:
+            adata.obs['nucleosomal_score_momentum'] = adata.obs['nucleosomal_score_momentum'].fillna(0)
+
+        if use_cwt:
+            adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
+
+        return adata
+
+    # cutoff_momentum = 1.5
+    # cutoff_cwt = 0.5
+    #
+    # selected_by_m = scaled[np.where(momentum_scores > cutoff_momentum)]
+    # selected_by_cwt = scaled[np.where(scores > cutoff_cwt)]
+    #
+    # scaled_mean_m = scale(np.sum(selected_by_m, axis=0) / len(selected_by_m))
+    # scaled_mean_cwt = scale(np.sum(selected_by_cwt, axis=0) / len(selected_by_cwt))
+    #
+    # mean = scale(np.sum(scaled, axis=0) / len(scaled))
+    #
+    # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 8))
+    #
+    # ax1.hist(scores, bins=100, log=True)
+    # ax1.axvline(x=cutoff_cwt, color='red')
+    # ax1.set_title('Scores_CWT')
+    # ax1.set_xlabel('Score')
+    # ax1.set_ylabel('Abundance')
+    #
+    # ax2.hist(momentum_scores, bins=100, log=True)
+    # ax2.axvline(x=cutoff_momentum, color='red')
+    # ax2.set_title('Scores_Momentum')
+    # ax2.set_xlabel('Score')
+    # ax2.set_ylabel('Abundance')
+    #
+    # ax3.plot(scaled_mean_cwt, color='blue')
+    # ax3.plot(mean, color='red')
+    # ax3.set_title('Fragment Length Distribution')
+    # ax3.set_xlabel('Fragment Length')
+    # ax3.set_ylabel('Abundance')
+    #
+    # ax4.plot(scaled_mean_m, color='blue')
+    # ax4.plot(mean, color='red')
+    # ax4.set_title('Fragment Length Distribution')
+    # ax4.set_xlabel('Fragment Length')
+    # ax4.set_ylabel('Abundance')
+    #
+    # # load anndata
+    # adata = epi.read_h5ad("/mnt/workspace/jdetlef/data/bamfiles/sorted_esophagus_muscularis_146_0.01_fragments_sorted.h5ad")
+    # # add the scores to the anndata
