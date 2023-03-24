@@ -1,5 +1,26 @@
 """
 Modules for plotting single cell data
+
+
+Loading the module
+-------------------
+.. plot ::
+    :context: close-figs
+
+    import sctoolbox.plotting as pl
+
+
+Loading example data
+--------------------
+
+.. plot ::
+    :context: close-figs
+
+    import numpy as np
+    import scanpy as sc
+
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 """
 
 from math import ceil
@@ -129,6 +150,15 @@ def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lear
         Number of threads to use for UMAP calculation.
     save : str, default None
         Path to save the figure to.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
+                                         spread_range=(2.0, 3.0, 0.5),
+                                         metacol="bulk_labels")
     """
     def get_loop_params(r):
         """Setup parameters to loop over"""
@@ -607,6 +637,18 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
         Path to save the plot. If None, the plot is not saved.
     figsize : tuple, default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.n_cells_barplot(adata, x="louvain")
+
+    .. plot::
+        :context: close-figs
+
+        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
@@ -926,6 +968,7 @@ def anndata_overview(adatas,
                      color_by,
                      plots=["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize=None,
+                     max_clusters=20,
                      output=None,
                      dpi=300):
     """
@@ -948,10 +991,24 @@ def anndata_overview(adatas,
         - LISI: Plots the distribution of any "LISI_score*" scores available in adata.obs
     figsize : number tuple, default None (automatic based on number of columns/rows)
         Size of the plot in inch.
+    max_clusters : int, default 20
+        Maximum number of clusters to show in legend.
     output : str, default None (not saved)
         Path to plot output file.
     dpi : number, default 300
         Dots per inch for output
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        adatas = {}  # dictionary of adata objects
+        adatas["standard"] = adata
+        adatas["parameter1"] = sc.tl.umap(adata, min_dist=1, copy=True)
+        adatas["parameter2"] = sc.tl.umap(adata, min_dist=2, copy=True)
+
+        pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
     if not isinstance(color_by, list):
         color_by = [color_by]
@@ -1005,6 +1062,23 @@ def anndata_overview(adatas,
     LISI_axes = []
     for plot_type in plots:
         for color in color_by:
+
+            # Iterate over adatas to find all possible categories for 'color'
+            categories = []
+            for adata in adatas.values():
+                if color in adata.obs.columns:  # color can also be an index in var
+                    if adata.obs[color].dtype.name == "category":
+                        categories += list(adata.obs[color].cat.categories)
+            categories = sorted(list(set(categories)))
+
+            # Create color palette equal for all columns
+            if len(categories) > 0:
+                colors = sns.color_palette("tab10", len(categories))
+                color_dict = dict(zip(categories, colors))
+            else:
+                color_dict = None  # use default color palette
+
+            # Plot for each adata (one row)
             for i, (name, adata) in enumerate(adatas.items()):
 
                 ax = axs[ax_idx]
@@ -1022,7 +1096,9 @@ def anndata_overview(adatas,
                     annotate_row(ax, plot_type)
 
                 # Collect options for plotting
-                embedding_kwargs = {"color": color, "title": "",
+                embedding_kwargs = {"color": color,
+                                    "palette": color_dict,  # only used for categorical color
+                                    "title": "",
                                     "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
                                     "show": False}
 
@@ -1059,19 +1135,30 @@ def anndata_overview(adatas,
                         elif plot_type == "PCA":
                             sc.pl.pca(adata, ax=ax, **embedding_kwargs)
 
-                # Set title for the legend
+                # Set title for the legend (for categorical color)
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
-                    ax.legend_.set_title(color)
-                    fontsize = ax.legend_.get_title()._fontproperties._size * 1.2  # increase fontsize of legend title and text
-                    plt.setp(ax.legend_.get_title(), fontsize=fontsize)
-                    plt.setp(ax.legend_.get_texts(), fontsize=fontsize)
 
-                # Adjust colorbars
-                if hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
+                    # Get current legend and rmove
+                    lines, labels = ax.get_legend_handles_labels()
+                    ax.get_legend().remove()
+
+                    # Replot legend with limited number of clusters
+                    per_column = 10
+                    n_clusters = min(max_clusters, len(lines))
+                    n_cols = int(np.ceil(n_clusters / per_column))
+
+                    ax.legend(lines[:max_clusters], labels[:max_clusters],
+                              title=color, ncols=n_cols, frameon=False,
+                              bbox_to_anchor=(1.05, 0.5),
+                              loc=6)
+
+                # Adjust colorbars (for continuous color)
+                elif hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
                     ax._colorbars[0].set_title(color, ha="left")
                     ax._colorbars[0]._colorbar_info["shrink"] = 0.8
                     ax._colorbars[0]._colorbar_info["pad"] = -0.15  # move colorbar closer to plot
 
+                _make_square(ax)
                 ax_idx += 1  # increment index for next plot
 
             if plot_type in row_count:
@@ -1493,6 +1580,13 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
         Filename to save the figure.
     kwargs : dict
         Additional arguments passed to `sc.pl.umap`.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.umap_pub(adata, color="louvain", title="Louvain clusters")
     """
 
     axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
