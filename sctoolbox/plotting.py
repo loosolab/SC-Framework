@@ -103,10 +103,9 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
     return ax
 
 
-def search_umap_parameters(adata,
-                           dist_range=(0.1, 0.4, 0.1),
-                           spread_range=(2.0, 3.0, 0.5),
-                           metacol="Sample", n_components=2, verbose=True, threads=4, save=None):
+def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
+                              min_dist_range=(0.1, 0.4, 0.1), spread_range=(2.0, 3.0, 0.5),
+                              metacol="Sample", verbose=True, threads=4, save=None, **kwargs):
     """
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -114,91 +113,108 @@ def search_umap_parameters(adata,
     ----------
     adata : anndata.AnnData
         Annotated data matrix object.
-    dist_range : tuple
-        Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (0.1, 0.4, 0.1)
-    spread_range : tuple
-        Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (2.0, 3.0, 0.5)
-    metacol : str
-        Name of the column in adata.obs to color by. Default: "Sample".
-    n_components : int
-        Number of components in UMAP calculation. Default: 2.
-    verbose : bool
-        Print progress to console. Default: True.
-    threads : int
-        Number of threads to use for UMAP calculation. Default: 4.
-    save : str
-        Path to save the figure to. Default: None.
+    dist_range : tuple, default (0.1, 0.4, 0.1)
+        UMAP parameter: Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
+    spread_range : tuple, default (2.0, 3.0, 0.5)
+        UMAP parameter: Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
+    perplexity_range : tuple, default (30, 60, 10)
+        tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
+    learning_rate_range : tuple, default (600, 1000, 200)
+        tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
+    metacol : str, default 'Sample'
+        Name of the column in adata.obs to color by.
+    verbose : bool, default True
+        Print progress to console.
+    threads : int, default 4
+        Number of threads to use for UMAP calculation.
+    save : str, default None
+        Path to save the figure to.
     """
+    def get_loop_params(r):
+        """Setup parameters to loop over"""
+        # Check validity of range parameters
+        if len(r) != 4:
+            raise ValueError(f"The parameter '{r[0]}' must be a tuple in the form (min, max, step)")
+        if r[3] > r[2] - r[1]:
+            raise ValueError(f"'step' of '{r[0]}' is larger than 'max' - 'min'. Please adjust.")
+        
+        return np.around(np.arange(r[1], r[2], r[3]), 2)
+    
+    # remove data to save memory
+    adata = sctoolbox.analyser.get_minimal_adata(adata)
+    # Allows for all case variants of method parameter
+    method = method.lower()
 
-    adata = sctoolbox.analyser.get_minimal_adata(adata)  # remove data to save memory
-
-    if len(dist_range) != 3:
-        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
-    if len(spread_range) != 3:
-        raise ValueError("The parameter 'spread_range' must be a tuple in the form (min, max, step)")
-
-    dist_min, dist_max, dist_step = dist_range
-    spread_min, spread_max, spread_step = spread_range
-
-    # Check validity of parameters
-    if dist_step > dist_max - dist_min:
-        raise ValueError("'step' of dist_range is larger than 'max' - 'min'. Please adjust.")
-    if spread_step > spread_max - spread_min:
-        raise ValueError("'step' of spread_range is larger than 'max' - 'min'. Please adjust.")
-
-    # Setup parameters to loop over
-    dists = np.arange(dist_min, dist_max, dist_step)
-    dists = np.around(dists, 2)
-    spreads = np.arange(spread_min, spread_max, spread_step)
-    spreads = np.around(spreads, 2)
+    if method == "umap":
+        range_1 = ["min_dist_range"] + list(min_dist_range)
+        range_2 = ["spread_range"] + list(spread_range)
+        #n_comp = "n_components"
+    elif method == "tsne":
+        range_1 = ["perplexity_range"] + list(perplexity_range)
+        range_2 = ["learning_rate_range"] + list(learning_rate_range)
+        #n_comp = "n_pcs"
+    else:
+        raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
+    
+    # Get tool and plotting function
+    tool_func = getattr(sc.tl, method)
+    plot_func = getattr(sc.pl, method)
+    
+    # Setup loop parameter
+    loop_params = list()
+    for r in [range_1, range_2]:
+        loop_params.append(get_loop_params(r))
 
     # Calculate umap for each combination of spread/dist
     pool = mp.Pool(threads)
     jobs = {}
-    for i, spread in enumerate(spreads):  # rows
-        for j, dist in enumerate(dists):  # columns
-            job = pool.apply_async(sc.tl.umap, args=(adata, ), kwds={"min_dist": dist,
-                                                                     "spread": spread,
-                                                                     "n_components": n_components,
-                                                                     "copy": True})
+    for i, r2_param in enumerate(loop_params[1]):  # rows
+        for j, r1_param in enumerate(loop_params[0]):  # columns
+            
+            kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
+                    range_2[0].rsplit('_', 1)[0]: r2_param,
+                    "copy": True}
+            kwds |= kwargs
+            job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
             jobs[(i, j)] = job
     pool.close()
 
-    utils.monitor_jobs(jobs, "Computing UMAPs")
+    utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
     pool.join()
 
     # Figure with rows=spread, cols=dist
-    fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
-    axes = np.array(axes).reshape((-1, 1)) if len(dists) == 1 else axes    # reshape 1-column array
-    axes = np.array(axes).reshape((1, -1)) if len(spreads) == 1 else axes  # reshape 1-row array
+    fig, axes = plt.subplots(len(loop_params[1]), len(loop_params[0]),
+                             figsize=(4 * len(loop_params[0]), 4 * len(loop_params[1])))
+    axes = np.array(axes).reshape((-1, 1)) if len(loop_params[0]) == 1 else axes  # reshape 1-column array
+    axes = np.array(axes).reshape((1, -1)) if len(loop_params[1]) == 1 else axes  # reshape 1-row array
 
     # Fill in UMAPs
-    for i, spread in enumerate(spreads):  # rows
-        for j, dist in enumerate(dists):  # columns
+    for i, r2_param in enumerate(loop_params[1]):  # rows
+        for j, r1_param in enumerate(loop_params[0]):  # columns
 
             # Add precalculated UMAP to adata
-            adata.obsm["X_umap"] = jobs[(i, j)].get().obsm["X_umap"]
+            adata.obsm[f"X_{method}"] = jobs[(i, j)].get().obsm[f"X_{method}"]
 
             if verbose is True:
-                print(f"Plotting umap for spread={spread} and dist={dist} ({i*len(dists)+j+1}/{len(dists)*len(spreads)})")
+                print(f"Plotting umap for spread={r2_param} and dist={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
 
             # Set legend loc for last column
-            if i == 0 and j == (len(dists) - 1):
+            if i == 0 and j == (len(loop_params[0]) - 1):
                 legend_loc = "left"
             else:
                 legend_loc = "none"
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-                sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+                plot_func(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
-                axes[i, j].set_ylabel(f"spread: {spread}")
+                axes[i, j].set_ylabel(f"{range_2[0].rsplit('_', 1)[0]}: {r2_param}")
             else:
                 axes[i, j].set_ylabel("")
 
             if i == 0:
-                axes[i, j].set_title(f"min_dist: {dist}")
+                axes[i, j].set_title(f"{range_1[0].rsplit('_', 1)[0]}: {r1_param}")
 
             axes[i, j].set_xlabel("")
 

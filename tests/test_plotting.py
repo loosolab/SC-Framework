@@ -70,12 +70,13 @@ def test_plot_pca_variance_fail(adata):
         sctoolbox.plotting.plot_pca_variance(adata, method=invalid)
 
 
-def test_search_umap_parameters(adata):
-    """ Test if search_umap_parameters returns an array of axes. """
+def test_search_dim_red_parameters(adata):
+    """ Test if search_dim_red_parameters returns an array of axes. """
 
-    axarr = sctoolbox.plotting.search_umap_parameters(adata,
+    axarr = sctoolbox.plotting.search_dim_red_parameters(adata,
                                                       metacol="condition",
-                                                      dist_range=(0.1, 0.3, 0.1),
+                                                      method="umap",
+                                                      min_dist_range=(0.1, 0.3, 0.1),
                                                       spread_range=(2.0, 3.0, 0.5))
 
     assert type(axarr).__name__ == "ndarray"
@@ -83,17 +84,19 @@ def test_search_umap_parameters(adata):
 
 
 @pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
-def test_search_umap_parameters_ranges(adata, range):
+def test_search_dim_red_parameters_ranges(adata, range):
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting.search_umap_parameters(adata,
-                                                  metacol="condition",
-                                                  dist_range=range)
+        sctoolbox.plotting.search_dim_red_parameters(adata,
+                                                     method="umap",
+                                                     metacol="condition",
+                                                     dist_range=range)
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting.search_umap_parameters(adata,
-                                                  metacol="condition",
-                                                  spread_range=range)
+        sctoolbox.plotting.search_dim_red_parameters(adata,
+                                                     method="umap",
+                                                     metacol="condition",
+                                                     spread_range=range)
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
