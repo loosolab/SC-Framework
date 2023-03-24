@@ -155,10 +155,8 @@ def search_umap_parameters(adata,
     2D numpy array of axis objects
     """
 
-    return search_dim_red_parameters(adata, method='umap', min_dist_range=dist_range, spread_range=spread_range
-                                            metacol=metacol, verbose=verbose, threads=threads, save=save, n_components=n_components)
-
-
+    return search_dim_red_parameters(adata, method='umap', min_dist_range=dist_range, spread_range=spread_range,
+                                     metacol=metacol, verbose=verbose, threads=threads, save=save, n_components=n_components)
 
 
 def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
@@ -209,9 +207,9 @@ def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lear
             raise ValueError(f"The parameter '{r[0]}' must be a tuple in the form (min, max, step)")
         if r[3] > r[2] - r[1]:
             raise ValueError(f"'step' of '{r[0]}' is larger than 'max' - 'min'. Please adjust.")
-        
+
         return np.around(np.arange(r[1], r[2], r[3]), 2)
-    
+
     # remove data to save memory
     adata = sctoolbox.analyser.get_minimal_adata(adata)
     # Allows for all case variants of method parameter
@@ -227,11 +225,11 @@ def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lear
         #n_comp = "n_pcs"
     else:
         raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
-    
+
     # Get tool and plotting function
     tool_func = getattr(sc.tl, method)
     plot_func = getattr(sc.pl, method)
-    
+
     # Setup loop parameter
     loop_params = list()
     for r in [range_1, range_2]:
@@ -242,7 +240,6 @@ def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lear
     jobs = {}
     for i, r2_param in enumerate(loop_params[1]):  # rows
         for j, r1_param in enumerate(loop_params[0]):  # columns
-            
             kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
                     range_2[0].rsplit('_', 1)[0]: r2_param,
                     "copy": True}
