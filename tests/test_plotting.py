@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """ Load and returns an anndata object. """
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
@@ -73,11 +73,11 @@ def test_plot_pca_variance_fail(adata):
 def test_search_dim_red_parameters(adata):
     """ Test if search_dim_red_parameters returns an array of axes. """
 
-    axarr = sctoolbox.plotting.search_dim_red_parameters(adata,
-                                                         metacol="condition",
-                                                         method="umap",
-                                                         min_dist_range=(0.1, 0.3, 0.1),
-                                                         spread_range=(2.0, 3.0, 0.5))
+    axarr = sctoolbox.plotting._search_dim_red_parameters(adata,
+                                                          metacol="condition",
+                                                          method="umap",
+                                                          min_dist_range=(0.1, 0.3, 0.1),
+                                                          spread_range=(2.0, 3.0, 0.5))
 
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
@@ -87,16 +87,16 @@ def test_search_dim_red_parameters(adata):
 def test_search_dim_red_parameters_ranges(adata, range):
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting.search_dim_red_parameters(adata,
-                                                     method="umap",
-                                                     metacol="condition",
-                                                     min_dist_range=range)
+        sctoolbox.plotting._search_dim_red_parameters(adata,
+                                                      method="umap",
+                                                      metacol="condition",
+                                                      min_dist_range=range)
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting.search_dim_red_parameters(adata,
-                                                     method="umap",
-                                                     metacol="condition",
-                                                     spread_range=range)
+        sctoolbox.plotting._search_dim_red_parameters(adata,
+                                                      method="umap",
+                                                      metacol="condition",
+                                                      spread_range=range)
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
