@@ -909,7 +909,9 @@ def add_insertsize_metrics(adata,
                            use_momentum=True,
                            use_cwt=True,
                            peaks_thr_mom=0.03,
-                           peaks_thr_cwt=0.05):
+                           peaks_thr_cwt=0.05,
+                           plotting=True,
+                           plot_sample=0):
 
     adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
 
@@ -947,18 +949,18 @@ def add_insertsize_metrics(adata,
         momentum_scores = score_by_momentum(data=scaled,
                                             shift=80,
                                             remove=100,
-                                            sample_to_inspect=0,
+                                            sample_to_inspect=plot_sample,
                                             peaks_thr=peaks_thr_mom,
                                             period=160,
                                             penalty_scale=100,
-                                            plotting=True)
+                                            plotting=plotting)
 
     if use_cwt:
         # calculate scores using the continues wavelet transformation
         print("calculating scores using the continues wavelet transformation...")
         cwt_scores = score_by_cwt(data=scaled_ori,
-                                  plot_sample=0,
-                                  plotting=True,
+                                  plot_sample=plot_sample,
+                                  plotting=plotting,
                                   adapter=250,
                                   wavelet='gaus1',
                                   scales=16,
@@ -985,141 +987,3 @@ def add_insertsize_metrics(adata,
         adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
 
     return adata
-
-if __name__ == '__main__':
-
-    import time
-    import episcanpy as epi
-    fragment_file = "/mnt/workspace/jdetlef/data/bamfiles/sorted_esophagus_muscularis_146_0.01_fragments_sorted.bed"
-    h5ad_file = "/mnt/workspace/jdetlef/processed_data/Esophagus_146_0.01/assembling/anndata/Esophagus_146_0.01.h5ad"
-    adata = epi.read_h5ad(h5ad_file)
-
-    adata = add_insertsize_metrics(adata, fragments=fragment_file, use_momentum=True, use_cwt=True)
-
-    print(adata.obs)
-
-    def add_insertsize_metrics(adata,
-                               bam=None,
-                               fragments=None,
-                               barcode_col=None,
-                               barcode_tag="CB",
-                               regions=None,
-                               use_momentum=True,
-                               use_cwt=True):
-
-        adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
-
-        if bam is not None and fragments is not None:
-            raise ValueError("Please provide either a bam file or a fragments file - not both.")
-
-        elif bam is not None:
-            count_table = atac.insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
-
-        elif fragments is not None:
-            count_table = atac.insertsize_from_fragments(fragments, barcodes=adata_barcodes)
-
-        print("Loading data and build count table...")
-        dist = count_table[[c for c in count_table.columns if isinstance(c, int)]]
-        dists_arr = dist.to_numpy()
-        dists_arr = np.nan_to_num(dists_arr)
-
-        # scale the data
-        scaled_ori = scale(dists_arr)
-
-        # plot the densityplot of the fragment length distribution
-        print("plotting density...")
-        densities = calc_densities(scaled_ori)
-        density_plot(scaled_ori, densities)
-
-        if use_momentum:
-            # prepare the data to be used for the momentum method
-            # smooth the data
-            print("smoothing data...")
-            smooth = multi_ma(dists_arr, n=2, window_size=10)
-            # scale the data
-            scaled = scale(smooth)
-
-            # calculate scores using the momentum method
-            print("calculating scores using the momentum method...")
-            momentum_scores = score_by_momentum(data=scaled,
-                                                shift=80,
-                                                remove=100,
-                                                sample_to_inspect=0,
-                                                peaks_thr=0.03,
-                                                period=160,
-                                                penalty_scale=100,
-                                                plotting=True)
-
-        if use_cwt:
-            # calculate scores using the continues wavelet transformation
-            print("calculating scores using the continues wavelet transformation...")
-            cwt_scores = score_by_cwt(data=scaled_ori,
-                                  plot_sample=0,
-                                  plotting=True,
-                                  adapter=250,
-                                  wavelet='gaus1',
-                                  scales=16,
-                                  n_threads=8,
-                                  peaks_thr=0.05,
-                                  penalty_scale=100,
-                                  period=160)
-
-        # select total inserts count and mean from count table
-        inserts_table = count_table[[c for c in count_table.columns if isinstance(c, str)]]
-
-        if use_momentum:
-            inserts_table['nucleosomal_score_momentum'] = momentum_scores
-
-        if use_cwt:
-            inserts_table['nucleosomal_score_cwt'] = cwt_scores
-
-        adata.obs = adata.obs.join(inserts_table)
-
-        if use_momentum:
-            adata.obs['nucleosomal_score_momentum'] = adata.obs['nucleosomal_score_momentum'].fillna(0)
-
-        if use_cwt:
-            adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
-
-        return adata
-
-    # cutoff_momentum = 1.5
-    # cutoff_cwt = 0.5
-    #
-    # selected_by_m = scaled[np.where(momentum_scores > cutoff_momentum)]
-    # selected_by_cwt = scaled[np.where(scores > cutoff_cwt)]
-    #
-    # scaled_mean_m = scale(np.sum(selected_by_m, axis=0) / len(selected_by_m))
-    # scaled_mean_cwt = scale(np.sum(selected_by_cwt, axis=0) / len(selected_by_cwt))
-    #
-    # mean = scale(np.sum(scaled, axis=0) / len(scaled))
-    #
-    # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 8))
-    #
-    # ax1.hist(scores, bins=100, log=True)
-    # ax1.axvline(x=cutoff_cwt, color='red')
-    # ax1.set_title('Scores_CWT')
-    # ax1.set_xlabel('Score')
-    # ax1.set_ylabel('Abundance')
-    #
-    # ax2.hist(momentum_scores, bins=100, log=True)
-    # ax2.axvline(x=cutoff_momentum, color='red')
-    # ax2.set_title('Scores_Momentum')
-    # ax2.set_xlabel('Score')
-    # ax2.set_ylabel('Abundance')
-    #
-    # ax3.plot(scaled_mean_cwt, color='blue')
-    # ax3.plot(mean, color='red')
-    # ax3.set_title('Fragment Length Distribution')
-    # ax3.set_xlabel('Fragment Length')
-    # ax3.set_ylabel('Abundance')
-    #
-    # ax4.plot(scaled_mean_m, color='blue')
-    # ax4.plot(mean, color='red')
-    # ax4.set_title('Fragment Length Distribution')
-    # ax4.set_xlabel('Fragment Length')
-    # ax4.set_ylabel('Abundance')
-    #
-    # # load anndata
-    # adata = epi.read_h5ad("/mnt/workspace/jdetlef/data/bamfiles/sorted_esophagus_muscularis_146_0.01_fragments_sorted.h5ad")
-    # # add the scores to the anndata
