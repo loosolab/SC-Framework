@@ -153,17 +153,67 @@ def search_umap_parameters(adata,
     Returns
     -------
     2D numpy array of axis objects
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
+                                         spread_range=(2.0, 3.0, 0.5),
+                                         metacol="bulk_labels")
     """
 
-    return search_dim_red_parameters(adata, method='umap', min_dist_range=dist_range, spread_range=spread_range,
-                                     metacol=metacol, verbose=verbose, threads=threads, save=save, n_components=n_components)
+    return _search_dim_red_parameters(adata, method='umap', min_dist_range=dist_range, spread_range=spread_range,
+                                      metacol=metacol, verbose=verbose, threads=threads, save=save, n_components=n_components)
 
 
-def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
-                              min_dist_range=(0.1, 0.4, 0.1), spread_range=(2.0, 3.0, 0.5),
-                              metacol="Sample", verbose=True, threads=4, save=None, **kwargs):
+def search_tsne_parameters(adata,
+                           perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
+                           metacol="Sample", verbose=True, threads=4, save=None):
     """
-    Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
+    Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    perplexity_range : tuple, default (30, 60, 10)
+        tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
+    learning_rate_range : tuple, default (600, 1000, 200)
+        tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
+    metacol : str, default "Sample"
+        Name of the column in adata.obs to color by.
+    verbose : bool, default True
+        Print progress to console.
+    threads : int, default 4
+        Number of threads to use for tSNE calculation.
+    save : str, default None (not saved)
+        Path to save the figure to.
+
+    Returns
+    -------
+    2D numpy array of axis objects
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_tsne_parameters(adata, perplexity_range=(30, 60, 10),
+                                         learning_rate_range=(600, 1000, 200),
+                                         metacol="bulk_labels")
+    """
+
+    return _search_dim_red_parameters(adata, method='tsne', perplexity_range=perplexity_range, learning_rate_range=learning_rate_range,
+                                      metacol=metacol, verbose=verbose, threads=threads, save=save)
+
+
+def _search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
+                               min_dist_range=(0.1, 0.4, 0.1), spread_range=(2.0, 3.0, 0.5),
+                               metacol="Sample", verbose=True, threads=4, save=None, **kwargs):
+    """
+    Function to search different combinations of parameters for UMAP or tSNE embeddings.
 
     Parameters
     ----------
@@ -189,16 +239,6 @@ def search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lear
     Returns
     -------
     2D numpy array of axis objects
-
-    Example
-    --------
-    .. plot::
-        :context: close-figs
-
-        pl.search_dim_red_parameters(adata, method='umap',
-                                         dist_range=(0.1, 0.4, 0.1),
-                                         spread_range=(2.0, 3.0, 0.5),
-                                         metacol="bulk_labels")
     """
     def get_loop_params(r):
         """Setup parameters to loop over"""
