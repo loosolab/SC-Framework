@@ -17,6 +17,7 @@ from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
+from scipy.sparse import issparse
 
 import sctoolbox.utilities
 import sctoolbox.analyser
@@ -532,7 +533,8 @@ def plot_3D_UMAP(adata, color, save):
         # color is a gene
         elif color in adata.var.index:
             color_idx = list(adata.var.index).index(color)
-            color_values = adata.X[:, color_idx].todense().A1
+            color_values = adata.X[:, color_idx]
+            color_values = color_values.todense().A1 if issparse(color_values) else color_values
 
         # color was not found
         else:
