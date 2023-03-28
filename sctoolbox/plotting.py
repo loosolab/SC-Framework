@@ -1661,6 +1661,10 @@ def add_figure_title(axarr, title, y=1.3, fontsize=16):
     None - adds a title to the figure directly.
     """
 
+    # If only one axes is passed, convert to list
+    if type(axarr).__name__.startswith("Axes"):
+        axarr = [axarr]
+
     # Get figure
     fig = plt.gcf()
     fig.canvas.draw()
