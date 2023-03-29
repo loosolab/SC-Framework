@@ -986,4 +986,6 @@ def add_insertsize_metrics(adata,
     if use_cwt:
         adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
 
+    adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
+
     return adata
