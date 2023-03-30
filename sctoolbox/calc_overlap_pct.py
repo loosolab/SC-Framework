@@ -106,7 +106,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     return out_sorted, temp_files
 
 
-def _convert_gtf_to_bed(gtf, temp_files, out=None):
+def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     """
     Extract 'chr', 'start' and 'stop' from .gtf file and convert it to sorted BED file.
     BED file will be sorted by chromosome name and start position.
