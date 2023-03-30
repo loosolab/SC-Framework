@@ -71,9 +71,6 @@ def test_create_fragment_file(test_bam, out):
 
     assert fragments == expected and os.path.isfile(fragments)
 
-    # clean up
-    for f in temp:
-        os.remove(f)
 
 @pytest.mark.parametrize("out", [None, 'tests/data/tmp'])
 def test_convert_gtf_to_bed(test_gtf, out):
@@ -90,8 +87,6 @@ def test_convert_gtf_to_bed(test_gtf, out):
 
     assert sorted_bed == expected and os.path.isfile(sorted_bed)
 
-    for f in temp:
-        os.remove(f)
 
 # These tests do not work due to _overlap_two_beds returning "There was no overlap!"
 """
