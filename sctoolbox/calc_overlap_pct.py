@@ -301,12 +301,12 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     if bam_file and not fragments_file:
         print('Converting BAM to fragments file! This may take a while...')
         fragments_file, temp_files = create_fragment_file(bam_file,
-                                              cb_tag=cb_tag,
-                                              out=None,
-                                              nproc=nproc,
-                                              sort_bam=sort_bam,
-                                              keep_temp=keep_fragments,
-                                              temp_files=temp_files)
+                                                          cb_tag=cb_tag,
+                                                          out=None,
+                                                          nproc=nproc,
+                                                          sort_bam=sort_bam,
+                                                          keep_temp=keep_fragments,
+                                                          temp_files=temp_files)
 
     # overlap reads in fragments with promoter regions, return path to overlapped file
     print('Finding overlaps...')

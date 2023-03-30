@@ -1,7 +1,6 @@
 
 import sctoolbox.atac as atac
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import pywt
 import multiprocessing as mp
@@ -247,7 +246,7 @@ def filter_peaks(peaks, reference, peaks_thr, operator='bigger'):
     return filtered_peaks
 
 
-######################## Momentum ##############################
+# ////////////////////////// Momentum \\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 def momentum_diff(data, remove=150, shift=80, smooth=True):
     """
@@ -380,7 +379,7 @@ def score_by_momentum(data,
     return scores
 
 
-############################ CWT ###############################
+# //////////////////////////// CWT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 def add_adapters(features, shift=250, smooth=False, window_size=30):
     """
@@ -725,7 +724,7 @@ def score_by_cwt(data,
     return scores
 
 
-######################### Plotting #############################
+# ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 def density_plot(scaled, densities):
     """
