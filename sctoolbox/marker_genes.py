@@ -376,8 +376,8 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
     Returns
     -----------
-    A py_DESeq2 object containing the results of the DESeq2 analysis.
-    Also adds the dataframes to adata.uns["deseq_result"] and adata.uns["deseq_normalized"].
+    A dataframe containing the results of the DESeq2 analysis.
+    Also adds the dataframe to adata.uns["deseq_result"]
 
     See also
     -----------
@@ -451,6 +451,9 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
     deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
+
+    # Add to adata
+    adata.uns["deseq_result"] = deseq_table
 
     return deseq_table
 
