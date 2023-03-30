@@ -1,6 +1,7 @@
 """
 Modules for plotting single cell data
 
+.. rubric:: Loading the module
 
 Loading the module
 -------------------
