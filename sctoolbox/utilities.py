@@ -470,7 +470,7 @@ def save_figure(path, dpi=600):
     """
     if path is not None:
         create_dir(path)  # recursively create parent dir if needed
-        plt.savefig(path, dpi=dpi, bbox_inches="tight")
+        plt.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
 
 
 def vprint(verbose=True):
