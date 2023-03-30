@@ -2,7 +2,7 @@ from setuptools import setup
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
+                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools', "apybiomart"],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'mnnpy', 'harmonypy', 'scanorama'],
                   "receptor_lignad": ['scikit-learn', 'igraph'],
