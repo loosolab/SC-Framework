@@ -281,7 +281,12 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     # Run batch correction depending on method
     if method == "bbknn":
         import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
-        adata = bbknn.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
+
+        # Get number of pcs in adata, as bbknn hardcodes n_pcs=50
+        n_pcs = adata.obsm["X_pca"].shape[1]
+
+        # Run bbknn
+        adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
 
@@ -325,11 +330,15 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
         # scanorama expect the batch key in a sorted format
         # therefore anndata.obs should be sorted based on batch column before this method.
+        original_order = adata.obs.index
         adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
 
         sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
         sc.pp.neighbors(adata)
+
+        # sort the adata back to the original order
+        adata = adata[original_order]
 
     elif method == "combat":
 
