@@ -1,5 +1,27 @@
 """
 Modules for plotting single cell data
+
+.. rubric:: Loading the module
+
+.. plot ::
+    :context: close-figs
+
+    import sctoolbox.plotting as pl
+
+
+.. rubric:: Loading example data
+
+.. plot ::
+    :context: close-figs
+
+    import numpy as np
+    import scanpy as sc
+
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+.. rubric:: Functions
+
 """
 
 from math import ceil
@@ -58,6 +80,28 @@ def sc_colormap():
     sc_cmap = ListedColormap(newcolors)
 
     return sc_cmap
+
+
+def flip_embedding(adata, key="X_umap", how="vertical"):
+    """
+    Flip the embedding in adata.obsm[key] along the given axis.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    key : str, default "X_umap"
+        Key in adata.obsm to flip.
+    how : str, default "vertical"
+        Axis to flip along. Can be "vertical" (flips up/down) or "horizontal" (flips left/right).
+    """
+
+    if how == "vertical":
+        adata.obsm[key][:, 1] = -adata.obsm[key][:, 1]
+    elif how == "horizontal":
+        adata.obsm[key][:, 0] = -adata.obsm[key][:, 0]
+    else:
+        raise ValueError("The given axis '{0}' is not supported. Please use 'vertical' or 'horizontal'.".format(how))
 
 
 def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
