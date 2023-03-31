@@ -9,10 +9,10 @@ class SctoolboxConfig(object):
     __frozen = False
 
     def __init__(self,
-                 plot_prefix: str = "",  # Prefix for all plots to write
+                 figure_prefix: str = "",  # Prefix for all figures to write
                  adata_input_prefix: str = "",  # Prefix for all adata objects to read
                  adata_output_prefix: str = "",   # Prefix for all adata objects to write
-                 n_jobs: int = 4,  # default number of jobs to use when multiprocessing is available
+                 threads: int = 4,  # default number of threads to use when multiprocessing is available
                  create_dirs: bool = True  # create output directories if they do not exist
                  ):
 
@@ -34,11 +34,11 @@ class SctoolboxConfig(object):
             raise TypeError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
         # Validate and set parameter
-        if key == "n_jobs":
+        if key == "threads":
             self._validate_int(value)
         elif key == "create_dirs":
             self._validate_bool(value)
-        elif key in ["plot_prefix", "adata_output_prefix"]:
+        elif key in ["figure_prefix", "adata_output_prefix"]:
             self._validate_prefix(value)
         object.__setattr__(self, key, value)
 
