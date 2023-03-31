@@ -6,8 +6,6 @@ import re
 import scanpy as sc
 import importlib
 from sctoolbox import settings
-import sctoolbox.checker as ch
-import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 import matplotlib
 import time
