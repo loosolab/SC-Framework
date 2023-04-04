@@ -85,18 +85,21 @@ def test_search_dim_red_parameters(adata):
 
 @pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
 def test_search_dim_red_parameters_ranges(adata, range):
+    """ Test that invalid ranges raise ValueError."""
 
     with pytest.raises(ValueError):
         sctoolbox.plotting._search_dim_red_parameters(adata,
                                                       method="umap",
                                                       color="condition",
-                                                      min_dist_range=range)
+                                                      min_dist_range=range,
+                                                      spread_range=(2.0, 3.0, 0.5))
 
     with pytest.raises(ValueError):
         sctoolbox.plotting._search_dim_red_parameters(adata,
                                                       method="umap",
                                                       color="condition",
-                                                      spread_range=range)
+                                                      spread_range=range,
+                                                      min_dist_range=(0.1, 0.3, 0.1))
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
