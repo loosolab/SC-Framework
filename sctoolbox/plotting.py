@@ -511,6 +511,8 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 
             axes[j, i].set_xlabel("")
 
+            _make_square(axes[j, i])
+
     # fig.tight_layout()
     return axes
 
