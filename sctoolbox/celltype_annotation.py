@@ -17,19 +17,8 @@ def read_scsa_database(species):
     species : str
         Species to read genes for. Must be one of Mouse or Human """
 
-    wholedb_path = pkg_resources.resource_filename("sctoolbox", "data/whole.db")
-    handler = gzip.open(wholedb_path, "rb")
-
-    # Code from SCSA for reading whole.db
-    _ = load(handler)  # gos
-    _ = load(handler)  # human_gofs
-    _ = load(handler)  # mouse_gofs
-    cmarkers = load(handler)  # only cmarkers is needed
-    # smarkers = load(handler)
-    # snames = load(handler)
-    # ensem_hgncs = load(handler)
-    # ensem_mouse = load(handler)
-    handler.close()
+    marker_path = pkg_resources.resource_filename("sctoolbox", "data/scsa.tsv")
+    cmarkers = pd.read_csv(marker_path, sep="\t")
 
     # Subset to species
     cmarkers = cmarkers[cmarkers["speciesType"] == species]
