@@ -127,7 +127,7 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
 def search_umap_parameters(adata,
                            dist_range=(0.1, 0.4, 0.1),
                            spread_range=(2.0, 3.0, 0.5),
-                           metacol="Sample", n_components=2, verbose=True, threads=4, save=None):
+                           color=None, n_components=2, verbose=True, threads=4, save=None):
     """
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -139,16 +139,16 @@ def search_umap_parameters(adata,
         Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (0.1, 0.4, 0.1)
     spread_range : tuple
         Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (2.0, 3.0, 0.5)
-    metacol : str
-        Name of the column in adata.obs to color by. Default: "Sample".
-    n_components : int
-        Number of components in UMAP calculation. Default: 2.
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    n_components : int, default 2
+        Number of components in UMAP calculation.
     verbose : bool
         Print progress to console. Default: True.
-    threads : int
-        Number of threads to use for UMAP calculation. Default: 4.
-    save : str
-        Path to save the figure to. Default: None.
+    threads : int, default 4
+        Number of threads to use for UMAP calculation.
+    save : str, default None
+        Path to save the figure to. If None, the figure is not saved.
 
     Returns
     -------
@@ -161,16 +161,16 @@ def search_umap_parameters(adata,
 
         pl.search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
                                          spread_range=(2.0, 3.0, 0.5),
-                                         metacol="bulk_labels")
+                                         color="bulk_labels")
     """
 
     return _search_dim_red_parameters(adata, method='umap', min_dist_range=dist_range, spread_range=spread_range,
-                                      metacol=metacol, verbose=verbose, threads=threads, save=save, n_components=n_components)
+                                      color=color, verbose=verbose, threads=threads, save=save, n_components=n_components)
 
 
 def search_tsne_parameters(adata,
                            perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
-                           metacol="Sample", verbose=True, threads=4, save=None):
+                           color=None, verbose=True, threads=4, save=None):
     """
     Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
@@ -182,8 +182,8 @@ def search_tsne_parameters(adata,
         tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
     learning_rate_range : tuple, default (600, 1000, 200)
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
-    metacol : str, default "Sample"
-        Name of the column in adata.obs to color by.
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
     verbose : bool, default True
         Print progress to console.
     threads : int, default 4
@@ -202,16 +202,16 @@ def search_tsne_parameters(adata,
 
         pl.search_tsne_parameters(adata, perplexity_range=(30, 60, 10),
                                          learning_rate_range=(600, 1000, 200),
-                                         metacol="bulk_labels")
+                                         color="bulk_labels")
     """
 
     return _search_dim_red_parameters(adata, method='tsne', perplexity_range=perplexity_range, learning_rate_range=learning_rate_range,
-                                      metacol=metacol, verbose=verbose, threads=threads, save=save)
+                                      color=color, verbose=verbose, threads=threads, save=save)
 
 
 def _search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
                                min_dist_range=(0.1, 0.4, 0.1), spread_range=(2.0, 3.0, 0.5),
-                               metacol="Sample", verbose=True, threads=4, save=None, **kwargs):
+                               color=None, verbose=True, threads=4, save=None, **kwargs):
     """
     Function to search different combinations of parameters for UMAP or tSNE embeddings.
 
@@ -227,8 +227,8 @@ def _search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lea
         tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
     learning_rate_range : tuple, default (600, 1000, 200)
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
-    metacol : str, default 'Sample'
-        Name of the column in adata.obs to color by.
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
     verbose : bool, default True
         Print progress to console.
     threads : int, default 4
@@ -313,15 +313,15 @@ def _search_dim_red_parameters(adata, method, perplexity_range=(30, 60, 10), lea
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-                plot_func(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+                plot_func(adata, color=color, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
-                axes[i, j].set_ylabel(f"{range_2[0].rsplit('_', 1)[0]}: {r2_param}")
+                axes[i, j].set_ylabel(f"{range_2[0].rsplit('_', 1)[0]}: {r2_param}", fontsize=14)
             else:
                 axes[i, j].set_ylabel("")
 
             if i == 0:
-                axes[i, j].set_title(f"{range_1[0].rsplit('_', 1)[0]}: {r1_param}")
+                axes[i, j].set_title(f"{range_1[0].rsplit('_', 1)[0]}: {r1_param}", fontsize=14)
 
             axes[i, j].set_xlabel("")
 

@@ -74,7 +74,7 @@ def test_search_dim_red_parameters(adata):
     """ Test if search_dim_red_parameters returns an array of axes. """
 
     axarr = sctoolbox.plotting._search_dim_red_parameters(adata,
-                                                          metacol="condition",
+                                                          color="condition",
                                                           method="umap",
                                                           min_dist_range=(0.1, 0.3, 0.1),
                                                           spread_range=(2.0, 3.0, 0.5))
@@ -89,13 +89,13 @@ def test_search_dim_red_parameters_ranges(adata, range):
     with pytest.raises(ValueError):
         sctoolbox.plotting._search_dim_red_parameters(adata,
                                                       method="umap",
-                                                      metacol="condition",
+                                                      color="condition",
                                                       min_dist_range=range)
 
     with pytest.raises(ValueError):
         sctoolbox.plotting._search_dim_red_parameters(adata,
                                                       method="umap",
-                                                      metacol="condition",
+                                                      color="condition",
                                                       spread_range=range)
 
 
