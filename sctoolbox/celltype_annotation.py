@@ -2,8 +2,6 @@ import sys
 import pandas as pd
 import pkg_resources
 import copy
-import gzip
-from pickle import load
 import subprocess
 
 import sctoolbox.utilities as utils
