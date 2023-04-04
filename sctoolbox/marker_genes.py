@@ -327,7 +327,8 @@ def run_rank_genes(adata, groupby,
                    method=None,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
-                   max_out_group_fraction=0.8):
+                   max_out_group_fraction=0.8,
+                   **kwargs):
     """ Run scanpy rank_genes_groups and filter_rank_genes_groups. """
 
     # Check that adata is an AnnData object
@@ -339,7 +340,7 @@ def run_rank_genes(adata, groupby,
     # Catch ImplicitModificationWarning from scanpy
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute*")
-        sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
+        sc.tl.rank_genes_groups(adata, method=method, groupby=groupby, **kwargs)
 
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
