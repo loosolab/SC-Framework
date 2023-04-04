@@ -826,8 +826,8 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     # Subset to input gene list
     gene_table_melted = gene_table_melted[gene_table_melted["gene"].isin(gene_list)]
 
-    # Sort by median
-    medians = gene_table_melted.groupby(groupby).median()
+    # Sort by median value
+    medians = gene_table_melted.groupby(groupby)["value"].median().to_frame()
     medians.columns = ["medians"]
     gene_table_melted_sorted = gene_table_melted.merge(medians, left_on=groupby, right_index=True).sort_values("medians", ascending=False)
 
