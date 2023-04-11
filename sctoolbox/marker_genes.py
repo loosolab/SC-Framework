@@ -7,6 +7,7 @@ import numpy as np
 import scanpy as sc
 import itertools
 from pathlib import Path
+from importlib.resources import as_file, files
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -537,46 +538,65 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     if not inplace:
         adata = adata.copy()
 
-    # if two lists are give, use both and ignore species
-    if s_genes is not None and g2m_genes is not None:
-        species = None
-        allowed_types = ['.txt', '.csv', '.tsv']
+    # if two lists are given, check if they are lists or paths
+    if s_genes is not None:
+        if isinstance(s_genes, np.ndarray):
+            s_genes = list(s_genes)
+        # check if s_genes is neither a list nor a path
+        if not isinstance(s_genes, str) and not isinstance(s_genes, list):
+            raise ValueError("Please provide a list of genes or a path to a list of genes!")
         # check if s_genes is a file
         if isinstance(s_genes, str):
-            # check if type is allowed
-            if Path(s_genes).suffix not in allowed_types:
-                raise ValueError(f"File '{s_genes}' does not have the expected file ending: {allowed_types}")
             # check if file exists
-            if os.path.exists(s_genes):
+            if Path(s_genes).is_file():
                 s_genes = utils.read_list_file(s_genes)
             else:
                 raise FileNotFoundError(f'The list {s_genes} was not found!')
+    
+    if g2m_genes is not None:
+        if isinstance(g2m_genes, np.ndarray):
+            g2m_genes = list(g2m_genes)
+        # check if g2m_genes is neither a list nor a path
+        if not isinstance(g2m_genes, str) and not isinstance(g2m_genes, list):
+            raise ValueError("Please provide a list of genes or a path to a list of genes!")
         # check if g2m_genes is a file
         if isinstance(g2m_genes, str):
-            # check if type is allowed
-            if Path(g2m_genes).suffix not in allowed_types:
-                raise ValueError(f"File '{g2m_genes}' does not have the expected file ending: {allowed_types}")
             # check if file exists
-            if os.path.exists(g2m_genes):
+            if Path(g2m_genes).is_file():
                 g2m_genes = utils.read_list_file(g2m_genes)
             else:
                 raise FileNotFoundError(f'The list {g2m_genes} was not found!')
 
+    # if two lists are given, use both and ignore species
+    if s_genes is not None and g2m_genes is not None:
+        species = None
+
     # get gene list for species
     elif species is not None:
         species = species.lower()
-        genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
+
+        # get path of directory where cell cycles gene lists are saved
+        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
 
         # check if given species is available
-        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
+        available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
         available_species = utils.clean_flanking_strings(available_files)
         if species not in available_species:
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
         # get cellcylce genes lists
-        path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
-        if os.path.exists(path_cellcycle_genes):
-            cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None, sep="\t", names=['gene', 'phase']).set_index('gene')
+        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
+        cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
+                                       sep="\t", names=['gene', 'phase']).set_index('gene')
+
+        # if one list is given as input, get the other list from gene lists dir
+        if s_genes is not None:
+            print("g2m_genes list is missing! Using default list instead")
+            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
+        elif g2m_genes is not None:
+            print("s_genes list is missing! Using default list instead")
+            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
+        else:
             s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
             g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
 
