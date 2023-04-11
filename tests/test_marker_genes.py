@@ -82,9 +82,14 @@ def test_mask_rank_genes(adata):
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
 
 
-@pytest.mark.parametrize("species", ["mouse", "unicorn", None])
+@pytest.mark.parametrize("species", ["human", "unicorn", None])
 def test_predict_cell_cycle(adata, species):
     """ Test if cell cycle is predicted and added to adata.obs """
+
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var.set_index('gene', inplace=True)
+
     if species is None or species == 'unicorn':
         with pytest.raises(ValueError):
             sctoolbox.marker_genes.predict_cell_cycle(adata, species)
@@ -93,4 +98,4 @@ def test_predict_cell_cycle(adata, species):
         columns = adata.obs.columns
         added_columns = ["S_score", "G2M_score", "phase"]
 
-        assert all([column in columns for column in added_columns]) 
+        assert all([column in columns for column in added_columns])

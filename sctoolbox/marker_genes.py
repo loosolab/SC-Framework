@@ -7,7 +7,7 @@ import numpy as np
 import scanpy as sc
 import itertools
 from pathlib import Path
-from importlib.resources import as_file, files
+from importlib.resources import files
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
