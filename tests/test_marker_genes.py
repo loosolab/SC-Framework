@@ -80,3 +80,17 @@ def test_mask_rank_genes(adata):
     for key in tables:
         table_names = tables[key]["names"].tolist()
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
+
+
+@pytest.mark.parametrize("species", ["mouse", "unicorn", None])
+def test_predict_cell_cycle(adata, species):
+    """ Test if cell cycle is predicted and added to adata.obs """
+    if species is None or species == 'unicorn':
+        with pytest.raises(ValueError):
+            sctoolbox.marker_genes.predict_cell_cycle(adata, species)
+    else:
+        sctoolbox.marker_genes.predict_cell_cycle(adata, species, inplace=True)
+        columns = adata.obs.columns
+        added_columns = ["S_score", "G2M_score", "phase"]
+
+        assert all([column in columns for column in added_columns]) 
