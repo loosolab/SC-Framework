@@ -518,21 +518,28 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     Parameters
     -----------
     adata : anndata.AnnData
-        Anndata object containing raw counts.
+        Anndata object to predict cell cycle on.
     species : str
         The species of data. Available species are: human, mouse, rat and zebrafish.
-    s_genes : str or list
+        If both s_genes and g2m_genes are given, set species=None,
+        otherwise species is ignored.
+    s_genes : str or list, default None
         If no species is given or desired species is not supported, you can provide
-        a list of genes for the S-phase or a txt file containing genes in each row.
-    g2m_genes : str or list
+        a list of genes for the S-phase or a txt file containing one gene in each row.
+        If only s_genes is provided and species is a supported input, the default
+        g2m_genes list will be used, otherwise the function will not run.
+    g2m_genes : str or list, default None
         If no species is given or desired species is not supported, you can provide
-        a list of genes for the G2M-phase or a txt file containing genes in each row.
-    inplace : bool, default: True
+        a list of genes for the G2M-phase or a txt file containing one gene per row.
+        If only g2m_genes is provided and species is a supported input, the default
+        s_genes list will be used, otherwise the function will not run.
+    inplace : bool, default True
         if True, add new columns to the original anndata object.
 
     Returns
     -----------
-    If inplace is False, return a copy of anndata object with the new column in the obs table.
+    scanpy.AnnData or None :
+        If inplace is False, return a copy of anndata object with the new column in the obs table.
     """
 
     if not inplace:
@@ -552,7 +559,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
                 s_genes = utils.read_list_file(s_genes)
             else:
                 raise FileNotFoundError(f'The list {s_genes} was not found!')
-    
+
     if g2m_genes is not None:
         if isinstance(g2m_genes, np.ndarray):
             g2m_genes = list(g2m_genes)
