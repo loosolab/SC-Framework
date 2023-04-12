@@ -2,46 +2,39 @@ import sys
 import pandas as pd
 import pkg_resources
 import copy
-import gzip
-from pickle import load
 import subprocess
 
 import sctoolbox.utilities as utils
 
 
-def read_scsa_database(species):
-    """ Read the SCSA database and return gene names and ids
+def _match_database(marker_db, input_genes):
+    """ Find best matching column in the marker database for the input genes"""
 
-    Parameters
-    -----------
-    species : str
-        Species to read genes for. Must be one of Mouse or Human """
+    user_database = pd.read_csv(marker_db, sep="\t")
 
-    wholedb_path = pkg_resources.resource_filename("sctoolbox", "data/whole.db")
-    handler = gzip.open(wholedb_path, "rb")
+    highest_perc = -1
+    for column in user_database.columns:
+        database_genes = set(user_database[column].tolist())
+        genes_overlap = set(input_genes).intersection(database_genes)
 
-    # Code from SCSA for reading whole.db
-    _ = load(handler)  # gos
-    _ = load(handler)  # human_gofs
-    _ = load(handler)  # mouse_gofs
-    cmarkers = load(handler)  # only cmarkers is needed
-    # smarkers = load(handler)
-    # snames = load(handler)
-    # ensem_hgncs = load(handler)
-    # ensem_mouse = load(handler)
-    handler.close()
+        percent_overlap = len(genes_overlap) / len(input_genes) * 100
 
-    # Subset to species
-    cmarkers = cmarkers[cmarkers["speciesType"] == species]
+        if percent_overlap > highest_perc:
+            highest_perc = percent_overlap
+            n_overlap = len(genes_overlap)
+            highest_perc = percent_overlap
+            best_column = column
 
-    # Read gene names and ids
-    gene_names = cmarkers["gene"].tolist()
-    gene_ids = cmarkers["ensemblID"].tolist()
+    if highest_perc == 0:
+        print("No match found in the marker database")
+        sys.exit()
 
-    return gene_names, gene_ids
+    print(f"Best match between input genes and database were found in column '{best_column}' with {n_overlap} genes ({highest_perc:.1f}%)")
+
+    return best_column
 
 
-def get_rank_genes(d):
+def _get_rank_genes(d):
     """ Get a list of unique rank genes from the nested adata.uns["rank_genes_groups"] dictionary
 
     Parameters
@@ -63,46 +56,19 @@ def get_rank_genes(d):
     return genes
 
 
-def check_genes_databses(all_genes, gene_db, source):
-    """ Check the coverage of genes between a database and a list of genes
-
-    Parameters
-    -----------
-    all_genes : list
-        List of input genes without duplicates
-    genes_db : list
-        List of marker genes
-    source : str
-        Where genes_db originated from: wholeDB or user_db
-    """
-
-    # Check the overlap between input genes and database
-    gene_overlap = set(all_genes).intersection(gene_db)
-    if len(gene_overlap) == 0:
-        raise ValueError(f"No match found between input genes and {source} database. Adjust 'gene_column' to control input genes and 'gene_symbol' to control the switch between name/id.")
-    perc_overlap = round(len(gene_overlap) / len(all_genes) * 100, 1)
-    perc_db_coverage = round(len(gene_overlap) / len(gene_db) * 100, 1)
-    print(f"{len(gene_overlap)}/{len(all_genes)} ({perc_overlap}%) input genes were found in {source} database (total genes in database: {len(gene_db)})")
-    print(f"{len(gene_overlap)}/{len(gene_db)} ({perc_db_coverage}%) of genes in {source} database were used for annotation")
-
-
 def run_scsa(adata,
              gene_column=None,
              gene_symbol='auto',
              key='rank_genes_groups',
              column_added='SCSA_pred_celltype',
              inplace=True,
-
              python_path=None,
-             scsa_path=None,
-             wholedb_path=None,
              species='human',
              fc=1.5,
-             pvalue=0.01,
+             pvalue=0.05,
              tissue='All',
-             celltype='normal',
              user_db=None,
-             z_score='best',
+             celltype_column="cell_name"
              ):
     """
     A function to run SCSA cell type annotation and assign cell types to cluster in an adata object.
@@ -113,7 +79,6 @@ def run_scsa(adata,
 
     Also adds adata.uns['SCSA'] as a dictionary with the following keys:
     - 'results': SCSA result table
-    - 'go': GO-term result table
     - 'stderr': SCSA stderr
     - 'stdout': SCSA stdout
     - 'cmd': SCSA command
@@ -134,7 +99,7 @@ def run_scsa(adata,
     key : str, optional
         The key in adata.uns where ranked genes are stored. Defaults to 'rank_genes_groups'.
     column_added : str, optional
-        The column name in adata.obs where the cell types will be added. Defaults to 'SCSA_pred_celltypes'.
+        The column name in adata.obs where the cell types will be added. Defaults to 'SCSA_pred_celltype'.
     inplace : bool, optional
         If True, cell types will be added to adata.obs. Defaults to True.
 
@@ -142,31 +107,27 @@ def run_scsa(adata,
     ----------------
     python_path : str, optional
         Path to python. If not given, will be inferred from sys.executable.
-    scsa_path : str, optional
-        Path to SCSA.py. Default is to use the SCSA.py file in the sctoolbox/data folder.
-    wholedb_path : str, optional
-        Path to whole.db. Default is to use the whole.db file in the sctoolbox/data folder.
     species : str, optional
-        Supports only human or mouse. Defaults to 'human'.
+        Supports only human or mouse. Defaults to 'human'. Set to None to use the user defined database given in user_db.
     fc : float, optional
         Fold change threshold to filter genes. Defaults to 1.5.
     pvalue : float, optional
-        P value threshold to filter. Defaults to 0.01.
+        P-value threshold to filter genes. Defaults to 0.05.
     tissue : float, optional
         A specific tissue can be defined. Defaults to 'All'.
-    celltype : str, optional
-        Either normal or cancer. Defaults to 'normal'.
     user_db : str, optional
-        Path to the user defined marker database. Defaults to None.
-    z_score : str, optional
-        Whether to choose the best scoring cell type. Defaults to 'best'.
+        Path to the user defined marker database.
+        Must contain at least two columns, one named "cell_name" (or set via celltype_column) for the cell type annotation,
+        and at least one more column with gene names or ids (selected automatically from best gene overlap).
+    celltype_column : str, optional
+        The column name in the user_db that contains the cell type annotation. Defaults to 'cell_name'.
 
     Returns
     --------
         AnnData: If inplace==False, returns adata with cell types in adata.obs
     """
 
-    if species:
+    if species is not None:
         species = species.capitalize()
 
     # ---- checking if columns exist in adata ---- #
@@ -188,10 +149,13 @@ def run_scsa(adata,
     # Get paths to scripts and files
     if not python_path:
         python_path = sys.executable
-    if not scsa_path:
-        scsa_path = pkg_resources.resource_filename("sctoolbox", "data/SCSA.py")
-    if not wholedb_path:
-        wholedb_path = pkg_resources.resource_filename("sctoolbox", "data/whole.db")
+
+    scsa_path = pkg_resources.resource_filename("sctoolbox", "data/SCSA_custom.py")
+
+    if species is not None:
+        marker_db = pkg_resources.resource_filename("sctoolbox", f"data/celltype_markers/cellmarker_{species.lower()}.tsv")
+    else:
+        marker_db = user_db
 
     # ---- fetching ranked genes from adata.uns ---- #
     result = copy.deepcopy(adata.uns[key])
@@ -208,43 +172,12 @@ def run_scsa(adata,
                 result["names"][i][j] = idx2name[result["names"][i][j]]
 
     # ---- Find out which gene symbol to use ---- #
-    all_genes = get_rank_genes(result)
+    all_genes = _get_rank_genes(result)
     print("Found {} genes from input ranked genes".format(len(all_genes)))
     print("Checking if genes are in the database...")
-    if species is not None:
-        database_genes_symbol, database_genes_id = read_scsa_database(species)
-        symbol_overlap = set(all_genes).intersection(database_genes_symbol)
-        id_overlap = set(all_genes).intersection(database_genes_id)
 
-        # If gene_symbol is 'auto', try to infer column from database
-        if gene_symbol == 'auto':
-            print(f"gene symbol overlap: {len(symbol_overlap)} | ensembl id overlap: {len(id_overlap)}")
-
-            if len(symbol_overlap) == 0 and len(id_overlap) == 0:
-                raise ValueError("No match found between input genes and marker database. Adjust'gene_column' to control input genes.")
-            if len(symbol_overlap) >= len(id_overlap):
-                print("Auto detection: gene_symbol is set to 'symbol'")
-                gene_symbol = "symbol"
-            else:
-                print("Auto detection: gene_symbol is set to 'id'")
-                gene_symbol = "id"
-
-        # Fetch final database genes
-        if gene_symbol == "symbol":
-            database_genes = database_genes_symbol
-        else:
-            database_genes = database_genes_id
-
-        # check database_genes against all_genes
-        check_genes_databses(all_genes, database_genes, source='wholeDB')
-
-    if user_db is not None:
-        # Read user database and check overlap with input genes
-        user_database = pd.read_csv(user_db, sep="\t", header=None)
-        database_genes = set(user_database[1].tolist())
-
-        # check database_genes against all_genes
-        check_genes_databses(all_genes, database_genes, source='User DB')
+    # Read database and find best matching gene column
+    gene_column = _match_database(marker_db, all_genes)
 
     # ---- Setup table for SCSA input ---- #
     groups = result['names'].dtype.names
@@ -264,23 +197,12 @@ def run_scsa(adata,
     results_path = "./scsa_results.txt"
     utils.create_dir(results_path)  # make sure the full path to results exists
 
-    if species == 'Human' or species == 'Mouse':
-        scsa_cmd = f"{python_path} {scsa_path} -d {wholedb_path} -i {csv} -s scanpy -k {tissue} -b -g {species} -f {fc} -p {pvalue} -o {results_path} -m txt"
-
-        if gene_symbol == "symbol":
-            scsa_cmd += ' -E'
-        if user_db:
-            scsa_cmd += f' -M {user_db}'
-
-    else:
-        # annotating other species is possible if species is False and user_db is provided
-        scsa_cmd = f"{python_path} {scsa_path} -d {wholedb_path} -i {csv} -s scanpy -k {tissue} -b -f {fc} -p {pvalue} -o {results_path} -m txt -M {user_db} -N"
-
-        if gene_symbol == "symbol":
-            scsa_cmd += ' -E'
+    scsa_cmd = f"{python_path} {scsa_path} -i {csv} -f {fc} -p {pvalue} -o {results_path} -m txt "
+    scsa_cmd += f"--db {marker_db} "
+    scsa_cmd += f"--cellcol {celltype_column} --genecol {gene_column}"
 
     # ---- run SCSA command ---- #
-    print('Running SCSA...\n')
+    print('Running SCSA...')
     p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = p.stderr
     stdout = p.stdout
@@ -288,34 +210,29 @@ def run_scsa(adata,
         raise ValueError(f"SCSA failed with error: {stderr.decode('utf-8')}")
 
     # ---- read results_path and assign to adata.obs ---- #
-    if z_score == 'best':
-        df = pd.read_csv(results_path, sep='\t', engine='python')
-        adata.uns["SCSA"] = df
+    df = pd.read_csv(results_path, sep='\t', engine='python')
+    adata.uns["SCSA"] = df
 
-        # Save the celltype with the best z-score to adata.obs
-        df_max1 = df.groupby('Cluster').first()
-        df_max = df_max1.drop(columns=['Z-score'])
-        df_max = df_max.reset_index()
-        df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
-        df_max = df_max.astype(str)
-        dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
+    # Save the celltype with the best z-score to adata.obs
+    df_max1 = df.groupby('Cluster').first()
+    df_max = df_max1.drop(columns=['Z-score'])
+    df_max = df_max.reset_index()
+    df_max = df_max.rename(columns={'Cell Type': 'Cell_Type'})
+    df_max = df_max.astype(str)
+    dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
 
     print(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
     for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
         print(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
-    # Read the go-term output file
-    go = pd.read_csv(results_path + ".go", sep="\t")
-
     # Save results to uns dictionary
     scsa_uns_dict = {"SCSA": {"results": df,
-                              "go": go,
                               "stderr": stderr.decode('utf-8'),
                               "stdout": stdout.decode('utf-8'),
                               "cmd": scsa_cmd}}
 
     # Remove the temporary files
-    files = [csv, results_path, results_path + ".go"]
+    files = [csv, results_path]
     utils.remove_files(files)
 
     # Add the annotated celltypes to the anndata-object
