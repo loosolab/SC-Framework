@@ -106,6 +106,9 @@ pages:
   tags:
     - coverage
   script:
+    - pip install rpy2   # resolve dependencies for diffexpr
+    - pip install numpy  # resolve dependencies for diffexpr
+    - pip install pandas # resolve dependencies for diffexpr
     - pip install .[all]
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
