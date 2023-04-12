@@ -1,8 +1,9 @@
 from setuptools import setup
+from setuptools import find_namespace_packages
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets'],
+                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'mnnpy', 'harmonypy', 'scanorama'],
                   "receptor_lignad": ['scikit-learn', 'igraph'],
@@ -17,7 +18,7 @@ setup(
     name='sc-toolbox',
     description='Custom modules for single cell analysis',
     license='MIT',
-    packages=['sctoolbox'],
+    packages=find_namespace_packages(),
     python_requires='>=3',
     install_requires=[
         'matplotlib',

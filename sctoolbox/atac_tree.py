@@ -59,17 +59,3 @@ class ATAC_tree(generalized_tree.Tree):
     @qc_plots_dir.setter
     def qc_plots_dir(self, value):
         self._qc_plots_dir = value
-
-
-if __name__ == "__main__":
-
-    tree = ATAC_tree()
-
-    tree.processing_dir = "/home/jan/python-workspace/sc-atac/test_processed_dir"
-
-    run = tree.run
-    tree.run = "some_test"
-
-    pre_pro_dir = tree.pre_pro_dir
-    tree.pre_pro_dir = "some/dir"
-    pre_pro_dir = tree.pre_pro_dir
