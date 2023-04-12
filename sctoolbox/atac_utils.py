@@ -487,7 +487,6 @@ def bam_adata_ov(adata, bamfile, cb_col):
     -------
 
     """
-
     bam_obj = bam_utils.open_bam(bamfile, "rb")
 
     sample = []
@@ -526,14 +525,13 @@ def check_barcode_tag(adata, bamfile, cb_col):
     """
     hitrate = bam_adata_ov(adata, bamfile, cb_col)
 
-    if hitrate <= 0.05:
-        warnings.warn('Less than 5% of the barcodes from the bamfile found in the .obs table. \n'
-                      'Consider if you are using the wrong column for cb-tag or bamfile. \n'
-                      'The following process can take several hours')
-    elif hitrate == 0:
-        warnings.warn('None of the barcodes from the bamfile found in the .obs table. \n'
-                      'Consider if you are using the wrong column cb-tag or bamfile. \n'
-                      'The following process can take several hours')
-
-    if hitrate > 0.05:
+    if hitrate == 0:
+        warnings.warn('None of the barcodes from the bamfile found in the .obs table.\n'
+                      'Consider if you are using the wrong column cb-tag or bamfile.')
+    elif hitrate <= 0.05:
+        warnings.warn('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
+                      'Consider if you are using the wrong column for cb-tag or bamfile.')
+    elif hitrate > 0.05:
         print('Barcode tag: OK')
+    else:
+        raise ValueError("Could not identify barcode hit rate.")
