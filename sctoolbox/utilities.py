@@ -11,11 +11,72 @@ import matplotlib
 import time
 import warnings
 from scipy.sparse import issparse
+import getpass
+from datetime import datetime
 
 from os.path import join, dirname, exists
 from pathlib import Path
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
+
+
+def get_user():
+    """ Get the name of the current user.
+
+    Returns
+    -------
+    str
+        The name of the current user.
+    """
+
+    try:
+        username = getpass.getuser()
+    except Exception:
+        username = "unknown"
+
+    return username
+
+
+def get_datetime():
+    """ Get a string with the current date and time for logging.
+
+    Returns
+    -------
+    str
+        A string with the current date and time in the format dd/mm/YY H:M:S
+    """
+
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
+
+    return dt_string
+
+
+def initialize_uns(adata, keys=[]):
+    """ Initialize the sctoolbox keys in adata.uns.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An AnnData object.
+    keys : str or list of str, optional
+        Additional keys to be initialized in adata.uns['sctoolbox'].
+
+    Returns
+    -------
+    None
+        keys are initialized in adata.uns['sctoolbox'].
+    """
+    if "sctoolbox" not in adata.uns:
+        adata.uns["sctoolbox"] = {}
+
+    # Add additional keys if needed
+    if isinstance(keys, str):
+        keys = [keys]
+
+    for key in keys:
+        if key not in adata.uns["sctoolbox"]:
+            adata.uns["sctoolbox"][key] = {}
 
 
 def get_package_versions():
@@ -551,6 +612,11 @@ def save_h5ad(adata, path):
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
 
+    # Log user to adata.uns
+    initialize_uns(adata, "user")
+    adata.uns["sctoolbox"]["user"].update({get_user(): get_datetime()})  # overwrites existing entry for each user
+
+    # Save adata
     adata_output = settings.adata_output_prefix + path
     adata.write(filename=adata_output)
 
