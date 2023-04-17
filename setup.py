@@ -12,7 +12,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
                   }
 
-extras_require["all"] = list(set(sum(extras_require.values(), [])))  # flatten list of all requirements
+extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
 setup(
     name='sc-toolbox',
@@ -38,7 +38,9 @@ setup(
         'leidenalg',
         'louvain',
         'IPython',
-        'openpyxl'
+        'openpyxl',
+        'ratelimiter',
+        'python-gitlab'
     ],
     include_package_data=True,
     extras_require=extras_require
