@@ -3,7 +3,6 @@ import os
 import scanpy as sc
 import numpy as np
 import sctoolbox.marker_genes
-from importlib.resources import files
 
 
 # ---------------------------- FIXTURES -------------------------------- #
