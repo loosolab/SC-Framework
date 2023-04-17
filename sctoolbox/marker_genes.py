@@ -610,7 +610,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     else:
         raise ValueError("Please provide either a supported species or lists of genes!")
 
-    # Scale the date before scoring
+    # Scale the data before scoring
     sdata = sc.pp.scale(adata, copy=True)
 
     # Score the cells by s phase or g2m phase
