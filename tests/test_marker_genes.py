@@ -82,7 +82,9 @@ def test_mask_rank_genes(adata):
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
 
 
-@pytest.mark.parametrize("species", ["human", "unicorn", None])
+@pytest.mark.parametrize("species, s_genes, g2m_genes", [("human", None, None),
+                                                         ("unicorn", None, None),
+                                                         (None, None, None)])
 def test_predict_cell_cycle(adata, species):
     """ Test if cell cycle is predicted and added to adata.obs """
 
@@ -90,12 +92,18 @@ def test_predict_cell_cycle(adata, species):
     adata.var.reset_index(inplace=True)
     adata.var.set_index('gene', inplace=True)
 
-    if species is None or species == 'unicorn':
-        with pytest.raises(ValueError):
-            sctoolbox.marker_genes.predict_cell_cycle(adata, species)
-    else:
-        sctoolbox.marker_genes.predict_cell_cycle(adata, species, inplace=True)
+    if species == 'human':
+        # workaround since example adata doesn't contain cellcycle genes
+        # otherwise species should be used as input for predict_cell_cycle
+        s_genes = adata.var.index.to_list()[:10]
+        g2m_genes = adata.var.index.to_list()[90:100]
+
+        sctoolbox.marker_genes.predict_cell_cycle(adata, species=None, s_genes=s_genes, g2m_genes=g2m_genes)
         columns = adata.obs.columns
         added_columns = ["S_score", "G2M_score", "phase"]
 
         assert all([column in columns for column in added_columns])
+
+    else:
+        with pytest.raises(ValueError):
+            sctoolbox.marker_genes.predict_cell_cycle(adata, species, s_genes, g2m_genes)
