@@ -3,6 +3,7 @@ import os
 import scanpy as sc
 import numpy as np
 import sctoolbox.marker_genes
+from importlib.resources import files
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -80,3 +81,27 @@ def test_mask_rank_genes(adata):
     for key in tables:
         table_names = tables[key]["names"].tolist()
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
+
+
+@pytest.mark.parametrize("score_name", ["test1", "test2"])
+def test_score_genes(adata, score_name):
+    """ Test if cell cycle is predicted and added to adata.obs """
+
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var.set_index('gene', inplace=True)
+
+    # test scoring genes with a list
+    if score_name == "test1":
+        gene_set = adata.var.index.to_list()[:100]
+        sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
+
+        assert score_name in adata.obs.columns
+
+    # test scoring genes with a list in a file
+    elif score_name == "test2":
+        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
+        gene_set = genelist_dir / "human_mito_genes.txt"
+        sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
+
+        assert score_name in adata.obs.columns
