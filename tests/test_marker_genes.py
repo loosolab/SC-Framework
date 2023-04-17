@@ -84,7 +84,7 @@ def test_mask_rank_genes(adata):
 
 @pytest.mark.parametrize("score_name", ["test1", "test2"])
 def test_score_genes(adata, score_name):
-    """ Test if cell cycle is predicted and added to adata.obs """
+    """ Test if genes are scored and added to adata.obs """
 
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
