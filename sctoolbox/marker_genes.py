@@ -510,7 +510,7 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     return cluster2celltype
 
 
-def score_genes(adata, gene_set, score_name, inplace=True, **kwargs):
+def score_genes(adata, gene_set, score_name='score', inplace=True):
     """
     Assign a score to each cell depending on the expression of a set of genes.
 
@@ -531,30 +531,26 @@ def score_genes(adata, gene_set, score_name, inplace=True, **kwargs):
     If inplace is False, return a copy of anndata object with the new column in the obs table.
     """
 
-    allowed_types = ['.txt', '.csv', '.tsv']
+    if not inplace:
+        adata = adata.copy()
+
     # check if list is in a file
     if isinstance(gene_set, str):
-        # check if type is allowed
-        if Path(gene_set).suffix not in allowed_types:
-            s1 = 'File type is not allowed! provide gene list in: '
-            s2 = ", ".join(allowed_types)
-            raise ValueError(s1 + s2)
         # check if file exists
-        if os.path.exists(gene_set):
-            gene_list = [x.strip() for x in open(gene_set)]
+        if Path(gene_set).is_file():
+            gene_set = [x.strip() for x in open(gene_set)]
         else:
             raise FileNotFoundError('The list was not found!')
+
     # check if gene set is a list
-    elif isinstance(gene_set, list):
-        gene_list = gene_set
-    else:
+    elif not isinstance(gene_set, list):
         raise ValueError('Please provide genes either as a list or txt file!')
 
     # scale data
     sdata = sc.pp.scale(adata, copy=True)
 
     # Score the cells
-    sc.tl.score_genes(sdata, gene_list=gene_list, score_name=score_name)
+    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name)
     # add score to adata.obs
     adata.obs[score_name] = sdata.obs[score_name]
 
