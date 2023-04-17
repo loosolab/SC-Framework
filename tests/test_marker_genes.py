@@ -90,7 +90,9 @@ def test_predict_cell_cycle(adata, species, s_genes, g2m_genes):
 
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
+    adata.var['gene'] = adata.var['gene'].astype('str')
     adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
 
     if species == 'human':
         # workaround since example adata doesn't contain cellcycle genes
