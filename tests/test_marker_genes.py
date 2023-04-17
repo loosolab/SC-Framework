@@ -85,7 +85,7 @@ def test_mask_rank_genes(adata):
 @pytest.mark.parametrize("species, s_genes, g2m_genes", [("human", None, None),
                                                          ("unicorn", None, None),
                                                          (None, None, None)])
-def test_predict_cell_cycle(adata, species):
+def test_predict_cell_cycle(adata, species, s_genes, g2m_genes):
     """ Test if cell cycle is predicted and added to adata.obs """
 
     # set gene names as index instead of ensemble ids
