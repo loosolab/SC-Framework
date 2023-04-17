@@ -90,6 +90,7 @@ def test_score_genes(adata, score_name):
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
     adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
 
     # test scoring genes with a list
     if score_name == "test1":
@@ -100,8 +101,9 @@ def test_score_genes(adata, score_name):
 
     # test scoring genes with a list in a file
     elif score_name == "test2":
-        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
-        gene_set = genelist_dir / "human_mito_genes.txt"
+        gene_set = os.path.join(os.path.dirname(__name__.split('.')[0]), 'data/gene_lists', 'human_mito_genes.txt')
+        #genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
+        #gene_set = str(genelist_dir / "human_mito_genes.txt")
         sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
 
         assert score_name in adata.obs.columns
