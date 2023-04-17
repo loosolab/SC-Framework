@@ -101,7 +101,7 @@ def test_score_genes(adata, score_name):
 
     # test scoring genes with a list in a file
     elif score_name == "test2":
-        gene_set = os.path.join(os.path.dirname(__name__.split('.')[0]), 'data/gene_lists', 'human_mito_genes.txt')
+        gene_set = os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt')
         sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
 
         assert score_name in adata.obs.columns
