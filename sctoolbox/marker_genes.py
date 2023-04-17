@@ -517,18 +517,19 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
     Parameters
     -----------
     adata : anndata.AnnData
-        Anndata object containing raw counts.
+        Anndata object to predict cell cycle on.
     gene_set : str or list
         A list of genes or path to a file containing a list of genes.
         The txt file should have one gene per row.
-    score_name : str
+    score_name : str, default "score"
         Name of the column in obs table where the score will be added.
-    inplace : bool, default: True
+    inplace : bool, default True
         Adds the new column to the original anndata object.
 
     Returns
     -----------
-    If inplace is False, return a copy of anndata object with the new column in the obs table.
+    anndata.Anndata
+        If inplace is False, return a copy of anndata object with the new column in the obs table.
     """
 
     if not inplace:
