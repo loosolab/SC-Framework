@@ -125,9 +125,9 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
 
 
 def search_umap_parameters(adata,
-                           dist_range=(0.1, 0.4, 0.1),
-                           spread_range=(2.0, 3.0, 0.5),
-                           metacol="Sample", n_components=2, verbose=True, threads=4, save=None):
+                           min_dist_range=(0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
+                           spread_range=(0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
+                           color=None, n_components=2, verbose=True, threads=4, save=None, **kwargs):
     """
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -135,100 +135,207 @@ def search_umap_parameters(adata,
     ----------
     adata : anndata.AnnData
         Annotated data matrix object.
-    dist_range : tuple
-        Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (0.1, 0.4, 0.1)
-    spread_range : tuple
-        Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (2.0, 3.0, 0.5)
-    metacol : str
-        Name of the column in adata.obs to color by. Default: "Sample".
-    n_components : int
-        Number of components in UMAP calculation. Default: 2.
+    min_dist_range : tuple, default: (0.2, 0.9, 0.2)
+        Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
+    spread_range : tuple, default (0.5, 2.0, 0.5)
+        Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    n_components : int, default 2
+        Number of components in UMAP calculation.
     verbose : bool
         Print progress to console. Default: True.
-    threads : int
-        Number of threads to use for UMAP calculation. Default: 4.
-    save : str
-        Path to save the figure to. Default: None.
+    threads : int, default 4
+        Number of threads to use for UMAP calculation.
+    save : str, default None
+        Path to save the figure to. If None, the figure is not saved.
+    kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.tl.umap`.
+
+    Returns
+    -------
+    2D numpy array of axis objects
 
     Example
     --------
     .. plot::
         :context: close-figs
 
-        pl.search_umap_parameters(adata, dist_range=(0.1, 0.4, 0.1),
+        pl.search_umap_parameters(adata, min_dist_range=(0.2, 0.9, 0.2),
                                          spread_range=(2.0, 3.0, 0.5),
-                                         metacol="bulk_labels")
+                                         color="bulk_labels")
     """
 
-    adata = sctoolbox.analyser.get_minimal_adata(adata)  # remove data to save memory
+    args = locals()  # get all arguments passed to function
+    args["method"] = "umap"
+    kwargs = args.pop("kwargs")  # split args from kwargs dict
 
-    if len(dist_range) != 3:
-        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
-    if len(spread_range) != 3:
-        raise ValueError("The parameter 'spread_range' must be a tuple in the form (min, max, step)")
+    return _search_dim_red_parameters(**args, **kwargs)
 
-    dist_min, dist_max, dist_step = dist_range
-    spread_min, spread_max, spread_step = spread_range
 
-    # Check validity of parameters
-    if dist_step > dist_max - dist_min:
-        raise ValueError("'step' of dist_range is larger than 'max' - 'min'. Please adjust.")
-    if spread_step > spread_max - spread_min:
-        raise ValueError("'step' of spread_range is larger than 'max' - 'min'. Please adjust.")
+def search_tsne_parameters(adata,
+                           perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
+                           color=None, verbose=True, threads=4, save=None, **kwargs):
+    """
+    Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
-    # Setup parameters to loop over
-    dists = np.arange(dist_min, dist_max, dist_step)
-    dists = np.around(dists, 2)
-    spreads = np.arange(spread_min, spread_max, spread_step)
-    spreads = np.around(spreads, 2)
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    perplexity_range : tuple, default (30, 60, 10)
+        tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
+    learning_rate_range : tuple, default (600, 1000, 200)
+        tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    verbose : bool, default True
+        Print progress to console.
+    threads : int, default 4
+        Number of threads to use for tSNE calculation.
+    save : str, default None (not saved)
+        Path to save the figure to.
+    kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.tl.tsne`.
+
+    Returns
+    -------
+    2D numpy array of axis objects
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_tsne_parameters(adata, perplexity_range=(30, 60, 10),
+                                         learning_rate_range=(600, 1000, 200),
+                                         color="bulk_labels")
+    """
+
+    args = locals()  # get all arguments passed to function
+    args["method"] = "tsne"
+    kwargs = args.pop("kwargs")
+
+    return _search_dim_red_parameters(**args, **kwargs)
+
+
+def _search_dim_red_parameters(adata, method, perplexity_range=None, learning_rate_range=None,
+                               min_dist_range=None, spread_range=None,
+                               color=None, verbose=True, threads=4, save=None, **kwargs):
+    """
+    Function to search different combinations of parameters for UMAP or tSNE embeddings.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str
+        Dimensionality reduction method to use. Must be either 'umap' or 'tsne'.
+    dist_range : tuple, default None
+        UMAP parameter: Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
+    spread_range : tuple, default None
+        UMAP parameter: Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
+    perplexity_range : tuple, default None
+        tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
+    learning_rate_range : tuple, default None
+        tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    verbose : bool, default True
+        Print progress to console.
+    threads : int, default 4
+        Number of threads to use for UMAP calculation.
+    save : str, default None
+        Path to save the figure to.
+    kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.tl.umap` or :func:`scanpy.tl.tsne`.
+
+    Returns
+    -------
+    2D numpy array of axis objects
+    """
+    def get_loop_params(r):
+        """Setup parameters to loop over"""
+        # Check validity of range parameters
+        if len(r) != 4:
+            raise ValueError(f"The parameter '{r[0]}' must be a tuple in the form (min, max, step)")
+        if r[3] > r[2] - r[1]:
+            raise ValueError(f"'step' of '{r[0]}' is larger than 'max' - 'min'. Please adjust.")
+
+        return np.around(np.arange(r[1], r[2], r[3]), 2)
+
+    # remove data to save memory
+    adata = sctoolbox.analyser.get_minimal_adata(adata)
+    # Allows for all case variants of method parameter
+    method = method.lower()
+
+    if method == "umap":
+        range_1 = ["min_dist_range"] + list(min_dist_range)
+        range_2 = ["spread_range"] + list(spread_range)
+    elif method == "tsne":
+        range_1 = ["perplexity_range"] + list(perplexity_range)
+        range_2 = ["learning_rate_range"] + list(learning_rate_range)
+    else:
+        raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
+
+    # Get tool and plotting function
+    tool_func = getattr(sc.tl, method)
+    plot_func = getattr(sc.pl, method)
+
+    # Setup loop parameter
+    loop_params = list()
+    for r in [range_1, range_2]:
+        loop_params.append(get_loop_params(r))
 
     # Calculate umap for each combination of spread/dist
     pool = mp.Pool(threads)
     jobs = {}
-    for i, spread in enumerate(spreads):  # rows
-        for j, dist in enumerate(dists):  # columns
-            job = pool.apply_async(sc.tl.umap, args=(adata, ), kwds={"min_dist": dist,
-                                                                     "spread": spread,
-                                                                     "n_components": n_components,
-                                                                     "copy": True})
+    for i, r2_param in enumerate(loop_params[1]):  # rows
+        for j, r1_param in enumerate(loop_params[0]):  # columns
+            kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
+                    range_2[0].rsplit('_', 1)[0]: r2_param,
+                    "copy": True}
+            kwds |= kwargs
+            job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
             jobs[(i, j)] = job
     pool.close()
 
-    utils.monitor_jobs(jobs, "Computing UMAPs")
+    utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
     pool.join()
 
     # Figure with rows=spread, cols=dist
-    fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
-    axes = np.array(axes).reshape((-1, 1)) if len(dists) == 1 else axes    # reshape 1-column array
-    axes = np.array(axes).reshape((1, -1)) if len(spreads) == 1 else axes  # reshape 1-row array
+    fig, axes = plt.subplots(len(loop_params[1]), len(loop_params[0]),
+                             figsize=(4 * len(loop_params[0]), 4 * len(loop_params[1])))
+    axes = np.array(axes).reshape((-1, 1)) if len(loop_params[0]) == 1 else axes  # reshape 1-column array
+    axes = np.array(axes).reshape((1, -1)) if len(loop_params[1]) == 1 else axes  # reshape 1-row array
 
     # Fill in UMAPs
-    for i, spread in enumerate(spreads):  # rows
-        for j, dist in enumerate(dists):  # columns
+    for i, r2_param in enumerate(loop_params[1]):  # rows
+        for j, r1_param in enumerate(loop_params[0]):  # columns
 
             # Add precalculated UMAP to adata
-            adata.obsm["X_umap"] = jobs[(i, j)].get().obsm["X_umap"]
+            adata.obsm[f"X_{method}"] = jobs[(i, j)].get().obsm[f"X_{method}"]
 
             if verbose is True:
-                print(f"Plotting umap for spread={spread} and dist={dist} ({i*len(dists)+j+1}/{len(dists)*len(spreads)})")
+                print(f"Plotting umap for spread={r2_param} and dist={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
 
             # Set legend loc for last column
-            if i == 0 and j == (len(dists) - 1):
+            if i == 0 and j == (len(loop_params[0]) - 1):
                 legend_loc = "left"
             else:
                 legend_loc = "none"
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-                sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+                plot_func(adata, color=color, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
-                axes[i, j].set_ylabel(f"spread: {spread}")
+                axes[i, j].set_ylabel(f"{range_2[0].rsplit('_', 1)[0]}: {r2_param}", fontsize=14)
             else:
                 axes[i, j].set_ylabel("")
 
             if i == 0:
-                axes[i, j].set_title(f"min_dist: {dist}")
+                axes[i, j].set_title(f"{range_1[0].rsplit('_', 1)[0]}: {r1_param}", fontsize=14)
 
             axes[i, j].set_xlabel("")
 
@@ -257,7 +364,7 @@ def search_clustering_parameters(adata,
     resolution_range : tuple, default: (0.1, 1, 0.1)
         Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
     embedding : str, default: "X_umap".
-        Embedding method to use. Must be a key in adata.obsm.
+        Embedding method to use. Must be a key in adata.obsm. If not, will try to use f"X_{embedding}".
     ncols : int, default: 3
         Number of columns in the grid.
     verbose : bool, default: True
@@ -282,7 +389,9 @@ def search_clustering_parameters(adata,
 
     # Check that coordinates for embedding is available in .obsm
     if embedding not in adata.obsm:
-        raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
+        embedding = f"X_{embedding}"
+        if embedding not in adata.obsm:
+            raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
 
     # Check that method is valid
     if method == "leiden":
@@ -717,8 +826,8 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     # Subset to input gene list
     gene_table_melted = gene_table_melted[gene_table_melted["gene"].isin(gene_list)]
 
-    # Sort by median
-    medians = gene_table_melted.groupby(groupby).median()
+    # Sort by median value
+    medians = gene_table_melted.groupby(groupby)["value"].median().to_frame()
     medians.columns = ["medians"]
     gene_table_melted_sorted = gene_table_melted.merge(medians, left_on=groupby, right_index=True).sort_values("medians", ascending=False)
 
