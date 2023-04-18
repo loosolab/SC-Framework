@@ -2,7 +2,7 @@ from setuptools import setup
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools', "apybiomart"],
+                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'mnnpy', 'harmonypy', 'scanorama'],
                   "receptor_lignad": ['scikit-learn', 'igraph'],
@@ -37,7 +37,9 @@ setup(
         'leidenalg',
         'louvain',
         'IPython',
-        'openpyxl'
+        'openpyxl',
+        'apybiomart',
+        'requests'
     ],
     include_package_data=True,
     extras_require=extras_require

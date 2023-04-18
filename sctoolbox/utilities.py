@@ -12,6 +12,8 @@ import matplotlib
 import time
 import warnings
 from scipy.sparse import issparse
+import apybiomart
+import requests
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -907,3 +909,114 @@ def add_expr_to_obs(adata, gene):
     else:
         idx = np.argwhere(boolean)[0][0]
         adata.obs[gene] = adata.X[:, idx].todense().A1
+
+
+# -------------------- bio utils ------------------- #
+# section could be its own file
+
+def gene_id_to_name(ids, species):
+    """
+    Get Ensembl gene names to Ensembl gene id.
+    
+    Parameters
+    ----------
+    ids : list of str
+        List of gene ids. Set to `None` to return all ids.
+    species : str
+        Species matching the gene ids. Set to `None` for list of available species.
+    
+    Returns
+    -------
+    pandas.DataFrame :
+        DataFrame with gene ids and matching gene names.
+    """
+    avail_species = sorted([s.split("_gene_ensembl")[0] for s in apybiomart.find_datasets()["Dataset_ID"]])
+
+    if species is None or species not in avail_species:
+        raise ValueError("Invalid species. Available species are: ", avail_species)
+
+    id_name_mapping = apybiomart.query(
+        attributes=["ensembl_gene_id", "external_gene_name"],
+        dataset=f"{species}_gene_ensembl",
+        filters={}
+    )
+
+    if ids:
+        # subset to given ids
+        return id_name_mapping[id_name_mapping["Gene stable ID"].isin(ids)]
+
+    return id_name_mapping
+
+
+def convert_id(adata, id_col_name, index=False, name_col="Gene name", species="auto", inplace=True):
+    """
+    Add gene names to adata.var.
+
+    Parameters
+    ----------
+    adata : scanpy.AnnData
+        AnnData with gene ids.
+    id_col_name : str
+        Name of the column in `adata.var` that stores the gene ids.
+    index : boolean, default False
+        Use index of `adata.var` instead of column name speciefied in `id_col_name`.
+    name_col : str, default "Gene name"
+        Name of the column added to `adata.var`.
+    species : str, default "auto"
+        Species of the dataset. On default, species is inferred based on gene ids.
+    inplace : boolean, default True
+        Whether to modify adata inplace.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        AnnData object with gene names.
+    """
+    if not inplace:
+        adata = adata.copy()
+
+    # get gene ids
+    if index:
+        gene_ids = list(adata.var.index)
+    else:
+        gene_ids = list(adata.var[id_col_name])
+
+    # infer species from gene id
+    if species == "auto":
+        ensid = gene_ids[0]
+
+        # this will redirect
+        url = f"http://www.ensembl.org/id/{ensid}"
+        response = requests.get(url)
+
+        # get redirect url
+        # e.g. http://www.ensembl.org/Homo_sapiens/Gene/...
+        # get species name from url
+        species = response.url.split("/")[3]
+
+        # bring into biomart format
+        # first letter of all words but complete last word e.g. hsapiens, mmusculus
+        spl_name = species.lower().split("_")
+        species = "".join(map(lambda x: x[0], spl_name[:-1])) + spl_name[-1]
+
+        print(f"Identified species as {species}")
+
+    # get id <-> name table
+    id_name_table = gene_id_to_name(ids=gene_ids, species=species)
+
+    # create new .var and replace in adata
+    new_var = pd.merge(
+        left=adata.var.reset_index(),
+        right=id_name_table.set_index("Gene stable ID"),
+        left_on="gene_ids",
+        left_index=False,
+        right_index=True,
+        how="left"
+    ).set_index(adata.var.index.name)
+    new_var["Gene name"].fillna('', inplace=True)
+    new_var.rename(columns={"Gene name": name_col}, inplace=True)
+
+    adata.var = new_var
+
+    if not inplace:
+        return adata
