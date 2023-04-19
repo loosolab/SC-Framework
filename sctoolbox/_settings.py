@@ -9,9 +9,12 @@ class SctoolboxConfig(object):
     __frozen = False
 
     def __init__(self,
-                 figure_prefix: str = "",  # Prefix for all figures to write
-                 adata_input_prefix: str = "",  # Prefix for all adata objects to read
-                 adata_output_prefix: str = "",   # Prefix for all adata objects to write
+                 figure_path: str = "",          # Path to write figures to
+                 figure_prefix: str = "",        # Prefix for all figures to write (within figure_path)
+                 adata_input_path: str = "",     # Path to read adata objects from
+                 adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_path)
+                 adata_output_path: str = "",    # Path to write adata objects to
+                 adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_path)
                  threads: int = 4,  # default number of threads to use when multiprocessing is available
                  create_dirs: bool = True  # create output directories if they do not exist
                  ):
@@ -38,18 +41,18 @@ class SctoolboxConfig(object):
             self._validate_int(value)
         elif key == "create_dirs":
             self._validate_bool(value)
-        elif key in ["figure_prefix", "adata_output_prefix"]:
-            self._validate_prefix(value)
+        elif key in ["figure_prefix", "adata_input_prefix", "adata_output_prefix"]:
+            self._validate_string(value)
+        elif key in ["figure_path", "adata_input_path", "adata_output_path"]:
+            value = os.path.join(value, '')  # add trailing slash if not present
+            self._validate_string(value)
+            self._create_dir(value)
+
         object.__setattr__(self, key, value)
 
-    def _validate_prefix(self, prefix: str):
-
-        # get directory of prefix
-        dirname = os.path.dirname(prefix)
-        dirname = "./" if dirname == "" else dirname
-
-        # create directory if it does not exist
-        self._create_dir(dirname)
+    def _validate_string(self, string: str):
+        if not isinstance(string, str):
+            raise TypeError("Parameter must be of type str.")
 
     def _validate_int(self, integer: int):
         if not isinstance(integer, int):
@@ -61,6 +64,9 @@ class SctoolboxConfig(object):
 
     def _create_dir(self, dirname: str):
         """ Create a directory if it does not exist yet """
+
+        if dirname == "":  # do not create directory if path is empty
+            return
 
         if self.create_dirs is True:
             if not os.path.exists(dirname):

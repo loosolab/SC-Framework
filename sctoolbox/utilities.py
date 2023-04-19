@@ -19,6 +19,41 @@ from pathlib import Path
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 
+def settings_from_config(config_file, key=None):
+    """
+    Read settings from a config file in json format.
+
+    Parameters
+    ----------
+    config_file : str
+        Path to the config file.
+    key : str, optional
+        If given, get settings for a specific key.
+
+    Returns
+    -------
+    dict
+        A dictionary with settings.
+    """
+
+    # Read json file
+    with open(config_file, "r") as f:
+        config_dict = json.load(f)
+    
+    if key is not None:
+        config_dict = config_dict[key]
+    
+    # Set settings
+    for key, value in config_dict.items():
+        setattr(settings, key, value)
+        
+    # Read config file
+    with open(config_file, "r") as f:
+        lines = f.readlines()
+
+    # Remove comments and empty lines
+    lines = [line for line in lines if line[0] != "#" and line != "
+
 
 def get_user():
     """ Get the name of the current user.
@@ -77,7 +112,6 @@ def initialize_uns(adata, keys=[]):
     for key in keys:
         if key not in adata.uns["sctoolbox"]:
             adata.uns["sctoolbox"][key] = {}
-
 
 def get_package_versions():
     """
