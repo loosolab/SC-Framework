@@ -14,6 +14,7 @@ dependencies:
   - notebook
   - bioconductor-deseq2
   - rpy2
+  - pybedtools
   - pip
   - pip:
     - -e ".[all]" # install sctoolbox from local repository, has to be in current directory!
