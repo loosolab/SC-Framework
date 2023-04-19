@@ -958,14 +958,14 @@ def add_expr_to_obs(adata, gene):
 def gene_id_to_name(ids, species):
     """
     Get Ensembl gene names to Ensembl gene id.
-    
+
     Parameters
     ----------
     ids : list of str
         List of gene ids. Set to `None` to return all ids.
     species : str
         Species matching the gene ids. Set to `None` for list of available species.
-    
+
     Returns
     -------
     pandas.DataFrame :
