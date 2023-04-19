@@ -5,7 +5,6 @@ import os
 import re
 import scanpy as sc
 import importlib
-from sctoolbox import settings
 import matplotlib.pyplot as plt
 import matplotlib
 import time
@@ -13,15 +12,19 @@ import warnings
 from scipy.sparse import issparse
 import getpass
 from datetime import datetime
+import yaml
+
+from sctoolbox import settings
 
 from os.path import join, dirname, exists
 from pathlib import Path
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 
+
 def settings_from_config(config_file, key=None):
     """
-    Read settings from a config file in json format.
+    Set settings from a config file in yaml format.
 
     Parameters
     ----------
@@ -32,27 +35,23 @@ def settings_from_config(config_file, key=None):
 
     Returns
     -------
-    dict
-        A dictionary with settings.
+    None
+        Settings are set in sctoolbox.settings.
     """
 
-    # Read json file
+    # Read yaml file
     with open(config_file, "r") as f:
-        config_dict = json.load(f)
-    
+        config_dict = yaml.safe_load(f)
+
     if key is not None:
-        config_dict = config_dict[key]
-    
+        try:
+            config_dict = config_dict[key]
+        except KeyError:
+            raise KeyError(f"Key {key} not found in config file {config_file}")
+
     # Set settings
     for key, value in config_dict.items():
         setattr(settings, key, value)
-        
-    # Read config file
-    with open(config_file, "r") as f:
-        lines = f.readlines()
-
-    # Remove comments and empty lines
-    lines = [line for line in lines if line[0] != "#" and line != "
 
 
 def get_user():
@@ -112,6 +111,7 @@ def initialize_uns(adata, keys=[]):
     for key in keys:
         if key not in adata.uns["sctoolbox"]:
             adata.uns["sctoolbox"][key] = {}
+
 
 def get_package_versions():
     """
@@ -562,7 +562,7 @@ def save_figure(path, dpi=600):
         Dots per inch. Higher value increases resolution.
     """
     if path is not None:
-        output_path = settings.figure_prefix + path
+        output_path = settings.figure_path + settings.figure_prefix + path
         plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
 
 
@@ -626,7 +626,7 @@ def load_h5ad(path):
         Loaded anndata object.
     """
 
-    adata_input = settings.adata_input_prefix + path
+    adata_input = settings.adata_input_path + settings.adata_input_prefix + path
     adata = sc.read_h5ad(filename=adata_input)
 
     print(f"The adata object was loaded from: {adata_input}")
@@ -651,7 +651,7 @@ def save_h5ad(adata, path):
     adata.uns["sctoolbox"]["user"].update({get_user(): get_datetime()})  # overwrites existing entry for each user
 
     # Save adata
-    adata_output = settings.adata_output_prefix + path
+    adata_output = settings.adata_output_path + settings.adata_output_prefix + path
     adata.write(filename=adata_output)
 
     print(f"The adata object was saved to: {adata_output}")
