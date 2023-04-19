@@ -657,7 +657,7 @@ def n_cells_pieplot(adata, groupby,
 
     # Get counts
     counts = adata.obs[groupby].value_counts()
-
+    counts
     # in progress
 
 
@@ -1870,4 +1870,4 @@ def add_labels(x, y, labels, ax=None):
         texts.append(text)
 
     # Adjust text positions
-    #to-do
+    # to-do
