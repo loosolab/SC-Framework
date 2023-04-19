@@ -632,6 +632,35 @@ def plot_3D_UMAP(adata, color, save):
 #                   Other overview plots for expression                     #
 #############################################################################
 
+
+def n_cells_pieplot(adata, groupby,
+                    figsize=None):
+    """
+    Plot number of cells per group in a pieplot.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    groupby : str
+        Name of the column in adata.obs to group by.
+
+    Returns
+    -------
+
+
+    Examples
+    --------
+
+
+    """
+
+    # Get counts
+    counts = adata.obs[groupby].value_counts()
+
+    # in progress
+
+
 def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
                     add_labels=False,
                     **kwargs):
@@ -1401,6 +1430,8 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
     # Plot expression from obs table
     _, ax = plt.subplots(figsize=figsize)
     if style == "violin":
+        kwargs["scale"] = "width" if "scale" not in kwargs else kwargs["scale"]  # set defaults
+        kwargs["cut"] = 0 if "cut" not in kwargs else kwargs["cut"]
         sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "boxplot":
         sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
@@ -1639,20 +1670,28 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
         Size of the figure. If `None`, use default size.
     """
 
+    i = 0
     if show_umap:
         figsize = (12, 6) if figsize is None else figsize
         fig, axarr = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1, 2]})
+
+        # Plot UMAP colored by groupby on the left
+        sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
+        axarr[i].set_aspect('equal')
+        i += 1
+
     else:
         figsize = (6, 6) if figsize is None else figsize
         fig, axarr = plt.subplots(1, 1, figsize=figsize)
         axarr = [axarr]  # Make sure axarr can be indexed
 
-    i = 0
-    if show_umap:
-        # Plot UMAP colored by groupby on the left
-        sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
-        axarr[i].set_aspect('equal')
-        i += 1
+    # Make sure all genes are in the data
+    marker_genes_dict = marker_genes_dict.copy()
+    for group in list(marker_genes_dict.keys()):
+        genes = marker_genes_dict[group]
+        marker_genes_dict[group] = [gene for gene in genes if gene in adata.var_names]
+        if len(marker_genes_dict[group]) == 0:
+            del marker_genes_dict[group]  # Remove group if no genes are left in the data
 
     # Plot marker gene expression on the right
     ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])
@@ -1778,6 +1817,14 @@ def add_figure_title(axarr, title, y=1.3, fontsize=16):
     Returns
     -------
     None - adds a title to the figure directly.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        axes = sc.pl.umap(adata, color=["louvain", "condition"], show=False)
+        pl.add_figure_title(axes, "UMAP plots")
     """
 
     # If only one axes is passed, convert to list
@@ -1803,3 +1850,24 @@ def add_figure_title(axarr, title, y=1.3, fontsize=16):
 
     # Add text
     _ = axarr[0].text(tx, ty, title, va="bottom", ha="center", fontsize=fontsize)
+
+
+def add_labels(x, y, labels, ax=None):
+    """ Add labels to a scatter plot.
+
+    Parameters
+    ----------
+
+    """
+
+    if ax is None:
+        ax = plt.gca()
+
+    texts = []
+    for i, label in enumerate(labels):
+
+        text = ax.annotate(label, (x[i], y[i]))
+        texts.append(text)
+
+    # Adjust text positions
+    #to-do
