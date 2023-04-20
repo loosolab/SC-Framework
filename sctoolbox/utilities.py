@@ -955,6 +955,41 @@ def add_expr_to_obs(adata, gene):
 # -------------------- bio utils ------------------- #
 # section could be its own file
 
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+    """
+    Get the organism name to the given Ensembl ID.
+    
+    Parameters
+    ----------
+    ensembl_id : str
+    Any Ensembl ID. E.g. ENSG00000164690
+    host : str
+    Ensembl server address.
+    
+    Returns
+    -------
+    str :
+        Organism assigned to the Ensembl ID
+    """
+    # this will redirect
+    url = f"{host}{ensembl_id}"
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        raise ConnectionError(f"Server response: {response.status_code}.\n With link {url}. Is the host/ path correct?")
+
+    # get redirect url
+    # e.g. http://www.ensembl.org/Homo_sapiens/Gene/...
+    # get species name from url
+    species = response.url.split("/")[3]
+
+    # invalid id
+    if species == "Multi":
+        raise ValueError(f"Organism returned as '{species}' ({response.url}).\n Usually due to invalid Ensembl ID. Make sure to use an Ensembl ID as described in http://www.ensembl.org/info/genome/stable_ids/index.html")
+
+    return species
+
+
 def gene_id_to_name(ids, species):
     """
     Get Ensembl gene names to Ensembl gene id.
@@ -1026,14 +1061,7 @@ def convert_id(adata, id_col_name, index=False, name_col="Gene name", species="a
     if species == "auto":
         ensid = gene_ids[0]
 
-        # this will redirect
-        url = f"http://www.ensembl.org/id/{ensid}"
-        response = requests.get(url)
-
-        # get redirect url
-        # e.g. http://www.ensembl.org/Homo_sapiens/Gene/...
-        # get species name from url
-        species = response.url.split("/")[3]
+        species = get_organism(ensid)
 
         # bring into biomart format
         # first letter of all words but complete last word e.g. hsapiens, mmusculus
