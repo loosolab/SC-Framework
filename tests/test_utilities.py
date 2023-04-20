@@ -16,6 +16,13 @@ def adata():
 
     return adata
 
+@pytest.fixture
+def adata2():
+    """ Load and returns an anndata object. """
+    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+
+    return sc.read_h5ad(f)
+
 
 @pytest.fixture
 def berries():
@@ -175,10 +182,72 @@ def test_remove_files():
     assert os.path.isfile("afile.txt") is False
 
 
-def test_pseudubulk_table(adata):
+def test_pseudobulk_table(adata):
     """ Test if pseudobulk table is returned correctly """
 
     pseudobulk = utils.pseudobulk_table(adata, "group")
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
+
+
+def test_get_organism():
+    """ Test function get_organism(). """
+
+    # invalid host
+    with pytest.raises(ConnectionError):
+        utils.get_organism("ENSE00000000361", host="http://www.ensembl.org/invalid/")
+
+    # invalid id
+    with pytest.raises(ValueError):
+        utils.get_organism("invalid_id")
+
+    # valid call
+    assert utils.get_organism("ENSG00000164690") == "Homo_sapiens"
+
+
+def test_gene_id_to_name(adata2):
+    """ Test function gene_id_to_name(). """
+
+    # invalid species
+    with pytest.raises(ValueError):
+        utils.gene_id_to_name(ids=[], species=None)
+
+    # valid call
+    id_name_table = utils.gene_id_to_name(ids=list(adata2.var.index), species="mmusculus")
+
+    assert isinstance(id_name_table, pd.DataFrame)
+    assert len(id_name_table) == len(adata2) # assert all genes kept
+    assert all(c in ["Gene stable ID", "Gene name"] for c in id_name_table.columns) # assert correct column names
+
+
+def test_convert_id(adata2):
+    """ Test convert_id() function. """
+
+    new_adata = adata2.copy()
+    name_col = "Ensembl name"
+    inv_name_col = "invalid"
+
+    # invalid parameter combination
+    with pytest.raises(ValueError):
+        utils.convert_id(adata=new_adata, id_col_name=None, index=False, name_col=name_col, species="mmusculus", inplace=False)
+
+    # invalid column name
+    with pytest.raises(ValueError):
+        utils.convert_id(adata=new_adata, id_col_name=inv_name_col, name_col=name_col, species="mmusculus", inplace=False)
+
+    # ids as index
+    out_adata = utils.convert_id(adata=new_adata, index=True, name_col=name_col, species="mmusculus", inplace=False)
+    assert name_col in out_adata.var.columns
+
+    # ids as column
+    new_adata.var.reset_index(inplace=True)
+    out_adata = utils.convert_id(adata=new_adata, id_col_name="index", name_col=name_col, species="mmusculus", inplace=False)
+    assert name_col in out_adata.var.columns
+
+    # not inplace
+    assert name_col not in new_adata.var.columns
+
+    # inplace
+    assert utils.convert_id(adata=new_adata, id_col_name="index", name_col=name_col, species="mmusculus", inplace=True) is None
+    assert name_col in new_adata
