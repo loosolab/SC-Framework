@@ -958,14 +958,14 @@ def add_expr_to_obs(adata, gene):
 def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     """
     Get the organism name to the given Ensembl ID.
-    
+
     Parameters
     ----------
     ensembl_id : str
     Any Ensembl ID. E.g. ENSG00000164690
     host : str
     Ensembl server address.
-    
+
     Returns
     -------
     str :
@@ -974,7 +974,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     # this will redirect
     url = f"{host}{ensembl_id}"
     response = requests.get(url)
-    
+
     if response.status_code != 200:
         raise ConnectionError(f"Server response: {response.status_code}.\n With link {url}. Is the host/ path correct?")
 
