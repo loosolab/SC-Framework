@@ -1006,6 +1006,9 @@ def gene_id_to_name(ids, species):
     pandas.DataFrame :
         DataFrame with gene ids and matching gene names.
     """
+    if not all(id.startswith("ENS") for id in ids):
+        raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
+
     avail_species = sorted([s.split("_gene_ensembl")[0] for s in apybiomart.find_datasets()["Dataset_ID"]])
 
     if species is None or species not in avail_species:
