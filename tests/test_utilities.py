@@ -213,6 +213,12 @@ def test_gene_id_to_name(adata2):
     with pytest.raises(ValueError):
         utils.gene_id_to_name(ids=[], species=None)
 
+    # invalid id
+    with pytest.raises(ValueError):
+        ids = list(adata2.var.index)
+        ids.append("invalid")
+        utils.gene_id_to_name(ids=list(adata2.var.index), species="mmusculus")
+
     # valid call
     id_name_table = utils.gene_id_to_name(ids=list(adata2.var.index), species="mmusculus")
 
