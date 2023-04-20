@@ -1024,7 +1024,7 @@ def gene_id_to_name(ids, species):
     return id_name_mapping
 
 
-def convert_id(adata, id_col_name, index=False, name_col="Gene name", species="auto", inplace=True):
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
     """
     Add gene names to adata.var.
 
@@ -1032,7 +1032,7 @@ def convert_id(adata, id_col_name, index=False, name_col="Gene name", species="a
     ----------
     adata : scanpy.AnnData
         AnnData with gene ids.
-    id_col_name : str
+    id_col_name : str, default None
         Name of the column in `adata.var` that stores the gene ids.
     index : boolean, default False
         Use index of `adata.var` instead of column name speciefied in `id_col_name`.
@@ -1048,6 +1048,11 @@ def convert_id(adata, id_col_name, index=False, name_col="Gene name", species="a
     scanpy.AnnData or None :
         AnnData object with gene names.
     """
+    if not id_col_name and not index:
+        raise ValueError("Either set parameter id_col_name or index.")
+    elif not index and id_col_name not in adata.var.columns:
+        raise ValueError("Invalid id column name. Name has to be a column found in adata.var.")
+
     if not inplace:
         adata = adata.copy()
 
