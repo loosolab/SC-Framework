@@ -16,6 +16,7 @@ def adata():
 
     return adata
 
+
 @pytest.fixture
 def adata2():
     """ Load and returns an anndata object. """
