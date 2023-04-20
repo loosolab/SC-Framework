@@ -1,0 +1,22 @@
+"01":
+  adata_output_path: "pipeline_output/adatas/"
+
+"02":
+  adata_input_path: "pipeline_output/adatas/"
+  adata_output_path: "pipeline_output/adatas/"
+  figure_path: "pipeline_output/figures/02_QC/"
+
+"03":
+  adata_input_path: "pipeline_output/adatas/"
+  adata_output_path: "pipeline_output/adatas/"
+  figure_path: "pipeline_output/figures/03_batch_correction/"
+
+"04":
+  adata_input_path: "pipeline_output/adatas/"
+  adata_output_path: "pipeline_output/adatas/"
+  figure_path: "pipeline_output/figures/04_clustering/"
+
+"05":
+  adata_input_path: "pipeline_output/adatas/"
+  adata_output_path: "pipeline_output/adatas/"
+  figure_path: "pipeline_output/figures/05_markers/"
