@@ -43,7 +43,8 @@ def rename_categories(series):
 
 
 def recluster(adata, column, clusters,
-              task="join", method="leiden", resolution=1, key_added=None, plot=True):
+              task="join", method="leiden", resolution=1, key_added=None,
+              plot=True, embedding="X_umap"):
     """
     Recluster an anndata object based on an existing clustering column in .obs.
 
@@ -110,11 +111,17 @@ def recluster(adata, column, clusters,
     # --- Plot reclustering before/after --- #
     if plot is True:
 
+        # Check that coordinates for embedding is available in .obsm
+        if embedding not in adata.obsm:
+            embedding = f"X_{embedding}"
+            if embedding not in adata.obsm:
+                raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
 
             fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-            sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
+            sc.pl.embedding(adata_copy, basis=embedding, color=column, ax=ax[0], show=False, legend_loc="on data")
             ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
 
             sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
