@@ -7,7 +7,7 @@ import sctoolbox.utilities as utils
 import scanpy as sc
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """ Returns adata object with 3 groups """
 
@@ -182,3 +182,16 @@ def test_pseudubulk_table(adata):
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
+
+
+def test_save_h5ad(adata):
+    """ Test if h5ad file is saved correctly """
+
+    path = "test.h5ad"
+    utils.save_h5ad(adata, path)
+
+    adata_read = sc.read_h5ad(path)
+
+    assert os.path.isfile(path)
+    assert "user" in adata_read.uns["sctoolbox"]
+    os.remove(path)  # clean up after tests

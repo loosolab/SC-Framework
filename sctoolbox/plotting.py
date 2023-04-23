@@ -41,6 +41,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from scipy.sparse import issparse
 
+from sctoolbox import settings
 import sctoolbox.utilities
 import sctoolbox.analyser
 import sctoolbox.utilities as utils
@@ -731,7 +732,7 @@ def plot_3D_UMAP(adata, color, save):
 
     # Save to file
     if save is not None:
-        path = save + ".html"
+        path = settings.figure_prefix + save + ".html"
         fig.write_html(path)
 
     print(f"Plot written to '{path}'")

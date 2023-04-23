@@ -342,6 +342,10 @@ def run_rank_genes(adata, groupby,
         warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute*")
         sc.tl.rank_genes_groups(adata, method=method, groupby=groupby, **kwargs)
 
+    if "log1p" in adata.uns:
+        adata.uns['log1p']['base'] = None  # hack for scanpy error
+
+    sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
