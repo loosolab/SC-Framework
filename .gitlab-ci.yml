@@ -42,7 +42,6 @@ default:
 
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
-  image: python:3.9.15
   inherit:
     default: false
   script:
@@ -54,7 +53,6 @@ pass:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 lint:
-  image: python:3.9.15
   inherit:
     default: false  # package not needed to run linting
   stage: test
@@ -102,7 +100,6 @@ test coverage:
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
-  image: python:3.9.15
   inherit:
     default: false
   stage: test
