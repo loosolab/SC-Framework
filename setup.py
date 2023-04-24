@@ -5,7 +5,7 @@ from setuptools import find_namespace_packages
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
-                  "batch_correction": ['bbknn', 'mnnpy', 'harmonypy', 'scanorama'],
+                  "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_lignad": ['scikit-learn', 'igraph'],
 
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
