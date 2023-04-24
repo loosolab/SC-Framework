@@ -6,7 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:3.11-buster
+image: python:latest
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -33,16 +33,18 @@ default:
     - virtualenv venv
     - source venv/bin/activate
     - apt update
-    - apt -y install r-base # needed for rpy2 install
-    - pip install rpy2   # resolve dependencies for diffexpr
-    - pip install numpy  # resolve dependencies for diffexpr
-    - pip install pandas # resolve dependencies for diffexpr
+    - conda install -c conda-forge mamba
+    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
+    #- apt -y install r-base # needed for rpy2 install
+    #- pip install rpy2   # resolve dependencies for diffexpr
+    #- pip install numpy  # resolve dependencies for diffexpr
+    #- pip install pandas # resolve dependencies for diffexpr
     #- apt -y install software-properties-common  # for gcc
     #- add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) universe"
     #- add-apt-repository universe  # for gcc
     #- apt update                   # for gcc
     #- apt -y install gcc-8 g++-8  # fixes issue when installing mnnpy due to compiling error; this version is recommended in the mnnpy README
-    - pip install .[all]
+    #- pip install .[all]
 
 # flake8 ignore rules:
 # E501 = Line too long
