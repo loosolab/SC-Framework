@@ -6,7 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:3.10  # pybedtools and mnnpy are not compatible with python 3.11
+image: python:3.10-buster  # pybedtools and mnnpy are not compatible with python 3.11
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -29,6 +29,7 @@ default:
     - python --version  # For debugging
     - uname -a          # For debugging
     - cat /etc/os-release    # For debugging
+    - gcc --version
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
