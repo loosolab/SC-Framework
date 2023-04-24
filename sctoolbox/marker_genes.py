@@ -323,7 +323,7 @@ def run_rank_genes(adata, groupby,
     """ Run scanpy rank_genes_groups and filter_rank_genes_groups """
 
     if "log1p" in adata.uns:
-        adata.uns['log1p']['base'] = None  # hack for scanpy error
+        adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
     sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
     sc.tl.filter_rank_genes_groups(adata,
