@@ -34,14 +34,15 @@ default:
     - source venv/bin/activate
     - apt update
     - apt -y install r-base # needed for rpy2 install
+    - pip install rpy2   # resolve dependencies for diffexpr
+    - pip install numpy  # resolve dependencies for diffexpr
+    - pip install pandas # resolve dependencies for diffexpr
     #- apt -y install software-properties-common  # for gcc
     #- add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) universe"
-    # - add-apt-repository universe  # for gcc
+    #- add-apt-repository universe  # for gcc
     #- apt update                   # for gcc
     #- apt -y install gcc-8 g++-8  # fixes issue when installing mnnpy due to compiling error; this version is recommended in the mnnpy README
     - pip install .[all]
-    - pip install pytest
-    - pip install pytest-cov
 
 # flake8 ignore rules:
 # E501 = Line too long
@@ -80,10 +81,6 @@ test coverage:
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
-    - pip install rpy2   # resolve dependencies for diffexpr
-    - pip install numpy  # resolve dependencies for diffexpr
-    - pip install pandas # resolve dependencies for diffexpr
-    - pip install .[all]
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html
   artifacts:
     when: always
@@ -117,10 +114,6 @@ pages:
   tags:
     - coverage
   script:
-    - pip install rpy2   # resolve dependencies for diffexpr
-    - pip install numpy  # resolve dependencies for diffexpr
-    - pip install pandas # resolve dependencies for diffexpr
-    - pip install .[all]
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
