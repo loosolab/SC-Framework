@@ -6,7 +6,11 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
+<<<<<<< HEAD
 image: python:3.10  # pybedtools is not compatible with python 3.11
+=======
+image: condaforge/mambaforge:latest
+>>>>>>> dev
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -23,7 +27,11 @@ cache:
     - .cache/pip
     - venv/
 
+<<<<<<< HEAD
 # Install package for all jobs (unless inherit is false)
+=======
+# Default before any other jobs
+>>>>>>> dev
 default:
   before_script:
     - python --version  # For debugging
@@ -40,8 +48,9 @@ default:
     - pip install pandas # resolve dependencies for diffexpr
     - pip install .[all]
 
-#this is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
+# This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
+  image: python:3.9.15
   inherit:
     default: false
   script:
@@ -130,22 +139,14 @@ pages:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
 
-#Test notebooks when code is pushed to main
+# Test notebooks when code is pushed to main
 notebooks:
   stage: deploy
-  image: continuumio/miniconda3:latest
   tags:
     - gwdg
     - gwdg-shared
-  inherit:
-    default: false  #do not install virtual env for this job
   script:
     - pip install papermill
-    - conda install -c conda-forge mamba
-    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
-    - conda init bash
-    - source ~/.bashrc
-    - conda activate sctoolbox
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
