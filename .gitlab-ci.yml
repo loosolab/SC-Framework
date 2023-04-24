@@ -42,7 +42,8 @@ default:
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
   inherit:
-    default: [image]
+    default: 
+      - image
   script:
      - 'echo passed'
   rules:
@@ -53,7 +54,8 @@ pass:
 # W503 = Line break occurred before a binary operator
 lint:
   inherit:
-    default: [image]  # package not needed to run linting
+    default: 
+      - image  # package not needed to run linting
   stage: test
   tags:
     - coverage
@@ -100,7 +102,8 @@ test coverage:
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
   inherit:
-    default: [image]
+    default: 
+      - image
   stage: test
   script:
     - python --version
