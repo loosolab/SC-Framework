@@ -24,7 +24,7 @@ default:
   # Official language image. Look for the different tagged releases at:
   # https://hub.docker.com/r/library/python/tags/
   image: python:3.10  # pybedtools is not compatible with python 3.11
-  install_package:
+  before_script:
     - python --version  # For debugging
     - uname -a          # For debugging
     - cat /etc/os-release    # For debugging
