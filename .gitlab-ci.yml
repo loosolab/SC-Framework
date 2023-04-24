@@ -4,10 +4,6 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
 
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/python/tags/
-image: python:3.10  # pybedtools is not compatible with python 3.11
-
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
 variables:
@@ -25,7 +21,10 @@ cache:
 
 # Install package for all jobs (unless inherit is false)
 default:
-  before_script:
+  # Official language image. Look for the different tagged releases at:
+  # https://hub.docker.com/r/library/python/tags/
+  image: python:3.10  # pybedtools is not compatible with python 3.11
+  install_package:
     - python --version  # For debugging
     - uname -a          # For debugging
     - cat /etc/os-release    # For debugging
@@ -43,7 +42,7 @@ default:
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
   inherit:
-    default: false
+    default: [image]
   script:
      - 'echo passed'
   rules:
@@ -54,7 +53,7 @@ pass:
 # W503 = Line break occurred before a binary operator
 lint:
   inherit:
-    default: false  # package not needed to run linting
+    default: [image]  # package not needed to run linting
   stage: test
   tags:
     - coverage
@@ -101,7 +100,7 @@ test coverage:
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
   inherit:
-    default: false
+    default: [image]
   stage: test
   script:
     - python --version
@@ -130,11 +129,17 @@ pages:
 
 # Test notebooks when code is pushed to main
 notebooks:
+  image: continuumio/miniconda3:latest
   stage: deploy
   tags:
     - gwdg
     - gwdg-shared
   script:
+    - conda install -c conda-forge mamba
+    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
+    - conda init bash
+    - source ~/.bashrc
+    - conda activate sctoolbox
     - pip install papermill
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
