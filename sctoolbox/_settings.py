@@ -32,12 +32,14 @@ class SctoolboxConfig(object):
         self.__frozen = True
 
     def __setattr__(self, key, value):
+        """ Set attribute if it exists in __init__ and is of the correct type """
+
         if self.__frozen and not hasattr(self, key):
             valid_parameters = [key for key in self.__dict__ if not key.startswith("_")]
             raise TypeError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
         # Validate and set parameter
-        if key == "__frozen":  # allow __frozen to be set without checking
+        if "__frozen" in key:  # allow __frozen to be set without checking
             pass
         elif key in ["figure_path", "adata_input_path", "adata_output_path"]:
             value = os.path.join(value, '')  # add trailing slash if not present
