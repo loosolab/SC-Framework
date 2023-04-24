@@ -5,7 +5,7 @@ from setuptools import find_namespace_packages
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
-                  "batch_correction": ['bbknn', 'mnnpy', 'harmonypy', 'scanorama'],
+                  "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_lignad": ['scikit-learn', 'igraph'],
 
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
@@ -19,7 +19,7 @@ setup(
     description='Custom modules for single cell analysis',
     license='MIT',
     packages=find_namespace_packages(),
-    python_requires='>=3',
+    python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
         'matplotlib',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9

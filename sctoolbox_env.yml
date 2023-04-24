@@ -8,7 +8,6 @@ dependencies:
   - bioconductor-singlecellexperiment
   - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
   - scanpy>=1.9
-  - mnnpy
   - python-annoy
   - notebook
   - bioconductor-deseq2
