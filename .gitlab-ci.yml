@@ -55,6 +55,7 @@ default:
 
 #this is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
+  image: python:3.9.15
   inherit:
     default: false
   script:
@@ -64,6 +65,8 @@ pass:
 
 lint:
   image: python:3.9.15
+  inherit:
+    default: false   #do not install virtual env for this job
   stage: test
   tags:
     - coverage
@@ -139,8 +142,6 @@ notebooks:
   tags:
     - gwdg
     - gwdg-shared
-  inherit:
-    default: false  #do not install virtual env for this job
   script:
     - pip install papermill
     - python -m ipykernel install --user --name sctoolbox
