@@ -28,7 +28,6 @@ default:
     - python --version  # For debugging
     - uname -a          # For debugging
     - cat /etc/os-release    # For debugging
-    - gcc --version          # For debugging
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
