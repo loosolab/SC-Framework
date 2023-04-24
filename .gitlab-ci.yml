@@ -6,11 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-<<<<<<< HEAD
 image: python:3.10  # pybedtools is not compatible with python 3.11
-=======
-image: condaforge/mambaforge:latest
->>>>>>> dev
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -27,11 +23,7 @@ cache:
     - .cache/pip
     - venv/
 
-<<<<<<< HEAD
 # Install package for all jobs (unless inherit is false)
-=======
-# Default before any other jobs
->>>>>>> dev
 default:
   before_script:
     - python --version  # For debugging
