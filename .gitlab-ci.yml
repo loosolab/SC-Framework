@@ -30,18 +30,14 @@ default:
     - virtualenv venv
     - source venv/bin/activate
     - apt update
-<<<<<<< HEAD
-    - apt -y install r-base
-    - apt install software-properties-common  # for gcc
+    - apt -y install r-base # needed for rpy2 install
+    - apt -y install software-properties-common  # for gcc
     - add-apt-repository universe  # for gcc
     - apt update                   # for gcc
     - apt -y install gcc-8 g++-8  # fixes issue when installing mnnpy due to compiling error; this version is recommended in the mnnpy README
     - pip install .[all]
     - pip install pytest
     - pip install pytest-cov
-=======
-    - apt -y install r-base  # needed for rpy2 install
->>>>>>> dev
 
 # flake8 ignore rules:
 # E501 = Line too long
