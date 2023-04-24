@@ -32,7 +32,8 @@ default:
     - apt update
     - apt -y install r-base # needed for rpy2 install
     - apt -y install software-properties-common  # for gcc
-    - add-apt-repository universe  # for gcc
+    - add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) universe"
+    # - add-apt-repository universe  # for gcc
     - apt update                   # for gcc
     - apt -y install gcc-8 g++-8  # fixes issue when installing mnnpy due to compiling error; this version is recommended in the mnnpy README
     - pip install .[all]
