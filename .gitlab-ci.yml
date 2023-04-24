@@ -31,7 +31,7 @@ default:
     - source venv/bin/activate
     - apt update
     - apt -y install r-base
-    - apt -y install gcc-6.3  # fixes issue when installing mnnpy due to compiling error
+    - apt -y install gcc-8 g++-8  # fixes issue when installing mnnpy due to compiling error; this version is recommended in the mnnpy README
     - pip install .[all]
     - pip install pytest
     - pip install pytest-cov
