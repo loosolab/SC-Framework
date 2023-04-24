@@ -70,7 +70,7 @@ class SctoolboxConfig(object):
         if dirname == "":  # do not create directory if path is empty
             return
 
-        if self.create_dirs is True:
+        if self.create_dirs:
             if not os.path.exists(dirname):
                 os.makedirs(dirname)  # creates directory and all parent directories
                 print("Created directory: " + dirname)
