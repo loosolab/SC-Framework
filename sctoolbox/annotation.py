@@ -8,6 +8,7 @@ import multiprocessing as mp
 import re
 
 import sctoolbox.utilities as utils
+import sctoolbox.atac_utils as atac_utils
 import psutil
 import subprocess
 import gzip
@@ -195,9 +196,10 @@ def format_adata_var(adata,
 
     # Test whether the first three columns are in the right format
     format_index = True
+    print(coordinate_columns)
     if coordinate_columns is not None:
         try:
-            validate_regions(adata, coordinate_columns)
+            atac_utils.validate_regions(adata, coordinate_columns)
             format_index = False
         except KeyError:
             print("The coordinate columns are not found in adata.var. Trying to format the index.")
@@ -235,7 +237,7 @@ def format_adata_var(adata,
         adata.var.insert(0, columns_added[0], peak_chr_list)
 
         # Check whether the newly added columns are in the right format
-        validate_regions(adata, columns_added)
+        atac_utils.validate_regions(adata, columns_added)
 
 
 def annotate_adata(adata,
@@ -339,7 +341,7 @@ def annotate_adata(adata,
         utils.check_columns(adata.var, coordinate_cols, "coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
-    format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
+    atac_utils.format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
@@ -736,7 +738,7 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     return (all_valid_annotations)
 
 
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, **kwargs):
+def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
 
@@ -757,6 +759,8 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         Value min_mean is adjusted by in each iteration. Will divide min_value (below range) or multiply (above range) by this value.
     inplace : boolean, default False
         Whether the anndata object is modified inplace.
+    save : str, default None
+        Path to save the plot to. If None, the plot is not saved.
     **kwargs :
         Additional arguments forwarded to scanpy.pp.highly_variable_genes().
 
@@ -790,6 +794,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
     else:
         sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
+        utils.save_figure(save)
         print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
     # Adding info in anndata.uns["infoprocess"]

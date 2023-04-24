@@ -1,5 +1,6 @@
 cd notebooks
-papermill --log-output 1_assembling_anndata.ipynb out.ipynb
-papermill --log-output 2_QC_filtering.ipynb out.ipynb
-papermill --log-output 3_batch.ipynb out.ipynb
-papermill --log-output 4_clustering.ipynb out.ipynb
+papermill --log-output -k sctoolbox --log-level DEBUG 1_assembling_anndata.ipynb out.ipynb
+echo "finished running notebook 1"
+papermill --log-output -k sctoolbox --log-level DEBUG 2_QC_filtering.ipynb out.ipynb
+papermill --log-output -k sctoolbox --log-level DEBUG 3_batch.ipynb out.ipynb
+papermill --log-output -k sctoolbox --log-level DEBUG 4_clustering.ipynb out.ipynb

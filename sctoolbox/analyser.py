@@ -43,7 +43,8 @@ def rename_categories(series):
 
 
 def recluster(adata, column, clusters,
-              task="join", method="leiden", resolution=1, key_added=None, plot=True):
+              task="join", method="leiden", resolution=1, key_added=None,
+              plot=True, embedding="X_umap"):
     """
     Recluster an anndata object based on an existing clustering column in .obs.
 
@@ -88,6 +89,8 @@ def recluster(adata, column, clusters,
     else:
         raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
+    # TODO: Check if clusters are found in column
+
     # --- Start reclustering --- #
     if task == "join":
         translate = {cluster: clusters[0] for cluster in clusters}
@@ -104,11 +107,17 @@ def recluster(adata, column, clusters,
     # --- Plot reclustering before/after --- #
     if plot is True:
 
+        # Check that coordinates for embedding is available in .obsm
+        if embedding not in adata.obsm:
+            embedding = f"X_{embedding}"
+            if embedding not in adata.obsm:
+                raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
 
             fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-            sc.pl.umap(adata_copy, color=column, ax=ax[0], show=False, legend_loc="on data")
+            sc.pl.embedding(adata_copy, basis=embedding, color=column, ax=ax[0], show=False, legend_loc="on data")
             ax[0].set_title(f"Before re-clustering\n(column name: '{column}')")
 
             sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
@@ -275,7 +284,12 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     # Run batch correction depending on method
     if method == "bbknn":
         import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
-        adata = bbknn.bbknn(adata, batch_key=batch_key, copy=True, **kwargs)  # bbknn is an alternative to neighbors
+
+        # Get number of pcs in adata, as bbknn hardcodes n_pcs=50
+        n_pcs = adata.obsm["X_pca"].shape[1]
+
+        # Run bbknn
+        adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
 
@@ -300,6 +314,9 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
 
+        # Make sure that the batch_key is still a categorical
+        adata.obs[batch_key] = adata.obs[batch_key].astype("category")
+
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.tl.pca(adata)  # rerun pca
         sc.pp.neighbors(adata)
@@ -316,11 +333,15 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
         # scanorama expect the batch key in a sorted format
         # therefore anndata.obs should be sorted based on batch column before this method.
+        original_order = adata.obs.index
         adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
 
         sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
         sc.pp.neighbors(adata)
+
+        # sort the adata back to the original order
+        adata = adata[original_order]
 
     elif method == "combat":
 
@@ -449,22 +470,19 @@ def get_threshold(data, interval, limit_on="both"):
         return thresholds[1]
 
 
-def calculate_qc_metrics(anndata, percent_top=None, inplace=False, **kwargs):
+def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
     Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`
 
-    TODO add logging
-    TODO we may want to rethink if this function is necessary
-
     Parameters
     ----------
-    anndata : anndata.AnnData
+    adata : anndata.AnnData
         Anndata object the quality metrics are added to.
     percent_top : [int], default None
         Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
     inplace : bool, default False
         If the anndata object should be modified in place.
-    ** kwargs :
+    **kwargs :
         Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
 
     Returns
@@ -474,14 +492,21 @@ def calculate_qc_metrics(anndata, percent_top=None, inplace=False, **kwargs):
     """
     # add metrics to copy of anndata
     if not inplace:
-        anndata = anndata.copy()
+        adata = adata.copy()
+
+    # remove n_genes from metrics before recalculation
+    to_remove = [col for col in adata.obs.columns if col in ["n_genes", "log1p_n_genes"]]
+    adata.obs.drop(columns=to_remove, inplace=True)
 
     # compute metrics
-    sc.pp.calculate_qc_metrics(adata=anndata, percent_top=percent_top, inplace=True, **kwargs)
+    sc.pp.calculate_qc_metrics(adata=adata, percent_top=percent_top, inplace=True, **kwargs)
+
+    # Rename metrics
+    adata.obs.rename(columns={"n_genes_by_counts": "n_genes", "log1p_n_genes_by_counts": "log1p_n_genes"}, inplace=True)
 
     # return modified anndata
     if not inplace:
-        return anndata
+        return adata
 
 
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):

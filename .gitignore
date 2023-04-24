@@ -1,3 +1,6 @@
+# Link to notebooks in docs - are automatically created during docs build
+*.nblink
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

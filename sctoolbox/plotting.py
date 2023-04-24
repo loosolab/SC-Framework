@@ -1,5 +1,26 @@
 """
 Modules for plotting single cell data
+
+
+Loading the module
+-------------------
+.. plot ::
+    :context: close-figs
+
+    import sctoolbox.plotting as pl
+
+
+Loading example data
+--------------------
+
+.. plot ::
+    :context: close-figs
+
+    import numpy as np
+    import scanpy as sc
+
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 """
 
 from math import ceil
@@ -15,6 +36,8 @@ import warnings
 
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
 
 import sctoolbox.utilities
 import sctoolbox.analyser
@@ -22,6 +45,16 @@ import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
 import plotly as po
 import plotly.graph_objects as go
+
+
+def _make_square(ax):
+    """ Utility function to set the aspect ratio of a plot to be a square """
+
+    xrange = np.diff(ax.get_xlim())[0]
+    yrange = np.diff(ax.get_ylim())[0]
+
+    aspect = xrange / yrange
+    ax.set_aspect(aspect)
 
 
 #############################################################################
@@ -92,9 +125,9 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
 
 
 def search_umap_parameters(adata,
-                           dist_range=(0.1, 0.4, 0.1),
-                           spread_range=(2.0, 3.0, 0.5),
-                           metacol="Sample", n_components=2, verbose=True, threads=4, save=None):
+                           min_dist_range=(0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
+                           spread_range=(0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
+                           color=None, n_components=2, verbose=True, threads=4, save=None, **kwargs):
     """
     Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -102,91 +135,207 @@ def search_umap_parameters(adata,
     ----------
     adata : anndata.AnnData
         Annotated data matrix object.
-    dist_range : tuple
-        Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (0.1, 0.4, 0.1)
-    spread_range : tuple
-        Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).  Default: (2.0, 3.0, 0.5)
-    metacol : str
-        Name of the column in adata.obs to color by. Default: "Sample".
-    n_components : int
-        Number of components in UMAP calculation. Default: 2.
+    min_dist_range : tuple, default: (0.2, 0.9, 0.2)
+        Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
+    spread_range : tuple, default (0.5, 2.0, 0.5)
+        Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    n_components : int, default 2
+        Number of components in UMAP calculation.
     verbose : bool
         Print progress to console. Default: True.
-    threads : int
-        Number of threads to use for UMAP calculation. Default: 4.
-    save : str
-        Path to save the figure to. Default: None.
+    threads : int, default 4
+        Number of threads to use for UMAP calculation.
+    save : str, default None
+        Path to save the figure to. If None, the figure is not saved.
+    kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.tl.umap`.
+
+    Returns
+    -------
+    2D numpy array of axis objects
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_umap_parameters(adata, min_dist_range=(0.2, 0.9, 0.2),
+                                         spread_range=(2.0, 3.0, 0.5),
+                                         color="bulk_labels")
     """
 
-    adata = sctoolbox.analyser.get_minimal_adata(adata)  # remove data to save memory
+    args = locals()  # get all arguments passed to function
+    args["method"] = "umap"
+    kwargs = args.pop("kwargs")  # split args from kwargs dict
 
-    if len(dist_range) != 3:
-        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
-    if len(spread_range) != 3:
-        raise ValueError("The parameter 'spread_range' must be a tuple in the form (min, max, step)")
+    return _search_dim_red_parameters(**args, **kwargs)
 
-    dist_min, dist_max, dist_step = dist_range
-    spread_min, spread_max, spread_step = spread_range
 
-    # Check validity of parameters
-    if dist_step > dist_max - dist_min:
-        raise ValueError("'step' of dist_range is larger than 'max' - 'min'. Please adjust.")
-    if spread_step > spread_max - spread_min:
-        raise ValueError("'step' of spread_range is larger than 'max' - 'min'. Please adjust.")
+def search_tsne_parameters(adata,
+                           perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
+                           color=None, verbose=True, threads=4, save=None, **kwargs):
+    """
+    Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
-    # Setup parameters to loop over
-    dists = np.arange(dist_min, dist_max, dist_step)
-    dists = np.around(dists, 2)
-    spreads = np.arange(spread_min, spread_max, spread_step)
-    spreads = np.around(spreads, 2)
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    perplexity_range : tuple, default (30, 60, 10)
+        tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
+    learning_rate_range : tuple, default (600, 1000, 200)
+        tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    verbose : bool, default True
+        Print progress to console.
+    threads : int, default 4
+        Number of threads to use for tSNE calculation.
+    save : str, default None (not saved)
+        Path to save the figure to.
+    kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.tl.tsne`.
+
+    Returns
+    -------
+    2D numpy array of axis objects
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.search_tsne_parameters(adata, perplexity_range=(30, 60, 10),
+                                         learning_rate_range=(600, 1000, 200),
+                                         color="bulk_labels")
+    """
+
+    args = locals()  # get all arguments passed to function
+    args["method"] = "tsne"
+    kwargs = args.pop("kwargs")
+
+    return _search_dim_red_parameters(**args, **kwargs)
+
+
+def _search_dim_red_parameters(adata, method, perplexity_range=None, learning_rate_range=None,
+                               min_dist_range=None, spread_range=None,
+                               color=None, verbose=True, threads=4, save=None, **kwargs):
+    """
+    Function to search different combinations of parameters for UMAP or tSNE embeddings.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str
+        Dimensionality reduction method to use. Must be either 'umap' or 'tsne'.
+    dist_range : tuple, default None
+        UMAP parameter: Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
+    spread_range : tuple, default None
+        UMAP parameter: Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
+    perplexity_range : tuple, default None
+        tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
+    learning_rate_range : tuple, default None
+        tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
+    color : str, default None
+        Name of the column in adata.obs to color plots by. If None, plots are not colored.
+    verbose : bool, default True
+        Print progress to console.
+    threads : int, default 4
+        Number of threads to use for UMAP calculation.
+    save : str, default None
+        Path to save the figure to.
+    kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.tl.umap` or :func:`scanpy.tl.tsne`.
+
+    Returns
+    -------
+    2D numpy array of axis objects
+    """
+    def get_loop_params(r):
+        """Setup parameters to loop over"""
+        # Check validity of range parameters
+        if len(r) != 4:
+            raise ValueError(f"The parameter '{r[0]}' must be a tuple in the form (min, max, step)")
+        if r[3] > r[2] - r[1]:
+            raise ValueError(f"'step' of '{r[0]}' is larger than 'max' - 'min'. Please adjust.")
+
+        return np.around(np.arange(r[1], r[2], r[3]), 2)
+
+    # remove data to save memory
+    adata = sctoolbox.analyser.get_minimal_adata(adata)
+    # Allows for all case variants of method parameter
+    method = method.lower()
+
+    if method == "umap":
+        range_1 = ["min_dist_range"] + list(min_dist_range)
+        range_2 = ["spread_range"] + list(spread_range)
+    elif method == "tsne":
+        range_1 = ["perplexity_range"] + list(perplexity_range)
+        range_2 = ["learning_rate_range"] + list(learning_rate_range)
+    else:
+        raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
+
+    # Get tool and plotting function
+    tool_func = getattr(sc.tl, method)
+    plot_func = getattr(sc.pl, method)
+
+    # Setup loop parameter
+    loop_params = list()
+    for r in [range_1, range_2]:
+        loop_params.append(get_loop_params(r))
 
     # Calculate umap for each combination of spread/dist
     pool = mp.Pool(threads)
     jobs = {}
-    for i, spread in enumerate(spreads):  # rows
-        for j, dist in enumerate(dists):  # columns
-            job = pool.apply_async(sc.tl.umap, args=(adata, ), kwds={"min_dist": dist,
-                                                                     "spread": spread,
-                                                                     "n_components": n_components,
-                                                                     "copy": True})
+    for i, r2_param in enumerate(loop_params[1]):  # rows
+        for j, r1_param in enumerate(loop_params[0]):  # columns
+            kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
+                    range_2[0].rsplit('_', 1)[0]: r2_param,
+                    "copy": True}
+            kwds |= kwargs
+            job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
             jobs[(i, j)] = job
     pool.close()
 
-    utils.monitor_jobs(jobs, "Computing UMAPs")
+    utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
     pool.join()
 
     # Figure with rows=spread, cols=dist
-    fig, axes = plt.subplots(len(spreads), len(dists), figsize=(4 * len(dists), 4 * len(spreads)))
-    axes = np.array(axes).reshape((-1, 1)) if len(dists) == 1 else axes    # reshape 1-column array
-    axes = np.array(axes).reshape((1, -1)) if len(spreads) == 1 else axes  # reshape 1-row array
+    fig, axes = plt.subplots(len(loop_params[1]), len(loop_params[0]),
+                             figsize=(4 * len(loop_params[0]), 4 * len(loop_params[1])))
+    axes = np.array(axes).reshape((-1, 1)) if len(loop_params[0]) == 1 else axes  # reshape 1-column array
+    axes = np.array(axes).reshape((1, -1)) if len(loop_params[1]) == 1 else axes  # reshape 1-row array
 
     # Fill in UMAPs
-    for i, spread in enumerate(spreads):  # rows
-        for j, dist in enumerate(dists):  # columns
+    for i, r2_param in enumerate(loop_params[1]):  # rows
+        for j, r1_param in enumerate(loop_params[0]):  # columns
 
             # Add precalculated UMAP to adata
-            adata.obsm["X_umap"] = jobs[(i, j)].get().obsm["X_umap"]
+            adata.obsm[f"X_{method}"] = jobs[(i, j)].get().obsm[f"X_{method}"]
 
             if verbose is True:
-                print(f"Plotting umap for spread={spread} and dist={dist} ({i*len(dists)+j+1}/{len(dists)*len(spreads)})")
+                print(f"Plotting umap for spread={r2_param} and dist={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
 
             # Set legend loc for last column
-            if i == 0 and j == (len(dists) - 1):
+            if i == 0 and j == (len(loop_params[0]) - 1):
                 legend_loc = "left"
             else:
                 legend_loc = "none"
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-                sc.pl.umap(adata, color=metacol, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+                plot_func(adata, color=color, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
-                axes[i, j].set_ylabel(f"spread: {spread}")
+                axes[i, j].set_ylabel(f"{range_2[0].rsplit('_', 1)[0]}: {r2_param}", fontsize=14)
             else:
                 axes[i, j].set_ylabel("")
 
             if i == 0:
-                axes[i, j].set_title(f"min_dist: {dist}")
+                axes[i, j].set_title(f"{range_1[0].rsplit('_', 1)[0]}: {r1_param}", fontsize=14)
 
             axes[i, j].set_xlabel("")
 
@@ -215,7 +364,7 @@ def search_clustering_parameters(adata,
     resolution_range : tuple, default: (0.1, 1, 0.1)
         Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
     embedding : str, default: "X_umap".
-        Embedding method to use. Must be a key in adata.obsm.
+        Embedding method to use. Must be a key in adata.obsm. If not, will try to use f"X_{embedding}".
     ncols : int, default: 3
         Number of columns in the grid.
     verbose : bool, default: True
@@ -240,7 +389,9 @@ def search_clustering_parameters(adata,
 
     # Check that coordinates for embedding is available in .obsm
     if embedding not in adata.obsm:
-        raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
+        embedding = f"X_{embedding}"
+        if embedding not in adata.obsm:
+            raise KeyError(f"The embedding '{embedding}' was not found in adata.obsm. Please adjust this parameter.")
 
     # Check that method is valid
     if method == "leiden":
@@ -309,7 +460,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     """
 
     # Get categories
-    groups = adata.obs[groupby].cat.categories
+    groups = adata.obs[groupby].astype("category").cat.categories
     n_groups = len(groups)
 
     # Find out how many rows are needed
@@ -352,7 +503,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     # Save figure
     save_figure(save)
 
-    plt.show()
+    return axarr
 
 
 def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None, **kwargs):
@@ -382,6 +533,9 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         all_vars.update(set(adata.obs.columns))
 
     # Subset var list to those available in any of the adata objects
+    if isinstance(var_list, str):
+        var_list = [var_list]
+
     not_found = set(var_list) - all_vars
     if len(not_found) == len(var_list):
         raise ValueError("None of the variables from var_list were found in the adata objects.")
@@ -443,6 +597,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
             axes[j, i].set_xlabel("")
 
     # fig.tight_layout()
+    return axes
 
 
 def _get_3d_dotsize(n):
@@ -483,10 +638,10 @@ def plot_3D_UMAP(adata, color, save):
     fig = go.Figure()
 
     # Plot per group in obs
-    if color in adata.obs.columns and str(adata.obs[color].dtype) == "category":
+    if color in adata.obs.columns and isinstance(adata.obs[color][0], str):
 
-        df["category"] = adata.obs[color].values
-        categories = df["category"].cat.categories
+        df["category"] = adata.obs[color].values  # color should be interpreted as a categorical variable
+        categories = df["category"].astype("category").cat.categories
         n_groups = len(categories)
         color_list = sns.color_palette("Set1", n_groups)
         color_list = list(map(colors.to_hex, color_list))  # convert to hex
@@ -559,7 +714,7 @@ def plot_3D_UMAP(adata, color, save):
 #                   Other overview plots for expression                     #
 #############################################################################
 
-def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
+def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -569,10 +724,24 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
         Annotated data matrix object.
     x : str
         Name of the column in adata.obs to group by on the x axis.
-    groupby : str
-        Name of the column in adata.obs to created stacked bars on the y axis. Default: None (the bars are not split).
-    save : str
-        Path to save the plot. Default: None (plot is not saved).
+    groupby : str, default None
+        Name of the column in adata.obs to created stacked bars on the y axis. If None, the bars are not split.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
+    figsize : tuple, default None
+        Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.n_cells_barplot(adata, x="louvain")
+
+    .. plot::
+        :context: close-figs
+
+        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
@@ -594,27 +763,31 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=(10, 3)):
     counts_wide_percent = counts_wide.div(counts_wide.sum(axis=1), axis=0) * 100
 
     # Plot barplots
-    fig, axarr = plt.subplots(1, 2, figsize=figsize)
+    if figsize is None:
+        figsize = (5 + 5 * (groupby is not None), 3)  # if groupby is not None, add 5 to width
+
+    if groupby is not None:
+        _, axarr = plt.subplots(1, 2, figsize=figsize)
+    else:
+        _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
+        axarr = [axarr]
 
     counts_wide.plot.bar(stacked=True, ax=axarr[0], legend=False)
     axarr[0].set_title("Number of cells")
     axarr[0].set_xticklabels(axarr[0].get_xticklabels(), rotation=45, ha="right")
-
-    counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
-    axarr[1].set_title("Percentage of cells")
-    axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
-
     axarr[0].grid(False)
-    axarr[1].grid(False)
 
-    # Set location of legend
-    if groupby is None:
-        axarr[1].get_legend().remove()
-    else:
-        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))
+    if groupby is not None:
+        counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
+        axarr[1].set_title("Percentage of cells")
+        axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
+        axarr[1].grid(False)
+
+        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))  # Set location of legend
 
     save_figure(save)
-    plt.show()
+
+    return axarr
 
 
 def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
@@ -653,8 +826,8 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     # Subset to input gene list
     gene_table_melted = gene_table_melted[gene_table_melted["gene"].isin(gene_list)]
 
-    # Sort by median
-    medians = gene_table_melted.groupby(groupby).median()
+    # Sort by median value
+    medians = gene_table_melted.groupby(groupby)["value"].median().to_frame()
     medians.columns = ["medians"]
     gene_table_melted_sorted = gene_table_melted.merge(medians, left_on=groupby, right_index=True).sort_values("medians", ascending=False)
 
@@ -671,6 +844,53 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 #############################################################################
 #                          Quality control plotting                         #
 #############################################################################
+
+def group_correlation(adata, groupby, method="spearman", save=None):
+    """
+    Plot correlation matrix between groups in `groupby`.
+    The function expects the count data in .X to be normalized across cells.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    groupby : str
+        Name of the column in adata.obs to group cells by.
+    method : str, default "spearman"
+        Correlation method to use. See pandas.DataFrame.corr for options.
+
+    Returns
+    -------
+    ClusterGrid object
+    """
+
+    # Calculate correlation of groups
+    count_table = utils.pseudobulk_table(adata, groupby=groupby)
+    corr = count_table.corr(numeric_only=False, method=method)
+
+    # Plot clustermap
+    g = sns.clustermap(corr, figsize=(4, 4),
+                       xticklabels=True,
+                       yticklabels=True,
+                       cmap="Reds",
+                       cbar_kws={'orientation': 'horizontal', 'label': method})
+    g.ax_heatmap.set_facecolor("grey")
+
+    # Adjust cbar
+    n = len(corr)
+    pos = g.ax_heatmap.get_position()
+    cbar_h = pos.height / n / 2
+    g.ax_cbar.set_position([pos.x0, pos.y0 - 3 * cbar_h, pos.width, cbar_h])
+
+    # Final adjustments
+    g.ax_col_dendrogram.set_visible(False)
+    g.ax_heatmap.xaxis.tick_top()
+    _ = g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="left")
+
+    utils.save_figure(save)
+
+    return g
+
 
 def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
     """
@@ -841,6 +1061,7 @@ def anndata_overview(adatas,
                      color_by,
                      plots=["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize=None,
+                     max_clusters=20,
                      output=None,
                      dpi=300):
     """
@@ -863,10 +1084,24 @@ def anndata_overview(adatas,
         - LISI: Plots the distribution of any "LISI_score*" scores available in adata.obs
     figsize : number tuple, default None (automatic based on number of columns/rows)
         Size of the plot in inch.
+    max_clusters : int, default 20
+        Maximum number of clusters to show in legend.
     output : str, default None (not saved)
         Path to plot output file.
     dpi : number, default 300
         Dots per inch for output
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        adatas = {}  # dictionary of adata objects
+        adatas["standard"] = adata
+        adatas["parameter1"] = sc.tl.umap(adata, min_dist=1, copy=True)
+        adatas["parameter2"] = sc.tl.umap(adata, min_dist=2, copy=True)
+
+        pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
     if not isinstance(color_by, list):
         color_by = [color_by]
@@ -920,6 +1155,23 @@ def anndata_overview(adatas,
     LISI_axes = []
     for plot_type in plots:
         for color in color_by:
+
+            # Iterate over adatas to find all possible categories for 'color'
+            categories = []
+            for adata in adatas.values():
+                if color in adata.obs.columns:  # color can also be an index in var
+                    if adata.obs[color].dtype.name == "category":
+                        categories += list(adata.obs[color].cat.categories)
+            categories = sorted(list(set(categories)))
+
+            # Create color palette equal for all columns
+            if len(categories) > 0:
+                colors = sns.color_palette("tab10", len(categories))
+                color_dict = dict(zip(categories, colors))
+            else:
+                color_dict = None  # use default color palette
+
+            # Plot for each adata (one row)
             for i, (name, adata) in enumerate(adatas.items()):
 
                 ax = axs[ax_idx]
@@ -937,7 +1189,9 @@ def anndata_overview(adatas,
                     annotate_row(ax, plot_type)
 
                 # Collect options for plotting
-                embedding_kwargs = {"color": color, "title": "",
+                embedding_kwargs = {"color": color,
+                                    "palette": color_dict,  # only used for categorical color
+                                    "title": "",
                                     "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
                                     "show": False}
 
@@ -974,19 +1228,30 @@ def anndata_overview(adatas,
                         elif plot_type == "PCA":
                             sc.pl.pca(adata, ax=ax, **embedding_kwargs)
 
-                # Set title for the legend
+                # Set title for the legend (for categorical color)
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
-                    ax.legend_.set_title(color)
-                    fontsize = ax.legend_.get_title()._fontproperties._size * 1.2  # increase fontsize of legend title and text
-                    plt.setp(ax.legend_.get_title(), fontsize=fontsize)
-                    plt.setp(ax.legend_.get_texts(), fontsize=fontsize)
 
-                # Adjust colorbars
-                if hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
+                    # Get current legend and rmove
+                    lines, labels = ax.get_legend_handles_labels()
+                    ax.get_legend().remove()
+
+                    # Replot legend with limited number of clusters
+                    per_column = 10
+                    n_clusters = min(max_clusters, len(lines))
+                    n_cols = int(np.ceil(n_clusters / per_column))
+
+                    ax.legend(lines[:max_clusters], labels[:max_clusters],
+                              title=color, ncols=n_cols, frameon=False,
+                              bbox_to_anchor=(1.05, 0.5),
+                              loc=6)
+
+                # Adjust colorbars (for continuous color)
+                elif hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
                     ax._colorbars[0].set_title(color, ha="left")
                     ax._colorbars[0]._colorbar_info["shrink"] = 0.8
                     ax._colorbars[0]._colorbar_info["pad"] = -0.15  # move colorbar closer to plot
 
+                _make_square(ax)
                 ax_idx += 1  # increment index for next plot
 
             if plot_type in row_count:
@@ -1047,5 +1312,421 @@ def boxplot(dt, show_median=True, ax=None):
             y = round(lines[4 + cat * 6].get_ydata()[0], 2)
             ax.text(cat, y, f'{y}', ha='center', va='center', fontweight='bold', size=10, color='white',
                     bbox=dict(facecolor='#445A64'))
+
+    return ax
+
+
+def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin", save=None, **kwargs):
+    """
+    Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
+    Can for example show the expression of one gene across groups (x = obs_group, y = gene),
+    expression of multiple genes grouped by cell type (x = gene_list, groupby = obs_cell_type),
+    or values from adata.obs across cells (x = obs_group, y = obs_column).
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    x : str or list
+        Column name in adata.obs or gene name(s) in adata.var.index to group by on the x-axis. Multiple gene names can be given in a list.
+    y : str, default None
+        A column name in adata.obs or a gene in adata.var.index to plot values for. Only needed if x is a column in adata.obs.
+    groupby : str, default None
+        Column name in adata.obs to create grouped violins. If None, a single violin is plotted per group in 'x'.
+    figsize : tuple, default None
+        Figure size.
+    title : str, default None
+        Title of the plot. If None, no title is shown.
+    style : str, default "violin"
+        Plot style. Either "violin" or "boxplot".
+    save : str, default None
+        Path to save the figure to. If None, the figure is not saved.
+    kwargs : arguments, optional
+        Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+
+    if isinstance(x, str):
+        x = [x]
+    x = list(x)  # convert to list incase x was a numpy array or other iterable
+
+    # Establish if x is a column in adata.obs or a gene in adata.var.index
+    x_assignment = []
+    for element in x:
+        if element not in adata.obs.columns and element not in adata.var.index:
+            raise ValueError(f"{element} is not a column in adata.obs or a gene in adata.var.index")
+        else:
+            if element in adata.obs.columns:
+                x_assignment.append("obs")
+            else:
+                x_assignment.append("var")
+
+    if len(set(x_assignment)) > 1:
+        raise ValueError("x must be either a column in adata.obs or all genes in adata.var.index")
+    else:
+        x_assignment = x_assignment[0]
+
+    # Establish if y is a column in adata.obs or a gene in adata.var.index
+    if x_assignment == "obs" and y is None:
+        raise ValueError("Because 'x' is a column in obs, 'y' must be given as parameter")
+
+    if y is not None:
+        if y in adata.obs.columns:
+            y_assignment = "obs"
+        elif y in adata.var.index:
+            y_assignment = "var"
+        else:
+            raise ValueError(f"y' ({y}) was not found in either adata.obs or adata.var.index")
+
+    # Create obs table with column
+    obs_cols = [col for col in [x[0], y, groupby] if col is not None and col in adata.obs.columns]
+    obs_table = adata.obs.copy()[obs_cols]  # creates a copy
+
+    for element in x + [y]:
+        if element in adata.var.index:
+            gene_idx = np.argwhere(adata.var.index == element)[0][0]
+            vals = adata.X[:, gene_idx].todense().A1
+            obs_table[element] = vals
+
+    # Convert table to long format if the x-axis contains gene expressions
+    if x_assignment == "var":
+        index_name = obs_table.index.name
+        id_vars = [index_name, groupby]
+        id_vars = id_vars + x if x_assignment == "obs" else id_vars
+        id_vars = [v for v in id_vars if v is not None]
+
+        obs_table.reset_index(inplace=True)
+        obs_table = obs_table.melt(id_vars=id_vars, value_vars=x,
+                                   var_name="gene", value_name="expression")
+        x_var = "gene"
+        y_var = "expression"
+
+    else:
+        x_var = x[0]
+        y_var = y
+
+    # Plot expression from obs table
+    _, ax = plt.subplots(figsize=figsize)
+    if style == "violin":
+        sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, scale='width', **kwargs)
+    elif style == "boxplot":
+        sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
+    else:
+        raise ValueError(f"Style '{style}' is not valid for this function. Style must be one of 'violin' or 'boxplot'")
+
+    if groupby is not None:
+        ax.legend(title=groupby, loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)  # Set location of legend
+
+    # Final adjustments of labels
+    if x_assignment == "obs" and y_assignment == "var":
+        ax.set_ylabel(ax.get_ylabel() + " expression")
+
+    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_title(title)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # save figure if output is given
+    save_figure(save)
+
+    return ax
+
+
+#############################################################################
+# ------------------------------ Dotplot ---------------------------------- #
+#############################################################################
+
+def _scale_values(array, mini, maxi):
+    """
+    Small utility to scale values in array to a given range.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to scale.
+    mini : float
+        Minimum value of the scale.
+    maxi : float
+        Maximum value of the scale.
+    """
+    val_range = array.max() - array.min()
+    a = (array - array.min()) / val_range
+    return a * (maxi - mini) + mini
+
+
+def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
+    """ Fill in an axis with a legend for the dotplot size scale.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axis to plot the legend on.
+    val_min : float
+        Minimum value of the scale.
+    val_max : float
+        Maximum value of the scale.
+    radius_min : float
+        Minimum radius of the dots.
+    radius_max : float
+        Maximum radius of the dots.
+    """
+
+    # Current issue: The sizes start at 0, which means there are dots for 0 values.
+    # the majority of this code is from the scanpy dotplot function
+
+    n_dots = 4
+    radius_list = np.linspace(radius_min, radius_max, n_dots)
+    value_list = np.linspace(val_min, val_max, n_dots)
+
+    # plot size bar
+    x_list = np.arange(n_dots) + 0.5
+    x_list *= 3  # extend space between points
+
+    circles = [plt.Circle((x, 0.5), radius=r) for x, r in zip(x_list, radius_list)]
+    col = PatchCollection(circles, color="gray", edgecolor='gray')
+    ax.add_collection(col)
+
+    ax.set_xticks(x_list)
+    labels = ["{:.1f}".format(v) for v in value_list]  # todo: make this more flexible with regards to integers
+    ax.set_xticklabels(labels, fontsize=8)
+
+    # remove y ticks and labels
+    ax.tick_params(axis='y', left=False, labelleft=False, labelright=False)
+
+    # remove surrounding lines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.grid(False)
+
+    pad = 0.15
+    ax.set_ylim(0 - 2 * pad, 1 + pad)
+    x0, x1 = ax.get_xlim()
+    ax.set_xlim(x0 - radius_min - pad, x1 + radius_max + pad)
+    ax.set_xlabel(title, fontsize=8)
+    ax.xaxis.set_label_position('top')
+    ax.set_aspect('equal')
+
+
+def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
+    """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        Dataframe containing the data to plot.
+    x : str
+        Column in table to plot on the x-axis.
+    y : str
+        Column in table to plot on the y-axis.
+    color : str
+        Column in table to use for the color of the dots.
+    size : str
+        Column in table to use for the size of the dots.
+    save : str, default None
+        If given, the figure will be saved to this path.
+    kwargs : arguments
+        Additional arguments to pass to seaborn.clustermap.
+    """
+
+    # This code is very hacky
+    # Major todo is to get better control of location of legends
+    # automatic scaling of figsize
+    # and to make the code more flexible, potentially using a class
+
+    # Create pivots with colors/size
+    color_pivot = pd.pivot(table, index=y, columns=x, values=color)
+    size_pivot = pd.pivot(table, index=y, columns=x, values=size)
+
+    # Plot clustermap of values
+    g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
+                       # vmin=color_min, vmax=color_max, #should be given as kwargs
+                       figsize=(5, 12),
+                       cbar_kws={'label': color, "orientation": "horizontal"},
+                       **kwargs)
+
+    g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_yticklabels(), fontsize=7)
+    g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), fontsize=7, rotation=45, ha="right")
+
+    # Turn off existing heatmap
+    g.ax_heatmap._children[0]._visible = False
+
+    # Add dots on top of cells
+    data_ordered = g.__dict__["data2d"]
+    nrows, ncols = data_ordered.shape
+    x, y = np.meshgrid(np.arange(0.5, ncols + 0.5, 1), np.arange(0.5, nrows + 0.5, 1))
+
+    # todo: get control of the min/max values of the color scale
+    color_mat = data_ordered.values
+    if "vmin" in kwargs:
+        color_min = kwargs["vmin"]
+        color_mat[color_mat < color_min] = color_min
+
+    if "vmax" in kwargs:
+        color_max = kwargs["vmax"]
+        color_mat[color_mat > color_max] = color_max
+
+    size_ordered = size_pivot.loc[data_ordered.index, data_ordered.columns]
+    size_mat = size_ordered.values
+    radius_mat = _scale_values(size_mat, 0.05, 0.5)
+
+    circles = [plt.Circle((j, i), radius=r) for r, j, i in zip(radius_mat.flat, x.flat, y.flat)]
+    col = PatchCollection(circles, array=color_mat.flatten(), cmap="bwr")
+    g.ax_heatmap.add_collection(col)
+
+    # Adjust size of individual cells and dendrograms
+    g.ax_heatmap.set_aspect('equal')
+
+    f = plt.gcf()
+    f.canvas.draw()
+
+    # trans_data = g.ax_heatmap.transData
+    # trans_data_inv = trans_data.inverted()
+
+    dend_row_pos = g.ax_row_dendrogram.get_position()
+    # dend_col_pos = g.ax_col_dendrogram.get_position()
+    heatmap_pos = g.ax_heatmap.get_position()
+
+    cell_width = heatmap_pos.height / data_ordered.shape[0]
+    den_size = cell_width * 5
+    pad = cell_width * 0.1
+
+    # Resize dendrograms
+    g.ax_row_dendrogram.set_position([heatmap_pos.x0 - den_size - pad, dend_row_pos.y0,
+                                      den_size, dend_row_pos.height])
+    g.ax_col_dendrogram.set_position([heatmap_pos.x0, heatmap_pos.y0 + heatmap_pos.height + pad,
+                                      heatmap_pos.width, den_size])
+
+    # TODO: get right bounds for y-axis labels to correctly place legends
+    # texts = g.ax_heatmap.get_yticklabels()
+    # bboxes = [t.get_window_extent(renderer=f.canvas.renderer) for t in texts]
+    # right_bound = max([bbox.x1 for bbox in bboxes])
+
+    # Move colorbar
+    max_txt_width = cell_width * 25
+    hm_pos = g.ax_heatmap.get_position()
+    g.ax_cbar.set_position([hm_pos.x1 + max_txt_width, hm_pos.y0, cell_width * 20, cell_width])
+    g.ax_cbar.set_xticklabels(g.ax_cbar.get_xticklabels(), fontsize=7)
+
+    g.ax_cbar.set_xlabel(g.ax_cbar.get_xlabel(), fontsize=8)
+    g.ax_cbar.xaxis.set_label_position('top')
+
+    # Add size legend manually
+    cbar_pos = g.ax_cbar.get_position()
+    ax_size = f.add_axes([cbar_pos.x0, cbar_pos.y1 + cbar_pos.height * 5, cbar_pos.width, cell_width])
+    _plot_size_legend(ax_size, np.min(size_mat), np.max(size_mat), np.min(radius_mat), np.max(radius_mat), title=size)
+
+    # Add border to heatmap
+    g.ax_heatmap.add_patch(Rectangle((0, 0), ncols, nrows, fill=False, edgecolor='grey', lw=1))
+
+    # Save figure
+    utils.save_figure(save)
+
+    return g
+
+
+def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
+    """ Plot an overview of marker genes and clustering """
+
+    fig, axarr = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 2]})
+
+    # Plot UMAP colored by groupby on the left
+    sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
+    axarr[0].set_aspect('equal')
+
+    # Plot marker gene expression on the right
+    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[1])
+    ax["mainplot_ax"].set_ylabel(groupby)
+    ax["mainplot_ax"].set_xticklabels(ax["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
+
+    for text in ax["gene_group_ax"]._children:
+        text._rotation = 45
+        text._horizontalalignment = "left"
+
+    fig.tight_layout()
+    plt.subplots_adjust(wspace=0.2)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return axarr
+
+
+def umap_pub(adata, color=None, title=None, save=None, **kwargs):
+    """
+    Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
+
+    Parameters
+    ----------
+    adata :anndata.AnnData
+        Annotated data matrix.
+    color : str or lst of str, default None
+        Key for annotation of observations/cells or variables/genes.
+    title : str, default None
+        Title of the plot. Default is no title.
+    save : str, default None
+        Filename to save the figure.
+    kwargs : dict
+        Additional arguments passed to `sc.pl.umap`.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.umap_pub(adata, color="louvain", title="Louvain clusters")
+    """
+
+    axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
+
+    if not isinstance(axarr, list):
+        axarr = [axarr]
+        color = [color]
+
+    for i, ax in enumerate(axarr):
+
+        # Set legend
+        legend = ax.get_legend()
+        if legend is not None:
+            legend.set_title(color[i])
+
+        ax.set_title(title)
+
+        # Remove all spines (axes lines)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        # Move x and y-labels to the start of axes
+        label = ax.xaxis.get_label()
+        label.set_horizontalalignment('left')
+        x_lab_pos, y_lab_pos = label.get_position()
+        label.set_position([0, y_lab_pos])
+
+        label = ax.yaxis.get_label()
+        label.set_horizontalalignment('left')
+        x_lab_pos, y_lab_pos = label.get_position()
+        label.set_position([x_lab_pos, 0])
+
+        # Draw UMAP coordinate arrows
+        ymin, ymax = ax.get_ylim()
+        xmin, xmax = ax.get_xlim()
+        yrange = ymax - ymin
+        xrange = xmax - xmin
+        arrow_len_y = yrange * 0.15
+        arrow_len_x = xrange * 0.15
+
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
+
+        # Adjust aspect ratio
+        _make_square(ax)
+
+    # Save figure
+    utils.save_figure(save)
 
     return ax

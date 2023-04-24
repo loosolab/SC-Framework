@@ -2,12 +2,39 @@ import pytest
 import os
 import numpy as np
 import shutil
+import pandas as pd
 import sctoolbox.utilities as utils
+import scanpy as sc
+
+
+@pytest.fixture
+def adata():
+    """ Returns adata object with 3 groups """
+
+    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+    return adata
 
 
 @pytest.fixture
 def berries():
     return ["blueberry", "strawberry", "blackberry"]
+
+
+@pytest.fixture
+def na_dataframe():
+    data = {'int': [3, 2, 1, np.nan],
+            'float': [1.2, 3.4, 5.6, np.nan],
+            'string': ['a', 'b', 'c', np.nan],
+            'boolean': [True, False, True, np.nan],
+            'category_str': ['cat1', 'cat2', 'cat3', np.nan],
+            'category_num': [10, 20, 30, np.nan]}
+    df = pd.DataFrame.from_dict(data)
+
+    df['category_str'] = df['category_str'].astype('category')
+    df['category_num'] = df['category_num'].astype('category')
+    return df
 
 
 arr_ints = np.random.randint(10, size=(10, 10))
@@ -117,3 +144,41 @@ def test_write_list_file(berries):
 
     assert os.path.isfile(path)
     os.remove(path)  # clean up after tests
+
+
+def test_fill_na(na_dataframe):
+    """ Test if na values in dataframe are filled correctly """
+    utils.fill_na(na_dataframe)
+    assert not na_dataframe.isna().any().any()
+    assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '', '']
+
+
+def test_get_adata_subsets(adata):
+    """ Test if adata subsets are returned correctly """
+
+    subsets = utils.get_adata_subsets(adata, "group")
+
+    for group, sub_adata in subsets.items():
+        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].nunique() == 1
+
+
+def test_remove_files():
+    """ Remove files from list """
+
+    if not os.path.isfile("afile.txt"):
+        os.mknod("afile.txt")
+
+    files = ["afile.txt", "notfound.txt"]
+    utils.remove_files(files)
+
+    assert os.path.isfile("afile.txt") is False
+
+
+def test_pseudubulk_table(adata):
+    """ Test if pseudobulk table is returned correctly """
+
+    pseudobulk = utils.pseudobulk_table(adata, "group")
+
+    assert pseudobulk.shape[0] == adata.shape[0]
+    assert pseudobulk.shape[1] == 3  # number of groups

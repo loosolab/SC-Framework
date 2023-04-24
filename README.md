@@ -1,3 +1,6 @@
+[![coverage](https://gitlab.gwdg.de/loosolab/software/loosolab_SC_RNA_framework/badges/dev/coverage.svg?key_text=coverage&key_width=70)](https://gitlab.gwdg.de/loosolab/software/loosolab_SC_RNA_framework/-/commits/dev)
+
+
 # loosolab_SC_RNA_framework
 
 A python framework for single cell analysis. It provides a plethora of functions for conducting common analysis tasks and respective visualization. It also includes a number of jupyter notebooks to further streamline the analysis process, making it easy to follow and reproduce analysis results.
@@ -31,6 +34,10 @@ pip install notebook
 6. Register the environment as a jupyter kernel.
 ```
 python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
+```
+7. (optional) If you want to push changes to notebooks, you need to add the custom .gitconfig to the local .git config-file in order to enable clearing of notebook outputs:
+```
+git config --replace-all include.path "../.gitconfig"
 ```
 
 # How to access the notebooks
