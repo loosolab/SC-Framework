@@ -37,7 +37,9 @@ class SctoolboxConfig(object):
             raise TypeError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
         # Validate and set parameter
-        if key in ["figure_path", "adata_input_path", "adata_output_path"]:
+        if key == "__frozen":  # allow __frozen to be set without checking
+            pass
+        elif key in ["figure_path", "adata_input_path", "adata_output_path"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._validate_string(value)
             self._create_dir(value)
