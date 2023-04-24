@@ -37,16 +37,16 @@ class SctoolboxConfig(object):
             raise TypeError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
         # Validate and set parameter
-        if key == "threads":
-            self._validate_int(value)
-        elif key == "create_dirs":
-            self._validate_bool(value)
-        elif key in ["figure_prefix", "adata_input_prefix", "adata_output_prefix"]:
-            self._validate_string(value)
-        elif key in ["figure_path", "adata_input_path", "adata_output_path"]:
+        if key in ["figure_path", "adata_input_path", "adata_output_path"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._validate_string(value)
             self._create_dir(value)
+        elif self.__init__.__annotations__[key] == int:
+            self._validate_int(value)
+        elif self.__init__.__annotations__[key] == bool:
+            self._validate_bool(value)
+        elif self.__init__.__annotations__[key] == str:
+            self._validate_string(value)
 
         object.__setattr__(self, key, value)
 
