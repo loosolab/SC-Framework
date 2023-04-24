@@ -19,7 +19,7 @@ setup(
     description='Custom modules for single cell analysis',
     license='MIT',
     packages=find_namespace_packages(),
-    python_requires='>=3,<3.11',  # pybedtools and mnnpy are not compatible with python 3.11
+    python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
         'matplotlib',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
