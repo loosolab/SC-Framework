@@ -6,7 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:latest
+image: continuumio/miniconda3:latest
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -35,6 +35,9 @@ default:
     - apt update
     - conda install -c conda-forge mamba
     - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
+    - conda init bash
+    - source ~/.bashrc
+    - conda activate sctoolbox
     #- apt -y install r-base # needed for rpy2 install
     #- pip install rpy2   # resolve dependencies for diffexpr
     #- pip install numpy  # resolve dependencies for diffexpr
@@ -60,6 +63,7 @@ pass:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 lint:
+  image: python:3.9.15
   stage: test
   tags:
     - coverage
@@ -132,7 +136,6 @@ pages:
 #Test notebooks when code is pushed to main
 notebooks:
   stage: deploy
-  image: continuumio/miniconda3:latest
   tags:
     - gwdg
     - gwdg-shared
@@ -140,11 +143,6 @@ notebooks:
     default: false  #do not install virtual env for this job
   script:
     - pip install papermill
-    - conda install -c conda-forge mamba
-    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
-    - conda init bash
-    - source ~/.bashrc
-    - conda activate sctoolbox
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
