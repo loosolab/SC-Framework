@@ -224,7 +224,7 @@ def test_gene_id_to_name(adata2):
     id_name_table = utils.gene_id_to_name(ids=list(adata2.var.index), species="mmusculus")
 
     assert isinstance(id_name_table, pd.DataFrame)
-    assert len(id_name_table) == len(adata2)  # assert all genes kept
+    assert len(id_name_table) == len(adata2.var)  # assert all genes kept
     assert all(c in ["Gene stable ID", "Gene name"] for c in id_name_table.columns)  # assert correct column names
 
 
