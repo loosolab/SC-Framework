@@ -218,13 +218,13 @@ def test_gene_id_to_name(adata2):
     with pytest.raises(ValueError):
         ids = list(adata2.var.index)
         ids.append("invalid")
-        utils.gene_id_to_name(ids=list(adata2.var.index), species="mmusculus")
+        utils.gene_id_to_name(ids=ids, species="mmusculus")
 
     # valid call
     id_name_table = utils.gene_id_to_name(ids=list(adata2.var.index), species="mmusculus")
 
     assert isinstance(id_name_table, pd.DataFrame)
-    assert len(id_name_table) == len(adata2)  # assert all genes kept
+    assert len(id_name_table) == len(adata2.var)  # assert all genes kept
     assert all(c in ["Gene stable ID", "Gene name"] for c in id_name_table.columns)  # assert correct column names
 
 
@@ -257,4 +257,4 @@ def test_convert_id(adata2):
 
     # inplace
     assert utils.convert_id(adata=new_adata, id_col_name="index", name_col=name_col, species="mmusculus", inplace=True) is None
-    assert name_col in new_adata
+    assert name_col in new_adata.var

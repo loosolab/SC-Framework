@@ -1083,13 +1083,13 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     # create new .var and replace in adata
     new_var = pd.merge(
-        left=adata.var.reset_index(),
+        left=adata.var,
         right=id_name_table.set_index("Gene stable ID"),
-        left_on="gene_ids",
-        left_index=False,
+        left_on=id_col_name,
+        left_index=index,
         right_index=True,
         how="left"
-    ).set_index(adata.var.index.name)
+    )
     new_var["Gene name"].fillna('', inplace=True)
     new_var.rename(columns={"Gene name": name_col}, inplace=True)
 

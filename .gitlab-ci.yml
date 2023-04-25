@@ -6,7 +6,7 @@
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: python:3.9.15  #pin due to numba not available for python 3.11
+image: python:3.10  # pybedtools is not compatible with python 3.11
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -23,21 +23,26 @@ cache:
     - .cache/pip
     - venv/
 
+# Install package for all jobs (unless inherit is false)
 default:
   before_script:
     - python --version  # For debugging
+    - uname -a          # For debugging
+    - cat /etc/os-release    # For debugging
+    - gcc --version
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
     - apt update
     - apt -y install r-base  # needed for rpy2 install
+    - pip install rpy2   # resolve dependencies for diffexpr
+    - pip install numpy  # resolve dependencies for diffexpr
+    - pip install pandas # resolve dependencies for diffexpr
+    - pip install .[all]
 
-# flake8 ignore rules:
-# E501 = Line too long
-# W503 = Line break occurred before a binary operator
-
-#this is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
+# This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
+  image: python:3.9.15
   inherit:
     default: false
   script:
@@ -45,7 +50,13 @@ pass:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
+# flake8 ignore rules:
+# E501 = Line too long
+# W503 = Line break occurred before a binary operator
 lint:
+  image: python:3.9.15
+  inherit:
+    default: false  # package not needed to run linting
   stage: test
   tags:
     - coverage
@@ -60,6 +71,7 @@ lint:
       - tests/*.py
       - sctoolbox/*.py
 
+# Run test coverage
 test coverage:
   stage: test
   tags:
@@ -69,10 +81,6 @@ test coverage:
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
-    - pip install rpy2   # resolve dependencies for diffexpr
-    - pip install numpy  # resolve dependencies for diffexpr
-    - pip install pandas # resolve dependencies for diffexpr
-    - pip install .[all]
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html
   artifacts:
     when: always
@@ -88,6 +96,9 @@ test coverage:
       - tests/*.py
       - sctoolbox/*.py
     - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
+    - if: $CI_PIPELINE_SOURCE == "push"  # manual rule for all pushes
+      when: manual
+      allow_failure: True  # the manual rule is allowed to fail
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
@@ -101,15 +112,12 @@ notebook-output-check:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
+# Build documentation
 pages:
   stage: deploy
   tags:
     - coverage
   script:
-    - pip install rpy2   # resolve dependencies for diffexpr
-    - pip install numpy  # resolve dependencies for diffexpr
-    - pip install pandas # resolve dependencies for diffexpr
-    - pip install .[all]
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
@@ -123,22 +131,14 @@ pages:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
 
-#Test notebooks when code is pushed to main
+# Test notebooks when code is pushed to main
 notebooks:
   stage: deploy
-  image: continuumio/miniconda3:latest
   tags:
     - gwdg
     - gwdg-shared
-  inherit:
-    default: false  #do not install virtual env for this job
   script:
     - pip install papermill
-    - conda install -c conda-forge mamba
-    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
-    - conda init bash
-    - source ~/.bashrc
-    - conda activate sctoolbox
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
