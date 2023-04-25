@@ -1097,3 +1097,43 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     if not inplace:
         return adata
+
+
+def unify_genes_column(adata, column='gene_name', ensembl_dataset="hsapiens_gene_ensembl"):
+    """
+    This function unifies the genes column in adata.var. It replaces ensembl gene ids with gene names.
+
+    Parameters
+    ----------
+    adata: AnnData
+        AnnData object
+    column: str
+        column name in adata.var
+    ensembl_dataset: str
+        ensembl dataset name
+
+    Returns
+    -------
+
+    """
+
+    assigned_features = adata.var[column].dropna()
+
+    df = apybiomart.query(attributes=["ensembl_gene_id", "external_gene_name"],
+                          dataset=ensembl_dataset,
+                          filters={})
+
+    ens_dict = dict(zip(df['Gene stable ID'], df['Gene name']))
+
+    count = 0
+    for index, gene in enumerate(assigned_features):
+        if gene.startswith("ENSG"):
+            if gene in ens_dict.keys():
+                if isinstance(ens_dict[gene], str):
+                    assigned_features.replace(gene, ens_dict[gene], inplace=True)
+                    count += 1
+    print(f'{count} ensembl gene ids have been replaced with gene names')
+
+    adata = adata[:, assigned_features.index]
+
+    return adata
