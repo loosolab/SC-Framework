@@ -257,4 +257,4 @@ def test_convert_id(adata2):
 
     # inplace
     assert utils.convert_id(adata=new_adata, id_col_name="index", name_col=name_col, species="mmusculus", inplace=True) is None
-    assert name_col in new_adata
+    assert name_col in new_adata.var
