@@ -21,9 +21,10 @@ def moving_average(series, adapter=0, n=10):
     n: int
         Number of steps to the left and right of the current step to be averaged (default=10)
 
-    Returns: array
-        Smoothed array
+    Returns
     -------
+    array : array
+        Smoothed array
 
     """
     for i in range(adapter):
@@ -62,9 +63,10 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
     n_threads: int
         Number of threads to be used for multiprocessing (default=8)
 
-    Returns: array
-        Smoothed array
+    Returns
     -------
+    array : array of arrays
+        array of smoothed array
 
     """
     # smooth
@@ -99,9 +101,10 @@ def scale(series_arr):
     series_arr: array
         Array of data to be scaled 1D or 2D
 
-    Returns: array
-        Scaled array
+    Returns
     -------
+    array : array
+        Scaled array
 
     """
     if len(series_arr.shape) == 1:
@@ -128,9 +131,10 @@ def calc_densities(features):
     features: array
         Array of features to calculate the density for
 
-    Returns: array
-        Array of densities
+    Returns
     -------
+    array : array
+        Array of densities
 
     """
     # calculate densities for a binned grid X,y of size original bins / 1000
@@ -160,9 +164,10 @@ def call_peaks(data, n_threads=4, distance=50, width=10):
     width: int
         Minimum width of peaks
 
-    Returns: array
-        Array of peaks (index of data)
+    Returns
     -------
+    array : array
+        Array of peaks (index of data)
 
     """
     peaks = []
@@ -197,9 +202,10 @@ def call_peaks_worker(array, distance=50, width=10):
     width: int
         Minimum width of peaks
 
-    Returns: array
-        Array of peaks (index of data)
+    Returns
     -------
+    array : array
+        Array of peaks (index of data)
 
     """
     peaks, _ = find_peaks(array, distance=distance, width=width)
@@ -222,9 +228,10 @@ def filter_peaks(peaks, reference, peaks_thr, operator='bigger'):
     operator: str
         Operator for filtering (default='bigger')
 
-    Returns: array
-        Filtered array of peaks
+    Returns
     -------
+    array: array
+        Filtered array of peaks
 
     """
     filtered_peaks = []
@@ -315,9 +322,10 @@ def score_by_momentum(data,
     plotting: bool
         Plot the momentum and the peaks of the reference sample (default=True)
 
-    Returns: array
-        Array of scores
+    Returns
     -------
+    array: array
+        Array of scores
 
     """
     print('calculate momentum...')
@@ -396,10 +404,10 @@ def add_adapters(features, shift=250, smooth=False, window_size=30):
     window_size: int
         Window size for smoothing (default=30)
 
-    Returns: array
-        Array of features with adapters
+    Returns
     -------
-
+    array: array
+        Array of features with adapters
     """
     if shift != 0:
         for i in range(shift):
@@ -424,10 +432,10 @@ def cross_point_shift(peaks, reference, convergence=0.01):
     convergence: float
         Convergence threshold
 
-    Returns: array
-        Array of corrected peaks
+    Returns
     -------
-
+    array: array
+        Array of corrected peaks
     """
     corrected_peaks = []
     latest = 0
@@ -473,10 +481,10 @@ def single_cwt_ov(features,
     convergence: float
         Convergence threshold
 
-    Returns: array
-        Array of coefficients
+    Returns
     -------
-
+    array:: array
+        Array of coefficients
     """
 
     feature = features[sample]
@@ -518,9 +526,10 @@ def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8):
     n_threads: int
         Number of threads to use
 
-    Returns: array
-        Array of coefficients
+    Returns
     -------
+    array: array
+        Array of coefficients
     """
     coef_arr = []
     # init pool
@@ -555,10 +564,10 @@ def cwt_worker(feature, wavelet="gaus1", scales=16):
     scales: int / or array of ints
         Scales for the CWT (default=16)
 
-    Returns: array
-        Array of coefficients
+    Returns
     -------
-
+    array: array
+        Array of coefficients
     """
     coef, freqs = pywt.cwt(feature, scales, wavelet)
 
@@ -661,10 +670,10 @@ def score_by_cwt(data,
     n_threads: int
         Number of threads to use
 
-    Returns: array
-        Array of scores
+    Returns
     -------
-
+    array: array
+        Array of scores
     """
 
     print('performing CWT on: ' + str(len(data)) + ' cells')
@@ -737,9 +746,9 @@ def density_plot(scaled, densities):
     densities: array
         2D array of the densities
 
-    Returns: None
+    Returns
     -------
-
+    None
     """
     # plot density
     normalized = np.log2(densities)  # normalize log2
@@ -789,9 +798,9 @@ def plot_single_momentum_ov(peaks,
     remove: int
         Number of bases removed from the left of the fragment length distribution
 
-    Returns: None
+    Returns
     -------
-
+    None
     """
     single_m = momentum[sample_n]
     single_d = data[sample_n]
@@ -853,9 +862,9 @@ def plot_wavl_ov(feature,
     convergence: float
         Convergence value for the cross point shift
 
-    Returns: None
+    Returns
     -------
-
+    None
     """
     # index frequence of interest
     coef_freq = coef[freq]
@@ -911,6 +920,43 @@ def add_insertsize_metrics(adata,
                            peaks_thr_cwt=0.05,
                            plotting=True,
                            plot_sample=0):
+    """
+    Wrapper function to add insert size metrics to an AnnData object. This function can either take a bam file or a
+    fragments file as input. If both are provided, an error is raised. If none are provided, an error is raised.
+    Nucleosomal signal can either calculated using the momentum method or the continuous wavelet transformation (CWT).
+
+    Parameters
+    ----------
+    adata: AnnData
+        AnnData object to add the insert size metrics to
+    bam: str
+        Path to bam file
+    fragments: str
+        Path to fragments file
+    barcode_col: str
+        Name of the column in the adata.obs dataframe that contains the barcodes
+    barcode_tag: str
+        Name of the tag in the bam file that contains the barcodes
+    regions: str
+        Path to bed file containing regions to calculate insert size metrics for
+    use_momentum: bool
+        If true, nucleosomal signal is calculated using the momentum method
+    use_cwt: bool
+        If true, nucleosomal signal is calculated using the CWT method
+    peaks_thr_mom: float
+        Threshold for the momentum method
+    peaks_thr_cwt: float
+        Threshold for the CWT method
+    plotting: bool
+        If true, plots are generated
+    plot_sample: int
+        Index of the sample to plot
+
+    Returns
+    -------
+    adata: AnnData
+        AnnData object with the insert size metrics added to the adata.obs dataframe
+    """
 
     adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
 
