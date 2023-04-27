@@ -723,7 +723,7 @@ def quality_violin(adata, columns,
         slider_dict[column] = {}
 
         # Plot data from table
-        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list)
+        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0)
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
         ax.set_xlabel("")
