@@ -31,7 +31,7 @@ def check_pct_fragments_in_promoters(adata, qc_col):
         return False
 
 
-def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False):
+def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]):
     """
     Create fragments file out of a BAM file using the package sinto
 
@@ -60,13 +60,17 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False):
         out_sorted = f"{path[0]}_fragments_sorted.bed"
         if sort_bam:
             bam_sorted = f"{path[0]}_sorted.bam"
+            temp_files.append(bam_sorted)
     else:
         name = os.path.basename(bam).split('.')[0]
         out_unsorted = os.path.join(out, f"{name}_fragments.bed")
         out_sorted = os.path.join(out, f"{name}_fragments_sorted.bed")
         if sort_bam:
             bam_sorted = os.path.join(out, f"{name}_sorted.bam")
+            temp_files.append(bam_sorted)
 
+    if not keep_temp:
+        temp_files.append(out_sorted)
     # sort bam if not sorted
     if sort_bam:
         print("Sorting BAM file...")
@@ -99,10 +103,10 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False):
     os.remove(out_unsorted)
 
     # return path to sorted fragments file
-    return out_sorted
+    return out_sorted, temp_files
 
 
-def _convert_gtf_to_bed(gtf, out=None):
+def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     """
     Extract 'chr', 'start' and 'stop' from .gtf file and convert it to sorted BED file.
     BED file will be sorted by chromosome name and start position.
@@ -124,6 +128,9 @@ def _convert_gtf_to_bed(gtf, out=None):
         out_unsorted = os.path.join(out, f'{name}_tmp.bed')
         out_sorted = os.path.join(out, f'{name}_sorted.bed')
 
+    # add temp file to list
+    temp_files.append(out_sorted)
+
     with open(gtf, 'rb') as file:
         with open(out_unsorted, "w") as out_file:
             for row in file:
@@ -141,10 +148,10 @@ def _convert_gtf_to_bed(gtf, out=None):
     os.remove(out_unsorted)
 
     # return the path to sorted bed
-    return out_sorted
+    return out_sorted, temp_files
 
 
-def _overlap_two_beds(bed1, bed2, out=None):
+def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
     """
     Overlap two BED files using Bedtools Intersect.
     The result is a BED file containing regions in bed1 that overlaps with at least one region in bed2.
@@ -171,6 +178,7 @@ def _overlap_two_beds(bed1, bed2, out=None):
     else:
         out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
 
+    temp_files.append(out_overlap)
     # a = pybedtools.BedTool(bed1)
     # b = pybedtools.BedTool(bed2)
     # a.intersect(b, u=True, sorted=True, output=out_overlap)
@@ -186,7 +194,7 @@ def _overlap_two_beds(bed1, bed2, out=None):
         return False
 
     # return path to overlapped file
-    return out_overlap
+    return out_overlap, temp_files
 
 
 def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None,
@@ -234,7 +242,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 
 
 def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None,
-                          cb_tag='CB', regions_name='list', nproc=1, sort_bam=False, sort_regions=False):
+                          cb_tag='CB', regions_name='list', nproc=1, sort_bam=False, sort_regions=False, keep_fragments=False):
     """
     This function calculates for each cell, the percentage of fragments in a BAM alignment file
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
@@ -275,14 +283,16 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     else:
         barcodes = adata.obs.index.to_list()
 
+    temp_files = []
     # check if regions file is gtf or bed
     file_ext = Path(regions_file).suffix
     if file_ext.lower() == '.gtf':
         print("Converting GTF to BED...")
         # convert gtf to bed with columns chr, start, end
-        bed_file = _convert_gtf_to_bed(regions_file, out=None)
+        bed_file, temp_files = _convert_gtf_to_bed(regions_file, temp_files=temp_files, out=None)
     elif file_ext.lower() == '.bed':
         bed_file = os.path.splitext(regions_file)[0] + '_sorted.bed'
+        temp_files.append(bed_file)
         if sort_regions:
             sort_cmd = f'sort -k1,1 -k2,2n {regions_file} > {bed_file}'
             os.system(sort_cmd)
@@ -290,11 +300,17 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # if only bam file is available -> convert to fragments
     if bam_file and not fragments_file:
         print('Converting BAM to fragments file! This may take a while...')
-        fragments_file = create_fragment_file(bam_file, cb_tag=cb_tag, out=None, nproc=nproc, sort_bam=sort_bam)
+        fragments_file, temp_files = create_fragment_file(bam_file,
+                                                          cb_tag=cb_tag,
+                                                          out=None,
+                                                          nproc=nproc,
+                                                          sort_bam=sort_bam,
+                                                          keep_temp=keep_fragments,
+                                                          temp_files=temp_files)
 
     # overlap reads in fragments with promoter regions, return path to overlapped file
     print('Finding overlaps...')
-    overlap_file = _overlap_two_beds(fragments_file, bed_file, out=None)
+    overlap_file, temp_files = _overlap_two_beds(fragments_file, bed_file, out=None, temp_files=temp_files)
 
     #
     mp_calc_pct = MPOverlapPct()
@@ -302,7 +318,9 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
     #
     print('Adding results to adata object...')
-
+    print("cleaning up...")
+    for f in temp_files:
+        os.remove(f)
     print('Done')
 
 

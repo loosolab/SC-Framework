@@ -1,6 +1,7 @@
 """
 Modules for plotting single cell data
 
+.. rubric:: Loading the module
 
 Loading the module
 -------------------
@@ -25,6 +26,7 @@ Loading example data
 
 from math import ceil
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import seaborn as sns
 import numpy as np
 import scanpy as sc
@@ -1240,10 +1242,16 @@ def anndata_overview(adatas,
                     n_clusters = min(max_clusters, len(lines))
                     n_cols = int(np.ceil(n_clusters / per_column))
 
-                    ax.legend(lines[:max_clusters], labels[:max_clusters],
-                              title=color, ncols=n_cols, frameon=False,
-                              bbox_to_anchor=(1.05, 0.5),
-                              loc=6)
+                    if mpl.__version__ > '3.6.0':
+                        ax.legend(lines[:max_clusters], labels[:max_clusters],
+                                  title=color, ncols=n_cols, frameon=False,
+                                  bbox_to_anchor=(1.05, 0.5),
+                                  loc=6)
+                    else:
+                        ax.legend(lines[:max_clusters], labels[:max_clusters],
+                                  title=color, ncol=n_cols, frameon=False,
+                                  bbox_to_anchor=(1.05, 0.5),
+                                  loc=6)
 
                 # Adjust colorbars (for continuous color)
                 elif hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:

@@ -483,7 +483,8 @@ def bam_adata_ov(adata, bamfile, cb_col):
     cb_col: str
         bamfile column to extract the barcodes from
 
-    Returns
+    Returns: float
+        hitrate of the barcodes in the bamfile
     -------
 
     """
