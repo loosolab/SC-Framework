@@ -32,15 +32,15 @@ def moving_average(series, adapter=0, n=10):
 
     list(series)
     smoothed = []
-    for i in range(len(series)):
+    for i in range(len(series)): # loop over all steps
         sumPerStep = 0
-        if i > n and i <= (len(series) - n):
+        if i > n and i <= (len(series) - n): # main phase
             for j in range(-n, n):
                 sumPerStep += series[i + j]
             smoothed.append(sumPerStep / (n * 2))
-        elif i > (len(series) - n):
+        elif i > (len(series) - n): # end phase
             smoothed.append(series[i])
-        elif i < n:
+        elif i <= n: # init phase
             smoothed.append(series[i])
 
     smoothed = np.array(smoothed)
@@ -1034,3 +1034,18 @@ def add_insertsize_metrics(adata,
     adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
     return adata
+
+if __name__ == "__main__":
+
+    print('This script is not meant to be run directly. Please import it into a Jupyter notebook.')
+    # Test Moving Average
+    in_array = np.linspace(0, 3.1415 * 2, 1000)
+    sine_wave = np.sin(in_array)
+    in_array = np.linspace(0, 500, 1000)
+    disturbance = np.sin(in_array)
+    scaled_disturbance = disturbance / 10
+    disturbed_sine = sine_wave + scaled_disturbance
+
+    smooth = moving_average(disturbed_sine)
+
+    print("Done!")
