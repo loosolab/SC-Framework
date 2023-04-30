@@ -359,6 +359,74 @@ def run_rank_genes(adata, groupby,
     adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
+def pairwise_rank_genes(adata, groupby,
+                        foldchange_threshold=1,
+                        min_in_group_fraction=0.25,
+                        max_out_group_fraction=0.5
+                        ):
+    """ Rank genes pairwise between groups in 'groupby'.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object containing expression data.
+    groupby : str
+        Key in adata.obs containing groups to be compared.
+    foldchange_threshold : float, default: 1
+        Minimum foldchange (+/-) to be considered as a marker gene.
+    min_in_group_fraction : float, default: 0.25
+        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
+    max_out_group_fraction : float, default: 0.5
+        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
+    """
+
+    adata = adata.copy()  # do not change original adata
+    groups = adata.obs[groupby].cat.categories
+
+    contrasts = list(itertools.combinations(groups, 2))
+
+    # Calculate marker genes for each contrast
+    tables = []
+    for contrast in contrasts:
+        print(f"Calculating rank genes for contrast: {contrast}")
+
+        run_rank_genes(adata, groupby=groupby, groups=contrast)
+
+        # Get table
+        c1, c2 = contrast
+        table_dict = get_rank_genes_tables(adata, out_group_fractions=True)  # returns dict with each group
+        table = table_dict[c1]
+
+        # Reorder columns
+        table.set_index("names", inplace=True)
+        table = table[["logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
+
+        # Calculate up/down genes
+        c1, c2 = contrast
+        groups = ["C1", "C2"]
+        conditions = [(table["logfoldchanges"] >= foldchange_threshold) & (table[c1 + "_fraction"] >= min_in_group_fraction) & (table[c2 + "_fraction"] <= max_out_group_fraction),  # up
+                      (table["logfoldchanges"] <= -foldchange_threshold) & (table[c1 + "_fraction"] <= max_out_group_fraction) & (table[c2 + "_fraction"] >= min_in_group_fraction)]  # down
+        table["group"] = np.select(conditions, groups, "NS")
+
+        # Rename columns
+        prefix = "/".join(contrast) + "_"
+        table.columns = [prefix + col if "fraction" not in col else col for col in table.columns]
+
+        # Add table to list
+        tables.append(table)
+
+    # Join individual tables
+    merged = pd.concat(tables, join="inner", axis=1)
+
+    # Move fraction columns to the back
+    merged = merged.loc[:, ~merged.columns.duplicated()]
+    fraction_columns = [col for col in merged.columns if col.endswith("_fraction")]
+    first_columns = [col for col in merged.columns if col not in fraction_columns]
+    merged = merged[first_columns + fraction_columns]
+
+    return merged
+
+
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
