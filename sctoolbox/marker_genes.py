@@ -8,6 +8,7 @@ import scanpy as sc
 import itertools
 import warnings
 from anndata import ImplicitModificationWarning
+from pathlib import Path
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -337,15 +338,15 @@ def run_rank_genes(adata, groupby,
 
     adata.uns['log1p'] = {'base': None}  # set log1p base to None to avoid error in rank_genes_groups
 
+    # Check number of groups in groupby
+    if len(adata.obs[groupby].cat.categories) < 2:
+        raise ValueError("groupby must contain at least two groups.")
+
     # Catch ImplicitModificationWarning from scanpy
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute*")
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute.*")
         sc.tl.rank_genes_groups(adata, method=method, groupby=groupby, **kwargs)
 
-    if "log1p" in adata.uns:
-        adata.uns['log1p']['base'] = None  # hack for scanpy error
-
-    sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
@@ -536,6 +537,49 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     return cluster2celltype
 
 
-# ----------------------------------------------------------------------------------------------- #
-# ----------------------------------- Plotting of marker genes ---------------------------------- #
-# ----------------------------------------------------------------------------------------------- #
+def score_genes(adata, gene_set, score_name='score', inplace=True):
+    """
+    Assign a score to each cell depending on the expression of a set of genes.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object to predict cell cycle on.
+    gene_set : str or list
+        A list of genes or path to a file containing a list of genes.
+        The txt file should have one gene per row.
+    score_name : str, default "score"
+        Name of the column in obs table where the score will be added.
+    inplace : bool, default True
+        Adds the new column to the original anndata object.
+
+    Returns
+    -----------
+    anndata.Anndata
+        If inplace is False, return a copy of anndata object with the new column in the obs table.
+    """
+
+    if not inplace:
+        adata = adata.copy()
+
+    # check if list is in a file
+    if isinstance(gene_set, str):
+        # check if file exists
+        if Path(gene_set).is_file():
+            gene_set = [x.strip() for x in open(gene_set)]
+        else:
+            raise FileNotFoundError('The list was not found!')
+
+    # check if gene set is a list
+    elif not isinstance(gene_set, list):
+        raise ValueError('Please provide genes either as a list or txt file!')
+
+    # scale data
+    sdata = sc.pp.scale(adata, copy=True)
+
+    # Score the cells
+    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name)
+    # add score to adata.obs
+    adata.obs[score_name] = sdata.obs[score_name]
+
+    return adata if not inplace else None

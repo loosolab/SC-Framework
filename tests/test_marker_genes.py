@@ -80,3 +80,28 @@ def test_mask_rank_genes(adata):
     for key in tables:
         table_names = tables[key]["names"].tolist()
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
+
+
+@pytest.mark.parametrize("score_name", ["test1", "test2"])
+def test_score_genes(adata, score_name):
+    """ Test if genes are scored and added to adata.obs """
+
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var['gene'] = adata.var['gene'].astype('str')
+    adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
+
+    # test scoring genes with a list
+    if score_name == "test1":
+        gene_set = adata.var.index.to_list()[:50]
+        sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
+
+        assert score_name in adata.obs.columns
+
+    # test scoring genes with a list in a file
+    elif score_name == "test2":
+        gene_set = os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt')
+        sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
+
+        assert score_name in adata.obs.columns
