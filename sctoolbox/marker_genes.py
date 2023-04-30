@@ -399,7 +399,7 @@ def pairwise_rank_genes(adata, groupby,
 
         # Reorder columns
         table.set_index("names", inplace=True)
-        table = table[["logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
+        table = table[["scores", "logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
 
         # Calculate up/down genes
         c1, c2 = contrast

@@ -2170,3 +2170,136 @@ def add_labels(x, y, labels, ax=None):
 
     # Adjust text positions
     # to-do
+
+
+def plot_differential_genes(rank_table, title="Differentially expressed genes",
+                            save=None,
+                            **kwargs):
+    """ Plot number of differentially expressed genes per contrast in a barplot.
+    Takes the output of mg.pairwise_rank_genes as input.
+
+    Parameters
+    ----------
+    rank_table : `pandas.DataFrame`
+        Output of mg.pairwise_rank_genes.
+    title : `str`, optional (default: `"Differentially expressed genes"`)
+        Title of the plot.
+    **kwargs : keyword arguments
+        Keyword arguments passed to pl.bidirectional_barplot.
+
+    Returns
+    -------
+    `matplotlib.axes.Axes`
+        Axes object.
+    """
+    group_columns = [col for col in rank_table.columns if "_group" in col]
+
+    info = {}
+    for col in group_columns:
+        contrast = tuple(col.split("_")[0].split("/"))
+        counts = rank_table[col].value_counts()
+        info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}
+
+    df = pd.DataFrame().from_dict(info, orient="index")
+    df = df.reset_index(names=["left_label", "right_label"])
+
+    ax = bidirectional_barplot(df, title=title, save=save, **kwargs)
+
+    return ax
+
+
+def bidirectional_barplot(df,
+                          title=None,
+                          colors=None,
+                          figsize=None,
+                          save=None):
+    """ Plot a bidirectional barplot. The input is a dataframe with the following columns:
+    - left_label
+    - right_label
+    - left_value
+    - right_value
+
+    Parameters
+    ----------
+    df : `pandas.DataFrame`
+        Dataframe with the following columns: left_label, right_label, left_value, right_value.
+    title : `str`, optional (default: `None`)
+        Title of the plot.
+    colors : `dict`, optional (default: `None`)
+        Dictionary with label names as keys and colors as values.
+    figsize : `tuple`, optional (default: `None`)
+        Figure size.
+    """
+
+    # Check that df contains columns left/right_label and left/right value
+    required_columns = ["left_label", "right_label", "left_value", "right_value"]
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Column {col} not found in dataframe.")
+
+    # Example data
+    labels_left = df["left_label"].tolist()
+    labels_right = df["right_label"].tolist()
+    values_left = -np.abs(df["left_value"])
+    values_right = df["right_value"]
+
+    if colors is None:
+        all_labels = list(set(labels_left + labels_right))
+        colors = {label: sns.color_palette()[i] for i, label in enumerate(all_labels)}
+
+    # Create figure and axis objects
+    if figsize is None:
+        figsize = (5, len(labels_left))  # 5 wide, n bars tall
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Set the position of the y-axis ticks
+    n_bars = len(labels_left)
+    yticks = np.arange(n_bars)[::-1]
+
+    # Plot the positive values as blue bars
+    right_colors = [colors[label] for label in labels_right]
+    right_bars = ax.barh(yticks, values_right, color=right_colors)
+
+    # Plot the negative values as red bars
+    left_colors = [colors[label] for label in labels_left]
+    left_bars = ax.barh(yticks, values_left, color=left_colors)
+
+    # Set the x-axis limits to include both positive and negative values
+    ax.set_xlim([min(values_left) * 1.1, max(values_right) * 1.1])
+
+    # Add a vertical line at x=0 to indicate the zero point
+    ax.axvline(x=0, color='k')
+
+    # Add text labels and values to right bars
+    for i, bar in enumerate(right_bars):
+        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, str(labels_right[i]), ha='left', va='center')
+        ax.text(bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, str(values_right[i]), ha='center', va='center')
+
+    # Add text labels and values to left bars
+    for i, bar in enumerate(left_bars):
+        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, str(labels_left[i]), ha='right', va='center')
+        ax.text(bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, str(np.abs(values_left[i])), ha='center', va='center')
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_position(('data', 0))
+
+    ax.set_yticks([])
+    ax.set_yticklabels([])
+
+    # Set the x-axis tick labels to be positive numbers
+    ticks = ax.get_xticks().tolist()
+    ax.set_xticks(ticks)  # prevent "FixedFormatter should only be used together with FixedLocator"
+    ax.set_xticklabels([int(abs(tick)) for tick in ticks])
+
+    # Add a legend
+    # ax.legend(['Positive', 'Negative'], loc='center left', bbox_to_anchor=(1, 0.5))
+    # ax.legend(['Positive', 'Negative'], loc='lower right')
+
+    if title is not None:
+        ax.set_title(title)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return ax
