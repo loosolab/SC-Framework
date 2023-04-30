@@ -41,6 +41,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from scipy.sparse import issparse
 from matplotlib.patches import Patch
+from matplotlib_venn import venn2, venn3
 
 from sctoolbox import settings
 import sctoolbox.utilities
@@ -2204,6 +2205,7 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     df = df.reset_index(names=["left_label", "right_label"])
 
     ax = bidirectional_barplot(df, title=title, save=save, **kwargs)
+    ax.set_xlabel("Number of genes")
 
     return ax
 
@@ -2272,12 +2274,12 @@ def bidirectional_barplot(df,
 
     # Add text labels and values to right bars
     for i, bar in enumerate(right_bars):
-        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, str(labels_right[i]), ha='left', va='center')
+        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, " " + str(labels_right[i]), ha='left', va='center')  # adding a space before to ensure space between bars and labels
         ax.text(bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, str(values_right[i]), ha='center', va='center')
 
     # Add text labels and values to left bars
     for i, bar in enumerate(left_bars):
-        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, str(labels_left[i]), ha='right', va='center')
+        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, str(labels_left[i]) + " ", ha='right', va='center')
         ax.text(bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, str(np.abs(values_left[i])), ha='center', va='center')
 
     ax.spines['top'].set_visible(False)
@@ -2303,3 +2305,119 @@ def bidirectional_barplot(df,
     utils.save_figure(save)
 
     return ax
+
+
+def genes_dotplot(adata, genes=None, key=None, n_genes=15,
+                  dendrogram=False,
+                  groupby=None,
+                  title=None,
+                  save=None):
+    """
+    Plot a dotplot of genes from rank_genes_groups or from a gene list/dict.
+
+    Parameters
+    ----------
+    adata : `anndata.AnnData`
+        Annotated data matrix.
+    genes : `list` or `dict`, optional (default: `None`)
+        List of genes to plot. If a dict is passed, the keys are the group names and the values are lists of genes.
+    key : `str`, optional (default: `None`)
+        Key from `adata.uns` to plot. If specified, `genes` must be `None`.
+    n_genes : `int`, optional (default: `15`)
+        Number of genes to plot if `key` is specified.
+    dendrogram : `bool`, optional (default: `False`)
+        Whether to show the dendrogram for groups.
+    groupby : `str`, optional (default: `None`)
+        Key from `adata.obs` to group cells by.
+    """
+
+    if genes is not None and key is not None:
+        raise ValueError("Only one of genes or key can be specified.")
+
+    # Plot genes from rank_genes_groups or from gene list
+    if key is not None:
+        g = sc.pl.rank_genes_groups_dotplot(adata,
+                                            key=key,
+                                            n_genes=n_genes,
+                                            dendrogram=dendrogram,
+                                            groupby=groupby,
+                                            show=False)
+    else:
+        if groupby is None:
+            raise ValueError("groupby can only be specified if 'genes' is specified.")
+
+        g = sc.pl.dotplot(adata, genes,
+                          dendrogram=False,
+                          groupby=groupby,
+                          show=False)
+
+    g["mainplot_ax"].set_xticklabels(g["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
+
+    # Rotate gene group names
+    if "gene_group_ax" in g:
+        for text in g["gene_group_ax"]._children:
+            text._rotation = 45
+            text._horizontalalignment = "left"
+
+    # Add title to plot above groups
+    if title is not None:
+
+        if "gene_group_ax" in g:
+            fig = plt.gcf()
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+
+            highest_y = 0
+            for text in g["gene_group_ax"]._children:
+
+                # Find highest y value for all labels
+                ax = g["gene_group_ax"]
+                transf = ax.transData.inverted()
+                bb = text.get_window_extent(renderer=renderer)
+                bb_datacoords = bb.transformed(transf)
+
+                highest_y = bb_datacoords.y1 if bb_datacoords.y1 > highest_y else highest_y
+
+            x_mid = np.mean(g["gene_group_ax"].get_xlim())
+            g["gene_group_ax"].text(x_mid, highest_y + 0.2, title, fontsize=14, va="bottom", ha="center")
+
+        else:
+            g["mainplot_ax"].set_title(title)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return g
+
+
+def plot_venn(groups_dict, title=None, save=None):
+    """
+    Plots a Venn diagram from a dictionary of groups of lists.
+
+    Parameters
+    ----------
+    groups_dict : `dict`
+        A dictionary where the keys are group names (strings) and the values
+        are lists of items belonging to that group (e.g. {'Group A': ['A', 'B', 'C'], ...}).
+    title : `str`, optional (default: `None`)
+        Title of the plot.
+    save : `str`, optional (default: `None`)
+        Filename to save the plot to.
+    """
+    # Extract the lists of items from the dictionary and convert them to sets
+    group_sets = [set(groups_dict[group]) for group in groups_dict]
+
+    # Plot the Venn diagram using matplotlib_venn
+    if len(group_sets) == 2:
+        venn2(group_sets, set_labels=list(groups_dict.keys()))
+    elif len(group_sets) == 3:
+        venn3(group_sets, set_labels=list(groups_dict.keys()))
+    else:
+        raise ValueError("Only 2 or 3 groups are supported.")
+
+    # Add a title to the plot
+    if title is not None:
+        plt.title(title)
+
+    # Show the plot
+    utils.save_figure(save)
