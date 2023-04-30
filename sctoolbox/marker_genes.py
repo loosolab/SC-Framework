@@ -255,7 +255,8 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                         group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
 
             # Fraction of cells outside group expressing each gene
-            s = (adata[~adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0).A1
+            other_groups = [g for g in groups if g != group]
+            s = (adata[adata.obs[groupby].isin(other_groups), :].X > 0).sum(axis=0).A1
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_out_expr"]
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
@@ -266,7 +267,8 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
             else:
                 out_group_name = "out_group_fraction"
 
-            group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
+            n_out_group = sum([n_cells_dict[other_group] for other_group in other_groups])  # sum of cells in other groups
+            group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / n_out_group
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 
             # Add additional columns to table
