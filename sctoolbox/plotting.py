@@ -40,6 +40,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from scipy.sparse import issparse
+from matplotlib.patches import Patch
 
 from sctoolbox import settings
 import sctoolbox.utilities
@@ -48,6 +49,8 @@ import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
 import plotly as po
 import plotly.graph_objects as go
+
+from scipy.stats import zscore
 
 
 def _make_square(ax):
@@ -1821,6 +1824,175 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     return axarr
 
 
+def gene_expression_heatmap(adata, genes, cluster_column,
+                            title=None,
+                            groupby=None,
+                            row_cluster=False,
+                            col_cluster=True,
+                            show_row_dendrogram=False,
+                            show_col_dendrogram=False,
+                            figsize=None,
+                            save=None,
+                            **kwargs):
+    """ Plot a heatmap of gene expression.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        genes = adata.var.index[:10]
+        pl.gene_expression_heatmap(adata, genes, cluster_column="bulk_labels")
+    """
+
+    adata = adata[:, genes]  # Subset to genes
+
+    # Collect counts for each gene per sample
+    counts = utils.pseudobulk_table(adata, groupby=cluster_column)
+    counts_z = counts.T.apply(zscore).T
+
+    # color dict for groupby
+    if groupby is not None:
+        groups = adata.obs[groupby].cat.categories
+        colors = sns.color_palette()[:len(groups)]
+        color_dict = dict(zip(groups, colors))
+
+        # samples = counts_z.columns.tolist()
+        sample2group = adata.obs[[cluster_column, groupby]].drop_duplicates()
+        samples = sample2group[cluster_column].tolist()
+        groups = sample2group[groupby].tolist()
+        colors = [color_dict[group] for group in groups]
+
+        sample_info = pd.DataFrame([samples, groups, colors], index=["sample", "group", "color"]).T.set_index("sample")
+        col_colors = sample_info["color"]
+
+    else:
+        col_colors = None
+
+    nrows, ncols = counts_z.shape
+    figsize = (ncols / 2, nrows / 3) if figsize is None else figsize  # (width, height)
+
+    # Plot heatmap
+    g = sns.clustermap(counts_z,
+                       cmap="bwr",
+                       center=0,
+                       xticklabels=True,
+                       yticklabels=True,  # show all genes
+                       row_cluster=row_cluster,
+                       col_cluster=col_cluster,
+                       figsize=figsize,
+                       col_colors=col_colors,
+                       **kwargs)
+
+    g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right")
+    g.ax_heatmap.tick_params(left=True, labelleft=True, right=False, labelright=False)
+    g.ax_heatmap.set_ylabel("")
+    heatmap_bbox = g.ax_heatmap.get_position()
+    heatmap_width = heatmap_bbox.x1 - heatmap_bbox.x0
+    # heat_height = heatmap_bbox.y1 - heatmap_bbox.y0
+
+    if show_row_dendrogram is False:
+        g.ax_row_dendrogram.set_visible(False)
+    if show_col_dendrogram is False:
+        g.ax_col_dendrogram.set_visible(False)
+
+    # Invert order of x-axis
+    # g.ax_col_colors.invert_xaxis()
+    # g.ax_col_dendrogram.invert_xaxis()
+    # g.ax_heatmap.invert_xaxis()
+
+    # Add color legend for groupby
+    if groupby is not None:
+
+        g.ax_col_colors.tick_params(right=False, labelright=False)
+
+        handles = [Patch(facecolor=color_dict[name]) for name in color_dict]
+        legend = plt.legend(handles, color_dict,
+                            title=groupby,
+                            bbox_to_anchor=(1, 1),
+                            bbox_transform=g.ax_heatmap.transAxes,
+                            loc='upper left',
+                            handlelength=1, handleheight=1,
+                            frameon=False,
+                            )
+        legend._legend_box.align = "left"
+
+    # Move colorbar
+    cbar_ax = g.ax_cbar
+    bbox = cbar_ax.get_position()
+    left, bottom, width, height = bbox._points.flatten()
+    cbar_ax.set_position([heatmap_bbox.x1 + heatmap_width / ncols, heatmap_bbox.y0, width, height / nrows * 10])
+    cbar_ax.set_ylabel("Mean expr.\nz-score")
+
+    # Set title on top of heatmap
+    if title is not None:
+        if g.ax_col_dendrogram.get_visible():
+            g.ax_col_dendrogram.set_title(title)
+        else:
+            g.ax_heatmap.set_title(title)
+
+    return g
+
+
+def umap_marker_overview(adata, markers, ncols=3, figsize=None,
+                         save=None,
+                         **kwargs):
+    """ Plot a pretty grid of UMAPs with marker gene expression. """
+
+    # Find out how many rows we need
+    n_markers = len(markers)
+    nrows = int(np.ceil(n_markers / ncols))
+
+    fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
+
+    params = {"cmap": sc_colormap(),
+              "ncols": ncols,
+              "frameon": False}
+    params.update(**kwargs)
+
+    axes_list = axarr.flatten()
+
+    for i, marker in enumerate(markers):
+        ax = axes_list[i]
+
+        _ = sc.pl.umap(adata,
+                       color=marker,
+                       show=False,
+                       colorbar_loc=None,
+                       ax=ax,
+                       **params)
+
+        # Add title to upper left corner
+        # ax.text(0, 1, marker, transform=ax.transAxes,
+        #                      horizontalalignment='left',
+        #                      verticalalignment='top')
+
+    # Hide axes not used
+    for ax in axes_list[len(markers):]:
+        ax.set_visible(False)
+
+    axes_list = axes_list[:len(markers)]
+
+    # Add colorbar next to the last plot
+    cax = fig.add_axes([0, 0, 1, 1])  # dummy size, will be resized
+    lastax_pos = axes_list[len(markers) - 1].get_position()  # get the position of the last axis
+    newpos = [lastax_pos.x1 * 1.1, lastax_pos.y0, lastax_pos.width * 0.1, lastax_pos.height * 0.5]
+    cax.set_position(newpos)  # set a new position
+
+    cbar = plt.colorbar(cm.ScalarMappable(cmap=params["cmap"]), cax=cax, label="Relative expr.")
+    cbar.set_ticks([])
+    cbar.outline.set_visible(False)  # remove border of colorbar
+
+    # Make plots square
+    for ax in axes_list:
+        _make_square(ax)
+
+    # Save figure if chosen
+    save_figure(save)
+
+    return axes_list
+
+
 def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     """
     Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
@@ -1894,11 +2066,17 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
         xmin, xmax = ax.get_xlim()
         yrange = ymax - ymin
         xrange = xmax - xmin
-        arrow_len_y = yrange * 0.15
-        arrow_len_x = xrange * 0.15
+        arrow_len_y = yrange * 0.2
+        arrow_len_x = xrange * 0.2
 
         ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
         ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
+
+        # Add number of cells to plot
+        ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
+                transform=ax.transAxes,
+                horizontalalignment='left',
+                verticalalignment='bottom')
 
         # Adjust aspect ratio
         _make_square(ax)
@@ -1941,6 +2119,17 @@ def add_figure_title(axarr, title, y=1.3, fontsize=16):
     if type(axarr).__name__.startswith("Axes"):
         axarr = [axarr]
 
+    try:
+        axarr[0]
+    except Exception:
+
+        if isinstance(axarr, dict):
+            ax_dict = axarr   # e.g. scanpy dotplot
+        else:
+            ax_dict = axarr.__dict__   # seaborn clustermap, etc.
+
+        axarr = [ax_dict[key] for key, value in ax_dict.items() if type(value).__name__.startswith("Axes")]
+
     # Get figure
     fig = plt.gcf()
     fig.canvas.draw()
@@ -1950,7 +2139,7 @@ def add_figure_title(axarr, title, y=1.3, fontsize=16):
     trans_data_inv = axarr[0].transData.inverted()  # from display to data
     bbox_list = [ax.get_window_extent(renderer=renderer).transformed(trans_data_inv) for ax in axarr]
 
-    # FInx y/x positions based on bboxes
+    # Find y/x positions based on bboxes
     ty = np.max([bbox.y1 for bbox in bbox_list])
     ty *= y
 
