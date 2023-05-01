@@ -102,7 +102,10 @@ def run_cmd(cmd):
         subprocess.check_call(cmd, shell=True)
         print(f"Command '{cmd}' ran successfully!")
     except subprocess.CalledProcessError as e:
-        raise ValueError(f"Error running command '{cmd}': {e}")
+        # print(f"Error running command '{cmd}': {e}")
+        print(f"Command standard output: {e.output.decode('utf-8')}")
+        print(f"Command standard error: {e.stderr.decode('utf-8')}")
+        raise e
 
 
 # ------------------- Multiprocessing ------------------- #
