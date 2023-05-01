@@ -958,7 +958,7 @@ def write_excel(table_dict, filename, index=False):
     # Write to excel
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
-            table.to_excel(writer, sheet_name=sanitize_sheetname(f'{name}'), index=index)
+            table.to_excel(writer, sheet_name=sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
 
 
 def add_expr_to_obs(adata, gene):
