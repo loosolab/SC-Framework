@@ -50,6 +50,6 @@ def test_bam_to_bigwig():
     """ Test whether the bigwig is written. """
 
     bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_f, bgtobw_path="../scripts/bedGraphToBigWig")
+    bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_f, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
