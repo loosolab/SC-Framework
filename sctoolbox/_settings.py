@@ -9,11 +9,11 @@ class SctoolboxConfig(object):
     __frozen = False
 
     def __init__(self,
-                 figure_path: str = "",          # Path to write figures to
+                 figure_dir: str = "",           # Directory to write figures to
                  figure_prefix: str = "",        # Prefix for all figures to write (within figure_path)
-                 adata_input_path: str = "",     # Path to read adata objects from
+                 adata_input_dir: str = "",      # Directory to read adata objects from
                  adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_path)
-                 adata_output_path: str = "",    # Path to write adata objects to
+                 adata_output_dir: str = "",     # Directory to write adata objects to
                  adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_path)
                  threads: int = 4,  # default number of threads to use when multiprocessing is available
                  create_dirs: bool = True  # create output directories if they do not exist
@@ -41,7 +41,7 @@ class SctoolboxConfig(object):
         # Validate and set parameter
         if "__frozen" in key:  # allow __frozen to be set without checking
             pass
-        elif key in ["figure_path", "adata_input_path", "adata_output_path"]:
+        elif key in ["figure_dir", "adata_input_dir", "adata_output_dir"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._validate_string(value)
             self._create_dir(value)
@@ -76,6 +76,34 @@ class SctoolboxConfig(object):
             if not os.path.exists(dirname):
                 os.makedirs(dirname)  # creates directory and all parent directories
                 print("Created directory: " + dirname)
+
+    # Getter / setter for filename prefixes
+    @property
+    def full_figure_prefix(self):
+        """ Combine figure_dir and figure_prefix on the fly to get the full figure prefix """
+        return self.figure_dir + self.figure_prefix   # figure_dir has trailing slash
+
+    @full_figure_prefix.setter
+    def full_figure_prefix(self, value):
+        raise ValueError("'full_figure_prefix' cannot be set directly. Adjust 'figure_dir' & 'figure_prefix' instead.")
+
+    @property
+    def full_adata_input_prefix(self):
+        """ Combine adata_input_dir and adata_input_prefix on the fly to get the full adata input prefix """
+        return self.adata_input_dir + self.adata_input_prefix
+
+    @full_adata_input_prefix.setter
+    def full_adata_input_prefix(self, value):
+        raise ValueError("'full_adata_input_prefix' cannot be set directly. Adjust 'adata_input_dir' & 'adata_input_prefix' instead.")
+
+    @property
+    def full_adata_output_prefix(self):
+        """ Combine adata_output_dir and adata_output_prefix on the fly to get the full adata output prefix """
+        return self.adata_output_dir + self.adata_output_prefix
+
+    @full_adata_output_prefix.setter
+    def full_adata_output_prefix(self, value):
+        raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
 
 
 settings = SctoolboxConfig()

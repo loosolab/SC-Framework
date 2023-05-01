@@ -555,14 +555,14 @@ def save_figure(path, dpi=600):
     Parameters
     ----------
     path : str
-        Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_prefix' as prefix.
-        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff
+        Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_dir' + 'sctoolbox.settings.figure_prefix' as prefix.
+        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff.
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
     """
     if path is not None:
-        output_path = settings.figure_path + settings.figure_prefix + path
+        output_path = settings.full_figure_prefix + path
         plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
 
 
@@ -618,7 +618,7 @@ def load_h5ad(path):
     Parameters
     ----------
     path : str
-        Name of the file to load the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_input_prefix' as prefix.
+        Name of the file to load the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_input_dir' + 'sctoolbox.settings.adata_input_prefix' as prefix.
 
     Returns
     -------
@@ -626,7 +626,7 @@ def load_h5ad(path):
         Loaded anndata object.
     """
 
-    adata_input = settings.adata_input_path + settings.adata_input_prefix + path
+    adata_input = settings.full_adata_input_prefix + path
     adata = sc.read_h5ad(filename=adata_input)
 
     print(f"The adata object was loaded from: {adata_input}")
@@ -643,7 +643,7 @@ def save_h5ad(adata, path):
     adata : anndata.AnnData
         Anndata object to save.
     path : str
-        Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_prefix' as prefix.
+        Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
 
     # Log user to adata.uns
@@ -651,7 +651,7 @@ def save_h5ad(adata, path):
     adata.uns["sctoolbox"]["user"].update({get_user(): get_datetime()})  # overwrites existing entry for each user
 
     # Save adata
-    adata_output = settings.adata_output_path + settings.adata_output_prefix + path
+    adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
 
     print(f"The adata object was saved to: {adata_output}")
