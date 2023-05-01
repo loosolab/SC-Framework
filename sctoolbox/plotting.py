@@ -1456,7 +1456,10 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
-def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin", save=None, **kwargs):
+def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin",
+                   normalize=False,
+                   save=None,
+                   **kwargs):
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
     Can for example show the expression of one gene across groups (x = obs_group, y = gene),
@@ -1479,6 +1482,8 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
         Title of the plot. If None, no title is shown.
     style : str, default "violin"
         Plot style. Either "violin" or "boxplot".
+    normalize : bool, default False
+        If True, normalize the values in 'y' to the range [0, 1] per group in 'x'.
     save : str, default None
         Path to save the figure to. If None, the figure is not saved.
     kwargs : arguments, optional
@@ -1538,15 +1543,20 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
         id_vars = id_vars + x if x_assignment == "obs" else id_vars
         id_vars = [v for v in id_vars if v is not None]
 
+        value_name = "Expression" if not normalize else "Normalized expression"
         obs_table.reset_index(inplace=True)
         obs_table = obs_table.melt(id_vars=id_vars, value_vars=x,
-                                   var_name="Gene", value_name="Expression")
+                                   var_name="Gene", value_name=value_name)
         x_var = "Gene"
-        y_var = "Expression"
+        y_var = value_name
 
     else:
         x_var = x[0]
         y_var = y
+
+    # Normalize values to 0-1 per group in x_var
+    if normalize:
+        obs_table[y_var] = obs_table.groupby(x_var, group_keys=False)[y_var].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
 
     # Plot expression from obs table
     _, ax = plt.subplots(figsize=figsize)
@@ -1915,7 +1925,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
                        col_cluster=col_cluster,
                        figsize=figsize,
                        col_colors=col_colors,
-                        **parameters)
+                       **parameters)
 
     g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right")
     g.ax_heatmap.tick_params(left=True, labelleft=True, right=False, labelright=False)
@@ -2430,6 +2440,7 @@ def pseudotime_heatmap(adata, genes,
                        figsize=None,
                        shrink_cbar=0.5,
                        title=None,
+                       save=None,
                        **kwargs):
     """ Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs. """
 
@@ -2473,6 +2484,7 @@ def pseudotime_heatmap(adata, genes,
                   "cmap": "bwr"}
     parameters.update(kwargs)
     ax = sns.heatmap(mat, ax=axarr[i],
+                     yticklabels=True,  # make sure all labels are shown
                      cbar_kws={"label": "Expr.z-score",
                                "shrink": shrink_cbar,
                                "anchor": (0, 0),
@@ -2484,9 +2496,12 @@ def pseudotime_heatmap(adata, genes,
         ax.set_title(title)
 
     # Draw pseudotime arrow below heatmap
-    ax.annotate('', xy=(0, n_genes + 1), xycoords=ax.transData, xytext=(n_cells, n_genes + 1), 
+    ax.annotate('', xy=(0, n_genes + 1), xycoords=ax.transData, xytext=(n_cells, n_genes + 1),
                 arrowprops=dict(arrowstyle="<-", color='black'))
-    ax.text(n_cells / 2, n_genes + 1.2, f"Pseudotime (n={n_cells} cells)", transform=ax.transData, ha="center", va="top")
+    ax.text(n_cells / 2, n_genes + 1.2, f"Pseudotime (n={n_cells:,} cells)", transform=ax.transData, ha="center", va="top")
+
+    # Save figure
+    utils.save_figure(save)
 
     return ax
 
