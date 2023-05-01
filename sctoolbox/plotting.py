@@ -1828,14 +1828,39 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
 def gene_expression_heatmap(adata, genes, cluster_column,
                             title=None,
                             groupby=None,
-                            row_cluster=False,
-                            col_cluster=True,
+                            row_cluster=True,
+                            col_cluster=False,
                             show_row_dendrogram=False,
                             show_col_dendrogram=False,
                             figsize=None,
                             save=None,
                             **kwargs):
     """ Plot a heatmap of gene expression.
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    genes : `list`
+        List of genes to plot.
+    cluster_column : `str`
+        Key in `adata.obs` for which to cluster the x-axis.
+    title : `str`, optional (default: `None`)
+        Title of the plot.
+    groupby : `str`, optional (default: `None`)
+        Key in `adata.obs` for which to plot a colorbar per cluster.
+    row_cluster : `bool`, optional (default: `True`)
+        Whether to cluster the rows.
+    col_cluster : `bool`, optional (default: `False`)
+        Whether to cluster the columns.
+    show_row_dendrogram : `bool`, optional (default: `False`)
+        Whether to show the dendrogram for the rows.
+    show_col_dendrogram : `bool`, optional (default: `False`)
+        Whether to show the dendrogram for the columns.
+    figsize : `tuple`, optional (default: `None`)
+        Size of the figure. If `None`, use default size.
+    save : `str`, optional (default: `None`)
+        If given, save the figure to this path.
 
     Example
     --------
@@ -1874,16 +1899,16 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     figsize = (ncols / 2, nrows / 3) if figsize is None else figsize  # (width, height)
 
     # Plot heatmap
+    parameters = {"cmap": "bwr", "center": 0}
+    parameters.update(**kwargs)
     g = sns.clustermap(counts_z,
-                       cmap="bwr",
-                       center=0,
                        xticklabels=True,
                        yticklabels=True,  # show all genes
                        row_cluster=row_cluster,
                        col_cluster=col_cluster,
                        figsize=figsize,
                        col_colors=col_colors,
-                       **kwargs)
+                        **parameters)
 
     g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right")
     g.ax_heatmap.tick_params(left=True, labelleft=True, right=False, labelright=False)
@@ -1931,6 +1956,8 @@ def gene_expression_heatmap(adata, genes, cluster_column,
             g.ax_col_dendrogram.set_title(title)
         else:
             g.ax_heatmap.set_title(title)
+
+    utils.save_figure(save)
 
     return g
 
@@ -2406,6 +2433,8 @@ def plot_venn(groups_dict, title=None, save=None):
     """
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
+
+    plt.figure()
 
     # Plot the Venn diagram using matplotlib_venn
     if len(group_sets) == 2:
