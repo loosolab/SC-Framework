@@ -5,7 +5,8 @@ Welcome to the documentation of the single cell framework!
    :maxdepth: 2
    :caption: Contents:
 
-   notebooks/index
+   rna-notebooks/index
+   atac-notebooks/index
    API/index
 
 

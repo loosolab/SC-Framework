@@ -891,6 +891,47 @@ def _none2null(none_obj):
     return r("NULL")
 
 
+def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):
+    """
+    Fill all NA values in pandas depending on the column data type
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame object with NA values over multiple columns
+    inplace : boolean, default True
+        Whether the DataFrame object is modified inplace.
+    replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
+        dict that contains default values to replace nas depedning on data type
+    """
+
+    if not inplace:
+        df = df.copy()
+
+    # Set default of missing replace value
+    replace_def = {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
+    for t in ["bool", "str", "float", "int", "category"]:
+        if t not in replace:
+            warnings.warn(f"Value for replace key '{t}' not given. Set to default value: '{replace_def[t]}'")
+            replace[t] = replace_def[t]
+
+    for nan_col in df.columns[df.isna().any()]:
+        col_type = df[nan_col].dtype.name
+        if col_type == "category":
+            df[nan_col] = df[nan_col].cat.add_categories(replace[col_type])
+            df[nan_col].fillna(replace[col_type], inplace=True)
+        elif col_type.startswith("float"):
+            df[nan_col].fillna(replace["float"], inplace=True)
+        elif col_type.startswith("int"):
+            df[nan_col].fillna(replace["int"], inplace=True)
+        elif col_type == "object":
+            value_set = list({x for x in set(df[nan_col]) if x == x})
+            o_type = type(value_set[0]).__name__ if value_set else "str"
+            df[nan_col].fillna(replace[o_type], inplace=True)
+    if not inplace:
+        return df
+
+
 def get_adata_subsets(adata, groupby):
     """
     Split an anndata object into a dict of sub-anndata objects based on a grouping column.

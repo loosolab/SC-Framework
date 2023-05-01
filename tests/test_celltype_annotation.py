@@ -18,16 +18,9 @@ def fetch_adata_uns(test_adata):
     return d
 
 
-@pytest.mark.parametrize("test_species", ["Mouse", "Human"])
-def test_read_scsa_database(test_species):
-    gene_names, gene_ids = celltype_annotation.read_scsa_database(test_species)
-
-    assert isinstance(gene_names, list) and isinstance(gene_ids, list)
-
-
 def test_get_rank_genes(test_adata):
     d = fetch_adata_uns(test_adata)
-    genes = celltype_annotation.get_rank_genes(d)
+    genes = celltype_annotation._get_rank_genes(d)
     assert len(genes) == len(set(genes))
 
 

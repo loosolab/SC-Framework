@@ -1,3 +1,9 @@
+# Link to notebooks in docs - are automatically created during docs build
+*.nblink
+
+#.rst files are automatically created during docs build
+docs/source/API/sctoolbox*.rst
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
