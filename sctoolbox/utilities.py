@@ -103,8 +103,10 @@ def run_cmd(cmd):
         print(f"Command '{cmd}' ran successfully!")
     except subprocess.CalledProcessError as e:
         # print(f"Error running command '{cmd}': {e}")
-        print(f"Command standard output: {e.output.decode('utf-8')}")
-        print(f"Command standard error: {e.stderr.decode('utf-8')}")
+        if e.output is not None:
+            print(f"Command standard output: {e.output.decode('utf-8')}")
+        if e.stderr is not None:
+            print(f"Command standard error: {e.stderr.decode('utf-8')}")
         raise e
 
 

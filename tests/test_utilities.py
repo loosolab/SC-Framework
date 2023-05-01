@@ -4,6 +4,7 @@ import numpy as np
 import shutil
 import pandas as pd
 import sctoolbox.utilities as utils
+import subprocess
 import scanpy as sc
 
 
@@ -49,7 +50,7 @@ def test_run_cmd_valid():
 
 def test_run_cmd_invalid():
     """ Check that invalid commands raise an error. """
-    with pytest.raises(ValueError):
+    with pytest.raises(subprocess.CalledProcessError):
         utils.run_cmd("ecccho hello world")
 
 
