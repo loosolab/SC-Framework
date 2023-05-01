@@ -78,6 +78,7 @@ test coverage:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - apt-get install bedtools  #needed for some tests
+    - chmod +x scripts/bedGraphToBigWig  # make script executable
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
