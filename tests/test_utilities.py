@@ -42,6 +42,17 @@ arr_ints2 = arr_ints.astype(float)
 arr_floats = np.random.rand(10, 10)
 
 
+def test_run_cmd_valid():
+    """ Test if the command is run. """
+    utils.run_cmd("echo hello world")
+
+
+def test_run_cmd_invalid():
+    """ Check that invalid commands raise an error. """
+    with pytest.raises(ValueError):
+        utils.run_cmd("ecccho hello world")
+
+
 @pytest.mark.parametrize("arr,boolean", [(arr_ints, True), (arr_ints2, True), (arr_floats, False)])
 def test_is_integer_array(arr, boolean):
     """ Get boolean of whether an array is an integer array """

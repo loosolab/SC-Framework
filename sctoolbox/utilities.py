@@ -14,6 +14,7 @@ import shutil
 import tempfile
 import warnings
 from scipy.sparse import issparse
+import subprocess
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -86,6 +87,22 @@ def get_binary_path(tool):
         raise ValueError(f"Could not find an executable for {tool} on path.")
 
     return tool_path
+
+
+def run_cmd(cmd):
+    """
+    Run a commandline command.
+
+    Parameters
+    ----------
+    cmd : str
+        Command to be run.
+    """
+    try:
+        subprocess.check_call(cmd, shell=True)
+        print(f"Command '{cmd}' ran successfully!")
+    except subprocess.CalledProcessError as e:
+        raise ValueError(f"Error running command '{cmd}': {e}")
 
 
 # ------------------- Multiprocessing ------------------- #

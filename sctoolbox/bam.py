@@ -718,18 +718,18 @@ def bam_to_bigwig(bam,
     bedgraph_out = utils.get_temporary_filename(tempdir)
     cmd = f"{bedtools_path} genomecov -bg -ibam {bam} > {bedgraph_out}"
     print("Running: " + cmd)
-    os.system(cmd)
+    utils.run_cmd(cmd)
 
     # Sort and scale input
     bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
     cmd = f"sort -k1,1 -k2,2n -T {tempdir} {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
     print("Running: " + cmd)
-    os.system(cmd)
+    utils.run_cmd(cmd)
 
     # Convert bedgraph to bigwig
     cmd = f"{bgtobw_path} {bedgraph_out_sorted} {chromsizes_file} {output}"
     print("Running: " + cmd)
-    os.system(cmd)
+    utils.run_cmd(cmd)
 
     # Remove all temp files
     if remove_temp is True:
