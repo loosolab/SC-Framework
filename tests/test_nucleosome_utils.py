@@ -61,7 +61,7 @@ def modulation():
 
 @pytest.fixture
 def fragment_distributions():
-    testdata = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'nucleosomal_score.csv'))
+    testdata = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'nucleosomal_score.csv'), delimiter=None)
 
     return testdata
 
