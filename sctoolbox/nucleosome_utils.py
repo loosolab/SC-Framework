@@ -460,7 +460,8 @@ def single_cwt_ov(features,
                   freq=4,
                   peaks_thr=0.5,
                   perform_cross_point_shift=True,
-                  convergence=0.1):
+                  convergence=0.1,
+                  plotting=True):
     """
     Apply Continues Wavelet Transformation (CWT) to a single sample and plot the results
 
@@ -501,14 +502,15 @@ def single_cwt_ov(features,
 
     filtered_peaks = filter_peaks(peaks, reference=coef[freq], peaks_thr=peaks_thr, operator='bigger')
 
-    plot_wavl_ov(feature,
-                 filtered_peaks,
-                 coef, freq=freq,
-                 plot_peaks=True,
-                 perform_cross_point_shift=perform_cross_point_shift,
-                 convergence=convergence)
+    if plotting:
+        plot_wavl_ov(feature,
+                     filtered_peaks,
+                     coef, freq=freq,
+                     plot_peaks=True,
+                     perform_cross_point_shift=perform_cross_point_shift,
+                     convergence=convergence)
 
-    return coef
+    return coef, filtered_peaks
 
 
 def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8):
