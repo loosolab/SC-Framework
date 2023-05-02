@@ -204,40 +204,6 @@ def get_keys(adata, manual_thresholds):
     return m_thresholds
 
 
-# def build_default_thresholds(adata, manual_thresholds, groupby=None):
-#     '''
-#     This builds a dictionary from the manual set thresholds in the format to use it later
-#     Parameters
-#     ----------
-#     manual_tresholds
-#     groupby
-#     columns
-#
-#     Returns
-#     -------
-#
-#     '''
-#     if groupby is not None:
-#         samples = []
-#         current_sample = None
-#         for sample in adata.obs[groupby]:
-#             if current_sample != sample:
-#                 samples.append(sample)
-#                 current_sample = sample
-#
-#         thresholds = {}
-#         for key, value in manual_thresholds.items():
-#             sample_dict = {}
-#             for sample in samples:
-#                 sample_dict[sample] = {key: value}
-#             thresholds[key] = sample_dict
-#
-#     else:
-#         thresholds = manual_thresholds
-#
-#     return thresholds
-
-
 def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
