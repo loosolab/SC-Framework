@@ -962,7 +962,7 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
 
     # Subset to input gene list
     if gene_list is not None:
-        gene_table = gene_table[gene_list]
+        gene_table = gene_table.loc[gene_list, :]
 
     # Z-score
     gene_table = utils.table_zscore(gene_table)
@@ -1972,7 +1972,10 @@ def gene_expression_heatmap(adata, genes, cluster_column,
         if g.ax_col_dendrogram.get_visible():
             g.ax_col_dendrogram.set_title(title)
         else:
-            g.ax_heatmap.set_title(title)
+            g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space beetween title and heatmap
+                              transform=g.ax_heatmap.transData, ha="center", va="bottom",
+                              fontsize=16)
+            # g.ax_heatmap.set_title(title, y=1.2)
 
     utils.save_figure(save)
 
@@ -1981,6 +1984,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
 
 def umap_marker_overview(adata, markers, ncols=3, figsize=None,
                          save=None,
+                         cbar_label="Relative expr.",
                          **kwargs):
     """ Plot a pretty grid of UMAPs with marker gene expression. """
 
@@ -1988,6 +1992,8 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
     n_markers = len(markers)
     nrows = int(np.ceil(n_markers / ncols))
 
+    if figsize is None:
+        figsize = (ncols * 3, nrows * 3)
     fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
 
     params = {"cmap": sc_colormap(),
@@ -2024,7 +2030,7 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
     newpos = [lastax_pos.x1 * 1.1, lastax_pos.y0, lastax_pos.width * 0.1, lastax_pos.height * 0.5]
     cax.set_position(newpos)  # set a new position
 
-    cbar = plt.colorbar(cm.ScalarMappable(cmap=params["cmap"]), cax=cax, label="Relative expr.")
+    cbar = plt.colorbar(cm.ScalarMappable(cmap=params["cmap"]), cax=cax, label=cbar_label)
     cbar.set_ticks([])
     cbar.outline.set_visible(False)  # remove border of colorbar
 
@@ -2351,11 +2357,17 @@ def bidirectional_barplot(df,
     return ax
 
 
-def genes_dotplot(adata, genes=None, key=None, n_genes=15,
+def genes_dotplot(adata,
+                  genes=None,
+                  key=None,
+                  n_genes=15,
                   dendrogram=False,
                   groupby=None,
                   title=None,
-                  save=None):
+                  style="dots",
+                  measure="expression",
+                  save=None,
+                  **kwargs):
     """
     Plot a dotplot of genes from rank_genes_groups or from a gene list/dict.
 
@@ -2373,57 +2385,100 @@ def genes_dotplot(adata, genes=None, key=None, n_genes=15,
         Whether to show the dendrogram for groups.
     groupby : `str`, optional (default: `None`)
         Key from `adata.obs` to group cells by.
+    title : `str`, optional (default: `None`)
+        Title for the plot.
+    style : `str`, optional (default: `dots`)
+        Style of the plot. Either `dots` or `heatmap`.
+    measure : `str`, optional (default: `expression`)
+        Measure to write in colorbar label. For example, `expression` or `accessibility`.
     """
+
+    available_styles = ["dots", "heatmap"]
+    if style not in available_styles:
+        raise ValueError(f"style must be one of {available_styles}.")
 
     if genes is not None and key is not None:
         raise ValueError("Only one of genes or key can be specified.")
 
     # Plot genes from rank_genes_groups or from gene list
-    if key is not None:
-        g = sc.pl.rank_genes_groups_dotplot(adata,
-                                            key=key,
-                                            n_genes=n_genes,
-                                            dendrogram=dendrogram,
-                                            groupby=groupby,
-                                            show=False)
-    else:
-        if groupby is None:
-            raise ValueError("groupby can only be specified if 'genes' is specified.")
+    parameters = {"swap_axes": False}  # default parameters
+    parameters.update(kwargs)
+    if key is not None:  # from rank_genes_groups output
 
-        g = sc.pl.dotplot(adata, genes,
-                          dendrogram=False,
-                          groupby=groupby,
-                          show=False)
+        if style == "dots":
+            g = sc.pl.rank_genes_groups_dotplot(adata,
+                                                key=key,
+                                                n_genes=n_genes,
+                                                dendrogram=dendrogram,
+                                                groupby=groupby,
+                                                show=False,
+                                                **parameters)
+        elif style == "heatmap":
+            g = sc.pl.rank_genes_groups_matrixplot(adata,
+                                                   key=key,
+                                                   n_genes=n_genes,
+                                                   dendrogram=dendrogram,
+                                                   groupby=groupby,
+                                                   show=False,
+                                                   **parameters)
+
+    else:  # from a gene list
+
+        if groupby is None:
+            raise ValueError("The parameter 'groupby' is needed if 'genes' is given.")
+
+        if style == "dots":
+            g = sc.pl.dotplot(adata, genes,
+                              dendrogram=False,
+                              groupby=groupby,
+                              show=False,
+                              **parameters)
+        elif style == "heatmap":
+            g = sc.pl.matrixplot(adata, genes,
+                                 dendrogram=False,
+                                 groupby=groupby,
+                                 show=False,
+                                 **parameters)
 
     g["mainplot_ax"].set_xticklabels(g["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
 
     # Rotate gene group names
-    if "gene_group_ax" in g:
+    if "gene_group_ax" in g and parameters["swap_axes"] is False:  # only rotate if axes is not swapped
         for text in g["gene_group_ax"]._children:
             text._rotation = 45
             text._horizontalalignment = "left"
+
+    # Change title of colorbar (for example expression -> accessibility)
+    default_title = g["color_legend_ax"].get_title()
+    updated_title = default_title.replace("expression", measure)
+    g["color_legend_ax"].set_title(updated_title)
 
     # Add title to plot above groups
     if title is not None:
 
         if "gene_group_ax" in g:
-            fig = plt.gcf()
-            fig.canvas.draw()
-            renderer = fig.canvas.get_renderer()
 
-            highest_y = 0
-            for text in g["gene_group_ax"]._children:
+            if parameters["swap_axes"]:
+                g["mainplot_ax"].set_title(title + "\n" * 2)  # \n to ensure a little space between title and plot
 
-                # Find highest y value for all labels
-                ax = g["gene_group_ax"]
-                transf = ax.transData.inverted()
-                bb = text.get_window_extent(renderer=renderer)
-                bb_datacoords = bb.transformed(transf)
+            else:
+                fig = plt.gcf()
+                fig.canvas.draw()
+                renderer = fig.canvas.get_renderer()
 
-                highest_y = bb_datacoords.y1 if bb_datacoords.y1 > highest_y else highest_y
+                highest_y = 0
+                for text in g["gene_group_ax"]._children:
 
-            x_mid = np.mean(g["gene_group_ax"].get_xlim())
-            g["gene_group_ax"].text(x_mid, highest_y + 0.2, title, fontsize=14, va="bottom", ha="center")
+                    # Find highest y value for all labels
+                    ax = g["gene_group_ax"]
+                    transf = ax.transData.inverted()
+                    bb = text.get_window_extent(renderer=renderer)
+                    bb_datacoords = bb.transformed(transf)
+
+                    highest_y = bb_datacoords.y1 if bb_datacoords.y1 > highest_y else highest_y
+
+                x_mid = np.mean(g["gene_group_ax"].get_xlim())
+                g["gene_group_ax"].text(x_mid, highest_y + 0.2, title, fontsize=14, va="bottom", ha="center")
 
         else:
             g["mainplot_ax"].set_title(title)
