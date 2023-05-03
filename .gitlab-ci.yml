@@ -18,6 +18,7 @@ cache:
   paths:
     - .cache/pip
     - venv/
+    - public
 
 # Install package for all jobs (unless inherit is false)
 default:
