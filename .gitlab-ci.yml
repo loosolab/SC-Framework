@@ -96,7 +96,8 @@ test coverage:
       - tests/*.py
       - sctoolbox/*.py
     - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
-    - when: manual  # the manual rule is allowed to fail
+    - when: manual  
+      allow_failure: True
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
@@ -131,9 +132,10 @@ pages:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev" # always after accepted MR to dev
       allow_failure: False  # dev not allowed to fail
-    - if: $CI_PIPELINE_SOURCE == "push"  # manual rule for all pushes
+    - if: $CI_COMMIT_BRANCH == "main"
+      allow_failure: False
+    - when: manual
       allow_failure: True
-      when: manual
 
 # Test notebooks when code is pushed to main
 notebooks:
