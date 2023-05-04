@@ -194,7 +194,6 @@ def test_score_by_momentum(fragment_distributions):
     testdata = fragment_distributions
     testdata = nu.scale(testdata)  # scale
     testdata = nu.multi_ma(testdata)  # smooth
-    print("shape: " + str(testdata.shape))
     scores = nu.score_by_momentum(testdata, plotting=False)  # score
 
     assert scores[0] > scores[1]
@@ -205,7 +204,6 @@ def test_score_by_cwt(fragment_distributions):
     """Tests the score_by_cwt function, by scoring data of different quality from high to low"""
     testdata = fragment_distributions
     testdata = nu.scale(testdata)
-    print("\t" + "shape: " + str(testdata.shape))
     scores = nu.score_by_cwt(testdata, plotting=False)
 
     assert scores[0] > scores[1]
