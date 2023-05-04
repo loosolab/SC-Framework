@@ -125,10 +125,9 @@ pages:
     - cd docs
     - make html
     - mkdir -p ../public/$CI_COMMIT_BRANCH/
-    - mkdir -p ../public/test/
     - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
-    - mv build/html/* ../public/test/.
-    - mv build/html/* ../public/.
+    - cp -r ../public/$CI_COMMIT_BRANCH/ ../public/test/
+    - cp -r ../public/$CI_COMMIT_BRANCH/* ../public/.
   artifacts:
     paths:
       - public
