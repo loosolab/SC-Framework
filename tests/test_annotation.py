@@ -82,25 +82,6 @@ def test_annotate_narrowPeak(config):
     assert 'gene_id' in annotation_table
 
 
-@pytest.mark.parametrize("fixture, expected", [("adata_atac", True),  # expects var tables to be unchanged
-                                               ("adata_atac_emptyvar", False),  # expects var tables to be changed
-                                               ("adata_rna", ValueError),  # expects a valueerror due to missing columns
-                                               ("adata_atac_invalid", ValueError)])  # expects a valueerror due to format of columns
-def test_format_adata_var(fixture, expected, request):
-    """ Test whether adata regions can be formatted (or raise an error if not)"""
-
-    adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
-    adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
-    if type(expected) == type:
-        with pytest.raises(expected):
-            anno.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
-
-    else:
-        anno.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
-
-        assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
-
-
 @pytest.mark.parametrize("inplace", [True, False])
 def test_annot_HVG(adata_rna, inplace):
     """ Test if 'highly_variable' column is added to adata.var. """
@@ -155,6 +136,35 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac',
              "gtf_missing_col": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_missing_column_gencode.v41.gtf'),
              "gtf_corrupted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_corrupted_format_gencode.v41.gtf'),
              "gff": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')}
+
+
+# indirect test of gtf_integrity as well
+@pytest.mark.parametrize("key, gtf", [(key, gtf_files[key]) for key in gtf_files])
+def test_prepare_gtf(key, gtf):
+
+    if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
+        gtf_out, tempfiles = anno.prepare_gtf(gtf, "", print)
+
+        assert os.path.exists(gtf_out)  # assert if output gtf exists as a file
+
+    elif key in ["gtf_missing_col", "gtf_corrupted", "gff"]:  # these gtfs are invalid and should raise an error
+
+        with pytest.raises(argparse.ArgumentTypeError) as err:
+            anno.prepare_gtf(gtf, "", print)
+
+        # Assert if the error message is correct depending on input
+        if key == "gtf_missing_col":
+            assert err.value.args[0] == 'Number of columns in the gtf file unequal 9'
+
+        elif key == "gtf_corrupted":
+            assert err.value.args[0] == 'gtf file is corrupted'
+
+        elif key == "gff":
+            assert err.value.args[0] == 'Header in gtf file does not match gtf format'
+
+    else:
+        raise ValueError("Invalid key: {}".format(key))
+      "gff": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')}
 
 
 # indirect test of gtf_integrity as well
