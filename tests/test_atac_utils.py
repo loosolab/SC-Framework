@@ -59,6 +59,6 @@ def test_format_adata_var(fixture, expected, request):
         assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
 
 
-def test_bam_adata_ov(adata, bamfile):
+def test_bam_adata_ov(adata_atac, bamfile):
     hitrate = atac_utils.bam_adata_ov(adata_atac, bamfile, cb_col='CB')
     assert hitrate >= 0.10
