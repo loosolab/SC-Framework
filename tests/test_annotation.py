@@ -164,32 +164,4 @@ def test_prepare_gtf(key, gtf):
 
     else:
         raise ValueError("Invalid key: {}".format(key))
-      "gff": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')}
-
-
-# indirect test of gtf_integrity as well
-@pytest.mark.parametrize("key, gtf", [(key, gtf_files[key]) for key in gtf_files])
-def test_prepare_gtf(key, gtf):
-
-    if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
-        gtf_out, tempfiles = anno.prepare_gtf(gtf, "", print)
-
-        assert os.path.exists(gtf_out)  # assert if output gtf exists as a file
-
-    elif key in ["gtf_missing_col", "gtf_corrupted", "gff"]:  # these gtfs are invalid and should raise an error
-
-        with pytest.raises(argparse.ArgumentTypeError) as err:
-            anno.prepare_gtf(gtf, "", print)
-
-        # Assert if the error message is correct depending on input
-        if key == "gtf_missing_col":
-            assert err.value.args[0] == 'Number of columns in the gtf file unequal 9'
-
-        elif key == "gtf_corrupted":
-            assert err.value.args[0] == 'gtf file is corrupted'
-
-        elif key == "gff":
-            assert err.value.args[0] == 'Header in gtf file does not match gtf format'
-
-    else:
-        raise ValueError("Invalid key: {}".format(key))
+    

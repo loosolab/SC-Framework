@@ -4,6 +4,7 @@ import os
 import scanpy as sc
 import numpy as np
 
+
 @pytest.fixture
 def adata_atac():
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
@@ -38,11 +39,11 @@ def bamfile():
     bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
     return bamfile
 
+
 @pytest.mark.parametrize("fixture, expected", [("adata_atac", True),  # expects var tables to be unchanged
                                                ("adata_atac_emptyvar", False),  # expects var tables to be changed
                                                ("adata_rna", ValueError),  # expects a valueerror due to missing columns
                                                ("adata_atac_invalid", ValueError)])  # expects a valueerror due to format of columns
-
 def test_format_adata_var(fixture, expected, request):
     """ Test whether adata regions can be formatted (or raise an error if not)"""
 
@@ -56,6 +57,7 @@ def test_format_adata_var(fixture, expected, request):
         atac_utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
 
         assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
+
 
 def test_bam_adata_ov(adata, bamfile):
     hitrate = atac_utils.bam_adata_ov(adata_atac, bamfile, cb_col='CB')
