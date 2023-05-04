@@ -72,7 +72,7 @@ def fragment_distributions():
 
 def test_moving_average(disturbed_sine):
     """
-    Test that the moving average function works as expected by comparing a smoothed disturbed sine wave to the original
+    Test that the moving average function works as expected, by comparing a smoothed disturbed sine wave to the original
     and inspecting the difference.
 
     """
@@ -208,4 +208,3 @@ def test_score_by_cwt(fragment_distributions):
 
     assert scores[0] > scores[1]
     assert scores[1] > scores[2]
-    
