@@ -7,6 +7,7 @@ from scipy.signal import find_peaks
 
 # ------------------------ Fixtures ------------------------ #
 
+
 @pytest.fixture
 def count_table():
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
@@ -14,12 +15,12 @@ def count_table():
 
 
 @pytest.fixture
-def disturbed_sine(freq= 3.1415 * 2):
+def disturbed_sine(freq=3.1415 * 2):
     in_array = np.linspace(0, freq, 1000)
     sine_wave = np.sin(in_array)
     in_array = np.linspace(0, 500, 1000)
     disturbance = np.sin(in_array)
-    scaled_disturbance = disturbance / 10
+    scaled_disturbance = disturbance/10
     disturbed_sine = sine_wave + scaled_disturbance
 
     return disturbed_sine, sine_wave
@@ -31,7 +32,7 @@ def stack_sines(disturbed_sine):
     sines = []
     disturbed_sine_waves = []
     for i in range(10):
-        disturbed_sine_wave , sine_wave = disturbed_sine
+        disturbed_sine_wave, sine_wave = disturbed_sine
         sines.append(sine_wave)
         disturbed_sine_waves.append(disturbed_sine_wave)
 
@@ -44,26 +45,28 @@ def stack_sines(disturbed_sine):
 @pytest.fixture
 def modulation():
     """This fixture creates a modulation curve"""
-    def gaussian(x, mu, sig): # Gaussian function
+    def gaussian(x, mu, sig):  # Gaussian function
         return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
     curves = []
     x_values = np.linspace(-3, 3, 1000)
-    for mu, sig in [(-1, 0.5), (0.2, 0.3), (-1, 3)]: # Gaussian curves with different means and standard deviations
+    for mu, sig in [(-1, 0.5), (0.2, 0.3), (-1, 3)]:  # Gaussian curves with different means and standard deviations
         curves.append(gaussian(x_values, mu, sig))
 
-    curves[1] = curves[1] / 1 # Peak 1
-    curves[1] = curves[1] / 5 # Peak 2
-    curves[2] = curves[2] / 5 # Bias
-    sum_c = np.sum(curves, axis=0) # Sum of the curves
+    curves[1] = curves[1] / 1  # Peak 1
+    curves[1] = curves[1] / 5  # Peak 2
+    curves[2] = curves[2] / 5  # Bias
+    sum_c = np.sum(curves, axis=0)  # Sum of the curves
 
     return sum_c
+
 
 @pytest.fixture
 def fragment_distributions():
     testdata = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'nucleosomal_score.csv'), delimiter=None)
 
     return testdata
+
 
 # ------------------------ Tests ------------------------ #
 
@@ -121,7 +124,7 @@ def test_scale(count_table):
 
 def test_call_peaks(stack_sines):
     """ Test that the call_peaks function works as expected """
-    sine_stack, dist_stack = stack_sines # get the stack of sines
+    sine_stack, dist_stack = stack_sines  # get the stack of sines
     peaks = nu.call_peaks(sine_stack)
 
     assert len(peaks) == 10
@@ -144,13 +147,13 @@ def test_momentum_diff(modulation):
     Test that the momentum_diff function works as expected, by modeling overlapping gaussian curves and checking that
     the function finds the correct peaks.
     """
-    sum_c = modulation # get the sum of the gaussian curves
+    sum_c = modulation  # get the sum of the gaussian curves
 
-    peaks_raw, _ = find_peaks(sum_c, height=0.1) # Find peaks in the sum of the curves
+    peaks_raw, _ = find_peaks(sum_c, height=0.1)  # Find peaks in the sum of the curves
 
-    mom, a, b = nu.momentum_diff(sum_c, remove=0, shift=50, smooth=False) # Calculate the momentum difference
+    mom, a, b = nu.momentum_diff(sum_c, remove=0, shift=50, smooth=False)  # Calculate the momentum difference
 
-    mom_peaks, _ = find_peaks(mom, height=0.1) # Find peaks in the momentum difference
+    mom_peaks, _ = find_peaks(mom, height=0.1)  # Find peaks in the momentum difference
 
     assert len(peaks_raw) == 1
     assert len(mom_peaks) == 2
@@ -161,7 +164,7 @@ def test_add_adapters():
     input = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9],
                     [1, 2, 3, 4, 5, 6, 7, 8, 9]])
 
-    added = nu.add_adapters(input, shift=10, smooth=False) # add adapters to the input array
+    added = nu.add_adapters(input, shift=10, smooth=False)  # add adapters to the input array
 
     # check for 10 zeros added to the beginning and end of each row
     assert np.all(added[:, :10] == 0)
@@ -169,14 +172,14 @@ def test_add_adapters():
 
 def test_cross_point_shift(modulation):
     """This test checks that the cross_point_shift function works as expected"""
-    sum_c = modulation # get the sum of the gaussian curves
+    sum_c = modulation  # get the sum of the gaussian curves
     mom, a, b = nu.momentum_diff(sum_c, remove=0, shift=50, smooth=False)  # Calculate the momentum difference
     peaks, _ = find_peaks(mom, height=0.1)  # Find peaks in the momentum difference
 
     # get the cross point shift
     shifted_peaks = nu.cross_point_shift(peaks, reference=mom, convergence=0.07)
 
-    assert((mom[shifted_peaks] <= 0.08).all()) # check that the shifted peaks are below the convergence threshold
+    assert((mom[shifted_peaks] <= 0.08).all())  # check that the shifted peaks are below the convergence threshold
 
 
 def test_single_cwt_ov(modulation):
@@ -190,8 +193,8 @@ def test_single_cwt_ov(modulation):
 def test_score_by_momentum(fragment_distributions):
     """Tests the score_by_cwt function, by scoring data of different quality from high to low"""
     testdata = fragment_distributions
-    testdata = nu.scale(testdata) # scale
-    testdata = nu.multi_ma(testdata) # smooth
+    testdata = nu.scale(testdata)  # scale
+    testdata = nu.multi_ma(testdata)  # smooth
     scores = nu.score_by_momentum(testdata, plotting=False) # score
 
     assert scores[0] > scores[1]
