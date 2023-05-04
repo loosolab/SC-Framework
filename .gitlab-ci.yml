@@ -123,7 +123,7 @@ pages:
     - pip install nbsphinx_link
     - cd docs
     - make html
-    - rm -f ../public/$CI_COMMIT_BRANCH/  # remove old folder content to overwrite
+    - rm -rf ../public/$CI_COMMIT_BRANCH/  # remove old folder content to overwrite
     - mkdir -p ../public/$CI_COMMIT_BRANCH/
     - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
     - if [ "$CI_COMMIT_BRANCH" == "main" ]; then cp -r ../public/$CI_COMMIT_BRANCH/* ../public/. ; fi  # upper url goes to main
