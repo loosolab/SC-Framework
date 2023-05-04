@@ -15,6 +15,7 @@ variables:
 # If you want to also cache the installed packages, you have to install
 # them in a virtualenv and cache it as well.
 cache:
+  key: "$CI_JOB_NAME"
   paths:
     - .cache/pip
     - venv/
@@ -123,7 +124,8 @@ pages:
     - pip install nbsphinx_link
     - cd docs
     - make html
-    - mkdir -p ../public/$CI_COMMIT_BRANCH/
+    - rm -rf ../public/$CI_COMMIT_BRANCH/  # remove old folder content to overwrite
+    - mkdir ../public/$CI_COMMIT_BRANCH/
     - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
     - if [ "$CI_COMMIT_BRANCH" == "main" ]; then cp -r ../public/$CI_COMMIT_BRANCH/* ../public/. ; fi  # upper url goes to main
   artifacts:
