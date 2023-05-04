@@ -362,7 +362,7 @@ def score_by_momentum(data,
         elif len(peak_list) > 1:
             corrected_scores = []
             for j in range(1, len(peak_list)):
-                amplitude = single_momentum[peak_list[j-1]] * 2
+                amplitude = single_momentum[peak_list[j - 1]] * 2
 
                 diff = peak_list[j] - peak_list[j - 1]
                 corrected_score = amplitude - (abs(diff - period) / penalty_scale)

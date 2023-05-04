@@ -20,7 +20,7 @@ def disturbed_sine(freq=3.1415 * 2):
     sine_wave = np.sin(in_array)
     in_array = np.linspace(0, 500, 1000)
     disturbance = np.sin(in_array)
-    scaled_disturbance = disturbance/10
+    scaled_disturbance = disturbance / 10
     disturbed_sine = sine_wave + scaled_disturbance
 
     return disturbed_sine, sine_wave
@@ -161,8 +161,7 @@ def test_momentum_diff(modulation):
 
 def test_add_adapters():
     """Test the add_adapters function"""
-    input = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9],
-                    [1, 2, 3, 4, 5, 6, 7, 8, 9]])
+    input = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 3, 4, 5, 6, 7, 8, 9]])
 
     added = nu.add_adapters(input, shift=10, smooth=False)  # add adapters to the input array
 
@@ -179,13 +178,13 @@ def test_cross_point_shift(modulation):
     # get the cross point shift
     shifted_peaks = nu.cross_point_shift(peaks, reference=mom, convergence=0.07)
 
-    assert((mom[shifted_peaks] <= 0.08).all())  # check that the shifted peaks are below the convergence threshold
+    assert ((mom[shifted_peaks] <= 0.08).all())  # check that the shifted peaks are below the convergence threshold
 
 
 def test_single_cwt_ov(modulation):
     """Tests the single_cwt_ov function"""
     features = [modulation]
-    coef, filtered_peaks = nu.single_cwt_ov(features, shift=0, sample=0, freq=4)#
+    coef, filtered_peaks = nu.single_cwt_ov(features, shift=0, sample=0, freq=4)
 
     assert len(filtered_peaks) == 2
 
@@ -195,7 +194,7 @@ def test_score_by_momentum(fragment_distributions):
     testdata = fragment_distributions
     testdata = nu.scale(testdata)  # scale
     testdata = nu.multi_ma(testdata)  # smooth
-    scores = nu.score_by_momentum(testdata, plotting=False) # score
+    scores = nu.score_by_momentum(testdata, plotting=False)  # score
 
     assert scores[0] > scores[1]
     assert scores[1] > scores[2]
@@ -209,3 +208,4 @@ def test_score_by_cwt(fragment_distributions):
 
     assert scores[0] > scores[1]
     assert scores[1] > scores[2]
+    
