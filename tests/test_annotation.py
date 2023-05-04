@@ -4,7 +4,6 @@ import pytest
 import sctoolbox.annotation as anno
 import sctoolbox.utilities as utils
 import scanpy as sc
-import numpy as np
 import os
 
 
@@ -164,4 +163,3 @@ def test_prepare_gtf(key, gtf):
 
     else:
         raise ValueError("Invalid key: {}".format(key))
-    
