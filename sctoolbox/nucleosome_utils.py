@@ -7,7 +7,7 @@ import multiprocessing as mp
 from scipy.signal import find_peaks
 
 
-def moving_average(series, adapter=0, n=10):
+def moving_average(series, n=10):
     """
     Moving average filter to smooth out data. This implementation ensures that the smoothed data has no shift and
     local maxima remain at the same position.
@@ -27,8 +27,6 @@ def moving_average(series, adapter=0, n=10):
         Smoothed array
 
     """
-    for i in range(adapter):
-        series = np.insert(series, 0, 0)
 
     list(series)
     smoothed = []
@@ -79,7 +77,7 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
         # loop over chunks
 
         for dist in series:
-            job = pool.apply_async(moving_average, args=(dist, 0, window_size))
+            job = pool.apply_async(moving_average, args=(dist, window_size))
             jobs.append(job)
         pool.close()
 
@@ -770,6 +768,8 @@ def density_plot(scaled, densities):
     plt.gca().invert_yaxis()
     plt.show()
 
+    return ax
+
 
 def plot_single_momentum_ov(peaks,
                             momentum,
@@ -836,6 +836,8 @@ def plot_single_momentum_ov(peaks,
     ax3.set_xlabel('Fragment Length', color='blue')
     ax3.plot(single_d)
     ax3.scatter(points_ori_x, points_ori_y, color='red', zorder=2)
+
+    return fig, [ax1, ax2, ax3]
 
 
 def plot_wavl_ov(feature,
@@ -909,6 +911,8 @@ def plot_wavl_ov(feature,
 
     fig.tight_layout()
     plt.show()
+
+    return fig, [ax1, ax2, ax3]
 
 
 def add_insertsize_metrics(adata,

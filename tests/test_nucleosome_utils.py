@@ -68,6 +68,13 @@ def fragment_distributions():
     return testdata
 
 
+@pytest.fixture
+def density_reference():
+    densities = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'densities.txt'), delimiter=None)
+
+    return densities
+
+
 # ------------------------ Tests ------------------------ #
 
 def test_moving_average(disturbed_sine):
@@ -117,9 +124,27 @@ def test_scale(count_table):
     dists_arr = np.nan_to_num(dists_arr)
 
     scaled = nu.scale(dists_arr)
+    scaled_single = nu.scale(dists_arr[0])
 
     assert np.max(scaled) == 1
     assert np.min(scaled) == 0
+
+    assert np.max(scaled_single) == 1
+    assert np.min(scaled_single) == 0
+
+
+def test_calc_densities(fragment_distributions, density_reference):
+    """ Test that the calc_densities function works as expected by asserting known values """
+    densities = nu.calc_densities(fragment_distributions)
+
+    assert np.array_equal(densities, density_reference)
+
+
+def test_call_peaks_worker(modulation):
+    """ Test that the call_peaks_worker function works as expected """
+    peaks = nu.call_peaks_worker(modulation)
+
+    assert peaks[0] == 333
 
 
 def test_call_peaks(stack_sines):
@@ -136,10 +161,14 @@ def test_filter_peaks(disturbed_sine):
     peaks = np.array([50, 250, 400, 500, 999])
     disturbed_sine_wave, sine_wave = disturbed_sine
 
-    filtered_peaks = nu.filter_peaks(peaks, sine_wave, peaks_thr=0.75)
+    filtered_peaks = nu.filter_peaks(peaks, sine_wave, peaks_thr=0.75, operator="bigger")
+    filtered_peaks_smaller = nu.filter_peaks(peaks, sine_wave, peaks_thr=0.75, operator="smaller")
 
     assert len(filtered_peaks) == 1
     assert filtered_peaks[0] == 250
+
+    assert len(filtered_peaks_smaller) == 4
+    assert np.all(filtered_peaks_smaller == np.array([50, 400, 500, 999]))
 
 
 def test_momentum_diff(modulation):
@@ -208,3 +237,76 @@ def test_score_by_cwt(fragment_distributions):
 
     assert scores[0] > scores[1]
     assert scores[1] > scores[2]
+
+
+def test_density_plot(density_reference, fragment_distributions):
+    """ Tests the density_plot function """
+    scaled = nu.scale(fragment_distributions)
+    ax = nu.density_plot(scaled, density_reference)
+
+    ax_type = type(ax).__name__
+
+    assert ax_type.startswith("Axes")
+
+
+def test_plot_single_momentum_ov(fragment_distributions):
+    """ Tests the plot_single_momentum_ov function """
+    scaled = nu.scale(fragment_distributions)
+
+    mom, shift_l, shift_r = nu.momentum_diff(scaled, remove=0, shift=50, smooth=False)  # Calculate the momentum difference
+
+    peaks = nu.call_peaks(mom, n_threads=8) # Find peaks in the momentum difference
+
+    peaks = nu.filter_peaks(peaks,
+                         reference=mom,
+                         peaks_thr=0.03,
+                         operator='bigger')
+
+    fig, axes = nu.plot_single_momentum_ov(peaks,
+                                       mom,
+                                       data=scaled,
+                                       shift_l=shift_l,
+                                       shift_r=shift_r,
+                                       sample_n=0,
+                                       shift=0,
+                                       remove=0)
+
+    fig_type = type(fig).__name__
+    ax1_type = type(axes[0]).__name__
+    ax2_type = type(axes[1]).__name__
+    ax3_type = type(axes[2]).__name__
+
+    assert fig_type.startswith("Figure")
+    assert ax1_type.startswith("Axes")
+    assert ax2_type.startswith("Axes")
+    assert ax3_type.startswith("Axes")
+
+
+def test_plot_wavl_ov(fragment_distributions):
+    """ Tests the plot_single_momentum_ov function """
+    plot_sample = 0
+    scaled = nu.scale(fragment_distributions)
+
+    shifted_peaks, wav_features, coefs = nu.wrap_cwt(data=scaled,
+                                                  adapter=250,
+                                                  wavelet='gaus1',
+                                                  scales=16,
+                                                  n_threads=4,
+                                                  peaks_thr=0.05)
+
+    fig, axes = nu.plot_wavl_ov(wav_features[plot_sample],
+                 shifted_peaks[plot_sample],
+                 [coefs[plot_sample]], freq=0,
+                 plot_peaks=True,
+                 perform_cross_point_shift=True,
+                 convergence=0)
+
+    fig_type = type(fig).__name__
+    ax1_type = type(axes[0]).__name__
+    ax2_type = type(axes[1]).__name__
+    ax3_type = type(axes[2]).__name__
+
+    assert fig_type.startswith("Figure")
+    assert ax1_type.startswith("Axes")
+    assert ax2_type.startswith("Axes")
+    assert ax3_type.startswith("Axes")
