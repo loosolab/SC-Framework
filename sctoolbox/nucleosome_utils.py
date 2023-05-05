@@ -620,8 +620,9 @@ def wrap_cwt(data,
         cp_shifted.append(cross_point_shift(peaks[i], reference=coefs[i], convergence=convergence))
 
     # remove adapter
-    peaks = np.array(peaks)
-    shifted_peaks = peaks - adapter
+    # peaks = np.array(peaks)  # Remove as fix for unit testing
+    # shifted_peaks = peaks - adapter
+    shifted_peaks = [x - adapter for x in peaks]
 
     nn_peaks = []
     for peak_list in shifted_peaks:
