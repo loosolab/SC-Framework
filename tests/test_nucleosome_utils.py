@@ -255,7 +255,7 @@ def test_plot_single_momentum_ov(fragment_distributions):
 
     mom, shift_l, shift_r = nu.momentum_diff(scaled, remove=0, shift=50, smooth=False)  # Calculate the momentum difference
 
-    peaks = nu.call_peaks(mom, n_threads=8) # Find peaks in the momentum difference
+    peaks = nu.call_peaks(mom, n_threads=8)  # Find peaks in the momentum difference
 
     peaks = nu.filter_peaks(peaks,
                          reference=mom,
@@ -263,13 +263,13 @@ def test_plot_single_momentum_ov(fragment_distributions):
                          operator='bigger')
 
     fig, axes = nu.plot_single_momentum_ov(peaks,
-                                       mom,
-                                       data=scaled,
-                                       shift_l=shift_l,
-                                       shift_r=shift_r,
-                                       sample_n=0,
-                                       shift=0,
-                                       remove=0)
+                                           mom,
+                                           data=scaled,
+                                           shift_l=shift_l,
+                                           shift_r=shift_r,
+                                           sample_n=0,
+                                           shift=0,
+                                           remove=0)
 
     fig_type = type(fig).__name__
     ax1_type = type(axes[0]).__name__
@@ -288,18 +288,19 @@ def test_plot_wavl_ov(fragment_distributions):
     scaled = nu.scale(fragment_distributions)
 
     shifted_peaks, wav_features, coefs = nu.wrap_cwt(data=scaled,
-                                                  adapter=250,
-                                                  wavelet='gaus1',
-                                                  scales=16,
-                                                  n_threads=4,
-                                                  peaks_thr=0.05)
+                                                      adapter=250,
+                                                      wavelet='gaus1',
+                                                      scales=16,
+                                                      n_threads=4,
+                                                      peaks_thr=0.05)
 
     fig, axes = nu.plot_wavl_ov(wav_features[plot_sample],
-                 shifted_peaks[plot_sample],
-                 [coefs[plot_sample]], freq=0,
-                 plot_peaks=True,
-                 perform_cross_point_shift=True,
-                 convergence=0)
+                                shifted_peaks[plot_sample],
+                                [coefs[plot_sample]],
+                                freq=0,
+                                plot_peaks=True,
+                                perform_cross_point_shift=True,
+                                convergence=0)
 
     fig_type = type(fig).__name__
     ax1_type = type(axes[0]).__name__
