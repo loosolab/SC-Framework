@@ -185,7 +185,7 @@ def call_peaks(data, n_threads=4, distance=50, width=10):
         peak_list = job.get()
         peaks.append(peak_list)
 
-    peaks = np.array(peaks)
+    # peaks = np.array(peaks)
 
     return peaks
 

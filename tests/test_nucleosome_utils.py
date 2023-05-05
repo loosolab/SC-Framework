@@ -128,7 +128,7 @@ def test_call_peaks(stack_sines):
     peaks = nu.call_peaks(sine_stack)
 
     assert len(peaks) == 10
-    assert np.all(peaks == 250)
+    assert np.all(np.vstack(peaks) == 250)
 
 
 def test_filter_peaks(disturbed_sine):
