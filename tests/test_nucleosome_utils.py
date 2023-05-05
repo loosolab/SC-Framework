@@ -329,11 +329,10 @@ def test_plot_wavl_ov(fragment_distributions):
 
 
 def test_add_insertsize_metrics(adata, bamfile):
-    """ check that the add_insertsize_metrics function works as expected adding the new columns """
+    """ check that the add_insertsize_metrics function works as expected """
 
     adata = nu.add_insertsize_metrics(adata, bamfile, plotting=False)
 
     assert 'nucleosomal_score_momentum' in adata.obs.columns
     assert 'nucleosomal_score_cwt' in adata.obs.columns
     assert 'genome_counts' in adata.obs.columns
-    
