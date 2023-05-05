@@ -84,7 +84,7 @@ def test_moving_average(disturbed_sine):
 
     """
     disturbed_sine_wave, sine_wave = disturbed_sine
-    smoothed_sine = nu.moving_average(disturbed_sine_wave, adapter=0, n=10)
+    smoothed_sine = nu.moving_average(disturbed_sine_wave, n=10)
 
     diff_smooth = np.sum(abs(sine_wave - smoothed_sine))
     diff_disturbed = np.sum(abs(sine_wave - disturbed_sine_wave))
@@ -258,9 +258,9 @@ def test_plot_single_momentum_ov(fragment_distributions):
     peaks = nu.call_peaks(mom, n_threads=8)  # Find peaks in the momentum difference
 
     peaks = nu.filter_peaks(peaks,
-                         reference=mom,
-                         peaks_thr=0.03,
-                         operator='bigger')
+                            reference=mom,
+                            peaks_thr=0.03,
+                            operator='bigger')
 
     fig, axes = nu.plot_single_momentum_ov(peaks,
                                            mom,
@@ -288,11 +288,11 @@ def test_plot_wavl_ov(fragment_distributions):
     scaled = nu.scale(fragment_distributions)
 
     shifted_peaks, wav_features, coefs = nu.wrap_cwt(data=scaled,
-                                                      adapter=250,
-                                                      wavelet='gaus1',
-                                                      scales=16,
-                                                      n_threads=4,
-                                                      peaks_thr=0.05)
+                                                     adapter=250,
+                                                     wavelet='gaus1',
+                                                     scales=16,
+                                                     n_threads=4,
+                                                     peaks_thr=0.05)
 
     fig, axes = nu.plot_wavl_ov(wav_features[plot_sample],
                                 shifted_peaks[plot_sample],
