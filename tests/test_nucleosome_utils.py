@@ -1,7 +1,8 @@
 import pytest
 import os
-import sctoolbox.atac as atac
 import numpy as np
+import scanpy as sc
+import sctoolbox.atac as atac
 import sctoolbox.nucleosome_utils as nu
 from scipy.signal import find_peaks
 
@@ -73,6 +74,20 @@ def density_reference():
     densities = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'densities.txt'), delimiter=None)
 
     return densities
+
+
+@pytest.fixture
+def adata():
+    """ Fixture for an AnnData object. """
+    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+    return adata
+
+
+@pytest.fixture
+def bamfile():
+    """ Fixture for an Bamfile.  """
+    bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
+    return bamfile
 
 
 # ------------------------ Tests ------------------------ #
@@ -311,3 +326,14 @@ def test_plot_wavl_ov(fragment_distributions):
     assert ax1_type.startswith("Axes")
     assert ax2_type.startswith("Axes")
     assert ax3_type.startswith("Axes")
+
+
+def test_add_insertsize_metrics(adata, bamfile):
+    """ check that the add_insertsize_metrics function works as expected """
+
+    adata = nu.add_insertsize_metrics(adata, bamfile, plotting=False)
+
+    assert 'nucleosomal_score_momentum' in adata.obs.columns
+    assert 'nucleosomal_score_cwt' in adata.obs.columns
+    assert 'genome_counts' in adata.obs.columns
+    

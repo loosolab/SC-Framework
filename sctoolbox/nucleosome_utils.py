@@ -984,9 +984,10 @@ def add_insertsize_metrics(adata,
     scaled_ori = scale(dists_arr)
 
     # plot the densityplot of the fragment length distribution
-    print("plotting density...")
-    densities = calc_densities(scaled_ori)
-    density_plot(scaled_ori, densities)
+    if plotting:
+        print("plotting density...")
+        densities = calc_densities(scaled_ori)
+        density_plot(scaled_ori, densities)
 
     if use_momentum:
         # prepare the data to be used for the momentum method
