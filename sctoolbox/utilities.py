@@ -1099,41 +1099,64 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
         return adata
 
 
-def unify_genes_column(adata, column='gene_name', ensembl_dataset="hsapiens_gene_ensembl"):
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
     """
     This function unifies the genes column in adata.var. It replaces ensembl gene ids with gene names.
 
     Parameters
     ----------
-    adata: AnnData
+    adata: scanpy.AnnData
         AnnData object
     column: str
-        column name in adata.var
-    ensembl_dataset: str
-        ensembl dataset name
+        Column name in adata.var
+    unified_names: str, default "unified_names"
+        Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
+    species : str, default "auto"
+        Species of the dataset. On default, species is inferred based on gene ids.
+    inplace: boolean, default True
+        Whether to modify adata or return a copy.
 
     Returns
     -------
-
+    scanpy.AnnData or None :
+        AnnData object with modified gene column.
     """
+    if column not in adata.var.columns:
+        raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
 
-    assigned_features = adata.var[column].dropna()
+    if not inplace:
+        adata = adata.copy()
 
-    df = apybiomart.query(attributes=["ensembl_gene_id", "external_gene_name"],
-                          dataset=ensembl_dataset,
-                          filters={})
+    # check for ensembl ids
+    ensids = [el for el in adata.var[column] if el.startswith("ENS")]
 
-    ens_dict = dict(zip(df['Gene stable ID'], df['Gene name']))
+    if not ensids:
+        raise ValueError(f"No Ensembl IDs in adata.var['{column}'] found.")
+
+    # infer species from gene id
+    if species == "auto":
+        ensid = ensids[0]
+
+        species = get_organism(ensid)
+
+        # bring into biomart format
+        # first letter of all words but complete last word e.g. hsapiens, mmusculus
+        spl_name = species.lower().split("_")
+        species = "".join(map(lambda x: x[0], spl_name[:-1])) + spl_name[-1]
+
+        print(f"Identified species as {species}")
+
+    # get id <-> name table
+    id_name_table = gene_id_to_name(ids=ensids, species=species)
 
     count = 0
-    for index, gene in enumerate(assigned_features):
-        if gene.startswith("ENSG"):
-            if gene in ens_dict.keys():
-                if isinstance(ens_dict[gene], str):
-                    assigned_features.replace(gene, ens_dict[gene], inplace=True)
-                    count += 1
+    for index, row in adata.var.iterrows():
+        if row[column] in id_name_table['Gene stable ID']:
+            count += 1
+
+            # replace gene id with name
+            adata.var.at[index, unified_column] = id_name_table.at[id_name_table.index[id_name_table["Gene stable ID"] == row[column]][0], "Gene name"]
     print(f'{count} ensembl gene ids have been replaced with gene names')
 
-    adata = adata[:, assigned_features.index]
-
-    return adata
+    if inplace:
+        return adata
