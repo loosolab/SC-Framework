@@ -1101,7 +1101,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
 def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
     """
-    This function unifies the genes column in adata.var. It replaces ensembl gene ids with gene names.
+    Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
 
     Parameters
     ----------
@@ -1151,12 +1151,14 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 
     count = 0
     for index, row in adata.var.iterrows():
-        if row[column] in id_name_table['Gene stable ID']:
+        if row[column] in id_name_table['Gene stable ID'].values:
             count += 1
 
             # replace gene id with name
             adata.var.at[index, unified_column] = id_name_table.at[id_name_table.index[id_name_table["Gene stable ID"] == row[column]][0], "Gene name"]
+        else:
+            adata.var.at[index, unified_column] = adata.var.at[index, column]
     print(f'{count} ensembl gene ids have been replaced with gene names')
 
-    if inplace:
+    if not inplace:
         return adata
