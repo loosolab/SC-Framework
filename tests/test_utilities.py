@@ -258,3 +258,29 @@ def test_convert_id(adata2):
     # inplace
     assert utils.convert_id(adata=new_adata, id_col_name="index", name_col=name_col, species="mmusculus", inplace=True) is None
     assert name_col in new_adata.var
+
+
+def test_unify_genes_column(adata2):
+    """ Test the unify_genes_column() function. """
+
+    mixed_name = "mixed"
+    new_col = "unified_names"
+
+    # create mixed column
+    mixed = [id if i % 2 == 0 else row["Gene name"] for i, (id, row) in enumerate(adata2.var.iterrows())]
+    adata2[mixed_name] = mixed
+
+    # invalid column
+    with pytest.raises(ValueError):
+        utils.unify_genes_column(adata2, column="invalid")
+
+    # new column created
+    assert new_col not in adata2.var.columns
+    assert new_col in utils.unify_genes_column(adata2, column=mixed_name, unified_column=new_col, inplace=False).var.columns
+
+    # column overwrite is working
+    utils.unify_genes_column(adata2, column=mixed_name, unified_column=mixed_name, inplace=True)
+    assert any(adata2.var[mixed_name] != mixed)
+
+    # no Ensembl IDs in output column
+    assert not any(adata.var[mixed_name].str.startswith("ENS"))
