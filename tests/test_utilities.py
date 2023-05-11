@@ -264,10 +264,12 @@ def test_unify_genes_column(adata2):
     """ Test the unify_genes_column() function. """
 
     mixed_name = "mixed"
+    name_col = "Gene name"
     new_col = "unified_names"
 
     # create mixed column
-    mixed = [id if i % 2 == 0 else row["Gene name"] for i, (id, row) in enumerate(adata2.var.iterrows())]
+    utils.convert_id(adata, index=True, name_col=name_col)
+    mixed = [id if i % 2 == 0 else row[name_col] for i, (id, row) in enumerate(adata2.var.iterrows())]
     adata2[mixed_name] = mixed
 
     # invalid column
