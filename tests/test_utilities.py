@@ -280,7 +280,7 @@ def test_unify_genes_column(adata2):
     new_col = "unified_names"
 
     # create mixed column
-    utils.convert_id(adata, index=True, name_col=name_col)
+    utils.convert_id(adata2, index=True, name_col=name_col)
     mixed = [id if i % 2 == 0 else row[name_col] for i, (id, row) in enumerate(adata2.var.iterrows())]
     adata2[mixed_name] = mixed
 
