@@ -297,4 +297,4 @@ def test_unify_genes_column(adata2):
     assert any(adata2.var[mixed_name] != mixed)
 
     # no Ensembl IDs in output column
-    assert not any(adata.var[mixed_name].str.startswith("ENS"))
+    assert not any(adata2.var[mixed_name].str.startswith("ENS"))
