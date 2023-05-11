@@ -10,16 +10,21 @@ import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 import matplotlib
 import time
+import shutil
+import tempfile
 import warnings
 from scipy.sparse import issparse
 import apybiomart
 import requests
+import subprocess
 
 from os.path import join, dirname, exists
 from pathlib import Path
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 
+
+# ------------------ Packages and tools ----------------- #
 
 def get_package_versions():
     """
@@ -50,6 +55,64 @@ def get_package_versions():
 
     return package_dict
 
+
+def get_binary_path(tool):
+    """ Get path to a binary commandline tool. Looks either in the local dir, on path or in the dir of the executing python binary.
+
+    Parameters
+    ----------
+    tool : str
+        Name of the commandline tool to be found.
+
+    Returns
+    -------
+    str :
+        Full path to the tool.
+    """
+
+    python_dir = os.path.dirname(sys.executable)
+    if os.path.exists(tool):
+        tool_path = f"./{tool}"
+
+    else:
+
+        # Check if tool is available on path
+        tool_path = shutil.which(tool)
+        if tool_path is None:
+
+            # Search for tool within same folder as python (e.g. in an environment)
+            python_dir = os.path.dirname(sys.executable)
+            tool_path = shutil.which(tool, path=python_dir)
+
+    # Check that tool is executable
+    if tool_path is None or shutil.which(tool_path) is None:
+        raise ValueError(f"Could not find an executable for {tool} on path.")
+
+    return tool_path
+
+
+def run_cmd(cmd):
+    """
+    Run a commandline command.
+
+    Parameters
+    ----------
+    cmd : str
+        Command to be run.
+    """
+    try:
+        subprocess.check_call(cmd, shell=True)
+        print(f"Command '{cmd}' ran successfully!")
+    except subprocess.CalledProcessError as e:
+        # print(f"Error running command '{cmd}': {e}")
+        if e.output is not None:
+            print(f"Command standard output: {e.output.decode('utf-8')}")
+        if e.stderr is not None:
+            print(f"Command standard error: {e.stderr.decode('utf-8')}")
+        raise e
+
+
+# ------------------- Multiprocessing ------------------- #
 
 def get_pbar(total, description):
     """
@@ -437,8 +500,18 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
+def get_temporary_filename(tempdir="."):
+    """ Get a writeable temporary filename by creating a temporary file and closing it again. """
+
+    filehandle = tempfile.NamedTemporaryFile(mode="w", dir=tempdir, delete=True)
+    filename = filehandle.name
+    filehandle.close()  # remove the file again
+
+    return filename
+
+
 def remove_files(file_list):
-    """ Delete all files in a file list. Prints a warning if deletion was not possible """
+    """ Delete all files in a file list. Prints a warning if deletion was not possible. """
 
     for f in file_list:
         try:

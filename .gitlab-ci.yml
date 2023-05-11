@@ -4,10 +4,6 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
 
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/python/tags/
-image: python:3.10  # pybedtools is not compatible with python 3.11
-
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
 variables:
@@ -22,9 +18,13 @@ cache:
   paths:
     - .cache/pip
     - venv/
+    - public
 
 # Install package for all jobs (unless inherit is false)
 default:
+  # Official language image. Look for the different tagged releases at:
+  # https://hub.docker.com/r/library/python/tags/
+  image: python:3.10  # pybedtools is not compatible with python 3.11
   before_script:
     - python --version  # For debugging
     - uname -a          # For debugging
@@ -42,9 +42,9 @@ default:
 
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
-  image: python:3.9.15
   inherit:
-    default: false
+    default: 
+      - image
   script:
      - 'echo passed'
   rules:
@@ -54,9 +54,9 @@ pass:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 lint:
-  image: python:3.9.15
   inherit:
-    default: false  # package not needed to run linting
+    default: 
+      - image  # package not needed to run linting
   stage: test
   tags:
     - coverage
@@ -78,6 +78,8 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - apt-get install bedtools  #needed for some tests
+    - chmod +x scripts/bedGraphToBigWig  # make script executable
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
@@ -96,15 +98,14 @@ test coverage:
       - tests/*.py
       - sctoolbox/*.py
     - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
-    - if: $CI_PIPELINE_SOURCE == "push"  # manual rule for all pushes
-      when: manual
-      allow_failure: True  # the manual rule is allowed to fail
+    - when: manual  
+      allow_failure: True
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
-  image: python:3.9.15
   inherit:
-    default: false
+    default: 
+      - image
   stage: test
   script:
     - python --version
@@ -124,20 +125,38 @@ pages:
     - pip install nbsphinx_link
     - cd docs
     - make html
-    - mv build/html/ ../public/
+    - rm -rf ../public/$CI_COMMIT_BRANCH/  # remove old folder content to overwrite
+    - mkdir -p ../public/$CI_COMMIT_BRANCH/
+    - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
+    - if [ "$CI_COMMIT_BRANCH" == "main" ]; then cp -r ../public/$CI_COMMIT_BRANCH/* ../public/. ; fi  # upper url goes to main
   artifacts:
+    name: "$CI_COMMIT_BRANCH"
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+    - if: $CI_COMMIT_BRANCH == "dev" # always after accepted MR to dev
+      allow_failure: False  # dev not allowed to fail
+    - if: $CI_COMMIT_BRANCH == "main"
+      allow_failure: False
+    - when: manual
+      allow_failure: True
+
 
 # Test notebooks when code is pushed to main
 notebooks:
+  image: continuumio/miniconda3:latest
+  inherit:
+    default: false
   stage: deploy
   tags:
     - gwdg
     - gwdg-shared
   script:
+    - conda install -c conda-forge mamba
+    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
+    - conda init bash
+    - source ~/.bashrc
+    - conda activate sctoolbox
     - pip install papermill
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh

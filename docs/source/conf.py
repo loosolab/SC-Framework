@@ -21,9 +21,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'SC FRAMEWORK'
-copyright = '2022, Loosolab'
+copyright = '2023, Loosolab'
 author = 'Loosolab'
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -43,9 +42,6 @@ extensions = ['matplotlib.sphinxext.plot_directive',
 napoleon_numpy_docstring = True
 autodoc_member_order = 'bysource'
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
-
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
@@ -56,6 +52,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 autodoc_mock_imports = []  # 'uropa', 'anndata', 'numpy', 'matplotlib',
                            # 'glob', 'sklearn', 'seaborn',
                            # 'qnorm', 'pylab', 'episcanpy']
+
+
+# ---- Automatic documentation generation -------------------------------------
+
+# Generate the API documentation per module
+cmd = "sphinx-apidoc -e -o API ../../sctoolbox/ --no-toc --templatedir=_templates --force"
+os.system(cmd)
+os.remove("API/sctoolbox.rst")
 
 # --- Create nblink files for notebooks ----------------------------------------
 
