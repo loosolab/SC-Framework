@@ -516,7 +516,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object to predict cell cycle on.
     species : str
@@ -537,7 +537,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         if True, add new columns to the original anndata object.
 
     Returns
-    -----------
+    -------
     scanpy.AnnData or None :
         If inplace is False, return a copy of anndata object with the new column in the obs table.
     """
