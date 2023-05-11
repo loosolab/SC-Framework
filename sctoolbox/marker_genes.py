@@ -515,7 +515,7 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
     Assign a score to each cell depending on the expression of a set of genes.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object to predict cell cycle on.
     gene_set : str or list
@@ -527,8 +527,8 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
         Adds the new column to the original anndata object.
 
     Returns
-    -----------
-    anndata.Anndata
+    -------
+    anndata.Anndata or None :
         If inplace is False, return a copy of anndata object with the new column in the obs table.
     """
 
