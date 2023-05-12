@@ -33,12 +33,12 @@ def adata_cc(adata):
 
 @pytest.fixture
 def s_genes(adata_cc):
-    return adata_cc.var.index[:int(len(adata.var) / 2)]
+    return adata_cc.var.index[:int(len(adata_cc.var) / 2)]
 
 
 @pytest.fixture
 def g2m_genes(adata_cc):
-    return adata_cc.var.index[int(len(adata.var) / 2):]
+    return adata_cc.var.index[int(len(adata_cc.var) / 2):]
 
 
 @pytest.fixture
