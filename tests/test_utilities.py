@@ -4,6 +4,7 @@ import numpy as np
 import shutil
 import pandas as pd
 import sctoolbox.utilities as utils
+import subprocess
 import scanpy as sc
 
 
@@ -40,6 +41,17 @@ def na_dataframe():
 arr_ints = np.random.randint(10, size=(10, 10))
 arr_ints2 = arr_ints.astype(float)
 arr_floats = np.random.rand(10, 10)
+
+
+def test_run_cmd_valid():
+    """ Test if the command is run. """
+    utils.run_cmd("echo hello world")
+
+
+def test_run_cmd_invalid():
+    """ Check that invalid commands raise an error. """
+    with pytest.raises(subprocess.CalledProcessError):
+        utils.run_cmd("ecccho hello world")
 
 
 @pytest.mark.parametrize("arr,boolean", [(arr_ints, True), (arr_ints2, True), (arr_floats, False)])
