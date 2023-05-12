@@ -103,9 +103,10 @@ def test_mask_rank_genes(adata):
 @pytest.mark.parametrize(
     "score_name, gene_set, inplace",
     [
-        ("test1", pytest.lazy_fixture("gene_set"), False), # https://stackoverflow.com/a/64348247/19870975
+        ("test1", "gene_set", False),
         ("test2", os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt'), True)
-    ]
+    ],
+    indirect=["gene_set"]
 )
 def test_score_genes(adata_score, score_name, gene_set, inplace):
     """ Test if genes are scored and added to adata.obs """
