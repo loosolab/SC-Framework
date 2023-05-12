@@ -61,7 +61,7 @@ def tmp_dir():
 def test_create_fragment_file(test_bam, out):
     if out:
         tmp_dir()
-    fragments = overlap.create_fragment_file(bam=test_bam, nproc=1, out=out, sort_bam=True)
+    fragments, temp = overlap.create_fragment_file(bam=test_bam, nproc=1, out=out, sort_bam=True)
 
     name = os.path.splitext(test_bam)[0] + "_fragments_sorted.bed"
     if out:
@@ -77,7 +77,7 @@ def test_convert_gtf_to_bed(test_gtf, out):
     if out:
         tmp_dir()
 
-    sorted_bed = overlap._convert_gtf_to_bed(test_gtf, out=out)
+    sorted_bed, temp = overlap._convert_gtf_to_bed(test_gtf, out=out)
     name = test_gtf + "_sorted.bed"
 
     if out:
