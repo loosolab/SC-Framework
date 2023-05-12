@@ -145,24 +145,24 @@ def test_mask_rank_genes(adata):
     ],
     indirect=["s_genes", "g2m_genes"]
 )
-def test_predict_cell_cycle(adata_cc, species, s_genes, g2m_genes, inplace):
+def test_predict_cell_cycle(adata_score, species, s_genes, g2m_genes, inplace):
     """ Test if cell cycle is predicted and added to adata.obs """
     expected_columns = ["S_score", "G2M_score", "phase"]
 
-    assert not any(c in adata_cc.obs.columns for c in expected_columns)
+    assert not any(c in adata_score.obs.columns for c in expected_columns)
 
     if species == "unicorn":
         with pytest.raises(ValueError):
-            sctoolbox.marker_genes.predict_cell_cycle(adata_cc, species=species)
+            sctoolbox.marker_genes.predict_cell_cycle(adata_score, species=species)
             return
 
-    out = sctoolbox.marker_genes.predict_cell_cycle(adata_cc, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
+    out = sctoolbox.marker_genes.predict_cell_cycle(adata_score, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
 
     if inplace:
         assert out is None
-        assert all(c in adata_cc.obs.columns for c in expected_columns)
+        assert all(c in adata_score.obs.columns for c in expected_columns)
     else:
-        assert not any(c in adata_cc.obs.columns for c in expected_columns)
+        assert not any(c in adata_score.obs.columns for c in expected_columns)
         assert all(c in out.obs.columns for c in expected_columns)
 
 
