@@ -2,7 +2,6 @@ import pytest
 import os
 import scanpy as sc
 import numpy as np
-import pandas as pd
 import tempfile
 import sctoolbox.marker_genes
 
