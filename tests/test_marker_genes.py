@@ -31,6 +31,11 @@ def adata_score(adata):
     return adata
 
 
+@pytest.fixture
+def gene_set(adata_score):
+    return adata_score.var.index.to_list()[:50]
+
+
 # ------------------------------ TESTS --------------------------------- #
 
 def test_get_chromosome_genes():
@@ -95,10 +100,13 @@ def test_mask_rank_genes(adata):
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
 
 
-@pytest.mark.parametrize("score_name", ["test1", "test2"],
-                         "gene_set", [adata_score.var.index.to_list()[:50],
-                                      os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt')],
-                         "inplace", [False, True])
+@pytest.mark.parametrize(
+    "score_name, gene_set, inplace",
+    [
+        ("test1", gene_set, False),
+        ("test2", os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt'), True)
+    ]
+    )
 def test_score_genes(adata_score, score_name, gene_set, inplace):
     """ Test if genes are scored and added to adata.obs """
 
