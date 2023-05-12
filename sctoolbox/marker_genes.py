@@ -517,7 +517,7 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
     Parameters
     ----------
     adata : anndata.AnnData
-        Anndata object to predict cell cycle on.
+        Anndata object to score.
     gene_set : str or list
         A list of genes or path to a file containing a list of genes.
         The txt file should have one gene per row.
