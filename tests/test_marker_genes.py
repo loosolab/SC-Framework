@@ -33,18 +33,13 @@ def adata_cc(adata):
 
 
 @pytest.fixture
-def cc_table():
-    return pd.read_csv(os.path.join(os.path.dirname(__file__), '../sctoolbox/data/', 'mouse_cellcycle_genes.txt'), sep="\t", header=None)
+def s_genes(adata_cc):
+    return adata_cc.var.index[:int(len(adata.var) / 2)]
 
 
 @pytest.fixture
-def s_genes(cc_table):
-    return cc_table[cc_table.loc[:, 1] == "s_genes"][0]
-
-
-@pytest.fixture
-def g2m_genes(cc_table):
-    return cc_table[cc_table.loc[:, 1] == "g2m_genes"][0]
+def g2m_genes(adata_cc):
+    return adata_cc.var.index[int(len(adata.var) / 2):]
 
 
 @pytest.fixture
