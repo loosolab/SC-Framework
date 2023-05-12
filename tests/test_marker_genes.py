@@ -51,7 +51,7 @@ def g2m_genes(cc_table):
 def g2m_file(g2m_genes):
     """ Write a tmp file, which is deleted after usage. """
     g2m_genes += "\n"
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "g2m_genes.txt")
 
@@ -65,7 +65,7 @@ def g2m_file(g2m_genes):
 def s_file(s_genes):
     """ Write a tmp file, which is deleted after usage. """
     s_genes += "\n"
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "s_genes.txt")
 
