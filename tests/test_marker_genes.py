@@ -17,6 +17,18 @@ def adata():
 
     return adata
 
+@pytest.fixture
+def adata_score(adata):
+    """ Prepare adata for scoring test. """
+    
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var['gene'] = adata.var['gene'].astype('str')
+    adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
+    
+    return adata
+
 
 # ------------------------------ TESTS --------------------------------- #
 
@@ -82,26 +94,20 @@ def test_mask_rank_genes(adata):
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
 
 
-@pytest.mark.parametrize("score_name", ["test1", "test2"])
-def test_score_genes(adata, score_name):
+@pytest.mark.parametrize("score_name", ["test1", "test2"],
+                         "gene_set", [adata_score.var.index.to_list()[:50],
+                                      os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt')],
+                         "inplace", [False, True])
+def test_score_genes(adata_score, score_name, gene_set, inplace):
     """ Test if genes are scored and added to adata.obs """
 
-    # set gene names as index instead of ensemble ids
-    adata.var.reset_index(inplace=True)
-    adata.var['gene'] = adata.var['gene'].astype('str')
-    adata.var.set_index('gene', inplace=True)
-    adata.var_names_make_unique()
+    assert score_name not in adata_score.obs.columns
 
-    # test scoring genes with a list
-    if score_name == "test1":
-        gene_set = adata.var.index.to_list()[:50]
-        sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
+    out = sctoolbox.marker_genes.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
 
-        assert score_name in adata.obs.columns
-
-    # test scoring genes with a list in a file
-    elif score_name == "test2":
-        gene_set = os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt')
-        sctoolbox.marker_genes.score_genes(adata, gene_set, score_name=score_name)
-
-        assert score_name in adata.obs.columns
+    if inplace:
+        assert out is None
+        assert score_name in adata_score.obs.columns
+    else:
+        assert score_name not in adata_score.obs.columns
+        assert score_name in out.obs.columns
