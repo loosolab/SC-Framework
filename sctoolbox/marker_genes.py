@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import itertools
+from pathlib import Path
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -507,3 +508,51 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
 
     return cluster2celltype
+
+
+def score_genes(adata, gene_set, score_name='score', inplace=True):
+    """
+    Assign a score to each cell depending on the expression of a set of genes.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to score.
+    gene_set : str or list
+        A list of genes or path to a file containing a list of genes.
+        The txt file should have one gene per row.
+    score_name : str, default "score"
+        Name of the column in obs table where the score will be added.
+    inplace : bool, default True
+        Adds the new column to the original anndata object.
+
+    Returns
+    -------
+    anndata.Anndata or None :
+        If inplace is False, return a copy of anndata object with the new column in the obs table.
+    """
+
+    if not inplace:
+        adata = adata.copy()
+
+    # check if list is in a file
+    if isinstance(gene_set, str):
+        # check if file exists
+        if Path(gene_set).is_file():
+            gene_set = [x.strip() for x in open(gene_set)]
+        else:
+            raise FileNotFoundError('The list was not found!')
+
+    # check if gene set is a list
+    elif not isinstance(gene_set, list):
+        raise ValueError('Please provide genes either as a list or txt file!')
+
+    # scale data
+    sdata = sc.pp.scale(adata, copy=True)
+
+    # Score the cells
+    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name)
+    # add score to adata.obs
+    adata.obs[score_name] = sdata.obs[score_name]
+
+    return adata if not inplace else None

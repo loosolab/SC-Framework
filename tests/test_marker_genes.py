@@ -18,6 +18,24 @@ def adata():
     return adata
 
 
+@pytest.fixture
+def adata_score(adata):
+    """ Prepare adata for scoring test. """
+
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var['gene'] = adata.var['gene'].astype('str')
+    adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
+
+    return adata
+
+
+@pytest.fixture
+def gene_set(adata_score):
+    return adata_score.var.index.to_list()[:50]
+
+
 # ------------------------------ TESTS --------------------------------- #
 
 def test_get_chromosome_genes():
@@ -80,3 +98,26 @@ def test_mask_rank_genes(adata):
     for key in tables:
         table_names = tables[key]["names"].tolist()
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
+
+
+@pytest.mark.parametrize(
+    "score_name, gene_set, inplace",
+    [
+        ("test1", "gene_set", False),
+        ("test2", os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt'), True)
+    ],
+    indirect=["gene_set"]
+)
+def test_score_genes(adata_score, score_name, gene_set, inplace):
+    """ Test if genes are scored and added to adata.obs """
+
+    assert score_name not in adata_score.obs.columns
+
+    out = sctoolbox.marker_genes.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
+
+    if inplace:
+        assert out is None
+        assert score_name in adata_score.obs.columns
+    else:
+        assert score_name not in adata_score.obs.columns
+        assert score_name in out.obs.columns
