@@ -33,24 +33,22 @@ def adata_cc(adata):
 
 @pytest.fixture
 def s_genes(adata_cc):
-    return adata_cc.var.index[:int(len(adata_cc.var) / 2)]
+    return adata_cc.var.index[:int(len(adata_cc.var) / 2)].tolist()
 
 
 @pytest.fixture
 def g2m_genes(adata_cc):
-    return adata_cc.var.index[int(len(adata_cc.var) / 2):]
+    return adata_cc.var.index[int(len(adata_cc.var) / 2):].tolist()
 
 
 @pytest.fixture
 def g2m_file(g2m_genes):
     """ Write a tmp file, which is deleted after usage. """
-    g2m_genes += "\n"
-
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "g2m_genes.txt")
 
         with open(tmp, "w") as f:
-            f.writelines(g2m_genes)
+            f.writelines([g + "\n" for g in g2m_genes])
 
         yield tmp
 
@@ -58,13 +56,11 @@ def g2m_file(g2m_genes):
 @pytest.fixture
 def s_file(s_genes):
     """ Write a tmp file, which is deleted after usage. """
-    s_genes += "\n"
-
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "s_genes.txt")
 
         with open(tmp, "w") as f:
-            f.writelines(s_genes)
+            f.writelines([g + "\n" for g in s_genes])
 
         yield tmp
 
