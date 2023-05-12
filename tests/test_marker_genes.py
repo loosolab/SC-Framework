@@ -142,7 +142,7 @@ def test_mask_rank_genes(adata):
 @pytest.mark.parametrize(
     "species, s_genes, g2m_genes, inplace",
     [
-        ("mouse", None, None, False),
+        # ("mouse", None, None, False),  # can not test on species as no cell cycle genes are present in testdata
         (None, "s_file", "g2m_file", True),
         (None, "s_genes", "g2m_genes", True),
         ("unicorn", None, None, False)
