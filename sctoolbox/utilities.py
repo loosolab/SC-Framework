@@ -5,8 +5,6 @@ import os
 import re
 import scanpy as sc
 import importlib
-import sctoolbox.checker as ch
-import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 import matplotlib
 import time
@@ -14,6 +12,11 @@ import shutil
 import tempfile
 import warnings
 from scipy.sparse import issparse
+import getpass
+from datetime import datetime
+import yaml
+
+from sctoolbox import settings
 import apybiomart
 import requests
 import subprocess
@@ -24,7 +27,98 @@ from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 
 
+def settings_from_config(config_file, key=None):
+    """
+    Set settings from a config file in yaml format.
+
+    Parameters
+    ----------
+    config_file : str
+        Path to the config file.
+    key : str, optional
+        If given, get settings for a specific key.
+
+    Returns
+    -------
+    None
+        Settings are set in sctoolbox.settings.
+    """
+
+    # Read yaml file
+    with open(config_file, "r") as f:
+        config_dict = yaml.safe_load(f)
+
+    if key is not None:
+        try:
+            config_dict = config_dict[key]
+        except KeyError:
+            raise KeyError(f"Key {key} not found in config file {config_file}")
+
+    # Set settings
+    for key, value in config_dict.items():
+        setattr(settings, key, value)
+
+
+def get_user():
+    """ Get the name of the current user.
+
+    Returns
+    -------
+    str
+        The name of the current user.
+    """
+
+    try:
+        username = getpass.getuser()
+    except Exception:
+        username = "unknown"
+
+    return username
+
+
+def get_datetime():
+    """ Get a string with the current date and time for logging.
+
+    Returns
+    -------
+    str
+        A string with the current date and time in the format dd/mm/YY H:M:S
+    """
+
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
+
+    return dt_string
+
+
+def initialize_uns(adata, keys=[]):
+    """ Initialize the sctoolbox keys in adata.uns.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An AnnData object.
+    keys : str or list of str, optional
+        Additional keys to be initialized in adata.uns['sctoolbox'].
+
+    Returns
+    -------
+    None
+        keys are initialized in adata.uns['sctoolbox'].
+    """
+    if "sctoolbox" not in adata.uns:
+        adata.uns["sctoolbox"] = {}
+
+    # Add additional keys if needed
+    if isinstance(keys, str):
+        keys = [keys]
+
+    for key in keys:
+        if key not in adata.uns["sctoolbox"]:
+            adata.uns["sctoolbox"][key] = {}
+
 # ------------------ Packages and tools ----------------- #
+
 
 def get_package_versions():
     """
@@ -536,15 +630,18 @@ def save_figure(path, dpi=600):
     Parameters
     ----------
     path : str
-        Path to the file to be saved.
-        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff
+        Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_dir' + 'sctoolbox.settings.figure_prefix' as prefix.
+        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff.
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
     """
+
+    # 'path' can be None if save_figure was used within a plotting function, and the internal 'save' was "None".
+    # This moves the checking to the save_figure function rather than each plotting function.
     if path is not None:
-        create_dir(path)  # recursively create parent dir if needed
-        plt.savefig(path, dpi=dpi, bbox_inches="tight")
+        output_path = settings.full_figure_prefix + path
+        plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
 
 
 def vprint(verbose=True):
@@ -592,113 +689,50 @@ def check_module(module):
         raise ImportError(s)
 
 
-def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
+def load_h5ad(path):
     """
-    Load anndata from a previous notebook.
+    Load an anndata object from .h5ad file.
 
     Parameters
     ----------
-    is_from_previous_note : boolean, default True
-        Set to False if you want to load an anndata object from other source rather than scRNAseq autom workflow.
-    which_notebook : int, default None
-        The number of the notebook that generated the anndata object you want to load
-        If is_from_previous_note=False, this parameter will be ignored
-    data_to_evaluate : str, default None
-        This is the anndata.obs column (`anndata.obs[data_to_evaluate]`) to be used for analysis, e.g. "condition"
+    path : str
+        Name of the file to load the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_input_dir' + 'sctoolbox.settings.adata_input_prefix' as prefix.
 
     Returns
     -------
     anndata.AnnData :
         Loaded anndata object.
     """
-    def loading_adata(NUM):
-        """
-        Loading information of pathway where is stored the anndata object.
 
-        Parameters
-        ----------
-        NUM = int
-            The number of a particular notebook that created the latest anndata object.
+    adata_input = settings.full_adata_input_prefix + path
+    adata = sc.read_h5ad(filename=adata_input)
 
-        Returns
-        -------
-        Str : The name of the latest anndata object with its pathway.
-        """
-        pathway = ch.fetch_info_txt()
-        files = os.listdir(''.join(pathway))
-        loading = "anndata_" + str(NUM)
-        if any(loading in items for items in files):
-            for file in files:
-                if loading in file:
-                    anndata_file = file
-        else:  # In case the user provided an inexistent anndata number
-            sys.exit(loading + " was not found in " + pathway)
+    print(f"The adata object was loaded from: {adata_input}")
 
-        return ''.join(pathway) + "/" + anndata_file
-
-    # Messages and others
-    m1 = "You choose is_from_previous_note=True. Then, set an which_notebook=[INT], which INT is the number of the notebook that generated the anndata object you want to load."
-    m2 = "Set the data_to_evaluate=[STRING], which STRING is anndata.obs[STRING] to be used for analysis, e.g. condition."
-    m3 = "Paste the pathway and filename where your anndata object deposited."
-    m4 = "Correct the pathway or filename or type q to quit."
-    opt1 = ["q", "quit"]
-
-    if data_to_evaluate is not None:
-        if isinstance(data_to_evaluate, str) is False:  # Close if the anndata.obs is not correct
-            sys.exit(m2)
-
-    if is_from_previous_note is True:  # Load anndata object from previous notebook
-        try:
-            ch.check_notebook(which_notebook)
-        except TypeError:
-            sys.exit(m1)
-
-        file_path = loading_adata(which_notebook)
-        data = sc.read_h5ad(filename=file_path)  # Loading the anndata
-
-        print(f"Source: {file_path}")
-
-        if data_to_evaluate is not None:
-            cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
-
-        return data
-
-    elif is_from_previous_note is False:  # Load anndata object from other source
-        answer = input(m3)
-        while os.path.isfile(answer) is False:  # False if pathway is wrong
-            if answer.lower() in opt1:
-                sys.exit("You quit and lost all modifications :(")
-            print(m4)
-            answer = input(m4)
-        data = sc.read_h5ad(filename=answer)  # Loading the anndata
-
-        print(f"Source: {file_path}")
-
-        if data_to_evaluate is not None:
-            cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
-        cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0])  # Annotating the anndata path
-
-        return data
+    return adata
 
 
-def saving_anndata(anndata, current_notebook):
+def save_h5ad(adata, path):
     """
-    Save your anndata object
+    Save an anndata object to an .h5ad file.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    adata : anndata.AnnData
         Anndata object to save.
-    current_notebook : int
-        The number of the current notebook.
+    path : str
+        Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
-    if not isinstance(current_notebook, int):
-        raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
-    adata_output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Run_id"] + ".h5ad")
-    anndata.write(filename=adata_output)
+    # Log user to adata.uns
+    initialize_uns(adata, "user")
+    adata.uns["sctoolbox"]["user"].update({get_user(): get_datetime()})  # overwrites existing entry for each user
 
-    print(f"Your new anndata object is saved here: {adata_output}")
+    # Save adata
+    adata_output = settings.full_adata_output_prefix + path
+    adata.write(filename=adata_output)
+
+    print(f"The adata object was saved to: {adata_output}")
 
 
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
