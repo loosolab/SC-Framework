@@ -143,7 +143,7 @@ notebooks:
 
 # Build documentation
 build-pages:
-  stage: deploy
+  stage: build
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
