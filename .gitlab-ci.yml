@@ -192,7 +192,6 @@ deploy-pages-commit:
 deploy-pages-main:
   stage: deploy
   needs: ["build-pages"]
-    - build-pages
   script:
     - mv docs/build/html/ public/
   artifacts:
