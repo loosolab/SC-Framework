@@ -187,6 +187,7 @@ deploy-pages-MR:
 # Deploy pages for a commit without a MR
 deploy-pages-commit:
   stage: deploy
+  needs:
     - job: "build-pages"
       artifacts: true
   inherit:
