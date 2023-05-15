@@ -8,6 +8,8 @@ import importlib
 import matplotlib.pyplot as plt
 import matplotlib
 import time
+import shutil
+import tempfile
 import warnings
 from scipy.sparse import issparse
 import getpass
@@ -15,6 +17,9 @@ from datetime import datetime
 import yaml
 
 from sctoolbox import settings
+import apybiomart
+import requests
+import subprocess
 
 from os.path import join, dirname, exists
 from pathlib import Path
@@ -112,6 +117,7 @@ def initialize_uns(adata, keys=[]):
         if key not in adata.uns["sctoolbox"]:
             adata.uns["sctoolbox"][key] = {}
 
+# ------------------ Packages and tools ----------------- #
 
 def get_package_versions():
     """
@@ -142,6 +148,64 @@ def get_package_versions():
 
     return package_dict
 
+
+def get_binary_path(tool):
+    """ Get path to a binary commandline tool. Looks either in the local dir, on path or in the dir of the executing python binary.
+
+    Parameters
+    ----------
+    tool : str
+        Name of the commandline tool to be found.
+
+    Returns
+    -------
+    str :
+        Full path to the tool.
+    """
+
+    python_dir = os.path.dirname(sys.executable)
+    if os.path.exists(tool):
+        tool_path = f"./{tool}"
+
+    else:
+
+        # Check if tool is available on path
+        tool_path = shutil.which(tool)
+        if tool_path is None:
+
+            # Search for tool within same folder as python (e.g. in an environment)
+            python_dir = os.path.dirname(sys.executable)
+            tool_path = shutil.which(tool, path=python_dir)
+
+    # Check that tool is executable
+    if tool_path is None or shutil.which(tool_path) is None:
+        raise ValueError(f"Could not find an executable for {tool} on path.")
+
+    return tool_path
+
+
+def run_cmd(cmd):
+    """
+    Run a commandline command.
+
+    Parameters
+    ----------
+    cmd : str
+        Command to be run.
+    """
+    try:
+        subprocess.check_call(cmd, shell=True)
+        print(f"Command '{cmd}' ran successfully!")
+    except subprocess.CalledProcessError as e:
+        # print(f"Error running command '{cmd}': {e}")
+        if e.output is not None:
+            print(f"Command standard output: {e.output.decode('utf-8')}")
+        if e.stderr is not None:
+            print(f"Command standard error: {e.stderr.decode('utf-8')}")
+        raise e
+
+
+# ------------------- Multiprocessing ------------------- #
 
 def get_pbar(total, description):
     """
@@ -529,8 +593,18 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
+def get_temporary_filename(tempdir="."):
+    """ Get a writeable temporary filename by creating a temporary file and closing it again. """
+
+    filehandle = tempfile.NamedTemporaryFile(mode="w", dir=tempdir, delete=True)
+    filename = filehandle.name
+    filehandle.close()  # remove the file again
+
+    return filename
+
+
 def remove_files(file_list):
-    """ Delete all files in a file list. Prints a warning if deletion was not possible """
+    """ Delete all files in a file list. Prints a warning if deletion was not possible. """
 
     for f in file_list:
         try:
@@ -979,3 +1053,215 @@ def add_expr_to_obs(adata, gene):
     else:
         idx = np.argwhere(boolean)[0][0]
         adata.obs[gene] = adata.X[:, idx].todense().A1
+
+
+# -------------------- bio utils ------------------- #
+# section could be its own file
+
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+    """
+    Get the organism name to the given Ensembl ID.
+
+    Parameters
+    ----------
+    ensembl_id : str
+    Any Ensembl ID. E.g. ENSG00000164690
+    host : str
+    Ensembl server address.
+
+    Returns
+    -------
+    str :
+        Organism assigned to the Ensembl ID
+    """
+    # this will redirect
+    url = f"{host}{ensembl_id}"
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        raise ConnectionError(f"Server response: {response.status_code}.\n With link {url}. Is the host/ path correct?")
+
+    # get redirect url
+    # e.g. http://www.ensembl.org/Homo_sapiens/Gene/...
+    # get species name from url
+    species = response.url.split("/")[3]
+
+    # invalid id
+    if species == "Multi":
+        raise ValueError(f"Organism returned as '{species}' ({response.url}).\n Usually due to invalid Ensembl ID. Make sure to use an Ensembl ID as described in http://www.ensembl.org/info/genome/stable_ids/index.html")
+
+    return species
+
+
+def gene_id_to_name(ids, species):
+    """
+    Get Ensembl gene names to Ensembl gene id.
+
+    Parameters
+    ----------
+    ids : list of str
+        List of gene ids. Set to `None` to return all ids.
+    species : str
+        Species matching the gene ids. Set to `None` for list of available species.
+
+    Returns
+    -------
+    pandas.DataFrame :
+        DataFrame with gene ids and matching gene names.
+    """
+    if not all(id.startswith("ENS") for id in ids):
+        raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
+
+    avail_species = sorted([s.split("_gene_ensembl")[0] for s in apybiomart.find_datasets()["Dataset_ID"]])
+
+    if species is None or species not in avail_species:
+        raise ValueError("Invalid species. Available species are: ", avail_species)
+
+    id_name_mapping = apybiomart.query(
+        attributes=["ensembl_gene_id", "external_gene_name"],
+        dataset=f"{species}_gene_ensembl",
+        filters={}
+    )
+
+    if ids:
+        # subset to given ids
+        return id_name_mapping[id_name_mapping["Gene stable ID"].isin(ids)]
+
+    return id_name_mapping
+
+
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
+    """
+    Add gene names to adata.var.
+
+    Parameters
+    ----------
+    adata : scanpy.AnnData
+        AnnData with gene ids.
+    id_col_name : str, default None
+        Name of the column in `adata.var` that stores the gene ids.
+    index : boolean, default False
+        Use index of `adata.var` instead of column name speciefied in `id_col_name`.
+    name_col : str, default "Gene name"
+        Name of the column added to `adata.var`.
+    species : str, default "auto"
+        Species of the dataset. On default, species is inferred based on gene ids.
+    inplace : boolean, default True
+        Whether to modify adata inplace.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        AnnData object with gene names.
+    """
+    if not id_col_name and not index:
+        raise ValueError("Either set parameter id_col_name or index.")
+    elif not index and id_col_name not in adata.var.columns:
+        raise ValueError("Invalid id column name. Name has to be a column found in adata.var.")
+
+    if not inplace:
+        adata = adata.copy()
+
+    # get gene ids
+    if index:
+        gene_ids = list(adata.var.index)
+    else:
+        gene_ids = list(adata.var[id_col_name])
+
+    # infer species from gene id
+    if species == "auto":
+        ensid = gene_ids[0]
+
+        species = get_organism(ensid)
+
+        # bring into biomart format
+        # first letter of all words but complete last word e.g. hsapiens, mmusculus
+        spl_name = species.lower().split("_")
+        species = "".join(map(lambda x: x[0], spl_name[:-1])) + spl_name[-1]
+
+        print(f"Identified species as {species}")
+
+    # get id <-> name table
+    id_name_table = gene_id_to_name(ids=gene_ids, species=species)
+
+    # create new .var and replace in adata
+    new_var = pd.merge(
+        left=adata.var,
+        right=id_name_table.set_index("Gene stable ID"),
+        left_on=id_col_name,
+        left_index=index,
+        right_index=True,
+        how="left"
+    )
+    new_var["Gene name"].fillna('', inplace=True)
+    new_var.rename(columns={"Gene name": name_col}, inplace=True)
+
+    adata.var = new_var
+
+    if not inplace:
+        return adata
+
+
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
+    """
+    Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
+
+    Parameters
+    ----------
+    adata: scanpy.AnnData
+        AnnData object
+    column: str
+        Column name in adata.var
+    unified_names: str, default "unified_names"
+        Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
+    species : str, default "auto"
+        Species of the dataset. On default, species is inferred based on gene ids.
+    inplace: boolean, default True
+        Whether to modify adata or return a copy.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        AnnData object with modified gene column.
+    """
+    if column not in adata.var.columns:
+        raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
+
+    if not inplace:
+        adata = adata.copy()
+
+    # check for ensembl ids
+    ensids = [el for el in adata.var[column] if el.startswith("ENS")]
+
+    if not ensids:
+        raise ValueError(f"No Ensembl IDs in adata.var['{column}'] found.")
+
+    # infer species from gene id
+    if species == "auto":
+        ensid = ensids[0]
+
+        species = get_organism(ensid)
+
+        # bring into biomart format
+        # first letter of all words but complete last word e.g. hsapiens, mmusculus
+        spl_name = species.lower().split("_")
+        species = "".join(map(lambda x: x[0], spl_name[:-1])) + spl_name[-1]
+
+        print(f"Identified species as {species}")
+
+    # get id <-> name table
+    id_name_table = gene_id_to_name(ids=ensids, species=species)
+
+    count = 0
+    for index, row in adata.var.iterrows():
+        if row[column] in id_name_table['Gene stable ID'].values:
+            count += 1
+
+            # replace gene id with name
+            adata.var.at[index, unified_column] = id_name_table.at[id_name_table.index[id_name_table["Gene stable ID"] == row[column]][0], "Gene name"]
+        else:
+            adata.var.at[index, unified_column] = adata.var.at[index, column]
+    print(f'{count} ensembl gene ids have been replaced with gene names')
+
+    if not inplace:
+        return adata

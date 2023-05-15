@@ -156,6 +156,8 @@ class Annotator(object):
 
             # filter on logfc and pvalue
             newexps = exps[[ncol, lcol, pcol]][(exps[lcol] >= self.args.foldchange) & (exps[pcol] <= self.args.pvalue)]
+            if newexps.empty:
+                raise ValueError('Dataframe empty after filtering. Try loosening the filter criteria.')
             print("Cluster " + cname + " Gene number:", newexps[ncol].unique().shape[0])
 
             # Calculate the H values

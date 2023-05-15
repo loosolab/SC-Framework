@@ -4,6 +4,91 @@ import re
 import os
 import multiprocessing
 import sctoolbox.utilities as utils
+import warnings
+
+
+def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False):
+    """
+    Subset a bam file based on a list of barcodes.
+
+    Parameters
+    ----------
+    bam_in : str
+        Path to input bam file.
+    bam_out : str
+        Path to output bam file.
+    barcodes : list of str
+        List of barcodes to keep.
+    read_tag : str, default "CB"
+        Tag in bam file to use for barcode.
+    pysam_threads : int, default 4
+        Number of threads to use for pysam.
+    overwrite : bool, default False
+        Overwrite output file if it exists.
+    """
+    # check then load modules
+    utils.check_module("tqdm")
+    if utils._is_notebook() is True:
+        from tqdm import tqdm_notebook as tqdm
+    else:
+        from tqdm import tqdm
+    utils.check_module("pysam")
+
+    # Create output dir if needed
+    utils.create_dir(bam_out)
+
+    if os.path.exists(bam_out) and overwrite is False:
+        warnings.warn(f"Output file {bam_out} exists. Skipping.")
+        return
+
+    # Open files
+    bam_in_obj = open_bam(bam_in, "rb", verbosity=0, threads=pysam_threads)
+    bam_out_obj = open_bam(bam_out, "wb", template=bam_in_obj, threads=pysam_threads, verbosity=0)
+
+    barcodes = set(barcodes)
+
+    # Update progress based on total number of reads
+    total = get_bam_reads(bam_in_obj)
+    print(' ', end='', flush=True)  # hack for making progress bars work in notebooks; https://github.com/tqdm/tqdm/issues/485#issuecomment-473338308
+    pbar_reading = tqdm(total=total, desc="Reading... ", unit="reads")
+    pbar_writing = tqdm(total=total, desc="% written from input", unit="reads")
+    step = int(total / 10000)  # 10000 total updates
+
+    # Iterate over reads
+    writing_i = 0
+    reading_i = 0
+    written = 0
+    for read in bam_in_obj:
+        reading_i += 1
+        if read.has_tag(read_tag):
+            bc = read.get_tag(read_tag)
+        else:
+            bc = None
+
+        # Update step manually - there is an overhead to update per read with hundreds of million reads
+        if reading_i == step:
+            pbar_reading.update(step)
+            pbar_reading.refresh()
+            reading_i = 0
+
+        # Write read to output bam if barcode is in barcodes
+        if bc in barcodes:
+            bam_out_obj.write(read)
+            written += 1
+
+            if writing_i == step:
+                pbar_writing.update(step)
+                pbar_writing.refresh()
+                writing_i = 0
+
+    # close progressbars
+    pbar_reading.close()
+    pbar_writing.close()
+
+    # Close bamfiles
+    bam_in_obj.close()
+    bam_out_obj.close()
+    print(f"Wrote {written} reads to output bam")
 
 
 def split_bam_clusters(adata,
@@ -382,6 +467,7 @@ def _monitor_progress(progress_queue,
         # update pbar depending on the task
         if task == "read":
             pbar.update(value)
+            pbar.refresh()
 
         elif task == "sent":
             pbar.total += value
@@ -389,6 +475,7 @@ def _monitor_progress(progress_queue,
 
         elif task == "written":
             pbar.update(value)
+            pbar.refresh()
 
         elif task == "done":
             writers_running -= 1
@@ -554,3 +641,100 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
     except Exception as e:
         print(e.message)
         raise e
+
+
+def bam_to_bigwig(bam,
+                  output=None,
+                  scale=True,
+                  overwrite=True,
+                  tempdir=".",
+                  remove_temp=True,
+                  bedtools_path=None,
+                  bgtobw_path=None):
+    """
+    Convert reads in a bam-file to bigwig format.
+
+    Parameters
+    ----------
+    bam : str
+        Path to bam file.
+    output : str, default None
+        Path to output file. If None, output is written to same directory as bam file with same name and .bw extension.
+    scale : bool, default True
+        Scale output depth to reads per million mapped reads.
+    overwrite : bool, default True
+        Overwrite output file if it already exists.
+    tempdir : str, default "."
+        Path to directory where temporary files are written.
+    remove_temp : bool, default True
+        Remove temporary files after conversion.
+    bedtools_path : str, default None
+        Path to bedtools binary. If None, the function will search for the binary in the path.
+    bgtobw_path : str, default None
+        Path to bedGraphToBigWig binary. If None, the function will search for the binary in the path.
+
+    Returns
+    -------
+    str : Path to output file.
+    """
+
+    # Set output name and check if bigwig already exists
+    if output is None:
+        output = bam.replace(".bam", ".bw")
+
+    if os.path.exists(output) and overwrite is False:
+        warnings.warn("Output file already exists. Set overwrite=True to overwrite.")
+        return output
+
+    # Check required modules
+    utils.check_module("pysam")
+    import pysam
+
+    if bedtools_path is None:
+        bedtools_path = utils.get_binary_path("bedtools")
+
+    if bgtobw_path is None:
+        bgtobw_path = utils.get_binary_path("bedGraphToBigWig")
+
+    # Get size of genome and write a chromsizes file
+    bamobj = pysam.AlignmentFile(bam, "rb")
+    chromsizes = {chrom: bamobj.lengths[i] for i, chrom in enumerate(bamobj.references)}
+    chromsizes_file = utils.get_temporary_filename(tempdir)
+
+    with open(chromsizes_file, "w") as f:
+        for chrom, size in chromsizes.items():
+            f.write(f"{chrom}\t{size}\n")
+
+    # Get number of mapped reads in file for normalization
+    print("Getting scaling factor")
+    scaling_factor = 0
+    if scale:
+        n_reads = get_bam_reads(bamobj)
+        scaling_factor = 1 / (n_reads / 1e6)
+        scaling_factor = round(scaling_factor, 5)
+    bamobj.close()
+
+    # Convert bam to bedgraph
+    bedgraph_out = utils.get_temporary_filename(tempdir)
+    cmd = f"{bedtools_path} genomecov -bg -ibam {bam} > {bedgraph_out}"
+    print("Running: " + cmd)
+    utils.run_cmd(cmd)
+
+    # Sort and scale input
+    bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
+    cmd = f"sort -k1,1 -k2,2n -T {tempdir} {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
+    print("Running: " + cmd)
+    utils.run_cmd(cmd)
+
+    # Convert bedgraph to bigwig
+    cmd = f"{bgtobw_path} {bedgraph_out_sorted} {chromsizes_file} {output}"
+    print("Running: " + cmd)
+    utils.run_cmd(cmd)
+
+    # Remove all temp files
+    if remove_temp is True:
+        utils.remove_files([chromsizes_file, bedgraph_out, bedgraph_out_sorted])
+
+    print(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
+
+    return output
