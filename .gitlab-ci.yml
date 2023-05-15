@@ -158,10 +158,10 @@ build-pages:
     paths:
       - docs/build/html/
   rules:  # if manual or commit to dev
-    - when: manual
-      allow_failure: True
     - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
       allow_failure: False  # dev not allowed to fail
+    - when: manual
+      allow_failure: True
 
 #Deploy documentation if it was the dev branch
 deploy-pages:
