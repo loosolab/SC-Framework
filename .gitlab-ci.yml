@@ -111,49 +111,12 @@ notebook-output-check:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
-# Build documentation
-build-pages:
-  stage: deploy
-  tags:
-    - coverage
-  script:
-    - apt-get update -qq && apt-get install -qq -y pandoc
-    - pip install sphinx sphinx-rtd-theme
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - cd docs
-    - make html
-  environment:
-    name: pages/$CI_COMMIT_BRANCH
-    url: "https://gitlab.gwdg.de/loosolab/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/build/html/index.html"
-    #auto_stop_in: 5 mins
-  artifacts:
-    paths:
-      - build/html/
-  rules:  # if manual or commit to dev
-    - when: manual
-      allow_failure: True
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
-
-#Deploy documentation if it was the dev branch
-deploy-pages:
-  dependencies:
-    - build-pages
-  script:
-    - mv build/html/ ../public/
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
-      allow_failure: False  # dev not allowed to fail
-
 # Test notebooks when code is pushed to main
 notebooks:
   image: continuumio/miniconda3:latest
   inherit:
     default: false
-  stage: deploy
+  stage: test
   tags:
     - gwdg
     - gwdg-shared
@@ -172,3 +135,43 @@ notebooks:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
+
+
+# ----------------------------- Gitlab pages ---------------------------------#
+
+# Build documentation
+build-pages:
+  stage: deploy
+  script:
+    - apt-get update -qq && apt-get install -qq -y pandoc
+    - pip install sphinx sphinx-rtd-theme
+    - pip install nbsphinx
+    - pip install nbsphinx_link
+    - cd docs
+    - make html
+  environment:
+    name: pages/$CI_COMMIT_BRANCH
+    url: "https://gitlab.gwdg.de/loosolab/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/build/html/index.html"
+    #auto_stop_in: 5 mins
+  artifacts:
+    paths:
+      - build/html/
+  rules:  # if manual or commit to dev
+    - when: manual
+      allow_failure: True
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+      allow_failure: False  # dev not allowed to fail
+
+#Deploy documentation if it was the dev branch
+deploy-pages:
+  stage: deploy
+  dependencies:
+    - build-pages
+  script:
+    - mv build/html/ ../public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+      allow_failure: False  # dev not allowed to fail
