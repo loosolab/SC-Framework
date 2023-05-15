@@ -155,7 +155,7 @@ build-pages:
     #auto_stop_in: 5 mins
   artifacts:
     paths:
-      - build/html/
+      - docs/build/html/
   rules:  # if manual or commit to dev
     - when: manual
       allow_failure: True
