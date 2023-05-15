@@ -157,14 +157,38 @@ build-pages:
   artifacts:
     paths:
       - docs/build/html/
-  rules:  # if manual or commit to dev
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
-      allow_failure: False  # dev not allowed to fail
-    - when: manual
-      allow_failure: True
+  #rules:  # if manual or commit to dev
+  #  - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+  #   allow_failure: False  # dev not allowed to fail
+  # - when: manual
+  #   allow_failure: True
+
+deploy-pages-MR:
+  stage: deploy
+  dependencies:
+    - build-pages
+  environment:
+    name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  script: 
+    - mv docs/build/html/ public/
+  rules:
+    when: manual
+
+deploy-pages-commit:
+  stage: deploy
+  dependencies:
+    - build-pages
+  environment:
+    name: pages/$CI_COMMIT_BRANCH
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  script: 
+    - mv docs/build/html/ public/
+  rules:
+    when: manual
 
 #Deploy documentation if it was the dev branch
-deploy-pages:
+deploy-pages-main:
   stage: deploy
   dependencies:
     - build-pages
