@@ -39,6 +39,7 @@ default:
     - pip install numpy  # resolve dependencies for diffexpr
     - pip install pandas # resolve dependencies for diffexpr
     - pip install .[all]
+  
 
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
@@ -143,7 +144,7 @@ notebooks:
 
 # Build documentation
 build-pages:
-  stage: build
+  stage: deploy
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
@@ -165,32 +166,32 @@ build-pages:
 
 deploy-pages-MR:
   stage: deploy
-  dependencies:
-    - build-pages
+  needs: ["build-pages"]
   environment:
     name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   script: 
-    - mv docs/build/html/ public/
+    - echo "deploy"
   rules:
-    - when: manual
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" #all MRs but dev can be triggered manually
+      when: manual
 
 deploy-pages-commit:
   stage: deploy
-  dependencies:
-    - build-pages
+  needs: ["build-pages"]
   environment:
     name: pages/$CI_COMMIT_BRANCH
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   script: 
-    - mv docs/build/html/ public/
+    - echo "deploy" #mv docs/build/html/ public/
   rules:
-    - when: manual
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"  # commits without MR can be triggered manually
+      when: manual
 
 #Deploy documentation if it was the dev branch
 deploy-pages-main:
   stage: deploy
-  dependencies:
+  needs: ["build-pages"]
     - build-pages
   script:
     - mv docs/build/html/ public/
