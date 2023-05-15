@@ -169,7 +169,7 @@ deploy-pages:
   dependencies:
     - build-pages
   script:
-    - mv build/html/ ../public/
+    - mv docs/build/html/ public/
   artifacts:
     paths:
       - public
