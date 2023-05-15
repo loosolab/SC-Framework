@@ -271,9 +271,10 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
             group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / n_out_group
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 
-            # Add additional columns to table
-            if len(var_columns) > 0:
-                group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
+    # Add additional columns to table
+    if len(var_columns) > 0:
+        for group in group_tables:
+            group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
     # If chosen: Save tables to joined excel
     if save_excel is not None:
