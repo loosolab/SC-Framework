@@ -40,6 +40,8 @@ setup(
         'louvain',
         'IPython',
         'openpyxl',
+        'apybiomart',
+        'requests',
         'ratelimiter',
         'python-gitlab'
     ],
