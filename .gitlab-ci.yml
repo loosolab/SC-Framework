@@ -173,7 +173,7 @@ deploy-pages-MR:
   script: 
     - mv docs/build/html/ public/
   rules:
-    when: manual
+    - when: manual
 
 deploy-pages-commit:
   stage: deploy
@@ -185,7 +185,7 @@ deploy-pages-commit:
   script: 
     - mv docs/build/html/ public/
   rules:
-    when: manual
+    - when: manual
 
 #Deploy documentation if it was the dev branch
 deploy-pages-main:
