@@ -165,6 +165,7 @@ build-pages:
   # - when: manual
   #   allow_failure: True
 
+# Deploy pages for a MR
 deploy-pages-MR:
   stage: deploy
   needs: ["build-pages"]
@@ -177,6 +178,7 @@ deploy-pages-MR:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" #all MRs but dev can be triggered manually
       #when: manual
 
+# Deploy pages for a commit without a MR
 deploy-pages-commit:
   stage: deploy
   needs: ["build-pages"]
@@ -189,12 +191,14 @@ deploy-pages-commit:
     - if: $CI_PIPELINE_SOURCE != "merge_request_event" && $CI_COMMIT_BRANCH != "dev"  # commits without MR can be triggered manually
       #when: manual
 
-#Deploy documentation if it was the dev branch
+# Deploy documentation to public if it was the dev branch
 deploy-pages-main:
   stage: deploy
   needs: ["build-pages"]
   script:
-    - mv docs/build/html/ public/
+    - ls -l
+    - ls -l docs/
+    - mv -f docs/build/html/ public/
   artifacts:
     paths:
       - public
