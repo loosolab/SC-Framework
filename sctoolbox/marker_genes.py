@@ -9,6 +9,7 @@ import itertools
 import warnings
 from anndata import ImplicitModificationWarning
 from pathlib import Path
+from importlib.resources import files
 
 import sctoolbox.utilities as utils
 import sctoolbox.creators as creators
@@ -339,7 +340,8 @@ def run_rank_genes(adata, groupby,
     # if not isinstance(adata, AnnData):
     #     raise ValueError("adata must be an AnnData object.")
 
-    adata.uns['log1p'] = {'base': None}  # set log1p base to None to avoid error in rank_genes_groups
+    if "log1p" in adata.uns:
+        adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
     # Check number of groups in groupby
     if len(adata.obs[groupby].cat.categories) < 2:
@@ -608,14 +610,126 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     return cluster2celltype
 
 
+def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
+    """
+    Assign a score and a phase to each cell depending on the expression of cell cycle genes.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to predict cell cycle on.
+    species : str
+        The species of data. Available species are: human, mouse, rat and zebrafish.
+        If both s_genes and g2m_genes are given, set species=None,
+        otherwise species is ignored.
+    s_genes : str or list, default None
+        If no species is given or desired species is not supported, you can provide
+        a list of genes for the S-phase or a txt file containing one gene in each row.
+        If only s_genes is provided and species is a supported input, the default
+        g2m_genes list will be used, otherwise the function will not run.
+    g2m_genes : str or list, default None
+        If no species is given or desired species is not supported, you can provide
+        a list of genes for the G2M-phase or a txt file containing one gene per row.
+        If only g2m_genes is provided and species is a supported input, the default
+        s_genes list will be used, otherwise the function will not run.
+    inplace : bool, default True
+        if True, add new columns to the original anndata object.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        If inplace is False, return a copy of anndata object with the new column in the obs table.
+    """
+
+    if not inplace:
+        adata = adata.copy()
+
+    # if two lists are given, check if they are lists or paths
+    if s_genes is not None:
+        if isinstance(s_genes, np.ndarray):
+            s_genes = list(s_genes)
+        # check if s_genes is neither a list nor a path
+        if not isinstance(s_genes, str) and not isinstance(s_genes, list):
+            raise ValueError("Please provide a list of genes or a path to a list of genes!")
+        # check if s_genes is a file
+        if isinstance(s_genes, str):
+            # check if file exists
+            if Path(s_genes).is_file():
+                s_genes = utils.read_list_file(s_genes)
+            else:
+                raise FileNotFoundError(f'The list {s_genes} was not found!')
+
+    if g2m_genes is not None:
+        if isinstance(g2m_genes, np.ndarray):
+            g2m_genes = list(g2m_genes)
+        # check if g2m_genes is neither a list nor a path
+        if not isinstance(g2m_genes, str) and not isinstance(g2m_genes, list):
+            raise ValueError("Please provide a list of genes or a path to a list of genes!")
+        # check if g2m_genes is a file
+        if isinstance(g2m_genes, str):
+            # check if file exists
+            if Path(g2m_genes).is_file():
+                g2m_genes = utils.read_list_file(g2m_genes)
+            else:
+                raise FileNotFoundError(f'The list {g2m_genes} was not found!')
+
+    # if two lists are given, use both and ignore species
+    if s_genes is not None and g2m_genes is not None:
+        species = None
+
+    # get gene list for species
+    elif species is not None:
+        species = species.lower()
+
+        # get path of directory where cell cycles gene lists are saved
+        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
+
+        # check if given species is available
+        available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
+        available_species = utils.clean_flanking_strings(available_files)
+        if species not in available_species:
+            raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
+
+        # get cellcylce genes lists
+        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
+        cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
+                                       sep="\t", names=['gene', 'phase']).set_index('gene')
+
+        # if one list is given as input, get the other list from gene lists dir
+        if s_genes is not None:
+            print("g2m_genes list is missing! Using default list instead")
+            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
+        elif g2m_genes is not None:
+            print("s_genes list is missing! Using default list instead")
+            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
+        else:
+            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
+            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
+
+    else:
+        raise ValueError("Please provide either a supported species or lists of genes!")
+
+    # Scale the data before scoring
+    sdata = sc.pp.scale(adata, copy=True)
+
+    # Score the cells by s phase or g2m phase
+    sc.tl.score_genes_cell_cycle(sdata, s_genes=s_genes, g2m_genes=g2m_genes)
+
+    # add results to adata
+    adata.obs['S_score'] = sdata.obs['S_score']
+    adata.obs['G2M_score'] = sdata.obs['G2M_score']
+    adata.obs['phase'] = sdata.obs['phase']
+
+    if not inplace:
+        return adata
+
+
 def score_genes(adata, gene_set, score_name='score', inplace=True):
     """
     Assign a score to each cell depending on the expression of a set of genes.
 
-    Parameters
-    -----------
     adata : anndata.AnnData
-        Anndata object to predict cell cycle on.
+        Anndata object to score.
     gene_set : str or list
         A list of genes or path to a file containing a list of genes.
         The txt file should have one gene per row.
@@ -625,8 +739,8 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
         Adds the new column to the original anndata object.
 
     Returns
-    -----------
-    anndata.Anndata
+    -------
+    anndata.Anndata or None :
         If inplace is False, return a copy of anndata object with the new column in the obs table.
     """
 

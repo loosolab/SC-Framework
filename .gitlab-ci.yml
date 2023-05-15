@@ -18,6 +18,7 @@ cache:
   paths:
     - .cache/pip
     - venv/
+    - public
 
 # Install package for all jobs (unless inherit is false)
 default:
@@ -77,6 +78,8 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - apt-get install bedtools  #needed for some tests
+    - chmod +x scripts/bedGraphToBigWig  # make script executable
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
@@ -95,9 +98,8 @@ test coverage:
       - tests/*.py
       - sctoolbox/*.py
     - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
-    - if: $CI_PIPELINE_SOURCE == "push"  # manual rule for all pushes
-      when: manual
-      allow_failure: True  # the manual rule is allowed to fail
+    - when: manual  
+      allow_failure: True
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
@@ -123,12 +125,22 @@ pages:
     - pip install nbsphinx_link
     - cd docs
     - make html
-    - mv build/html/ ../public/
+    - rm -rf ../public/$CI_COMMIT_BRANCH/  # remove old folder content to overwrite
+    - mkdir -p ../public/$CI_COMMIT_BRANCH/
+    - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
+    - if [ "$CI_COMMIT_BRANCH" == "main" ]; then cp -r ../public/$CI_COMMIT_BRANCH/* ../public/. ; fi  # upper url goes to main
   artifacts:
+    name: "$CI_COMMIT_BRANCH"
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+    - if: $CI_COMMIT_BRANCH == "dev" # always after accepted MR to dev
+      allow_failure: False  # dev not allowed to fail
+    - if: $CI_COMMIT_BRANCH == "main"
+      allow_failure: False
+    - when: manual
+      allow_failure: True
+
 
 # Test notebooks when code is pushed to main
 notebooks:

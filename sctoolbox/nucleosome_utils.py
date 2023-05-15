@@ -7,7 +7,7 @@ import multiprocessing as mp
 from scipy.signal import find_peaks
 
 
-def moving_average(series, adapter=0, n=10):
+def moving_average(series, n=10):
     """
     Moving average filter to smooth out data. This implementation ensures that the smoothed data has no shift and
     local maxima remain at the same position.
@@ -27,20 +27,18 @@ def moving_average(series, adapter=0, n=10):
         Smoothed array
 
     """
-    for i in range(adapter):
-        series = np.insert(series, 0, 0)
 
     list(series)
     smoothed = []
-    for i in range(len(series)):
+    for i in range(len(series)):  # loop over all steps
         sumPerStep = 0
-        if i > n and i <= (len(series) - n):
+        if i > n and i <= (len(series) - n):  # main phase
             for j in range(-n, n):
                 sumPerStep += series[i + j]
             smoothed.append(sumPerStep / (n * 2))
-        elif i > (len(series) - n):
+        elif i > (len(series) - n):  # end phase
             smoothed.append(series[i])
-        elif i < n:
+        elif i <= n:  # init phase
             smoothed.append(series[i])
 
     smoothed = np.array(smoothed)
@@ -79,7 +77,7 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
         # loop over chunks
 
         for dist in series:
-            job = pool.apply_async(moving_average, args=(dist, 0, window_size))
+            job = pool.apply_async(moving_average, args=(dist, window_size))
             jobs.append(job)
         pool.close()
 
@@ -185,7 +183,7 @@ def call_peaks(data, n_threads=4, distance=50, width=10):
         peak_list = job.get()
         peaks.append(peak_list)
 
-    peaks = np.array(peaks)
+    # peaks = np.array(peaks)
 
     return peaks
 
@@ -362,7 +360,7 @@ def score_by_momentum(data,
         elif len(peak_list) > 1:
             corrected_scores = []
             for j in range(1, len(peak_list)):
-                amplitude = single_momentum[peak_list[j]] * 2
+                amplitude = single_momentum[peak_list[j - 1]] * 2
 
                 diff = peak_list[j] - peak_list[j - 1]
                 corrected_score = amplitude - (abs(diff - period) / penalty_scale)
@@ -460,7 +458,8 @@ def single_cwt_ov(features,
                   freq=4,
                   peaks_thr=0.5,
                   perform_cross_point_shift=True,
-                  convergence=0.1):
+                  convergence=0.1,
+                  plotting=True):
     """
     Apply Continues Wavelet Transformation (CWT) to a single sample and plot the results
 
@@ -501,14 +500,15 @@ def single_cwt_ov(features,
 
     filtered_peaks = filter_peaks(peaks, reference=coef[freq], peaks_thr=peaks_thr, operator='bigger')
 
-    plot_wavl_ov(feature,
-                 filtered_peaks,
-                 coef, freq=freq,
-                 plot_peaks=True,
-                 perform_cross_point_shift=perform_cross_point_shift,
-                 convergence=convergence)
+    if plotting:
+        plot_wavl_ov(feature,
+                     filtered_peaks,
+                     coef, freq=freq,
+                     plot_peaks=True,
+                     perform_cross_point_shift=perform_cross_point_shift,
+                     convergence=convergence)
 
-    return coef
+    return coef, filtered_peaks
 
 
 def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8):
@@ -618,8 +618,9 @@ def wrap_cwt(data,
         cp_shifted.append(cross_point_shift(peaks[i], reference=coefs[i], convergence=convergence))
 
     # remove adapter
-    peaks = np.array(peaks)
-    shifted_peaks = peaks - adapter
+    # peaks = np.array(peaks)  # Remove as fix for unit testing
+    # shifted_peaks = peaks - adapter
+    shifted_peaks = [x - adapter for x in peaks]
 
     nn_peaks = []
     for peak_list in shifted_peaks:
@@ -767,6 +768,8 @@ def density_plot(scaled, densities):
     plt.gca().invert_yaxis()
     plt.show()
 
+    return ax
+
 
 def plot_single_momentum_ov(peaks,
                             momentum,
@@ -833,6 +836,8 @@ def plot_single_momentum_ov(peaks,
     ax3.set_xlabel('Fragment Length', color='blue')
     ax3.plot(single_d)
     ax3.scatter(points_ori_x, points_ori_y, color='red', zorder=2)
+
+    return fig, [ax1, ax2, ax3]
 
 
 def plot_wavl_ov(feature,
@@ -907,6 +912,8 @@ def plot_wavl_ov(feature,
     fig.tight_layout()
     plt.show()
 
+    return fig, [ax1, ax2, ax3]
+
 
 def add_insertsize_metrics(adata,
                            bam=None,
@@ -977,9 +984,10 @@ def add_insertsize_metrics(adata,
     scaled_ori = scale(dists_arr)
 
     # plot the densityplot of the fragment length distribution
-    print("plotting density...")
-    densities = calc_densities(scaled_ori)
-    density_plot(scaled_ori, densities)
+    if plotting:
+        print("plotting density...")
+        densities = calc_densities(scaled_ori)
+        density_plot(scaled_ori, densities)
 
     if use_momentum:
         # prepare the data to be used for the momentum method
@@ -1034,3 +1042,9 @@ def add_insertsize_metrics(adata,
     adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
     return adata
+
+
+if __name__ == "__main__":
+
+    print('This script is not meant to be run directly. Please import it into a Jupyter notebook.')
+    print("Done!")
