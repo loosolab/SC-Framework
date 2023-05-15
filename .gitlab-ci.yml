@@ -112,7 +112,7 @@ notebook-output-check:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 # Build documentation
-pages:
+build-pages:
   stage: deploy
   tags:
     - coverage
@@ -123,19 +123,29 @@ pages:
     - pip install nbsphinx_link
     - cd docs
     - make html
-    - mkdir -p ../public/$CI_COMMIT_BRANCH/
-    - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
-    - if [ "$CI_COMMIT_BRANCH" == "main" ]; then cp -r ../public/$CI_COMMIT_BRANCH/* ../public/. ; fi  # upper url goes to main
+  environment:
+        name: pages/$CI_COMMIT_BRANCH
+        url: "https://gitlab.gwdg.de/loosolab/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/build/html/index.html"
+        #auto_stop_in: 5 mins
+  artifacts:
+    paths:
+      - build/html/
+  rules:  # if manual or commit to dev
+    - when: manual
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+
+#Deploy documentation if it was the dev branch
+deploy-pages:
+  dependencies:
+    - build-pages
+  script:
+    - mv build/html/ ../public/
   artifacts:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # always after accepted MR to dev
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
       allow_failure: False  # dev not allowed to fail
-    - if: $CI_COMMIT_BRANCH == "main"
-      allow_failure: False
-    - when: manual
-      allow_failure: True
 
 # Test notebooks when code is pushed to main
 notebooks:
