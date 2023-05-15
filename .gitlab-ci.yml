@@ -15,6 +15,7 @@ variables:
 # If you want to also cache the installed packages, you have to install
 # them in a virtualenv and cache it as well.
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - .cache/pip
     - venv/
@@ -167,12 +168,18 @@ build-pages:
 # Deploy pages for a MR
 deploy-pages-MR:
   stage: deploy
-  needs: ["build-pages"]
+  needs: 
+    - job: "build-pages"
+      artifacts: true
   environment:
     name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   script: 
+    - ls -l
     - echo "deploy"
+  artifacts:
+    paths:
+      - docs/build/html/
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" #all MRs but dev can be triggered manually
       #when: manual
@@ -180,7 +187,11 @@ deploy-pages-MR:
 # Deploy pages for a commit without a MR
 deploy-pages-commit:
   stage: deploy
-  needs: ["build-pages"]
+    - job: "build-pages"
+      artifacts: true
+  inherit:
+    default: 
+      - image  # package not needed to run linting
   environment:
     name: pages/$CI_COMMIT_BRANCH
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
