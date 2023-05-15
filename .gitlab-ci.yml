@@ -124,14 +124,15 @@ build-pages:
     - cd docs
     - make html
   environment:
-        name: pages/$CI_COMMIT_BRANCH
-        url: "https://gitlab.gwdg.de/loosolab/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/build/html/index.html"
-        #auto_stop_in: 5 mins
+    name: pages/$CI_COMMIT_BRANCH
+    url: "https://gitlab.gwdg.de/loosolab/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/build/html/index.html"
+    #auto_stop_in: 5 mins
   artifacts:
     paths:
       - build/html/
   rules:  # if manual or commit to dev
     - when: manual
+      allow_failure: True
     - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
 
 #Deploy documentation if it was the dev branch
