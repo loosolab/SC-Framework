@@ -216,7 +216,7 @@ def test_save_h5ad(adata):
     assert "user" in adata_read.uns["sctoolbox"]
     os.remove(path)  # clean up after tests
 
-    
+
 def test_get_organism():
     """ Test function get_organism(). """
 

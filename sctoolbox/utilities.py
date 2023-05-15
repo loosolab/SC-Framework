@@ -119,6 +119,7 @@ def initialize_uns(adata, keys=[]):
 
 # ------------------ Packages and tools ----------------- #
 
+
 def get_package_versions():
     """
     Utility to get a dictionary of currently installed python packages and versions.
