@@ -151,8 +151,7 @@ build-pages:
     - make html
   environment:
     name: pages/$CI_COMMIT_BRANCH
-    url: "https://gitlab.gwdg.de/loosolab/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/build/html/index.html"
-    #auto_stop_in: 5 mins
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   artifacts:
     paths:
       - docs/build/html/
