@@ -93,11 +93,10 @@ test coverage:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == "dev"  # all MR or commits to dev
       changes:
       - tests/*.py
       - sctoolbox/*.py
-    - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
     - when: manual  
       allow_failure: True
 
@@ -172,7 +171,7 @@ deploy-pages-MR:
   script: 
     - echo "deploy"
   rules:
-    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" #all MRs but dev can be triggered manually
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" #all MRs but dev can be triggered manually
       when: manual
 
 deploy-pages-commit:
