@@ -19,7 +19,6 @@ cache:
   paths:
     - .cache/pip
     - venv/
-    - public
 
 # Install package for all jobs (unless inherit is false)
 default:
@@ -159,9 +158,10 @@ build-pages:
     paths:
       - docs/build/html/
   rules:
+    - if: $CI_COMMIT_BRANCH == "main" # always for commits to main
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
     - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
-      when: never   # but not for any merge requests coming from dev
+      when: never   # but not again for any merge requests coming from dev
     - when: manual  # otherwise manual
 
 # Deploy pages for a MR - needs to be separate from deploy-pages-commit due to 
@@ -179,7 +179,7 @@ deploy-pages-MR:
   script: 
     - echo "deploy"
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" # dev is built automatically
 
 # Deploy pages for a commit without a MR
 deploy-pages-commit:
@@ -195,23 +195,17 @@ deploy-pages-commit:
   script: 
     - echo "deploy" #mv docs/build/html/ public/
   rules:
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event" && $CI_COMMIT_BRANCH != "dev"
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
-# Deploy documentation to public if it was the dev branch
-deploy-pages-main:
+# Deploy documentation to public pages if it was the dev branch
+pages:
   stage: deploy
   needs:
     - job: "build-pages"
       artifacts: true
   inherit:
     default: ["image"] # package not needed to deploy
-  environment:
-    name: pages/$CI_COMMIT_BRANCH
-    url: https://loosolab.pages.gwdg.de/software/sc_framework/
   script:
-    - ls -l
-    - ls -l docs/
-    - rm -rf public/  #remove any existing public folder
     - mv docs/build/html/ public/
   artifacts:
     paths:
