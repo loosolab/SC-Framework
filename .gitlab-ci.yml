@@ -163,6 +163,5 @@ notebooks:
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: always
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
-      when: manual
+    - when: manual  # for all other pushes, you can manually trigger the notebooks
       allow_failure: True  # the manual rule is allowed to fail
