@@ -205,6 +205,9 @@ deploy-pages-main:
       artifacts: true
   inherit:
     default: ["image"] # package not needed to deploy
+  environment:
+    name: pages/$CI_COMMIT_BRANCH
+    url: https://loosolab.pages.gwdg.de/software/sc_framework/
   script:
     - ls -l
     - ls -l docs/
