@@ -93,11 +93,10 @@ test coverage:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_PIPELINE_SOURCE == "merge_request_event"   # all MR or commits to dev
       changes:
       - tests/*.py
       - sctoolbox/*.py
-    - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
     - when: manual  
       allow_failure: True
 
@@ -150,25 +149,55 @@ build-pages:
     - pip install nbsphinx_link
     - cd docs
     - make html
-  environment:
-    name: pages/$CI_COMMIT_BRANCH
-    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   artifacts:
     paths:
       - docs/build/html/
-  rules:  # if manual or commit to dev
-    - when: manual
-      allow_failure: True
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
-      allow_failure: False  # dev not allowed to fail
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
+      when: never   # but not for any merge requests coming from dev
+    - when: manual  # otherwise manual
 
-#Deploy documentation if it was the dev branch
-deploy-pages:
+  #rules:  # if manual or commit to dev
+  #  - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+  #   allow_failure: False  # dev not allowed to fail
+  # - when: manual
+  #   allow_failure: True
+
+# Deploy pages for a MR
+deploy-pages-MR:
   stage: deploy
-  dependencies:
-    - build-pages
+  needs: ["build-pages"]
+  environment:
+    name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  script: 
+    - echo "deploy"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" #all MRs but dev can be triggered manually
+      #when: manual
+
+# Deploy pages for a commit without a MR
+deploy-pages-commit:
+  stage: deploy
+  needs: ["build-pages"]
+  environment:
+    name: pages/$CI_COMMIT_BRANCH
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  script: 
+    - echo "deploy" #mv docs/build/html/ public/
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event" && $CI_COMMIT_BRANCH != "dev"  # commits without MR can be triggered manually
+      #when: manual
+
+# Deploy documentation to public if it was the dev branch
+deploy-pages-main:
+  stage: deploy
+  needs: ["build-pages"]
   script:
-    - mv build/html/ ../public/
+    - ls -l
+    - ls -l docs/
+    - mv -f docs/build/html/ public/
   artifacts:
     paths:
       - public
