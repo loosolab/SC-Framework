@@ -198,6 +198,9 @@ deploy-pages-commit:
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   script: 
     - echo "deploy" #mv docs/build/html/ public/
+  artifacts:
+    paths:
+      - docs/build/html/
   rules:
     - if: $CI_PIPELINE_SOURCE != "merge_request_event" && $CI_COMMIT_BRANCH != "dev"  # commits without MR can be triggered manually
       #when: manual
