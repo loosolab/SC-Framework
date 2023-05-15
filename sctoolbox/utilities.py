@@ -5,18 +5,119 @@ import os
 import re
 import scanpy as sc
 import importlib
-import sctoolbox.checker as ch
-import sctoolbox.creators as cr
 import matplotlib.pyplot as plt
 import matplotlib
 import time
+import shutil
+import tempfile
 import warnings
 from scipy.sparse import issparse
+import getpass
+from datetime import datetime
+import yaml
+
+from sctoolbox import settings
+import apybiomart
+import requests
+import subprocess
 
 from os.path import join, dirname, exists
 from pathlib import Path
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
+
+
+def settings_from_config(config_file, key=None):
+    """
+    Set settings from a config file in yaml format.
+
+    Parameters
+    ----------
+    config_file : str
+        Path to the config file.
+    key : str, optional
+        If given, get settings for a specific key.
+
+    Returns
+    -------
+    None
+        Settings are set in sctoolbox.settings.
+    """
+
+    # Read yaml file
+    with open(config_file, "r") as f:
+        config_dict = yaml.safe_load(f)
+
+    if key is not None:
+        try:
+            config_dict = config_dict[key]
+        except KeyError:
+            raise KeyError(f"Key {key} not found in config file {config_file}")
+
+    # Set settings
+    for key, value in config_dict.items():
+        setattr(settings, key, value)
+
+
+def get_user():
+    """ Get the name of the current user.
+
+    Returns
+    -------
+    str
+        The name of the current user.
+    """
+
+    try:
+        username = getpass.getuser()
+    except Exception:
+        username = "unknown"
+
+    return username
+
+
+def get_datetime():
+    """ Get a string with the current date and time for logging.
+
+    Returns
+    -------
+    str
+        A string with the current date and time in the format dd/mm/YY H:M:S
+    """
+
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
+
+    return dt_string
+
+
+def initialize_uns(adata, keys=[]):
+    """ Initialize the sctoolbox keys in adata.uns.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An AnnData object.
+    keys : str or list of str, optional
+        Additional keys to be initialized in adata.uns['sctoolbox'].
+
+    Returns
+    -------
+    None
+        keys are initialized in adata.uns['sctoolbox'].
+    """
+    if "sctoolbox" not in adata.uns:
+        adata.uns["sctoolbox"] = {}
+
+    # Add additional keys if needed
+    if isinstance(keys, str):
+        keys = [keys]
+
+    for key in keys:
+        if key not in adata.uns["sctoolbox"]:
+            adata.uns["sctoolbox"][key] = {}
+
+# ------------------ Packages and tools ----------------- #
 
 
 def get_package_versions():
@@ -48,6 +149,64 @@ def get_package_versions():
 
     return package_dict
 
+
+def get_binary_path(tool):
+    """ Get path to a binary commandline tool. Looks either in the local dir, on path or in the dir of the executing python binary.
+
+    Parameters
+    ----------
+    tool : str
+        Name of the commandline tool to be found.
+
+    Returns
+    -------
+    str :
+        Full path to the tool.
+    """
+
+    python_dir = os.path.dirname(sys.executable)
+    if os.path.exists(tool):
+        tool_path = f"./{tool}"
+
+    else:
+
+        # Check if tool is available on path
+        tool_path = shutil.which(tool)
+        if tool_path is None:
+
+            # Search for tool within same folder as python (e.g. in an environment)
+            python_dir = os.path.dirname(sys.executable)
+            tool_path = shutil.which(tool, path=python_dir)
+
+    # Check that tool is executable
+    if tool_path is None or shutil.which(tool_path) is None:
+        raise ValueError(f"Could not find an executable for {tool} on path.")
+
+    return tool_path
+
+
+def run_cmd(cmd):
+    """
+    Run a commandline command.
+
+    Parameters
+    ----------
+    cmd : str
+        Command to be run.
+    """
+    try:
+        subprocess.check_call(cmd, shell=True)
+        print(f"Command '{cmd}' ran successfully!")
+    except subprocess.CalledProcessError as e:
+        # print(f"Error running command '{cmd}': {e}")
+        if e.output is not None:
+            print(f"Command standard output: {e.output.decode('utf-8')}")
+        if e.stderr is not None:
+            print(f"Command standard error: {e.stderr.decode('utf-8')}")
+        raise e
+
+
+# ------------------- Multiprocessing ------------------- #
 
 def get_pbar(total, description):
     """
@@ -435,8 +594,18 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
+def get_temporary_filename(tempdir="."):
+    """ Get a writeable temporary filename by creating a temporary file and closing it again. """
+
+    filehandle = tempfile.NamedTemporaryFile(mode="w", dir=tempdir, delete=True)
+    filename = filehandle.name
+    filehandle.close()  # remove the file again
+
+    return filename
+
+
 def remove_files(file_list):
-    """ Delete all files in a file list. Prints a warning if deletion was not possible """
+    """ Delete all files in a file list. Prints a warning if deletion was not possible. """
 
     for f in file_list:
         try:
@@ -461,15 +630,18 @@ def save_figure(path, dpi=600):
     Parameters
     ----------
     path : str
-        Path to the file to be saved.
-        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff
+        Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_dir' + 'sctoolbox.settings.figure_prefix' as prefix.
+        Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff.
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
     """
+
+    # 'path' can be None if save_figure was used within a plotting function, and the internal 'save' was "None".
+    # This moves the checking to the save_figure function rather than each plotting function.
     if path is not None:
-        create_dir(path)  # recursively create parent dir if needed
-        plt.savefig(path, dpi=dpi, bbox_inches="tight")
+        output_path = settings.full_figure_prefix + path
+        plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
 
 
 def vprint(verbose=True):
@@ -517,113 +689,50 @@ def check_module(module):
         raise ImportError(s)
 
 
-def load_anndata(is_from_previous_note=True, which_notebook=None, data_to_evaluate=None):
+def load_h5ad(path):
     """
-    Load anndata from a previous notebook.
+    Load an anndata object from .h5ad file.
 
     Parameters
     ----------
-    is_from_previous_note : boolean, default True
-        Set to False if you want to load an anndata object from other source rather than scRNAseq autom workflow.
-    which_notebook : int, default None
-        The number of the notebook that generated the anndata object you want to load
-        If is_from_previous_note=False, this parameter will be ignored
-    data_to_evaluate : str, default None
-        This is the anndata.obs column (`anndata.obs[data_to_evaluate]`) to be used for analysis, e.g. "condition"
+    path : str
+        Name of the file to load the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_input_dir' + 'sctoolbox.settings.adata_input_prefix' as prefix.
 
     Returns
     -------
     anndata.AnnData :
         Loaded anndata object.
     """
-    def loading_adata(NUM):
-        """
-        Loading information of pathway where is stored the anndata object.
 
-        Parameters
-        ----------
-        NUM = int
-            The number of a particular notebook that created the latest anndata object.
+    adata_input = settings.full_adata_input_prefix + path
+    adata = sc.read_h5ad(filename=adata_input)
 
-        Returns
-        -------
-        Str : The name of the latest anndata object with its pathway.
-        """
-        pathway = ch.fetch_info_txt()
-        files = os.listdir(''.join(pathway))
-        loading = "anndata_" + str(NUM)
-        if any(loading in items for items in files):
-            for file in files:
-                if loading in file:
-                    anndata_file = file
-        else:  # In case the user provided an inexistent anndata number
-            sys.exit(loading + " was not found in " + pathway)
+    print(f"The adata object was loaded from: {adata_input}")
 
-        return ''.join(pathway) + "/" + anndata_file
-
-    # Messages and others
-    m1 = "You choose is_from_previous_note=True. Then, set an which_notebook=[INT], which INT is the number of the notebook that generated the anndata object you want to load."
-    m2 = "Set the data_to_evaluate=[STRING], which STRING is anndata.obs[STRING] to be used for analysis, e.g. condition."
-    m3 = "Paste the pathway and filename where your anndata object deposited."
-    m4 = "Correct the pathway or filename or type q to quit."
-    opt1 = ["q", "quit"]
-
-    if data_to_evaluate is not None:
-        if isinstance(data_to_evaluate, str) is False:  # Close if the anndata.obs is not correct
-            sys.exit(m2)
-
-    if is_from_previous_note is True:  # Load anndata object from previous notebook
-        try:
-            ch.check_notebook(which_notebook)
-        except TypeError:
-            sys.exit(m1)
-
-        file_path = loading_adata(which_notebook)
-        data = sc.read_h5ad(filename=file_path)  # Loading the anndata
-
-        print(f"Source: {file_path}")
-
-        if data_to_evaluate is not None:
-            cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
-
-        return data
-
-    elif is_from_previous_note is False:  # Load anndata object from other source
-        answer = input(m3)
-        while os.path.isfile(answer) is False:  # False if pathway is wrong
-            if answer.lower() in opt1:
-                sys.exit("You quit and lost all modifications :(")
-            print(m4)
-            answer = input(m4)
-        data = sc.read_h5ad(filename=answer)  # Loading the anndata
-
-        print(f"Source: {file_path}")
-
-        if data_to_evaluate is not None:
-            cr.build_infor(data, "data_to_evaluate", data_to_evaluate)  # Annotating the anndata data to evaluate
-        cr.build_infor(data, "Anndata_path", answer.rsplit('/', 1)[0])  # Annotating the anndata path
-
-        return data
+    return adata
 
 
-def saving_anndata(anndata, current_notebook):
+def save_h5ad(adata, path):
     """
-    Save your anndata object
+    Save an anndata object to an .h5ad file.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    adata : anndata.AnnData
         Anndata object to save.
-    current_notebook : int
-        The number of the current notebook.
+    path : str
+        Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
-    if not isinstance(current_notebook, int):
-        raise TypeError(f"Invalid type! Current_notebook has to be int got {current_notebook} of type {type(current_notebook)}.")
 
-    adata_output = os.path.join(anndata.uns["infoprocess"]["Anndata_path"], "anndata_" + str(current_notebook) + "_" + anndata.uns["infoprocess"]["Run_id"] + ".h5ad")
-    anndata.write(filename=adata_output)
+    # Log user to adata.uns
+    initialize_uns(adata, "user")
+    adata.uns["sctoolbox"]["user"].update({get_user(): get_datetime()})  # overwrites existing entry for each user
 
-    print(f"Your new anndata object is saved here: {adata_output}")
+    # Save adata
+    adata_output = settings.full_adata_output_prefix + path
+    adata.write(filename=adata_output)
+
+    print(f"The adata object was saved to: {adata_output}")
 
 
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
@@ -948,3 +1057,215 @@ def add_expr_to_obs(adata, gene):
     else:
         idx = np.argwhere(boolean)[0][0]
         adata.obs[gene] = adata.X[:, idx].todense().A1
+
+
+# -------------------- bio utils ------------------- #
+# section could be its own file
+
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+    """
+    Get the organism name to the given Ensembl ID.
+
+    Parameters
+    ----------
+    ensembl_id : str
+    Any Ensembl ID. E.g. ENSG00000164690
+    host : str
+    Ensembl server address.
+
+    Returns
+    -------
+    str :
+        Organism assigned to the Ensembl ID
+    """
+    # this will redirect
+    url = f"{host}{ensembl_id}"
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        raise ConnectionError(f"Server response: {response.status_code}.\n With link {url}. Is the host/ path correct?")
+
+    # get redirect url
+    # e.g. http://www.ensembl.org/Homo_sapiens/Gene/...
+    # get species name from url
+    species = response.url.split("/")[3]
+
+    # invalid id
+    if species == "Multi":
+        raise ValueError(f"Organism returned as '{species}' ({response.url}).\n Usually due to invalid Ensembl ID. Make sure to use an Ensembl ID as described in http://www.ensembl.org/info/genome/stable_ids/index.html")
+
+    return species
+
+
+def gene_id_to_name(ids, species):
+    """
+    Get Ensembl gene names to Ensembl gene id.
+
+    Parameters
+    ----------
+    ids : list of str
+        List of gene ids. Set to `None` to return all ids.
+    species : str
+        Species matching the gene ids. Set to `None` for list of available species.
+
+    Returns
+    -------
+    pandas.DataFrame :
+        DataFrame with gene ids and matching gene names.
+    """
+    if not all(id.startswith("ENS") for id in ids):
+        raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
+
+    avail_species = sorted([s.split("_gene_ensembl")[0] for s in apybiomart.find_datasets()["Dataset_ID"]])
+
+    if species is None or species not in avail_species:
+        raise ValueError("Invalid species. Available species are: ", avail_species)
+
+    id_name_mapping = apybiomart.query(
+        attributes=["ensembl_gene_id", "external_gene_name"],
+        dataset=f"{species}_gene_ensembl",
+        filters={}
+    )
+
+    if ids:
+        # subset to given ids
+        return id_name_mapping[id_name_mapping["Gene stable ID"].isin(ids)]
+
+    return id_name_mapping
+
+
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
+    """
+    Add gene names to adata.var.
+
+    Parameters
+    ----------
+    adata : scanpy.AnnData
+        AnnData with gene ids.
+    id_col_name : str, default None
+        Name of the column in `adata.var` that stores the gene ids.
+    index : boolean, default False
+        Use index of `adata.var` instead of column name speciefied in `id_col_name`.
+    name_col : str, default "Gene name"
+        Name of the column added to `adata.var`.
+    species : str, default "auto"
+        Species of the dataset. On default, species is inferred based on gene ids.
+    inplace : boolean, default True
+        Whether to modify adata inplace.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        AnnData object with gene names.
+    """
+    if not id_col_name and not index:
+        raise ValueError("Either set parameter id_col_name or index.")
+    elif not index and id_col_name not in adata.var.columns:
+        raise ValueError("Invalid id column name. Name has to be a column found in adata.var.")
+
+    if not inplace:
+        adata = adata.copy()
+
+    # get gene ids
+    if index:
+        gene_ids = list(adata.var.index)
+    else:
+        gene_ids = list(adata.var[id_col_name])
+
+    # infer species from gene id
+    if species == "auto":
+        ensid = gene_ids[0]
+
+        species = get_organism(ensid)
+
+        # bring into biomart format
+        # first letter of all words but complete last word e.g. hsapiens, mmusculus
+        spl_name = species.lower().split("_")
+        species = "".join(map(lambda x: x[0], spl_name[:-1])) + spl_name[-1]
+
+        print(f"Identified species as {species}")
+
+    # get id <-> name table
+    id_name_table = gene_id_to_name(ids=gene_ids, species=species)
+
+    # create new .var and replace in adata
+    new_var = pd.merge(
+        left=adata.var,
+        right=id_name_table.set_index("Gene stable ID"),
+        left_on=id_col_name,
+        left_index=index,
+        right_index=True,
+        how="left"
+    )
+    new_var["Gene name"].fillna('', inplace=True)
+    new_var.rename(columns={"Gene name": name_col}, inplace=True)
+
+    adata.var = new_var
+
+    if not inplace:
+        return adata
+
+
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
+    """
+    Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
+
+    Parameters
+    ----------
+    adata: scanpy.AnnData
+        AnnData object
+    column: str
+        Column name in adata.var
+    unified_names: str, default "unified_names"
+        Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
+    species : str, default "auto"
+        Species of the dataset. On default, species is inferred based on gene ids.
+    inplace: boolean, default True
+        Whether to modify adata or return a copy.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        AnnData object with modified gene column.
+    """
+    if column not in adata.var.columns:
+        raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
+
+    if not inplace:
+        adata = adata.copy()
+
+    # check for ensembl ids
+    ensids = [el for el in adata.var[column] if el.startswith("ENS")]
+
+    if not ensids:
+        raise ValueError(f"No Ensembl IDs in adata.var['{column}'] found.")
+
+    # infer species from gene id
+    if species == "auto":
+        ensid = ensids[0]
+
+        species = get_organism(ensid)
+
+        # bring into biomart format
+        # first letter of all words but complete last word e.g. hsapiens, mmusculus
+        spl_name = species.lower().split("_")
+        species = "".join(map(lambda x: x[0], spl_name[:-1])) + spl_name[-1]
+
+        print(f"Identified species as {species}")
+
+    # get id <-> name table
+    id_name_table = gene_id_to_name(ids=ensids, species=species)
+
+    count = 0
+    for index, row in adata.var.iterrows():
+        if row[column] in id_name_table['Gene stable ID'].values:
+            count += 1
+
+            # replace gene id with name
+            adata.var.at[index, unified_column] = id_name_table.at[id_name_table.index[id_name_table["Gene stable ID"] == row[column]][0], "Gene name"]
+        else:
+            adata.var.at[index, unified_column] = adata.var.at[index, column]
+    print(f'{count} ensembl gene ids have been replaced with gene names')
+
+    if not inplace:
+        return adata

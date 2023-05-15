@@ -62,7 +62,7 @@ lint:
     - coverage
   script:
     - pip install flake8
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
@@ -78,6 +78,8 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - apt-get install bedtools  #needed for some tests
+    - chmod +x scripts/bedGraphToBigWig  # make script executable
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
