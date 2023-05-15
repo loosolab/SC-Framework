@@ -141,7 +141,7 @@ notebooks:
 
 # Build documentation
 build-pages:
-  stage: pages
+  stage: deploy
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
@@ -164,7 +164,7 @@ build-pages:
 
 #Deploy documentation if it was the dev branch
 deploy-pages:
-  stage: pages
+  stage: deploy
   dependencies:
     - build-pages
   script:
