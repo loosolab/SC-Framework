@@ -636,6 +636,9 @@ def save_figure(path, dpi=600):
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
     """
+
+    # 'path' can be None if save_figure was used within a plotting function, and the internal 'save' was "None".
+    # This moves the checking to the save_figure function rather than each plotting function.
     if path is not None:
         output_path = settings.full_figure_prefix + path
         plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
