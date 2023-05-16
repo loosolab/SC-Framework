@@ -208,6 +208,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                 continue
             out = pathlib.Path(out_path) / item["name"]
             if not out.is_file() or overwrite:
+                print(f"Downloading: {item['name']}")
                 with rate_limiter:
                     with open(out, 'wb') as f:
                         project.files.raw(file_path=item["path"], ref=branch, streamed=True, action=f.write)
@@ -244,7 +245,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
         print(f"Build: {path_to_build}")
 
 
-def add_analysis(dest, analysis_name, method="rna"
+def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
                  starts_with=1, **kwargs):
     """
@@ -312,7 +313,7 @@ def build_notebooks_regex(starts_with):
     if starts_with < 1:
         raise ValueError("starts_with needs to be at least 1")
     elif 1 <= starts_with < 10:
-        regex = f"[0]*[{starts_with}-9].*.ipynb"
+        regex = f"[0]*[1-9]?[{starts_with}-9].*.ipynb"
     elif 10 <= starts_with < 90:
         regex = f"[0]*([{str(starts_with)[0]}][{str(starts_with)[1]}-9]|[{str(starts_with+10)[0]}-9][0-9]).*.ipynb"
     else:
