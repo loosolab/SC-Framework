@@ -267,6 +267,30 @@ def monitor_jobs(jobs, description="Progress"):
 
 # ------------------ Type checking ------------------ #
 
+def in_range(value, limits, include_limits=True):
+    """
+    Check if a value is in a given range.
+
+    Parameters
+    ----------
+    value : int
+        Number to check if in range.
+    limits : int tuple
+        Lower and upper limits. E.g. (0, 10)
+    include_limits : bool, default True
+        If True includes limits in accepted range.
+
+    Returns
+    -------
+    bool :
+        Returns whether the value is between the set limits.
+    """
+    if include_limits:
+        return value >= limits[0] and value <= limits[1]
+    else:
+        return value > limits[0] and value < limits[1]
+
+
 def is_integer_array(arr):
     """
     Check if all values of arr are integers.
