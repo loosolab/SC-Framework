@@ -171,6 +171,7 @@ deploy-pages-MR:
   stage: deploy
   needs: 
     - build-pages
+      artifacts: True
   inherit:
     default: ["image"] # package not needed to deploy
   environment:
@@ -191,6 +192,7 @@ deploy-pages-commit:
   stage: deploy
   needs:
     - build-pages
+      artifacts: True
   inherit:
     default: ["image"] # package not needed to deploy
   environment:
@@ -211,6 +213,7 @@ pages:
   stage: deploy
   needs:
     - build-pages
+      artifacts: True
   inherit:
     default: ["image"] # package not needed to deploy
   script:
