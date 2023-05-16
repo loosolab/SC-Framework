@@ -46,7 +46,6 @@ from matplotlib_venn import venn2, venn3
 
 from sctoolbox import settings
 import sctoolbox.utilities
-import sctoolbox.analyser
 import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
 import plotly as po
@@ -295,7 +294,7 @@ def _search_dim_red_parameters(adata, method, perplexity_range=None, learning_ra
         return np.around(np.arange(r[1], r[2], r[3]), 2)
 
     # remove data to save memory
-    adata = sctoolbox.analyser.get_minimal_adata(adata)
+    adata = utils.get_minimal_adata(adata)
     # Allows for all case variants of method parameter
     method = method.lower()
 
@@ -453,7 +452,7 @@ def search_clustering_parameters(adata,
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
-        adata.obs[key_added] = sctoolbox.analyser.rename_categories(adata.obs[key_added])  # rename to start at 1
+        adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
         n_clusters = len(adata.obs[key_added].cat.categories)
 
         # Plot embedding
@@ -1340,7 +1339,7 @@ def anndata_overview(adatas,
 
                     if len(lisi_columns) == 0:
                         e = f"No LISI scores found in adata.obs for '{name}'"
-                        e += "Please run 'sctoolbox.analyser.wrap_batch_evaluation()' or remove LISI from the plots list"
+                        e += "Please run 'sctoolbox.tools.wrap_batch_evaluation()' or remove LISI from the plots list"
                         raise ValueError(e)
 
                     # Plot LISI scores

@@ -130,27 +130,6 @@ def recluster(adata, column, clusters,
 
 # ----------------------- Fast estimation of multiple umaps --------------------- #
 
-def get_minimal_adata(adata):
-    """ Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
-
-    Parameters
-    ----------
-    adata : anndata.AnnData
-        Annotated data matrix.
-
-    Returns
-    -------
-    anndata.AnnData
-        Minimal copy of anndata object.
-    """
-
-    adata_minimal = adata.copy()
-    adata_minimal.X = None
-    adata_minimal.layers = None
-    adata_minimal.raw = None
-
-    return adata_minimal
-
 
 def wrap_umap(adatas, threads=4):
     """
@@ -174,7 +153,7 @@ def wrap_umap(adatas, threads=4):
 
     jobs = []
     for i, adata in enumerate(adatas):
-        adata_minimal = get_minimal_adata(adata)
+        adata_minimal = utils.get_minimal_adata(adata)
         job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds={"copy": True})
         jobs.append(job)
     pool.close()
