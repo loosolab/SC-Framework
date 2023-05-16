@@ -22,6 +22,7 @@ setup(
     python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
         'matplotlib',
+        'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10
         'numpy',

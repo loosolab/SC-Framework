@@ -11,6 +11,7 @@ import time
 import shutil
 import tempfile
 import warnings
+from scipy.stats import zscore
 from scipy.sparse import issparse
 import getpass
 from datetime import datetime
@@ -641,7 +642,7 @@ def save_figure(path, dpi=600):
     # This moves the checking to the save_figure function rather than each plotting function.
     if path is not None:
         output_path = settings.full_figure_prefix + path
-        plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+        plt.savefig(output_path, dpi=dpi, bbox_inches="tight", facecolor="white")
 
 
 def vprint(verbose=True):
@@ -1035,7 +1036,7 @@ def write_excel(table_dict, filename, index=False):
     # Write to excel
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
-            table.to_excel(writer, sheet_name=sanitize_sheetname(f'{name}'), index=index)
+            table.to_excel(writer, sheet_name=sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
 
 
 def add_expr_to_obs(adata, gene):
@@ -1057,6 +1058,63 @@ def add_expr_to_obs(adata, gene):
     else:
         idx = np.argwhere(boolean)[0][0]
         adata.obs[gene] = adata.X[:, idx].todense().A1
+
+
+def table_zscore(table, how="row"):
+    """
+    Z-score a table.
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        Table to z-score.
+    how : str, default "row"
+        Whether to z-score rows or columns.
+
+    Returns
+    -------
+    pandas.DataFrame :
+        Z-scored table.
+    """
+
+    if how == "row":
+        counts_z = table.T.apply(zscore).T
+    elif how == "col":
+        counts_z = table.apply(zscore)
+    else:
+        raise Exception(f"'{how}' is invalid for 'how' - it must be 'row' or 'col'.")
+
+    return counts_z
+
+
+def shuffle_cells(adata, seed=42):
+    """
+    Shuffle cells in an adata object to improve plotting.
+    Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object to shuffle cells in.
+
+    Returns
+    -------
+    anndata.AnnData :
+        Anndata object with shuffled cells.
+    seed : int, default 42
+        Seed for random number generator.
+    """
+
+    import random
+    state = random.getstate()
+
+    random.seed(seed)
+    shuffled_barcodes = random.sample(adata.obs.index.tolist(), len(adata))
+    adata = adata[shuffled_barcodes]
+
+    random.setstate(state)  # reset random state
+
+    return adata
 
 
 # -------------------- bio utils ------------------- #

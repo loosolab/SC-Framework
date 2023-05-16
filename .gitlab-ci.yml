@@ -15,10 +15,10 @@ variables:
 # If you want to also cache the installed packages, you have to install
 # them in a virtualenv and cache it as well.
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - .cache/pip
     - venv/
-    - public
 
 # Install package for all jobs (unless inherit is false)
 default:
@@ -93,12 +93,15 @@ test coverage:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+    - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
       changes:
       - tests/*.py
       - sctoolbox/*.py
-    - if: $CI_COMMIT_BRANCH == "dev" # all commits to dev; used for getting coverage
-    - when: manual  
+    - if: $CI_COMMIT_BRANCH != "dev" && $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
+      changes:
+      - tests/*.py
+      - sctoolbox/*.py    
+    - when: manual
       allow_failure: True
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
@@ -113,41 +116,12 @@ notebook-output-check:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
-# Build documentation
-pages:
-  stage: deploy
-  tags:
-    - coverage
-  script:
-    - apt-get update -qq && apt-get install -qq -y pandoc
-    - pip install sphinx sphinx-rtd-theme
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - cd docs
-    - make html
-    - rm -rf ../public/$CI_COMMIT_BRANCH/  # remove old folder content to overwrite
-    - mkdir -p ../public/$CI_COMMIT_BRANCH/
-    - mv build/html/* ../public/$CI_COMMIT_BRANCH/.
-    - if [ "$CI_COMMIT_BRANCH" == "main" ]; then cp -r ../public/$CI_COMMIT_BRANCH/* ../public/. ; fi  # upper url goes to main
-  artifacts:
-    name: "$CI_COMMIT_BRANCH"
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # always after accepted MR to dev
-      allow_failure: False  # dev not allowed to fail
-    - if: $CI_COMMIT_BRANCH == "main"
-      allow_failure: False
-    - when: manual
-      allow_failure: True
-
-
 # Test notebooks when code is pushed to main
 notebooks:
   image: continuumio/miniconda3:latest
   inherit:
     default: false
-  stage: deploy
+  stage: test
   tags:
     - gwdg
     - gwdg-shared
@@ -163,6 +137,92 @@ notebooks:
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: always
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
-      when: manual
+    - when: manual  # for all other pushes, you can manually trigger the notebooks
       allow_failure: True  # the manual rule is allowed to fail
+
+
+# ----------------------------- Gitlab pages ---------------------------------#
+
+# Build documentation
+build-pages:
+  stage: deploy
+  script:
+    - apt-get update -qq && apt-get install -qq -y pandoc
+    - pip install sphinx sphinx-rtd-theme
+    - pip install nbsphinx
+    - pip install nbsphinx_link
+    - cd docs
+    - make html
+  artifacts:
+    paths:
+      - docs/build/html/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" # always for commits to main
+    - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
+      when: never   # but not again for any merge requests coming from dev
+    - when: manual  # otherwise manual
+      allow_failure: True  # manual is not required
+
+# Deploy pages for a MR - needs to be separate from deploy-pages-commit due to 
+# $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != $CI_COMMIT_BRANCH
+deploy-pages-MR:
+  stage: deploy
+  needs: 
+    - job: build-pages
+      artifacts: True
+  inherit:
+    default: ["image"] # package not needed to deploy
+  environment:
+    name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  artifacts:
+    paths:
+      - docs/build/html/
+  script: 
+    - ls -l docs/
+    - echo "deploy"
+  artifacts:
+    paths:
+      - docs/build/html/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" # dev is built automatically
+      allow_failure: True
+
+# Deploy pages for a commit without a MR
+deploy-pages-commit:
+  stage: deploy
+  needs:
+    - job: build-pages
+      artifacts: True
+  inherit:
+    default: ["image"] # package not needed to deploy
+  environment:
+    name: pages/$CI_COMMIT_BRANCH
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  script:
+    - ls -l docs/
+    - echo "deploy" #mv docs/build/html/ public/
+  artifacts:
+    paths:
+      - docs/build/html/
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+      allow_failure: True
+
+# Deploy documentation to public pages if it was the dev branch
+pages:
+  stage: deploy
+  needs:
+    - job: build-pages
+      artifacts: True
+  inherit:
+    default: ["image"] # package not needed to deploy
+  script:
+    - mv docs/build/html/ public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+      allow_failure: False  # dev not allowed to fail

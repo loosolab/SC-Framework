@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import itertools
+import warnings
+from anndata import ImplicitModificationWarning
 from pathlib import Path
 from importlib.resources import files
 
@@ -240,7 +242,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
             expressed.columns = ["names", "n_expr"]
 
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-            group_tables[group]["in_group_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
+            group_tables[group][group + "_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
 
             # Fraction of cells for individual groups
             if out_group_fractions is True:
@@ -254,17 +256,26 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                         group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
 
             # Fraction of cells outside group expressing each gene
-            s = (adata[~adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0).A1
+            other_groups = [g for g in groups if g != group]
+            s = (adata[adata.obs[groupby].isin(other_groups), :].X > 0).sum(axis=0).A1
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_out_expr"]
-
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-            group_tables[group]["out_group_fraction"] = group_tables[group]["n_out_expr"] / (sum(n_cells_dict.values()) - n_cells_dict[group])
+
+            # If there are only two groups, out_group_fraction -> name of the other group
+            if len(groups) == 2:
+                out_group_name = [g for g in groups if g != group][0] + "_fraction"
+            else:
+                out_group_name = "out_group_fraction"
+
+            n_out_group = sum([n_cells_dict[other_group] for other_group in other_groups])  # sum of cells in other groups
+            group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / n_out_group
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 
-            # Add additional columns to table
-            if len(var_columns) > 0:
-                group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
+    # Add additional columns to table
+    if len(var_columns) > 0:
+        for group in group_tables:
+            group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
     # If chosen: Save tables to joined excel
     if save_excel is not None:
@@ -321,20 +332,102 @@ def run_rank_genes(adata, groupby,
                    method=None,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
-                   max_out_group_fraction=0.8):
-    """ Run scanpy rank_genes_groups and filter_rank_genes_groups """
+                   max_out_group_fraction=0.8,
+                   **kwargs):
+    """ Run scanpy rank_genes_groups and filter_rank_genes_groups. """
+
+    # Check that adata is an AnnData object
+    # if not isinstance(adata, AnnData):
+    #     raise ValueError("adata must be an AnnData object.")
 
     if "log1p" in adata.uns:
         adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
-    sc.tl.rank_genes_groups(adata, method=method, groupby=groupby)
+    # Check number of groups in groupby
+    if len(adata.obs[groupby].cat.categories) < 2:
+        raise ValueError("groupby must contain at least two groups.")
+
+    # Catch ImplicitModificationWarning from scanpy
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute.*")
+        sc.tl.rank_genes_groups(adata, method=method, groupby=groupby, **kwargs)
+
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
                                    max_out_group_fraction=max_out_group_fraction)
 
-    # adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    # adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+    # Copy rank_genes_groups to rank_genes_<groupby>
+    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
+    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+
+
+def pairwise_rank_genes(adata, groupby,
+                        foldchange_threshold=1,
+                        min_in_group_fraction=0.25,
+                        max_out_group_fraction=0.5
+                        ):
+    """ Rank genes pairwise between groups in 'groupby'.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object containing expression data.
+    groupby : str
+        Key in adata.obs containing groups to be compared.
+    foldchange_threshold : float, default: 1
+        Minimum foldchange (+/-) to be considered as a marker gene.
+    min_in_group_fraction : float, default: 0.25
+        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
+    max_out_group_fraction : float, default: 0.5
+        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
+    """
+
+    adata = adata.copy()  # do not change original adata
+    groups = adata.obs[groupby].cat.categories
+
+    contrasts = list(itertools.combinations(groups, 2))
+
+    # Calculate marker genes for each contrast
+    tables = []
+    for contrast in contrasts:
+        print(f"Calculating rank genes for contrast: {contrast}")
+
+        run_rank_genes(adata, groupby=groupby, groups=contrast)
+
+        # Get table
+        c1, c2 = contrast
+        table_dict = get_rank_genes_tables(adata, out_group_fractions=True)  # returns dict with each group
+        table = table_dict[c1]
+
+        # Reorder columns
+        table.set_index("names", inplace=True)
+        table = table[["scores", "logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
+
+        # Calculate up/down genes
+        c1, c2 = contrast
+        groups = ["C1", "C2"]
+        conditions = [(table["logfoldchanges"] >= foldchange_threshold) & (table[c1 + "_fraction"] >= min_in_group_fraction) & (table[c2 + "_fraction"] <= max_out_group_fraction),  # up
+                      (table["logfoldchanges"] <= -foldchange_threshold) & (table[c1 + "_fraction"] <= max_out_group_fraction) & (table[c2 + "_fraction"] >= min_in_group_fraction)]  # down
+        table["group"] = np.select(conditions, groups, "NS")
+
+        # Rename columns
+        prefix = "/".join(contrast) + "_"
+        table.columns = [prefix + col if "fraction" not in col else col for col in table.columns]
+
+        # Add table to list
+        tables.append(table)
+
+    # Join individual tables
+    merged = pd.concat(tables, join="inner", axis=1)
+
+    # Move fraction columns to the back
+    merged = merged.loc[:, ~merged.columns.duplicated()]
+    fraction_columns = [col for col in merged.columns if col.endswith("_fraction")]
+    first_columns = [col for col in merged.columns if col not in fraction_columns]
+    merged = merged[first_columns + fraction_columns]
+
+    return merged
 
 
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
@@ -362,8 +455,8 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
     Returns
     -----------
-    A py_DESeq2 object containing the results of the DESeq2 analysis.
-    Also adds the dataframes to adata.uns["deseq_result"] and adata.uns["deseq_normalized"].
+    A dataframe containing the results of the DESeq2 analysis.
+    Also adds the dataframe to adata.uns["deseq_result"]
 
     See also
     -----------
@@ -437,6 +530,9 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
     deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
+
+    # Add to adata
+    adata.uns["deseq_result"] = deseq_table
 
     return deseq_table
 

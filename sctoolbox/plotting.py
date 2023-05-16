@@ -3,16 +3,13 @@ Modules for plotting single cell data
 
 .. rubric:: Loading the module
 
-Loading the module
--------------------
 .. plot ::
     :context: close-figs
 
     import sctoolbox.plotting as pl
 
 
-Loading example data
---------------------
+.. rubric:: Loading example data
 
 .. plot ::
     :context: close-figs
@@ -22,6 +19,9 @@ Loading example data
 
     adata = sc.datasets.pbmc68k_reduced()
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+.. rubric:: Functions
+
 """
 
 from math import ceil
@@ -40,6 +40,9 @@ from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
+from scipy.sparse import issparse
+from matplotlib.patches import Patch
+from matplotlib_venn import venn2, venn3
 
 from sctoolbox import settings
 import sctoolbox.utilities
@@ -48,6 +51,8 @@ import sctoolbox.utilities as utils
 from sctoolbox.utilities import save_figure
 import plotly as po
 import plotly.graph_objects as go
+
+from scipy.stats import zscore
 
 
 def _make_square(ax):
@@ -81,6 +86,28 @@ def sc_colormap():
     sc_cmap = ListedColormap(newcolors)
 
     return sc_cmap
+
+
+def flip_embedding(adata, key="X_umap", how="vertical"):
+    """
+    Flip the embedding in adata.obsm[key] along the given axis.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    key : str, default "X_umap"
+        Key in adata.obsm to flip.
+    how : str, default "vertical"
+        Axis to flip along. Can be "vertical" (flips up/down) or "horizontal" (flips left/right).
+    """
+
+    if how == "vertical":
+        adata.obsm[key][:, 1] = -adata.obsm[key][:, 1]
+    elif how == "horizontal":
+        adata.obsm[key][:, 0] = -adata.obsm[key][:, 0]
+    else:
+        raise ValueError("The given axis '{0}' is not supported. Please use 'vertical' or 'horizontal'.".format(how))
 
 
 def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
@@ -599,6 +626,8 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 
             axes[j, i].set_xlabel("")
 
+            _make_square(axes[j, i])
+
     # fig.tight_layout()
     return axes
 
@@ -674,7 +703,8 @@ def plot_3D_UMAP(adata, color, save):
         # color is a gene
         elif color in adata.var.index:
             color_idx = list(adata.var.index).index(color)
-            color_values = adata.X[:, color_idx].todense().A1
+            color_values = adata.X[:, color_idx]
+            color_values = color_values.todense().A1 if issparse(color_values) else color_values
 
         # color was not found
         else:
@@ -717,7 +747,38 @@ def plot_3D_UMAP(adata, color, save):
 #                   Other overview plots for expression                     #
 #############################################################################
 
-def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
+
+def n_cells_pieplot(adata, groupby,
+                    figsize=None):
+    """
+    Plot number of cells per group in a pieplot.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    groupby : str
+        Name of the column in adata.obs to group by.
+
+    Returns
+    -------
+
+
+    Examples
+    --------
+
+
+    """
+
+    # Get counts
+    counts = adata.obs[groupby].value_counts()
+    counts
+    # in progress
+
+
+def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
+                    add_labels=False,
+                    **kwargs):
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -729,10 +790,16 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
         Name of the column in adata.obs to group by on the x axis.
     groupby : str, default None
         Name of the column in adata.obs to created stacked bars on the y axis. If None, the bars are not split.
+    stacked : bool, default True
+        Whether to stack the bars or not.
     save : str, default None
         Path to save the plot. If None, the plot is not saved.
     figsize : tuple, default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
+    add_labels : bool, default False
+        Whether to add labels to the bars giving the number/percentage of cells.
+    **kwargs
+        Additional arguments passed to pandas.DataFrame.plot.bar.
 
     Examples
     --------
@@ -775,18 +842,42 @@ def n_cells_barplot(adata, x, groupby=None, save=None, figsize=None):
         _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
         axarr = [axarr]
 
-    counts_wide.plot.bar(stacked=True, ax=axarr[0], legend=False)
+    counts_wide.plot.bar(stacked=stacked, ax=axarr[0], legend=False, **kwargs)
     axarr[0].set_title("Number of cells")
     axarr[0].set_xticklabels(axarr[0].get_xticklabels(), rotation=45, ha="right")
     axarr[0].grid(False)
 
     if groupby is not None:
-        counts_wide_percent.plot.bar(stacked=True, ax=axarr[1])
+        counts_wide_percent.plot.bar(stacked=stacked, ax=axarr[1], **kwargs)
         axarr[1].set_title("Percentage of cells")
         axarr[1].set_xticklabels(axarr[1].get_xticklabels(), rotation=45, ha="right")
         axarr[1].grid(False)
 
-        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1))  # Set location of legend
+        # Set location of legend
+        axarr[1].legend(title=groupby, bbox_to_anchor=(1, 1), frameon=False,
+                        handlelength=1, handleheight=1  # make legend markers square
+                        )
+
+        # Draw line at 100% if values are stacked
+        if stacked is True:
+            axarr[1].axhline(100, color='black', linestyle='--', linewidth=0.5, zorder=0)
+
+    # Add labels to bars
+    if add_labels:
+        for i, ax in enumerate(axarr):
+            for c in ax.containers:
+                labels = [v.get_height() if v.get_height() > 0 else '' for v in c]  # no label if segment is 0
+                if i == 0:
+                    labels = [str(int(v)) for v in labels]  # convert to int
+                else:
+                    labels = ["%.1f" % v + "%" for v in labels]  # round and add % sign
+                    labels = [label.replace(".0", "") for label in labels]  # remove .0 from 100.0%
+                ax.bar_label(c, labels=labels, label_type='center')
+
+    # Remove spines
+    for ax in axarr:
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
 
     save_figure(save)
 
@@ -840,6 +931,46 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     ax.set_ylabel("Normalized expression")
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+    return g
+
+
+def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
+    """ Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene
+
+    Parameters
+    ----------
+    adata : anndata.AnnData object
+        An annotated data matrix object containing counts in .X.
+    groupby : str
+        A column in .obs for grouping cells into groups on the x-axis
+    gene_list : list, optional
+        A list of genes to show expression for. Default: None (all genes)
+    save : str, optional
+        Save the figure to a file. Default: None (do not save)
+    figsize : tuple, optional
+        Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+
+    Returns
+    -------
+    g : seaborn.clustermap
+        The seaborn clustermap object
+    """
+
+    # Obtain pseudobulk
+    gene_table = sctoolbox.utilities.pseudobulk_table(adata, groupby)
+
+    # Subset to input gene list
+    if gene_list is not None:
+        gene_table = gene_table.loc[gene_list, :]
+
+    # Z-score
+    gene_table = utils.table_zscore(gene_table)
+
+    # Plot heatmap
+    g = sns.heatmap(gene_table, figsize=figsize, xticklabels=True, yticklabels=True, cmap="RdBu_r", center=0)  # center=0, vmin=-2, vmax=2)
+
+    utils.save_figure(save)
 
     return g
 
@@ -1325,7 +1456,10 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
-def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin", save=None, **kwargs):
+def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin",
+                   normalize=False,
+                   save=None,
+                   **kwargs):
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
     Can for example show the expression of one gene across groups (x = obs_group, y = gene),
@@ -1348,6 +1482,8 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
         Title of the plot. If None, no title is shown.
     style : str, default "violin"
         Plot style. Either "violin" or "boxplot".
+    normalize : bool, default False
+        If True, normalize the values in 'y' to the range [0, 1] per group in 'x'.
     save : str, default None
         Path to save the figure to. If None, the figure is not saved.
     kwargs : arguments, optional
@@ -1407,20 +1543,27 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
         id_vars = id_vars + x if x_assignment == "obs" else id_vars
         id_vars = [v for v in id_vars if v is not None]
 
+        value_name = "Expression" if not normalize else "Normalized expression"
         obs_table.reset_index(inplace=True)
         obs_table = obs_table.melt(id_vars=id_vars, value_vars=x,
-                                   var_name="gene", value_name="expression")
-        x_var = "gene"
-        y_var = "expression"
+                                   var_name="Gene", value_name=value_name)
+        x_var = "Gene"
+        y_var = value_name
 
     else:
         x_var = x[0]
         y_var = y
 
+    # Normalize values to 0-1 per group in x_var
+    if normalize:
+        obs_table[y_var] = obs_table.groupby(x_var, group_keys=False)[y_var].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
+
     # Plot expression from obs table
     _, ax = plt.subplots(figsize=figsize)
     if style == "violin":
-        sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, scale='width', **kwargs)
+        kwargs["scale"] = "width" if "scale" not in kwargs else kwargs["scale"]  # set defaults
+        kwargs["cut"] = 0 if "cut" not in kwargs else kwargs["cut"]
+        sns.violinplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     elif style == "boxplot":
         sns.boxplot(data=obs_table, x=x_var, y=y_var, hue=groupby, ax=ax, **kwargs)
     else:
@@ -1639,17 +1782,50 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
     return g
 
 
-def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
-    """ Plot an overview of marker genes and clustering """
+def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
+    """ Plot an overview of marker genes and clustering.
 
-    fig, axarr = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 2]})
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groupby : `str`
+        Key in `adata.obs` for which to plot the clustering.
+    marker_genes_dict : `dict`
+        Dictionary of marker genes to plot. Keys are the names of the groups and values are lists of marker genes.
+    show_umap : `bool`, optional (default: `True`)
+        Whether to show a UMAP plot on the left.
+    save : `str`, optional (default: `None`)
+        If given, save the figure to this path.
+    figsize : `tuple`, optional (default: `None`)
+        Size of the figure. If `None`, use default size.
+    """
 
-    # Plot UMAP colored by groupby on the left
-    sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
-    axarr[0].set_aspect('equal')
+    i = 0
+    if show_umap:
+        figsize = (12, 6) if figsize is None else figsize
+        fig, axarr = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1, 2]})
+
+        # Plot UMAP colored by groupby on the left
+        sc.pl.umap(adata, color=groupby, ax=axarr[0], legend_loc="on data", show=False)
+        axarr[i].set_aspect('equal')
+        i += 1
+
+    else:
+        figsize = (6, 6) if figsize is None else figsize
+        fig, axarr = plt.subplots(1, 1, figsize=figsize)
+        axarr = [axarr]  # Make sure axarr can be indexed
+
+    # Make sure all genes are in the data
+    marker_genes_dict = marker_genes_dict.copy()
+    for group in list(marker_genes_dict.keys()):
+        genes = marker_genes_dict[group]
+        marker_genes_dict[group] = [gene for gene in genes if gene in adata.var_names]
+        if len(marker_genes_dict[group]) == 0:
+            del marker_genes_dict[group]  # Remove group if no genes are left in the data
 
     # Plot marker gene expression on the right
-    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[1])
+    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])
     ax["mainplot_ax"].set_ylabel(groupby)
     ax["mainplot_ax"].set_xticklabels(ax["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
 
@@ -1664,6 +1840,208 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, save=None):
     utils.save_figure(save)
 
     return axarr
+
+
+def gene_expression_heatmap(adata, genes, cluster_column,
+                            title=None,
+                            groupby=None,
+                            row_cluster=True,
+                            col_cluster=False,
+                            show_row_dendrogram=False,
+                            show_col_dendrogram=False,
+                            figsize=None,
+                            save=None,
+                            **kwargs):
+    """ Plot a heatmap of gene expression.
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    genes : `list`
+        List of genes to plot.
+    cluster_column : `str`
+        Key in `adata.obs` for which to cluster the x-axis.
+    title : `str`, optional (default: `None`)
+        Title of the plot.
+    groupby : `str`, optional (default: `None`)
+        Key in `adata.obs` for which to plot a colorbar per cluster.
+    row_cluster : `bool`, optional (default: `True`)
+        Whether to cluster the rows.
+    col_cluster : `bool`, optional (default: `False`)
+        Whether to cluster the columns.
+    show_row_dendrogram : `bool`, optional (default: `False`)
+        Whether to show the dendrogram for the rows.
+    show_col_dendrogram : `bool`, optional (default: `False`)
+        Whether to show the dendrogram for the columns.
+    figsize : `tuple`, optional (default: `None`)
+        Size of the figure. If `None`, use default size.
+    save : `str`, optional (default: `None`)
+        If given, save the figure to this path.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        genes = adata.var.index[:10]
+        pl.gene_expression_heatmap(adata, genes, cluster_column="bulk_labels")
+    """
+
+    adata = adata[:, genes]  # Subset to genes
+
+    # Collect counts for each gene per sample
+    counts = utils.pseudobulk_table(adata, groupby=cluster_column)
+    counts_z = counts.T.apply(zscore).T
+
+    # color dict for groupby
+    if groupby is not None:
+        groups = adata.obs[groupby].cat.categories
+        colors = sns.color_palette()[:len(groups)]
+        color_dict = dict(zip(groups, colors))
+
+        # samples = counts_z.columns.tolist()
+        sample2group = adata.obs[[cluster_column, groupby]].drop_duplicates()
+        samples = sample2group[cluster_column].tolist()
+        groups = sample2group[groupby].tolist()
+        colors = [color_dict[group] for group in groups]
+
+        sample_info = pd.DataFrame([samples, groups, colors], index=["sample", "group", "color"]).T.set_index("sample")
+        col_colors = sample_info["color"]
+
+    else:
+        col_colors = None
+
+    nrows, ncols = counts_z.shape
+    figsize = (ncols / 2, nrows / 3) if figsize is None else figsize  # (width, height)
+
+    # Plot heatmap
+    parameters = {"cmap": "bwr", "center": 0}
+    parameters.update(**kwargs)
+    g = sns.clustermap(counts_z,
+                       xticklabels=True,
+                       yticklabels=True,  # show all genes
+                       row_cluster=row_cluster,
+                       col_cluster=col_cluster,
+                       figsize=figsize,
+                       col_colors=col_colors,
+                       **parameters)
+
+    g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right")
+    g.ax_heatmap.tick_params(left=True, labelleft=True, right=False, labelright=False)
+    g.ax_heatmap.set_ylabel("")
+    heatmap_bbox = g.ax_heatmap.get_position()
+    heatmap_width = heatmap_bbox.x1 - heatmap_bbox.x0
+    # heat_height = heatmap_bbox.y1 - heatmap_bbox.y0
+
+    if show_row_dendrogram is False:
+        g.ax_row_dendrogram.set_visible(False)
+    if show_col_dendrogram is False:
+        g.ax_col_dendrogram.set_visible(False)
+
+    # Invert order of x-axis
+    # g.ax_col_colors.invert_xaxis()
+    # g.ax_col_dendrogram.invert_xaxis()
+    # g.ax_heatmap.invert_xaxis()
+
+    # Add color legend for groupby
+    if groupby is not None:
+
+        g.ax_col_colors.tick_params(right=False, labelright=False)
+
+        handles = [Patch(facecolor=color_dict[name]) for name in color_dict]
+        legend = plt.legend(handles, color_dict,
+                            title=groupby,
+                            bbox_to_anchor=(1, 1),
+                            bbox_transform=g.ax_heatmap.transAxes,
+                            loc='upper left',
+                            handlelength=1, handleheight=1,
+                            frameon=False,
+                            )
+        legend._legend_box.align = "left"
+
+    # Move colorbar
+    cbar_ax = g.ax_cbar
+    bbox = cbar_ax.get_position()
+    left, bottom, width, height = bbox._points.flatten()
+    cbar_ax.set_position([heatmap_bbox.x1 + heatmap_width / ncols, heatmap_bbox.y0, width, height / nrows * 10])
+    cbar_ax.set_ylabel("Mean expr.\nz-score")
+
+    # Set title on top of heatmap
+    if title is not None:
+        if g.ax_col_dendrogram.get_visible():
+            g.ax_col_dendrogram.set_title(title)
+        else:
+            g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space beetween title and heatmap
+                              transform=g.ax_heatmap.transData, ha="center", va="bottom",
+                              fontsize=16)
+            # g.ax_heatmap.set_title(title, y=1.2)
+
+    utils.save_figure(save)
+
+    return g
+
+
+def umap_marker_overview(adata, markers, ncols=3, figsize=None,
+                         save=None,
+                         cbar_label="Relative expr.",
+                         **kwargs):
+    """ Plot a pretty grid of UMAPs with marker gene expression. """
+
+    # Find out how many rows we need
+    n_markers = len(markers)
+    nrows = int(np.ceil(n_markers / ncols))
+
+    if figsize is None:
+        figsize = (ncols * 3, nrows * 3)
+    fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
+
+    params = {"cmap": sc_colormap(),
+              "ncols": ncols,
+              "frameon": False}
+    params.update(**kwargs)
+
+    axes_list = axarr.flatten()
+
+    for i, marker in enumerate(markers):
+        ax = axes_list[i]
+
+        _ = sc.pl.umap(adata,
+                       color=marker,
+                       show=False,
+                       colorbar_loc=None,
+                       ax=ax,
+                       **params)
+
+        # Add title to upper left corner
+        # ax.text(0, 1, marker, transform=ax.transAxes,
+        #                      horizontalalignment='left',
+        #                      verticalalignment='top')
+
+    # Hide axes not used
+    for ax in axes_list[len(markers):]:
+        ax.set_visible(False)
+
+    axes_list = axes_list[:len(markers)]
+
+    # Add colorbar next to the last plot
+    cax = fig.add_axes([0, 0, 1, 1])  # dummy size, will be resized
+    lastax_pos = axes_list[len(markers) - 1].get_position()  # get the position of the last axis
+    newpos = [lastax_pos.x1 * 1.1, lastax_pos.y0, lastax_pos.width * 0.1, lastax_pos.height * 0.5]
+    cax.set_position(newpos)  # set a new position
+
+    cbar = plt.colorbar(cm.ScalarMappable(cmap=params["cmap"]), cax=cax, label=cbar_label)
+    cbar.set_ticks([])
+    cbar.outline.set_visible(False)  # remove border of colorbar
+
+    # Make plots square
+    for ax in axes_list:
+        _make_square(ax)
+
+    # Save figure if chosen
+    save_figure(save)
+
+    return axes_list
 
 
 def umap_pub(adata, color=None, title=None, save=None, **kwargs):
@@ -1693,18 +2071,31 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
 
     axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
 
+    if title is not None and not isinstance(title, list):
+        title = [title]
+
     if not isinstance(axarr, list):
         axarr = [axarr]
         color = [color]
 
+    colorbar_count = 0
     for i, ax in enumerate(axarr):
 
         # Set legend
         legend = ax.get_legend()
-        if legend is not None:
+        if legend is not None:  # legend of categorical variables
             legend.set_title(color[i])
+        else:                   # legend of continuous variables
+            colorbar_idx = i + colorbar_count + 1
+            local_axes = ax.figure._localaxes
+            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
+                local_axes[colorbar_idx].set_title(color[i])
+                colorbar_count += 1
 
-        ax.set_title(title)
+        # Remove automatic title
+        ax.set_title("")
+        if title is not None:
+            ax.set_title(title[i])
 
         # Remove all spines (axes lines)
         for spine in ax.spines.values():
@@ -1726,11 +2117,17 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
         xmin, xmax = ax.get_xlim()
         yrange = ymax - ymin
         xrange = xmax - xmin
-        arrow_len_y = yrange * 0.15
-        arrow_len_x = xrange * 0.15
+        arrow_len_y = yrange * 0.2
+        arrow_len_x = xrange * 0.2
 
         ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
         ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
+
+        # Add number of cells to plot
+        ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
+                transform=ax.transAxes,
+                horizontalalignment='left',
+                verticalalignment='bottom')
 
         # Adjust aspect ratio
         _make_square(ax)
@@ -1738,4 +2135,462 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     # Save figure
     utils.save_figure(save)
 
+    return axarr
+
+
+def add_figure_title(axarr, title, y=1.3, fontsize=16):
+    """
+    Add a figure title to the top of a multi-axes figure.
+
+    Parameters
+    ----------
+    axarr : `list` of `matplotlib.axes.Axes`
+        List of axes to add the title to.
+    title : `str`
+        Title to add at the top of plot.
+    y : `float`, optional (default: `1.3`)
+        Vertical position of the title in relation to the content. Larger number moves the title further up.
+    fontsize : `int`, optional (default: `16`)
+        Font size of the title.
+
+    Returns
+    -------
+    None - adds a title to the figure directly.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        axes = sc.pl.umap(adata, color=["louvain", "condition"], show=False)
+        pl.add_figure_title(axes, "UMAP plots")
+    """
+
+    # If only one axes is passed, convert to list
+    if type(axarr).__name__.startswith("Axes"):
+        axarr = [axarr]
+
+    try:
+        axarr[0]
+    except Exception:
+
+        if isinstance(axarr, dict):
+            ax_dict = axarr   # e.g. scanpy dotplot
+        else:
+            ax_dict = axarr.__dict__   # seaborn clustermap, etc.
+
+        axarr = [ax_dict[key] for key, value in ax_dict.items() if type(value).__name__.startswith("Axes")]
+
+    # Get figure
+    fig = plt.gcf()
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+
+    # Get bounding box of axes in relation to first axes
+    trans_data_inv = axarr[0].transData.inverted()  # from display to data
+    bbox_list = [ax.get_window_extent(renderer=renderer).transformed(trans_data_inv) for ax in axarr]
+
+    # Find y/x positions based on bboxes
+    ty = np.max([bbox.y1 for bbox in bbox_list])
+    ty *= y
+
+    xmin = np.min([bbox.x0 for bbox in bbox_list])
+    xmax = np.max([bbox.x1 for bbox in bbox_list])
+    tx = np.mean([xmin, xmax])
+
+    # Add text
+    _ = axarr[0].text(tx, ty, title, va="bottom", ha="center", fontsize=fontsize)
+
+
+def add_labels(x, y, labels, ax=None):
+    """ Add labels to a scatter plot.
+
+    Parameters
+    ----------
+
+    """
+
+    if ax is None:
+        ax = plt.gca()
+
+    texts = []
+    for i, label in enumerate(labels):
+
+        text = ax.annotate(label, (x[i], y[i]))
+        texts.append(text)
+
+    # Adjust text positions
+    # to-do
+
+
+def plot_differential_genes(rank_table, title="Differentially expressed genes",
+                            save=None,
+                            **kwargs):
+    """ Plot number of differentially expressed genes per contrast in a barplot.
+    Takes the output of mg.pairwise_rank_genes as input.
+
+    Parameters
+    ----------
+    rank_table : `pandas.DataFrame`
+        Output of mg.pairwise_rank_genes.
+    title : `str`, optional (default: `"Differentially expressed genes"`)
+        Title of the plot.
+    **kwargs : keyword arguments
+        Keyword arguments passed to pl.bidirectional_barplot.
+
+    Returns
+    -------
+    `matplotlib.axes.Axes`
+        Axes object.
+    """
+    group_columns = [col for col in rank_table.columns if "_group" in col]
+
+    info = {}
+    for col in group_columns:
+        contrast = tuple(col.split("_")[0].split("/"))
+        counts = rank_table[col].value_counts()
+        info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}
+
+    df = pd.DataFrame().from_dict(info, orient="index")
+    df = df.reset_index(names=["left_label", "right_label"])
+
+    ax = bidirectional_barplot(df, title=title, save=save, **kwargs)
+    ax.set_xlabel("Number of genes")
+
     return ax
+
+
+def bidirectional_barplot(df,
+                          title=None,
+                          colors=None,
+                          figsize=None,
+                          save=None):
+    """ Plot a bidirectional barplot. The input is a dataframe with the following columns:
+    - left_label
+    - right_label
+    - left_value
+    - right_value
+
+    Parameters
+    ----------
+    df : `pandas.DataFrame`
+        Dataframe with the following columns: left_label, right_label, left_value, right_value.
+    title : `str`, optional (default: `None`)
+        Title of the plot.
+    colors : `dict`, optional (default: `None`)
+        Dictionary with label names as keys and colors as values.
+    figsize : `tuple`, optional (default: `None`)
+        Figure size.
+    """
+
+    # Check that df contains columns left/right_label and left/right value
+    required_columns = ["left_label", "right_label", "left_value", "right_value"]
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Column {col} not found in dataframe.")
+
+    # Example data
+    labels_left = df["left_label"].tolist()
+    labels_right = df["right_label"].tolist()
+    values_left = -np.abs(df["left_value"])
+    values_right = df["right_value"]
+
+    if colors is None:
+        all_labels = list(set(labels_left + labels_right))
+        colors = {label: sns.color_palette()[i] for i, label in enumerate(all_labels)}
+
+    # Create figure and axis objects
+    if figsize is None:
+        figsize = (5, len(labels_left))  # 5 wide, n bars tall
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Set the position of the y-axis ticks
+    n_bars = len(labels_left)
+    yticks = np.arange(n_bars)[::-1]
+
+    # Plot the positive values as blue bars
+    right_colors = [colors[label] for label in labels_right]
+    right_bars = ax.barh(yticks, values_right, color=right_colors)
+
+    # Plot the negative values as red bars
+    left_colors = [colors[label] for label in labels_left]
+    left_bars = ax.barh(yticks, values_left, color=left_colors)
+
+    # Set the x-axis limits to include both positive and negative values
+    ax.set_xlim([min(values_left) * 1.1, max(values_right) * 1.1])
+
+    # Add a vertical line at x=0 to indicate the zero point
+    ax.axvline(x=0, color='k')
+
+    # Add text labels and values to right bars
+    for i, bar in enumerate(right_bars):
+        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, " " + str(labels_right[i]), ha='left', va='center')  # adding a space before to ensure space between bars and labels
+        ax.text(bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, str(values_right[i]), ha='center', va='center')
+
+    # Add text labels and values to left bars
+    for i, bar in enumerate(left_bars):
+        ax.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, str(labels_left[i]) + " ", ha='right', va='center')
+        ax.text(bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, str(np.abs(values_left[i])), ha='center', va='center')
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_position(('data', 0))
+
+    ax.set_yticks([])
+    ax.set_yticklabels([])
+
+    # Set the x-axis tick labels to be positive numbers
+    ticks = ax.get_xticks().tolist()
+    ax.set_xticks(ticks)  # prevent "FixedFormatter should only be used together with FixedLocator"
+    ax.set_xticklabels([int(abs(tick)) for tick in ticks])
+
+    # Add a legend
+    # ax.legend(['Positive', 'Negative'], loc='center left', bbox_to_anchor=(1, 0.5))
+    # ax.legend(['Positive', 'Negative'], loc='lower right')
+
+    if title is not None:
+        ax.set_title(title)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return ax
+
+
+def genes_dotplot(adata,
+                  genes=None,
+                  key=None,
+                  n_genes=15,
+                  dendrogram=False,
+                  groupby=None,
+                  title=None,
+                  style="dots",
+                  measure="expression",
+                  save=None,
+                  **kwargs):
+    """
+    Plot a dotplot of genes from rank_genes_groups or from a gene list/dict.
+
+    Parameters
+    ----------
+    adata : `anndata.AnnData`
+        Annotated data matrix.
+    genes : `list` or `dict`, optional (default: `None`)
+        List of genes to plot. If a dict is passed, the keys are the group names and the values are lists of genes.
+    key : `str`, optional (default: `None`)
+        Key from `adata.uns` to plot. If specified, `genes` must be `None`.
+    n_genes : `int`, optional (default: `15`)
+        Number of genes to plot if `key` is specified.
+    dendrogram : `bool`, optional (default: `False`)
+        Whether to show the dendrogram for groups.
+    groupby : `str`, optional (default: `None`)
+        Key from `adata.obs` to group cells by.
+    title : `str`, optional (default: `None`)
+        Title for the plot.
+    style : `str`, optional (default: `dots`)
+        Style of the plot. Either `dots` or `heatmap`.
+    measure : `str`, optional (default: `expression`)
+        Measure to write in colorbar label. For example, `expression` or `accessibility`.
+    """
+
+    available_styles = ["dots", "heatmap"]
+    if style not in available_styles:
+        raise ValueError(f"style must be one of {available_styles}.")
+
+    if genes is not None and key is not None:
+        raise ValueError("Only one of genes or key can be specified.")
+
+    # Plot genes from rank_genes_groups or from gene list
+    parameters = {"swap_axes": False}  # default parameters
+    parameters.update(kwargs)
+    if key is not None:  # from rank_genes_groups output
+
+        if style == "dots":
+            g = sc.pl.rank_genes_groups_dotplot(adata,
+                                                key=key,
+                                                n_genes=n_genes,
+                                                dendrogram=dendrogram,
+                                                groupby=groupby,
+                                                show=False,
+                                                **parameters)
+        elif style == "heatmap":
+            g = sc.pl.rank_genes_groups_matrixplot(adata,
+                                                   key=key,
+                                                   n_genes=n_genes,
+                                                   dendrogram=dendrogram,
+                                                   groupby=groupby,
+                                                   show=False,
+                                                   **parameters)
+
+    else:  # from a gene list
+
+        if groupby is None:
+            raise ValueError("The parameter 'groupby' is needed if 'genes' is given.")
+
+        if style == "dots":
+            g = sc.pl.dotplot(adata, genes,
+                              dendrogram=False,
+                              groupby=groupby,
+                              show=False,
+                              **parameters)
+        elif style == "heatmap":
+            g = sc.pl.matrixplot(adata, genes,
+                                 dendrogram=False,
+                                 groupby=groupby,
+                                 show=False,
+                                 **parameters)
+
+    g["mainplot_ax"].set_xticklabels(g["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
+
+    # Rotate gene group names
+    if "gene_group_ax" in g and parameters["swap_axes"] is False:  # only rotate if axes is not swapped
+        for text in g["gene_group_ax"]._children:
+            text._rotation = 45
+            text._horizontalalignment = "left"
+
+    # Change title of colorbar (for example expression -> accessibility)
+    default_title = g["color_legend_ax"].get_title()
+    updated_title = default_title.replace("expression", measure)
+    g["color_legend_ax"].set_title(updated_title)
+
+    # Add title to plot above groups
+    if title is not None:
+
+        if "gene_group_ax" in g:
+
+            if parameters["swap_axes"]:
+                g["mainplot_ax"].set_title(title + "\n" * 2)  # \n to ensure a little space between title and plot
+
+            else:
+                fig = plt.gcf()
+                fig.canvas.draw()
+                renderer = fig.canvas.get_renderer()
+
+                highest_y = 0
+                for text in g["gene_group_ax"]._children:
+
+                    # Find highest y value for all labels
+                    ax = g["gene_group_ax"]
+                    transf = ax.transData.inverted()
+                    bb = text.get_window_extent(renderer=renderer)
+                    bb_datacoords = bb.transformed(transf)
+
+                    highest_y = bb_datacoords.y1 if bb_datacoords.y1 > highest_y else highest_y
+
+                x_mid = np.mean(g["gene_group_ax"].get_xlim())
+                g["gene_group_ax"].text(x_mid, highest_y + 0.2, title, fontsize=14, va="bottom", ha="center")
+
+        else:
+            g["mainplot_ax"].set_title(title)
+
+    # Save figure
+    utils.save_figure(save)
+
+    return g
+
+
+def pseudotime_heatmap(adata, genes,
+                       sortby=None,
+                       layer=None,
+                       figsize=None,
+                       shrink_cbar=0.5,
+                       title=None,
+                       save=None,
+                       **kwargs):
+    """ Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs. """
+
+    adata_sub = adata[:, genes].copy()
+
+    # Sort adata
+    if sortby is not None:
+        obs_sorted = adata_sub.obs.sort_values(sortby)
+        adata_sub = adata_sub[obs_sorted.index, :]
+
+    # Collect matrix
+    if layer is not None:
+        mat = adata_sub.layers[layer]
+    else:
+        mat = adata_sub.X
+
+    mat = mat.todense() if issparse(mat) else mat
+    mat = mat.T     # pseudotime on x-axis
+
+    # Convert to pandas dataframe
+    mat = pd.DataFrame(mat)
+    mat.index = genes
+
+    # z-score normalize per row
+    mat = utils.table_zscore(mat)
+
+    # Plot heatmap
+    n_genes = len(mat)
+    n_cells = mat.shape[1]
+    nrows = 1
+
+    if figsize is None:
+        figsize = (6, n_genes / 5)
+
+    # Setup figure
+    fig, axarr = plt.subplots(nrows, 1, sharex=True, figsize=figsize)  # , height_ratios=(1, len(mat)))
+    axarr = [axarr] if type(axarr).__name__.startswith("AxesSubplot") else axarr
+    i = 0
+
+    parameters = {"center": 0,
+                  "cmap": "bwr"}
+    parameters.update(kwargs)
+    ax = sns.heatmap(mat, ax=axarr[i],
+                     yticklabels=True,  # make sure all labels are shown
+                     cbar_kws={"label": "Expr.z-score",
+                               "shrink": shrink_cbar,
+                               "anchor": (0, 0),
+                               "aspect": 20 * shrink_cbar * 2},  # width of cbar after shrink by adjusting aspect
+                     **parameters)
+    ax.set_xticks([])  # remove x-ticks
+
+    if title is not None:
+        ax.set_title(title)
+
+    # Draw pseudotime arrow below heatmap
+    ax.annotate('', xy=(0, n_genes + 1), xycoords=ax.transData, xytext=(n_cells, n_genes + 1),
+                arrowprops=dict(arrowstyle="<-", color='black'))
+    ax.text(n_cells / 2, n_genes + 1.2, f"Pseudotime (n={n_cells:,} cells)", transform=ax.transData, ha="center", va="top")
+
+    # Save figure
+    utils.save_figure(save)
+
+    return ax
+
+
+def plot_venn(groups_dict, title=None, save=None):
+    """
+    Plots a Venn diagram from a dictionary of groups of lists.
+
+    Parameters
+    ----------
+    groups_dict : `dict`
+        A dictionary where the keys are group names (strings) and the values
+        are lists of items belonging to that group (e.g. {'Group A': ['A', 'B', 'C'], ...}).
+    title : `str`, optional (default: `None`)
+        Title of the plot.
+    save : `str`, optional (default: `None`)
+        Filename to save the plot to.
+    """
+    # Extract the lists of items from the dictionary and convert them to sets
+    group_sets = [set(groups_dict[group]) for group in groups_dict]
+
+    plt.figure()
+
+    # Plot the Venn diagram using matplotlib_venn
+    if len(group_sets) == 2:
+        venn2(group_sets, set_labels=list(groups_dict.keys()))
+    elif len(group_sets) == 3:
+        venn3(group_sets, set_labels=list(groups_dict.keys()))
+    else:
+        raise ValueError("Only 2 or 3 groups are supported.")
+
+    # Add a title to the plot
+    if title is not None:
+        plt.title(title)
+
+    # Show the plot
+    utils.save_figure(save)
