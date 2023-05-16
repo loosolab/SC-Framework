@@ -163,6 +163,7 @@ build-pages:
     - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
       when: never   # but not again for any merge requests coming from dev
     - when: manual  # otherwise manual
+      allow_failure: True  # manual is not required
 
 # Deploy pages for a MR - needs to be separate from deploy-pages-commit due to 
 # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != $CI_COMMIT_BRANCH
@@ -180,6 +181,7 @@ deploy-pages-MR:
     - echo "deploy"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" # dev is built automatically
+      allow_failure: True
 
 # Deploy pages for a commit without a MR
 deploy-pages-commit:
@@ -196,6 +198,7 @@ deploy-pages-commit:
     - echo "deploy" #mv docs/build/html/ public/
   rules:
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+      allow_failure: True
 
 # Deploy documentation to public pages if it was the dev branch
 pages:
