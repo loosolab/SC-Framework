@@ -168,14 +168,16 @@ build-pages:
 # $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != $CI_COMMIT_BRANCH
 deploy-pages-MR:
   stage: deploy
-  needs: 
-    - job: "build-pages"
-      artifacts: true
+  dependencies: 
+    - build-pages
   inherit:
     default: ["image"] # package not needed to deploy
   environment:
     name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  artifacts:
+    paths:
+      - docs/build/html/
   script: 
     - ls -l
     - echo "deploy"
@@ -189,9 +191,8 @@ deploy-pages-MR:
 # Deploy pages for a commit without a MR
 deploy-pages-commit:
   stage: deploy
-  needs:
-    - job: "build-pages"
-      artifacts: true
+  dependencies: 
+    - build-pages
   inherit:
     default: ["image"] # package not needed to deploy
   environment:
@@ -209,9 +210,8 @@ deploy-pages-commit:
 # Deploy documentation to public pages if it was the dev branch
 pages:
   stage: deploy
-  needs:
-    - job: "build-pages"
-      artifacts: true
+  dependencies: 
+    - build-pages
   inherit:
     default: ["image"] # package not needed to deploy
   script:
