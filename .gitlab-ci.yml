@@ -136,7 +136,7 @@ notebooks:
     - bash scripts/run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
-      when: always
+      when: manual  # manual trigger but not allowed to fail
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
