@@ -291,6 +291,7 @@ def add_analysis(dest, analysis_name, method="rna",
     # Download notebooks
     print("Downloading notebooks..")
     gitlab_download(f"{method}-notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
+    gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
 
 
 def build_notebooks_regex(starts_with):
