@@ -128,7 +128,7 @@ def create_dir(outpath, test):
 
 
 def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
-                    repo="loosolab_SC_RNA_framework", branch="main",
+                    repo="sc_framework", branch="main",
                     commit=None, out_path="./", private=False,
                     load_token=pathlib.Path.home() / ".gitlab_token",
                     save_token=pathlib.Path.home() / ".gitlab_token",
@@ -208,6 +208,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                 continue
             out = pathlib.Path(out_path) / item["name"]
             if not out.is_file() or overwrite:
+                print(f"Downloading: {item['name']}")
                 with rate_limiter:
                     with open(out, 'wb') as f:
                         project.files.raw(file_path=item["path"], ref=branch, streamed=True, action=f.write)
@@ -244,7 +245,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
         print(f"Build: {path_to_build}")
 
 
-def add_analysis(dest, analysis_name,
+def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
                  starts_with=1, **kwargs):
     """
@@ -259,6 +260,8 @@ def add_analysis(dest, analysis_name,
         Path to experiment
     analysis_name : str
         Name of the new analysis run
+    method : str, default rna
+        Which notebooks should be downloaded. ['rna', 'atac']
     dirs : list, default ['figures', 'data', 'logs']
         Internal folders to create. Notebook directory is required.
     start_with : int, default 1
@@ -276,6 +279,9 @@ def add_analysis(dest, analysis_name,
                                 + "Please check if you entered the right "
                                 + "directory or if it was setup correctly.")
     run_path = analysis_path / analysis_name
+    method = method.lower()
+    if method not in ['rna', 'atac']:
+        raise ValueError("Invalid method type. Valid options: 'rna', 'atac'")
 
     # Setup run directorys
     setup_experiment(run_path, dirs=dirs + ["notebooks"])
@@ -284,7 +290,8 @@ def add_analysis(dest, analysis_name,
 
     # Download notebooks
     print("Downloading notebooks..")
-    gitlab_download("notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
+    gitlab_download(f"{method}-notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
+    gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
 
 
 def build_notebooks_regex(starts_with):
@@ -307,7 +314,7 @@ def build_notebooks_regex(starts_with):
     if starts_with < 1:
         raise ValueError("starts_with needs to be at least 1")
     elif 1 <= starts_with < 10:
-        regex = f"[0]*[{starts_with}-9].*.ipynb"
+        regex = f"[0]*[1-9]?[{starts_with}-9].*.ipynb"
     elif 10 <= starts_with < 90:
         regex = f"[0]*([{str(starts_with)[0]}][{str(starts_with)[1]}-9]|[{str(starts_with+10)[0]}-9][0-9]).*.ipynb"
     else:
