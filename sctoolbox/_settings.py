@@ -1,4 +1,5 @@
 import os
+import yaml
 
 
 class SctoolboxConfig(object):
@@ -104,6 +105,38 @@ class SctoolboxConfig(object):
     @full_adata_output_prefix.setter
     def full_adata_output_prefix(self, value):
         raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
+
+
+def settings_from_config(config_file, key=None):
+    """
+    Set settings from a config file in yaml format.
+
+    Parameters
+    ----------
+    config_file : str
+        Path to the config file.
+    key : str, optional
+        If given, get settings for a specific key.
+
+    Returns
+    -------
+    None
+        Settings are set in sctoolbox.settings.
+    """
+
+    # Read yaml file
+    with open(config_file, "r") as f:
+        config_dict = yaml.safe_load(f)
+
+    if key is not None:
+        try:
+            config_dict = config_dict[key]
+        except KeyError:
+            raise KeyError(f"Key {key} not found in config file {config_file}")
+
+    # Set settings
+    for key, value in config_dict.items():
+        setattr(settings, key, value)
 
 
 settings = SctoolboxConfig()

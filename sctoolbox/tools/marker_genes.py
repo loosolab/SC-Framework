@@ -9,10 +9,9 @@ import itertools
 import warnings
 from anndata import ImplicitModificationWarning
 from pathlib import Path
-from importlib.resources import files
 
-import sctoolbox.utilities as utils
-import sctoolbox.creators as creators
+import sctoolbox.utils as utils
+import sctoolbox.utils.creators as creators
 
 
 def get_chromosome_genes(gtf, chromosomes):
@@ -180,6 +179,119 @@ def add_gene_expression(adata, gene):
         raise ValueError(f"Gene '{gene}' was not found in adata.var.index")
 
 
+############################################################
+#                 Scanpy rank genes groups                 #
+############################################################
+
+def run_rank_genes(adata, groupby,
+                   min_in_group_fraction=0.25,
+                   min_fold_change=0.5,
+                   max_out_group_fraction=0.8,
+                   **kwargs):
+    """ Run scanpy rank_genes_groups and filter_rank_genes_groups. """
+
+    # Check that adata is an AnnData object
+    # if not isinstance(adata, AnnData):
+    #     raise ValueError("adata must be an AnnData object.")
+
+    if "log1p" in adata.uns:
+        adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
+
+    # Check number of groups in groupby
+    if len(adata.obs[groupby].cat.categories) < 2:
+        raise ValueError("groupby must contain at least two groups.")
+
+    # Catch ImplicitModificationWarning from scanpy
+    params = {'method': 't-test'}  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+    params.update(kwargs)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute.*")
+        sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
+
+    sc.tl.filter_rank_genes_groups(adata,
+                                   min_in_group_fraction=min_in_group_fraction,
+                                   min_fold_change=min_fold_change,
+                                   max_out_group_fraction=max_out_group_fraction)
+
+    # Copy rank_genes_groups to rank_genes_<groupby>
+    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
+    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+
+
+def pairwise_rank_genes(adata, groupby,
+                        foldchange_threshold=1,
+                        min_in_group_fraction=0.25,
+                        max_out_group_fraction=0.5,
+                        **kwargs
+                        ):
+    """ Rank genes pairwise between groups in 'groupby'.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object containing expression data.
+    groupby : str
+        Key in adata.obs containing groups to be compared.
+    foldchange_threshold : float, default: 1
+        Minimum foldchange (+/-) to be considered as a marker gene.
+    min_in_group_fraction : float, default: 0.25
+        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
+    max_out_group_fraction : float, default: 0.5
+        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
+    kwargs : dict
+        Additional arguments to be passed to scanpy.tl.rank_genes_groups.
+    """
+
+    groups = adata.obs[groupby].astype("category").cat.categories
+    contrasts = list(itertools.combinations(groups, 2))
+
+    # Calculate marker genes for each contrast
+    tables = []
+    for contrast in contrasts:
+        print(f"Calculating rank genes for contrast: {contrast}")
+
+        # Get adata for contrast
+        adata_sub = adata[adata.obs[groupby].isin(contrast)]   # subset to contrast
+
+        # Run rank_genes_groups
+        run_rank_genes(adata_sub, groupby=groupby, **kwargs)
+
+        # Get table
+        c1, c2 = contrast
+        table_dict = get_rank_genes_tables(adata_sub, out_group_fractions=True)  # returns dict with each group
+        table = table_dict[c1]
+
+        # Reorder columns
+        table.set_index("names", inplace=True)
+        table = table[["scores", "logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
+        table = table.copy(deep=True)  # prevent SettingWithCopyWarning
+
+        # Calculate up/down genes
+        c1, c2 = contrast
+        groups = ["C1", "C2"]
+        conditions = [(table["logfoldchanges"] >= foldchange_threshold) & (table[c1 + "_fraction"] >= min_in_group_fraction) & (table[c2 + "_fraction"] <= max_out_group_fraction),  # up
+                      (table["logfoldchanges"] <= -foldchange_threshold) & (table[c1 + "_fraction"] <= max_out_group_fraction) & (table[c2 + "_fraction"] >= min_in_group_fraction)]  # down
+        table["group"] = np.select(conditions, groups, "NS")
+
+        # Rename columns
+        prefix = "/".join(contrast) + "_"
+        table.columns = [prefix + col if "fraction" not in col else col for col in table.columns]
+
+        # Add table to list
+        tables.append(table)
+
+    # Join individual tables
+    merged = pd.concat(tables, join="inner", axis=1)
+
+    # Move fraction columns to the back
+    merged = merged.loc[:, ~merged.columns.duplicated()]
+    fraction_columns = [col for col in merged.columns if col.endswith("_fraction")]
+    first_columns = [col for col in merged.columns if col not in fraction_columns]
+    merged = merged[first_columns + fraction_columns]
+
+    return merged
+
+
 def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -328,107 +440,9 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
         return adata
 
 
-def run_rank_genes(adata, groupby,
-                   method=None,
-                   min_in_group_fraction=0.25,
-                   min_fold_change=0.5,
-                   max_out_group_fraction=0.8,
-                   **kwargs):
-    """ Run scanpy rank_genes_groups and filter_rank_genes_groups. """
-
-    # Check that adata is an AnnData object
-    # if not isinstance(adata, AnnData):
-    #     raise ValueError("adata must be an AnnData object.")
-
-    if "log1p" in adata.uns:
-        adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
-
-    # Check number of groups in groupby
-    if len(adata.obs[groupby].cat.categories) < 2:
-        raise ValueError("groupby must contain at least two groups.")
-
-    # Catch ImplicitModificationWarning from scanpy
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute.*")
-        sc.tl.rank_genes_groups(adata, method=method, groupby=groupby, **kwargs)
-
-    sc.tl.filter_rank_genes_groups(adata,
-                                   min_in_group_fraction=min_in_group_fraction,
-                                   min_fold_change=min_fold_change,
-                                   max_out_group_fraction=max_out_group_fraction)
-
-    # Copy rank_genes_groups to rank_genes_<groupby>
-    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
-
-
-def pairwise_rank_genes(adata, groupby,
-                        foldchange_threshold=1,
-                        min_in_group_fraction=0.25,
-                        max_out_group_fraction=0.5
-                        ):
-    """ Rank genes pairwise between groups in 'groupby'.
-
-    Parameters
-    ----------
-    adata : anndata.AnnData
-        Anndata object containing expression data.
-    groupby : str
-        Key in adata.obs containing groups to be compared.
-    foldchange_threshold : float, default: 1
-        Minimum foldchange (+/-) to be considered as a marker gene.
-    min_in_group_fraction : float, default: 0.25
-        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
-    max_out_group_fraction : float, default: 0.5
-        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
-    """
-
-    adata = adata.copy()  # do not change original adata
-    groups = adata.obs[groupby].cat.categories
-
-    contrasts = list(itertools.combinations(groups, 2))
-
-    # Calculate marker genes for each contrast
-    tables = []
-    for contrast in contrasts:
-        print(f"Calculating rank genes for contrast: {contrast}")
-
-        run_rank_genes(adata, groupby=groupby, groups=contrast)
-
-        # Get table
-        c1, c2 = contrast
-        table_dict = get_rank_genes_tables(adata, out_group_fractions=True)  # returns dict with each group
-        table = table_dict[c1]
-
-        # Reorder columns
-        table.set_index("names", inplace=True)
-        table = table[["scores", "logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
-
-        # Calculate up/down genes
-        c1, c2 = contrast
-        groups = ["C1", "C2"]
-        conditions = [(table["logfoldchanges"] >= foldchange_threshold) & (table[c1 + "_fraction"] >= min_in_group_fraction) & (table[c2 + "_fraction"] <= max_out_group_fraction),  # up
-                      (table["logfoldchanges"] <= -foldchange_threshold) & (table[c1 + "_fraction"] <= max_out_group_fraction) & (table[c2 + "_fraction"] >= min_in_group_fraction)]  # down
-        table["group"] = np.select(conditions, groups, "NS")
-
-        # Rename columns
-        prefix = "/".join(contrast) + "_"
-        table.columns = [prefix + col if "fraction" not in col else col for col in table.columns]
-
-        # Add table to list
-        tables.append(table)
-
-    # Join individual tables
-    merged = pd.concat(tables, join="inner", axis=1)
-
-    # Move fraction columns to the back
-    merged = merged.loc[:, ~merged.columns.duplicated()]
-    fraction_columns = [col for col in merged.columns if col.endswith("_fraction")]
-    first_columns = [col for col in merged.columns if col not in fraction_columns]
-    merged = merged[first_columns + fraction_columns]
-
-    return merged
-
+#####################################################################
+#                       DEseq2 on pseudobulks                       #
+#####################################################################
 
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
     """
@@ -535,193 +549,6 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     adata.uns["deseq_result"] = deseq_table
 
     return deseq_table
-
-
-def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
-    """
-    Get cell type assignment based on marker genes.
-
-    Parameters
-    -----------
-    adata : anndata.AnnData
-        Anndata object containing raw counts.
-    clustering : str
-        Name of clustering column to use for cell type assignment.
-    marker_genes_dict : dict
-        Dictionary containing cell type names as keys and lists of marker genes as values.
-    column_name : str, default: "celltype"
-        Name of column to add to adata.obs containing cell type assignment.
-
-    Returns
-    -----------
-    Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
-    Also adds the cell type assignment to adata.obs[<column_name>] in place.
-    """
-
-    if column_name in adata.obs.columns:
-        raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
-
-    # todo: make this more robust
-
-    marker_genes_list = [[gene] if isinstance(gene, str) else gene for gene in marker_genes_dict.values()]
-    marker_genes_list = sum(marker_genes_list, [])
-    sub = adata[:, marker_genes_list]
-
-    # Get long marker genes table
-    markers = []
-    for celltype, gene_list in marker_genes_dict.items():
-        for gene in gene_list:
-            markers.append({"celltype": celltype, "gene": gene})
-
-    marker_genes_table = pd.DataFrame(markers)
-
-    # Get pseudobulk table
-    table = utils.pseudobulk_table(sub, clustering)
-    table.index.name = "genes"
-    table.reset_index(inplace=True)
-
-    table_long = table.melt(id_vars=["genes"], var_name=clustering)
-    table_long.sort_values("value", ascending=False)
-
-    table_long = table_long.merge(marker_genes_table, left_on="genes", right_on="gene")
-    table_long = table_long.drop(columns="gene")
-
-    cluster2celltype = {}
-    celltype_count = {}
-    for idx, sub in table_long.groupby(clustering):
-        mu = sub.groupby("celltype").mean(numeric_only=True).sort_values("value", ascending=False)
-        cluster2celltype[idx] = mu.index[0]
-
-    # Make unique
-    celltype_count = {}
-    celltypes = list(cluster2celltype.values())
-    for cluster in cluster2celltype:
-        celltype = cluster2celltype[cluster]
-        celltype_count[celltype] = celltype_count.get(celltype, 0) + 1
-
-        if celltypes.count(celltype) > 1:
-            cluster2celltype[cluster] = f"{celltype} {celltype_count[celltype]}"
-
-    # Add assigned celltype to adata.obs
-    table = pd.DataFrame().from_dict(cluster2celltype, orient="index")
-    table.columns = [column_name]
-    adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
-
-    return cluster2celltype
-
-
-def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
-    """
-    Assign a score and a phase to each cell depending on the expression of cell cycle genes.
-
-    Parameters
-    ----------
-    adata : anndata.AnnData
-        Anndata object to predict cell cycle on.
-    species : str
-        The species of data. Available species are: human, mouse, rat and zebrafish.
-        If both s_genes and g2m_genes are given, set species=None,
-        otherwise species is ignored.
-    s_genes : str or list, default None
-        If no species is given or desired species is not supported, you can provide
-        a list of genes for the S-phase or a txt file containing one gene in each row.
-        If only s_genes is provided and species is a supported input, the default
-        g2m_genes list will be used, otherwise the function will not run.
-    g2m_genes : str or list, default None
-        If no species is given or desired species is not supported, you can provide
-        a list of genes for the G2M-phase or a txt file containing one gene per row.
-        If only g2m_genes is provided and species is a supported input, the default
-        s_genes list will be used, otherwise the function will not run.
-    inplace : bool, default True
-        if True, add new columns to the original anndata object.
-
-    Returns
-    -------
-    scanpy.AnnData or None :
-        If inplace is False, return a copy of anndata object with the new column in the obs table.
-    """
-
-    if not inplace:
-        adata = adata.copy()
-
-    # if two lists are given, check if they are lists or paths
-    if s_genes is not None:
-        if isinstance(s_genes, np.ndarray):
-            s_genes = list(s_genes)
-        # check if s_genes is neither a list nor a path
-        if not isinstance(s_genes, str) and not isinstance(s_genes, list):
-            raise ValueError("Please provide a list of genes or a path to a list of genes!")
-        # check if s_genes is a file
-        if isinstance(s_genes, str):
-            # check if file exists
-            if Path(s_genes).is_file():
-                s_genes = utils.read_list_file(s_genes)
-            else:
-                raise FileNotFoundError(f'The list {s_genes} was not found!')
-
-    if g2m_genes is not None:
-        if isinstance(g2m_genes, np.ndarray):
-            g2m_genes = list(g2m_genes)
-        # check if g2m_genes is neither a list nor a path
-        if not isinstance(g2m_genes, str) and not isinstance(g2m_genes, list):
-            raise ValueError("Please provide a list of genes or a path to a list of genes!")
-        # check if g2m_genes is a file
-        if isinstance(g2m_genes, str):
-            # check if file exists
-            if Path(g2m_genes).is_file():
-                g2m_genes = utils.read_list_file(g2m_genes)
-            else:
-                raise FileNotFoundError(f'The list {g2m_genes} was not found!')
-
-    # if two lists are given, use both and ignore species
-    if s_genes is not None and g2m_genes is not None:
-        species = None
-
-    # get gene list for species
-    elif species is not None:
-        species = species.lower()
-
-        # get path of directory where cell cycles gene lists are saved
-        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
-
-        # check if given species is available
-        available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
-        available_species = utils.clean_flanking_strings(available_files)
-        if species not in available_species:
-            raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
-
-        # get cellcylce genes lists
-        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
-        cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
-                                       sep="\t", names=['gene', 'phase']).set_index('gene')
-
-        # if one list is given as input, get the other list from gene lists dir
-        if s_genes is not None:
-            print("g2m_genes list is missing! Using default list instead")
-            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
-        elif g2m_genes is not None:
-            print("s_genes list is missing! Using default list instead")
-            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
-        else:
-            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
-            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
-
-    else:
-        raise ValueError("Please provide either a supported species or lists of genes!")
-
-    # Scale the data before scoring
-    sdata = sc.pp.scale(adata, copy=True)
-
-    # Score the cells by s phase or g2m phase
-    sc.tl.score_genes_cell_cycle(sdata, s_genes=s_genes, g2m_genes=g2m_genes)
-
-    # add results to adata
-    adata.obs['S_score'] = sdata.obs['S_score']
-    adata.obs['G2M_score'] = sdata.obs['G2M_score']
-    adata.obs['phase'] = sdata.obs['phase']
-
-    if not inplace:
-        return adata
 
 
 def score_genes(adata, gene_set, score_name='score', inplace=True):

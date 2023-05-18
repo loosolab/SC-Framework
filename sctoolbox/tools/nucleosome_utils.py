@@ -1,10 +1,10 @@
 
-import sctoolbox.atac as atac
 import numpy as np
 import matplotlib.pyplot as plt
 import pywt
 import multiprocessing as mp
 from scipy.signal import find_peaks
+import sctoolbox.tools as tools
 
 
 def moving_average(series, n=10):
@@ -971,10 +971,10 @@ def add_insertsize_metrics(adata,
         raise ValueError("Please provide either a bam file or a fragments file - not both.")
 
     elif bam is not None:
-        count_table = atac.insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
+        count_table = tools.insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
 
     elif fragments is not None:
-        count_table = atac.insertsize_from_fragments(fragments, barcodes=adata_barcodes)
+        count_table = tools.insertsize_from_fragments(fragments, barcodes=adata_barcodes)
 
     dist = count_table[[c for c in count_table.columns if isinstance(c, int)]]
     dists_arr = dist.to_numpy()

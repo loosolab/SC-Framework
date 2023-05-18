@@ -1,28 +1,178 @@
-import os
 import numpy as np
 import pandas as pd
-import functools  # for partial functions
 import scanpy as sc
 import multiprocessing as mp
 import warnings
 import anndata
-
-# for plotting
-from matplotlib.patches import Rectangle
-import seaborn as sns
-import matplotlib.pyplot as plt
-import ipywidgets
+from pathlib import Path
+from importlib.resources import files
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
+import matplotlib.pyplot as plt
 
 # toolbox functions
 import sctoolbox
-from sctoolbox.utilities import save_figure
+import sctoolbox.utils as utils
+from sctoolbox.plotting import _save_figure
 
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
+
+def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
+    """
+    Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object the quality metrics are added to.
+    percent_top : [int], default None
+        Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
+    inplace : bool, default False
+        If the anndata object should be modified in place.
+    **kwargs :
+        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
+
+    Returns
+    -------
+    anndata.AnnData or None:
+        Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.
+    """
+    # add metrics to copy of anndata
+    if not inplace:
+        adata = adata.copy()
+
+    # remove n_genes from metrics before recalculation
+    to_remove = [col for col in adata.obs.columns if col in ["n_genes", "log1p_n_genes", "n_features", "log1p_n_features"]]
+    adata.obs.drop(columns=to_remove, inplace=True)
+
+    # compute metrics
+    sc.pp.calculate_qc_metrics(adata=adata, percent_top=percent_top, inplace=True, **kwargs)
+
+    # Rename metrics
+    adata.obs.rename(columns={"n_genes_by_counts": "n_genes", "log1p_n_genes_by_counts": "log1p_n_genes",
+                              "n_features_by_counts": "n_features", "log1p_n_features_by_counts": "log1p_n_features"}, inplace=True)
+
+    # return modified anndata
+    if not inplace:
+        return adata
+
+
+def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
+    """
+    Assign a score and a phase to each cell depending on the expression of cell cycle genes.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to predict cell cycle on.
+    species : str
+        The species of data. Available species are: human, mouse, rat and zebrafish.
+        If both s_genes and g2m_genes are given, set species=None,
+        otherwise species is ignored.
+    s_genes : str or list, default None
+        If no species is given or desired species is not supported, you can provide
+        a list of genes for the S-phase or a txt file containing one gene in each row.
+        If only s_genes is provided and species is a supported input, the default
+        g2m_genes list will be used, otherwise the function will not run.
+    g2m_genes : str or list, default None
+        If no species is given or desired species is not supported, you can provide
+        a list of genes for the G2M-phase or a txt file containing one gene per row.
+        If only g2m_genes is provided and species is a supported input, the default
+        s_genes list will be used, otherwise the function will not run.
+    inplace : bool, default True
+        if True, add new columns to the original anndata object.
+
+    Returns
+    -------
+    scanpy.AnnData or None :
+        If inplace is False, return a copy of anndata object with the new column in the obs table.
+    """
+
+    if not inplace:
+        adata = adata.copy()
+
+    # if two lists are given, check if they are lists or paths
+    if s_genes is not None:
+        if isinstance(s_genes, np.ndarray):
+            s_genes = list(s_genes)
+        # check if s_genes is neither a list nor a path
+        if not isinstance(s_genes, str) and not isinstance(s_genes, list):
+            raise ValueError("Please provide a list of genes or a path to a list of genes!")
+        # check if s_genes is a file
+        if isinstance(s_genes, str):
+            # check if file exists
+            if Path(s_genes).is_file():
+                s_genes = utils.read_list_file(s_genes)
+            else:
+                raise FileNotFoundError(f'The list {s_genes} was not found!')
+
+    if g2m_genes is not None:
+        if isinstance(g2m_genes, np.ndarray):
+            g2m_genes = list(g2m_genes)
+        # check if g2m_genes is neither a list nor a path
+        if not isinstance(g2m_genes, str) and not isinstance(g2m_genes, list):
+            raise ValueError("Please provide a list of genes or a path to a list of genes!")
+        # check if g2m_genes is a file
+        if isinstance(g2m_genes, str):
+            # check if file exists
+            if Path(g2m_genes).is_file():
+                g2m_genes = utils.read_list_file(g2m_genes)
+            else:
+                raise FileNotFoundError(f'The list {g2m_genes} was not found!')
+
+    # if two lists are given, use both and ignore species
+    if s_genes is not None and g2m_genes is not None:
+        species = None
+
+    # get gene list for species
+    elif species is not None:
+        species = species.lower()
+
+        # get path of directory where cell cycles gene lists are saved
+        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
+
+        # check if given species is available
+        available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
+        available_species = utils.clean_flanking_strings(available_files)
+        if species not in available_species:
+            raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
+
+        # get cellcylce genes lists
+        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
+        cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
+                                       sep="\t", names=['gene', 'phase']).set_index('gene')
+
+        # if one list is given as input, get the other list from gene lists dir
+        if s_genes is not None:
+            print("g2m_genes list is missing! Using default list instead")
+            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
+        elif g2m_genes is not None:
+            print("s_genes list is missing! Using default list instead")
+            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
+        else:
+            s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
+            g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
+
+    else:
+        raise ValueError("Please provide either a supported species or lists of genes!")
+
+    # Scale the data before scoring
+    sdata = sc.pp.scale(adata, copy=True)
+
+    # Score the cells by s phase or g2m phase
+    sc.tl.score_genes_cell_cycle(sdata, s_genes=s_genes, g2m_genes=g2m_genes)
+
+    # add results to adata
+    adata.obs['S_score'] = sdata.obs['S_score']
+    adata.obs['G2M_score'] = sdata.obs['G2M_score']
+    adata.obs['phase'] = sdata.obs['phase']
+
+    if not inplace:
+        return adata
+
 
 def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
     """
@@ -236,17 +386,17 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         axarr[1].set_xlim(xlim)
         axarr[1].set_title("Prediction of female groups")
 
-        save_figure(save)
+        _save_figure(save)
 
 
 ###############################################################################
 #                      STEP 1: FINDING AUTOMATIC CUTOFFS                      #
 ###############################################################################
 
-def get_thresholds(data,
-                   max_mixtures=5,
-                   n_std=3,
-                   plot=True):
+def _get_thresholds(data,
+                    max_mixtures=5,
+                    n_std=3,
+                    plot=True):
     """
     Get automatic min/max thresholds for input data array. The function will fit a gaussian mixture model, and find the threshold
     based on the mean and standard deviation of the largest mixture in the model.
@@ -387,7 +537,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
         if groupby is None:
             data = table[col].values
             data[np.isnan(data)] = 0
-            d = get_thresholds(data, plot=False)
+            d = _get_thresholds(data, plot=False)
             thresholds[col] = d
 
         else:
@@ -395,7 +545,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
             for group, subtable in table.groupby(groupby):
                 data = subtable[col].values
                 data[np.isnan(data)] = 0
-                d = get_thresholds(data, plot=False)
+                d = _get_thresholds(data, plot=False)
                 thresholds[col][group] = d
 
     return thresholds
@@ -440,7 +590,7 @@ def thresholds_as_table(threshold_dict):
 
 
 ######################################################################################
-#                     STEP 2: PLOT AND DEFINE CUSTOM CUTOFFS                         #
+#                     STEP 2:     DEFINE CUSTOM CUTOFFS                              #
 ######################################################################################
 
 def _validate_minmax(d):
@@ -510,384 +660,62 @@ def validate_threshold_dict(table, thresholds, groupby=None):
                     _validate_minmax(thresholds[col])
 
 
-def _link_sliders(sliders):
-    """ Link the values between interactive sliders.
-
-    Parameters
-    ------------
-    sliders : list of ipywidgets.widgets.Slider
-        List of sliders to link.
-
-    Returns
-    --------
-    list : list of ipywidgets.widgets.link
-        List of links between sliders.
+def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
-
-    tup = [(slider, 'value') for slider in sliders]
-
-    linkage_list = []
-    for i in range(1, len(tup)):
-        link = ipywidgets.link(*tup[i - 1:i + 1])
-        linkage_list.append(link)
-
-    return linkage_list
-
-
-def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
+    return the thresholds for the filtering
+    :param adata: anndata.AnnData
+    :param manual_thresholds:
+    :param automatic_thresholds:
+    :return:
     """
-    Either link or unlink sliders depending on the new value of the checkbox.
+    manual_thresholds = get_keys(adata, manual_thresholds)
 
-    Parameters
-    -----------
-    checkbox : ipywidgets.widgets.Checkbox
-        Checkbox to toggle linkage.
-    linkage_dict : dict
-        Dictionary of links to link or unlink.
-    slider_list : list of ipywidgets.widgets.Slider
-        List of sliders to link or unlink.
-    key : str
-        Key in linkage_dict for fetching and updating links.
-    """
-
-    check_bool = checkbox["new"]
-
-    if check_bool is True:
-        if linkage_dict[key] is None:  # link sliders if they have not been linked yet
-            linkage_dict[key] = _link_sliders(slider_list)  # overwrite None with the list of links
-
-        for linkage in linkage_dict[key]:
-            linkage.link()
-
-    elif check_bool is False:
-
-        if linkage_dict[key] is not None:  # only unlink if there are links to unlink
-            for linkage in linkage_dict[key]:
-                linkage.unlink()
-
-
-def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
-    """ Update the locations of thresholds in plot """
-
-    tmin, tmax = slider["new"]  # threshold values from slider
-
-    # Update min line
-    ydata = min_line.get_ydata()
-    ydata = [tmin for _ in ydata]
-    min_line.set_ydata(ydata)
-
-    x, y = min_shade.get_xy()
-    min_shade.set_height(tmin - y)
-
-    # Update max line
-    ydata = max_line.get_ydata()
-    ydata = [tmax for _ in ydata]
-    max_line.set_ydata(ydata)
-
-    x, y = max_shade.get_xy()
-    max_shade.set_height(tmax - y)
-
-    # Draw figure after update
-    fig.canvas.draw_idle()
-
-    # Save figure
-    # sctoolbox.utilities.save_figure(save)
-
-
-def quality_violin(adata, columns,
-                   which="obs",
-                   groupby=None,
-                   ncols=2,
-                   header=None,
-                   color_list=None,
-                   title=None,
-                   thresholds=None,
-                   global_threshold=True,
-                   interactive=True,
-                   save=None):
-    """
-    A function to plot quality measurements for cells in an anndata object.
-
-    Note
-    ------
-    Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
-
-    Parameters
-    -------------
-    adata : anndata.AnnData
-        Anndata object containing quality measures in .obs/.var
-    columns : list
-        A list of columns in .obs/.var to show measures for.
-    which : str, optional
-        Which table to show quality for. Either "obs" / "var". Default: "obs".
-    groupby : str, optional
-        A column in table to values on the x-axis, e.g. 'condition'.
-    ncols : int
-        Number of columns in the plot. Default: 2.
-    header : list, optional
-        A list of custom headers for each measure given in columns. Default: None (headers are the column names)
-    color_list : list, optional
-        A list of colors to use for violins. Default: None (colors are chosen automatically)
-    title : str, optional
-        The title of the full plot. Default: None (no title).
-    thresholds : dict, optional
-        Dictionary containing initial min/max thresholds to show in plot.
-    global_threshold : bool, default True
-        Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
-    interactive : bool, Default True
-        Whether to show interactive sliders. If False, the static matplotlib plot is shown.
-    save : str, optional
-        Save the figure to the path given in 'save'. Default: None (figure is not saved).
-
-    Returns
-    -----------
-    tuple of box, dict
-        box contains the sliders and figure to show in notebook, and the dictionary contains the sliders determined by sliders
-    """
-
-    is_interactive = sctoolbox.utilities._is_interactive()
-
-    # ---------------- Test input and get ready --------------#
-
-    ncols = min(ncols, len(columns))  # Make sure ncols is not larger than the number of columns
-    nrows = int(np.ceil(len(columns) / ncols))
-
-    # Decide which table to use
-    if which == "obs":
-        table = adata.obs
-    elif which == "var":
-        table = adata.var
+    if only_automatic_thresholds:
+        keys = list(manual_thresholds.keys())
+        thresholds = automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
+        return thresholds
     else:
-        raise ValueError()
-
-    # Order of categories on x axis
-    if groupby is not None:
-        groups = table[groupby].cat.categories
-        n_colors = len(groups)
-    else:
-        groups = None
-        n_colors = 1
-
-    # Setup colors to be used
-    if color_list is None:
-        color_list = sns.color_palette("Set1", n_colors)
-    else:
-        if int(n_colors) <= int(len(color_list)):
-            raise ValueError("Increase the color_list variable to at least {} colors.".format(n_colors))
-        else:
-            color_list = color_list[:n_colors]
-
-    # Setup headers to be used
-    if header is None:
-        header = columns
-    else:
-        # check that header has the right length
-        if len(header) != len(columns):
-            raise ValueError("Length of header does not match length of columns")
-
-    # Setup thresholds if not given
-    if thresholds is None:
-        thresholds = {col: {} for col in columns}
-
-    # ---------------- Setup figure --------------#
-
-    # Setting up output figure
-    plt.ioff()  # prevent plot from showing twice in notebook
-
-    if is_interactive:
-        figsize = (ncols * 3, nrows * 3)
-    else:
-        figsize = (ncols * 4, nrows * 4)  # static plot can be larger
-
-    fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
-    axes_list = [axarr] if type(axarr).__name__ == "AxesSubplot" else axarr.flatten()
-
-    # Remove empty axes
-    for ax in axes_list[len(columns):]:
-        ax.axis('off')
-
-    # Add title of full plot
-    if title is not None:
-        fig.suptitle(title)
-        fontsize = fig._suptitle._fontproperties._size * 1.2  # increase fontsize of title
-        plt.setp(fig._suptitle, fontsize=fontsize)
-
-    # Add title of individual plots
-    for i in range(len(columns)):
-        ax = axes_list[i]
-        ax.set_title(header[i], fontsize=11)
-
-    # ------------- Plot data and add sliders ---------#
-
-    # Plotting data
-    slider_dict = {}
-    linkage_dict = {}  # one link list per column
-    accordion_content = []
-    for i, column in enumerate(columns):
-        ax = axes_list[i]
-        slider_dict[column] = {}
-
-        # Plot data from table
-        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0)
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
-        ax.set_ylabel("")
-        ax.set_xlabel("")
-
-        ticks = ax.get_xticks()
-        ymin, ymax = ax.get_ylim()  # ylim before plotting any thresholds
-
-        # Establish groups
-        if groupby is not None:
-            group_names = groups
-        else:
-            group_names = ["Threshold"]
-
-        # Plot thresholds per group
-        y_range = ymax - ymin
-        nothresh_min = ymin - y_range * 0.1  # just outside of y axis range
-        nothresh_max = ymax + y_range * 0.1
-
-        data_min = table[column].min()
-        data_max = table[column].max()
-        slider_list = []
-        for j, group in enumerate(group_names):
-
-            # Establish the threshold to plot
-            if column not in thresholds:  # no thresholds given
-                tmin = nothresh_min
-                tmax = nothresh_max
-            elif group in thresholds[column]:  # thresholds per group
-                tmin = thresholds[column][group].get("min", nothresh_min)
-                tmax = thresholds[column][group].get("max", nothresh_max)
+        if groupby:
+            samples = []
+            current_sample = None
+            for sample in adata.obs[groupby]:
+                if current_sample != sample:
+                    samples.append(sample)
+                    current_sample = sample
+        # thresholds which are not set by the user are set automatically
+        for key, value in manual_thresholds.items():
+            if value['min'] is None or value['max'] is None:
+                auto_thr = automatic_thresholds(adata, which="obs", columns=[key], groupby=groupby)
+                manual_thresholds[key] = auto_thr[key]
             else:
-                tmin = thresholds[column].get("min", nothresh_min)
-                tmax = thresholds[column].get("max", nothresh_max)
-
-            # Replace None with nothresh
-            tmin = nothresh_min if tmin is None else tmin
-            tmax = nothresh_max if tmax is None else tmax
-
-            # Plot line and shading
-            tick = ticks[j]
-            x = [tick - 0.5, tick + 0.5]
-
-            min_line = ax.plot(x, [tmin] * 2, color="red", linestyle="--")[0]
-            max_line = ax.plot(x, [tmax] * 2, color="red", linestyle="--")[0]
-
-            min_shade = ax.add_patch(Rectangle((x[0], ymin), x[1] - x[0], tmin - ymin, color="grey", alpha=0.2, linewidth=0))  # starting at lower left with positive height
-            max_shade = ax.add_patch(Rectangle((x[0], ymax), x[1] - x[0], tmax - ymax, color="grey", alpha=0.2, linewidth=0))  # starting at upper left with negative height
-
-            # Add slider to control thresholds
-            if is_interactive:
-
-                slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max,
-                                                     value=[tmin, tmax],  # initial value
-                                                     continuous_update=False)
-
-                slider.observe(functools.partial(_update_thresholds,
-                                                 fig=fig,
-                                                 min_line=min_line,
-                                                 min_shade=min_shade,
-                                                 max_line=max_line,
-                                                 max_shade=max_shade), names=["value"])
-
-                slider_list.append(slider)
-                if groupby is not None:
-                    slider_dict[column][group] = slider
+                if groupby:
+                    thresholds = {}
+                    for sample in samples:
+                        thresholds[sample] = value
                 else:
-                    slider_dict[column] = slider
+                    thresholds = {key: value}
 
-        ax.set_ylim(ymin, ymax)  # set ylim back to original after plotting thresholds
+                manual_thresholds[key] = thresholds
 
-        # Link sliders together
-        if is_interactive:
-
-            if len(slider_list) > 1:
-
-                # Toggle linked sliders
-                c = ipywidgets.Checkbox(value=global_threshold, description='Global threshold', disabled=False, indent=False)
-                linkage_dict[column] = _link_sliders(slider_list) if global_threshold is True else None
-
-                c.observe(functools.partial(_toggle_linkage,
-                                            linkage_dict=linkage_dict,
-                                            slider_list=slider_list,
-                                            key=column), names=["value"])
-
-                box = ipywidgets.VBox([c] + slider_list)
-
-            else:
-                box = ipywidgets.VBox(slider_list)  # no tickbox needed if there is only one slider per column
-
-            accordion_content.append(box)
-
-    fig.tight_layout()
-    sctoolbox.utilities.save_figure(save)  # save plot; can be overwritten if thresholds are changed
-
-    # Assemble accordion with different measures
-    if is_interactive:
-
-        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
-        for i in range(len(columns)):
-            accordion.set_title(i, columns[i])
-
-        fig.canvas.header_visible = False
-        fig.canvas.toolbar_visible = False
-        fig.canvas.resizable = True
-        fig.canvas.width = "auto"
-
-        # Hack to force the plot to show
-        # reference: https://github.com/matplotlib/ipympl/issues/290
-        fig.canvas._handle_message(fig.canvas, {'type': 'send_image_mode'}, [])
-        fig.canvas._handle_message(fig.canvas, {'type': 'refresh'}, [])
-        fig.canvas._handle_message(fig.canvas, {'type': 'initialized'}, [])
-        fig.canvas._handle_message(fig.canvas, {'type': 'draw'}, [])
-
-        fig.canvas.draw()
-        figure = ipywidgets.HBox([accordion, fig.canvas])  # Setup box to hold all widgets
-
-    else:
-        figure = fig  # non interactive figure
-
-    return figure, slider_dict
+        return manual_thresholds
 
 
-def get_slider_thresholds(slider_dict):
-    """ Get thresholds from sliders.
-
-    Parameters
-    ----------
-    slider_dict : dict
-        Dictionary of sliders in the format 'slider_dict[column][group] = slider' or 'slider_dict[column] = slider' if no grouping.
-
-    Returns
-    -------
-    dict in the format threshold_dict[column][group] = {"min": <min_threshold>, "max": <max_threshold>} or
-    threshold_dict[column] = {"min": <min_threshold>, "max": <max_threshold>} if no grouping
-
+def get_keys(adata, manual_thresholds):
     """
+    get the keys of the obs columns
+    :param adata:
+    :return:
+    """
+    m_thresholds = {}
+    legend = adata.uns["legend"]
+    for key, value in manual_thresholds.items():
+        if key in legend:
+            obs_key = legend[key]
+            m_thresholds[obs_key] = value
+        else:
+            print('column: ' + key + ' not found in adata.obs')
 
-    threshold_dict = {}
-    for measure in slider_dict:
-        threshold_dict[measure] = {}
-
-        if isinstance(slider_dict[measure], dict):  # thresholds for groups
-            for group in slider_dict[measure]:
-                slider = slider_dict[measure][group]
-                threshold_dict[measure][group] = {"min": slider.value[0], "max": slider.value[1]}
-
-            # Check if all groups have the same thresholds
-            mins = set([d["min"] for d in threshold_dict[measure].values()])
-            maxs = set([d["max"] for d in threshold_dict[measure].values()])
-
-            # Set overall threshold if individual sliders are similar
-            if len(mins) == 1 and len(maxs) == 1:
-                threshold_dict[measure] = threshold_dict[measure][group]  # takes the last group from the previous for loop
-
-        else:  # One threshold for measure
-            slider = slider_dict[measure]
-            threshold_dict[measure] = {"min": slider.value[0], "max": slider.value[1]}
-
-    return threshold_dict
+    return m_thresholds
 
 
 ###############################################################################

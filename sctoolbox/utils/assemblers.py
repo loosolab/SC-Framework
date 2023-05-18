@@ -3,16 +3,107 @@ Module to assembling anndata objects
 """
 import scanpy as sc
 import pandas as pd
-
 import os
 import glob
 from scipy import sparse
 from scipy.io import mmread
+import anndata as ad
+
+import sctoolbox.utils as utils
 
 
-#######################################################################################################################
-#                                ASSEMBLING ANNDATA FOR THE VELOCITY ANALYSIS                                         #
-#######################################################################################################################
+#####################################################################
+#                   Assemble from multiple h5ad files               #
+#####################################################################
+
+def assemble_from_h5ad(h5ad_files,
+                       qc_columns,
+                       merge_column='sample',
+                       coordinate_cols=None,
+                       set_index=True,
+                       index_from=None):
+    '''
+    Function to assemble multiple adata files into a single adata object with a sample column in the
+    adata.obs table. This concatenates adata.obs and merges adata.uns.
+
+    Parameters
+    ----------
+    h5ad_files: list of str
+        list of h5ad_files
+    qc_columns: dictionary
+        dictionary of existing adata.obs column to add to infoprocess legend
+    merge_column: str
+        column name to store sample identifier
+    coordinate_cols: list of str
+        location information of the peaks
+    set_index: boolean
+        True: index will be formatted and can be set by a given column
+    index_from: str
+        column to build the index from
+
+    Returns
+    -------
+
+    '''
+
+    adata_dict = {}
+    counter = 0
+    for h5ad_path in h5ad_files:
+        counter += 1
+
+        sample = 'sample' + str(counter)
+
+        adata = sc.read_h5ad(h5ad_path)
+        if set_index:
+            utils.format_index(adata, index_from)
+
+        # Establish columns for coordinates
+        if coordinate_cols is None:
+            coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
+        else:
+            utils.check_columns(adata.var, coordinate_cols,
+                                "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+
+        utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
+
+        # Add information to the infoprocess
+        # cr.build_infor(adata, "Input_for_assembling", h5ad_path)
+        # cr.build_infor(adata, "Strategy", "Read from h5ad")
+
+        print('add existing adata.obs columns to infoprocess:')
+        print()
+        for key, value in qc_columns.items():
+            if value is not None:
+                print(key + ':' + value)
+                if value in adata.obs.columns:
+                    utils.build_legend(adata, key, value)
+                else:
+                    print('column:  ' + value + ' is not in adata.obs')
+
+        # check if the barcode is the index otherwise set it
+        utils.barcode_index(adata)
+
+        adata.obs = adata.obs.assign(file=h5ad_path)
+
+        # Add conditions here
+
+        adata_dict[sample] = adata
+
+    adata = ad.concat(adata_dict, label=merge_column)
+    adata.uns = ad.concat(adata_dict, uns_merge='same').uns
+    for value in adata_dict.values():
+        adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
+
+    # Remove name of indexes for cellxgene compatibility
+    adata.obs.index.name = None
+    adata.var.index.name = None
+
+    return adata
+
+
+#####################################################################
+#          ASSEMBLING ANNDATA FROM STARSOLO OUTPUT FOLDERS          #
+#####################################################################
 
 def from_single_starsolo(path, dtype="filtered", header='infer'):
     '''
@@ -142,9 +233,9 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     return adata
 
 
-#######################################################################################################################
-#                                   CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT                                     #
-#######################################################################################################################
+#####################################################################
+#          CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT            #
+#####################################################################
 
 def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
     ''' Building adata object from single mtx and two tsv/csv files
@@ -263,3 +354,117 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
         adata = adata_objects[0]
 
     return adata
+
+
+def convertToAdata(file, output=None, r_home=None, layer=None):
+    """
+    Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
+
+    In order to work an R installation with Seurat & SingleCellExperiment is required.
+
+    Parameters
+    ----------
+    file : str
+        Path to the .rds or .robj file.
+    output : str, default None
+        Path to output .h5ad file. Won't save if None.
+    r_home : str, default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+    layer : str, default None
+        Provide name of layer to be stored in anndata. By default the main layer is stored.
+        In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
+
+    Returns
+    -------
+    anndata.AnnData or None:
+        Returns converted anndata object if output is None.
+    """
+    # Setup R
+    utils.setup_R(r_home)
+
+    # Initialize R <-> python interface
+    utils.check_module("anndata2ri")
+    import anndata2ri
+    utils.check_module("rpy2")
+    from rpy2.robjects import r, default_converter, conversion, globalenv
+    anndata2ri.activate()
+
+    # create rpy2 None to NULL converter
+    # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    none_converter = conversion.Converter("None converter")
+    none_converter.py2rpy.register(type(None), utils._none2null)
+
+    # check if Seurat and SingleCellExperiment are installed
+    r("""
+        if (!suppressPackageStartupMessages(require(Seurat))) {
+            stop("R dependency Seurat not found.")
+        }
+        if (!suppressPackageStartupMessages(require(SingleCellExperiment))) {
+            stop("R dependecy SingleCellExperiment not found.")
+        }
+    """)
+
+    # add variables into R
+    with conversion.localconverter(default_converter + none_converter):
+        globalenv["file"] = file
+        globalenv["layer"] = layer
+
+    # ----- convert to anndata ----- #
+    r("""
+        # ----- load object ----- #
+        # try loading .robj
+        object <- try({
+            # load file; returns vector of created variables
+            new_vars <- load(file)
+            # store new variable into another variable to work on
+            get(new_vars[1])
+        }, silent = TRUE)
+
+        # if .robj failed try .rds
+        if (class(object) == "try-error") {
+            # load object
+            object <- try(readRDS(file), silent = TRUE)
+        }
+
+        # if both .robj and .rds failed throw error
+        if (class(object) == "try-error") {
+            stop("Unknown file. Expected '.robj' or '.rds' got", file)
+        }
+
+        # ----- convert to SingleCellExperiment ----- #
+        # can only convert Seurat -> SingleCellExperiment -> anndata
+        if (class(object) == "Seurat") {
+            object <- as.SingleCellExperiment(object)
+        } else if (class(object) == "SingleCellExperiment") {
+            object <- object
+        } else {
+            stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+        }
+
+        # ----- change layer ----- #
+        # adata can only store a single layer
+        if (!is.null(layer)) {
+            layers <- c(mainExpName(object), altExpNames(object))
+
+            # check if layer is valid
+            if (!layer %in% layers) {
+                stop("Invalid layer! Expected one of ", paste(layers, collapse = ", "), " got ", layer)
+            }
+
+            # select layer
+            if (layer != mainExpName(object)) {
+                object <- swapAltExp(object, layer, saved = mainExpName(object), withColData = TRUE)
+            }
+        }
+    """)
+
+    # pull SingleCellExperiment into python
+    # this also converts to anndata
+    adata = globalenv["object"]
+
+    if output:
+        # Saving adata.h5ad
+        adata.write(filename=output, compression='gzip')
+    else:
+        return adata

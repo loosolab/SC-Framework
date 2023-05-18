@@ -3,7 +3,7 @@ import pandas as pd
 from functools import reduce
 import warnings
 
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils
 
 
 def merge_anndata(anndata_dict, join="inner"):

@@ -2,148 +2,17 @@ import pandas as pd
 import numpy as np
 import copy
 import os
-import argparse
-import glob
 import multiprocessing as mp
-import re
-
-import sctoolbox.utilities as utils
-import sctoolbox.atac_utils as atac_utils
 import psutil
 import subprocess
-import gzip
-import shutil
-import scanpy as sc
-import sctoolbox.creators as cr
-import warnings
 
+import sctoolbox.utils as utils
 
-def add_cellxgene_annotation(adata, csv):
-    """
-    Add columns from cellxgene annotation to the adata .obs table.
-
-    Parameters
-    ----------
-    adata : anndata.AnnData
-        Adata object to add annotations to.
-    csv : str
-        Path to the annotation file from cellxgene containing cell annotation.
-
-    Returns
-    --------
-    None - the annotation is added to adata in place.
-    """
-    anno_table = pd.read_csv(csv, sep=",", comment='#')
-    anno_table.set_index("index", inplace=True)
-    anno_name = anno_table.columns[-1]
-    adata.obs.loc[anno_table.index, anno_name] = anno_table[anno_name].astype('category')
 
 
 #################################################################################
 # ------------------------ Uropa annotation of peaks -------------------------- #
 #################################################################################
-
-def gtf_integrity(gtf):
-    '''
-    Checks the integrity of a gtf file by examining:
-        - file-ending
-        - header ##format: gtf
-        - number of columns == 9
-        - regex pattern of column 9 matches gtf specific format
-
-    :param gtf: str
-        Path to .gtf file containing genomic elements for annotation.
-    :return: boolean
-        True if the file passed all tests
-    '''
-
-    regex_header = '#+.*'
-    regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'
-
-    # Initialize parameters
-    first_entry = []
-    header = False
-    format_gtf = False
-
-    if _is_gz_file(gtf):
-        fp = gzip.open(gtf, 'rt')  # read text (rt) mode
-    else:
-        fp = open(gtf)
-
-    # Check header (if present) and first entry
-    for line in fp:
-        if re.match(regex_header, line):
-            header = True
-            if re.match(regex_format_column, line):
-                # Check if format information in the header matches gtf
-                format_gtf = True
-        else:
-            first_entry = line.split(sep='\t')
-            break
-
-    fp.close()  # done reading from file
-
-    # Check if number of columns matches 9
-    if len(first_entry) != 9:
-        raise argparse.ArgumentTypeError('Number of columns in the gtf file unequal 9')
-
-    # If there was a header, check that the header matches gtf
-    if header and not format_gtf:
-        raise argparse.ArgumentTypeError('Header in gtf file does not match gtf format')
-
-    # Extract gene_id information from column 9 and check if the format is gtf (not gff)
-    column_9 = first_entry[8]
-    column_9_split = column_9.split(sep=';')
-    gene_id = column_9_split[0]  # TODO; it cannot always be assumed that the gene_id is the first entry in column 9
-    # gtf specific format of the gene_id column (gff3: gene_id="xxxxx"; gtf: gene_id "xxxxx")
-    regex_gene_id = 'gene_id ".*"'
-
-    # check match of the pattern
-    if not re.match(regex_gene_id, gene_id):
-        raise argparse.ArgumentTypeError('gtf file is corrupted')
-
-    return True  # the function only returns of no error is raised
-
-
-def _is_gz_file(filepath):
-    with open(filepath, 'rb') as test_f:
-        return test_f.read(2) == b'\x1f\x8b'
-
-
-def gunzip_file(f_in, f_out):
-    with gzip.open(f_in, 'rb') as h_in:
-        with open(f_out, 'wb') as h_out:
-            shutil.copyfileobj(h_in, h_out)
-
-
-def rm_tmp(temp_dir, tempfiles=None):
-    """
-    1. Running with tempfiles list:
-    Removing temporary directory by previously removing temporary files from the tempfiles list.
-    If the temporary directory is not empty it will not be removed.
-    2. Running without tempfiles list:
-    All gtf related files will be removed automatically no list of them required.
-    The directory is then removed afterwards.
-
-    :param temp_dir: str
-        Path to the temporary directory.
-    :param tempfiles: list of str
-        Paths to files to be deleted before removing the temp directory.
-    :return: None
-    """
-    try:
-        if tempfiles is None:
-            for f in glob.glob(temp_dir + "/*gtf*"):
-                os.remove(f)
-        else:
-            for f in tempfiles:
-                os.remove(f)
-
-        os.rmdir(temp_dir)
-
-    except OSError as error:
-        print(error)
-
 
 def annotate_adata(adata,
                    gtf,
@@ -246,7 +115,7 @@ def annotate_adata(adata,
         utils.check_columns(adata.var, coordinate_cols, "coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
-    atac_utils.format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
+    utils.format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
@@ -260,9 +129,9 @@ def annotate_adata(adata,
         region_dicts.append(d)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = _prepare_gtf(gtf, temp_dir, print)
 
-    annotations_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
+    annotations_table = _annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
     # Preparation of adata.var update
 
@@ -308,7 +177,7 @@ def annotate_adata(adata,
 
     # Remove temporary directory
     if remove_temp:
-        rm_tmp(temp_dir, tempfiles)
+        utils.rm_tmp(temp_dir, tempfiles)
 
     if inplace is False:
         return adata  # else returns None
@@ -377,23 +246,23 @@ def annotate_narrowPeak(filepath,
     cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
     print("Config dictionary: {0}".format(cfg_dict))
 
-    region_dicts = load_narrowPeak(filepath, print)
+    region_dicts = _load_narrowPeak(filepath, print)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = _prepare_gtf(gtf, temp_dir, print)
 
-    annotation_table = annotate_features(region_dicts, threads, gtf, cfg_dict, best)
+    annotation_table = _annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
     print("annotation done")
 
     # Remove temporary directory
     if remove_temp:
-        rm_tmp(temp_dir, tempfiles)
+        utils.rm_tmp(temp_dir, tempfiles)
 
     return annotation_table
 
 
-def load_narrowPeak(filepath, print):
+def _load_narrowPeak(filepath, print):
     '''
     Load narrowPeak file to annotate.
 
@@ -419,9 +288,9 @@ def load_narrowPeak(filepath, print):
     return region_dicts
 
 
-def prepare_gtf(gtf,
-                temp_dir,
-                print):
+def _prepare_gtf(gtf,
+                 temp_dir,
+                 print):
     """
     Prepares the .gtf file to use it in the annotation process. Therefore the file properties are checked and if necessary it is sorted, indexed and compressed.
 
@@ -442,7 +311,7 @@ def prepare_gtf(gtf,
 
     # input_gtf = gtf
     # Check integrity of the gtf file
-    gtf_integrity(gtf)  # will raise an error if gtf is not valid
+    utils._gtf_integrity(gtf)  # will raise an error if gtf is not valid
 
     tempfiles = []
 
@@ -462,7 +331,7 @@ def prepare_gtf(gtf,
             print("- Index of gtf not found - trying to index gtf")
 
             # First check if gtf was already gzipped
-            if not _is_gz_file(gtf):
+            if not utils._is_gz_file(gtf):
                 base = os.path.basename(gtf)
                 gtf_gz = os.path.join(temp_dir, base + ".gz")
                 pysam.tabix_compress(gtf, gtf_gz, force=True)
@@ -479,12 +348,12 @@ def prepare_gtf(gtf,
                 print("- Indexing failed - the GTF is probably unsorted")
 
                 # Start by uncompressing file if file is gz
-                is_gz = _is_gz_file(gtf)
+                is_gz = utils._is_gz_file(gtf)
                 if is_gz:
                     gtf_uncompressed = os.path.join(temp_dir, "uncompressed.gtf")
                     print(f"- Uncompressing {gtf} to: {gtf_uncompressed}")
                     try:
-                        gunzip_file(gtf, gtf_uncompressed)
+                        utils.gunzip_file(gtf, gtf_uncompressed)
                     except Exception:
                         raise ValueError("Could not uncompress gtf file to sort. Please ensure that the input gtf is sorted.")
                     gtf = gtf_uncompressed
@@ -515,12 +384,11 @@ def prepare_gtf(gtf,
     return gtf, tempfiles
 
 
-def annotate_features(region_dicts,
-                      threads,
-                      gtf,
-                      cfg_dict,
-                      best):
-
+def _annotate_features(region_dicts,
+                       threads,
+                       gtf,
+                       cfg_dict,
+                       best):
     '''
 
     :param region_dicts: dictionary
@@ -641,69 +509,3 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
     tabix_obj.close()
 
     return (all_valid_annotations)
-
-
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
-    """
-    Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
-
-    Note: Logarithmized data is expected.
-
-    Parameters
-    ----------
-    anndata : anndata.AnnData
-        Anndata object to annotate.
-    min_mean : float, default 0.0125
-        Starting min_mean parameter for finding HVGs.
-    max_iterations : int, default 10
-        Maximum number of min_mean adjustments.
-    hvg_range : int tuple, default (1000, 5000)
-        Number of HVGs should be in the given range. Will issue a warning if result is not in range.
-        Default limits are chosen as proposed by https://doi.org/10.15252/msb.20188746.
-    step : float, default 10
-        Value min_mean is adjusted by in each iteration. Will divide min_value (below range) or multiply (above range) by this value.
-    inplace : boolean, default False
-        Whether the anndata object is modified inplace.
-    save : str, default None
-        Path to save the plot to. If None, the plot is not saved.
-    **kwargs :
-        Additional arguments forwarded to scanpy.pp.highly_variable_genes().
-
-    Returns
-    -------
-    anndata.Anndata or None:
-        Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
-    """
-    adata_m = anndata if inplace else anndata.copy()
-
-    print("Annotating highy variable genes (HVG)")
-
-    # adjust min_mean to get a HVG count in a certain range
-    for i in range(max_iterations + 1):
-        sc.pp.highly_variable_genes(adata_m, min_mean=min_mean, inplace=True, **kwargs)
-
-        # counts True values in column
-        hvg_count = sum(adata_m.var.highly_variable)
-
-        # adjust min_mean
-        # skip adjustment if in last iteration
-        if i < max_iterations and hvg_count < hvg_range[0]:
-            min_mean /= step
-        elif i < max_iterations and hvg_count > hvg_range[1]:
-            min_mean *= step + 0.00001  # This .000001 is to avoid an infinit loop if the current mean lie in the above if.
-        else:
-            break
-
-    # warn if outside of range
-    if hvg_count < hvg_range[0] or hvg_count > hvg_range[1]:
-        warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
-    else:
-        sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
-        utils.save_figure(save)
-        print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
-
-    # Adding info in anndata.uns["infoprocess"]
-    cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)
-
-    if not inplace:
-        return adata_m

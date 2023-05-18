@@ -1,5 +1,7 @@
 from setuptools import setup
 from setuptools import find_namespace_packages
+import re
+import os
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
@@ -14,9 +16,21 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
 
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
+
+# Find version for package
+def find_version(f):
+    version_file = open(f).read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    else:
+        raise RuntimeError("Unable to find version string.")
+
+
 setup(
-    name='sc-toolbox',
+    name='sctoolbox',
     description='Custom modules for single cell analysis',
+    version=find_version(os.path.join("sctoolbox", "_version.py")),
     license='MIT',
     packages=find_namespace_packages(),
     python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11

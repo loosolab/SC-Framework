@@ -25,7 +25,7 @@ def import_submodules(globals):
     # Import each submodule to find functions
     for submodule_name in submodule_names:
         module = import_module("sctoolbox." + module_name + "." + submodule_name)
-        function_names = [function for function in dir(module) if not function.startswith("_")]  # do not add internal functions
+        function_names = [function for function in dir(module) if not function.startswith("__")]  # do not add internal functions
 
         # Add each function to globals for this module
         for function_name in function_names:

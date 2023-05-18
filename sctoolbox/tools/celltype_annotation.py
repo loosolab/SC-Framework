@@ -4,8 +4,97 @@ import pkg_resources
 import copy
 import subprocess
 
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils
 
+
+#####################################################################
+#              Predict cell types from marker genes dict            #
+#####################################################################
+
+def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
+    """
+    Get cell type assignment based on marker genes.
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        Anndata object containing raw counts.
+    clustering : str
+        Name of clustering column to use for cell type assignment.
+    marker_genes_dict : dict
+        Dictionary containing cell type names as keys and lists of marker genes as values.
+    column_name : str, default: "celltype"
+        Name of column to add to adata.obs containing cell type assignment.
+
+    Returns
+    -----------
+    Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
+    Also adds the cell type assignment to adata.obs[<column_name>] in place.
+    """
+
+    # if column_name in adata.obs.columns:
+    # raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
+
+    # todo: make this more robust
+
+    marker_genes_list = [[gene] if isinstance(gene, str) else gene for gene in marker_genes_dict.values()]
+    marker_genes_list = sum(marker_genes_list, [])
+    sub = adata[:, marker_genes_list]
+
+    # Get long marker genes table
+    markers = []
+    for celltype, gene_list in marker_genes_dict.items():
+        for gene in gene_list:
+            markers.append({"celltype": celltype, "gene": gene})
+
+    marker_genes_table = pd.DataFrame(markers)
+
+    # Get pseudobulk table
+    table = utils.pseudobulk_table(sub, clustering)
+    table.index.name = "genes"
+    table.reset_index(inplace=True)
+
+    table_long = table.melt(id_vars=["genes"], var_name=clustering)
+    table_long.sort_values("value", ascending=False)
+
+    table_long = table_long.merge(marker_genes_table, left_on="genes", right_on="gene")
+    table_long = table_long.drop(columns="gene")
+
+    cluster2celltype = {}
+    celltype_count = {}
+    for idx, sub in table_long.groupby(clustering):
+        mu = sub.groupby("celltype").mean(numeric_only=True).sort_values("value", ascending=False)
+        cluster2celltype[idx] = mu.index[0]
+
+    # Make unique
+    celltype_count = {}
+    celltypes = list(cluster2celltype.values())
+    for cluster in cluster2celltype:
+        celltype = cluster2celltype[cluster]
+        celltype_count[celltype] = celltype_count.get(celltype, 0) + 1
+
+        if celltypes.count(celltype) > 1:
+            cluster2celltype[cluster] = f"{celltype} {celltype_count[celltype]}"
+
+    # Add assigned celltype to adata.obs
+    table = pd.DataFrame().from_dict(cluster2celltype, orient="index")
+    table.columns = [column_name]
+    adata.obs = adata.obs.merge(table, left_on=clustering, right_index=True, how="left")
+
+    return cluster2celltype
+
+
+"""
+
+# a subheader
+
+
+"""
+
+
+#####################################################################
+#                  Predict cell types using SCSA                    #
+#####################################################################
 
 def _match_database(marker_db, input_genes):
     """ Find best matching column in the marker database for the input genes"""
@@ -244,3 +333,8 @@ def run_scsa(adata,
         assigned_adata.obs[column_added] = assigned_adata.obs[groupby].map(dictMax)
         assigned_adata.uns.update(scsa_uns_dict)
         return assigned_adata
+
+
+#####################################################################
+#                  Cell types using custom script                   #
+#####################################################################

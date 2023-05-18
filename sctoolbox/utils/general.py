@@ -1,0 +1,329 @@
+import os
+import re
+import sys
+from os.path import join, dirname, exists
+import subprocess
+import shutil
+from pathlib import Path
+
+
+# ------------------ Packages and tools ----------------- #
+
+def get_package_versions():
+    """
+    Utility to get a dictionary of currently installed python packages and versions.
+
+    Returns
+    --------
+    A dict in the form:
+    {"package1": "1.2.1", "package2":"4.0.1", (...)}
+
+    """
+
+    # Import freeze
+    try:
+        from pip._internal.operations import freeze
+    except ImportError:  # pip < 10.0
+        from pip.operations import freeze
+
+    # Get list of packages and versions with freeze
+    package_list = freeze.freeze()
+    package_dict = {}  # dict for collecting versions
+    for s in package_list:
+        try:
+            name, version = re.split("==| @ ", s)
+            package_dict[name] = version
+        except Exception:
+            print(f"Error reading version for package: {s}")
+
+    return package_dict
+
+
+def get_binary_path(tool):
+    """ Get path to a binary commandline tool. Looks either in the local dir, on path or in the dir of the executing python binary.
+
+    Parameters
+    ----------
+    tool : str
+        Name of the commandline tool to be found.
+
+    Returns
+    -------
+    str :
+        Full path to the tool.
+    """
+
+    python_dir = os.path.dirname(sys.executable)
+    if os.path.exists(tool):
+        tool_path = f"./{tool}"
+
+    else:
+
+        # Check if tool is available on path
+        tool_path = shutil.which(tool)
+        if tool_path is None:
+
+            # Search for tool within same folder as python (e.g. in an environment)
+            python_dir = os.path.dirname(sys.executable)
+            tool_path = shutil.which(tool, path=python_dir)
+
+    # Check that tool is executable
+    if tool_path is None or shutil.which(tool_path) is None:
+        raise ValueError(f"Could not find an executable for {tool} on path.")
+
+    return tool_path
+
+
+def run_cmd(cmd):
+    """
+    Run a commandline command.
+
+    Parameters
+    ----------
+    cmd : str
+        Command to be run.
+    """
+    try:
+        subprocess.check_call(cmd, shell=True)
+        print(f"Command '{cmd}' ran successfully!")
+    except subprocess.CalledProcessError as e:
+        # print(f"Error running command '{cmd}': {e}")
+        if e.output is not None:
+            print(f"Command standard output: {e.output.decode('utf-8')}")
+        if e.stderr is not None:
+            print(f"Command standard error: {e.stderr.decode('utf-8')}")
+        raise e
+
+
+#####################################################################
+#                           R setup                                 #
+#####################################################################
+
+def setup_R(r_home=None):
+    """
+    Setup R installation for rpy2 use.
+
+    Parameters:
+    -----------
+    r_home : str, default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+
+    """
+    # Set R installation path
+    if not r_home:
+        # https://stackoverflow.com/a/54845971
+        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
+
+    if not exists(r_home):
+        raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
+
+    os.environ['R_HOME'] = r_home
+
+
+def _none2null(none_obj):
+    """ rpy2 converter that translates python 'None' to R 'NULL' """
+    # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
+    from rpy2.robjects import r
+
+    return r("NULL")
+
+
+# ----------------- List functions ---------------- #
+
+def split_list(lst, n):
+    """
+    Split list into n chunks.
+
+    Parameters
+    -----------
+    lst : list
+        List to be chunked
+    n : int
+        Number of chunks.
+
+    Returns
+    -------
+    list :
+        List of lists (chunks).
+    """
+    chunks = []
+    for i in range(0, n):
+        chunks.append(lst[i::n])
+
+    return chunks
+
+
+def split_list_size(lst, max_size):
+    """
+    Split list into chunks of max_size.
+
+    Parameters
+    -----------
+    lst : list
+        List to be chunked
+    max_size : int
+        Max size of chunks.
+
+    Returns
+    -------
+    list :
+        List of lists (chunks).
+    """
+
+    chunks = []
+    for i in range(0, len(lst), max_size):
+        chunks.append(lst[i:i + max_size])
+
+    return chunks
+
+
+def write_list_file(lst, path):
+    """
+    Write a list to a file with one element per line.
+
+    Parameters
+    -----------
+    lst : list
+        A list of values/strings to write to file
+    path : str
+        Path to output file.
+    """
+
+    lst = [str(s) for s in lst]
+    s = "\n".join(lst)
+
+    with open(path, "w") as f:
+        f.write(s)
+
+
+def read_list_file(path):
+    """
+    Read a list from a file with one element per line.
+
+    Parameters
+    ----------
+    path : str
+        Path to read file from.
+
+    Returns
+    -------
+    list :
+        List of strings read from file.
+    """
+
+    f = open(path)
+    lst = f.read().splitlines()  # get lines without "\n"
+    f.close()
+
+    return lst
+
+
+# ----------------- String functions ---------------- #
+
+def clean_flanking_strings(list_of_strings):
+    """
+    Remove common suffix and prefix from a list of strings, e.g. running the function on
+    ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
+
+    Parameters
+    -----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    --------
+    List of strings without common suffix and prefix
+    """
+
+    suffix = longest_common_suffix(list_of_strings)
+    prefix = os.path.commonprefix(list_of_strings)
+
+    list_of_strings_clean = [remove_prefix(s, prefix) for s in list_of_strings]
+    list_of_strings_clean = [remove_suffix(s, suffix) for s in list_of_strings_clean]
+
+    return list_of_strings_clean
+
+
+def longest_common_suffix(list_of_strings):
+    """
+    Find the longest common suffix of a list of strings.
+
+    Parameters
+    ----------
+    list_of_strings : list of str
+        List of strings.
+
+    Returns
+    -------
+    str :
+        Longest common suffix of the list of strings.
+    """
+    reversed_strings = [s[::-1] for s in list_of_strings]
+    reversed_lcs = os.path.commonprefix(reversed_strings)
+    lcs = reversed_lcs[::-1]
+
+    return lcs
+
+
+def remove_prefix(s, prefix):
+    """
+    Remove prefix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    prefix : str
+        Prefix to be removed.
+
+    Returns
+    -------
+    str :
+        String without prefix.
+    """
+    return s[len(prefix):] if s.startswith(prefix) else s
+
+
+def remove_suffix(s, suffix):
+    """
+    Remove suffix from a string.
+
+    Parameters
+    ----------
+    s : str
+        String to be processed.
+    suffix : str
+        Suffix to be removed.
+
+    Returns
+    -------
+    str :
+        String without suffix.
+    """
+    return s[:-len(suffix)] if s.endswith(suffix) else s
+
+
+def sanitize_string(s, char_list, replace="_"):
+    """
+    Replace every occurrence of given substrings.
+
+    Parameters
+    ----------
+    s : str
+        String to sanitize
+    char_list : list of str
+        Strings that should be replaced.
+    replace : str, default "_"
+        Replacement of substrings.
+
+    Returns
+    -------
+    str :
+        Sanitized string.
+    """
+
+    for char in char_list:
+        s = s.replace(char, replace)
+
+    return s

@@ -48,18 +48,59 @@ autodoc_member_order = 'bysource'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # Mock modules imported within sctoolbox - prevents failures of documentation build
-# modules are needed to build the example figures in the documentation, so they should not be mocked
-autodoc_mock_imports = []  # 'uropa', 'anndata', 'numpy', 'matplotlib',
-                           # 'glob', 'sklearn', 'seaborn',
-                           # 'qnorm', 'pylab', 'episcanpy']
-
+autodoc_mock_imports = []
 
 # ---- Automatic documentation generation -------------------------------------
 
 # Generate the API documentation per module
-cmd = "sphinx-apidoc -e -o API ../../sctoolbox/ --no-toc --templatedir=_templates --force"
-os.system(cmd)
-os.remove("API/sctoolbox.rst")
+modules = [os.path.basename(f) for f in glob.glob("../../sctoolbox/*")]
+modules = [module for module in modules if not module.startswith("_") and module != "data"]
+
+# Create one page per module
+for module in modules:
+    with open("API/" + module + ".rst", 'w') as fp:
+
+        fp.write(f"{module.capitalize()}\n")
+        fp.write(f"{'='*len(module)}\n\n")
+
+        if module == "plotting":
+            fp.write(".. rubric:: Loading example data\n\n")
+
+            pre_code = open("plot_pre_code.py").read()
+            pre_code = "    " + pre_code.replace("\n", "\n    ")
+            fp.write(".. plot ::\n\n")
+            fp.write(pre_code + "\n\n")
+
+            fp.write(".. rubric:: Functions\n\n")
+
+        # Find all submodules
+        submodules = [os.path.basename(f).replace(".py", "") for f in glob.glob("../../sctoolbox/" + module + "/*")]
+        submodules = [f for f in submodules if not f.startswith("_")]
+
+        # Set preferred order of submodules (all additional submodules are added at the end)
+        if module == "plotting":
+            submodule_order = ["qc_filter", "highly_variable", "embedding", "clustering", "marker_genes"]
+        elif module == "tools":
+            submodule_order = ["qc_filter", "highly_variable", "dim_reduction", "embedding", "clustering",
+                               "marker_genes"]
+
+        # reorder submodules
+        submodules = [submodule for submodule in submodule_order if submodule in submodules]
+        submodules += [submodule for submodule in submodules if submodule not in submodule_order]
+
+        # Add submodules to rst file
+        for submodule in submodules:
+            fp.write("-" * 30 + "\n\n")  # horizontal line between submodules
+            fp.write(f"{submodule}\n")
+            fp.write(f"{'-'*len(submodule)}\n")
+            f = f"""
+.. automodule:: sctoolbox.{module}.{submodule}
+   :members:
+   :undoc-members:
+   :show-inheritance:
+"""
+            fp.write(f + "\n\n")
+
 
 # --- Create nblink files for notebooks ----------------------------------------
 
@@ -89,6 +130,7 @@ plot_include_source = True
 plot_html_show_source_link = False
 plot_formats = [("png", 90)]
 plot_html_show_formats = False
+plot_pre_code = open("plot_pre_code.py").read()
 
 plot_rcparams = {'savefig.bbox': 'tight'}  # make sure plots are not cut off in the docs
 plot_apply_rcparams = True                 # if context option is used
@@ -104,4 +146,4 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']

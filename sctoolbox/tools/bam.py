@@ -2,9 +2,80 @@
 
 import re
 import os
+import pandas as pd
 import multiprocessing
-import sctoolbox.utilities as utils
 import warnings
+
+import sctoolbox.utils as utils
+
+
+def bam_adata_ov(adata, bamfile, cb_col):
+    """
+    Check if adata.obs barcodes existing in a column of a bamfile
+    Parameters
+    ----------
+    adata: anndata.AnnData
+        adata object where adata.obs is stored
+    bamfile: str
+        path of the bamfile to investigate
+    cb_col: str
+        bamfile column to extract the barcodes from
+
+    Returns: float
+        hitrate of the barcodes in the bamfile
+    -------
+
+    """
+    bam_obj = open_bam(bamfile, "rb")
+
+    sample = []
+    counter = 0
+    iterations = 1000
+    for read in bam_obj:
+        tag = read.get_tag(cb_col)
+        sample.append(tag)
+        if counter == iterations:
+            break
+        counter += 1
+
+    barcodes_df = pd.DataFrame(adata.obs.index)
+    count_table = barcodes_df.isin(sample)
+    hits = count_table.sum()
+    hitrate = hits[0] / iterations
+
+    return hitrate
+
+
+def check_barcode_tag(adata, bamfile, cb_col):
+    """
+    Check for the possibilty that the wrong barcode is used
+    Parameters
+    ----------
+    adata: anndata.AnnData
+        adata object where adata.obs is stored
+    bamfile: str
+        path of the bamfile to investigate
+    cb_col: str
+        bamfile column to extract the barcodes from
+
+    Returns
+    -------
+
+    """
+    hitrate = bam_adata_ov(adata, bamfile, cb_col)
+
+    if hitrate == 0:
+        warnings.warn('None of the barcodes from the bamfile found in the .obs table.\n'
+                      'Consider if you are using the wrong column cb-tag or bamfile.')
+    elif hitrate <= 0.05:
+        warnings.warn('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
+                      'Consider if you are using the wrong column for cb-tag or bamfile.')
+    elif hitrate > 0.05:
+        print('Barcode tag: OK')
+    else:
+        raise ValueError("Could not identify barcode hit rate.")
+
+#####################################################################
 
 
 def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False):
@@ -89,53 +160,6 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     bam_in_obj.close()
     bam_out_obj.close()
     print(f"Wrote {written} reads to output bam")
-
-
-def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4):
-
-    # check then load modules
-    utils.check_module("tqdm")
-    if utils._is_notebook() is True:
-        from tqdm import tqdm_notebook as tqdm
-    else:
-        from tqdm import tqdm
-    utils.check_module("pysam")
-
-    # Open files
-    bam_in_obj = open_bam(bam_in, "rb", verbosity=0, threads=pysam_threads)
-    bam_out_obj = open_bam(bam_out, "wb", template=bam_in_obj, threads=pysam_threads, verbosity=0)
-
-    barcodes = set(barcodes)
-
-    # Update progress based on total number of reads
-    total = get_bam_reads(bam_in_obj)
-    pbar = tqdm(total=total, desc="Reading... ", unit="reads")
-    step = int(total / 10000)  # 10000 total updates
-
-    # Iterate over reads
-    i = 0
-    written = 0
-    for read in bam_in_obj:
-        i += 1
-        if read.has_tag(read_tag):
-            bc = read.get_tag(read_tag)
-        else:
-            bc = None
-
-        # Update step manually - there is an overhead to update per read with hundreds of million reads
-        if i == step:
-            pbar.update(step)
-            pbar.refresh()
-            i = 0
-
-        if bc in barcodes:
-            bam_out_obj.write(read)
-            written += 1
-
-    # close progressbar
-    pbar.close()
-
-    print(f"Wrote {written} reads to cluster files")
 
 
 def split_bam_clusters(adata,

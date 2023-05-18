@@ -5,7 +5,7 @@
     as first columns.
 """
 from collections import Counter
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils
 import os
 import pkg_resources
 import pandas as pd
