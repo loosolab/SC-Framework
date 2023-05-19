@@ -13,7 +13,7 @@ old_to_new.update({util: "utils" for util in old_util_modules})
 # Tool modules
 old_tool_modules = ["analyser", "annotation", "atac", "atac_utils", "bam", "calc_overlap_pct",
                     "celltype_annotation", "custom_celltype_annotation", "marker_genes",
-                    "nucleosome_utils", "qc_filter", "receptor_ligand"]
+                    "nucleosome_utils", "qc_filter", "receptor_ligand", "multiomics"]
 old_to_new.update({tool: "tools" for tool in old_tool_modules})
 
 # Make connection using sys.modules and attributes
