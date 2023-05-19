@@ -21,14 +21,23 @@ from sctoolbox.tools import highly_variable as hv
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
-def atac_norm(adata, method):  # , condition_col='nb_features'):
-    """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
-    calculates PCA and UMAP and plots both UMAPs.
+def atac_norm(adata, method):
+    """
+    A function that normalizes count matrix using different methods.
 
-    :param anndata.AnnData adata: AnnData object with peak counts.
-    :param str condition_col: Name of the column to use as color in the umap plot, defaults to 'nb_features'
-    :param bool remove_pc1: Removing first component after TFIDF normalization and LSI, defaults to True
-    :return anndata.AnnData: Two AnnData objects with normalized matrices (Total and TFIDF) and UMAP.
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    method : str
+        Normalization method. Either 'total' or 'tfidf'.
+        - "total": Performs normalization for total counts, log1p and PCA.
+        - "tfidf": Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
+
+    Returns
+    -------
+    anndata.AnnData
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
     """
 
     adata = adata.copy()  # make sure the original data is not modified

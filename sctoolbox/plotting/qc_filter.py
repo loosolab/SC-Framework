@@ -454,7 +454,7 @@ def quality_violin(adata, columns,
     elif which == "var":
         table = adata.var
     else:
-        raise ValueError()
+        raise ValueError("'which' must be either 'obs' or 'var'.")
 
     # Order of categories on x axis
     if groupby is not None:
@@ -484,6 +484,11 @@ def quality_violin(adata, columns,
     # Setup thresholds if not given
     if thresholds is None:
         thresholds = {col: {} for col in columns}
+
+    # Check that columns are in table
+    invalid_columns = set(columns) - set(table.columns)
+    if invalid_columns:
+        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
 
     # ---------------- Setup figure --------------#
 

@@ -77,6 +77,8 @@ test import:
  script:
   - pip install .
   - python -c "import sctoolbox"
+ rules:
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 # Run test coverage
 test coverage:

@@ -166,7 +166,7 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
         Path to new .bed file.
     """
 
-    utils.check_module(pybedtools)
+    utils.check_module("pybedtools")
     import pybedtools
 
     # get names of the bed files

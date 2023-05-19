@@ -263,6 +263,9 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     if plot is True:
         sc.external.pl.scrublet_score_distribution(adata)
 
+    # Save "doublet_score" as a metric for plotting obs
+    utils.add_uns_info(adata, "obs_metrics", "doublet_score", how="append")
+
     # Return adata (or None if inplace)
     if inplace is False:
         return adata
@@ -387,6 +390,9 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         axarr[1].set_title("Prediction of female groups")
 
         _save_figure(save)
+
+    # Save information to adata.uns
+    utils.add_uns_info(adata, "obs_metrics", "predicted_sex", how="append")
 
 
 ###############################################################################

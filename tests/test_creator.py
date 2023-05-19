@@ -1,7 +1,5 @@
 import sctoolbox.creators as creator
-import anndata
 import pytest
-import pandas as pd
 from glob import glob
 from pathlib import Path
 import shutil

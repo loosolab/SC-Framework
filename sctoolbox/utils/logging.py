@@ -74,7 +74,7 @@ def get_datetime():
     return dt_string
 
 
-def add_uns_info(adata, key, value):
+def add_uns_info(adata, key, value, how="overwrite"):
     """ Add information to adata.uns['sctoolbox']. This is used for logging the parameters and options of different steps in the analysis.
 
     Parameters
@@ -99,7 +99,23 @@ def add_uns_info(adata, key, value):
             d[k] = d.get(k, {})
         d = d[k]
 
-    d[key[-1]] = value  # last key contains value
+    # Add value to last key
+    last_key = key[-1]
+    if how == "overwrite":
+        d[last_key] = value  # last key contains value
+
+    elif how == "append":
+        if key[-1] not in d:
+            d[last_key] = value  # initialize with a value if key does not exist
+
+        else:  # append to existing key
+            if not isinstance(d[last_key], list):
+                d[last_key] = [d[last_key]]
+
+            # Remove value if it is already in list; this prevents duplicates and ensures that value is now last in list
+            if value in d[last_key]:
+                d[last_key].remove(value)
+            d[last_key].append(value)
 
 
 def initialize_uns(adata, keys=[]):

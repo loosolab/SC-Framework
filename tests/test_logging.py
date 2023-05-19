@@ -23,3 +23,6 @@ def test_add_uns_info(adata):
     logging.add_uns_info(adata, ["upper", "lower"], "info")
     assert "upper" in adata.uns["sctoolbox"]
     assert adata.uns["sctoolbox"]["upper"]["lower"] == "info"
+
+    logging.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
+    assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
