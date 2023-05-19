@@ -6,6 +6,7 @@ import numpy as np
 import anndata as ad
 import yaml
 
+import sctoolbox.plotting as pl
 
 @pytest.fixture
 def adata():
@@ -79,7 +80,7 @@ def test_insertsize_plotting(adata):
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
     sctoolbox.atac.add_insertsize(adata, fragments=fragments)
 
-    ax = sctoolbox.atac.plot_insertsize(adata)
+    ax = pl.plot_insertsize(adata)
 
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")

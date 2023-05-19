@@ -5,7 +5,7 @@ import os
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pysam', 'episcanpy', 'pyyaml', 'psutil', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
+                  "atac": ['episcanpy', 'pyyaml', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_lignad": ['scikit-learn', 'igraph'],
@@ -27,21 +27,26 @@ def find_version(f):
         raise RuntimeError("Unable to find version string.")
 
 
+# Find all packages in sctoolbox
+packages = find_namespace_packages("sctoolbox")
+packages = [package for package in packages if not package.startswith("data")]  # remove data package as it is included in manifest
+packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. prefix to all packages
+
 setup(
     name='sctoolbox',
     description='Custom modules for single cell analysis',
     version=find_version(os.path.join("sctoolbox", "_version.py")),
     license='MIT',
-    packages=find_namespace_packages(),
+    packages=packages,
     python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
+        'pysam',
         'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10
         'numpy',
         'kneed',
-        'fitter',
         'qnorm',
         'plotly',
         'scipy',
@@ -58,7 +63,9 @@ setup(
         'apybiomart',
         'requests',
         'ratelimiter',
-        'python-gitlab'
+        'python-gitlab',
+        'psutil',
+        'pyyaml',
     ],
     include_package_data=True,
     extras_require=extras_require

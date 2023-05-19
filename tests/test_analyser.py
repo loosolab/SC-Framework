@@ -53,7 +53,7 @@ def test_rename_categories():
 
     data = np.random.choice(["C1", "C2", "C3"], size=100)
     series = pd.Series(data).astype("category")
-    renamed_series = an.rename_categories(series)
+    renamed_series = utils.rename_categories(series)
 
     assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
 

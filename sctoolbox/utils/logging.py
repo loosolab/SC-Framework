@@ -74,6 +74,34 @@ def get_datetime():
     return dt_string
 
 
+def add_uns_info(adata, key, value):
+    """ Add information to adata.uns['sctoolbox']. This is used for logging the parameters and options of different steps in the analysis.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An AnnData object.
+    key : str or list
+        The key to add to adata.uns['sctoolbox']. If the key is a list, it represents a path within a nested dictionary.
+    value : any
+        The value to add to adata.uns['sctoolbox'].
+    """
+
+    if "sctoolbox" not in adata.uns:
+        adata.uns["sctoolbox"] = {}
+
+    if isinstance(key, str):
+        key = [key]
+
+    d = adata.uns["sctoolbox"]
+    for k in key[:-1]:  # iterate over all keys except the last one
+        if k not in d:
+            d[k] = d.get(k, {})
+        d = d[k]
+
+    d[key[-1]] = value  # last key contains value
+
+
 def initialize_uns(adata, keys=[]):
     """ Initialize the sctoolbox keys in adata.uns.
 

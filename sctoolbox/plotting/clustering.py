@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import _save_figure
 
 
 def search_clustering_parameters(adata,
@@ -98,7 +99,7 @@ def search_clustering_parameters(adata,
         ax.axis('off')
 
     plt.tight_layout()
-    utils._save_figure(save)
+    _save_figure(save)
 
     return axarr
 
@@ -158,6 +159,6 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     plt.subplots_adjust(wspace=0.2)
 
     # Save figure
-    utils._save_figure(save)
+    _save_figure(save)
 
     return axarr

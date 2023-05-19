@@ -577,14 +577,16 @@ def thresholds_as_table(threshold_dict):
 
     # Assemble table
     df = pd.DataFrame(rows)
-    df.columns = ["Parameter", "Group", "Minimum", "Maximum"]
+    if len(df) > 0:  # df can be empty if no valid thresholds were input
 
-    # Remove group column if no thresholds had groups
-    if df["Group"].isnull().sum() == df.shape[0]:
-        df.drop(columns="Group", inplace=True)
+        df.columns = ["Parameter", "Group", "Minimum", "Maximum"]
 
-    # Remove duplicate rows
-    df.drop_duplicates(inplace=True)
+        # Remove group column if no thresholds had groups
+        if df["Group"].isnull().sum() == df.shape[0]:
+            df.drop(columns="Group", inplace=True)
+
+        # Remove duplicate rows
+        df.drop_duplicates(inplace=True)
 
     return df
 
@@ -707,7 +709,7 @@ def get_keys(adata, manual_thresholds):
     :return:
     """
     m_thresholds = {}
-    legend = adata.uns["legend"]
+    legend = adata.uns.get("legend", {})
     for key, value in manual_thresholds.items():
         if key in legend:
             obs_key = legend[key]

@@ -9,9 +9,6 @@ from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 from anndata import AnnData
 
-import sctoolbox.tools.highly_variable as hv
-import sctoolbox.tools.norm_correct as nc
-
 
 ############################################################################
 #                             PCA / SVD                                    #
@@ -50,39 +47,40 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
         return adata_m
 
 
-def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
-    """
-    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
-
-    Parameters
-    ----------
-    anndata : anndata.AnnData
-        Anndata object to work on.
-    exclude_HEG : boolean, default True
-        If True, highly expressed genes (HEG) will be not considered in the normalization.
-    use_HVG_PCA : boolean, default True
-        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-    inplace : boolean, default False
-        Whether to work inplace on the anndata object.
-
-    Returns
-    -------
-    anndata.Anndata or None:
-        Anndata with expression values normalized and log converted and PCA computed.
-    """
-    adata_m = anndata if inplace else anndata.copy()
-
-    # Normalization and converting to log
-    nc.adata_normalize_total(adata_m, exclude_HEG, inplace=True)
-
-    # Annotate highly variable genes
-    hv.annot_HVG(adata_m, inplace=True)
-
-    # Compute PCA
-    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
-
-    if not inplace:
-        return adata_m
+# wrapper no longer used
+# def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
+#    """
+#    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
+#
+#    Parameters
+#    ----------
+#    anndata : anndata.AnnData
+#        Anndata object to work on.
+#    exclude_HEG : boolean, default True
+#        If True, highly expressed genes (HEG) will be not considered in the normalization.
+#    use_HVG_PCA : boolean, default True
+#        If true, highly variable genes (HVG) will be also considered to calculate PCA.
+#    inplace : boolean, default False
+#        Whether to work inplace on the anndata object.
+#
+#    Returns
+#    -------
+#    anndata.Anndata or None:
+#        Anndata with expression values normalized and log converted and PCA computed.
+#    """
+#    adata_m = anndata if inplace else anndata.copy()
+#
+#    # Normalization and converting to log
+#    nc.adata_normalize_total(adata_m, exclude_HEG, inplace=True)
+#
+#    # Annotate highly variable genes
+#    hv.annot_HVG(adata_m, inplace=True)
+#
+#    # Compute PCA
+#    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
+#
+#    if not inplace:
+#        return adata_m
 
 
 def lsi(data, scale_embeddings=True, n_comps=50):
@@ -247,64 +245,3 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
 
     if inplace is False:
         return adata
-
-
-def atac_norm(adata, method):  # , condition_col='nb_features'):
-    """A function that normalizes count matrix using two methods (total and TFIDF) seperately,
-    calculates PCA and UMAP and plots both UMAPs.
-
-    :param anndata.AnnData adata: AnnData object with peak counts.
-    :param str condition_col: Name of the column to use as color in the umap plot, defaults to 'nb_features'
-    :param bool remove_pc1: Removing first component after TFIDF normalization and LSI, defaults to True
-    :return anndata.AnnData: Two AnnData objects with normalized matrices (Total and TFIDF) and UMAP.
-    """
-
-    adata = adata.copy()  # make sure the original data is not modified
-
-    if method == "total":  # perform total normalization and pca
-        print('Performing total normalization and PCA...')
-        sc.pp.normalize_total(adata)
-        sc.pp.log1p(adata)
-        sc.pp.pca(adata)
-
-    elif method == "tfidf":
-        print('Performing TFIDF and LSI...')
-        nc.tfidf(adata)
-        lsi(adata)  # corresponds to PCA
-
-    else:
-        raise ValueError("Method must be either 'total' or 'tfidf'")
-
-    return adata
-
-
-"""
-    # perform tfidf and latent semantic indexing
-    print('Performing TFIDF and LSI...')
-
-    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
-    sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
-    print('Done')
-
-    # perform total normalization and pca
-    print('Performing total normalization and PCA...')
-    sc.pp.normalize_total(adata_total)
-    adata_total.layers['normalised'] = adata_total.X.copy()
-    epi.pp.log1p(adata_total)
-    sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=False)
-    sc.pp.neighbors(adata_total, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean')
-    sc.tl.umap(adata_total, min_dist=0.1, spread=2)
-    print('Done')
-
-    print('Plotting UMAP...')
-    fig, axarr = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
-    axes = axarr.flatten()
-    sc.pl.pca(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[0], show=False)
-    sc.pl.pca(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[1], show=False)
-    sc.pl.umap(adata_tfidf, color=condition_col, title='', legend_loc='none', ax=axes[2], show=False)
-    sc.pl.umap(adata_total, color=condition_col, title='', legend_loc='right margin', ax=axes[3], show=False)
-
-    plt.tight_layout()
-
-    return adata_tfidf, adata_total
-"""

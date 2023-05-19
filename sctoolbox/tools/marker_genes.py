@@ -11,7 +11,6 @@ from anndata import ImplicitModificationWarning
 from pathlib import Path
 
 import sctoolbox.utils as utils
-import sctoolbox.utils.creators as creators
 
 
 def get_chromosome_genes(gtf, chromosomes):
@@ -149,7 +148,9 @@ def label_genes(adata,
         print(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
     # --------- Save information -------- #
-    creators.build_infor(adata, "genes_labeled", added)
+
+    # Add information to adata.uns
+    utils.add_uns_info(adata, "genes_labeled", added)
 
 
 def add_gene_expression(adata, gene):
@@ -399,7 +400,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                 table["scores"] = table["scores"].round(3)
                 table["logfoldchanges"] = table["logfoldchanges"].round(3)
 
-                table.to_excel(writer, sheet_name=utils.sanitize_sheetname(f'{group}'), index=False)
+                table.to_excel(writer, sheet_name=utils._sanitize_sheetname(f'{group}'), index=False)
 
     return group_tables
 

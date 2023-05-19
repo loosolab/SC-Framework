@@ -112,7 +112,7 @@ def test_rm_tmp():
 
     # Remove tempfile in tempdir (but tempdir should still exist)
     tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
-    anno.rm_tmp(temp_dir, tempfiles)
+    utils.rm_tmp(temp_dir, tempfiles)
 
     dir_exists = os.path.exists(temp_dir)
     files_removed = sum([os.path.exists(f) for f in tempfiles]) == 0
@@ -120,7 +120,7 @@ def test_rm_tmp():
     assert dir_exists and files_removed
 
     # Check that tempdir is removed if it is empty
-    anno.rm_tmp(temp_dir)
+    utils.rm_tmp(temp_dir)
     dir_exists = os.path.exists(temp_dir)
 
     assert dir_exists is False
@@ -142,14 +142,14 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac',
 def test_prepare_gtf(key, gtf):
 
     if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
-        gtf_out, tempfiles = anno.prepare_gtf(gtf, "", print)
+        gtf_out, tempfiles = anno._prepare_gtf(gtf, "", print)
 
         assert os.path.exists(gtf_out)  # assert if output gtf exists as a file
 
     elif key in ["gtf_missing_col", "gtf_corrupted", "gff"]:  # these gtfs are invalid and should raise an error
 
         with pytest.raises(argparse.ArgumentTypeError) as err:
-            anno.prepare_gtf(gtf, "", print)
+            anno._prepare_gtf(gtf, "", print)
 
         # Assert if the error message is correct depending on input
         if key == "gtf_missing_col":

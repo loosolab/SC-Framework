@@ -16,9 +16,7 @@ import plotly.graph_objects as go
 
 from sctoolbox._settings import settings
 import sctoolbox.utils as utils
-import sctoolbox.plotting as pl
-from sctoolbox.plotting import _save_figure, _make_square
-from sctoolbox.plotting.general import boxplot
+from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 
 
 #############################################################################
@@ -449,7 +447,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 
             axes[j, i].set_xlabel("")
 
-            pl._make_square(axes[j, i])
+            _make_square(axes[j, i])
 
     # fig.tight_layout()
     return axes
@@ -721,7 +719,7 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
                 verticalalignment='bottom')
 
         # Adjust aspect ratio
-        pl._make_square(ax)
+        _make_square(ax)
 
     # Save figure
     _save_figure(save)

@@ -71,6 +71,13 @@ lint:
       - tests/*.py
       - sctoolbox/*.py
 
+# Test that the minimal sctoolbox package can still be imported without additional dependencies
+test import:
+ stage: test
+ script:
+  - pip install .
+  - python -c "import sctoolbox"
+
 # Run test coverage
 test coverage:
   stage: test

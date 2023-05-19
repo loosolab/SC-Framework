@@ -58,7 +58,7 @@ def test_get_thresholds():
     """ Test whether min/max threshold can be found for a normal distribution """
     data_arr = np.random.normal(size=1000)
 
-    threshold = qc.get_thresholds(data_arr)
+    threshold = qc._get_thresholds(data_arr)
 
     assert "min" in threshold and "max" in threshold
 

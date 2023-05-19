@@ -195,7 +195,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     g.ax_heatmap.xaxis.tick_top()
     _ = g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="left")
 
-    utils.save_figure(save)
+    _save_figure(save)
 
     return g
 

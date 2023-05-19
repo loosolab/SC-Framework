@@ -766,7 +766,7 @@ def density_plot(scaled, densities):
     ax.imshow(rotated[:-1, :], cmap='viridis', interpolation='nearest', aspect=stretch)
     ax.plot(scaled_mean, color="red", markersize=1)
     plt.gca().invert_yaxis()
-    plt.show()
+    # plt.show()  # plots are shown automatically in jupyter notebook
 
     return ax
 
@@ -910,7 +910,7 @@ def plot_wavl_ov(feature,
     ax3.set_ylabel('Frequencies', color='blue')
 
     fig.tight_layout()
-    plt.show()
+    # plt.show()
 
     return fig, [ax1, ax2, ax3]
 
@@ -971,10 +971,10 @@ def add_insertsize_metrics(adata,
         raise ValueError("Please provide either a bam file or a fragments file - not both.")
 
     elif bam is not None:
-        count_table = tools.insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
+        count_table = tools._insertsize_from_bam(bam, barcode_tag=barcode_tag, regions=regions, barcodes=adata_barcodes)
 
     elif fragments is not None:
-        count_table = tools.insertsize_from_fragments(fragments, barcodes=adata_barcodes)
+        count_table = tools._insertsize_from_fragments(fragments, barcodes=adata_barcodes)
 
     dist = count_table[[c for c in count_table.columns if isinstance(c, int)]]
     dists_arr = dist.to_numpy()

@@ -1,8 +1,10 @@
 import pytest
-import sctoolbox.atac_utils as atac_utils
 import os
 import scanpy as sc
 import numpy as np
+
+import sctoolbox.utilities as utils
+import sctoolbox.tools as tools
 
 
 @pytest.fixture
@@ -51,14 +53,14 @@ def test_format_adata_var(fixture, expected, request):
     adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
     if type(expected) == type:
         with pytest.raises(expected):
-            atac_utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+            utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
 
     else:
-        atac_utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
+        utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
 
         assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
 
 
 def test_bam_adata_ov(adata_atac, bamfile):
-    hitrate = atac_utils.bam_adata_ov(adata_atac, bamfile, cb_col='CB')
+    hitrate = tools.bam_adata_ov(adata_atac, bamfile, cb_col='CB')
     assert hitrate >= 0.10

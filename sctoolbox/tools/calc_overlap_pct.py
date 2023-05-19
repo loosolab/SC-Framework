@@ -5,15 +5,13 @@
     as first columns.
 """
 from collections import Counter
-import sctoolbox.utils as utils
 import os
 import pkg_resources
 import pandas as pd
-import pybedtools
 import sys
 from pathlib import Path
-from sinto.fragments import fragments
 import multiprocessing as mp
+import sctoolbox.utils as utils
 
 
 def check_pct_fragments_in_promoters(adata, qc_col):
@@ -50,7 +48,9 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     """
 
     utils.check_module("pysam")
+    utils.check_module("sinto")
     import pysam
+    from sinto.fragments import fragments
 
     # extract bam file name and path
 
@@ -166,7 +166,8 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
         Path to new .bed file.
     """
 
-    from pathlib import Path
+    utils.check_module(pybedtools)
+    import pybedtools
 
     # get names of the bed files
     name_1 = Path(bed1).stem
