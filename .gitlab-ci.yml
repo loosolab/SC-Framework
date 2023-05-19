@@ -33,7 +33,7 @@ default:
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
-    - apt update
+#    - apt update
     - apt -y install r-base  # needed for rpy2 install
     - pip install rpy2   # resolve dependencies for diffexpr
     - pip install numpy  # resolve dependencies for diffexpr
@@ -73,6 +73,9 @@ lint:
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
+ inherit:
+    default: 
+      - image  #only inherit image, not before_script
  stage: test
  script:
   - pip install .
@@ -157,7 +160,8 @@ notebooks:
 build-pages:
   stage: deploy
   script:
-    - apt-get update -qq && apt-get install -qq -y pandoc
+    - pip install pandoc
+    - #apt-get update -qq && apt-get install -qq -y pandoc
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
