@@ -149,6 +149,7 @@ notebooks:
 
 # Build documentation
 build-pages:
+  image: python:3.10
   stage: deploy
   script:
     - pip install pandoc
