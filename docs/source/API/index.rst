@@ -7,4 +7,4 @@ sctoolbox API reference
 
    tools
    plotting
-   utilities
+   utils

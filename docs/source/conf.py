@@ -71,8 +71,6 @@ for module in modules:
             fp.write(".. plot ::\n\n")
             fp.write(pre_code + "\n\n")
 
-            fp.write(".. rubric:: Functions\n\n")
-
         # Find all submodules
         submodules = [os.path.basename(f).replace(".py", "") for f in glob.glob("../../sctoolbox/" + module + "/*")]
         submodules = [f for f in submodules if not f.startswith("_")]
@@ -85,11 +83,11 @@ for module in modules:
                                "marker_genes"]
 
         # reorder submodules
-        submodules = [submodule for submodule in submodule_order if submodule in submodules]
-        submodules += [submodule for submodule in submodules if submodule not in submodule_order]
+        submodules_ordered = [submodule for submodule in submodule_order if submodule in submodules]
+        submodules_ordered += [submodule for submodule in submodules if submodule not in submodule_order]
 
         # Add submodules to rst file
-        for submodule in submodules:
+        for submodule in submodules_ordered:
             fp.write("-" * 30 + "\n\n")  # horizontal line between submodules
             fp.write(f"{submodule}\n")
             fp.write(f"{'-'*len(submodule)}\n")

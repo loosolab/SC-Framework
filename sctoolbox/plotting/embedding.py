@@ -14,9 +14,12 @@ from matplotlib.colors import ListedColormap
 import plotly as po
 import plotly.graph_objects as go
 
+from numba import errors as numba_errors
+
 from sctoolbox._settings import settings
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
+
 
 
 #############################################################################
@@ -232,20 +235,23 @@ def _search_dim_red_parameters(adata, method, perplexity_range=None, learning_ra
         loop_params.append(get_loop_params(r))
 
     # Calculate umap for each combination of spread/dist
-    pool = mp.Pool(threads)
-    jobs = {}
-    for i, r2_param in enumerate(loop_params[1]):  # rows
-        for j, r1_param in enumerate(loop_params[0]):  # columns
-            kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
-                    range_2[0].rsplit('_', 1)[0]: r2_param,
-                    "copy": True}
-            kwds |= kwargs
-            job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
-            jobs[(i, j)] = job
-    pool.close()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=numba_errors.NumbaDeprecationWarning, message="The 'nopython' keyword argument")  # numba warning for 0.59.0
 
-    utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
-    pool.join()
+        pool = mp.Pool(threads)
+        jobs = {}
+        for i, r2_param in enumerate(loop_params[1]):  # rows
+            for j, r1_param in enumerate(loop_params[0]):  # columns
+                kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
+                        range_2[0].rsplit('_', 1)[0]: r2_param,
+                        "copy": True}
+                kwds |= kwargs
+                job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
+                jobs[(i, j)] = job
+        pool.close()
+
+        utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
+        pool.join()
 
     # Figure with rows=spread, cols=dist
     fig, axes = plt.subplots(len(loop_params[1]), len(loop_params[0]),
