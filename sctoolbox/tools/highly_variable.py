@@ -6,6 +6,7 @@ import warnings
 import scanpy as sc
 
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import _save_figure
 
 
 def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
@@ -63,8 +64,11 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
     if hvg_count < hvg_range[0] or hvg_count > hvg_range[1]:
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
     else:
-        sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
-        utils.save_figure(save)
+        ax = sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
+
+        print(ax)
+
+        _save_figure(save)
         print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
     # Adding info in anndata.uns["infoprocess"]

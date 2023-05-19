@@ -546,8 +546,8 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     C1, C2 = contrasts[0]
     deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
 
-    # Add to adata
-    adata.uns["deseq_result"] = deseq_table
+    # Add to adata uns
+    utils.add_uns_info(adata, "deseq_result", deseq_table)
 
     return deseq_table
 

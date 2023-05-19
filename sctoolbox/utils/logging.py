@@ -1,6 +1,8 @@
 import getpass
 from datetime import datetime
 import anndata
+from collections.abc import Sequence  # check if object is iterable
+from collections import OrderedDict
 
 
 def build_legend(adata, key, value, inplace=True):
@@ -109,13 +111,28 @@ def add_uns_info(adata, key, value, how="overwrite"):
             d[last_key] = value  # initialize with a value if key does not exist
 
         else:  # append to existing key
-            if not isinstance(d[last_key], list):
-                d[last_key] = [d[last_key]]
 
-            # Remove value if it is already in list; this prevents duplicates and ensures that value is now last in list
-            if value in d[last_key]:
-                d[last_key].remove(value)
-            d[last_key].append(value)
+            current_value = d[last_key]
+
+            if isinstance(value, dict) and not isinstance(current_value, dict):
+                nested = "adata.uns['sctoolbox'][" + "][".join(key) + "]"
+                raise ValueError(f"Cannot append {value} to {nested} because it is not a dict.")
+            elif type(current_value).__name__ == "ndarray":  # convert numpy array to list in order to use "append"/extend"
+                d[last_key] = list(current_value)
+            else:
+                d[last_key] = [current_value]
+
+            # Append/extend/update value
+            if isinstance(value, list):
+                d[last_key].extend(value)
+            elif isinstance(value, dict):
+                d[last_key].update(value)   # update dict
+            else:
+                d[last_key].append(value)   # value is a single value
+
+            # If list; remove duplicates and keep the last occurrence
+            if isinstance(d[last_key], Sequence):
+                d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
 
 
 def initialize_uns(adata, keys=[]):

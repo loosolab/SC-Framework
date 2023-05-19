@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scanpy as sc
 
@@ -120,6 +121,9 @@ def load_h5ad(path):
     adata = sc.read_h5ad(filename=adata_input)
 
     print(f"The adata object was loaded from: {adata_input}")
+
+    # Save information of source to adata
+    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(adata_input))
 
     return adata
 

@@ -445,6 +445,9 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
 
+    # Add information to adata.uns
+    utils.add_uns_info(adata, "batch_correction", {"method": method, "batch_key": batch_key})
+
     return adata  # the corrected adata object
 
 

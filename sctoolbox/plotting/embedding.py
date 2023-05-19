@@ -21,7 +21,6 @@ import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 
 
-
 #############################################################################
 #                                  Utilities                                #
 #############################################################################
@@ -957,7 +956,11 @@ def anndata_overview(adatas,
     return axs
 
 
-def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
+def plot_pca_variance(adata, method="pca",
+                      n_pcs=20,
+                      n_selected=None,
+                      ax=None,
+                      save=None):
     """
     Plot the pca variance explained by each component as a barplot.
 
@@ -983,7 +986,7 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
         raise KeyError("The given method '{0}' is not found in adata.uns. Please make sure to run the method before plotting variance.")
 
     # Get variance from object
-    var_explained = adata.uns["pca"]["variance_ratio"][:n_pcs]
+    var_explained = adata.uns[method]["variance_ratio"][:n_pcs]
     var_explained = var_explained * 100  # to percent
 
     # Plot barplot of variance
@@ -992,10 +995,18 @@ def plot_pca_variance(adata, method="pca", n_pcs=20, ax=None):
                 color="limegreen",
                 ax=ax)
 
+    # Add number of selected as line
+    if n_selected is not None:
+        ax.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
+        ax.legend()
+
     # Finalize plot
     ax.set_xlabel('PCs', fontsize=12)
     ax.set_ylabel("Variance explained (%)")
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
     ax.set_axisbelow(True)
+
+    # Save figure
+    _save_figure(save)
 
     return ax

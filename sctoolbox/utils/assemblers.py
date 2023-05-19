@@ -230,6 +230,9 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     print("Concatenating anndata objects")
     adata = adata_list[0].concatenate(adata_list[1:], join="outer")
 
+    # Add information to uns
+    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
+
     return adata
 
 
@@ -462,6 +465,9 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     # pull SingleCellExperiment into python
     # this also converts to anndata
     adata = globalenv["object"]
+
+    # Add information to uns
+    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
     if output:
         # Saving adata.h5ad

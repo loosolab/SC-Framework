@@ -170,6 +170,9 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     adata.obs['G2M_score'] = sdata.obs['G2M_score']
     adata.obs['phase'] = sdata.obs['phase']
 
+    # Add phase to uns
+    utils.add_uns_info(adata, "obs_metrics", "phase", how="append")
+
     if not inplace:
         return adata
 
@@ -836,6 +839,9 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
                 adata = adata[:, included]  # filter on var
 
         print(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
+
+    # Save information to adata.uns
+    utils.add_uns_info(adata, ["qc_thresholds", which], thresholds)   # saves dict to adata.uns["qc_thresholds"]["obs"] or adata.uns["qc_thresholds"]["var"]
 
     if inplace is False:
         return adata
