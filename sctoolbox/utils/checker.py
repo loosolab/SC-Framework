@@ -113,7 +113,7 @@ def format_adata_var(adata,
     Formats the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
     If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
     If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
-    "\*[_:-]start[_:-]stop"
+    "*[_:-]start[_:-]stop"
 
     If the index can be formatted, the formatted columns (columns_added) will be added.
     If the index cannot be formatted, an error will be raised.

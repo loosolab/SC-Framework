@@ -21,7 +21,7 @@ from sctoolbox.tools import highly_variable as hv
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
-def atac_norm(adata, methods):
+def atac_norm(adata, method):
     """
     A function that normalizes count matrix using different methods.
 
@@ -30,7 +30,7 @@ def atac_norm(adata, methods):
     adata : anndata.AnnData
         Annotated data matrix.
     method : str or list of str
-        Normalization method. Either 'total' or 'tfidf'.
+        Normalization method. Either 'total' and/or 'tfidf'.
 
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
@@ -66,38 +66,6 @@ def atac_norm(adata, methods):
         adatas[method] = adata
 
     return adatas
-
-
-"""
-# perform tfidf and latent semantic indexing
-print('Performing TFIDF and LSI...')
-
-sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
-sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
-print('Done')
-
-# perform total normalization and pca
-print('Performing total normalization and PCA...')
-sc.pp.normalize_total(adata_total)
-adata_total.layers['normalised'] = adata_total.X.copy()
-epi.pp.log1p(adata_total)
-sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=False)
-sc.pp.neighbors(adata_total, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean')
-sc.tl.umap(adata_total, min_dist=0.1, spread=2)
-print('Done')
-
-print('Plotting UMAP...')
-fig, axarr = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
-axes = axarr.flatten()
-sc.pl.pca(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[0], show=False)
-sc.pl.pca(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[1], show=False)
-sc.pl.umap(adata_tfidf, color=condition_col, title='', legend_loc='none', ax=axes[2], show=False)
-sc.pl.umap(adata_total, color=condition_col, title='', legend_loc='right margin', ax=axes[3], show=False)
-
-plt.tight_layout()
-
-return adata_tfidf, adata_total
-"""
 
 
 def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log_kwargs={}):

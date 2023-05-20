@@ -9,7 +9,7 @@ from importlib.resources import files
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
-import scrublet as scr
+#import scrublet as scr
 
 # toolbox functions
 import sctoolbox
@@ -296,12 +296,12 @@ def _run_scrublet(adata, **kwargs):
         warnings.filterwarnings("ignore", category=UserWarning, message="Received a view of an AnnData*")
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute `.obs`*")  # because adata is a view
 
-        ##X = adata.X
-        #scrub = scr.Scrublet(X)
-        #doublet_scores, predicted_doublets = scrub.scrub_doublets()
+        # X = adata.X
+        # scrub = scr.Scrublet(X)
+        # doublet_scores, predicted_doublets = scrub.scrub_doublets()
 
-        #adata.obs["doublet_score"] = doublet_scores
-        #adata.obs["predicted_doublet"] = predicted_doublets
+        # adata.obs["doublet_score"] = doublet_scores
+        # adata.obs["predicted_doublet"] = predicted_doublets
 
         sc.external.pp.scrublet(adata, copy=False, **kwargs)
 
