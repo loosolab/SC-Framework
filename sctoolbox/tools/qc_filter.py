@@ -9,7 +9,7 @@ from importlib.resources import files
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
-#import scrublet as scr
+# import scrublet as scr
 
 # toolbox functions
 import sctoolbox

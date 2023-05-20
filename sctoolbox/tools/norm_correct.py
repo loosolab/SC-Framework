@@ -42,8 +42,8 @@ def atac_norm(adata, method):
         Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
     """
 
-    if isinstance(methods, str):
-        methods = [methods]
+    if isinstance(method, str):
+        methods = [method]
 
     adatas = {}
     for method in methods:
