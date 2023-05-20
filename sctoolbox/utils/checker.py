@@ -109,11 +109,11 @@ def validate_regions(adata, coordinate_columns):
 def format_adata_var(adata,
                      coordinate_columns=None,
                      columns_added=["chr", "start", "end"]):
-    '''
+    """
     Formats the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
     If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
     If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
-    "*[_:-]start[_:-]stop"
+    "\*[_:-]start[_:-]stop"
 
     If the index can be formatted, the formatted columns (columns_added) will be added.
     If the index cannot be formatted, an error will be raised.
@@ -125,7 +125,7 @@ def format_adata_var(adata,
         If None, the index will be formatted.
     :param columns_added: list of str
         List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
-    '''
+    """
 
     # Test whether the first three columns are in the right format
     format_index = True

@@ -67,7 +67,7 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
-    **kwargs
+    **kwargs : arguments
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
     Examples
@@ -81,6 +81,7 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
         :context: close-figs
 
         pl.n_cells_barplot(adata, x="louvain", groupby="condition")
+
     """
 
     # Get cell counts for groups or all
@@ -212,11 +213,12 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
         Note: Row order defines plot order.
         Structure:
-            index (two columns)
+
+            - index (two columns)
                 - Name of anndata.var or anndata.obs column.
                 - Name of origin. Either "obs" or "var".
-            1st column - Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
-            2nd column - Name of anndata.var or anndata.obs column used for color grouping or None to disable.
+            - 1st column: Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
+            - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
     colors : list of str, default None
         List of colors for the violins.
     filename : str, default None

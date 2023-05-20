@@ -21,7 +21,7 @@ from sctoolbox.tools import highly_variable as hv
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
-def atac_norm(adata, method):
+def atac_norm(adata, methods):
     """
     A function that normalizes count matrix using different methods.
 
@@ -29,65 +29,74 @@ def atac_norm(adata, method):
     ----------
     adata : anndata.AnnData
         Annotated data matrix.
-    method : str
+    method : str or list of str
         Normalization method. Either 'total' or 'tfidf'.
-        - "total": Performs normalization for total counts, log1p and PCA.
-        - "tfidf": Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
+
+        - 'total': Performs normalization for total counts, log1p and PCA.
+        - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
 
     Returns
     -------
-    anndata.AnnData
-        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+    dict of anndata.AnnData
+        Dictionary containing method name as key, and anndata as values.
+        Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
     """
 
-    adata = adata.copy()  # make sure the original data is not modified
+    if isinstance(methods, str):
+        methods = [methods]
 
-    if method == "total":  # perform total normalization and pca
-        print('Performing total normalization and PCA...')
-        sc.pp.normalize_total(adata)
-        sc.pp.log1p(adata)
-        sc.pp.pca(adata)
+    adatas = {}
+    for method in methods:
+        adata = adata.copy()  # make sure the original data is not modified
 
-    elif method == "tfidf":
-        print('Performing TFIDF and LSI...')
-        tfidf(adata)
-        lsi(adata)  # corresponds to PCA
+        if method == "total":  # perform total normalization and pca
+            print('Performing total normalization and PCA...')
+            sc.pp.normalize_total(adata)
+            sc.pp.log1p(adata)
+            sc.pp.pca(adata)
 
-    else:
-        raise ValueError("Method must be either 'total' or 'tfidf'")
+        elif method == "tfidf":
+            print('Performing TFIDF and LSI...')
+            tfidf(adata)
+            lsi(adata)  # corresponds to PCA
 
-    return adata
+        else:
+            raise ValueError(f"Method '{method}' is invalid - must be either 'total' or 'tfidf'.")
+
+        adatas[method] = adata
+
+    return adatas
 
 
 """
-    # perform tfidf and latent semantic indexing
-    print('Performing TFIDF and LSI...')
+# perform tfidf and latent semantic indexing
+print('Performing TFIDF and LSI...')
 
-    sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
-    sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
-    print('Done')
+sc.pp.neighbors(adata_tfidf, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean', use_rep='X_pca')
+sc.tl.umap(adata_tfidf, min_dist=0.1, spread=2)
+print('Done')
 
-    # perform total normalization and pca
-    print('Performing total normalization and PCA...')
-    sc.pp.normalize_total(adata_total)
-    adata_total.layers['normalised'] = adata_total.X.copy()
-    epi.pp.log1p(adata_total)
-    sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=False)
-    sc.pp.neighbors(adata_total, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean')
-    sc.tl.umap(adata_total, min_dist=0.1, spread=2)
-    print('Done')
+# perform total normalization and pca
+print('Performing total normalization and PCA...')
+sc.pp.normalize_total(adata_total)
+adata_total.layers['normalised'] = adata_total.X.copy()
+epi.pp.log1p(adata_total)
+sc.pp.pca(adata_total, svd_solver='arpack', n_comps=50, use_highly_variable=False)
+sc.pp.neighbors(adata_total, n_neighbors=15, n_pcs=50, method='umap', metric='euclidean')
+sc.tl.umap(adata_total, min_dist=0.1, spread=2)
+print('Done')
 
-    print('Plotting UMAP...')
-    fig, axarr = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
-    axes = axarr.flatten()
-    sc.pl.pca(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[0], show=False)
-    sc.pl.pca(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[1], show=False)
-    sc.pl.umap(adata_tfidf, color=condition_col, title='', legend_loc='none', ax=axes[2], show=False)
-    sc.pl.umap(adata_total, color=condition_col, title='', legend_loc='right margin', ax=axes[3], show=False)
+print('Plotting UMAP...')
+fig, axarr = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
+axes = axarr.flatten()
+sc.pl.pca(adata_tfidf, color=condition_col, title='TFIDF', legend_loc='none', ax=axes[0], show=False)
+sc.pl.pca(adata_total, color=condition_col, title='Total', legend_loc='right margin', ax=axes[1], show=False)
+sc.pl.umap(adata_tfidf, color=condition_col, title='', legend_loc='none', ax=axes[2], show=False)
+sc.pl.umap(adata_total, color=condition_col, title='', legend_loc='right margin', ax=axes[3], show=False)
 
-    plt.tight_layout()
+plt.tight_layout()
 
-    return adata_tfidf, adata_total
+return adata_tfidf, adata_total
 """
 
 

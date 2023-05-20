@@ -22,9 +22,9 @@ def merge_anndata(anndata_dict, join="inner"):
     join : str, deafult 'inner'
         set how to join cells of the adata objects: ['inner', 'outer']
         This only affects the cells since the var/gene section is simply added
-        'inner': only keep overlapping cells
-        'outer': keep all cells. This will add placeholder cells/dots to plots
-                 currently disabled
+
+        - 'inner': only keep overlapping cells
+        - 'outer': keep all cells. This will add placeholder cells/dots to plots currently disabled
 
     Returns
     -------

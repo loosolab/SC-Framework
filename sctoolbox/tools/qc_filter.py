@@ -9,6 +9,7 @@ from importlib.resources import files
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
+import scrublet as scr
 
 # toolbox functions
 import sctoolbox
@@ -22,7 +23,7 @@ from sctoolbox.plotting import _save_figure
 
 def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
-    Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`
+    Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`.
 
     Parameters
     ----------
@@ -32,7 +33,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
         Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
     inplace : bool, default False
         If the anndata object should be modified in place.
-    **kwargs :
+    **kwargs : arguments
         Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
 
     Returns
@@ -294,6 +295,14 @@ def _run_scrublet(adata, **kwargs):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning, message="Received a view of an AnnData*")
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute `.obs`*")  # because adata is a view
+
+        ##X = adata.X
+        #scrub = scr.Scrublet(X)
+        #doublet_scores, predicted_doublets = scrub.scrub_doublets()
+
+        #adata.obs["doublet_score"] = doublet_scores
+        #adata.obs["predicted_doublet"] = predicted_doublets
+
         sc.external.pp.scrublet(adata, copy=False, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
@@ -618,18 +627,22 @@ def _validate_minmax(d):
 
 def validate_threshold_dict(table, thresholds, groupby=None):
     """
-    Validate threshold dictionary. Thresholds can be in the format::
+    Validate threshold dictionary. Thresholds can be in the format:
 
-    thresholds = {"chrM_percent": {"min": 0, "max": 10},
-                  "total_reads": {"min": 1000}}
+    .. code-block:: python
+
+        thresholds = {"chrM_percent": {"min": 0, "max": 10},
+                      "total_reads": {"min": 1000}}
 
     Or per group in 'groupy':
 
-    thresholds = {"chrM_percent": {
-                               "Sample1": {"max": 10},
-                               "Sample2": {"max": 5}
-                               },
-                  "total_reads": {"min": 1000}}
+    .. code-block:: python
+
+        thresholds = {"chrM_percent": {
+                                "Sample1": {"min": 0, "max": 10},
+                                "Sample2": {"max": 5}
+                                },
+                      "total_reads": {"min": 1000}}
 
     Parameters
     ----------

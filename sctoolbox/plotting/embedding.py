@@ -822,7 +822,7 @@ def anndata_overview(adatas,
     rows = sum([row_count.get(plot, len(color_by)) for plot in plots])  # the number of rows in output plot
     cols = len(adatas)
     figsize = figsize if figsize is not None else (2 + cols * 4, rows * 4)
-    fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize, constrained_layout=True)
+    fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize) #, constrained_layout=True)
     axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by

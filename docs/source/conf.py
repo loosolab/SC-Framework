@@ -16,6 +16,10 @@ import sys
 import glob
 import json
 
+sys.path.insert(0, os.path.abspath('.'))
+import build_api
+
+
 sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
@@ -52,53 +56,7 @@ autodoc_mock_imports = []
 
 # ---- Automatic documentation generation -------------------------------------
 
-# Generate the API documentation per module
-modules = [os.path.basename(f) for f in glob.glob("../../sctoolbox/*")]
-modules = [module for module in modules if not module.startswith("_") and module != "data"]
-
-# Create one page per module
-for module in modules:
-    with open("API/" + module + ".rst", 'w') as fp:
-
-        fp.write(f"{module.capitalize()}\n")
-        fp.write(f"{'='*len(module)}\n\n")
-
-        if module == "plotting":
-            fp.write(".. rubric:: Loading example data\n\n")
-
-            pre_code = open("plot_pre_code.py").read()
-            pre_code = "    " + pre_code.replace("\n", "\n    ")
-            fp.write(".. plot ::\n\n")
-            fp.write(pre_code + "\n\n")
-
-        # Find all submodules
-        submodules = [os.path.basename(f).replace(".py", "") for f in glob.glob("../../sctoolbox/" + module + "/*")]
-        submodules = [f for f in submodules if not f.startswith("_")]
-
-        # Set preferred order of submodules (all additional submodules are added at the end)
-        if module == "plotting":
-            submodule_order = ["qc_filter", "highly_variable", "embedding", "clustering", "marker_genes"]
-        elif module == "tools":
-            submodule_order = ["qc_filter", "highly_variable", "dim_reduction", "embedding", "clustering",
-                               "marker_genes"]
-
-        # reorder submodules
-        submodules_ordered = [submodule for submodule in submodule_order if submodule in submodules]
-        submodules_ordered += [submodule for submodule in submodules if submodule not in submodule_order]
-
-        # Add submodules to rst file
-        for submodule in submodules_ordered:
-            fp.write("-" * 30 + "\n\n")  # horizontal line between submodules
-            fp.write(f"{submodule}\n")
-            fp.write(f"{'-'*len(submodule)}\n")
-            f = f"""
-.. automodule:: sctoolbox.{module}.{submodule}
-   :members:
-   :undoc-members:
-   :show-inheritance:
-"""
-            fp.write(f + "\n\n")
-
+build_api.main()  # generate API documentation using custom script
 
 # --- Create nblink files for notebooks ----------------------------------------
 

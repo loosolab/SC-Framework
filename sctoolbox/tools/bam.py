@@ -12,6 +12,7 @@ import sctoolbox.utils as utils
 def bam_adata_ov(adata, bamfile, cb_col):
     """
     Check if adata.obs barcodes existing in a column of a bamfile
+
     Parameters
     ----------
     adata: anndata.AnnData
@@ -21,9 +22,10 @@ def bam_adata_ov(adata, bamfile, cb_col):
     cb_col: str
         bamfile column to extract the barcodes from
 
-    Returns: float
+    Returns
+    --------
+    float
         hitrate of the barcodes in the bamfile
-    -------
 
     """
     bam_obj = open_bam(bamfile, "rb")
@@ -48,7 +50,8 @@ def bam_adata_ov(adata, bamfile, cb_col):
 
 def check_barcode_tag(adata, bamfile, cb_col):
     """
-    Check for the possibilty that the wrong barcode is used
+    Check for the possibilty that the wrong barcode is used.
+
     Parameters
     ----------
     adata: anndata.AnnData
@@ -192,7 +195,7 @@ def split_bam_clusters(adata,
         Name of a column in adata.obs to use as barcodes. If None, use the index of .obs.
     read_tag : str, default "CB"
         Tag to use to identify the reads to split. Must match the barcodes of the barcode_col.
-    output_prefix : str, default "split_"
+    output_prefix : str, default `split_`
         Prefix to use for the output files.
     reader_threads : int, default 1
         Number of threads to use for reading.

@@ -181,14 +181,13 @@ def add_analysis(dest, analysis_name, method="rna",
 def build_notebooks_regex(starts_with):
     """
     Build regex for notebooks starting with given number.
-    Note: Only works up to 89. If we reach notebook 90 this function
-          needs to be adjusted.
+    Note: Only works up to 89. If we reach notebook 90 this function needs to be adjusted.
 
     @ToDo Move to utilities.py when cleaned up
 
     Parameters
     ----------
-    starts_with, int
+    starts_with : int
         Starting number
 
     Returns

@@ -1,9 +1,11 @@
 """
-    Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
-    in a GTF file using 'pct_reads_in_promoters' function. The function 'pct_reads_overlap' calculates percentage of
-    reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
-    as first columns.
+Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
+in a GTF file using 'pct_reads_in_promoters' function. The function 'pct_reads_overlap' calculates percentage of
+reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
+as first columns.
+
 """
+
 from collections import Counter
 import os
 import pkg_resources
@@ -17,9 +19,15 @@ import sctoolbox.utils as utils
 def check_pct_fragments_in_promoters(adata, qc_col):
     """
     Check if percentage of reads in promoters is in adata.obs.
-    :param adata: anndata.AnnData
-        AnnData object
-    :return boolean
+
+    Parameters
+    -----------
+    adata : anndata.AnnData
+        AnnData object.
+
+    Returns
+    --------
+    boolean
         True if pct_reads_in_promoters column is in adata.obs, otherwise False.
     """
 

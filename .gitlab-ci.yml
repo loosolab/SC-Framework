@@ -152,8 +152,7 @@ build-pages:
   image: python:3.10
   stage: deploy
   script:
-    - pip install pandoc
-    # - apt-get update -qq && apt-get install -qq -y pandoc
+    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link

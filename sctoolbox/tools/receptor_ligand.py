@@ -775,19 +775,19 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
     Returns
     -------
     pandas.DataFrame :
-        Table that contains interactions.
-        Columns:
-            receptor_cluster      = name of the receptor cluster
-            ligand_cluster        = name of the ligand cluster
-            receptor_gene         = name of the receptor gene
-            ligand_gene           = name of the ligand gene
-            receptor_score        = zscore of receptor gene cluster mean expression (scaled by cluster size)
-            ligand_score          = zscore of ligand gene cluster mean expression (scaled by cluster size)
-            receptor_percent      = percent of cells in cluster expressing receptor gene
-            ligand_percent        = percent of cells in cluster expressing ligand gene
-            receptor_cluster_size = number of cells in receptor cluster
-            ligand_cluster_size   = number of cells in ligand cluster
-            interaction_score     = sum of receptor_score and ligand_score
+        Table that contains interactions. Columns:
+
+            - receptor_cluster      = name of the receptor cluster
+            - ligand_cluster        = name of the ligand cluster
+            - receptor_gene         = name of the receptor gene
+            - ligand_gene           = name of the ligand gene
+            - receptor_score        = zscore of receptor gene cluster mean expression (scaled by cluster size)
+            - ligand_score          = zscore of ligand gene cluster mean expression (scaled by cluster size)
+            - receptor_percent      = percent of cells in cluster expressing receptor gene
+            - ligand_percent        = percent of cells in cluster expressing ligand gene
+            - receptor_cluster_size = number of cells in receptor cluster
+            - ligand_cluster_size   = number of cells in ligand cluster
+            - interaction_score     = sum of receptor_score and ligand_score
     """
     # check if data is available
     _check_interactions(anndata)
