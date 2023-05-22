@@ -138,6 +138,7 @@ notebooks:
     - pip install .  # make sure the sctoolbox package is installed correctly in conda env
     - python -m ipykernel install --user --name sctoolbox
     - cd scripts
+    - chmod +x run_notebooks.sh  # make script executable
     - ./run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
