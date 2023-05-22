@@ -40,7 +40,7 @@ def test_lsi(adata):
 
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_atac_norm(adata, method):
-    adata_norm = sctoolbox.atac.atac_norm(adata, method=method)
+    adata_norm = sctoolbox.atac.atac_norm(adata, method=method)[method]  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
