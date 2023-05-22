@@ -14,3 +14,4 @@ dependencies:
   - rpy2
   - pybedtools
   - ipykernel # needed to register environment as jupyter kernel
+  - pip  # for installing additional packages

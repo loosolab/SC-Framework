@@ -141,6 +141,7 @@ notebooks:
     - pip install --user .[all]
     - /opt/conda/envs/sctoolbox/bin/python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
+    - which pip                # for debug
     - which python3            # for debug
     - which papermill          # for debug
     - python -c "import sys; print(sys.path)" # for debug
