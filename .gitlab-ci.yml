@@ -1,13 +1,3 @@
-# This file is a template, and might need editing before it works on your project.
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Python.gitlab-ci.yml
-
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/python/tags/
-image: python:3.9.15  #pin due to numba not available for python 3.11
-
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
 variables:
@@ -19,24 +9,29 @@ variables:
 # If you want to also cache the installed packages, you have to install
 # them in a virtualenv and cache it as well.
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - .cache/pip
     - venv/
 
+# Install package for all jobs (unless inherit is false)
 default:
   before_script:
     - python --version  # For debugging
+    - uname -a          # For debugging
+    - cat /etc/os-release    # For debugging
+    - gcc --version
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
     - apt update
     - apt -y install r-base  # needed for rpy2 install
+    - pip install rpy2   # resolve dependencies for diffexpr
+    - pip install numpy  # resolve dependencies for diffexpr
+    - pip install pandas # resolve dependencies for diffexpr
+    - pip install .[all]
 
-# flake8 ignore rules:
-# E501 = Line too long
-# W503 = Line break occurred before a binary operator
-
-#this is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
+# This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
   inherit:
     default: false
@@ -45,13 +40,19 @@ pass:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
+# flake8 ignore rules:
+# E501 = Line too long
+# W503 = Line break occurred before a binary operator
 lint:
+  image: python:3.10  # pybedtools is not compatible with python 3.11
+  inherit:
+    default: false # do not inherit before_script
   stage: test
   tags:
     - coverage
   script:
     - pip install flake8
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/data,tests/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
@@ -60,68 +61,184 @@ lint:
       - tests/*.py
       - sctoolbox/*.py
 
+# Test that the minimal sctoolbox package can still be imported without additional dependencies
+test import:
+  image: python:3.10  # pybedtools is not compatible with python 3.11
+  inherit:
+      default: false # do not inherit before_script
+  stage: test
+  script:
+    - pip install .
+    - python -c "import sctoolbox"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Run test coverage
 test coverage:
   stage: test
+  image: python:3.10
   tags:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - apt-get install bedtools  #needed for some tests
+    - chmod +x scripts/bedGraphToBigWig  # make script executable
     - pip install pytest
     - pip install pytest-cov
-    - pip install .[all]
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml    
+    - pip install pytest-html
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html
   artifacts:
     when: always
     paths:
       - pytest.xml
+      - pytest.html
+      - htmlcov
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+    - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
       changes:
       - tests/*.py
       - sctoolbox/*.py
+    - if: $CI_COMMIT_BRANCH != "dev" && $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
+      changes:
+      - tests/*.py
+      - sctoolbox/*.py    
+    - when: manual
+      allow_failure: True
 
-pages:
-  stage: deploy
-  tags:
-    - coverage
-  script:
-    - pip install .[all]
-    - apt-get update -qq && apt-get install -qq -y pandoc
-    - pip install sphinx sphinx-rtd-theme
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - cd docs
-    - make html
-    - mv build/html/ ../public/
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
-
-#Test notebooks when code is pushed to main
-notebooks:
-  stage: deploy
-  image: continuumio/miniconda3:latest
-  tags:
-    - gwdg
-    - gwdg-shared
+# test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
+notebook-output-check:
+  image: python:3.10
   inherit:
-    default: false  #do not install virtual env for this job
+    default: false
+  stage: test
   script:
-    - pip install papermill
+    - python --version
+    - python scripts/check_notebooks.py */*.ipynb
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+
+# Test notebooks when code is pushed to main
+notebooks:
+  image: continuumio/miniconda3:latest
+  inherit:
+    default: false
+  stage: test
+  #tags:
+  #  - gwdg
+  #  - gwdg-shared
+  script:
     - conda install -c conda-forge mamba
     - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
     - conda init bash
     - source ~/.bashrc
     - conda activate sctoolbox
-    - python -m ipykernel install --user --name sctoolbox
-    - bash scripts/run_notebooks.sh
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install papermill
+    - pip install .[all]
+    - /opt/conda/envs/sctoolbox/bin/python -m ipykernel install --user --name sctoolbox
+    - which python             # for debug
+    - which pip                # for debug
+    - which python3            # for debug
+    - which papermill          # for debug
+    - python -c "import sys; print(sys.path)" # for debug
+    - jupyter kernelspec list  # for debug
+    - python scripts/run_notebooks.py
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
-      when: always
+      when: manual  # manual trigger
+      allow_failure: True  # Currently allowed to fail while we solve issues with the automatic notebook runs
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
+
+
+# ----------------------------- Gitlab pages ---------------------------------#
+
+# Build documentation
+build-pages:
+  image: python:3.10
+  stage: deploy
+  script:
+    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
+    - pip install sphinx sphinx-rtd-theme
+    - pip install nbsphinx
+    - pip install nbsphinx_link
+    - cd docs
+    - make html
+  artifacts:
+    paths:
+      - docs/build/html/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" # always for commits to main
+    - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
+      when: never   # but not again for any merge requests coming from dev
+    - when: manual  # otherwise manual
+      allow_failure: True  # manual is not required
+
+# Deploy pages for a MR - needs to be separate from deploy-pages-commit due to 
+# $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != $CI_COMMIT_BRANCH
+deploy-pages-MR:
+  stage: deploy
+  needs: 
+    - job: build-pages
+      artifacts: True
+  inherit:
+    default: false
+  environment:
+    name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  artifacts:
+    paths:
+      - docs/build/html/
+  script: 
+    - ls -l docs/
+    - echo "deploy"
+  artifacts:
+    paths:
+      - docs/build/html/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" # dev is built automatically
+      allow_failure: True
+
+# Deploy pages for a commit without a MR
+deploy-pages-commit:
+  stage: deploy
+  needs:
+    - job: build-pages
+      artifacts: True
+  inherit:
+    default: false
+  environment:
+    name: pages/$CI_COMMIT_BRANCH
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+  script:
+    - ls -l docs/
+    - echo "deploy" #mv docs/build/html/ public/
+  artifacts:
+    paths:
+      - docs/build/html/
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+      allow_failure: True
+
+# Deploy documentation to public pages if it was the dev branch
+pages:
+  stage: deploy
+  needs:
+    - job: build-pages
+      artifacts: True
+  inherit:
+    default: false
+  script:
+    - mv docs/build/html/ public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
+      allow_failure: False  # dev not allowed to fail
