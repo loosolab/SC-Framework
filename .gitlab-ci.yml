@@ -135,6 +135,7 @@ notebooks:
     - source ~/.bashrc
     - conda activate sctoolbox
     - pip install papermill
+    - pip install .  # make sure the sctoolbox package is installed correctly in conda env
     - python -m ipykernel install --user --name sctoolbox
     - bash scripts/run_notebooks.sh
   rules:
