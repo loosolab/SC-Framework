@@ -129,6 +129,9 @@ notebooks:
   #  - gwdg
   #  - gwdg-shared
   script:
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
     - conda install -c conda-forge mamba
     - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
     - conda init bash
@@ -136,7 +139,7 @@ notebooks:
     - conda activate sctoolbox
     - pip install --user papermill
     - pip install --user .[all]
-    - python -m ipykernel install --user --name sctoolbox
+    - /opt/conda/envs/sctoolbox/bin/python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which python3            # for debug
     - which papermill          # for debug
