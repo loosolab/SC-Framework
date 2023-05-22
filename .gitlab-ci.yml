@@ -137,8 +137,8 @@ notebooks:
     - pip install virtualenv
     - virtualenv venv
     - source venv/bin/activate
-    - pip install --user papermill
-    - pip install --user .[all]
+    - pip install papermill
+    - pip install .[all]
     - /opt/conda/envs/sctoolbox/bin/python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
