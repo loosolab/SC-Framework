@@ -149,7 +149,8 @@ notebooks:
     - python scripts/run_notebooks.py
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
-      when: manual  # manual trigger but not allowed to fail
+      when: manual  # manual trigger
+      allow_failure: True  # Currently allowed to fail while we solve issues with the automatic notebook runs
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
