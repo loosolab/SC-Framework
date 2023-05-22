@@ -140,9 +140,7 @@ notebooks:
     - which python             # for debug
     - which papermill          # for debug
     - jupyter kernelspec list  # for debug
-    - cd scripts
-    - chmod +x run_notebooks.sh  # make script executable
-    - ./run_notebooks.sh
+    - python scripts/run_notebooks.py
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: manual  # manual trigger but not allowed to fail
