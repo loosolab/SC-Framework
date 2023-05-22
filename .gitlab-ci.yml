@@ -137,7 +137,8 @@ notebooks:
     - pip install papermill
     - pip install .  # make sure the sctoolbox package is installed correctly in conda env
     - python -m ipykernel install --user --name sctoolbox
-    - bash scripts/run_notebooks.sh
+    - cd scripts
+    - ./run_notebooks.sh
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: manual  # manual trigger but not allowed to fail
