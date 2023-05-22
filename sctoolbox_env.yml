@@ -13,7 +13,5 @@ dependencies:
   - bioconductor-deseq2
   - rpy2
   - pybedtools
-  - pip
-  - pip:
-    - -e ".[all]" # install sctoolbox from local repository, has to be in current directory!
   - ipykernel # needed to register environment as jupyter kernel
+  - pip  # for installing additional packages

@@ -27,15 +27,19 @@ mamba env create -f sctoolbox_env.yml
 ```
 conda activate sctoolbox
 ```
-5. If "jupyter-notebook" command is not available at this point: install notebook package.
+5. Install the sctoolbox into the environment
+```
+pip install sctoolbox .[all]
+```
+6. If "jupyter-notebook" command is not available at this point: install notebook package.
 ```
 pip install notebook
 ```
-6. Register the environment as a jupyter kernel.
+7. Register the environment as a jupyter kernel.
 ```
 python -m ipykernel install --user --name sctoolbox --display-name "sctoolbox"
 ```
-7. (optional) If you want to push changes to notebooks, you need to add the custom .gitconfig to the local .git config-file in order to enable clearing of notebook outputs:
+8. (optional) If you want to push changes to notebooks, you need to add the custom .gitconfig to the local .git config-file in order to enable clearing of notebook outputs:
 ```
 git config --replace-all include.path "../.gitconfig"
 ```

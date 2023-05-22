@@ -2,7 +2,9 @@ sctoolbox API reference
 ========================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :glob:
 
-   sctoolbox.*
+   tools
+   plotting
+   utils

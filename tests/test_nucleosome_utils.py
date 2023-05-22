@@ -12,7 +12,7 @@ from scipy.signal import find_peaks
 @pytest.fixture
 def count_table():
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
-    return atac.insertsize_from_fragments(fragments, barcodes=None)
+    return atac._insertsize_from_fragments(fragments, barcodes=None)
 
 
 @pytest.fixture

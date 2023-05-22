@@ -4,7 +4,6 @@ import pytest
 import sctoolbox.annotation as anno
 import sctoolbox.utilities as utils
 import scanpy as sc
-import numpy as np
 import os
 
 
@@ -82,25 +81,6 @@ def test_annotate_narrowPeak(config):
     assert 'gene_id' in annotation_table
 
 
-@pytest.mark.parametrize("fixture, expected", [("adata_atac", True),  # expects var tables to be unchanged
-                                               ("adata_atac_emptyvar", False),  # expects var tables to be changed
-                                               ("adata_rna", ValueError),  # expects a valueerror due to missing columns
-                                               ("adata_atac_invalid", ValueError)])  # expects a valueerror due to format of columns
-def test_format_adata_var(fixture, expected, request):
-    """ Test whether adata regions can be formatted (or raise an error if not)"""
-
-    adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
-    adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
-    if type(expected) == type:
-        with pytest.raises(expected):
-            anno.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
-
-    else:
-        anno.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
-
-        assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
-
-
 @pytest.mark.parametrize("inplace", [True, False])
 def test_annot_HVG(adata_rna, inplace):
     """ Test if 'highly_variable' column is added to adata.var. """
@@ -132,7 +112,7 @@ def test_rm_tmp():
 
     # Remove tempfile in tempdir (but tempdir should still exist)
     tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
-    anno.rm_tmp(temp_dir, tempfiles)
+    utils.rm_tmp(temp_dir, tempfiles)
 
     dir_exists = os.path.exists(temp_dir)
     files_removed = sum([os.path.exists(f) for f in tempfiles]) == 0
@@ -140,7 +120,7 @@ def test_rm_tmp():
     assert dir_exists and files_removed
 
     # Check that tempdir is removed if it is empty
-    anno.rm_tmp(temp_dir)
+    utils.rm_tmp(temp_dir)
     dir_exists = os.path.exists(temp_dir)
 
     assert dir_exists is False
@@ -162,14 +142,14 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac',
 def test_prepare_gtf(key, gtf):
 
     if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
-        gtf_out, tempfiles = anno.prepare_gtf(gtf, "", print)
+        gtf_out, tempfiles = anno._prepare_gtf(gtf, "", print)
 
         assert os.path.exists(gtf_out)  # assert if output gtf exists as a file
 
     elif key in ["gtf_missing_col", "gtf_corrupted", "gff"]:  # these gtfs are invalid and should raise an error
 
         with pytest.raises(argparse.ArgumentTypeError) as err:
-            anno.prepare_gtf(gtf, "", print)
+            anno._prepare_gtf(gtf, "", print)
 
         # Assert if the error message is correct depending on input
         if key == "gtf_missing_col":
