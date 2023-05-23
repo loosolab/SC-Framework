@@ -38,6 +38,18 @@ def search_clustering_parameters(adata,
     -------
     axarr : array of matplotlib.axes.Axes
         Array of axes objects containing the plot(s).
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+
+    .. plot::
+        :context: close-figs
+
+        pl.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
     """
 
     # Check input
