@@ -490,9 +490,15 @@ def plot_3D_UMAP(adata, color, save):
     --------
     .. plot::
         :context: close-figs
+
+        import scanpy as sc
         min_dist = 0.3
         spread = 2.5
         sc.tl.umap(adata, min_dist=min_dist, spread=spread, n_components=3)
+
+    .. plot::
+        :context: close-figs
+
         plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
     """
 
