@@ -325,7 +325,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     .. plot::
         :context: close-figs
 
-        test_adata = utils.load_h5ad(os.path.join('tests','data','atac', 'homo_sapiens_liver.h5ad'))
+        test_adata = utils.load_h5ad(os.path.join('..', 'tests','data','atac', 'homo_sapiens_liver.h5ad'))
 
     .. plot::
         :context: close-figs
