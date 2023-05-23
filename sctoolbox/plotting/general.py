@@ -485,6 +485,7 @@ def boxplot(dt, show_median=True, ax=None):
         :context: close-figs
 
         import sctoolbox.plotting as pl
+        import matplotlib.pyplot as plt
         import pandas as pd
         import numpy as np
 
