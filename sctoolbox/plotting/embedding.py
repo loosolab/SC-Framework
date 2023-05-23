@@ -590,8 +590,10 @@ def plot_3D_UMAP(adata, color, save):
     if save is not None:
         path = settings.full_figure_prefix + save + ".html"
         fig.write_html(path)
-
-    print(f"Plot written to '{path}'")
+        print(f"Plot written to '{path}'")
+    
+    else
+        print(f"Please specify save parameter for html export")
 
 
 def umap_marker_overview(adata, markers, ncols=3, figsize=None,
