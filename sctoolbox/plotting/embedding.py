@@ -592,7 +592,7 @@ def plot_3D_UMAP(adata, color, save):
         fig.write_html(path)
         print(f"Plot written to '{path}'")
     
-    else
+    else:
         print(f"Please specify save parameter for html export")
 
 
