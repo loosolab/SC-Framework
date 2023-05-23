@@ -319,6 +319,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     .. plot::
         import os
         import sctoolbox.utils as utils
+        import sctoolbox.plotting as pl
 
     .. plot::
         :context: close-figs
