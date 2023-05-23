@@ -320,7 +320,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     .. plot::
         :context: close-figs
 
-        pl.plot_group_embeddings(adata, 'condition', embedding='umap', ncols=4)
+        pl.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
     """
 
     # Get categories
