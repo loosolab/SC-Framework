@@ -384,14 +384,13 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
     .. plot::
         :context: close-figs
         
-        import numpy as np
         import scanpy as sc
 
     .. plot::
         :context: close-figs
 
         adata1 = sc.datasets.pbmc68k_reduced()
-        adata2 = sc.datasets.sc.datasets.pbmc3k_processed()
+        adata2 = sc.datasets.pbmc3k_processed()
         adata_list = [adata1, adata2]
         val_list = ['n_counts', 'n_cells']
     
