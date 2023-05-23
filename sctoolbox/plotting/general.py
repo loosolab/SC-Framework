@@ -490,6 +490,7 @@ def boxplot(dt, show_median=True, ax=None):
         :context: close-figs
         
         pl.boxplot(dt, show_median=True, ax=None)
+        plt.show()
     """
 
     if ax is None:
