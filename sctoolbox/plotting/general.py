@@ -535,12 +535,21 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     .. plot::
         :context: close-figs
 
+        import sctoolbox.plotting as pl
+        import matplotlib.pyplot as plt
+        import pandas as pd
+        import numpy as np
+
+    .. plot::
+        :context: close-figs
+
         table = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
 
     .. plot::
         :context: close-figs
         
-        pl.violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True)
+        pl.violinplot(table, "A", color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True)
+        plt.show()
     """
 
     # check if valid column name
