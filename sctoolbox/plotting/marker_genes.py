@@ -196,6 +196,11 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
     .. plot::
         :context: close-figs
 
+        import sctoolbox.plotting as pl
+        
+    .. plot::
+        :context: close-figs
+
         gene_list = ['HES4', 'TNFRSF4', 'SSU72', 'PARK7', 'RBP7']
 
     .. plot::
