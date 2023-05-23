@@ -983,7 +983,7 @@ def plot_pca_variance(adata, method="pca",
 
         #init data
 
-        data = adata
+        adata = utils.load_h5ad('tests/data/atac/homo_sapiens_liver.h5ad')
 
     .. plot:: 
         :context: close-figs
