@@ -313,6 +313,14 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
         Number of columns in the figure. Default: 4.
     save : str
         Path to save the figure. Default: None.
+
+    Example
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
     """
 
     # Get categories
