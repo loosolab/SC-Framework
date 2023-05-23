@@ -485,6 +485,12 @@ def plot_3D_UMAP(adata, color, save):
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
     save : str
         Save prefix. Plot will be saved to <save>.html.
+    
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+        plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
     """
 
     n_cells = len(adata.obs)
