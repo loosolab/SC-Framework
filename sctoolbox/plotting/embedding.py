@@ -313,14 +313,14 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
         Number of columns in the figure. Default: 4.
     save : str
         Path to save the figure. Default: None.
-
-    Example
+        Example
     --------
 
     .. plot::
         :context: close-figs
 
         pl.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
+
     """
 
     # Get categories
@@ -982,6 +982,27 @@ def plot_pca_variance(adata, method="pca",
         Number of components to plot. Default: 20.
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If None, a new figure is created. Default: None.
+    polt_pca_variance
+    
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        #init data
+        import sctoolbox.plotting as pl
+        import scanpy as sc
+
+        adata = sc.datasets.pbmc68k_reduced()
+
+    .. plot:: 
+        :context: close-figs
+
+        pl.plot_pca_variance(adata, method="pca",
+                      n_pcs=20,
+                      n_selected=None,
+                      ax=None,
+                      save=None)
     """
 
     if ax is None:
