@@ -529,7 +529,20 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     -------
     matplotlib.axes.Axes :
         Object containing the violinplot.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        table = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
+
+    .. plot::
+        :context: close-figs
+        
+        pl.violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True)
     """
+
     # check if valid column name
     if y not in table.columns:
         raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
