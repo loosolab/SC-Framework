@@ -974,6 +974,24 @@ def plot_pca_variance(adata, method="pca",
         Number of components to plot. Default: 20.
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If None, a new figure is created. Default: None.
+    polt_pca_variance
+    
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        #init data
+
+        data = adata
+
+    .. plot:: 
+        :context: close-figs
+        plot_pca_variance(adata, method="pca",
+                      n_pcs=20,
+                      n_selected=None,
+                      ax=None,
+                      save=None)
     """
 
     if ax is None:
