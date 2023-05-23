@@ -484,6 +484,13 @@ def boxplot(dt, show_median=True, ax=None):
     .. plot::
         :context: close-figs
 
+        import sctoolbox.plotting as pl
+        import pandas as pd
+        import numpy as np
+
+    .. plot::
+        :context: close-figs
+
         dt = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
 
     .. plot::
