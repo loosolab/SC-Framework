@@ -316,15 +316,16 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
 
     Example
     --------
-    .. plot::
-        :context: close-figs
-
-        print(adata.obs)
 
     .. plot::
         :context: close-figs
 
-        pl.plot_group_embeddings(adata, 'condition', embedding='umap', ncols=4)
+        test_adata = utils.load_h5ad('tests/data/adata.h5ad')
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_group_embeddings(test_adata, 'condition', embedding='umap', ncols=4)
     """
 
     # Get categories
