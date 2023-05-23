@@ -493,6 +493,27 @@ def plot_3D_UMAP(adata, color, save):
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
     save : str
         Save prefix. Plot will be saved to <save>.html.
+    
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import sctoolbox.plotting
+        min_dist = 0.3
+        spread = 2.5
+        sc.tl.umap(adata, min_dist=min_dist, spread=spread, n_components=3)
+
+    .. plot::
+        :context: close-figs
+
+        sctoolbox.plotting.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
+
+    .. plot::
+        :context: close-figs
+
+        RESULT = "File was written to my3d_umap.html"
     """
 
     n_cells = len(adata.obs)
@@ -577,8 +598,10 @@ def plot_3D_UMAP(adata, color, save):
     if save is not None:
         path = settings.full_figure_prefix + save + ".html"
         fig.write_html(path)
-
-    print(f"Plot written to '{path}'")
+        print(f"Plot written to '{path}'")
+    
+    else:
+        print(f"Please specify save parameter for html export")
 
 
 def umap_marker_overview(adata, markers, ncols=3, figsize=None,
