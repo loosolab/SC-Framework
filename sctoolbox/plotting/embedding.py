@@ -982,13 +982,14 @@ def plot_pca_variance(adata, method="pca",
         :context: close-figs
 
         #init data
-
+        import sctoolbox.utils
+        import sctoolbox.plotting as pl
         adata = utils.load_h5ad('tests/data/atac/homo_sapiens_liver.h5ad')
 
     .. plot:: 
         :context: close-figs
-        
-        plot_pca_variance(adata, method="pca",
+
+        pl.plot_pca_variance(adata, method="pca",
                       n_pcs=20,
                       n_selected=None,
                       ax=None,
