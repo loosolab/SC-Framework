@@ -478,7 +478,20 @@ def boxplot(dt, show_median=True, ax=None):
     -------
     AxesSubplot
         containing boxplot for every column.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        dt = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
+
+    .. plot::
+        :context: close-figs
+        
+        pl.boxplot(dt, show_median=True, ax=None)
     """
+
     if ax is None:
         fig, ax = plt.subplots()
     else:
