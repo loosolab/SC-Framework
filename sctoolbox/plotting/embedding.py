@@ -316,21 +316,11 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
 
     Example
     --------
-    .. plot::
-        :context: close-figs
-        
-        import os
-        import sctoolbox.utils as utils
 
     .. plot::
         :context: close-figs
 
-        test_adata = utils.load_h5ad(os.path.join('..', 'tests','data','atac', 'homo_sapiens_liver.h5ad'))
-
-    .. plot::
-        :context: close-figs
-
-        pl.plot_group_embeddings(test_adata, 'PP', embedding='umap', ncols=4)
+        pl.plot_group_embeddings(adata, 'condition', embedding='umap', ncols=4)
     """
 
     # Get categories
