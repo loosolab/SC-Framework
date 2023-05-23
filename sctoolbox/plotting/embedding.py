@@ -501,6 +501,11 @@ def plot_3D_UMAP(adata, color, save):
         :context: close-figs
 
         sctoolbox.plotting.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
+
+    .. plot::
+        :context: close-figs
+
+        RESULT = "File was written to my3d_umap.html"
     """
 
     n_cells = len(adata.obs)
