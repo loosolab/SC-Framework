@@ -551,7 +551,28 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     -------
     matplotlib.axes.Axes :
         Object containing the violinplot.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+    .. plot::
+        :context: close-figs
+
+        table = sns.load_dataset("titanic")
+
+    .. plot::
+        :context: close-figs
+        
+        pl.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
+        plt.show()
     """
+
     # check if valid column name
     if y not in table.columns:
         raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
