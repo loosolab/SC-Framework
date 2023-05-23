@@ -987,6 +987,7 @@ def plot_pca_variance(adata, method="pca",
 
     .. plot:: 
         :context: close-figs
+        
         plot_pca_variance(adata, method="pca",
                       n_pcs=20,
                       n_selected=None,
