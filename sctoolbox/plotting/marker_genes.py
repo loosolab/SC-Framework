@@ -301,7 +301,7 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 
 def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     """
-    Plot a boxplot showing gene expression of genes in `gene_list` across the groups in `groupby`. The total gene expression is quantile normalized
+    Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`. The total gene expression is quantile normalized
     per group, and are subsequently normalized to 0-1 per gene across groups.
 
     Parameters
@@ -314,6 +314,20 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
         A column in .obs for grouping cells into groups on the x-axis
     figsize : tuple, optional
         Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+
+    EXAMPLE
+    -------
+
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+
+    .. plot::
+        :context: close-figs
+
+        gene_list=("HES4", "PRMT2", "ITGB2")
+        pl.group_expression_boxplot(adata, gene_list, groupby="bulk_labels")
     """
 
     # Obtain pseudobulk

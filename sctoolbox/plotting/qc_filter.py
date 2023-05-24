@@ -171,6 +171,24 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     Returns
     -------
     ClusterGrid object
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import sctoolbox.plotting as pl
+
+    .. plot::
+        :context: close-figs
+
+        adata = sc.datasets.pbmc68k_reduced()
+
+    .. plot::
+        :context: close-figs
+
+        pl.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
     # Calculate correlation of groups

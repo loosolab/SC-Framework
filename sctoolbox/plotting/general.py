@@ -478,7 +478,29 @@ def boxplot(dt, show_median=True, ax=None):
     -------
     AxesSubplot
         containing boxplot for every column.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+        import matplotlib.pyplot as plt
+        import pandas as pd
+        import numpy as np
+
+    .. plot::
+        :context: close-figs
+
+        dt = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
+
+    .. plot::
+        :context: close-figs
+
+        pl.boxplot(dt, show_median=True, ax=None)
+        plt.show()
     """
+
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -529,7 +551,28 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     -------
     matplotlib.axes.Axes :
         Object containing the violinplot.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+    .. plot::
+        :context: close-figs
+
+        table = sns.load_dataset("titanic")
+
+    .. plot::
+        :context: close-figs
+
+        pl.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
+        plt.show()
     """
+
     # check if valid column name
     if y not in table.columns:
         raise ValueError(f"{y} not found in column names of table! Use one of {list(table.columns)}.")
