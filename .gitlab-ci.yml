@@ -109,6 +109,8 @@ test coverage:
 
 #Changes.rst file must be changed in merge requests
 check_changes:
+  inherit:
+    default: false
   script:
     - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
