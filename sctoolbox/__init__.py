@@ -1,3 +1,4 @@
+from ._version import __version__
 from ._settings import settings
 from importlib import import_module
 import sys

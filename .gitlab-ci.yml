@@ -151,12 +151,9 @@ notebooks:
     - conda init bash
     - source ~/.bashrc
     - conda activate sctoolbox
-    - pip install virtualenv
-    - virtualenv venv
-    - source venv/bin/activate
     - pip install papermill
     - pip install .[all]
-    - /opt/conda/envs/sctoolbox/bin/python -m ipykernel install --user --name sctoolbox
+    - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
     - which python3            # for debug

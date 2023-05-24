@@ -14,3 +14,11 @@ rna_notebooks = [nb for nb in rna_notebooks if "05" not in nb and "11" not in nb
 for notebook in rna_notebooks:
     print(f"Running notebook: {notebook}")
     pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True)
+
+# Run ATAC notebooks
+os.chdir(script_dir + "/../atac-notebooks/")
+atac_notebooks = glob.glob("*.ipynb")
+
+for notebook in atac_notebooks:
+    print(f"Running notebook: {notebook}")
+    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True)

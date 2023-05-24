@@ -138,7 +138,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     --------
     .. plot::
         :context: close-figs
-        
+
         import scanpy as sc
         import sctoolbox.plotting as pl
 
