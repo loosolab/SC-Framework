@@ -107,6 +107,18 @@ test coverage:
     - when: manual
       allow_failure: True
 
+#Changes.rst file must be changed in merge requests
+check_changes:
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
+    - if grep -q "CHANGES.rst" changed_files.txt; then echo "The 'CHANGES.rst' file was changed."; else echo "The 'CHANGES.rst' file must be changed for merge requests!"; exit 1; fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+
+
+# ------------------------ Tests for notebooks in repo -----------------------#
+
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
   image: python:3.10
