@@ -43,27 +43,27 @@ def atac_norm(adata, method):
     """
 
     if isinstance(method, str):
-        methods = [method]
+        method = [method]
 
     adatas = {}
-    for method in methods:
+    for method_str in method:  # method is a list
         adata = adata.copy()  # make sure the original data is not modified
 
-        if method == "total":  # perform total normalization and pca
+        if method_str == "total":  # perform total normalization and pca
             print('Performing total normalization and PCA...')
             sc.pp.normalize_total(adata)
             sc.pp.log1p(adata)
             sc.pp.pca(adata)
 
-        elif method == "tfidf":
+        elif method_str == "tfidf":
             print('Performing TFIDF and LSI...')
             tfidf(adata)
             lsi(adata)  # corresponds to PCA
 
         else:
-            raise ValueError(f"Method '{method}' is invalid - must be either 'total' or 'tfidf'.")
+            raise ValueError(f"Method '{method_str}' is invalid - must be either 'total' or 'tfidf'.")
 
-        adatas[method] = adata
+        adatas[method_str] = adata
 
     return adatas
 
