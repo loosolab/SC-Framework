@@ -493,7 +493,7 @@ def plot_3D_UMAP(adata, color, save):
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
     save : str
         Save prefix. Plot will be saved to <save>.html.
-    
+
     Example
     --------
     .. plot::
@@ -599,9 +599,9 @@ def plot_3D_UMAP(adata, color, save):
         path = settings.full_figure_prefix + save + ".html"
         fig.write_html(path)
         print(f"Plot written to '{path}'")
-    
+
     else:
-        print(f"Please specify save parameter for html export")
+        print("Please specify save parameter for html export")
 
 
 def umap_marker_overview(adata, markers, ncols=3, figsize=None,
@@ -1006,7 +1006,7 @@ def plot_pca_variance(adata, method="pca",
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If None, a new figure is created. Default: None.
     polt_pca_variance
-    
+
     Example
     --------
     .. plot::
@@ -1018,7 +1018,7 @@ def plot_pca_variance(adata, method="pca",
 
         adata = sc.datasets.pbmc68k_reduced()
 
-    .. plot:: 
+    .. plot::
         :context: close-figs
 
         pl.plot_pca_variance(adata, method="pca",

@@ -176,7 +176,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     --------
     .. plot::
         :context: close-figs
-        
+
         import scanpy as sc
         import sctoolbox.plotting as pl
 

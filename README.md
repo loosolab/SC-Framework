@@ -29,7 +29,7 @@ conda activate sctoolbox
 ```
 5. Install the sctoolbox into the environment
 ```
-pip install sctoolbox .[all]
+pip install .[all]
 ```
 6. If "jupyter-notebook" command is not available at this point: install notebook package.
 ```

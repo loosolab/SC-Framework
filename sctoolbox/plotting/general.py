@@ -496,7 +496,7 @@ def boxplot(dt, show_median=True, ax=None):
 
     .. plot::
         :context: close-figs
-        
+
         pl.boxplot(dt, show_median=True, ax=None)
         plt.show()
     """
@@ -568,7 +568,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 
     .. plot::
         :context: close-figs
-        
+
         pl.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
         plt.show()
     """
