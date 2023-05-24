@@ -72,6 +72,9 @@ test import:
     - python -c "import sctoolbox"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - setup.py
+        - sctoolbox/*.py
 
 # Run test coverage
 test coverage:
@@ -122,7 +125,7 @@ check_changes:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
-#in addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
+#In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
 check_version:
   image:
     name: alpine/git:latest
