@@ -50,7 +50,7 @@ setup(
         'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
-        'numba>=0.57.0rc1',  # minimum version supporting python>=3.10
+        'numba==0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
         'kneed',
         'qnorm',
