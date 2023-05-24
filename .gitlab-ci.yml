@@ -122,6 +122,20 @@ check_changes:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
+#in addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
+check_version:
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
+  inherit:
+    default: false
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
+    - cat changed_files.txt
+    - if grep -q "sctoolbox/_version.py" changed_files.txt; then echo "The 'sctoolbox/_version.py' file was changed."; else echo "The 'sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
 # ------------------------ Tests for notebooks in repo -----------------------#
 
