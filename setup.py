@@ -35,7 +35,7 @@ packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. pr
 
 # Find top level modules in sctoolbox
 modules = glob.glob("sctoolbox/*.py")
-modules = [m.replace("/", ".")[:-3] for m in modules if not m.endswith("__init__.py")] # omit file ending and adjust path to import format e.g. sctoolbox._modules
+modules = [m.replace("/", ".")[:-3] for m in modules if not m.endswith("__init__.py")]  # omit file ending and adjust path to import format e.g. sctoolbox._modules
 
 setup(
     name='sctoolbox',
