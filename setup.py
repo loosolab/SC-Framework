@@ -2,6 +2,7 @@ from setuptools import setup
 from setuptools import find_namespace_packages
 import re
 import os
+import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
@@ -32,12 +33,17 @@ packages = find_namespace_packages("sctoolbox")
 packages = [package for package in packages if not package.startswith("data")]  # remove data package as it is included in manifest
 packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. prefix to all packages
 
+# Find top level modules in sctoolbox
+modules = glob.glob("sctoolbox/*.py")
+modules = [m.replace("/", ".")[:-3] for m in modules if not m.endswith("__init__.py")] # omit file ending and adjust path to import format e.g. sctoolbox._modules
+
 setup(
     name='sctoolbox',
     description='Custom modules for single cell analysis',
     version=find_version(os.path.join("sctoolbox", "_version.py")),
     license='MIT',
     packages=packages,
+    py_modules=modules,
     python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
         'pysam',
