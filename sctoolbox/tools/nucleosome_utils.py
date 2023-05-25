@@ -377,7 +377,7 @@ def score_by_momentum(data,
 
     if plotting:
         fig, ax = plt.subplots()
-        ax.hist(scores, bins=100, log=True)
+        ax.hist(np.sort(scores), bins=100, log=True)
         ax.set_title('Scores')
         ax.set_xlabel('Score')
         ax.set_ylabel('Abundance')
@@ -450,6 +450,30 @@ def cross_point_shift(peaks, reference, convergence=0.01):
     corrected_peaks = np.delete(corrected_peaks, np.where(np.array(corrected_peaks) > len(reference)))
 
     return corrected_peaks
+
+def half_wave_shift(peaks, scale):
+    """
+    This function shifts the peaks to the left by half a wavelength
+
+    Parameters
+    ----------
+    peaks: array
+        Array of peaks
+    scale: int
+        Scale of the wavelet
+
+    Returns
+    -------
+    peaks: array
+        Array of corrected peaks
+
+    """
+
+    freq = pywt.scale2frequency('gaus1', scale)
+    shift = 1 / freq
+    peaks - shift
+
+    return peaks
 
 
 def single_cwt_ov(features,
@@ -638,7 +662,7 @@ def score_by_cwt(data,
                  plotting=True,
                  adapter=250,
                  wavelet='gaus1',
-                 scales=16,
+                 scales=35,
                  peaks_thr=0.05,
                  penalty_scale=100,
                  period=160,
@@ -693,7 +717,9 @@ def score_by_cwt(data,
                      shifted_peaks[plot_sample],
                      [coefs[plot_sample]], freq=0,
                      plot_peaks=True,
-                     perform_cross_point_shift=True,
+                     perform_cross_point_shift=False,
+                     perform_half_wave_shift=True,
+                     scale=scales,
                      convergence=0)
 
     print('calculate scores...')
@@ -726,7 +752,7 @@ def score_by_cwt(data,
 
     if plotting:
         fig, ax = plt.subplots()
-        ax.hist(scores, bins=100, log=True)
+        ax.hist(np.sort(scores), bins=50)
         ax.set_title('Scores')
         ax.set_xlabel('Score')
         ax.set_ylabel('Abundance')
@@ -846,6 +872,8 @@ def plot_wavl_ov(feature,
                  freq=6,
                  plot_peaks=True,
                  perform_cross_point_shift=True,
+                 perform_half_wave_shift=True,
+                 scale=35,
                  convergence=0.1):
     """
     Plots the original data, the wavelet transformation and the found peaks as an overview.
@@ -882,6 +910,9 @@ def plot_wavl_ov(feature,
         # define points for the original abundances
         if perform_cross_point_shift:
             peaks = cross_point_shift(peaks, reference=coef[freq], convergence=convergence)
+
+        if perform_half_wave_shift:
+            peaks = half_wave_shift(peaks, scale)
         x_values = peaks
         y_values = feature[peaks]
     else:
@@ -923,6 +954,7 @@ def add_insertsize_metrics(adata,
                            regions=None,
                            use_momentum=True,
                            use_cwt=True,
+                           wavl_scale=35,
                            peaks_thr_mom=0.03,
                            peaks_thr_cwt=0.05,
                            plotting=True,
@@ -950,6 +982,8 @@ def add_insertsize_metrics(adata,
         If true, nucleosomal signal is calculated using the momentum method
     use_cwt: bool
         If true, nucleosomal signal is calculated using the CWT method
+    wavl_scale: int
+        Scale parameter for the CWT method
     peaks_thr_mom: float
         Threshold for the momentum method
     peaks_thr_cwt: float
@@ -1016,7 +1050,7 @@ def add_insertsize_metrics(adata,
                                   plotting=plotting,
                                   adapter=250,
                                   wavelet='gaus1',
-                                  scales=16,
+                                  scales=wavl_scale,
                                   n_threads=8,
                                   peaks_thr=peaks_thr_cwt,
                                   penalty_scale=100,
