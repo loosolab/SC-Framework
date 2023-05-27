@@ -731,11 +731,10 @@ def get_keys(adata, manual_thresholds):
     :return:
     """
     m_thresholds = {}
-    legend = adata.uns.get("legend", {})
+    legend = adata.obs.columns
     for key, value in manual_thresholds.items():
         if key in legend:
-            obs_key = legend[key]
-            m_thresholds[obs_key] = value
+            m_thresholds[key] = value
         else:
             print('column: ' + key + ' not found in adata.obs')
 

@@ -72,13 +72,14 @@ def assemble_from_h5ad(h5ad_files,
 
         print('add existing adata.obs columns to infoprocess:')
         print()
-        for key, value in qc_columns.items():
-            if value is not None:
-                print(key + ':' + value)
-                if value in adata.obs.columns:
-                    utils.build_legend(adata, key, value)
-                else:
-                    print('column:  ' + value + ' is not in adata.obs')
+        if qc_columns is not None:
+            for key, value in qc_columns.items():
+                if value is not None:
+                    print(key + ':' + value)
+                    if value in adata.obs.columns:
+                        utils.build_legend(adata, key, value)
+                    else:
+                        print('column:  ' + value + ' is not in adata.obs')
 
         # check if the barcode is the index otherwise set it
         utils.barcode_index(adata)
