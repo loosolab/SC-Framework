@@ -1,3 +1,7 @@
+0.2 (in progress)
+--------------------
+- Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
+
 0.1.1.2 (05-06-2023)
 --------------------
 - Fixed assembling atac notebook 01

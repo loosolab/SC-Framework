@@ -19,7 +19,7 @@ for notebook in rna_notebooks:
 # Run ATAC notebooks
 notebook_dir = script_dir + "/../atac-notebooks/"
 atac_notebooks = glob.glob(notebook_dir + "*.ipynb")
-atac_notebooks = [nb for nb in rna_notebooks if "05" not in nb]  # 05 is not tested yet
+atac_notebooks = [nb for nb in atac_notebooks if "05" not in nb]  # 05 is not tested yet
 print(atac_notebooks)
 
 for notebook in atac_notebooks:
