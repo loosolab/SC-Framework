@@ -452,6 +452,7 @@ def cross_point_shift(peaks, reference, convergence=0.01):
 
     return corrected_peaks
 
+
 def half_wave_shift(peaks, scale):
     """
     This function shifts the peaks to the left by half a wavelength
