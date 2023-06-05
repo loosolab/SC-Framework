@@ -967,4 +967,3 @@ def filter_genes(adata, genes, remove_bool=True, inplace=True):
     ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
 
     return ret  # adata objec or None
-None
