@@ -718,8 +718,8 @@ def score_by_cwt(data,
                      shifted_peaks[plot_sample],
                      [coefs[plot_sample]], freq=0,
                      plot_peaks=True,
-                     perform_cross_point_shift=False,
-                     perform_half_wave_shift=True,
+                     perform_cross_point_shift=True,
+                     perform_half_wave_shift=False,
                      scale=scales,
                      convergence=0)
 
