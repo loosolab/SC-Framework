@@ -684,7 +684,7 @@ def validate_threshold_dict(table, thresholds, groupby=None):
                     _validate_minmax(thresholds[col])
 
 
-def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
+def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
     :param adata: anndata.AnnData
@@ -967,3 +967,4 @@ def filter_genes(adata, genes, remove_bool=True, inplace=True):
     ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
 
     return ret  # adata objec or None
+None
