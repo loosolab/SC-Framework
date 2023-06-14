@@ -193,22 +193,11 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 
     Example
     --------
+    
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-        import scanpy as sc
-        
-    .. plot::
-        :context: close-figs
-
-        adata = sc.datasets.pbmc68k_reduced()
-        gene_list=("HES4", "TNFRSF4", "SSU72", "PARK7", "RBP7")
-
-    .. plot::
-        :context: close-figs
-
-        pl.grouped_violin(adata, gene_list)
+        pl.grouped_violin(adata, 'phase', y='G2M_score')
     """
 
     if isinstance(x, str):
