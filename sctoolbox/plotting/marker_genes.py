@@ -197,10 +197,12 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
         :context: close-figs
 
         import sctoolbox.plotting as pl
+        import scanpy as sc
         
     .. plot::
         :context: close-figs
 
+        adata = sc.datasets.pbmc68k_reduced()
         gene_list=("HES4", "TNFRSF4", "SSU72", "PARK7", "RBP7")
 
     .. plot::
