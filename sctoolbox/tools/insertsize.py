@@ -201,6 +201,14 @@ def _insertsize_from_bam(bam,
     if len(count_dict) == 0 and barcodes is not None:
         raise ValueError("No reads found in bam file for the barcodes given in 'barcodes'. Please adjust the 'barcodes' or 'barcode_tag' parameters.")
 
+    # Fill missing sizes with 0
+    max_fragment_size = 1000
+
+    for barcode in count_dict:
+        for size in range(max_fragment_size):
+            if size not in count_dict[barcode]:
+                count_dict[barcode][size] = 0
+
     # Convert dict to pandas dataframes
     print("Converting counts to dataframe")
     table = pd.DataFrame.from_dict(count_dict, orient="index")
@@ -258,6 +266,15 @@ def _insertsize_from_fragments(fragments, barcodes=None):
         if check_in(barcode, barcodes) is True:
             count_dict = _add_fragment(count_dict, barcode, size, count)
 
+    # Fill missing sizes with 0
+    max_fragment_size = 1001
+
+    for barcode in count_dict:
+        for size in range(max_fragment_size):
+            if size not in count_dict[barcode]:
+                count_dict[barcode][size] = 0
+
+    # Close file and print elapsed time
     end_time = datetime.datetime.now()
     elapsed = end_time - start_time
     f.close()
