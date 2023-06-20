@@ -1,5 +1,7 @@
 import os
 import yaml
+import sys
+import logging
 
 
 class SctoolboxConfig(object):
@@ -17,10 +19,13 @@ class SctoolboxConfig(object):
                  adata_output_dir: str = "",     # Directory to write adata objects to
                  adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_path)
                  threads: int = 4,  # default number of threads to use when multiprocessing is available
-                 create_dirs: bool = True  # create output directories if they do not exist
+                 create_dirs: bool = True,  # create output directories if they do not exist
+                 verbosity: int = 1,             # 0 = error, 1 = info, 2 = debug
                  ):
-
+        """
+        """
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
+        self._setup_logger(verbosity)
 
         # Save all parameters
         for key, value in locals().items():
@@ -42,10 +47,16 @@ class SctoolboxConfig(object):
         # Validate and set parameter
         if "__frozen" in key:  # allow __frozen to be set without checking
             pass
+        elif key == "logger":
+            pass  # allow logger to be set without checking
         elif key in ["figure_dir", "adata_input_dir", "adata_output_dir"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._validate_string(value)
             self._create_dir(value)
+        elif key == "verbosity":
+            if value not in [0, 1, 2]:
+                raise ValueError("Verbosity must be 0 (error), 1 (info), or 2 (debug).")
+            self._setup_logger(value)
         elif self.__init__.__annotations__[key] == int:
             self._validate_int(value)
         elif self.__init__.__annotations__[key] == bool:
@@ -105,6 +116,32 @@ class SctoolboxConfig(object):
     @full_adata_output_prefix.setter
     def full_adata_output_prefix(self, value):
         raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
+
+    def _setup_logger(self, verbosity: int):
+        """ Set up logger on the basis of the verbosity level """
+
+        self.logger = logging.getLogger("sctoolbox")
+        self.logger.handlers = []  # remove any existing handlers
+
+        # Setup formatting of handler
+        H = logging.StreamHandler(sys.stdout)
+        simple_formatter = logging.Formatter("[%(levelname)s] %(message)s")
+        debug_formatter = logging.Formatter("[%(levelname)s] [%(name)s:%(funcName)s] %(message)s")
+
+        # Set verbosity and formatting
+        if verbosity == 0:
+            self.logger.setLevel(logging.ERROR)
+            H.setFormatter(simple_formatter)
+        elif verbosity == 1:
+            self.logger.setLevel(logging.INFO)
+            H.setFormatter(simple_formatter)
+        elif verbosity == 2:
+            self.logger.setLevel(logging.DEBUG)
+            H.setFormatter(debug_formatter)
+        else:
+            raise ValueError("Verbosity must be 0, 1 or 2.")
+
+        self.logger.addHandler(H)
 
 
 def settings_from_config(config_file, key=None):

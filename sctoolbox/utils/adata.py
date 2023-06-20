@@ -2,8 +2,9 @@ import os
 import numpy as np
 import scanpy as sc
 
-from sctoolbox._settings import settings
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def get_adata_subsets(adata, groupby):
@@ -120,7 +121,7 @@ def load_h5ad(path):
     adata_input = settings.full_adata_input_prefix + path
     adata = sc.read_h5ad(filename=adata_input)
 
-    print(f"The adata object was loaded from: {adata_input}")
+    logger.info(f"The adata object was loaded from: {adata_input}")
 
     # Save information of source to adata
     utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(adata_input))
@@ -148,4 +149,4 @@ def save_h5ad(adata, path):
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
 
-    print(f"The adata object was saved to: {adata_output}")
+    logger.info(f"The adata object was saved to: {adata_output}")
