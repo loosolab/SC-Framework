@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import scanpy as sc
+import scipy
 
 from sctoolbox._settings import settings
 import sctoolbox.utils as utils
@@ -149,3 +150,82 @@ def save_h5ad(adata, path):
     adata.write(filename=adata_output)
 
     print(f"The adata object was saved to: {adata_output}")
+
+
+def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, rename_var=None, inplace=False):
+    """
+    Prepares the given adata for cellxgene deployment.
+
+    Parameters
+    ----------
+    adata : scanpy.Anndata
+        Anndata object.
+    keep_obs : list, default
+        adata.obs columns that should be kept. None to keep all.
+    keep_var : list, default
+        adata.var columns that should be kept. None to keep all.
+    rename_obs : dict or None, default None
+        Dictionary of .obs columns to rename. Key is the old name, value the new one.
+    rename_var : dict or None, default None
+        Dictionary of .var columns to rename. Key is the old name, value the new one.
+    inplace : bool, default False
+
+    Returns
+    -------
+    scanpy.Anndata or None:
+        Returns the deployment ready Anndata object.
+    """
+    out = adata if inplace else adata.copy()
+
+    # TODO remove more adata internals not needed for cellxgene
+
+    ##### .obs #####
+    # remove obs columns
+    if keep_obs:
+        drop_obs = set(out.obs.columns) - set(keep_obs)
+
+        out.obs.drop(columns=drop_obs, inplace=True)
+
+    # rename obs columns
+    if rename_obs:
+        out.obs.rename(columns=rename_obs, inplace=True)
+
+    for c in out.obs:
+        if out.obs[c].dtype == 'Int32':
+            out.obs[c] = out.obs[c].astype('float64')
+
+    out.obs.index.names = ['index']
+
+    ##### .var #####
+    # remove var columns
+    if keep_var:
+        drop_var = set(out.var.columns) - set(keep_var)
+
+        out.var.drop(columns=drop_var, inplace=True)
+
+    # rename obs columns
+    if rename_var:
+        out.var.rename(columns=rename_var, inplace=True)
+
+    for c in out.var:
+        if out.var[c].dtype == 'Int32':
+            out.var[c] = out.var[c].astype('float64')
+
+    out.var.index.names = ['index']
+
+    ###### .X ######
+    # convert .X to sparse matrix if needed
+    if not scipy.sparse.isspmatrix(out.X):
+        out.X = scipy.sparse.csc_matrix(out.X)
+
+    out.X = out.X.astype("float32")
+
+    ##### .uns #####
+    # apply color fix
+    # https://github.com/chanzuckerberg/cellxgene/issues/2598
+    for key in out.uns.keys():
+        if key.endswith('colors'):
+            out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in adata.uns[key]])
+
+    if not inplace:
+        return out
