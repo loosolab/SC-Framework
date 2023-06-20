@@ -7,6 +7,8 @@ import scanpy as sc
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
@@ -42,7 +44,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
     """
     adata_m = anndata if inplace else anndata.copy()
 
-    print("Annotating highy variable genes (HVG)")
+    logger.info("Annotating highy variable genes (HVG)")
 
     # adjust min_mean to get a HVG count in a certain range
     for i in range(max_iterations + 1):
@@ -64,12 +66,10 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
     if hvg_count < hvg_range[0] or hvg_count > hvg_range[1]:
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
     else:
-        ax = sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
-
-        print(ax)
+        _ = sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
 
         _save_figure(save)
-        print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
+        logger.info("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
     # Adding info in anndata.uns["infoprocess"]
     # cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)

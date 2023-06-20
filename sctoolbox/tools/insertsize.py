@@ -6,7 +6,8 @@ import datetime
 
 import sctoolbox.utils as utils
 import sctoolbox.tools.bam
-
+from sctoolbox._settings import settings
+logger = settings.logger
 
 # --------------------------------------------------------------------- #
 # --------------------- Insertsize distribution ----------------------- #
@@ -77,7 +78,7 @@ def add_insertsize(adata,
         raise ValueError("No common barcodes")
 
     elif len(missing) > 0:
-        print("WARNING: not all barcodes in adata.obs were represented in the input fragments. The values for these barcodes are set to NaN.")
+        logger.warning("not all barcodes in adata.obs were represented in the input fragments. The values for these barcodes are set to NaN.")
         missing_table = pd.DataFrame(index=list(missing), columns=distribution_table.columns)
         distribution_table = pd.concat([distribution_table, missing_table])
 
@@ -90,7 +91,7 @@ def add_insertsize(adata,
     adata.uns["insertsize_distribution"] = distribution_table.loc[adata_barcodes]
     adata.uns['insertsize_distribution'].columns = adata.uns['insertsize_distribution'].columns.astype(str)  # ensures correct order of barcodes in table
 
-    print("Added insertsize information to adata.obs[[\"insertsize_count\", \"mean_insertsize\"]] and adata.uns[\"insertsize_distribution\"].")
+    logger.info("Added insertsize information to adata.obs[[\"insertsize_count\", \"mean_insertsize\"]] and adata.uns[\"insertsize_distribution\"].")
 
 
 def _insertsize_from_bam(bam,
@@ -140,16 +141,16 @@ def _insertsize_from_bam(bam,
         check_in = _check_true
 
     # Open bamfile
-    print("Opening bam file...")
+    logger.info("Opening bam file...")
     if not os.path.exists(bam + ".bai"):
-        print("Bamfile has no index - trying to index with pysam...")
+        logger.warning("Bamfile has no index - trying to index with pysam...")
         pysam.index(bam)
 
     bam_obj = sctoolbox.tools.bam.open_bam(bam, "rb", require_index=True)
     chromosome_lengths = dict(zip(bam_obj.references, bam_obj.lengths))
 
     # Create chunked genome regions:
-    print(f"Creating chunks of size {chunk_size}bp...")
+    logger.info(f"Creating chunks of size {chunk_size}bp...")
 
     if regions is None:
         regions = [f"{chrom}:0-{length}" for chrom, length in chromosome_lengths.items()]
@@ -169,7 +170,7 @@ def _insertsize_from_bam(bam,
             regions_split.append(f"{chromosome}:{chunk_start}-{chunk_end}")
 
     # Count insertsize per chunk using multiprocessing
-    print(f"Counting insertsizes across {len(regions_split)} chunks...")
+    logger.info(f"Counting insertsizes across {len(regions_split)} chunks...")
     count_dict = {}
     read_count = 0
     pbar = tqdm(total=len(regions_split), desc="Progress: ", unit="chunks")
@@ -202,12 +203,12 @@ def _insertsize_from_bam(bam,
         raise ValueError("No reads found in bam file for the barcodes given in 'barcodes'. Please adjust the 'barcodes' or 'barcode_tag' parameters.")
 
     # Convert dict to pandas dataframes
-    print("Converting counts to dataframe")
+    logger.info("Converting counts to dataframe")
     table = pd.DataFrame.from_dict(count_dict, orient="index")
     table = table[["insertsize_count", "mean_insertsize"] + sorted(table.columns[2:])]
     table["mean_insertsize"] = table["mean_insertsize"].round(2)
 
-    print("Done getting insertsizes from bam!")
+    logger.info("Done getting insertsizes from bam!")
 
     return table
 
@@ -243,7 +244,7 @@ def _insertsize_from_fragments(fragments, barcodes=None):
         check_in = _check_true
 
     # Read fragments file and add to dict
-    print("Counting fragment lengths from fragments file...")
+    logger.info("Counting fragment lengths from fragments file...")
     start_time = datetime.datetime.now()
     count_dict = {}
     for line in f:
@@ -261,15 +262,15 @@ def _insertsize_from_fragments(fragments, barcodes=None):
     end_time = datetime.datetime.now()
     elapsed = end_time - start_time
     f.close()
-    print("Done reading file - elapsed time: {0}".format(str(elapsed).split(".")[0]))
+    logger.info("Done reading file - elapsed time: {0}".format(str(elapsed).split(".")[0]))
 
     # Convert dict to pandas dataframe
-    print("Converting counts to dataframe...")
+    logger.info("Converting counts to dataframe...")
     table = pd.DataFrame.from_dict(count_dict, orient="index")
     table = table[["insertsize_count", "mean_insertsize"] + sorted(table.columns[2:])]
     table["mean_insertsize"] = table["mean_insertsize"].round(2)
 
-    print("Done getting insertsizes from fragments!")
+    logger.info("Done getting insertsizes from fragments!")
 
     return table
 
