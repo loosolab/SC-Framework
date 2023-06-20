@@ -9,6 +9,7 @@ import sctoolbox.tools.bam
 from sctoolbox._settings import settings
 logger = settings.logger
 
+
 # --------------------------------------------------------------------- #
 # --------------------- Insertsize distribution ----------------------- #
 # --------------------------------------------------------------------- #
