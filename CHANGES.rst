@@ -1,5 +1,6 @@
 0.2 (in progress)
 --------------------
+- Implemented prepare_for_cellxgene to prepare adata for cellxgene deployment
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 
 0.1.1 (24-05-2023)
