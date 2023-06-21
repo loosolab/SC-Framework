@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import sctoolbox
 import sctoolbox.utils as utils
 from sctoolbox.plotting import _save_figure
-
+import sctoolbox.utils.decorator as deco
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
@@ -746,6 +746,8 @@ def get_keys(adata, manual_thresholds):
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
 
+
+@deco.log_anndata
 def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=True):
     """
     Apply QC thresholds to anndata object.

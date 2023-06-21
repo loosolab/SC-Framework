@@ -22,7 +22,12 @@ def write_TOBIAS_config(out_path,
                         gtf=None,
                         motifs=None,
                         organism="human",
-                        output="TOBIAS_output"):
+                        output="TOBIAS_output",
+                        plot_comparison=True,
+                        plot_correction=True,
+                        plot_venn=True,
+                        coverage=True,
+                        wilson=True):
     """
     Write a TOBIAS config file from input bams/fasta/blacklist etc.
 
@@ -46,6 +51,16 @@ def write_TOBIAS_config(out_path,
         Organism name. TOBIAS supports 'human', 'mouse' or 'zebrafish'. Default: "human".
     output : string, optional
         Output directory of the TOBIAS run. Default: "TOBIAS_output".
+    plot_comparison : boolean, optional
+        Flag for the step of plotting comparison of the TOBIAS run. Default: True.
+    plot_correction : boolean, optional
+        Flag for the step of plotting correction of the TOBIAS run. Default: True.
+    plot_venn : boolean, optional
+        Flag for the step of plotting venn diagramms of the TOBIAS run. Default: True.
+    coverage : boolean, optional
+        Flag for coverage step of the TOBIAS run. Default: True.
+    wilson: boolean, optional
+        Flag for wilson step of the TOBIAS run. Default: True.
     """
 
     # Check organism input
@@ -72,11 +87,11 @@ def write_TOBIAS_config(out_path,
                         "output": output}
 
     # Flags for parts of pipeline to include/exclude
-    data["flags"] = {"plot_comparison": True,
-                     "plot_correction": True,
-                     "plot_venn": True,
-                     "coverage": True,
-                     "wilson": True}
+    data["flags"] = {"plot_comparison": plot_comparison,
+                     "plot_correction": plot_correction,
+                     "plot_venn": plot_venn,
+                     "coverage": coverage,
+                     "wilson": wilson}
 
     # Default module parameters
     data["macs"] = "--nomodel --shift -100 --extsize 200 --broad"
