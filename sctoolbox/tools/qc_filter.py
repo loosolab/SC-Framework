@@ -21,6 +21,7 @@ import sctoolbox.utils.decorator as deco
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
 
+
 def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
     Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`.

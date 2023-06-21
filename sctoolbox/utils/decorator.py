@@ -20,7 +20,7 @@ def log_anndata(func):
     """
     # TODO store datatypes not supported by scanpy.write as string representation (repr())
 
-    @functools.wraps(func) # preserve information of the decorated func
+    @functools.wraps(func)  # preserve information of the decorated func
     def wrapper(*args, **kwargs):
         # find anndata object within parameters (if there are more use the first one)
         adata = None
