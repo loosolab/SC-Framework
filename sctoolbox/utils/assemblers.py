@@ -65,21 +65,6 @@ def assemble_from_h5ad(h5ad_files,
 
         utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
 
-        # Add information to the infoprocess
-        # cr.build_infor(adata, "Input_for_assembling", h5ad_path)
-        # cr.build_infor(adata, "Strategy", "Read from h5ad")
-
-        #print('add existing adata.obs columns to infoprocess:')
-        #print()
-        #if qc_columns is not None:
-        #    for key, value in qc_columns.items():
-        #        if value is not None:
-        #            print(key + ':' + value)
-        #            if value in adata.obs.columns:
-        #                utils.build_legend(adata, key, value)
-        #            else:
-        #                print('column:  ' + value + ' is not in adata.obs')
-
         # check if the barcode is the index otherwise set it
         utils.barcode_index(adata)
 
