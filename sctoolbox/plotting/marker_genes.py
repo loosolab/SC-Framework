@@ -193,10 +193,11 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 
     Example
     --------
+    
     .. plot::
         :context: close-figs
 
-
+        pl.grouped_violin(adata, 'phase', y='G2M_score')
     """
 
     if isinstance(x, str):

@@ -386,6 +386,26 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         List of names for the adata objects. Default: None (adatas will be named adata_1, adata_2, etc.).
     kwargs : arguments
         Additional arguments to pass to sc.pl.umap/sc.pl.tsne/sc.pl.pca.
+    
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+        
+        import scanpy as sc
+
+    .. plot::
+        :context: close-figs
+
+        adata1 = sc.datasets.pbmc68k_reduced()
+        adata2 = sc.datasets.pbmc3k_processed()
+        adata_list = [adata1, adata2]
+        var_list = ['n_counts', 'n_cells']
+    
+    .. plot::
+        :context: close-figs
+
+        pl.compare_embeddings(adata_list, var_list)
     """
 
     embedding = embedding.lower()
