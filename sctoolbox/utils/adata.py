@@ -24,8 +24,13 @@ def get_adata_subsets(adata, groupby):
         Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
     """
 
+    if groupby not in adata.obs.columns:
+        raise ValueError(f"Column '{groupby}' not found in adata.obs")
+
     group_names = adata.obs[groupby].astype("category").cat.categories.tolist()
     adata_subsets = {name: adata[adata.obs[groupby] == name] for name in group_names}
+
+    logger.debug("Split adata into {} subsets based on column '{}'".format(len(adata_subsets), groupby))
 
     return adata_subsets
 
@@ -122,9 +127,6 @@ def load_h5ad(path):
     adata = sc.read_h5ad(filename=adata_input)
 
     logger.info(f"The adata object was loaded from: {adata_input}")
-
-    # Save information of source to adata
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(adata_input))
 
     return adata
 
