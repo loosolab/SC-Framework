@@ -17,11 +17,12 @@ import sctoolbox.utils as utils
 from sctoolbox.plotting import _save_figure
 import sctoolbox.utils.decorator as deco
 
+
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
 
-
+@deco.log_anndata
 def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
     Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`.
@@ -62,6 +63,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
         return adata
 
 
+@deco.log_anndata
 def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -179,6 +181,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         return adata
 
 
+@deco.log_anndata
 def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
     """
     Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
@@ -309,6 +312,7 @@ def _run_scrublet(adata, **kwargs):
     return (adata.obs, adata.uns["scrublet"])
 
 
+@deco.log_anndata
 def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True, save=None):
     """
     Function for predicting sex based on expression of Xist (or another gene).

@@ -7,6 +7,8 @@ import datetime
 import sctoolbox.utils as utils
 import sctoolbox.tools.bam
 from sctoolbox._settings import settings
+import sctoolbox.utils.decorator as deco
+
 logger = settings.logger
 
 
@@ -22,6 +24,7 @@ def _check_true(element, alist):  # true regardless of input
     return True
 
 
+@deco.log_anndata
 def add_insertsize(adata,
                    bam=None,
                    fragments=None,

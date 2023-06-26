@@ -15,6 +15,9 @@ import scanpy.external as sce
 import sctoolbox.utils as utils
 from sctoolbox.tools.dim_reduction import lsi, compute_PCA
 from sctoolbox.tools import highly_variable as hv
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 #####################################################################
@@ -50,13 +53,13 @@ def atac_norm(adata, method):
         adata = adata.copy()  # make sure the original data is not modified
 
         if method_str == "total":  # perform total normalization and pca
-            print('Performing total normalization and PCA...')
-            sc.pp.normalize_total(adata)
+            logger.info('Performing total normalization and PCA...')
+            sc.pp.normalize_total(adata, exclude_highly_expressed=True)
             sc.pp.log1p(adata)
             sc.pp.pca(adata)
 
         elif method_str == "tfidf":
-            print('Performing TFIDF and LSI...')
+            logger.info('Performing TFIDF and LSI...')
             tfidf(adata)
             lsi(adata)  # corresponds to PCA
 
@@ -93,7 +96,7 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
     adata_m = anndata if inplace else anndata.copy()
 
     # Normalizing and logaritimyzing
-    print("Normalizing the data and converting to log")
+    # print("Normalizing the data and converting to log")
     sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True, **norm_kwargs)
     sc.pp.log1p(adata_m, copy=False, **log_kwargs)
 
@@ -306,6 +309,7 @@ def wrap_corrections(adata,
     return anndata_dict
 
 
+@deco.log_anndata
 def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     """
     Perform batch correction on the adata object using the 'method' given.
@@ -422,12 +426,10 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
 
-    # Add information to adata.uns
-    utils.add_uns_info(adata, "batch_correction", {"method": method, "batch_key": batch_key})
-
     return adata  # the corrected adata object
 
 
+@deco.log_anndata
 def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', max_dims=5, inplace=False):
     """
     Evaluate batch effect methods using LISI.
