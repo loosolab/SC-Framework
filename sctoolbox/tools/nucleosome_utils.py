@@ -7,6 +7,10 @@ from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
 import sctoolbox.tools as tools
 
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
+
 
 def moving_average(series, n=10):
     """
@@ -29,6 +33,7 @@ def moving_average(series, n=10):
 
     """
 
+    logger.info('performing moving average to smooth data')
     list(series)
     smoothed = []
     for i in range(len(series)):  # loop over all steps
@@ -68,6 +73,7 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
         array of smoothed array
 
     """
+    logger.info('performing moving average on multiple arrays in parallel')
     # smooth
     for i in range(n):
 
@@ -327,18 +333,18 @@ def score_by_momentum(data,
         Array of scores
 
     """
-    print('calculate momentum...')
+    logger.info('calculate momentum...')
     momentum, shift_l, shift_r = momentum_diff(data=data, remove=remove, shift=shift)
-    print('find peaks...')
+    logger.info('find peaks...')
     peaks = call_peaks(momentum, n_threads=8)
-    print('filter peaks...')
+    logger.info('filter peaks...')
     peaks = filter_peaks(peaks,
                          reference=momentum,
                          peaks_thr=peaks_thr,
                          operator='bigger')
 
     if plotting:
-        print('plot single cell...')
+        logger.info('plot single cell...')
         plot_single_momentum_ov(peaks=peaks,
                                 momentum=momentum,
                                 data=data,
@@ -348,7 +354,7 @@ def score_by_momentum(data,
                                 shift=shift,
                                 remove=remove)
 
-    print('calc scores...')
+    logger.info('calc scores...')
     scores = []
     for i in range(len(peaks)):
         peak_list = peaks[i]
@@ -703,9 +709,9 @@ def score_by_cwt(data,
         Array of scores
     """
 
-    print('performing CWT on: ' + str(len(data)) + ' cells')
-    print('using wavelet type: ' + wavelet)
-    print('with scale: ' + str(scales))
+    logger.info('performing CWT on: ' + str(len(data)) + ' cells')
+    logger.info('using wavelet type: ' + wavelet)
+    logger.info('with scale: ' + str(scales))
     shifted_peaks, wav_features, coefs = wrap_cwt(data=data,
                                                   adapter=adapter,
                                                   wavelet=wavelet,
@@ -714,7 +720,7 @@ def score_by_cwt(data,
                                                   peaks_thr=peaks_thr)
 
     if plotting:
-        print('plotting single cell...')
+        logger.info('plotting single cell...')
         plot_wavl_ov(wav_features[plot_sample],
                      shifted_peaks[plot_sample],
                      [coefs[plot_sample]], freq=0,
@@ -724,7 +730,7 @@ def score_by_cwt(data,
                      scale=scales,
                      convergence=0)
 
-    print('calculate scores...')
+    logger.info('calculate scores...')
 
     scores = []
     for i in range(len(shifted_peaks)):
@@ -1213,6 +1219,7 @@ def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0):
     ax3.hist(scores, bins=100, log=True)
 
 
+@deco.log_anndata
 def add_insertsize_metrics(adata,
                            bam=None,
                            fragments=None,
@@ -1293,20 +1300,20 @@ def add_insertsize_metrics(adata,
 
     # plot the densityplot of the fragment length distribution
     if plotting:
-        print("plotting density...")
+        logger.info("plotting density...")
         densities = calc_densities(scaled_ori)
         density_plot(scaled_ori, densities)
 
     if use_momentum:
         # prepare the data to be used for the momentum method
         # smooth the data
-        print("smoothing data...")
+        logger.info("smoothing data...")
         smooth = multi_ma(dists_arr, n=2, window_size=10)
         # scale the data
         scaled = scale(smooth)
 
         # calculate scores using the momentum method
-        print("calculating scores using the momentum method...")
+        logger.info("calculating scores using the momentum method...")
         momentum_scores = score_by_momentum(data=scaled,
                                             shift=80,
                                             remove=100,
@@ -1318,7 +1325,7 @@ def add_insertsize_metrics(adata,
 
     if use_cwt:
         # calculate scores using the continues wavelet transformation
-        print("calculating scores using the continues wavelet transformation...")
+        logger.info("calculating scores using the continues wavelet transformation...")
         cwt_scores = score_by_cwt(data=scaled_ori,
                                   plot_sample=plot_sample,
                                   plotting=plotting,
@@ -1331,6 +1338,7 @@ def add_insertsize_metrics(adata,
                                   period=160)
 
     if use_ct_cwt:
+        logger.info("calculating scores using the custom continues wavelet transformation...")
         ct_cwt_scores = score_by_ct_cwt(data=scaled_ori,
                                         plot_wavl=False,
                                         n_threads=n_threads,

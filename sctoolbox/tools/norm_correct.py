@@ -24,6 +24,7 @@ logger = settings.logger
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
+@deco.log_anndata
 def atac_norm(adata, method):
     """
     A function that normalizes count matrix using different methods.
@@ -304,7 +305,7 @@ def wrap_corrections(adata,
     for method in methods:
         anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
 
-    print("Finished batch correction(s)!")
+    logger.info("Finished batch correction(s)!")
 
     return anndata_dict
 
@@ -343,7 +344,7 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
     if not callable(method):
         method = method.lower()
 
-    print(f"Running batch correction with '{method}'...")
+    logger.info(f"Running batch correction with '{method}'...")
 
     # Check that batch_key is in adata object
     if batch_key not in adata.obs.columns:

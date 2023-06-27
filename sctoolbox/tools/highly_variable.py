@@ -8,9 +8,11 @@ import scanpy as sc
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
 from sctoolbox._settings import settings
+import sctoolbox.utils.decorator as deco
 logger = settings.logger
 
 
+@deco.log_anndata
 def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
@@ -79,6 +81,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 
 
 # This is for ATAC-seq data
+@deco.log_anndata
 def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True):
     """
     Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.var. If show is True, the plot is shown.

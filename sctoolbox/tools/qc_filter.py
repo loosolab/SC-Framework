@@ -689,6 +689,7 @@ def validate_threshold_dict(table, thresholds, groupby=None):
                     _validate_minmax(thresholds[col])
 
 
+@deco.log_anndata
 def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering

@@ -7,7 +7,8 @@ import multiprocessing
 import warnings
 
 import sctoolbox.utils as utils
-
+from sctoolbox._settings import settings
+logger = settings.logger
 
 def bam_adata_ov(adata, bamfile, cb_col):
     """
@@ -28,6 +29,7 @@ def bam_adata_ov(adata, bamfile, cb_col):
         hitrate of the barcodes in the bamfile
 
     """
+    logger.info("calculating barcode overlap between bamfile and adata.obs")
     bam_obj = open_bam(bamfile, "rb")
 
     sample = []
