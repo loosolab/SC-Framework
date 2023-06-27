@@ -785,7 +785,7 @@ def density_plot(scaled, densities):
     rotated = np.flip(rotated, axis=1)
     stretch = len(rotated[0]) / len(rotated[:, 0])  # calculate stretch for good visibility
     mean = scaled.sum(axis=0) / len(scaled)
-    scaled_mean = scale(mean) * 1000
+    scaled_mean = mean * 1000
 
     fig, ax = plt.subplots()
     ax.set_title('Fragment Size Density Plot')
