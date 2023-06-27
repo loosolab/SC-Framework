@@ -183,7 +183,6 @@ def annotate_adata(adata,
         return adata  # else returns None
 
 
-@deco.log_anndata
 def annotate_narrowPeak(filepath,
                         gtf,
                         config=None,

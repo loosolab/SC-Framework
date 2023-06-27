@@ -10,8 +10,6 @@ from scipy.io import mmread
 import anndata as ad
 
 import sctoolbox.utils as utils
-
-import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -20,7 +18,6 @@ logger = settings.logger
 #                   Assemble from multiple h5ad files               #
 #####################################################################
 
-@deco.log_anndata
 def assemble_from_h5ad(h5ad_files,
                        merge_column='sample',
                        coordinate_cols=None,
