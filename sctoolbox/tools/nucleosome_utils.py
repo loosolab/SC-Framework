@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pywt
 import multiprocessing as mp
 from scipy.signal import find_peaks
+from scipy.signal import fftconvolve
 import sctoolbox.tools as tools
 
 
@@ -377,7 +378,7 @@ def score_by_momentum(data,
 
     if plotting:
         fig, ax = plt.subplots()
-        ax.hist(scores, bins=100, log=True)
+        ax.hist(np.sort(scores), bins=100, log=True)
         ax.set_title('Scores')
         ax.set_xlabel('Score')
         ax.set_ylabel('Abundance')
@@ -450,6 +451,31 @@ def cross_point_shift(peaks, reference, convergence=0.01):
     corrected_peaks = np.delete(corrected_peaks, np.where(np.array(corrected_peaks) > len(reference)))
 
     return corrected_peaks
+
+
+def half_wave_shift(peaks, scale):
+    """
+    This function shifts the peaks to the left by half a wavelength
+
+    Parameters
+    ----------
+    peaks: array
+        Array of peaks
+    scale: int
+        Scale of the wavelet
+
+    Returns
+    -------
+    peaks: array
+        Array of corrected peaks
+
+    """
+
+    freq = pywt.scale2frequency('gaus1', scale)
+    shift = 1 / freq
+    peaks - shift
+
+    return peaks
 
 
 def single_cwt_ov(features,
@@ -638,7 +664,7 @@ def score_by_cwt(data,
                  plotting=True,
                  adapter=250,
                  wavelet='gaus1',
-                 scales=16,
+                 scales=35,
                  peaks_thr=0.05,
                  penalty_scale=100,
                  period=160,
@@ -694,6 +720,8 @@ def score_by_cwt(data,
                      [coefs[plot_sample]], freq=0,
                      plot_peaks=True,
                      perform_cross_point_shift=True,
+                     perform_half_wave_shift=False,
+                     scale=scales,
                      convergence=0)
 
     print('calculate scores...')
@@ -726,7 +754,7 @@ def score_by_cwt(data,
 
     if plotting:
         fig, ax = plt.subplots()
-        ax.hist(scores, bins=100, log=True)
+        ax.hist(np.sort(scores), bins=50, log=True)
         ax.set_title('Scores')
         ax.set_xlabel('Score')
         ax.set_ylabel('Abundance')
@@ -757,7 +785,7 @@ def density_plot(scaled, densities):
     rotated = np.flip(rotated, axis=1)
     stretch = len(rotated[0]) / len(rotated[:, 0])  # calculate stretch for good visibility
     mean = scaled.sum(axis=0) / len(scaled)
-    scaled_mean = scale(mean) * 1000
+    scaled_mean = mean * 1000
 
     fig, ax = plt.subplots()
     ax.set_title('Fragment Size Density Plot')
@@ -846,6 +874,8 @@ def plot_wavl_ov(feature,
                  freq=6,
                  plot_peaks=True,
                  perform_cross_point_shift=True,
+                 perform_half_wave_shift=True,
+                 scale=35,
                  convergence=0.1):
     """
     Plots the original data, the wavelet transformation and the found peaks as an overview.
@@ -882,6 +912,9 @@ def plot_wavl_ov(feature,
         # define points for the original abundances
         if perform_cross_point_shift:
             peaks = cross_point_shift(peaks, reference=coef[freq], convergence=convergence)
+
+        if perform_half_wave_shift:
+            peaks = half_wave_shift(peaks, scale)
         x_values = peaks
         y_values = feature[peaks]
     else:
@@ -915,6 +948,271 @@ def plot_wavl_ov(feature,
     return fig, [ax1, ax2, ax3]
 
 
+def custome_wavelet(amplitude=1,
+                    frequency=3,
+                    phase_shift=np.pi / 0.65,
+                    mu=0,
+                    sigma=150,
+                    plotting=True):
+
+    """
+    Implementation of a custom wavelet.
+    The wavelet is a sine curve multiplied by a Gaussian curve.
+
+    Parameters
+    ----------
+    amplitude: float
+        Amplitude of the sine curve
+    frequency: float
+        Frequency of the sine curve
+    phase_shift: float
+        Phase shift of the sine curve
+    mu: float
+        Mean of the Gaussian
+    sigma: float
+        Standard deviation of the Gaussian
+    plotting: bool
+        If true, the wavelet is plotted
+
+    Returns
+    -------
+    wavelet: array
+        Array of the wavelet
+    """
+    center = amplitude  # Center of the sine wave
+
+    wing_size = 300
+    # Create an array of x values
+    x = np.linspace(-wing_size, wing_size, wing_size * 2)
+
+    # Compute the centered sine curve values for each x
+    sine_curve = amplitude * np.sin(2 * np.pi * frequency * x + phase_shift) + center
+
+    # Compute the Gaussian values for each x
+    gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+    wavelet = sine_curve * gaussian
+
+    if plotting:
+        fig, ax = plt.subplots()
+        ax.plot(wavelet)
+        ax.set_title('Wavelet')
+        ax.set_xlabel('Interval')
+        ax.set_ylabel('Amplitude')
+
+    return wavelet
+
+
+def custome_cwt(data, mode='convolve', plot_wavl=False):
+    """
+    Custom implementation of the continuous wavelet transformation.
+
+    Parameters
+    ----------
+    data: array
+        Array of arrays of the fragment length distributions
+    mode: str
+        Mode of the convolution. Either 'convolve' or 'fftconvolve'
+    plot_wavl: bool
+        If true, the wavelet is plotted
+
+    Returns
+    -------
+
+    """
+    # Get the wavelet
+    wavelet = custome_wavelet(plotting=plot_wavl)
+
+    # convolve with the data
+    convolved_data = []
+    for cell in data:
+        if mode == 'convolve':
+            convolved_data.append(np.convolve(cell, wavelet, mode='same'))
+        elif mode == 'fftconvolve':
+            convolved_data.append(fftconvolve(data, wavelet, mode='same'))
+
+    return np.array(convolved_data)
+
+
+def score_by_ct_cwt(data,
+                    plot_wavl=False,
+                    n_threads=12,
+                    peaks_thr=0.01,
+                    operator='bigger',
+                    plotting_mask=False,
+                    plotting_ov=True,
+                    sample=0):
+    """
+    Implementation of the score by custom continuous wavelet transformation and score mask.
+
+    Parameters
+    ----------
+    data: array
+        Array of arrays of the fragment length distributions
+    plot_wavl: bool
+        If true, the wavelet is plotted
+    n_threads: int
+        Number of threads to use for the peak calling
+    peaks_thr: float
+        Threshold for the peak calling
+    operator: str
+        Operator to use for the peak calling. Either 'bigger' or 'smaller'
+    plotting_mask: bool
+        If true, the score mask is plotted
+    plotting_ov: bool
+        If true, the overlay of the score mask and the convolved data is plotted
+    sample: int
+        Index of the sample to plot
+
+    Returns
+    -------
+    scores: array
+        Array of scores for each sample
+    """
+    convolved_data = custome_cwt(data, plot_wavl=plot_wavl)
+
+    peaks = call_peaks(convolved_data, n_threads=n_threads)
+
+    filtered_peaks = filter_peaks(peaks, reference=convolved_data, peaks_thr=peaks_thr, operator=operator)
+
+    score_mask = build_score_mask(plotting=plotting_mask)
+    scores = []
+    for i, peak_list in enumerate(filtered_peaks):
+        conv = convolved_data[i]
+
+        if len(peak_list) == 0:
+            score = 0
+        elif len(peak_list) == 1:
+            score = conv[peak_list[0]] * score_mask[0][peak_list[0]]
+
+        elif len(peak_list) > 1:
+            score = 0
+            for j in range(1, len(peak_list)):
+                if j <= 3:
+                    score += conv[peak_list[j]] * score_mask[j][peak_list[j]]
+                else:
+                    score += conv[peak_list[j]] * score_mask[3][peak_list[j]]
+
+        scores.append(score)
+
+    if plotting_ov:
+        plot_custom_cwt(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample)
+
+    return scores
+
+
+def build_score_mask(plotting=True, mu_list=[42, 200, 360, 550], sigma_list=[25, 35, 45, 25]):
+    """
+    Builds a score mask for the score by custom continuous wavelet transformation.
+    Mask is a sum of 4 Gaussian curves with mu and sigma specified for the expected peak positions and deviations.
+
+    Parameters
+    ----------
+    plotting: bool
+        If true, the score mask is plotted
+    mu_list: list
+        List of mu values for the Gaussian curves
+    sigma_list: list
+        List of sigma values for the Gaussian curves
+
+    Returns
+    -------
+    gaussians: array
+        Array of the score mask
+    """
+
+    # Create an array of x values
+    x = np.linspace(0, 1000, 1000)
+    gaussians = []
+    for mu, sigma in zip(mu_list, sigma_list):
+        gaussians.append(scale((1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)))
+
+    gaussians = np.array(gaussians)
+
+    if plotting:
+        fig, ax = plt.subplots()
+
+        ax.plot(gaussians[0])
+        ax.plot(gaussians[1])
+        ax.plot(gaussians[2])
+        ax.plot(gaussians[3])
+        ax.set_title('score-mask')
+        ax.set_xlabel('position')
+        ax.set_ylabel('scoring')
+
+    return gaussians
+
+
+def gauss(x, mu, sigma):
+    """
+    Returns the values of the Gaussian function for a given x, mu and sigma.
+
+    Parameters
+    ----------
+    x: array
+        x values
+    mu: float
+        mu value
+    sigma: float
+        sigma value
+
+    Returns
+    -------
+
+    """
+
+    gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+
+    return gaussian
+
+
+def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0):
+    """
+    Plots the overlay of the convolved data, the peaks and the score mask.
+
+    Parameters
+    ----------
+    convolved_data: array
+        Array of the convolved data
+    data: array
+        Array of the original data
+    peaks: array
+        Array of the peaks
+    scores: array
+        Array of the scores
+    sample_n: int
+        Index of the sample to plot
+
+    Returns
+    -------
+    None
+    """
+
+    single_m = convolved_data[sample_n]
+    single_d = data[sample_n]
+    sample_peaks = peaks[sample_n]
+
+    points_x = sample_peaks
+    points_y = single_m[sample_peaks]
+
+    points_y_data = single_d[sample_peaks]
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+
+    ax1.set_ylabel('convolution of sample: ' + str(sample_n))
+    ax1.set_xlabel('fragment length', color='blue')
+    ax1.plot(single_m)
+    ax1.scatter(points_x, points_y, color='red', zorder=2)
+
+    ax2.set_ylabel('scaled abundance of sample: ' + str(sample_n))
+    ax2.set_xlabel('fragment length', color='blue')
+    ax2.plot(single_d)
+    ax2.scatter(points_x, points_y_data, color='red', zorder=2)
+
+    ax3.set_ylabel('scores all')
+    ax3.set_xlabel('fragment length', color='blue')
+    ax3.hist(scores, bins=100, log=True)
+
+
 def add_insertsize_metrics(adata,
                            bam=None,
                            fragments=None,
@@ -923,10 +1221,14 @@ def add_insertsize_metrics(adata,
                            regions=None,
                            use_momentum=True,
                            use_cwt=True,
+                           use_ct_cwt=True,
                            peaks_thr_mom=0.03,
                            peaks_thr_cwt=0.05,
+                           peaks_thr_ct_cwt=0.01,
+                           wavl_scale=35,
                            plotting=True,
-                           plot_sample=0):
+                           plot_sample=0,
+                           n_threads=12):
     """
     Wrapper function to add insert size metrics to an AnnData object. This function can either take a bam file or a
     fragments file as input. If both are provided, an error is raised. If none are provided, an error is raised.
@@ -950,14 +1252,20 @@ def add_insertsize_metrics(adata,
         If true, nucleosomal signal is calculated using the momentum method
     use_cwt: bool
         If true, nucleosomal signal is calculated using the CWT method
+    use_ct_cwt: bool
+        If true, nucleosomal signal is calculated using the custom CWT method
     peaks_thr_mom: float
         Threshold for the momentum method
     peaks_thr_cwt: float
         Threshold for the CWT method
+    peaks_thr_ct_cwt: float
+        Threshold for the custom CWT method
     plotting: bool
         If true, plots are generated
     plot_sample: int
         Index of the sample to plot
+    n_threads: int
+        Number of threads
 
     Returns
     -------
@@ -1016,11 +1324,21 @@ def add_insertsize_metrics(adata,
                                   plotting=plotting,
                                   adapter=250,
                                   wavelet='gaus1',
-                                  scales=16,
-                                  n_threads=8,
+                                  scales=wavl_scale,
+                                  n_threads=n_threads,
                                   peaks_thr=peaks_thr_cwt,
                                   penalty_scale=100,
                                   period=160)
+
+    if use_ct_cwt:
+        ct_cwt_scores = score_by_ct_cwt(data=scaled_ori,
+                                        plot_wavl=False,
+                                        n_threads=n_threads,
+                                        peaks_thr=peaks_thr_ct_cwt,
+                                        operator='bigger',
+                                        plotting_mask=False,
+                                        plotting_ov=True,
+                                        sample=plot_sample)
 
     # select total inserts count and mean from count table
     inserts_table = count_table[[c for c in count_table.columns if isinstance(c, str)]]
@@ -1031,6 +1349,9 @@ def add_insertsize_metrics(adata,
     if use_cwt:
         inserts_table['nucleosomal_score_cwt'] = cwt_scores
 
+    if use_ct_cwt:
+        inserts_table['nucleosomal_score_ct_cwt'] = ct_cwt_scores
+
     adata.obs = adata.obs.join(inserts_table)
 
     if use_momentum:
@@ -1038,6 +1359,9 @@ def add_insertsize_metrics(adata,
 
     if use_cwt:
         adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
+
+    if use_ct_cwt:
+        adata.obs['nucleosomal_score_ct_cwt'] = adata.obs['nucleosomal_score_ct_cwt'].fillna(0)
 
     adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
