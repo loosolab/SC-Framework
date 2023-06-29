@@ -225,7 +225,7 @@ def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
     ax.set_aspect('equal')
 
 
-def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
+def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, **kwargs):
     """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
 
     Parameters
@@ -242,6 +242,8 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
         Column in table to use for the size of the dots.
     save : str, default None
         If given, the figure will be saved to this path.
+    fillna : float, default 0
+        Replace NaN with given value.
     kwargs : arguments
         Additional arguments to pass to seaborn.clustermap.
     """
@@ -252,8 +254,9 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
     # and to make the code more flexible, potentially using a class
 
     # Create pivots with colors/size
-    color_pivot = pd.pivot(table, index=y, columns=x, values=color)
-    size_pivot = pd.pivot(table, index=y, columns=x, values=size)
+    # .fillna fixes NaN in table which caused cluster error
+    color_pivot = pd.pivot(table, index=y, columns=x, values=color).fillna(fillna)
+    size_pivot = pd.pivot(table, index=y, columns=x, values=size).fillna(fillna)
 
     # Plot clustermap of values
     g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
