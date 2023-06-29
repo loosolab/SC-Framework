@@ -225,7 +225,7 @@ def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
     ax.set_aspect('equal')
 
 
-def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, **kwargs):
+def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr", **kwargs):
     """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
 
     Parameters
@@ -244,6 +244,8 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, **kwargs):
         If given, the figure will be saved to this path.
     fillna : float, default 0
         Replace NaN with given value.
+    cmap : str, default bwr
+        Colormap of the plot.
     kwargs : arguments
         Additional arguments to pass to seaborn.clustermap.
     """
@@ -259,7 +261,7 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, **kwargs):
     size_pivot = pd.pivot(table, index=y, columns=x, values=size).fillna(fillna)
 
     # Plot clustermap of values
-    g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
+    g = sns.clustermap(color_pivot, yticklabels=True, cmap=cmap,
                        # vmin=color_min, vmax=color_max, #should be given as kwargs
                        figsize=(5, 12),
                        cbar_kws={'label': color, "orientation": "horizontal"},
@@ -291,7 +293,7 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, **kwargs):
     radius_mat = _scale_values(size_mat, 0.05, 0.5)
 
     circles = [plt.Circle((j, i), radius=r) for r, j, i in zip(radius_mat.flat, x.flat, y.flat)]
-    col = PatchCollection(circles, array=color_mat.flatten(), cmap="bwr")
+    col = PatchCollection(circles, array=color_mat.flatten(), cmap=cmap)
     g.ax_heatmap.add_collection(col)
 
     # Adjust size of individual cells and dendrograms
