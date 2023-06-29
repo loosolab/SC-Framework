@@ -313,6 +313,14 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
         Number of columns in the figure. Default: 4.
     save : str
         Path to save the figure. Default: None.
+        Example
+    --------
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
+
     """
 
     # Get categories
@@ -378,6 +386,26 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         List of names for the adata objects. Default: None (adatas will be named adata_1, adata_2, etc.).
     kwargs : arguments
         Additional arguments to pass to sc.pl.umap/sc.pl.tsne/sc.pl.pca.
+    
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+        
+        import scanpy as sc
+
+    .. plot::
+        :context: close-figs
+
+        adata1 = sc.datasets.pbmc68k_reduced()
+        adata2 = sc.datasets.pbmc3k_processed()
+        adata_list = [adata1, adata2]
+        var_list = ['n_counts', 'n_cells']
+    
+    .. plot::
+        :context: close-figs
+
+        pl.compare_embeddings(adata_list, var_list)
     """
 
     embedding = embedding.lower()
@@ -485,6 +513,27 @@ def plot_3D_UMAP(adata, color, save):
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
     save : str
         Save prefix. Plot will be saved to <save>.html.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import sctoolbox.plotting
+        min_dist = 0.3
+        spread = 2.5
+        sc.tl.umap(adata, min_dist=min_dist, spread=spread, n_components=3)
+
+    .. plot::
+        :context: close-figs
+
+        sctoolbox.plotting.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
+
+    .. plot::
+        :context: close-figs
+
+        RESULT = "File was written to my3d_umap.html"
     """
 
     n_cells = len(adata.obs)
@@ -569,8 +618,10 @@ def plot_3D_UMAP(adata, color, save):
     if save is not None:
         path = settings.full_figure_prefix + save + ".html"
         fig.write_html(path)
+        print(f"Plot written to '{path}'")
 
-    print(f"Plot written to '{path}'")
+    else:
+        print("Please specify save parameter for html export")
 
 
 def umap_marker_overview(adata, markers, ncols=3, figsize=None,
@@ -974,6 +1025,27 @@ def plot_pca_variance(adata, method="pca",
         Number of components to plot. Default: 20.
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If None, a new figure is created. Default: None.
+    polt_pca_variance
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        #init data
+        import sctoolbox.plotting as pl
+        import scanpy as sc
+
+        adata = sc.datasets.pbmc68k_reduced()
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_variance(adata, method="pca",
+                      n_pcs=20,
+                      n_selected=None,
+                      ax=None,
+                      save=None)
     """
 
     if ax is None:

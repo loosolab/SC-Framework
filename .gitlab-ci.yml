@@ -72,6 +72,9 @@ test import:
     - python -c "import sctoolbox"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - setup.py
+        - sctoolbox/*.py
 
 # Run test coverage
 test coverage:
@@ -107,6 +110,38 @@ test coverage:
     - when: manual
       allow_failure: True
 
+#Changes.rst file must be changed in merge requests
+check_changes:
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
+  inherit:
+    default: false
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
+    - cat changed_files.txt
+    - if grep -q "CHANGES.rst" changed_files.txt; then echo "The 'CHANGES.rst' file was changed."; else echo "The 'CHANGES.rst' file must be changed for merge requests!"; exit 1; fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+
+#In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
+check_version:
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
+  inherit:
+    default: false
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
+    - cat changed_files.txt
+    - if grep -q "sctoolbox/_version.py" changed_files.txt; then echo "The 'sctoolbox/_version.py' file was changed."; else echo "The 'sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
+
+# ------------------------ Tests for notebooks in repo -----------------------#
+
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
   image: python:3.10
@@ -134,12 +169,9 @@ notebooks:
     - conda init bash
     - source ~/.bashrc
     - conda activate sctoolbox
-    - pip install virtualenv
-    - virtualenv venv
-    - source venv/bin/activate
     - pip install papermill
     - pip install .[all]
-    - /opt/conda/envs/sctoolbox/bin/python -m ipykernel install --user --name sctoolbox
+    - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
     - which python3            # for debug
@@ -202,7 +234,7 @@ deploy-pages-MR:
     paths:
       - docs/build/html/
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" # dev is built automatically
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "main" # dev/main are built automatically
       allow_failure: True
 
 # Deploy pages for a commit without a MR
@@ -226,7 +258,7 @@ deploy-pages-commit:
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
       allow_failure: True
 
-# Deploy documentation to public pages if it was the dev branch
+# Deploy documentation to public pages if it was the main branch
 pages:
   stage: deploy
   needs:
@@ -240,5 +272,5 @@ pages:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # after accepted MR to dev
-      allow_failure: False  # dev not allowed to fail
+    - if: $CI_COMMIT_BRANCH == "main" # after accepted MR to main
+      allow_failure: False  # main not allowed to fail
