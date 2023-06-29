@@ -267,7 +267,8 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr"
             x="bulk_labels",
             y="index",
             color="n_genes",
-            size="n_counts"
+            size="n_counts",
+            cmap="viridis"
         )
     """
 
