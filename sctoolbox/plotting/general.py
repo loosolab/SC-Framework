@@ -248,6 +248,27 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr"
         Colormap of the plot.
     kwargs : arguments
         Additional arguments to pass to seaborn.clustermap.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+        import scanpy as sc
+
+        table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+
+    .. plot::
+        :context: close-figs
+
+        pl.clustermap_dotplot(
+            table=table,
+            x="bulk_labels",
+            y="index",
+            color="n_genes",
+            size="n_counts"
+        )
     """
 
     # This code is very hacky
