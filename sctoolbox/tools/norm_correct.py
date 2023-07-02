@@ -254,6 +254,7 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
 # --------------------------- Batch correction methods -------------------------- #
 ###################################################################################
 
+
 def wrap_corrections(adata,
                      batch_key,
                      methods=["bbknn", "mnn"],

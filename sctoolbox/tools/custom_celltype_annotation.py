@@ -5,8 +5,12 @@ import sys
 import pandas as pd
 import scanpy as sc
 from IPython.display import display
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
+@deco.log_anndata
 def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, cluster_path=None, cluster_column=None, rank_genes_column=None, sample="sample", ct_column="cell_types", tissue="all", db="panglao", species="Hs", inplace=True):
     """
     If the script is called via a package (atactoolbox), please use this function.
@@ -58,7 +62,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
         for folder in [cluster_path, ct_path]:
             if os.path.exists(folder):
-                print(f"Warning: The path {folder}/ already exists!\nAll files will be overritten.")
+                logger.info(f"Warning: The path {folder}/ already exists!\nAll files will be overritten.")
                 go_on = False
 
         if not go_on:
@@ -66,24 +70,24 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
             go_on = True if go_on == "yes" else False
 
             if not go_on:
-                print("Cell type annotation has been aborted.")
+                logger.info("Cell type annotation has been aborted.")
 
                 return
 
-        print(f"Output folder: {ct_path}/", "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}/",
+        logger.info(f"Output folder: {ct_path}/", "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}/",
               "\nTissue: " + tissue, "\nDB: " + db)
         if adata and genes_adata and cluster_column:
             # Create folders containing the annotation assignment table aswell as the detailed scoring files per cluster
             if not os.path.exists(f'{cluster_path}'):
                 os.makedirs(f'{cluster_path}')
-                print(f'Created folder: {cluster_path}')
+                logger.info(f'Created folder: {cluster_path}')
 
             if not os.path.exists(f'{ct_path}'):
                 os.makedirs(f'{ct_path}')
-                print(f'Created folder: {ct_path}')
+                logger.info(f'Created folder: {ct_path}')
 
             # Write one file per cluster containing gene names and ranked gene scores
-            print("Writing one file per cluster containing gene names and ranked gene scores.")
+            logger.info("Writing one file per cluster containing gene names and ranked gene scores.")
             for cluster in adata.obs[f'{cluster_column}'].unique():
                 with open(f'{cluster_path}/{sample}.cluster_{cluster}', 'w') as file:
                     for index, gene in enumerate(genes_adata.uns[f'{rank_genes_column}']['names'][cluster]):
@@ -91,13 +95,13 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
                         file.write(f'{gene.split("_")[0]}\t{score}\n')
 
             # Perform the actual cell type annotation per clustering resolution
-            print("Starting cell type annotation.")
-            print(output_path, ct_path, cluster_column)
+            logger.info("Starting cell type annotation.")
+            logger.info(output_path, ct_path, cluster_column)
             perform_cell_type_annotation(
                 f"{ct_path}/", db_path, f"{cluster_path}/", tissue, db=db, species=species)
 
             # Add information to the adata object
-            print("Adding information to the adata object.")
+            logger.info("Adding information to the adata object.")
             cta_dict = {}
             with open(f'{ct_path}/annotation.txt') as file:
                 for line in file:
@@ -105,17 +109,17 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
                     cta_dict[cluster] = ct.rstrip()
             adata.obs[f'{ct_column}'] = adata.obs[f'{cluster_column}'].map(cta_dict)
 
-            print(f"Finished cell type annotation! The results are found in the .obs table {ct_column}.")
+            logger.info(f"Finished cell type annotation! The results are found in the .obs table {ct_column}.")
 
             if not inplace:
                 return adata
 
         elif cluster_path:
-            print("Output folder: " + output_path, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
+            logger.info("Output folder: " + output_path, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
                   "\nTissue: " + tissue, "\nDB: " + db)
             perform_cell_type_annotation(
                 f"{output_path}/ranked/output/{cluster_column}/", db_path, cluster_path, tissue, db=db)
-            print(f"Cell type annotation of output path {ct_path}/ finished.")
+            logger.info(f"Cell type annotation of output path {ct_path}/ finished.")
 
         else:
             pass
@@ -157,7 +161,7 @@ def modify_ct(adata=None, annotation_dir=None, clustering_column="leiden_0.1", c
         display(df.head(10))
         new_ct = int(input("Please choose another cell type by picking a number of the corresponding index column: "))
         adata.obs[f'{cell_type_column}_mod'] = adata.obs[f'{cell_type_column}_mod'].cat.rename_categories({df.iat[0, 0]: df.iat[new_ct, 0]})
-        print(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
+        logger.info(f'Succesfully replaced {df.iat[0, 0]} with {df.iat[new_ct, 0]}.')
         umap = input("Would you like to see the updated UMAP? Enter yes or no: ")
         umap = True if umap == "yes" else False
         if umap:
@@ -320,7 +324,7 @@ def calc_ranks(cm_dict, annotated_clusters):
     data_hits = list(set(data_hits))
     db_genes = list(set(db_genes))
 
-    print(f"The database contains {str(len(db_genes))} different genes.\
+    logger.info(f"The database contains {str(len(db_genes))} different genes.\
           \nThe input data contains {str(len(data_genes))} different genes.\
           \nThe genes of the input data overlap with {str(len(data_hits))} genes in total, {str(round(len(data_hits) / len(db_genes), 2) * 100)} percent.")
 
@@ -355,7 +359,7 @@ def get_cell_types(cluster_path, db_path, tissue="all", db="panglao", species="H
     if db == "panglao":
         db_dict = get_panglao(db_path, tissue=tissue, species=species)
     else:
-        print("DB " + db + " not supported.")
+        logger.info("DB " + db + " not supported.")
         exit(1)
 
     annotated_clusters = get_annotated_clusters(cluster_path=cluster_path)
@@ -474,12 +478,12 @@ def main():
     if len(sys.argv) == 6:
         output, db_path, cluster_path, tissue, db = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], \
             sys.argv[5]
-        print("Output folder: " + output, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
+        logger.info("Output folder: " + output, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
               "\nTissue: " + tissue, "\nDB: " + db)
         perform_cell_type_annotation(
             output, db_path, cluster_path, tissue, db=db)
-        print("Cell type annotation of " + output + " finished.")
+        logger.info("Cell type annotation of " + output + " finished.")
     else:
-        print("Please use three, five, six or seven parameters only!")
-        print("Example: python3 cell_type_annotation.py output_path panglao_path cluster_path all panglao")
+        logger.info("Please use three, five, six or seven parameters only!")
+        logger.info("Example: python3 cell_type_annotation.py output_path panglao_path cluster_path all panglao")
         exit(1)

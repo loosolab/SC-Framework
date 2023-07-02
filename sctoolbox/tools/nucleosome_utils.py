@@ -33,7 +33,6 @@ def moving_average(series, n=10):
 
     """
 
-    logger.info('performing moving average to smooth data')
     list(series)
     smoothed = []
     for i in range(len(series)):  # loop over all steps
@@ -73,7 +72,6 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
         array of smoothed array
 
     """
-    logger.info('performing moving average on multiple arrays in parallel')
     # smooth
     for i in range(n):
 

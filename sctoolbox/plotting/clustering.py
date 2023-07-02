@@ -5,8 +5,12 @@ import warnings
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
+@deco.log_anndata
 def search_clustering_parameters(adata,
                                  method="leiden",
                                  resolution_range=(0.1, 1, 0.1),
@@ -92,7 +96,7 @@ def search_clustering_parameters(adata,
     for i, res in enumerate(resolutions):
 
         if verbose is True:
-            print(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
+            logger.info(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
 
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
