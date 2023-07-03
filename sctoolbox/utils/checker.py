@@ -388,5 +388,3 @@ def is_regex(regex):
 
     except re.error:
         return False
-e.error:
-        return False
