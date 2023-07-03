@@ -1,3 +1,4 @@
+import logging
 
 import pytest
 import sctoolbox.qc_filter as qc
@@ -43,6 +44,10 @@ def invalid_threshold_dict():
          "qc_variable2": {"min": 0.5, "max": 1}}
     return d
 
+
+#@pytest.fixture(autouse=True)
+#def inject_fixtures(self, caplog):
+#    self._caplog = caplog
 
 # --------------------------- Tests --------------------------------- #
 
@@ -120,11 +125,11 @@ def test_filter_cells(adata):
     assert adata.shape[0] == n_false
 
 
-def test_predict_sex(capsys, adata):
+def test_predict_sex(caplog, adata):
     # gene not in data
-    qc.predict_sex(adata, groupby='sample')
-    captured = capsys.readouterr()
-    assert "Selected gene is not present in the data. Prediction is skipped." in captured.out.strip()
+    with caplog.at_level(logging.INFO):
+        qc.predict_sex(adata, groupby='sample')
+        assert "Selected gene is not present in the data. Prediction is skipped." in caplog.records[1].message
 
     # gene in data
     qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample')

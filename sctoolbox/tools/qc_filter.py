@@ -404,9 +404,6 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
 
         _save_figure(save)
 
-    # Save information to adata.uns
-    utils.add_uns_info(adata, "obs_metrics", "predicted_sex", how="append")
-
 
 ###############################################################################
 #                      STEP 1: FINDING AUTOMATIC CUTOFFS                      #
