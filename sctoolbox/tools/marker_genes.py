@@ -147,11 +147,6 @@ def label_genes(adata,
         available_species = utils.clean_flanking_strings(available_files)
         print(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
-    # --------- Save information -------- #
-
-    # Add information to adata.uns
-    utils.add_uns_info(adata, "genes_labeled", added)
-
 
 def add_gene_expression(adata, gene):
     """

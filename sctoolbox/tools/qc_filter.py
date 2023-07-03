@@ -176,9 +176,6 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     adata.obs['G2M_score'] = sdata.obs['G2M_score']
     adata.obs['phase'] = sdata.obs['phase']
 
-    # Add phase to uns
-    utils.add_uns_info(adata, "obs_metrics", "phase", how="append")
-
     if not inplace:
         return adata
 
@@ -272,9 +269,6 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     # Plot the distribution of scrublet scores
     if plot is True:
         sc.external.pl.scrublet_score_distribution(adata)
-
-    # Save "doublet_score" as a metric for plotting obs
-    utils.add_uns_info(adata, "obs_metrics", "doublet_score", how="append")
 
     # Return adata (or None if inplace)
     if inplace is False:
@@ -861,9 +855,6 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
                 adata = adata[:, included]  # filter on var
 
         logger.info(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
-
-    # Save information to adata.uns
-    utils.add_uns_info(adata, ["qc_thresholds", which], thresholds)   # saves dict to adata.uns["qc_thresholds"]["obs"] or adata.uns["qc_thresholds"]["var"]
 
     if inplace is False:
         return adata

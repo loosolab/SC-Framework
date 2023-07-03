@@ -142,14 +142,14 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac',
 def test_prepare_gtf(key, gtf):
 
     if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
-        gtf_out, tempfiles = anno._prepare_gtf(gtf, "", print)
+        gtf_out, tempfiles = anno._prepare_gtf(gtf, "")
 
         assert os.path.exists(gtf_out)  # assert if output gtf exists as a file
 
     elif key in ["gtf_missing_col", "gtf_corrupted", "gff"]:  # these gtfs are invalid and should raise an error
 
         with pytest.raises(argparse.ArgumentTypeError) as err:
-            anno._prepare_gtf(gtf, "", print)
+            anno._prepare_gtf(gtf, "")
 
         # Assert if the error message is correct depending on input
         if key == "gtf_missing_col":
@@ -163,3 +163,4 @@ def test_prepare_gtf(key, gtf):
 
     else:
         raise ValueError("Invalid key: {}".format(key))
+.format(key))
