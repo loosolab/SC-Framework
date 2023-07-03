@@ -1,7 +1,7 @@
 import os
 import scanpy as sc
 import pytest
-from sctoolbox.utils import logging
+from sctoolbox.utils import decorator as deco
 
 
 @pytest.fixture
@@ -12,17 +12,28 @@ def adata():
     return sc.read_h5ad(f)
 
 
-def test_add_uns_info(adata):
-    """ Test if add_uns_info works on both string and list keys. """
+def test_log_anndata(adata):
+    """ Test if log_anndata  decorator works. """
 
-    logging.add_uns_info(adata, "akey", "info")
-    print(adata.uns)
-    assert "akey" in adata.uns["sctoolbox"]
-    assert adata.uns["sctoolbox"]["akey"] == "info"
+    # define a function with the decorator
+    @deco.log_anndata
+    def test_func(adata, param1, param2, param3, param4, param5):
+        param_array = [param1, param2, param3, param4, param5]
+        return adata
 
-    logging.add_uns_info(adata, ["upper", "lower"], "info")
-    assert "upper" in adata.uns["sctoolbox"]
-    assert adata.uns["sctoolbox"]["upper"]["lower"] == "info"
+    # run the function
+    adata = test_func(adata, param1=1, param2=None, param3="test", param4=1.0, param5=True)
+    # run the function again
+    adata = test_func(adata, param1=1, param2=None, param3="test", param4=1.0, param5=True)
 
-    logging.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
-    assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
+    # check if log is in adata.uns
+    assert "sctoolbox" in adata.uns
+    assert "test_func" in adata.uns["sctoolbox"]
+    # check if run_1 and run_2 are in adata.uns
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param1"] == 1
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param2"] == None
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param3"] == "test"
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param4"] == 1.0
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param5"] == True
+
+    assert adata.uns["sctoolbox"]["test_func"]["run_2"]['kwargs']["param1"] == 1
