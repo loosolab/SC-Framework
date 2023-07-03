@@ -163,4 +163,3 @@ def test_prepare_gtf(key, gtf):
 
     else:
         raise ValueError("Invalid key: {}".format(key))
-.format(key))
