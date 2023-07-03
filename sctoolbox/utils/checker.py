@@ -219,7 +219,6 @@ def format_adata_var(adata,
 
     # Test whether the first three columns are in the right format
     format_index = True
-    #print(coordinate_columns)
     if coordinate_columns is not None:
         try:
             validate_regions(adata, coordinate_columns)
@@ -388,4 +387,6 @@ def is_regex(regex):
         return True
 
     except re.error:
+        return False
+e.error:
         return False

@@ -75,7 +75,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
                 return
 
         logger.info(f"Output folder: {ct_path}/", "\nDB file: " + db_path, f"\nCluster folder: {cluster_path}/",
-              "\nTissue: " + tissue, "\nDB: " + db)
+                    "\nTissue: " + tissue, "\nDB: " + db)
         if adata and genes_adata and cluster_column:
             # Create folders containing the annotation assignment table aswell as the detailed scoring files per cluster
             if not os.path.exists(f'{cluster_path}'):
@@ -116,7 +116,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None, clust
 
         elif cluster_path:
             logger.info("Output folder: " + output_path, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
-                  "\nTissue: " + tissue, "\nDB: " + db)
+                        "\nTissue: " + tissue, "\nDB: " + db)
             perform_cell_type_annotation(
                 f"{output_path}/ranked/output/{cluster_column}/", db_path, cluster_path, tissue, db=db)
             logger.info(f"Cell type annotation of output path {ct_path}/ finished.")
@@ -479,7 +479,7 @@ def main():
         output, db_path, cluster_path, tissue, db = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], \
             sys.argv[5]
         logger.info("Output folder: " + output, "\nDB file: " + db_path, "\nCluster folder: " + cluster_path,
-              "\nTissue: " + tissue, "\nDB: " + db)
+                    "\nTissue: " + tissue, "\nDB: " + db)
         perform_cell_type_annotation(
             output, db_path, cluster_path, tissue, db=db)
         logger.info("Cell type annotation of " + output + " finished.")

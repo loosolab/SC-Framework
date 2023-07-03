@@ -9,6 +9,7 @@ import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
+
 def bam_adata_ov(adata, bamfile, cb_col):
     """
     Check if adata.obs barcodes existing in a column of a bamfile
@@ -70,10 +71,10 @@ def check_barcode_tag(adata, bamfile, cb_col):
 
     if hitrate == 0:
         logger.warning('None of the barcodes from the bamfile found in the .obs table.\n'
-                      'Consider if you are using the wrong column cb-tag or bamfile.')
+                       'Consider if you are using the wrong column cb-tag or bamfile.')
     elif hitrate <= 0.05:
         logger.warning('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
-                      'Consider if you are using the wrong column for cb-tag or bamfile.')
+                       'Consider if you are using the wrong column for cb-tag or bamfile.')
     elif hitrate > 0.05:
         logger.info('Barcode tag: OK')
     else:
