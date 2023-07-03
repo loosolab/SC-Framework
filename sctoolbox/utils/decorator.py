@@ -40,7 +40,7 @@ def log_anndata(func):
 
         funcname = func.__name__
         if funcname not in adata.uns["sctoolbox"].keys():
-            adata.uns["sctoolbox"][funcname] = []
+            adata.uns["sctoolbox"][funcname] = {}
 
         # Convert anndata objects to string representation
         args_repr = [repr(element) for element in args if isinstance(element, anndata.AnnData)]
@@ -54,7 +54,8 @@ def log_anndata(func):
         d["args"] = args_repr
         d["kwargs"] = kwargs_repr
 
-        adata.uns["sctoolbox"][funcname].append(d)
+        run_n = len(adata.uns["sctoolbox"][funcname]) + 1
+        adata.uns["sctoolbox"][funcname]['run_' + str(run_n)] = d
 
         return func(*args, **kwargs)
 

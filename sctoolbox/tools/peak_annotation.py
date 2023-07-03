@@ -100,8 +100,8 @@ def annotate_adata(adata,
         cfg_dict = config
 
     cfg_dict = copy.deepcopy(cfg_dict)  # make sure that config is not being changed in place
-    logger = uropa.utils.UROPALogger()
-    cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
+    uropa_logger = uropa.utils.UROPALogger()
+    cfg_dict = uropa.utils.format_config(cfg_dict, logger=uropa_logger)
     logger.info("Config dictionary: {0}".format(cfg_dict))
 
     # Read regions from .var table
@@ -129,7 +129,7 @@ def annotate_adata(adata,
         region_dicts.append(d)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = _prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = _prepare_gtf(gtf, temp_dir)
 
     annotations_table = _annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -239,14 +239,14 @@ def annotate_narrowPeak(filepath,
         cfg_dict = config
 
     cfg_dict = copy.deepcopy(cfg_dict)  # make sure that config is not being changed in place
-    logger = uropa.utils.UROPALogger()
-    cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
+    uropa_logger = uropa.utils.UROPALogger()
+    cfg_dict = uropa.utils.format_config(cfg_dict, logger=uropa_logger)
     logger.info("Config dictionary: {0}".format(cfg_dict))
 
-    region_dicts = _load_narrowPeak(filepath, print)
+    region_dicts = _load_narrowPeak(filepath)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = _prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = _prepare_gtf(gtf, temp_dir)
 
     annotation_table = _annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -259,18 +259,16 @@ def annotate_narrowPeak(filepath,
     return annotation_table
 
 
-def _load_narrowPeak(filepath, print):
+def _load_narrowPeak(filepath):
     '''
     Load narrowPeak file to annotate.
 
     :param filepath: str
         Path to the narrowPeak file.
-    :param print: function
-        Print function for verbose printing.
     :return: region_dicts: dictionary
         Dictionary with the peak information.
     '''
-    print("load regions_dict from: " + filepath)
+    logger.info("load regions_dict from: " + filepath)
     peaks = pd.read_csv(filepath, header=None, sep='\t')
     peaks = peaks.drop([3, 4, 5, 6, 7, 8, 9], axis=1)
     peaks.columns = ["peak_chr", "peak_start", "peak_end"]
@@ -294,8 +292,6 @@ def _prepare_gtf(gtf,
         Path to the .gtf file containing the genes to be annotated.
     :param temp_dir: str
         Path to the temporary directory for storing .gtf files.
-    :param print: function
-        Function for verbose printing.
 
     :return: gtf: str
         Path to the gtf file to use in the annotation.
