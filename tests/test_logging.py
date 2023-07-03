@@ -19,6 +19,7 @@ def test_log_anndata(adata):
     @deco.log_anndata
     def test_func(adata, param1, param2, param3, param4, param5):
         param_array = [param1, param2, param3, param4, param5]
+        adata.uns["test_func"] = param_array
         return adata
 
     # run the function
@@ -31,9 +32,9 @@ def test_log_anndata(adata):
     assert "test_func" in adata.uns["sctoolbox"]
     # check if run_1 and run_2 are in adata.uns
     assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param1"] == 1
-    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param2"] == None
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param2"] is None
     assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param3"] == "test"
     assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param4"] == 1.0
-    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param5"] == True
+    assert adata.uns["sctoolbox"]["test_func"]["run_1"]['kwargs']["param5"] is True
 
     assert adata.uns["sctoolbox"]["test_func"]["run_2"]['kwargs']["param1"] == 1
