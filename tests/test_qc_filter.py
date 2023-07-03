@@ -45,10 +45,6 @@ def invalid_threshold_dict():
     return d
 
 
-#@pytest.fixture(autouse=True)
-#def inject_fixtures(self, caplog):
-#    self._caplog = caplog
-
 # --------------------------- Tests --------------------------------- #
 
 @pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1), ("sample", 4)])

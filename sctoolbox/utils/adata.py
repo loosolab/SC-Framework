@@ -1,7 +1,6 @@
 import numpy as np
 import scanpy as sc
 
-import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
