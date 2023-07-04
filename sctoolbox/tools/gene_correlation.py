@@ -1,0 +1,138 @@
+import pandas as pd
+import numpy as np
+import scanpy as sc
+from scipy.stats import spearmanr
+from scipy.stats import norm
+import statsmodels.api
+from joblib import Parallel, delayed
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+
+from sctoolbox.utils.checker import check_columns
+from sctoolbox.utils.adata import get_adata_subsets
+
+
+def coorelate_and_compare_two_conditions(adata, gene, condition_col, condition_A, condition_B):
+    """
+    Calculates the correlation of a gene expression over two conditions and compares the two conditions.
+
+    Parameter
+    ---------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    gene : str
+        Gene of interest.
+    condition_col : str
+        Column in adata.obs containing conditions.
+    condition_A : str
+        First condition.
+    condition_B : str
+        Second condition.
+    """
+    # TODO Rename function
+
+    # Subset adata on conditions
+    check_columns(adata.obs, columns=[condition_col], name="adata.obs")
+    adata_subsets = get_adata_subsets(adata, groupby=condition_col)
+
+    if not all(x in adata_subsets.keys() for x in [condition_A, condition_B]):
+        raise ValueError(f"One or both conditions ({condition_A}, {condition_B}]) \
+                         could not be found in adata.obs['{condition_col}']")
+
+    # Calculate correlations
+    corr_A_df = correlate_ref_vs_all(adata_subsets[condition_A], gene)
+    corr_B_df = correlate_ref_vs_all(adata_subsets[condition_B], gene)
+
+    # Compare correlations
+    compare_two_conditons(corr_A_df, corr_B_df,
+                          adata_subsets[condition_A].shape[1],
+                          adata_subsets[condition_B].shape[1])
+
+
+def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4):
+    """
+    Calculates the correlation of the reference gene vs all other genes.
+
+    Parameter
+    ---------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    gene : str
+        Reference gene.
+    correlation_threshold : float, default 0.4
+        threshold for correlation value. Correlations >= threshold will be plotted.
+    """
+    def spearmanr_of_gene(df, gene, ref):
+        return (gene, spearmanr(ref, df.loc[:, gene]))
+    
+    def map_correlation_strength(x):
+        if 0 <= x < 0.2: return "very weak (0.00-0.19)"
+        elif x < 0.4: return "weak (0.20-0.39)"
+        elif x < 0.6: return "moderate (0.40-0.59)"
+        elif x < 0.8: return "strong (0.60-0.79)"
+        elif x <= 1: return "very strong (0.80-1.00)"
+        elif np.isnan(x): return x
+        else: raise ValueError("Invalid correlation value.")
+
+    # Convert anndata to pandas dataframe
+    df = adata.to_df()
+    # Get expression values of reference gene
+    ref = df.loc[:, gene]
+
+    print(f"Calculating the correlation to {gene}")
+    results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(df, gene, ref) for gene in tqdm(adata.var.index.values.tolist())))
+    correlation_df = pd.DataFrame.from_dict(results, orient="index")
+    correlation_df.columns = ["correlation", "p-value"]
+    
+    # Adjust p-values
+    correlation_df["padj"] = statsmodels.stats.multitest.multipletests(correlation_df["p-value"],method="bonferroni")[1]
+    
+    # Add interpretation columns
+    correlation_df["correlation_sign"] = np.where(correlation_df['correlation'] < 0, "negative", "positive")
+    correlation_df['correlation_strength'] = correlation_df['correlation'].apply(map_correlation_strength)
+    correlation_df["reject_0?"] = np.where(correlation_df['padj'] < 0.05, True, False)
+    
+    # Clean up after nan values
+    correlation_df.loc[correlation_df.isnull().any(axis=1), :] = np.nan
+    
+    return correlation_df
+
+
+def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
+    """
+    Compare two conditions
+
+    Parameter
+    ---------
+    df_cond_A : pandas.DataFrame
+        Dataframe containing correlation analysis from correlate_ref_vs_all
+    df_cond_B : pandas.DataFrame
+        Dataframe containing correlation analysis from correlate_ref_vs_all
+    n_cells_A :  int
+        Number of cells within condition A
+    n_cells_B :  int
+        Number of cells within condition B
+    """
+    def independent_corr(gene_row, n_xy, n_ab):
+        """
+        z-transforms correlation coefficient xy (of n cells)and
+        ab (of n2 cells) and p-value of the difference.
+        """
+        if (1 - gene_row['correlation_A']) == 0 or (1 - gene_row['correlation_B']) == 0:
+            return np.nan, np.nan
+        xy_z = 0.5 * np.log((1 + gene_row['correlation_A'])/(1 - gene_row['correlation_A']))
+        ab_z = 0.5 * np.log((1 + gene_row['correlation_B'])/(1 - gene_row['correlation_B']))
+        se_diff_r = np.sqrt(1/(n_xy - 3) + 1/(n_ab - 3))
+        diff = xy_z - ab_z
+        z = abs(diff / se_diff_r)
+        p = (1 - norm.cdf(z))*2 #two-tailed p-vaue, therefore *2
+        return z, p
+
+    # Join both correlation tables
+    df_cond = df_cond_A.join(df_cond_B, lsuffix='_A', rsuffix='_B')
+    
+    # Compare both correlation coefficients
+    df_cond['comparison z-score'], df_cond['comparison p-value'] = \
+        zip(*df_cond.apply(independent_corr, args=(n_cells_A, n_cells_B), axis=1))
+
+    return df_cond
