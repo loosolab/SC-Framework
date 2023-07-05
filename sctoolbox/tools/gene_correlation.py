@@ -115,17 +115,22 @@ def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
     """
     def independent_corr(gene_row, n_xy, n_ab):
         """
-        z-transforms correlation coefficient xy (of n cells)and
+        z-transforms correlation coefficient xy (of n cells) and
         ab (of n2 cells) and p-value of the difference.
         """
         if (1 - gene_row['correlation_A']) == 0 or (1 - gene_row['correlation_B']) == 0:
             return np.nan, np.nan
-        xy_z = 0.5 * np.log((1 + gene_row['correlation_A'])/(1 - gene_row['correlation_A']))
+        # Fisher's r-to-Z Transformation
+        xy_z = 0.5 * np.log((1 + gene_row['correlation_A'])/(1 - gene_row['correlation_A'])) 
         ab_z = 0.5 * np.log((1 + gene_row['correlation_B'])/(1 - gene_row['correlation_B']))
-        se_diff_r = np.sqrt(1/(n_xy - 3) + 1/(n_ab - 3))
+        # fisher1925 - denominator
+        se_diff_r = np.sqrt(1/(n_xy - 3) + 1/(n_ab - 3)) 
+        # fisher1925 - numerator
         diff = xy_z - ab_z
+        # fisher1925 - significance test
         z = abs(diff / se_diff_r)
-        p = (1 - norm.cdf(z))*2 #two-tailed p-vaue, therefore *2
+        # two-tailed p-value, therefore *2
+        p = (1 - norm.cdf(z))*2 
         return z, p
 
     # Join both correlation tables
