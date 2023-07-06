@@ -76,16 +76,16 @@ def get_parameter_table(adata):
     pd.DataFrame
         Table with all function calls and their parameters.
     """
-
+    
     if "sctoolbox" not in adata.uns.keys():
         raise ValueError("No sctoolbox function calls logged in adata.")
 
     # Create an overview table for each function
     function_tables = []
     for function in adata.uns["sctoolbox"].keys():
-        table = pd.DataFrame(adata.uns["sctoolbox"][function])
+        table = pd.DataFrame.from_dict(adata.uns["sctoolbox"][function], orient='index')
         table.sort_values("timestamp", inplace=True)
-        table.insert(3, "func_count", range(1, len(table) + 1))
+        table.insert(3, "func_count", table.index)
         function_tables.append(table)
 
     # Concatenate all tables and sort by timestamp

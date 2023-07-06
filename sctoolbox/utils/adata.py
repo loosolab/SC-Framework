@@ -141,10 +141,6 @@ def save_h5ad(adata, path):
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
 
-    # # Log user to adata.uns
-    # utils.initialize_uns(adata, "user")
-    # adata.uns["sctoolbox"]["user"].update({utils.get_user(): utils.get_datetime()})  # overwrites existing entry for each user
-
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
