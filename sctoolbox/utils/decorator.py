@@ -76,7 +76,7 @@ def get_parameter_table(adata):
     pd.DataFrame
         Table with all function calls and their parameters.
     """
-    
+
     if "sctoolbox" not in adata.uns.keys():
         raise ValueError("No sctoolbox function calls logged in adata.")
 
