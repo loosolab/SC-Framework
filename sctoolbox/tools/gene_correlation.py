@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from sctoolbox.utils.checker import check_columns
 from sctoolbox.utils.adata import get_adata_subsets
+from sctoolbox.plotting.embedding import umap_marker_overview
 
 
 def coorelate_and_compare_two_conditions(adata, gene, condition_col, condition_A, condition_B):
@@ -49,9 +50,10 @@ def coorelate_and_compare_two_conditions(adata, gene, condition_col, condition_A
                           adata_subsets[condition_B].shape[1])
 
 
-def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4):
+def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
     """
     Calculates the correlation of the reference gene vs all other genes.
+    Additionally, plots umap highlighting correlating gene expression.
 
     Parameter
     ---------
@@ -60,7 +62,10 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4):
     gene : str
         Reference gene.
     correlation_threshold : float, default 0.4
-        threshold for correlation value. Correlations >= threshold will be plotted.
+        Threshold for correlation value. Correlating genes with a correlation >= threshold will be plotted
+        if plot parameter is set to True.
+    save : str, default None
+        Path to save the figure to.
     """
     def spearmanr_of_gene(df, gene, ref):
         return (gene, spearmanr(ref, df.loc[:, gene]))
@@ -81,21 +86,24 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4):
 
     print(f"Calculating the correlation to {gene}")
     results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(df, gene, ref) for gene in tqdm(adata.var.index.values.tolist())))
-    correlation_df = pd.DataFrame.from_dict(results, orient="index")
-    correlation_df.columns = ["correlation", "p-value"]
+    corr_df = pd.DataFrame.from_dict(results, orient="index")
+    corr_df.columns = ["correlation", "p-value"]
     
     # Adjust p-values
-    correlation_df["padj"] = statsmodels.stats.multitest.multipletests(correlation_df["p-value"],method="bonferroni")[1]
+    corr_df["padj"] = statsmodels.stats.multitest.multipletests(corr_df["p-value"], method="bonferroni")[1]
     
     # Add interpretation columns
-    correlation_df["correlation_sign"] = np.where(correlation_df['correlation'] < 0, "negative", "positive")
-    correlation_df['correlation_strength'] = correlation_df['correlation'].apply(map_correlation_strength)
-    correlation_df["reject_0?"] = np.where(correlation_df['padj'] < 0.05, True, False)
+    corr_df["correlation_sign"] = np.where(corr_df['correlation'] < 0, "negative", "positive")
+    corr_df['correlation_strength'] = corr_df['correlation'].apply(map_correlation_strength)
+    corr_df["reject_0?"] = np.where(corr_df['padj'] < 0.05, True, False)
     
     # Clean up after nan values
-    correlation_df.loc[correlation_df.isnull().any(axis=1), :] = np.nan
-    
-    return correlation_df
+    corr_df.loc[corr_df.isnull().any(axis=1), :] = np.nan
+
+    if plot:
+        to_plot = corr_df[corr_df["coorelation"] > correlation_threshold].index.to_list()
+        _ = umap_marker_overview(adata, to_plot, ncols=4, save=save, cbar_label="Relative expr.")
+    return corr_df
 
 
 def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
