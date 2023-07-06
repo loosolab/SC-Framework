@@ -681,7 +681,7 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
 
     # Make plots square
     for ax in axes_list:
-        utils._make_square(ax)
+        _make_square(ax)
 
     # Save figure if chosen
     _save_figure(save)
