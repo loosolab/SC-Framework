@@ -606,44 +606,42 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
     axes_list : list
         List containing all axis objects.
     """
-    
     if isinstance(gene_list, str):
         gene_list = [gene_list]
 
     # Find out how many rows we need
     n_genes = len(gene_list)
     nrows = int(np.ceil(len(gene_list) / ncols))
-    
+
     if figsize is None:
         figsize = (ncols * 3, nrows * 3)
 
     fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
     axes_list = axarr.flatten()
-    
+
     # Convert anndata to pandas dataframe
     df = adata.to_df()
     # Get expression values of reference gene
     ref = df.loc[:, ref_gene]
-    
+
     for i, gene in enumerate(gene_list):
         ax = axes_list[i]
-        
         gene_expr = df.loc[:, gene]
         sns.regplot(x=ref, y=gene_expr, ax=ax)
-        
+
     # Hide axes not used
     for ax in axes_list[len(gene_list):]:
         ax.set_visible(False)
     axes_list = axes_list[:len(gene_list)]
-    
+
     # Make plots square
     for ax in axes_list:
         _make_square(ax)
-        
+
     fig.tight_layout()
-    
+
     # Save figure if chosen
     if save:
         _save_figure(save)
-    
+
     return axes_list
