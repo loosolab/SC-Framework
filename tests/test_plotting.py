@@ -18,12 +18,6 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
 
-    # set gene names as index instead of ensemble ids
-    adata.var.reset_index(inplace=True)
-    adata.var['gene'] = adata.var['gene'].astype('str')
-    adata.var.set_index('gene', inplace=True)
-    adata.var_names_make_unique()
-
     sc.tl.umap(adata, n_components=3)
     sc.tl.tsne(adata)
     sc.tl.pca(adata)
@@ -296,6 +290,13 @@ def test_grouped_violin(adata, x, y, groupby):
 
 
 def test_plot_gene_correlation(adata):
+
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var['gene'] = adata.var['gene'].astype('str')
+    adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
+
     axes = sctoolbox.plotting.plot_gene_correlation(adata, "Xkr4", ["Gm18956", "Gm37143", "Gm7512"])
     assert type(axes).__name__ == "ndarray"
-    assert type(axes[0]).__name__ == "AxesSubplot"
+    assert type(axes[0]).__name__ == "Axes"
