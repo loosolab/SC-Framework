@@ -1,7 +1,7 @@
-[![coverage](https://gitlab.gwdg.de/loosolab/software/loosolab_SC_RNA_framework/badges/dev/coverage.svg?key_text=coverage&key_width=70)](https://gitlab.gwdg.de/loosolab/software/loosolab_SC_RNA_framework/-/commits/dev)
+[![coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/dev/coverage.svg?key_text=coverage&key_width=70)](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/commits/dev)
 
 
-# loosolab_SC_RNA_framework
+# SC framework
 
 A python framework for single cell analysis. It provides a plethora of functions for conducting common analysis tasks and respective visualization. It also includes a number of jupyter notebooks to further streamline the analysis process, making it easy to follow and reproduce analysis results.
 
@@ -13,11 +13,11 @@ A python framework for single cell analysis. It provides a plethora of functions
 
 1. Download the repository. This will download the repository to your current folder.
 ```
-git clone https://gitlab.gwdg.de/loosolab/software/loosolab_sc_rna_framework.git
+git clone https://gitlab.gwdg.de/loosolab/software/sc_framework.git
 ```
 2. Change working directory to repository.
 ```
-cd loosolab_sc_rna_framework
+cd sc_framework
 ```
 3. Install analysis environment. Note: using `mamba` is faster than `conda`, but this requires mamba to be installed.
 ```
@@ -52,7 +52,7 @@ cd ~/notebooks/
 
 2. Create a symbolic link to the location where you cloned the framework
 ```
-ln -s <path to loosolab_sc_rna_framework>
+ln -s <path to sc_framework>
 ```
 
 3. Get the notebook server URL by running:
@@ -62,7 +62,7 @@ jupyter notebook list
 
 4. Copy the output URL from the previous command into your browser. 
 
-5. You can now navigate to the `loosolab_sc_rna_framework/notebooks` folder containing the notebooks!
+5. You can now navigate to the `sc_framework/notebooks` folder containing the notebooks!
 
 
 # Usage
