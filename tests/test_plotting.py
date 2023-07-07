@@ -287,3 +287,9 @@ def test_grouped_violin(adata, x, y, groupby):
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
+
+
+def test_plot_gene_correlation(adata):
+    axes = sctoolbox.plotting.plot_gene_correlation(adata, "Xkr4", ["Gm18956", "Gm37143", "Gm7512"])
+    assert type(axes).__name__ == "ndarray"
+    assert type(axes[0]).__name__ == "AxesSubplot"
