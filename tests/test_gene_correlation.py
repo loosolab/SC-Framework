@@ -1,9 +1,11 @@
 import pytest
 import numpy as np
+import pandas as pd
 import os
 import scanpy as sc
 
-from sctoolbox.tools.gene_correlation import * 
+from sctoolbox.utils.adata import get_adata_subsets
+from sctoolbox.tools.gene_correlation import correlate_and_compare_two_conditions, correlate_ref_vs_all, compare_two_conditons
 
 # ---------------------------- FIXTURES -------------------------------- #
 
@@ -34,11 +36,11 @@ def test_correlate_ref_vs_all(adata):
 
     # Test of columns are matching
     assert list(results.columns) == ['correlation',
-                               'p-value',
-                               'padj',
-                               'correlation_sign',
-                               'correlation_strength',
-                               'reject_0?']
+                                     'p-value',
+                                     'padj',
+                                     'correlation_sign',
+                                     'correlation_strength',
+                                     'reject_0?']
 
 
 def test_compare_two_conditons(adata):
@@ -50,9 +52,9 @@ def test_compare_two_conditons(adata):
     corr_B_df = correlate_ref_vs_all(adata_subsets["C2"], "Xkr4")
 
     comparison = compare_two_conditons(corr_A_df, corr_B_df,
-                        adata_subsets["C1"].shape[1],
-                        adata_subsets["C2"].shape[1])
-    
+                                       adata_subsets["C1"].shape[1],
+                                       adata_subsets["C2"].shape[1])
+
     # Test if dataframe is returned
     assert isinstance(comparison, pd.DataFrame)
 

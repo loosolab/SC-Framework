@@ -131,7 +131,7 @@ def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
         Number of cells within condition A
     n_cells_B :  int
         Number of cells within condition B
-    
+
     Returns
     -------
     df_cond : pandas.DataFrame
