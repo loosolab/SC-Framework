@@ -12,7 +12,7 @@ from matplotlib.patches import Patch
 
 # sctoolbox functions
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import bidirectional_barplot, _save_figure
+from sctoolbox.plotting.general import bidirectional_barplot, _save_figure, _make_square
 
 
 def rank_genes_plot(adata,
