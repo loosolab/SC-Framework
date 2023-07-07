@@ -33,7 +33,7 @@ def test_correlate_ref_vs_all(adata):
     assert isinstance(results, pd.DataFrame)
 
     # Test of columns are matching
-    assert list(r.columns) == ['correlation',
+    assert list(results.columns) == ['correlation',
                                'p-value',
                                'padj',
                                'correlation_sign',
