@@ -11,6 +11,7 @@ from anndata import ImplicitModificationWarning
 from pathlib import Path
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 
 
 def get_chromosome_genes(gtf, chromosomes):
@@ -67,6 +68,7 @@ def get_chromosome_genes(gtf, chromosomes):
     return gene_names
 
 
+@deco.log_anndata
 def label_genes(adata,
                 gene_column=None,
                 species=None):
@@ -148,6 +150,7 @@ def label_genes(adata,
         print(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
 
+@deco.log_anndata
 def add_gene_expression(adata, gene):
     """
     Add values of gene/feature per cell to the adata.obs dataframe.
@@ -179,6 +182,7 @@ def add_gene_expression(adata, gene):
 #                 Scanpy rank genes groups                 #
 ############################################################
 
+@deco.log_anndata
 def run_rank_genes(adata, groupby,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
@@ -214,6 +218,7 @@ def run_rank_genes(adata, groupby,
     adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
+@deco.log_anndata
 def pairwise_rank_genes(adata, groupby,
                         foldchange_threshold=1,
                         min_in_group_fraction=0.25,
@@ -288,6 +293,7 @@ def pairwise_rank_genes(adata, groupby,
     return merged
 
 
+@deco.log_anndata
 def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -400,6 +406,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
     return group_tables
 
 
+@deco.log_anndata
 def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
     """
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
@@ -440,6 +447,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
 #                       DEseq2 on pseudobulks                       #
 #####################################################################
 
+@deco.log_anndata
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
@@ -547,6 +555,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     return deseq_table
 
 
+@deco.log_anndata
 def score_genes(adata, gene_set, score_name='score', inplace=True):
     """
     Assign a score to each cell depending on the expression of a set of genes.

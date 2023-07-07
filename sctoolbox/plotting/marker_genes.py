@@ -13,8 +13,10 @@ from matplotlib.patches import Patch
 # sctoolbox functions
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import bidirectional_barplot, _save_figure
+import sctoolbox.utils.decorator as deco
 
 
+@deco.log_anndata
 def rank_genes_plot(adata,
                     genes=None,
                     key=None,
@@ -151,6 +153,7 @@ def rank_genes_plot(adata,
 #          Violin / boxplot / bar for genes between groups          #
 #####################################################################
 
+@deco.log_anndata
 def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin",
                    normalize=False,
                    ax=None,
@@ -300,6 +303,7 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
     return ax
 
 
+@deco.log_anndata
 def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     """
     Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`. The total gene expression is quantile normalized
@@ -365,6 +369,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     return g
 
 
+@deco.log_anndata
 def gene_expression_heatmap(adata, genes, cluster_column,
                             title=None,
                             groupby=None,
@@ -505,6 +510,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     return g
 
 
+@deco.log_anndata
 def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
     """ Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
@@ -547,6 +553,7 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
     return g
 
 
+@deco.log_anndata
 def plot_differential_genes(rank_table, title="Differentially expressed genes",
                             save=None,
                             **kwargs):

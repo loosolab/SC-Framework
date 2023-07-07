@@ -1,6 +1,7 @@
 import numpy as np
 import scanpy as sc
 
+import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -33,6 +34,7 @@ def get_adata_subsets(adata, groupby):
     return adata_subsets
 
 
+@deco.log_anndata
 def add_expr_to_obs(adata, gene):
     """
     Add expression of a gene from adata.X to adata.obs as a new column.
@@ -54,6 +56,7 @@ def add_expr_to_obs(adata, gene):
         adata.obs[gene] = adata.X[:, idx].todense().A1
 
 
+@deco.log_anndata
 def shuffle_cells(adata, seed=42):
     """
     Shuffle cells in an adata object to improve plotting.
@@ -129,6 +132,7 @@ def load_h5ad(path):
     return adata
 
 
+@deco.log_anndata
 def save_h5ad(adata, path):
     """
     Save an anndata object to an .h5ad file.

@@ -120,6 +120,7 @@ def search_clustering_parameters(adata,
     return axarr
 
 
+@deco.log_anndata
 def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
     """ Plot an overview of marker genes and clustering.
 

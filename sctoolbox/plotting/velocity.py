@@ -4,12 +4,14 @@ import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 
 
 ####################################################################################################
 #                        Plots correlating gene expression with pseudotime                         #
 ####################################################################################################
 
+@deco.log_anndata
 def pseudotime_heatmap(adata, genes,
                        sortby=None,
                        layer=None,

@@ -6,6 +6,7 @@ import pandas as pd
 import multiprocessing
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -50,6 +51,7 @@ def bam_adata_ov(adata, bamfile, cb_col):
     return hitrate
 
 
+@deco.log_anndata
 def check_barcode_tag(adata, bamfile, cb_col):
     """
     Check for the possibilty that the wrong barcode is used.
@@ -167,6 +169,7 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     logger.info(f"Wrote {written} reads to output bam")
 
 
+@deco.log_anndata
 def split_bam_clusters(adata,
                        bams,
                        groupby,
@@ -216,7 +219,7 @@ def split_bam_clusters(adata,
     index_bams : boolean, default False
         Create an index file for each output bam. Will throw an error if `sort_bams` is False.
     """
-    # check then load modules
+    # then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm

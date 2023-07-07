@@ -16,10 +16,13 @@ import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
 import warnings
 
+import sctoolbox.utils.decorator as deco
+
 
 # -------------------------------------------------- setup functions -------------------------------------------------- #
 
 
+@deco.log_anndata
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False):
     """
     Download table of receptor-ligand interactions and store in adata.
@@ -83,6 +86,7 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
         return modified_adata
 
 
+@deco.log_anndata
 def calculate_interaction_table(adata, cluster_column, gene_index=None, normalize=1000, inplace=False, overwrite=False):
     """
     Calculate an interaction table of the clusters defined in adata.
@@ -236,6 +240,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 # -------------------------------------------------- plotting functions -------------------------------------------------- #
 
 
+@deco.log_anndata
 def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100):
     """
     Generate violin plot of pairwise cluster interactions.
@@ -292,6 +297,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
     return axs
 
 
+@deco.log_anndata
 def hairball(adata,
              min_perc,
              interaction_score=0,
@@ -546,6 +552,7 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
     return plot
 
 
+@deco.log_anndata
 def connectionPlot(adata,
                    restrict_to=None,
                    figsize=(10, 15),
@@ -753,6 +760,7 @@ def connectionPlot(adata,
 # -------------------------------------------------- helper functions -------------------------------------------------- #
 
 
+@deco.log_anndata
 def get_interactions(anndata, min_perc=None, interaction_score=None, interaction_perc=None, group_a=None, group_b=None):
     """
     Get interaction table from anndata. Apply filters if any.

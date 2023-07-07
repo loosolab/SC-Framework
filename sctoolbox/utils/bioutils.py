@@ -8,8 +8,10 @@ import gzip
 import argparse
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 
 
+@deco.log_anndata
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
                      percentile_range=(0, 100), chunk_size=1000):
     """
@@ -92,6 +94,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 #                        Format adata indexes                       #
 #####################################################################
 
+@deco.log_anndata
 def barcode_index(adata):
     """
     check if the barcode is the index
@@ -196,6 +199,7 @@ def gene_id_to_name(ids, species):
     return id_name_mapping
 
 
+@deco.log_anndata
 def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
     """
     Add gene names to adata.var.
@@ -268,6 +272,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
         return adata
 
 
+@deco.log_anndata
 def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
     """
     Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.

@@ -915,6 +915,7 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
         return adata
 
 
+@deco.log_anndata
 def filter_cells(adata, cells, remove_bool=True, inplace=True):
     """
     Remove cells from anndata object.
@@ -941,6 +942,7 @@ def filter_cells(adata, cells, remove_bool=True, inplace=True):
     return ret  # adata objec or None
 
 
+@deco.log_anndata
 def filter_genes(adata, genes, remove_bool=True, inplace=True):
     """
     Remove genes from adata object.

@@ -5,6 +5,7 @@ import copy
 import subprocess
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -13,6 +14,8 @@ logger = settings.logger
 #                 Celltypes loaded from cellxgene                   #
 #####################################################################
 
+
+@deco.log_anndata
 def add_cellxgene_annotation(adata, csv):
     """
     Add columns from cellxgene annotation to the adata .obs table.
@@ -38,6 +41,8 @@ def add_cellxgene_annotation(adata, csv):
 #              Predict cell types from marker genes dict            #
 #####################################################################
 
+
+@deco.log_anndata
 def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
     """
     Get cell type assignment based on marker genes.
@@ -172,6 +177,7 @@ def _get_rank_genes(d):
     return genes
 
 
+@deco.log_anndata
 def run_scsa(adata,
              gene_column=None,
              gene_symbol='auto',

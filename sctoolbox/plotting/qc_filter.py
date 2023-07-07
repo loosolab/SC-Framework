@@ -11,12 +11,14 @@ from matplotlib.patches import Rectangle
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import violinplot, _save_figure
+import sctoolbox.utils.decorator as deco
 
 
 ########################################################################################
 # ---------------------------- Plots for counting cells ------------------------------ #
 ########################################################################################
 
+@deco.log_anndata
 def _n_cells_pieplot(adata, groupby,
                      figsize=None):
     """
@@ -45,6 +47,7 @@ def _n_cells_pieplot(adata, groupby,
     # in progress
 
 
+@deco.log_anndata
 def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
                     add_labels=False,
                     **kwargs):
@@ -154,6 +157,7 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
     return axarr
 
 
+@deco.log_anndata
 def group_correlation(adata, groupby, method="spearman", save=None):
     """
     Plot correlation matrix between groups in `groupby`.
@@ -219,6 +223,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     return g
 
 
+@deco.log_anndata
 def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize=None, dpi=300):
     """
     Grid of violinplots with optional cutoffs.
@@ -281,6 +286,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
 # --------------------------- Insertsize -------------------------- #
 #####################################################################
 
+@deco.log_anndata
 def plot_insertsize(adata, barcodes=None):
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
@@ -410,6 +416,7 @@ def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
     # sctoolbox.utilities.save_figure(save)
 
 
+@deco.log_anndata
 def quality_violin(adata, columns,
                    which="obs",
                    groupby=None,

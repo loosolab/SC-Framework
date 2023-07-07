@@ -9,6 +9,7 @@ from matplotlib.patches import Rectangle
 from matplotlib_venn import venn2, venn3
 
 from sctoolbox import settings
+import sctoolbox.utils.decorator as deco
 
 
 ########################################################################################
@@ -447,6 +448,7 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
+@deco.log_anndata
 def plot_obs_violin(adata, obs_cols):
     """
     plot violin plots of the obs columns
