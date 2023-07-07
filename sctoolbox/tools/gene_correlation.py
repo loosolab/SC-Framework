@@ -13,7 +13,7 @@ from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.plotting.embedding import umap_marker_overview
 
 
-def coorelate_and_compare_two_conditions(adata, gene, condition_col, condition_A, condition_B):
+def correlate_and_compare_two_conditions(adata, gene, condition_col, condition_A, condition_B):
     """
     Calculates the correlation of a gene expression over two conditions and compares the two conditions.
 
@@ -45,9 +45,10 @@ def coorelate_and_compare_two_conditions(adata, gene, condition_col, condition_A
     corr_B_df = correlate_ref_vs_all(adata_subsets[condition_B], gene)
 
     # Compare correlations
-    compare_two_conditons(corr_A_df, corr_B_df,
+    comparison = compare_two_conditons(corr_A_df, corr_B_df,
                           adata_subsets[condition_A].shape[1],
                           adata_subsets[condition_B].shape[1])
+    return comparison
 
 
 def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
@@ -100,7 +101,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
     # Clean up after nan values
     corr_df.loc[corr_df.isnull().any(axis=1), :] = np.nan
 
-    if plot:
+    if save:
         to_plot = corr_df[corr_df["coorelation"] > correlation_threshold].index.to_list()
         _ = umap_marker_overview(adata, to_plot, ncols=4, save=save, cbar_label="Relative expr.")
     return corr_df
