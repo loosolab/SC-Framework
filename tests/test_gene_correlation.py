@@ -9,6 +9,7 @@ from sctoolbox.tools.gene_correlation import correlate_and_compare_two_condition
 
 # ---------------------------- FIXTURES -------------------------------- #
 
+
 @pytest.fixture
 def adata():
 
@@ -26,6 +27,7 @@ def adata():
     return adata
 
 # ------------------------------ TESTS --------------------------------- #
+
 
 def test_correlate_ref_vs_all(adata):
     """ Test if correlation between a reference gene to other genes is calculated. """

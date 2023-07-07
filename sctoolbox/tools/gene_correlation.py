@@ -148,7 +148,7 @@ def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
         xy_z = 0.5 * np.log((1 + gene_row['correlation_A']) / (1 - gene_row['correlation_A']))
         ab_z = 0.5 * np.log((1 + gene_row['correlation_B']) / (1 - gene_row['correlation_B']))
         # fisher1925 - denominator
-        se_diff_r = np.sqrt(1/(n_xy - 3) + 1/(n_ab - 3))
+        se_diff_r = np.sqrt(1 / (n_xy - 3) + 1 / (n_ab - 3))
         # fisher1925 - numerator
         diff = xy_z - ab_z
         # fisher1925 - significance test
