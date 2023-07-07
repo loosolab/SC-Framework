@@ -610,7 +610,6 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
         gene_list = [gene_list]
 
     # Find out how many rows we need
-    n_genes = len(gene_list)
     nrows = int(np.ceil(len(gene_list) / ncols))
 
     if figsize is None:
