@@ -111,7 +111,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
     corr_df.loc[corr_df.isnull().any(axis=1), :] = np.nan
 
     if save:
-        to_plot = corr_df[corr_df["coorelation"] > correlation_threshold].index.to_list()
+        to_plot = corr_df[corr_df["correlation"] > correlation_threshold].index.to_list()
         _ = umap_marker_overview(adata, to_plot, ncols=4, save=save, cbar_label="Relative expr.")
     return corr_df
 

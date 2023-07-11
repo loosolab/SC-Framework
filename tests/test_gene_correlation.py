@@ -28,10 +28,11 @@ def adata():
 
 # ------------------------------ TESTS --------------------------------- #
 
-
-def test_correlate_ref_vs_all(adata):
+@pytest.mark.parametrize("gene, save", [("Xkr4", None),
+                                        ("Xkr4", "output.png")])
+def test_correlate_ref_vs_all(adata, gene, save):
     """ Test if correlation between a reference gene to other genes is calculated. """
-    results = correlate_ref_vs_all(adata, "Xkr4")
+    results = correlate_ref_vs_all(adata, gene, save=save)
 
     # Test if dataframe is returned
     assert isinstance(results, pd.DataFrame)
@@ -43,6 +44,13 @@ def test_correlate_ref_vs_all(adata):
                                      'correlation_sign',
                                      'correlation_strength',
                                      'reject_0?']
+
+
+@pytest.mark.parametrize("gene", ["Invalid Gene"])
+def test_correlate_ref_vs_all_invalid(adata, gene):
+    """ Test if error is thrown if given gene is not in dataset. """
+    with pytest.raises(Exception):
+        correlate_ref_vs_all(adata, gene)
 
 
 def test_compare_two_conditons(adata):

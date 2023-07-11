@@ -289,7 +289,10 @@ def test_grouped_violin(adata, x, y, groupby):
     assert ax_type.startswith("Axes")
 
 
-def test_plot_gene_correlation(adata):
+@pytest.mark.parametrize("gene_list,save,figsize",
+                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2,2)),
+                          ("Gm18956", "out.png", None)])
+def test_plot_gene_correlation(adata, gene_list, save, figsize):
 
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
@@ -297,6 +300,7 @@ def test_plot_gene_correlation(adata):
     adata.var.set_index('gene', inplace=True)
     adata.var_names_make_unique()
 
-    axes = sctoolbox.plotting.plot_gene_correlation(adata, "Xkr4", ["Gm18956", "Gm37143", "Gm7512"])
+    axes = sctoolbox.plotting.plot_gene_correlation(adata, "Xkr4", gene_list,
+                                                    save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
-    assert type(axes[0]).__name__ == "Axes"
+    assert type(axes[0]).__name__.startswith("Axes")
