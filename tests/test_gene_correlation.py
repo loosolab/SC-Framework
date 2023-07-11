@@ -5,7 +5,7 @@ import os
 import scanpy as sc
 
 from sctoolbox.utils.adata import get_adata_subsets
-from sctoolbox.tools.gene_correlation import correlate_and_compare_two_conditions, correlate_ref_vs_all, compare_two_conditons
+from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref_vs_all, compare_two_conditons
 
 # ---------------------------- FIXTURES -------------------------------- #
 
@@ -77,9 +77,9 @@ def test_compare_two_conditons(adata):
                                         'comparison p-value']
 
 
-def test_correlate_and_compare_two_conditions(adata):
+def test_correlate_conditions(adata):
     """ Test wrapper for correlation and comparison """
-    comparison = correlate_and_compare_two_conditions(adata, "Xkr4", "condition", "C1", "C2")
+    comparison = correlate_conditions(adata, "Xkr4", "condition", "C1", "C2")
 
     # Test if dataframe is returned
     assert isinstance(comparison, pd.DataFrame)
@@ -99,3 +99,8 @@ def test_correlate_and_compare_two_conditions(adata):
                                         'reject_0?_B',
                                         'comparison z-score',
                                         'comparison p-value']
+
+
+def test_invalid_condition_correlate_conditions(adata):
+    with pytest.raises(Exception) as e_info:
+        correlate_conditions(adata, "Xkr4", "condition", "Invalid Condition", "C2")
