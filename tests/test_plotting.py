@@ -290,7 +290,7 @@ def test_grouped_violin(adata, x, y, groupby):
 
 
 @pytest.mark.parametrize("gene_list,save,figsize",
-                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2,2)),
+                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
                           ("Gm18956", "out.png", None)])
 def test_plot_gene_correlation(adata, gene_list, save, figsize):
 

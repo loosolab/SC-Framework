@@ -28,6 +28,7 @@ def adata():
 
 # ------------------------------ TESTS --------------------------------- #
 
+
 @pytest.mark.parametrize("gene, save", [("Xkr4", None),
                                         ("Xkr4", "output.png")])
 def test_correlate_ref_vs_all(adata, gene, save):
