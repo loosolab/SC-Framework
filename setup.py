@@ -8,7 +8,7 @@ import glob
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['episcanpy', 'pyyaml', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
-                  "batch_correction": ['bbknn @ git+https://github.com/Teichlab/bbknn.git', 'harmonypy', 'scanorama'],  # Get latest bbknn
+                  "batch_correction": ['bbknn @ git+https://github.com/Teichlab/bbknn.git', 'harmonypy', 'scanorama'],  # Get latest bbkn. Resolves Issue #128
                   "receptor_lignad": ['scikit-learn>=1.3', 'igraph'],
 
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
