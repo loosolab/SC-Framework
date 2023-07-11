@@ -605,6 +605,20 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
     -------
     axes_list : list
         List containing all axis objects.
+
+    EXAMPLE
+    -------
+
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+
+    .. plot::
+        :context: close-figs
+
+        gene_list=("HES4", "PRMT2", "ITGB2")
+        pl.plot_gene_correlation(adata, "Xkr4", gene_list)
     """
     if isinstance(gene_list, str):
         gene_list = [gene_list]
