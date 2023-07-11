@@ -11,7 +11,7 @@ from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.plotting.embedding import umap_marker_overview
 
 
-def correlate_and_compare_two_conditions(adata, gene, condition_col, condition_A, condition_B):
+def correlate_conditions(adata, gene, condition_col, condition_A, condition_B):
     """
     Calculates the correlation of a gene expression over two conditions and compares the two conditions.
 
@@ -28,7 +28,6 @@ def correlate_and_compare_two_conditions(adata, gene, condition_col, condition_A
     condition_B : str
         Second condition.
     """
-    # TODO Rename function
 
     # Subset adata on conditions
     check_columns(adata.obs, columns=[condition_col], name="adata.obs")
