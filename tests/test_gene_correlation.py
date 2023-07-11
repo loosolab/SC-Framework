@@ -102,5 +102,5 @@ def test_correlate_conditions(adata):
 
 
 def test_invalid_condition_correlate_conditions(adata):
-    with pytest.raises(Exception) as e_info:
+    with pytest.raises(Exception):
         correlate_conditions(adata, "Xkr4", "condition", "Invalid Condition", "C2")
