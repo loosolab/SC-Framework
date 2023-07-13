@@ -44,7 +44,9 @@ pass:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 lint:
-  image: python:3.10  # pybedtools is not compatible with python 3.11
+  image: 
+    name: python:3.10 # pybedtools is not compatible with python 3.11
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]
   inherit:
     default: false # do not inherit before_script
   stage: test
@@ -79,7 +81,9 @@ test import:
 # Run test coverage
 test coverage:
   stage: test
-  image: python:3.10
+  image: 
+    name: python:3.10
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]
   tags:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
