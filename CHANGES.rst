@@ -1,7 +1,8 @@
 0.2 (in progress)
 --------------------
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
-- temporarily get latest bbknn version directly from github
+- Fix "shell not found" error for CI pipeline (#129)
+- Pinned scikit-learn to version <=1.2.2 (#128)
 - Added script for gene correlation and comparison between two conditions
 
 0.1.1.2 (05-06-2023)
