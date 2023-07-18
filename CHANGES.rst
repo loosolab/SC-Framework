@@ -5,6 +5,14 @@
 - Pinned scikit-learn to version <=1.2.2 (#128)
 - Added check for marker gene lists
 
+0.1.1.2 (05-06-2023)
+--------------------
+- Fixed assembling atac notebook 01
+- Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
+- Added custome cwt implementation
+- Added additional parameters to add_insertsize_metrics
+- Revised nucleosomal score scoring
+
 0.1.1 (24-05-2023)
 --------------------
 - Fixed import issue
