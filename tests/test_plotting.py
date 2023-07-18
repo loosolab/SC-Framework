@@ -53,9 +53,10 @@ def test_sc_colormap():
     assert type(cmap).__name__ == "ListedColormap"
 
 
-def test_plot_pca_variance(adata):
+@pytest.mark.parametrize("n_selected", [None, 1, 2])
+def test_plot_pca_variance(adata, n_selected):
     """ Test if Axes object is returned. """
-    ax = sctoolbox.plotting.plot_pca_variance(adata)
+    ax = sctoolbox.plotting.plot_pca_variance(adata, n_selected=n_selected)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -70,17 +71,27 @@ def test_plot_pca_variance_fail(adata):
         sctoolbox.plotting.plot_pca_variance(adata, method=invalid)
 
 
-def test_search_dim_red_parameters(adata):
+@pytest.mark.parametrize("method", ["umap", "tsne"])
+def test_search_dim_red_parameters(adata, method):
     """ Test if search_dim_red_parameters returns an array of axes. """
 
     axarr = sctoolbox.plotting._search_dim_red_parameters(adata,
                                                           color="condition",
-                                                          method="umap",
+                                                          method=method,
                                                           min_dist_range=(0.1, 0.3, 0.1),
-                                                          spread_range=(2.0, 3.0, 0.5))
+                                                          spread_range=(2.0, 3.0, 0.5),
+                                                          learning_rate_range=(100, 300, 100),
+                                                          perplexity_range=(20, 30, 5))
 
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
+
+
+def test_invalid_method_search_dim_red_parameter(adata):
+    with pytest.raises(ValueError):
+        sctoolbox.plotting._search_dim_red_parameters(adata,
+                                                      color="condition",
+                                                      method="invalid")
 
 
 @pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
@@ -110,17 +121,29 @@ def test_plot_group_embeddings(adata, embedding):
     assert axarr.shape == (2, 2)
 
 
-@pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
-def test_compare_embeddings(adata, embedding):
+@pytest.mark.parametrize("embedding, var_list", [("pca", "list"),
+                                                 ("umap", "condition"),
+                                                 ("tsne", "list")])
+def test_compare_embeddings(adata, embedding, var_list):
 
     adata_cp = adata.copy()
-    adata_cp.obs.drop(columns=["condition"], inplace=True)  # check that function can deal with missing vars
+
+    # check that function can deal with missing vars
+    adata_cp.obs.drop(columns=["condition"], inplace=True)
 
     adata_list = [adata, adata_cp]
-    var_list = [adata.var.index[0], "condition", "notfound"]  # notfound will be excluded
+    if var_list == "list":
+        var_list = [adata.var.index[0], "condition", "notfound"]  # notfound will be excluded
     axarr = sctoolbox.plotting.compare_embeddings(adata_list, var_list, embedding=embedding)
 
     assert axarr.shape == (2, 2)
+
+
+def test_invalid_var_list_compare_embeddings(adata):
+    with pytest.raises(ValueError):
+        adata_cp = adata.copy()
+        adata_list = [adata, adata_cp]
+        sctoolbox.plotting.compare_embeddings(adata_list, ["invalid_1", "invalid_2"], embedding="umap")
 
 
 @pytest.mark.parametrize("method", ["leiden", "louvain"])
@@ -131,6 +154,12 @@ def test_search_clustering_parameters(adata, method):
 
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
+
+
+def test_wrong_embeding_search_clustering_parameters(adata):
+    with pytest.raises(KeyError):
+        sctoolbox.plotting.search_clustering_parameters(adata,
+                                                        embedding="Invalid")
 
 
 @pytest.mark.parametrize("method,resrange", [("leiden", (0.1, 0.2, 0.1, 0.1)),
@@ -199,6 +228,36 @@ def test_anndata_overview_fail_color_by(adata):
         )
 
 
+def test_anndata_overview_fail(adata):
+    """ Test invalid parameter inputs """
+    adatas_invalid = {"raw": adata, "invalid": "Not an anndata"}
+
+    adata.obs = adata.obs.drop("LISI_score_pca")
+    adatas = {"raw": adata}
+
+    # invalid datatype
+    with pytest.raises(ValueError, match="All items in 'adatas'"):
+        sctoolbox.plotting.anndata_overview(
+            adatas=adatas_invalid,
+            color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
+            plots=["PCA"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+    # Missing LISI score
+    with pytest.raises(ValueError, match="No LISI scores found"):
+        sctoolbox.plotting.anndata_overview(
+            adatas=adatas,
+            color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
+            plots=["PCA"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+
 def test_anndata_overview_fail_plots(adata):
     """ Test invalid parameter inputs """
     adatas = {"raw": adata}
@@ -256,6 +315,12 @@ def test_plot_3D_UMAP(adata, color):
     os.remove("3D_test.html")
 
 
+def test_invalid_color_plot_3D_UMAP(adata):
+    """ Test if plot_3D_UMAP return KeyError if color paramater cannot be found in adata"""
+    with pytest.raises(KeyError):
+        sctoolbox.plotting.plot_3D_UMAP(adata, color="invalid", save="3D_test")
+
+
 def test_group_correlation(adata):
     """ Test if plot is written to pdf """
 
@@ -287,3 +352,74 @@ def test_grouped_violin(adata, x, y, groupby):
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("show_umap", [True, False])
+def test_marker_gene_clustering(adata, show_umap):
+    """ Test marker_gene_clustering"""
+
+    marker_dict = {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+                   "Celltype B": ['ENSMUSG00000102272']}
+
+    ax = sctoolbox.plotting.marker_gene_clustering(adata, "condition",
+                                                   marker_dict,
+                                                   show_umap=show_umap)
+    ax_type = type(ax).__name__
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("how", ["vertical", "horizontal"])
+def test_flip_embedding(adata, how):
+    tmp = adata.copy()
+    key = "X_umap"
+    sctoolbox.plotting.flip_embedding(adata, key=key, how=how)
+
+    if how == "vertical":
+        assert adata.obsm[key][:, 1] == tmp.obsm[key][:, 1]
+    elif how == "horizontal":
+        assert adata.obsm[key][:, 0] == -tmp.obsm[key][:, 0]
+
+
+def test_invalid_flip_embedding(adata):
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.flip_embedding(adata, how="invalid")
+
+    with pytest.raises(KeyError):
+        sctoolbox.plotting.flip_embedding(adata, key="invalid")
+
+
+@pytest.mark.parametrize("n, res", [(500, 12), (1000, 8),
+                                    (5000, 8), (10000, 3), (20000, 3)])
+def test_get_3d_dotsize(n, res):
+    assert sctoolbox.plotting._get_3d_dotsize(n) == res
+
+
+@pytest.mark.parametrize("marker", ["ENSMUSG00000103377",
+                                    ["ENSMUSG00000103377", 'ENSMUSG00000104428']])
+def test_umap_marker_overview(adata, marker):
+    """ Test umap_marker_overview """
+    axes_list = sctoolbox.plotting.umap_marker_overview(adata, marker)
+
+    assert type(axes_list) == "list"
+    ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("color,title", [(["condition"], ["Condition"]),
+                                         (["condition", "clustering"], [None]),
+                                         (["condition", "clustering"], ["Condition", "Clustering"])])
+def test_umap_pub(adata, color, title):
+    """ Test umap_pub plotting with different color and title parameter. """
+    axes_list = sctoolbox.plotting.umap_pub(adata, color=color, title=title)
+
+    assert type(axes_list) == "list"
+    ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("color,title", [("condition", ["Title 1", "Title 2"]),
+                                         (["condition", "clustering"], "Title 1")])
+def test_invalid_parameter_len_umap_pub(adata, color, title):
+    """ Test case if color and title are not the same lenght """
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.umap_pub(adata, color=color, title=title)
