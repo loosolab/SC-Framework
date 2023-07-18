@@ -497,7 +497,7 @@ def _get_3d_dotsize(n):
     """ Utility to get the dotsize for a given number of points. """
     if n < 1000:
         return 12
-    if n < 10000:
+    elif n < 10000:
         return 8
     else:
         return 3
