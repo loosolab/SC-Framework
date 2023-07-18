@@ -38,9 +38,12 @@ def log_anndata(func):
         if "sctoolbox" not in adata.uns.keys():
             adata.uns["sctoolbox"] = dict()
 
+        if "log" not in adata.uns["sctoolbox"].keys():
+            adata.uns["sctoolbox"]["log"] = dict()
+
         funcname = func.__name__
-        if funcname not in adata.uns["sctoolbox"].keys():
-            adata.uns["sctoolbox"][funcname] = {}
+        if funcname not in adata.uns["sctoolbox"]["log"].keys():
+            adata.uns["sctoolbox"]["log"][funcname] = {}
 
         # Convert anndata objects to string representation
         args_repr = [repr(element) for element in args if isinstance(element, anndata.AnnData)]
@@ -50,12 +53,12 @@ def log_anndata(func):
         d = {}
         d["timestamp"] = utils.get_datetime()
         d["user"] = utils.get_user()
-        d["func"] = func.__name__
+        d["func"] = funcname
         d["args"] = args_repr
         d["kwargs"] = kwargs_repr
 
-        run_n = len(adata.uns["sctoolbox"][funcname]) + 1
-        adata.uns["sctoolbox"][funcname]['run_' + str(run_n)] = d
+        run_n = len(adata.uns["sctoolbox"]["log"][funcname]) + 1
+        adata.uns["sctoolbox"]["log"][funcname][f"run_{run_n}"] = d
 
         return func(*args, **kwargs)
 
@@ -77,13 +80,13 @@ def get_parameter_table(adata):
         Table with all function calls and their parameters.
     """
 
-    if "sctoolbox" not in adata.uns.keys():
+    if "sctoolbox" not in adata.uns.keys() or "log" not in adata.uns["sctoolbox"].keys():
         raise ValueError("No sctoolbox function calls logged in adata.")
 
     # Create an overview table for each function
     function_tables = []
-    for function in adata.uns["sctoolbox"].keys():
-        table = pd.DataFrame.from_dict(adata.uns["sctoolbox"][function], orient='index')
+    for function in adata.uns["sctoolbox"]["log"].keys():
+        table = pd.DataFrame.from_dict(adata.uns["sctoolbox"]["log"][function], orient='index')
         table.sort_values("timestamp", inplace=True)
         table.insert(3, "func_count", table.index)
         function_tables.append(table)
