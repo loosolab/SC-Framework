@@ -88,13 +88,17 @@ def get_parameter_table(adata):
     for function in adata.uns["sctoolbox"]["log"].keys():
         table = pd.DataFrame.from_dict(adata.uns["sctoolbox"]["log"][function], orient='index')
         table.sort_values("timestamp", inplace=True)
-        table.insert(3, "func_count", table.index)
+        table.insert(len(table.columns), "func_count", table.index)
         function_tables.append(table)
 
     # Concatenate all tables and sort by timestamp
     complete_table = pd.concat(function_tables)
-    complete_table.reset_index(drop=True, inplace=True)
     complete_table.sort_values("timestamp", inplace=True)
+    complete_table.reset_index(drop=True, inplace=True)
+
+    # reorder columns
+    first_cols = ["func", "args", "kwargs"]
+    complete_table = complete_table.reindex(columns= first_cols + list(set(complete_table.columns) - set(first_cols)))
 
     return complete_table
 
