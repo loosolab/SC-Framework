@@ -193,7 +193,7 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 
     Example
     --------
-    
+
     .. plot::
         :context: close-figs
 

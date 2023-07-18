@@ -684,7 +684,7 @@ def validate_threshold_dict(table, thresholds, groupby=None):
                     _validate_minmax(thresholds[col])
 
 
-def get_thresholds_atac_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
+def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
     :param adata: anndata.AnnData
@@ -731,11 +731,10 @@ def get_keys(adata, manual_thresholds):
     :return:
     """
     m_thresholds = {}
-    legend = adata.uns.get("legend", {})
+    legend = adata.obs.columns
     for key, value in manual_thresholds.items():
         if key in legend:
-            obs_key = legend[key]
-            m_thresholds[obs_key] = value
+            m_thresholds[key] = value
         else:
             print('column: ' + key + ' not found in adata.obs')
 
