@@ -496,13 +496,11 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 def _get_3d_dotsize(n):
     """ Utility to get the dotsize for a given number of points. """
     if n < 1000:
-        size = 12
+        return 12
     if n < 10000:
-        size = 8
+        return 8
     else:
-        size = 3
-
-    return size
+        return 3
 
 
 def plot_3D_UMAP(adata, color, save):
@@ -684,12 +682,12 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
 
     # Make plots square
     for ax in axes_list:
-        utils._make_square(ax)
+        _make_square(ax)
 
     # Save figure if chosen
     _save_figure(save)
 
-    return axes_list
+    return list(axes_list)
 
 
 def umap_pub(adata, color=None, title=None, save=None, **kwargs):
@@ -726,9 +724,8 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
         axarr = [axarr]
         color = [color]
 
-    if not title:
-        if len(title) != len(color):
-            raise ValueError("Color and Title must have the same length.")
+    if title and len(title) != len(color):
+        raise ValueError("Color and Title must have the same length.")
 
     colorbar_count = 0
     for i, ax in enumerate(axarr):
