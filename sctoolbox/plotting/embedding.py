@@ -58,6 +58,9 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
         Axis to flip along. Can be "vertical" (flips up/down) or "horizontal" (flips left/right).
     """
 
+    if key not in adata.obsm:
+        raise KeyError(f"The given key '{key}' cannot be found in adata.obsm. Please check the key value")
+
     if how == "vertical":
         adata.obsm[key][:, 1] = -adata.obsm[key][:, 1]
     elif how == "horizontal":
@@ -722,6 +725,10 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     if not isinstance(axarr, list):
         axarr = [axarr]
         color = [color]
+
+    if not title:
+        if len(title) != len(color):
+            raise ValueError("Color and Title must have the same length.")
 
     colorbar_count = 0
     for i, ax in enumerate(axarr):
