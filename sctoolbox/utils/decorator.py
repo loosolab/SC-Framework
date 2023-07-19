@@ -98,7 +98,7 @@ def get_parameter_table(adata):
 
     # reorder columns
     first_cols = ["func", "args", "kwargs"]
-    complete_table = complete_table.reindex(columns= first_cols + list(set(complete_table.columns) - set(first_cols)))
+    complete_table = complete_table.reindex(columns=first_cols + list(set(complete_table.columns) - set(first_cols)))
 
     return complete_table
 
