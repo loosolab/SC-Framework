@@ -1,5 +1,7 @@
 import numpy as np
 import scanpy as sc
+from collections.abc import Sequence  # check if object is iterable
+from collections import OrderedDict
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
