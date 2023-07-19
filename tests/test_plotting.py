@@ -71,9 +71,9 @@ def test_plot_pca_variance_fail(adata):
         sctoolbox.plotting.plot_pca_variance(adata, method=invalid)
 
 
-""" @pytest.mark.parametrize("method", ["umap", "tsne"])
+@pytest.mark.parametrize("method", ["umap"])  # , "tsne"]) # tsne option is currently broken and sends the function to sleep. Will be added if fixed.
 def test_search_dim_red_parameters(adata, method):
-    # Test if search_dim_red_parameters returns an array of axes.
+    """ Test if search_dim_red_parameters returns an array of axes. """
 
     axarr = sctoolbox.plotting._search_dim_red_parameters(adata,
                                                           color="condition",
@@ -82,21 +82,20 @@ def test_search_dim_red_parameters(adata, method):
                                                           spread_range=(2.0, 3.0, 0.5),
                                                           learning_rate_range=(100, 300, 100),
                                                           perplexity_range=(20, 30, 5))
-
     assert type(axarr).__name__ == "ndarray"
-    assert axarr.shape == (2, 2) """
+    assert axarr.shape == (2, 2)
 
 
-""" def test_invalid_method_search_dim_red_parameter(adata):
+def test_invalid_method_search_dim_red_parameter(adata):
     with pytest.raises(ValueError):
         sctoolbox.plotting._search_dim_red_parameters(adata,
                                                       color="condition",
-                                                      method="invalid") """
+                                                      method="invalid")
 
 
-""" @pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
+@pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
 def test_search_dim_red_parameters_ranges(adata, range):
-    Test that invalid ranges raise ValueError.
+    """ Test that invalid ranges raise ValueError. """
 
     with pytest.raises(ValueError):
         sctoolbox.plotting._search_dim_red_parameters(adata,
@@ -110,7 +109,7 @@ def test_search_dim_red_parameters_ranges(adata, range):
                                                       method="umap",
                                                       color="condition",
                                                       spread_range=range,
-                                                      min_dist_range=(0.1, 0.3, 0.1)) """
+                                                      min_dist_range=(0.1, 0.3, 0.1))
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
