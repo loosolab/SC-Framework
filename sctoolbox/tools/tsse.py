@@ -40,6 +40,7 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000):
     # Create list of TSS
     tss_list = []
     # Write TSS to file and list
+    logger.info("building temporary TSS file")
     with open(custom_TSS, "w") as out_file:
         for gene in tabix_obj.fetch(parser=pysam.asGTF()):
             tss_list.append([gene.contig, gene.start - negativ_shift, gene.start + positiv_shift])
@@ -84,12 +85,14 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
 
     """
     # Overlap two bedfiles (FRAGMENTS / TSS_sites)
+    logger.info("overlapping fragments with TSS")
     bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
     intersect_cmd = f'{bedtools} intersect -a {fragments} -b {custom_TSS} -u -sorted > {overlap}'
     # run command
     os.system(intersect_cmd)
 
     # Read in overlap file
+    logger.info("opening overlap file")
     overlap_list = []
     with open(overlap, 'rb') as file:
         for row in file:
@@ -111,6 +114,7 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
 
 
     # Aggregate Overlap
+    logger.info("aggregating fragments")
     for tss in tqdm(tss_list, desc='Aggregating'):
         for i in range(k, len(overlap_list)):
 
@@ -171,6 +175,7 @@ def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100):
     tSS_agg_arr = np.array(tSSe_df['TSS_agg'].to_list())
 
     # get the edges as bias
+    logger.info("calculating bias")
     border_upstream = tSS_agg_arr[:, 0:edge_size]
     border_downstream = tSS_agg_arr[:, -edge_size:]
 
@@ -182,6 +187,7 @@ def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100):
     bias[bias == 0] = min_bias  # Can I do this?
 
     # calculate per base tSSe
+    logger.info("calculating per base tSSe")
     per_base_tsse = tSS_agg_arr / bias[:, None]
 
     return per_base_tsse
@@ -205,12 +211,15 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50):
     global_tsse_score: numpy.array
         numpy array with the global tSSe score
     """
+    # calculate global tSSe score
+    logger.info("calculating global tSSe score")
     center = per_base_tsse[:,negativ_shift-edge_size:negativ_shift+edge_size]
     global_tsse_score = np.sum(center, axis=1) / (edge_size*2)
 
     return global_tsse_score
 
 
+@deco.log_anndata
 def add_tsse_score(adata,
                    fragments,
                    gtf,
@@ -254,6 +263,7 @@ def add_tsse_score(adata,
     adata: AnnData
         AnnData object with added tSSe score
     """
+    logger.info("adding tSSe score to adata object")
     # create list for temporary files
     tmp_files = []
     # create temporary file paths
@@ -280,6 +290,7 @@ def add_tsse_score(adata,
 
     # remove temporary files
     if not keep_tmp:
+        logger.info("cleaning up temporary files")
         for tmp_file in tmp_files:
             os.remove(tmp_file)
 
