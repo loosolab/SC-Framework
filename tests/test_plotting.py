@@ -7,6 +7,8 @@ import shutil
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
@@ -30,6 +32,14 @@ def df():
     """Create and return a pandas dataframe"""
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
+
+
+@pytest.fixture
+def df_bidir_bar():
+    return pd.DataFrame(data={'left_label': np.random.choice(["B1", "B2", "B3"], size=5),
+                              'right_label': np.random.choice(["A1", "A2", "A3"], size=5),
+                              'left_value': np.random.normal(size=5),
+                              'right_value': np.random.normal(size=5)})
 
 
 @pytest.fixture
@@ -233,9 +243,9 @@ def test_anndata_overview_fail_color_by(adata):
 def test_anndata_overview_fail(adata):
     """ Test invalid parameter inputs """
     adatas_invalid = {"raw": adata, "invalid": "Not an anndata"}
-    print(adata.obs.columns)
-    adata.obs = adata.obs.drop(["LISI_score_pca"], axis=1)
-    adatas = {"raw": adata}
+    adata_cp = adata.copy()
+    adata_cp.obs = adata_cp.obs.drop(["LISI_score_pca"], axis=1)
+    adatas = {"raw": adata_cp}
 
     # invalid datatype
     with pytest.raises(ValueError, match="All items in 'adatas'"):
@@ -252,7 +262,7 @@ def test_anndata_overview_fail(adata):
     with pytest.raises(ValueError, match="No LISI scores found"):
         sctoolbox.plotting.anndata_overview(
             adatas=adatas,
-            color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
+            color_by=list(adata_cp.obs.columns) + [adata_cp.var_names.tolist()[0]],
             plots=["LISI"],
             figsize=None,
             output=None,
@@ -426,3 +436,48 @@ def test_invalid_parameter_len_umap_pub(adata, color, title):
     """ Test case if color and title are not the same lenght """
     with pytest.raises(ValueError):
         sctoolbox.plotting.umap_pub(adata, color=color, title=title)
+
+
+@pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
+def test_add_figure_title(adata, color):
+    """ Test if function _add_figure_title runs without error when called correctly. """
+    axes = sc.pl.umap(adata, color=color, show=False)
+    sctoolbox.plotting._add_figure_title(axes, "UMAP plots", fontsize=20)
+
+    assert True
+
+
+def test_add_labels(adata):
+    # TODO
+    assert True
+
+
+@pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
+                                             (np.array([[1, 2, 3], [1, 2, 3]]), 1, 100),
+                                             (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
+def test_scale_values(array, mini, maxi):
+    """ Test that scaled values are in given range. """
+    result = sctoolbox.plotting._scale_values(array, mini, maxi)
+
+    assert len(result) == len(array)
+    if len(result.shape) == 1:
+        assert all((mini <= result) & (result <= maxi))
+    else:
+        for i in range(len(result)):
+            assert all((mini <= result[i]) & (result[i] <= maxi))
+
+
+def test_clustermap_dotplot():
+    """ Test clustermap_dotplot. """
+    table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+    sctoolbox.plotting.clustermap_dotplot(table=table, x="bulk_labels",
+                                          y="index", color="n_genes",
+                                          size="n_counts", cmap="viridis",
+                                          vmin=0, vmax=10)
+    assert True
+
+
+def test_bidirectional_barplot(df_bidir_bar):
+    """ Test bidirectoional_barplot. """
+    sctoolbox.plotting.bidirectional_barplot(df_bidir_bar)
+    assert True
