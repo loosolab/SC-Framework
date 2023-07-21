@@ -4,12 +4,13 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import sctoolbox.tools as tools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000):
+def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_dir=None):
     """
     This writes a custom TSS file from a gene gtf file.
     negativ_shift and positiv_shift are the number of bases of the flanks.
@@ -35,6 +36,9 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000):
         list of lists with the following columns:
         1: chr, 2: start, 3:stop
     """
+
+    # Unzip, sort and index gtf if necessary
+    gtf, tempfiles = tools._prepare_gtf(gtf, temp_dir)
     # Open tabix file
     tabix_obj = pysam.TabixFile(gtf)
     # Create list of TSS
@@ -48,7 +52,7 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000):
                 gene.start + positiv_shift) + '\n'
             out_file.write(line)
 
-    return tss_list
+    return tss_list, tempfiles
 
 
 def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shift=2000, positiv_shift=2000):
@@ -274,7 +278,9 @@ def add_tsse_score(adata,
     tmp_files.append(overlap)
 
     # write custom TSS bed file
-    tss_list = write_TSS_bed(gtf, custom_TSS, negativ_shift=negativ_shift, positiv_shift=positiv_shift)
+    tss_list, tmp_files_tss = write_TSS_bed(gtf, custom_TSS, negativ_shift=negativ_shift, positiv_shift=positiv_shift, temp_dir=temp_dir)
+    # add temporary file paths to list
+    tmp_files.extend(tmp_files_tss)
     # overlap fragments with custom TSS
     tSSe_cells = overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list)
     # calculate per base tSSe
