@@ -8,7 +8,6 @@ import gzip
 import argparse
 import os
 import sys
-import tqdm
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -448,7 +447,7 @@ def _read_bedfile(bedfile):
     """
     bed_list = []
     with open(bedfile, 'rb') as file:
-        for row in tqdm(file, desc="read bedfile"):
+        for row in file:
             row = row.decode("utf-8")
             row = row.split('\t')
             line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
