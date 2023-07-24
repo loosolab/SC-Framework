@@ -493,13 +493,29 @@ def test_bidirectional_barplot_fail(df):
         sctoolbox.plotting.bidirectional_barplot(df)
 
 
-@pytest.mark.parametrize("ylabel,color_by", [(True, None), (False, "clustering")])
-def test_violin_plot(adata, ylabel, color_by):
+@pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
+                                                    (False, "clustering",[0.5, 0.5, 0.5, 0.5])])
+def test_violinplot(adata, ylabel, color_by, hlines):
     ax = sctoolbox.plotting.violinplot(adata.obs, "qc_float", color_by=color_by,
-                                       hlines=None, colors=None, ax=None,
+                                       hlines=hlines, colors=None, ax=None,
                                        title="Title", ylabel=ylabel)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
+
+
+def test_violinplot_fail(adata):
+    with pytest.raises(ValueError, match='not found in column names of table!'):
+        sctoolbox.plotting.violinplot(adata.obs, y="Invalid")
+
+    with pytest.raises(ValueError, match='Color grouping'):
+        sctoolbox.plotting.violinplot(adata.obs, y="qc_float", color_by="Invalid")
+
+    with pytest.raises(ValueError, match='Parameter hlines has to be number or list'):
+        sctoolbox.plotting.violinplot(adata.obs, y="qc_float", hlines={"A": 0.5})
+
+    with pytest.raises(ValueError, match='Invalid dict keys in hlines parameter.'):
+        sctoolbox.plotting.violinplot(adata.obs, y="qc_float",
+                                      color_by="clustering", hlines={"A": 0.5})
 
 
 def test_plot_venn(venn_dict):
