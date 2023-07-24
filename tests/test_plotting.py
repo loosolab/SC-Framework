@@ -18,9 +18,14 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
 
+    sc.pp.normalize_total(adata, target_sum = None)
+    sc.pp.log1p(adata)
+
     sc.tl.umap(adata, n_components=3)
     sc.tl.tsne(adata)
     sc.tl.pca(adata)
+    sc.tl.rank_genes_groups(adata, groupby = 'clustering', method='t-test_overestim_var', n_genes = 250)
+    sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
 
@@ -567,3 +572,34 @@ def test_scatter_HVF_distribution_fail(adata):
     """ Test if input is invalid. """
     with pytest.raises(KeyError):
         sctoolbox.plotting.scatter_HVF_distribution(adata)
+
+
+@pytest.mark.parametrize("style,dendrogram,genes,key,swap_axes",
+                         [("dots", True, ['ENSMUSG00000102851',
+                                          'ENSMUSG00000102272',
+                                          'ENSMUSG00000101571'], None, True),
+                          ("heatmap", False, None, 'rank_genes_groups', False)])
+def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
+    """ Test rank_genes_plot for ranked genes and gene lists. """
+    # Gene list
+    d = sctoolbox.plotting.rank_genes_plot(adata, groupby="clustering",
+                                           genes=genes, key=key,
+                                           style=style, title="Test",
+                                           dendrogram=dendrogram,
+                                           swap_axes=swap_axes)
+    assert isinstance(d, dict)
+
+
+def test_rank_genes_plot_fail(adata):
+    """ Test rank_genes_plot for invalid input. """
+    with pytest.raises(ValueError, match='style must be one of'):
+        sctoolbox.plotting.rank_genes_plot(adata, groupby="clustering",
+                                           key='rank_genes_groups',
+                                           style="Invalid")
+    with pytest.raises(ValueError, match='Only one of genes or key can be specified.'):
+        sctoolbox.plotting.rank_genes_plot(adata, groupby="clustering",
+                                           key='rank_genes_groups',
+                                           genes=["A", "B", "C"])
+    with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
+        sctoolbox.plotting.rank_genes_plot(adata, groupby=None,
+                                           genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
