@@ -489,6 +489,7 @@ def test_bidirectional_barplot(df_bidir_bar):
 
 
 def test_bidirectional_barplot_fail(df):
+    """ test bidorectional_barplot with invalid input. """
     with pytest.raises(ValueError):
         sctoolbox.plotting.bidirectional_barplot(df)
 
@@ -496,6 +497,7 @@ def test_bidirectional_barplot_fail(df):
 @pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
                                                     (False, "clustering",[0.5, 0.5, 0.5, 0.5])])
 def test_violinplot(adata, ylabel, color_by, hlines):
+    """ Test violinplot. """
     ax = sctoolbox.plotting.violinplot(adata.obs, "qc_float", color_by=color_by,
                                        hlines=hlines, colors=None, ax=None,
                                        title="Title", ylabel=ylabel)
@@ -504,6 +506,7 @@ def test_violinplot(adata, ylabel, color_by, hlines):
 
 
 def test_violinplot_fail(adata):
+    """ Test invalid input for violinplot. """
     with pytest.raises(ValueError, match='not found in column names of table!'):
         sctoolbox.plotting.violinplot(adata.obs, y="Invalid")
 
@@ -519,6 +522,7 @@ def test_violinplot_fail(adata):
 
 
 def test_plot_venn(venn_dict):
+    """ Test plot_venn with 3 and 2 groups. """
     sctoolbox.plotting.plot_venn(venn_dict, title="Test")
     venn_dict.pop("Group C")
     sctoolbox.plotting.plot_venn(venn_dict, title="Test")
@@ -526,6 +530,7 @@ def test_plot_venn(venn_dict):
 
 
 def test_plot_venn_fail(venn_dict):
+    """ Test for invalid input. """
     venn_dict["Group D"] = [1, 2]
     with pytest.raises(ValueError):
         sctoolbox.plotting.plot_venn(venn_dict)
