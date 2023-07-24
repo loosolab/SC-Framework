@@ -698,6 +698,11 @@ def plot_venn(groups_dict, title=None, save=None):
     save : `str`, optional (default: `None`)
         Filename to save the plot to.
     """
+    # Check if input is dict
+    if not isinstance(groups_dict, dict):
+        raise ValueError("The 'groups_dict' variable must be a dictionary."
+                         + "Please ensure that you are passing a valid dictionary as input.")
+
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
 
