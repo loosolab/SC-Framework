@@ -7,8 +7,6 @@ import shutil
 import pandas as pd
 import numpy as np
 
-import matplotlib.pyplot as plt
-
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
@@ -40,6 +38,13 @@ def df_bidir_bar():
                               'right_label': np.random.choice(["A1", "A2", "A3"], size=5),
                               'left_value': np.random.normal(size=5),
                               'right_value': np.random.normal(size=5)})
+
+
+@pytest.fixture
+def venn_dict():
+    return {"Group A": [1, 2, 3, 4, 5, 6],
+            "Group B": [2, 3, 7, 8],
+            "Group C": [3, 4, 5, 9, 10]}
 
 
 @pytest.fixture
@@ -479,5 +484,35 @@ def test_clustermap_dotplot():
 
 def test_bidirectional_barplot(df_bidir_bar):
     """ Test bidirectoional_barplot. """
-    sctoolbox.plotting.bidirectional_barplot(df_bidir_bar)
+    sctoolbox.plotting.bidirectional_barplot(df_bidir_bar, title="Title")
     assert True
+
+
+def test_bidirectional_barplot_fail(df):
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.bidirectional_barplot(df)
+
+
+@pytest.mark.parametrize("ylabel,color_by", [(True, None), (False, "clustering")])
+def test_violin_plot(adata, ylabel, color_by):
+    ax = sctoolbox.plotting.violinplot(adata.obs, "qc_float", color_by=color_by,
+                                       hlines=None, colors=None, ax=None,
+                                       title="Title", ylabel=ylabel)
+    ax_type = type(ax).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_plot_venn(venn_dict):
+    sctoolbox.plotting.plot_venn(venn_dict, title="Test")
+    venn_dict.pop("Group C")
+    sctoolbox.plotting.plot_venn(venn_dict, title="Test")
+    assert True
+
+
+def test_plot_venn_fail(venn_dict):
+    venn_dict["Group D"] = [1, 2]
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.plot_venn(venn_dict)
+
+    with pytest.raises(ValueError):
+        sctoolbox.plotting.plot_venn([1, 2, 3, 4, 5])
