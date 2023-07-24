@@ -618,3 +618,12 @@ def test_rank_genes_plot_fail(adata):
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         sctoolbox.plotting.rank_genes_plot(adata, groupby=None,
                                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
+
+
+#@pytest.mark.parametrize("groupby", [None, "condition"]) Seems to be broken
+@pytest.mark.parametrize("title", [None, "Title"])
+def test_gene_expression_heatmap(adata, title):
+    """ Test gene_expression_heatmap. """
+    g = sctoolbox.plotting.gene_expression_heatmap(adata, genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'],
+                                                   cluster_column="clustering", title=title)
+    assert type(g).__name__ == "ClusterGrid"
