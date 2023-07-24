@@ -4,7 +4,9 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 import sctoolbox.tools as tools
+import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -97,13 +99,15 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
 
     # Read in overlap file
     logger.info("opening overlap file")
-    overlap_list = []
-    with open(overlap, 'rb') as file:
-        for row in file:
-            row = row.decode("utf-8")
-            row = row.split('\t')
-            line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
-            overlap_list.append(line)
+    #overlap_list = []
+    #with open(overlap, 'rb') as file:
+    #    for row in file:
+    #        row = row.decode("utf-8")
+    #        row = row.split('\t')
+    #        line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
+    #        overlap_list.append(line)
+
+    overlap_list = utils._read_bedfile(overlap)
 
     # initialize dictionary
     tSSe_cells = {}

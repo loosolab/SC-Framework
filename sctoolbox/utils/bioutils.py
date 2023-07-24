@@ -6,6 +6,9 @@ import apybiomart
 from scipy.sparse import issparse
 import gzip
 import argparse
+import os
+import sys
+import tqdm
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -402,3 +405,53 @@ def _gtf_integrity(gtf):
         raise argparse.ArgumentTypeError('gtf file is corrupted')
 
     return True  # the function only returns of no error is raised
+
+
+def _overlap_two_bedfiles(bed1, bed2, overlap):
+    """
+    This function overlaps two bedfiles and writes the overlap to a new bedfile
+
+    Parameters
+    ----------
+    bed1: str
+        path to bedfile1
+    bed2: str
+        path to bedfile2
+    overlap: str
+        path to output bedfile
+
+    Returns
+    -------
+    None
+
+    """
+    # Overlap two bedfiles
+    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
+    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {overlap}'
+    # run command
+    os.system(intersect_cmd)
+
+
+def _read_bedfile(bedfile):
+    """
+    This function reads in a bedfile and returns a list of the rows
+
+    Parameters
+    ----------
+    bedfile: str
+        path to bedfile
+
+    Returns
+    -------
+    bed_list: list
+        list of bedfile rows
+    """
+    bed_list = []
+    with open(bedfile, 'rb') as file:
+        for row in tqdm(file, desc="read bedfile"):
+            row = row.decode("utf-8")
+            row = row.split('\t')
+            line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
+            bed_list.append(line)
+    file.close()
+    return bed_list
