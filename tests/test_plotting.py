@@ -537,3 +537,33 @@ def test_plot_venn_fail(venn_dict):
 
     with pytest.raises(ValueError):
         sctoolbox.plotting.plot_venn([1, 2, 3, 4, 5])
+
+
+def test_violin_HVF_distribution(adata):
+    """ Test violin_HVF_distribution. """
+    adata_HVF = adata.copy()
+    adata_HVF.var['highly_variable'] = np.random.choice([True, False], size=adata_HVF.shape[1])
+    adata_HVF.var['n_cells_by_counts'] = np.random.normal(size=adata_HVF.shape[1])
+    sctoolbox.plotting.violin_HVF_distribution(adata_HVF)
+    assert True
+
+
+def test_violin_HVF_distribution_fail(adata):
+    """ Test if input is invalid. """
+    with pytest.raises(KeyError):
+        sctoolbox.plotting.violin_HVF_distribution(adata)
+
+
+def test_scatter_HVF_distribution(adata):
+    """ Test scatter_HVF_distribution. """
+    adata_HVF = adata.copy()
+    adata_HVF.var['variability_score'] = np.random.normal(size=adata_HVF.shape[1])
+    adata_HVF.var['n_cells'] = np.random.normal(size=adata_HVF.shape[1])
+    sctoolbox.plotting.scatter_HVF_distribution(adata_HVF)
+    assert True
+
+
+def test_scatter_HVF_distribution_fail(adata):
+    """ Test if input is invalid. """
+    with pytest.raises(KeyError):
+        sctoolbox.plotting.scatter_HVF_distribution(adata)
