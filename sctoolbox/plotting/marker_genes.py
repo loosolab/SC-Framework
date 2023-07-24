@@ -209,16 +209,12 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
     for element in x:
         if element not in adata.obs.columns and element not in adata.var.index:
             raise ValueError(f"{element} is not a column in adata.obs or a gene in adata.var.index")
-        else:
-            if element in adata.obs.columns:
-                x_assignment.append("obs")
-            else:
-                x_assignment.append("var")
+        x_assignment.append("obs" if element in adata.obs.columns else "var")
 
     if len(set(x_assignment)) > 1:
         raise ValueError("x must be either a column in adata.obs or all genes in adata.var.index")
-    else:
-        x_assignment = x_assignment[0]
+
+    x_assignment = x_assignment[0]
 
     # Establish if y is a column in adata.obs or a gene in adata.var.index
     if x_assignment == "obs" and y is None:
