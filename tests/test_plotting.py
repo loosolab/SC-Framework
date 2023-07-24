@@ -365,15 +365,30 @@ def test_n_cells_barplot(adata, groupby):
         assert len(axarr) == 2
 
 
-@pytest.mark.parametrize("x,y,groupby", [("clustering", "ENSMUSG00000102693", "condition"),
-                                         ("ENSMUSG00000102693", None, "condition"),
-                                         ("clustering", "qc_float", "condition")])
-def test_grouped_violin(adata, x, y, groupby):
+@pytest.mark.parametrize("x,y,norm", [("clustering", "ENSMUSG00000102693", True),
+                                      ("ENSMUSG00000102693", None, False),
+                                      ("clustering", "qc_float", True)])
+@pytest.mark.parametrize("style", ["violin", "boxplot", "bar"])
+def test_grouped_violin(adata, x, y, norm, style):
 
-    ax = sctoolbox.plotting.grouped_violin(adata, x=x, y=y, groupby=groupby)
+    ax = sctoolbox.plotting.grouped_violin(adata, x=x, y=y, style=style,
+                                           groupby="condition", normalize=norm)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
+
+
+def test_grouped_violin_fail(adata):
+    with pytest.raises(ValueError, match='is not a column in adata.obs or a gene in adata.var.index'):
+        sctoolbox.plotting.grouped_violin(adata, x="Invalid", y=None, groupby="condition")
+    with pytest.raises(ValueError, match='x must be either a column in adata.obs or all genes in adata.var.index'):
+        sctoolbox.plotting.grouped_violin(adata, x=["clustering", "ENSMUSG00000102693"], y=None, groupby="condition")
+    with pytest.raises(ValueError, match='was not found in either adata.obs or adata.var.index'):
+        sctoolbox.plotting.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
+    with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
+        sctoolbox.plotting.grouped_violin(adata, x="clustering", y=None, groupby="condition")
+    with pytest.raises(ValueError, match="Style 'Invalid' is not valid for this function."):
+        sctoolbox.plotting.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
 
 
 @pytest.mark.parametrize("show_umap", [True, False])
