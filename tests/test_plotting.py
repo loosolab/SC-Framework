@@ -18,13 +18,13 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
 
-    sc.pp.normalize_total(adata, target_sum = None)
+    sc.pp.normalize_total(adata, target_sum=None)
     sc.pp.log1p(adata)
 
     sc.tl.umap(adata, n_components=3)
     sc.tl.tsne(adata)
     sc.tl.pca(adata)
-    sc.tl.rank_genes_groups(adata, groupby = 'clustering', method='t-test_overestim_var', n_genes = 250)
+    sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
     sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
@@ -515,7 +515,7 @@ def test_bidirectional_barplot_fail(df):
 
 
 @pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
-                                                    (False, "clustering",[0.5, 0.5, 0.5, 0.5])])
+                                                    (False, "clustering", [0.5, 0.5, 0.5, 0.5])])
 def test_violinplot(adata, ylabel, color_by, hlines):
     """ Test violinplot. """
     ax = sctoolbox.plotting.violinplot(adata.obs, "qc_float", color_by=color_by,
@@ -620,7 +620,7 @@ def test_rank_genes_plot_fail(adata):
                                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
 
 
-#@pytest.mark.parametrize("groupby", [None, "condition"]) Seems to be broken
+# @pytest.mark.parametrize("groupby", [None, "condition"]) Seems to be broken
 @pytest.mark.parametrize("title", [None, "Title"])
 def test_gene_expression_heatmap(adata, title):
     """ Test gene_expression_heatmap. """
