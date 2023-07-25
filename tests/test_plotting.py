@@ -633,14 +633,15 @@ def test_rank_genes_plot_fail(adata):
                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
 
 
-# @pytest.mark.parametrize("groupby", [None, "condition"]) Seems to be broken
+@pytest.mark.parametrize("groupby", [None, "condition"])
 @pytest.mark.parametrize("title", [None, "Title"])
-def test_gene_expression_heatmap(adata, title):
+def test_gene_expression_heatmap(adata, title, groupby):
     """ Test gene_expression_heatmap. """
     g = pl.gene_expression_heatmap(adata,
                                    genes=['ENSMUSG00000102851',
                                           'ENSMUSG00000102272'],
-                                   cluster_column="clustering", title=title)
+                                   groupby=groupby, title=title,
+                                   cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
 
 
