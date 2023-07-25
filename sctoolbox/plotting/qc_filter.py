@@ -219,7 +219,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     return g
 
 
-def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize=None, dpi=300):
+def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=None, dpi=300):
     """
     Grid of violinplots with optional cutoffs.
 
@@ -239,7 +239,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
             - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
     colors : list of str, default None
         List of colors for the violins.
-    filename : str, default None
+    save : str, default None
         Path and name of file to be saved.
     ncols : int, default 3
         Number of violins per row.
@@ -273,8 +273,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         fig.delaxes(axs[i])
 
     # Save plot
-    if filename:
-        _save_figure(filename)
+    _save_figure(save)
 
 
 #####################################################################
