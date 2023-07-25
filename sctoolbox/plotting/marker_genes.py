@@ -572,7 +572,11 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     for col in group_columns:
         contrast = tuple(col.split("_")[0].split("/"))
         counts = rank_table[col].value_counts()
-        info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}
+        if all(x in list(counts.index) for x in ['C1', 'C2']):
+            info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}
+
+    if not info:
+        raise ValueError("No significant differentially expressed genes in the data. Abort.")
 
     df = pd.DataFrame().from_dict(info, orient="index")
     df = df.reset_index(names=["left_label", "right_label"])
