@@ -1,11 +1,12 @@
 import pytest
-import sctoolbox.plotting
+import sctoolbox.plotting as pl
 import scanpy as sc
 import os
 import tempfile
 import shutil
 import pandas as pd
 import numpy as np
+import sctoolbox.tools as tool
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
@@ -35,6 +36,14 @@ def df():
     """Create and return a pandas dataframe"""
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
+
+
+@pytest.fixture
+def pairwise_ranked_genes():
+    return pd.DataFrame(data={"1/2_group": ["C1", "C1", "C2", "C2"],
+                              "1/3_group": ["C1", "NS", "C2", "C2"],
+                              "2/3_group": ["C1", "C1", "NS", "C2"]},
+                        index=["GeneA", "GeneB", "GeneC", "GeneD"])
 
 
 @pytest.fixture
@@ -69,14 +78,14 @@ def tmp_file():
 def test_sc_colormap():
     """ Test whether sc_colormap returns a colormap """
 
-    cmap = sctoolbox.plotting.sc_colormap()
+    cmap = pl.sc_colormap()
     assert type(cmap).__name__ == "ListedColormap"
 
 
 @pytest.mark.parametrize("n_selected", [None, 1, 2])
 def test_plot_pca_variance(adata, n_selected):
     """ Test if Axes object is returned. """
-    ax = sctoolbox.plotting.plot_pca_variance(adata, n_selected=n_selected)
+    ax = pl.plot_pca_variance(adata, n_selected=n_selected)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -88,29 +97,27 @@ def test_plot_pca_variance_fail(adata):
     invalid = "-".join(list(adata.uns.keys())) + "-invalid"
 
     with pytest.raises(KeyError):
-        sctoolbox.plotting.plot_pca_variance(adata, method=invalid)
+        pl.plot_pca_variance(adata, method=invalid)
 
 
 @pytest.mark.parametrize("method", ["umap"])  # , "tsne"]) # tsne option is currently broken and sends the function to sleep. Will be added if fixed.
 def test_search_dim_red_parameters(adata, method):
     """ Test if search_dim_red_parameters returns an array of axes. """
 
-    axarr = sctoolbox.plotting._search_dim_red_parameters(adata,
-                                                          color="condition",
-                                                          method=method,
-                                                          min_dist_range=(0.1, 0.3, 0.1),
-                                                          spread_range=(2.0, 3.0, 0.5),
-                                                          learning_rate_range=(100, 300, 100),
-                                                          perplexity_range=(20, 30, 5))
+    axarr = pl._search_dim_red_parameters(adata, color="condition",
+                                          method=method,
+                                          min_dist_range=(0.1, 0.3, 0.1),
+                                          spread_range=(2.0, 3.0, 0.5),
+                                          learning_rate_range=(100, 300, 100),
+                                          perplexity_range=(20, 30, 5))
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
 
 def test_invalid_method_search_dim_red_parameter(adata):
     with pytest.raises(ValueError):
-        sctoolbox.plotting._search_dim_red_parameters(adata,
-                                                      color="condition",
-                                                      method="invalid")
+        pl._search_dim_red_parameters(adata, color="condition",
+                                      method="invalid")
 
 
 @pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
@@ -118,24 +125,23 @@ def test_search_dim_red_parameters_ranges(adata, range):
     """ Test that invalid ranges raise ValueError. """
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting._search_dim_red_parameters(adata,
-                                                      method="umap",
-                                                      color="condition",
-                                                      min_dist_range=range,
-                                                      spread_range=(2.0, 3.0, 0.5))
+        pl._search_dim_red_parameters(adata, method="umap",
+                                      color="condition",
+                                      min_dist_range=range,
+                                      spread_range=(2.0, 3.0, 0.5))
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting._search_dim_red_parameters(adata,
-                                                      method="umap",
-                                                      color="condition",
-                                                      spread_range=range,
-                                                      min_dist_range=(0.1, 0.3, 0.1))
+        pl._search_dim_red_parameters(adata, method="umap",
+                                      color="condition",
+                                      spread_range=range,
+                                      min_dist_range=(0.1, 0.3, 0.1))
 
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
 def test_plot_group_embeddings(adata, embedding):
 
-    axarr = sctoolbox.plotting.plot_group_embeddings(adata, groupby="condition", embedding=embedding, ncols=2)
+    axarr = pl.plot_group_embeddings(adata, groupby="condition",
+                                     embedding=embedding, ncols=2)
 
     assert axarr.shape == (2, 2)
 
@@ -152,11 +158,12 @@ def test_compare_embeddings(adata, embedding, var_list):
 
     adata_list = [adata, adata_cp]
     if var_list == "list":
-        var_list = [adata.var.index[0], "condition", "notfound"]  # notfound will be excluded
+        # notfound will be excluded
+        var_list = [adata.var.index[0], "condition", "notfound"]
         res = (2, 2)
     else:
         res = (1, 2)
-    axarr = sctoolbox.plotting.compare_embeddings(adata_list, var_list, embedding=embedding)
+    axarr = pl.compare_embeddings(adata_list, var_list, embedding=embedding)
 
     assert axarr.shape == res
 
@@ -165,23 +172,24 @@ def test_invalid_var_list_compare_embeddings(adata):
     with pytest.raises(ValueError):
         adata_cp = adata.copy()
         adata_list = [adata, adata_cp]
-        sctoolbox.plotting.compare_embeddings(adata_list, ["invalid_1", "invalid_2"], embedding="umap")
+        pl.compare_embeddings(adata_list, ["invalid_1", "invalid_2"],
+                              embedding="umap")
 
 
 @pytest.mark.parametrize("method", ["leiden", "louvain"])
 def test_search_clustering_parameters(adata, method):
     """ Test if search_clustering_parameters returns an array of axes. """
 
-    axarr = sctoolbox.plotting.search_clustering_parameters(adata, method=method, resolution_range=(0.1, 0.31, 0.1), ncols=2)
-
+    axarr = pl.search_clustering_parameters(adata, method=method,
+                                            resolution_range=(0.1, 0.31, 0.1),
+                                            ncols=2)
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
 
 def test_wrong_embeding_search_clustering_parameters(adata):
     with pytest.raises(KeyError):
-        sctoolbox.plotting.search_clustering_parameters(adata,
-                                                        embedding="Invalid")
+        pl.search_clustering_parameters(adata, embedding="Invalid")
 
 
 @pytest.mark.parametrize("method,resrange", [("leiden", (0.1, 0.2, 0.1, 0.1)),
@@ -190,7 +198,8 @@ def test_wrong_embeding_search_clustering_parameters(adata):
 def test_search_clustering_parameters_errors(adata, method, resrange):
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting.search_clustering_parameters(adata, resolution_range=resrange, method=method)
+        pl.search_clustering_parameters(adata, resolution_range=resrange,
+                                        method=method)
 
 
 def test_anndata_overview(adata, tmp_file):
@@ -199,7 +208,7 @@ def test_anndata_overview(adata, tmp_file):
 
     assert not os.path.exists(tmp_file)
 
-    sctoolbox.plotting.anndata_overview(
+    pl.anndata_overview(
         adatas=adatas,
         color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
         plots=["PCA", "PCA-var", "UMAP", "tSNE", "LISI"],
@@ -210,7 +219,7 @@ def test_anndata_overview(adata, tmp_file):
 
     assert not os.path.exists(tmp_file)
 
-    sctoolbox.plotting.anndata_overview(
+    pl.anndata_overview(
         adatas=adatas,
         color_by=list(adata.obs.columns),
         plots=["PCA"],
@@ -229,7 +238,7 @@ def test_anndata_overview_fail_color_by(adata):
     # invalid color_by
     # no input
     with pytest.raises(ValueError, match="Couldn't find column"):
-        sctoolbox.plotting.anndata_overview(
+        pl.anndata_overview(
             adatas=adatas,
             color_by=None,
             plots=["PCA"],
@@ -240,7 +249,7 @@ def test_anndata_overview_fail_color_by(adata):
 
     # wrong input
     with pytest.raises(ValueError, match="Couldn't find column"):
-        sctoolbox.plotting.anndata_overview(
+        pl.anndata_overview(
             adatas=adatas,
             color_by="-".join(list(adata.obs.columns)) + "-invalid",
             plots=["PCA"],
@@ -259,7 +268,7 @@ def test_anndata_overview_fail(adata):
 
     # invalid datatype
     with pytest.raises(ValueError, match="All items in 'adatas'"):
-        sctoolbox.plotting.anndata_overview(
+        pl.anndata_overview(
             adatas=adatas_invalid,
             color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
             plots=["PCA"],
@@ -270,7 +279,7 @@ def test_anndata_overview_fail(adata):
 
     # Missing LISI score
     with pytest.raises(ValueError, match="No LISI scores found"):
-        sctoolbox.plotting.anndata_overview(
+        pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata_cp.obs.columns) + [adata_cp.var_names.tolist()[0]],
             plots=["LISI"],
@@ -287,7 +296,7 @@ def test_anndata_overview_fail_plots(adata):
     # invalid plots
     # no input
     with pytest.raises(ValueError, match="Invalid plot specified:"):
-        sctoolbox.plotting.anndata_overview(
+        pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
             plots=None,
@@ -298,7 +307,7 @@ def test_anndata_overview_fail_plots(adata):
 
     # wrong input
     with pytest.raises(ValueError, match="Invalid plot specified:"):
-        sctoolbox.plotting.anndata_overview(
+        pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
             plots=["PCA", "invalid"],
@@ -311,15 +320,16 @@ def test_anndata_overview_fail_plots(adata):
 def test_group_expression_boxplot(adata):
     """ Test if group_expression_boxplot returns a plot """
     gene_list = adata.var_names.tolist()[:10]
-    ax = sctoolbox.plotting.group_expression_boxplot(adata, gene_list, groupby="condition")
+    ax = pl.group_expression_boxplot(adata, gene_list, groupby="condition")
     ax_type = type(ax).__name__
 
-    assert ax_type.startswith("Axes")  # depending on matplotlib version, it can be either AxesSubplot or Axes
+    # depending on matplotlib version, it can be either AxesSubplot or Axes
+    assert ax_type.startswith("Axes")
 
 
 def test_boxplot(df):
     """ Test if Axes object is returned. """
-    ax = sctoolbox.plotting.boxplot(df)
+    ax = pl.boxplot(df)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -330,7 +340,7 @@ def test_plot_3D_UMAP(adata, color):
     """ Test if 3d plot is written to html """
 
     # Run 3d plotting
-    sctoolbox.plotting.plot_3D_UMAP(adata, color=color, save="3D_test")
+    pl.plot_3D_UMAP(adata, color=color, save="3D_test")
 
     # Assert creation of file
     assert os.path.isfile("3D_test.html")
@@ -340,14 +350,15 @@ def test_plot_3D_UMAP(adata, color):
 def test_invalid_color_plot_3D_UMAP(adata):
     """ Test if plot_3D_UMAP return KeyError if color paramater cannot be found in adata"""
     with pytest.raises(KeyError):
-        sctoolbox.plotting.plot_3D_UMAP(adata, color="invalid", save="3D_test")
+        pl.plot_3D_UMAP(adata, color="invalid", save="3D_test")
 
 
 def test_group_correlation(adata):
     """ Test if plot is written to pdf """
 
     # Run group correlation
-    sctoolbox.plotting.group_correlation(adata, groupby="condition", save="group_correlation.pdf")
+    pl.group_correlation(adata, groupby="condition",
+                         save="group_correlation.pdf")
 
     # Assert creation of file
     assert os.path.isfile("group_correlation.pdf")
@@ -357,7 +368,7 @@ def test_group_correlation(adata):
 @pytest.mark.parametrize("groupby", [None, "condition"])
 def test_n_cells_barplot(adata, groupby):
 
-    axarr = sctoolbox.plotting.n_cells_barplot(adata, "clustering", groupby=groupby)
+    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby)
 
     if groupby is None:
         assert len(axarr) == 1
@@ -371,8 +382,8 @@ def test_n_cells_barplot(adata, groupby):
 @pytest.mark.parametrize("style", ["violin", "boxplot", "bar"])
 def test_grouped_violin(adata, x, y, norm, style):
 
-    ax = sctoolbox.plotting.grouped_violin(adata, x=x, y=y, style=style,
-                                           groupby="condition", normalize=norm)
+    ax = pl.grouped_violin(adata, x=x, y=y, style=style,
+                           groupby="condition", normalize=norm)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -380,15 +391,15 @@ def test_grouped_violin(adata, x, y, norm, style):
 
 def test_grouped_violin_fail(adata):
     with pytest.raises(ValueError, match='is not a column in adata.obs or a gene in adata.var.index'):
-        sctoolbox.plotting.grouped_violin(adata, x="Invalid", y=None, groupby="condition")
+        pl.grouped_violin(adata, x="Invalid", y=None, groupby="condition")
     with pytest.raises(ValueError, match='x must be either a column in adata.obs or all genes in adata.var.index'):
-        sctoolbox.plotting.grouped_violin(adata, x=["clustering", "ENSMUSG00000102693"], y=None, groupby="condition")
+        pl.grouped_violin(adata, x=["clustering", "ENSMUSG00000102693"], y=None, groupby="condition")
     with pytest.raises(ValueError, match='was not found in either adata.obs or adata.var.index'):
-        sctoolbox.plotting.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
+        pl.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
     with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
-        sctoolbox.plotting.grouped_violin(adata, x="clustering", y=None, groupby="condition")
+        pl.grouped_violin(adata, x="clustering", y=None, groupby="condition")
     with pytest.raises(ValueError, match="Style 'Invalid' is not valid for this function."):
-        sctoolbox.plotting.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
+        pl.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
 
 
 @pytest.mark.parametrize("show_umap", [True, False])
@@ -398,9 +409,8 @@ def test_marker_gene_clustering(adata, show_umap):
     marker_dict = {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
                    "Celltype B": ['ENSMUSG00000102272']}
 
-    axes_list = sctoolbox.plotting.marker_gene_clustering(adata, "condition",
-                                                          marker_dict,
-                                                          show_umap=show_umap)
+    axes_list = pl.marker_gene_clustering(adata, "condition",
+                                          marker_dict, show_umap=show_umap)
     assert isinstance(axes_list, list)
     ax_type = type(axes_list[0]).__name__
     assert ax_type.startswith("Axes")
@@ -410,7 +420,7 @@ def test_marker_gene_clustering(adata, show_umap):
 def test_flip_embedding(adata, how):
     tmp = adata.copy()
     key = "X_umap"
-    sctoolbox.plotting.flip_embedding(adata, key=key, how=how)
+    pl.flip_embedding(adata, key=key, how=how)
 
     if how == "vertical":
         assert all(adata.obsm[key][:, 1] == -tmp.obsm[key][:, 1])
@@ -420,23 +430,23 @@ def test_flip_embedding(adata, how):
 
 def test_invalid_flip_embedding(adata):
     with pytest.raises(ValueError):
-        sctoolbox.plotting.flip_embedding(adata, how="invalid")
+        pl.flip_embedding(adata, how="invalid")
 
     with pytest.raises(KeyError):
-        sctoolbox.plotting.flip_embedding(adata, key="invalid")
+        pl.flip_embedding(adata, key="invalid")
 
 
 @pytest.mark.parametrize("n, res", [(500, 12), (1000, 8),
                                     (5000, 8), (10000, 3), (20000, 3)])
 def test_get_3d_dotsize(n, res):
-    assert sctoolbox.plotting._get_3d_dotsize(int(n)) == res
+    assert pl._get_3d_dotsize(int(n)) == res
 
 
 @pytest.mark.parametrize("marker", ["ENSMUSG00000103377",
                                     ["ENSMUSG00000103377", 'ENSMUSG00000104428']])
 def test_umap_marker_overview(adata, marker):
     """ Test umap_marker_overview """
-    axes_list = sctoolbox.plotting.umap_marker_overview(adata, marker)
+    axes_list = pl.umap_marker_overview(adata, marker)
 
     assert isinstance(axes_list, list)
     ax_type = type(axes_list[0]).__name__
@@ -448,7 +458,7 @@ def test_umap_marker_overview(adata, marker):
                                          (["condition", "clustering"], ["Condition", "Clustering"])])
 def test_umap_pub(adata, color, title):
     """ Test umap_pub plotting with different color and title parameter. """
-    axes_list = sctoolbox.plotting.umap_pub(adata, color=color, title=title)
+    axes_list = pl.umap_pub(adata, color=color, title=title)
 
     assert type(axes_list).__name__ == "list"
     ax_type = type(axes_list[0]).__name__
@@ -460,14 +470,14 @@ def test_umap_pub(adata, color, title):
 def test_invalid_parameter_len_umap_pub(adata, color, title):
     """ Test case if color and title are not the same lenght """
     with pytest.raises(ValueError):
-        sctoolbox.plotting.umap_pub(adata, color=color, title=title)
+        pl.umap_pub(adata, color=color, title=title)
 
 
 @pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
 def test_add_figure_title(adata, color):
     """ Test if function _add_figure_title runs without error when called correctly. """
     axes = sc.pl.umap(adata, color=color, show=False)
-    sctoolbox.plotting._add_figure_title(axes, "UMAP plots", fontsize=20)
+    pl._add_figure_title(axes, "UMAP plots", fontsize=20)
 
     assert True
 
@@ -482,7 +492,7 @@ def test_add_labels(adata):
                                              (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
 def test_scale_values(array, mini, maxi):
     """ Test that scaled values are in given range. """
-    result = sctoolbox.plotting._scale_values(array, mini, maxi)
+    result = pl._scale_values(array, mini, maxi)
 
     assert len(result) == len(array)
     if len(result.shape) == 1:
@@ -495,32 +505,32 @@ def test_scale_values(array, mini, maxi):
 def test_clustermap_dotplot():
     """ Test clustermap_dotplot. """
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
-    sctoolbox.plotting.clustermap_dotplot(table=table, x="bulk_labels",
-                                          y="index", color="n_genes",
-                                          size="n_counts", cmap="viridis",
-                                          vmin=0, vmax=10)
+    pl.clustermap_dotplot(table=table, x="bulk_labels",
+                          y="index", color="n_genes",
+                          size="n_counts", cmap="viridis",
+                          vmin=0, vmax=10)
     assert True
 
 
 def test_bidirectional_barplot(df_bidir_bar):
     """ Test bidirectoional_barplot. """
-    sctoolbox.plotting.bidirectional_barplot(df_bidir_bar, title="Title")
+    pl.bidirectional_barplot(df_bidir_bar, title="Title")
     assert True
 
 
 def test_bidirectional_barplot_fail(df):
     """ test bidorectional_barplot with invalid input. """
     with pytest.raises(ValueError):
-        sctoolbox.plotting.bidirectional_barplot(df)
+        pl.bidirectional_barplot(df)
 
 
 @pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
                                                     (False, "clustering", [0.5, 0.5, 0.5, 0.5])])
 def test_violinplot(adata, ylabel, color_by, hlines):
     """ Test violinplot. """
-    ax = sctoolbox.plotting.violinplot(adata.obs, "qc_float", color_by=color_by,
-                                       hlines=hlines, colors=None, ax=None,
-                                       title="Title", ylabel=ylabel)
+    ax = pl.violinplot(adata.obs, "qc_float", color_by=color_by,
+                       hlines=hlines, colors=None, ax=None,
+                       title="Title", ylabel=ylabel)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
 
@@ -528,24 +538,24 @@ def test_violinplot(adata, ylabel, color_by, hlines):
 def test_violinplot_fail(adata):
     """ Test invalid input for violinplot. """
     with pytest.raises(ValueError, match='not found in column names of table!'):
-        sctoolbox.plotting.violinplot(adata.obs, y="Invalid")
+        pl.violinplot(adata.obs, y="Invalid")
 
     with pytest.raises(ValueError, match='Color grouping'):
-        sctoolbox.plotting.violinplot(adata.obs, y="qc_float", color_by="Invalid")
+        pl.violinplot(adata.obs, y="qc_float", color_by="Invalid")
 
     with pytest.raises(ValueError, match='Parameter hlines has to be number or list'):
-        sctoolbox.plotting.violinplot(adata.obs, y="qc_float", hlines={"A": 0.5})
+        pl.violinplot(adata.obs, y="qc_float", hlines={"A": 0.5})
 
     with pytest.raises(ValueError, match='Invalid dict keys in hlines parameter.'):
-        sctoolbox.plotting.violinplot(adata.obs, y="qc_float",
-                                      color_by="clustering", hlines={"A": 0.5})
+        pl.violinplot(adata.obs, y="qc_float",
+                      color_by="clustering", hlines={"A": 0.5})
 
 
 def test_plot_venn(venn_dict):
     """ Test plot_venn with 3 and 2 groups. """
-    sctoolbox.plotting.plot_venn(venn_dict, title="Test")
+    pl.plot_venn(venn_dict, title="Test")
     venn_dict.pop("Group C")
-    sctoolbox.plotting.plot_venn(venn_dict, title="Test")
+    pl.plot_venn(venn_dict, title="Test")
     assert True
 
 
@@ -553,10 +563,10 @@ def test_plot_venn_fail(venn_dict):
     """ Test for invalid input. """
     venn_dict["Group D"] = [1, 2]
     with pytest.raises(ValueError):
-        sctoolbox.plotting.plot_venn(venn_dict)
+        pl.plot_venn(venn_dict)
 
     with pytest.raises(ValueError):
-        sctoolbox.plotting.plot_venn([1, 2, 3, 4, 5])
+        pl.plot_venn([1, 2, 3, 4, 5])
 
 
 def test_violin_HVF_distribution(adata):
@@ -564,14 +574,14 @@ def test_violin_HVF_distribution(adata):
     adata_HVF = adata.copy()
     adata_HVF.var['highly_variable'] = np.random.choice([True, False], size=adata_HVF.shape[1])
     adata_HVF.var['n_cells_by_counts'] = np.random.normal(size=adata_HVF.shape[1])
-    sctoolbox.plotting.violin_HVF_distribution(adata_HVF)
+    pl.violin_HVF_distribution(adata_HVF)
     assert True
 
 
 def test_violin_HVF_distribution_fail(adata):
     """ Test if input is invalid. """
     with pytest.raises(KeyError):
-        sctoolbox.plotting.violin_HVF_distribution(adata)
+        pl.violin_HVF_distribution(adata)
 
 
 def test_scatter_HVF_distribution(adata):
@@ -579,51 +589,75 @@ def test_scatter_HVF_distribution(adata):
     adata_HVF = adata.copy()
     adata_HVF.var['variability_score'] = np.random.normal(size=adata_HVF.shape[1])
     adata_HVF.var['n_cells'] = np.random.normal(size=adata_HVF.shape[1])
-    sctoolbox.plotting.scatter_HVF_distribution(adata_HVF)
+    pl.scatter_HVF_distribution(adata_HVF)
     assert True
 
 
 def test_scatter_HVF_distribution_fail(adata):
     """ Test if input is invalid. """
     with pytest.raises(KeyError):
-        sctoolbox.plotting.scatter_HVF_distribution(adata)
+        pl.scatter_HVF_distribution(adata)
 
 
-@pytest.mark.parametrize("style,dendrogram,genes,key,swap_axes",
-                         [("dots", True, ['ENSMUSG00000102851',
-                                          'ENSMUSG00000102272',
-                                          'ENSMUSG00000101571'], None, True),
-                          ("heatmap", False, None, 'rank_genes_groups', False)])
+@pytest.mark.parametrize("dendrogram,genes,key,swap_axes",
+                         [(True, ['ENSMUSG00000102851',
+                                  'ENSMUSG00000102272',
+                                  'ENSMUSG00000101571'], None, True),
+                          (False, None, 'rank_genes_groups', False)])
+@pytest.mark.parametrize("style", ["dots", "heatmap"])
 def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
     """ Test rank_genes_plot for ranked genes and gene lists. """
     # Gene list
-    d = sctoolbox.plotting.rank_genes_plot(adata, groupby="clustering",
-                                           genes=genes, key=key,
-                                           style=style, title="Test",
-                                           dendrogram=dendrogram,
-                                           swap_axes=swap_axes)
+    d = pl.rank_genes_plot(adata, groupby="clustering",
+                           genes=genes, key=key,
+                           style=style, title="Test",
+                           dendrogram=dendrogram,
+                           swap_axes=swap_axes)
     assert isinstance(d, dict)
 
 
 def test_rank_genes_plot_fail(adata):
     """ Test rank_genes_plot for invalid input. """
     with pytest.raises(ValueError, match='style must be one of'):
-        sctoolbox.plotting.rank_genes_plot(adata, groupby="clustering",
-                                           key='rank_genes_groups',
-                                           style="Invalid")
+        pl.rank_genes_plot(adata, groupby="clustering",
+                           key='rank_genes_groups',
+                           style="Invalid")
     with pytest.raises(ValueError, match='Only one of genes or key can be specified.'):
-        sctoolbox.plotting.rank_genes_plot(adata, groupby="clustering",
-                                           key='rank_genes_groups',
-                                           genes=["A", "B", "C"])
+        pl.rank_genes_plot(adata, groupby="clustering",
+                           key='rank_genes_groups',
+                           genes=["A", "B", "C"])
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
-        sctoolbox.plotting.rank_genes_plot(adata, groupby=None,
-                                           genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
+        pl.rank_genes_plot(adata, groupby=None,
+                           genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
 
 
 # @pytest.mark.parametrize("groupby", [None, "condition"]) Seems to be broken
 @pytest.mark.parametrize("title", [None, "Title"])
 def test_gene_expression_heatmap(adata, title):
     """ Test gene_expression_heatmap. """
-    g = sctoolbox.plotting.gene_expression_heatmap(adata, genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'],
-                                                   cluster_column="clustering", title=title)
+    g = pl.gene_expression_heatmap(adata,
+                                   genes=['ENSMUSG00000102851',
+                                          'ENSMUSG00000102272'],
+                                   cluster_column="clustering", title=title)
     assert type(g).__name__ == "ClusterGrid"
+
+
+@pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
+                                              'ENSMUSG00000102272']])
+@pytest.mark.parametrize("figsize", [None, (10, 10)])
+def test_group_heatmap(adata, gene_list, figsize):
+    """ Test group heatmap. """
+    pl.group_heatmap(adata, "clustering", gene_list=gene_list,
+                     figsize=figsize)
+
+
+def test_plot_differential_genes(pairwise_ranked_genes):
+    ax = pl.plot_differential_genes(pairwise_ranked_genes)
+    ax_type = type(ax).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_plot_differential_genes_fail(adata):
+    ranked_genes = tool.pairwise_rank_genes(adata, groupby="clustering")
+    with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
+        pl.plot_differential_genes(ranked_genes)

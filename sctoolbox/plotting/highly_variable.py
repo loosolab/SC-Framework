@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import sctoolbox.utils as utils 
+import sctoolbox.utils as utils
 
 
 def violin_HVF_distribution(adata):
