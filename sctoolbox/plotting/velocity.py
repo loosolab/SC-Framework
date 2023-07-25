@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import _save_figure
 
 
 ####################################################################################################
@@ -103,6 +104,6 @@ def pseudotime_heatmap(adata, genes,
     ax.text(n_cells / 2, n_genes + 1.2, f"Pseudotime (n={n_cells:,} cells)", transform=ax.transData, ha="center", va="top")
 
     # Save figure
-    utils.save_figure(save)
+    _save_figure(save)
 
     return ax
