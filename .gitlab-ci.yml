@@ -168,7 +168,8 @@ notebooks:
   #  - gwdg
   #  - gwdg-shared
   script:
-    - conda install --override-channels -c conda-forge mamba 'python_abi=*=*cp*'
+    - conda install 'mamba<=1.4.5' -n base -c conda-forge
+    - conda update mamba -n base -c conda-forge
     - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
     - conda init bash
     - source ~/.bashrc
