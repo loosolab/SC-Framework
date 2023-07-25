@@ -6,6 +6,7 @@ import tempfile
 import shutil
 import pandas as pd
 import numpy as np
+import sctoolbox.tools as tool
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
@@ -35,6 +36,14 @@ def df():
     """Create and return a pandas dataframe"""
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
+
+
+@pytest.fixture
+def pairwise_ranked_genes():
+    return pd.DataFrame(data={"1/2_group": ["C1", "C1", "C2", "C2"],
+                              "1/3_group": ["C1", "NS", "C2", "C2"],
+                              "2/3_group": ["C1", "C1", "NS", "C2"]},
+                        index=["GeneA", "GeneB", "GeneC", "GeneD"])
 
 
 @pytest.fixture
@@ -640,3 +649,15 @@ def test_group_heatmap(adata, gene_list, figsize):
     """ Test group heatmap. """
     pl.group_heatmap(adata, "clustering", gene_list=gene_list,
                      figsize=figsize)
+
+
+def test_plot_differential_genes(pairwise_ranked_genes):
+    ax = pl.plot_differential_genes(pairwise_ranked_genes)
+    ax_type = type(ax).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_plot_differential_genes_fail(adata):
+    ranked_genes = tool.pairwise_rank_genes(adata, groupby="clustering")
+    with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
+        pl.plot_differential_genes(ranked_genes)
