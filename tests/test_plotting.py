@@ -476,11 +476,19 @@ def test_invalid_parameter_len_umap_pub(adata, color, title):
 
 
 @pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
-def test_add_figure_title(adata, color):
-    """ Test if function _add_figure_title runs without error when called correctly. """
+def test_add_figure_title_axis(adata, color):
+    """ Test if function _add_figure_title runs with axis object(s) as input """
     axes = sc.pl.umap(adata, color=color, show=False)
     pl._add_figure_title(axes, "UMAP plots", fontsize=20)
+    assert True
 
+
+def test_add_figure_title_axis_dict(adata):
+    """ Test if function _add_figure_title runs with axis dict as input """
+    markers = ['ENSMUSG00000103377', 'ENSMUSG00000102851']
+    axes = sc.pl.dotplot(adata, markers, groupby='condition',
+                         dendrogram=True, show=False)
+    pl._add_figure_title(axes, "UMAP plots", fontsize=20)
     assert True
 
 
