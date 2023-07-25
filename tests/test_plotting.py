@@ -7,6 +7,7 @@ import shutil
 import pandas as pd
 import numpy as np
 import sctoolbox.tools as tool
+import seaborn as sns
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
@@ -488,7 +489,14 @@ def test_add_figure_title_axis_dict(adata):
     markers = ['ENSMUSG00000103377', 'ENSMUSG00000102851']
     axes = sc.pl.dotplot(adata, markers, groupby='condition',
                          dendrogram=True, show=False)
-    pl._add_figure_title(axes, "UMAP plots", fontsize=20)
+    pl._add_figure_title(axes, "Dotplot", fontsize=20)
+    assert True
+
+
+def test_add_figure_title_axis_clustermap(adata):
+    """ Test if function _add_figure_title runs with clustermap as input """
+    clustermap = sns.clustermap(adata.obs[['LISI_score_pca', 'qc_float']])
+    pl._add_figure_title(clustermap, "Heatmap", fontsize=20)
     assert True
 
 
