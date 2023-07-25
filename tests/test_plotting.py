@@ -366,9 +366,11 @@ def test_group_correlation(adata):
 
 
 @pytest.mark.parametrize("groupby", [None, "condition"])
-def test_n_cells_barplot(adata, groupby):
+@pytest.mark.parametrize("add_labels", [True, False])
+def test_n_cells_barplot(adata, groupby, add_labels):
 
-    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby)
+    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby,
+                               add_labels=add_labels)
 
     if groupby is None:
         assert len(axarr) == 1
