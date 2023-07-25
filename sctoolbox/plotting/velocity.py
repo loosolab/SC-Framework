@@ -80,7 +80,7 @@ def pseudotime_heatmap(adata, genes,
 
     # Setup figure
     fig, axarr = plt.subplots(nrows, 1, sharex=True, figsize=figsize)  # , height_ratios=(1, len(mat)))
-    axarr = [axarr] if type(axarr).__name__.startswith("AxesSubplot") else axarr
+    axarr = [axarr] if type(axarr).__name__.startswith("Axes") else axarr
     i = 0
 
     parameters = {"center": 0,
