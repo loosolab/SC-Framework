@@ -524,6 +524,7 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
     g : seaborn.clustermap
         The seaborn clustermap object
     """
+    _, ax = plt.subplots(figsize=figsize)
 
     # Obtain pseudobulk
     gene_table = utils.pseudobulk_table(adata, groupby)
@@ -536,7 +537,9 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
     gene_table = utils.table_zscore(gene_table)
 
     # Plot heatmap
-    g = sns.heatmap(gene_table, figsize=figsize, xticklabels=True, yticklabels=True, cmap="RdBu_r", center=0)  # center=0, vmin=-2, vmax=2)
+    g = sns.heatmap(gene_table, xticklabels=True,
+                    yticklabels=True, cmap="RdBu_r",
+                    center=0, ax=ax)  # center=0, vmin=-2, vmax=2)
 
     _save_figure(save)
 
