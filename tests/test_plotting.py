@@ -664,3 +664,16 @@ def test_plot_differential_genes_fail(adata):
     ranked_genes = tool.pairwise_rank_genes(adata, groupby="clustering")
     with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
         pl.plot_differential_genes(ranked_genes)
+
+
+@pytest.mark.parametrize("sortby", [None, "condition"])
+@pytest.mark.parametrize("title", [None, "condition"])
+@pytest.mark.parametrize("figsize", [None, (10, 10)])
+@pytest.mark.parametrize("layer", [None, "spliced"])
+def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
+    ax = pl.pseudotime_heatmap(adata, ['ENSMUSG00000103377',
+                                       'ENSMUSG00000102851'],
+                               sortby=sortby, title=title,
+                               figsize=figsize, layer=layer)
+    ax_type = type(ax).__name__
+    assert ax_type.startswith("Axes")
