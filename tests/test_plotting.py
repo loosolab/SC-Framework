@@ -484,9 +484,13 @@ def test_add_figure_title(adata, color):
     assert True
 
 
-def test_add_labels(adata):
-    # TODO
-    assert True
+@pytest.mark.parametrize("label", [None, "label"])
+def test_add_labels(df, label):
+    if label:
+        df["label"] = ["A", "B", "C", "D", "E"]
+    texts = pl._add_labels(df, x="col1", y="col2", label_col=label)
+    assert isinstance(texts, list)
+    assert type(texts[0]).__name__ == "Annotation"
 
 
 @pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
