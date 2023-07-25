@@ -18,7 +18,33 @@ def pseudotime_heatmap(adata, genes,
                        title=None,
                        save=None,
                        **kwargs):
-    """ Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs. """
+    """
+    Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
+
+    Parameter
+    ---------
+    adata : anndata.AnnData
+        Anndata object
+    genes : list
+        List of genes for heatmap.
+    sortby : str, default None
+        Sort genes by condition
+    layer : str, default None
+        Use different layer of anndata object.
+    figsize : tuple, default None
+        Tuple of integers setting the heatmap figsize.
+    shrink_cbar : float, default 0.5
+        Shrink color bar by set ratio.
+    title : str, default None
+        Set title for plot.
+    save : str, default None
+        Path and name of file to be saved.
+
+    Returns
+    --------
+    ax : matplotlib.Axes
+        Axes object containing the plot.
+    """
 
     adata_sub = adata[:, genes].copy()
 
