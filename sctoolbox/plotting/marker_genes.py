@@ -362,6 +362,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
 
 def gene_expression_heatmap(adata, genes, cluster_column,
+                            gene_name_column=None,
                             title=None,
                             groupby=None,
                             row_cluster=True,
@@ -371,16 +372,18 @@ def gene_expression_heatmap(adata, genes, cluster_column,
                             figsize=None,
                             save=None,
                             **kwargs):
-    """ Plot a heatmap of gene expression.
+    """ Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     genes : `list`
-        List of genes to plot.
+        List of genes to plot. Must match names in `adata.var.index`.
     cluster_column : `str`
         Key in `adata.obs` for which to cluster the x-axis.
+    gene_name_column : `str`, optional (default: `None`)
+        Column in `adata.var` for which to use for gene row names. Default is to use the index.
     title : `str`, optional (default: `None`)
         Title of the plot.
     groupby : `str`, optional (default: `None`)
@@ -403,33 +406,53 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     .. plot::
         :context: close-figs
 
-        genes = adata.var.index[:10]
-        pl.gene_expression_heatmap(adata, genes, cluster_column="bulk_labels")
+        adata.obs["samples"] = np.random.choice(["CTRL1", "CTRL2", "CTRL3", "CTRL4", "TREAT1", "TREAT2", "TREAT3", "TREAT4"], size=adata.shape[0])
+        adata.obs["condition"] = adata.obs["samples"].str.extract("([A-Z]+)")
+
+        genes = adata.var.index[:15]
+        pl.gene_expression_heatmap(adata, genes, cluster_column="samples",
+                                   groupby="condition",
+                                   gene_name_column="gene",
+                                   title="Gene expression",
+                                   col_cluster=True,
+                                   show_col_dendrogram=True,
+                                   colors_ratio=0.03)
     """
 
     adata = adata[:, genes]  # Subset to genes
 
+    # Decide which combination to cluster by
+    groupby_col = "_cluster_by"
+    if groupby is not None:
+        adata.obs[groupby_col] = list(zip(adata.obs[cluster_column], adata.obs[groupby]))
+    else:
+        adata.obs[groupby_col] = [(s, ) for s in adata.obs[cluster_column]]
+
     # Collect counts for each gene per sample
-    counts = utils.pseudobulk_table(adata, groupby=cluster_column)
+    counts = utils.pseudobulk_table(adata, groupby=groupby_col)
     counts_z = counts.T.apply(zscore).T
 
-    # color dict for groupby
+    # Color dict for groupby
     if groupby is not None:
-        groups = adata.obs[groupby].cat.categories
-        colors = sns.color_palette()[:len(groups)]
-        color_dict = dict(zip(groups, colors))
+        groups = adata.obs[groupby].unique().tolist()
+        color_list = sns.color_palette()[:len(groups)]
+        color_dict = dict(zip(groups, color_list))
 
-        # samples = counts_z.columns.tolist()
-        sample2group = adata.obs[[cluster_column, groupby]].drop_duplicates()
-        samples = sample2group[cluster_column].tolist()
-        groups = sample2group[groupby].tolist()
-        colors = [color_dict[group] for group in groups]
-
-        sample_info = pd.DataFrame([samples, groups, colors], index=["sample", "group", "color"]).T.set_index("sample")
-        col_colors = sample_info["color"]
+        # Get color per column
+        colors = [color_dict[col[-1]] for col in counts_z.columns]
+        col_colors = pd.Series(index=counts_z.columns, data=colors)
 
     else:
         col_colors = None
+
+    # Translation dict for row names
+    if gene_name_column is not None:
+        try:
+            row_name_dict = dict(zip(adata.var.index, adata.var[gene_name_column]))
+        except KeyError:
+            raise KeyError(f"Column '{gene_name_column}' not found in adata.var")
+    else:
+        row_name_dict = {}
 
     nrows, ncols = counts_z.shape
     figsize = (ncols / 2, nrows / 3) if figsize is None else figsize  # (width, height)
@@ -446,12 +469,14 @@ def gene_expression_heatmap(adata, genes, cluster_column,
                        col_colors=col_colors,
                        **parameters)
 
-    g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right")
+    yticklabes = [row_name_dict.get(s, s) for s in g.data2d.index]
+    g.ax_heatmap.set_yticklabels(yticklabes)
+
+    xticklabels = [c[0] for c in g.data2d.columns]  # first index contains the cluster_column
+    g.ax_heatmap.set_xticklabels(xticklabels, rotation=45, ha="right")
     g.ax_heatmap.tick_params(left=True, labelleft=True, right=False, labelright=False)
     g.ax_heatmap.set_ylabel("")
     heatmap_bbox = g.ax_heatmap.get_position()
-    heatmap_width = heatmap_bbox.x1 - heatmap_bbox.x0
-    # heat_height = heatmap_bbox.y1 - heatmap_bbox.y0
 
     if show_row_dendrogram is False:
         g.ax_row_dendrogram.set_visible(False)
@@ -463,7 +488,14 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     # g.ax_col_dendrogram.invert_xaxis()
     # g.ax_heatmap.invert_xaxis()
 
-    # Add color legend for groupby
+    # Move colorbar
+    cbar_ax = g.ax_cbar
+    cbar_width = heatmap_bbox.width / ncols  # width of 1 column
+    cbar_height = min(heatmap_bbox.height, heatmap_bbox.height / nrows * 5)  # 5 rows high, but ensure colorbar is not taller than heatmap
+    cbar_ax.set_position([heatmap_bbox.x1 + cbar_width, heatmap_bbox.y0, cbar_width, cbar_height])
+    cbar_ax.set_ylabel("Mean expr.\nz-score")
+
+    # Add color legend for groupby above cbar
     if groupby is not None:
 
         g.ax_col_colors.tick_params(right=False, labelright=False)
@@ -471,30 +503,23 @@ def gene_expression_heatmap(adata, genes, cluster_column,
         handles = [Patch(facecolor=color_dict[name]) for name in color_dict]
         legend = plt.legend(handles, color_dict,
                             title=groupby,
-                            bbox_to_anchor=(1, 1),
-                            bbox_transform=g.ax_heatmap.transAxes,
-                            loc='upper left',
+                            bbox_to_anchor=(0, 1.25),  # 1.25 to make sure there is space for cbar label
+                            bbox_transform=cbar_ax.transAxes,
+                            loc='lower left',
                             handlelength=1, handleheight=1,
                             frameon=False,
+                            borderpad=0
                             )
         legend._legend_box.align = "left"
-
-    # Move colorbar
-    cbar_ax = g.ax_cbar
-    bbox = cbar_ax.get_position()
-    left, bottom, width, height = bbox._points.flatten()
-    cbar_ax.set_position([heatmap_bbox.x1 + heatmap_width / ncols, heatmap_bbox.y0, width, height / nrows * 10])
-    cbar_ax.set_ylabel("Mean expr.\nz-score")
 
     # Set title on top of heatmap
     if title is not None:
         if g.ax_col_dendrogram.get_visible():
-            g.ax_col_dendrogram.set_title(title)
+            g.ax_col_dendrogram.set_title(title, fontsize=13)
         else:
             g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space beetween title and heatmap
                               transform=g.ax_heatmap.transData, ha="center", va="bottom",
-                              fontsize=16)
-            # g.ax_heatmap.set_title(title, y=1.2)
+                              fontsize=13)
 
     _save_figure(save)
 
