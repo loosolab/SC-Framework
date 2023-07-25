@@ -474,19 +474,6 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-def plot_obs_violin(adata, obs_cols):
-    """
-    plot violin plots of the obs columns
-    :param adata:
-    :param obs_cols:
-    :return:
-    """
-
-    for col in obs_cols:
-        sc.pl.violin(adata, col, show=False)
-
-    plt.show()
-
 
 def boxplot(dt, show_median=True, ax=None):
     """
