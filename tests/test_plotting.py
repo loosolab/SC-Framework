@@ -8,6 +8,9 @@ import pandas as pd
 import numpy as np
 import sctoolbox.tools as tool
 import seaborn as sns
+import ipywidgets as widgets
+import functools
+import matplotlib.pyplot as plt
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
@@ -71,6 +74,21 @@ def tmp_file():
 
     # clean up directory and contents
     shutil.rmtree(tmpdir)
+
+
+@pytest.fixture
+def slider():
+    return widgets.FloatSlider(value=7.5, min=0, max=10.0, step=0.1)
+
+
+@pytest.fixture
+def slider_list(slider):
+    return [slider for _ in range(2)]
+
+
+@pytest.fixture
+def checkbox():
+    return widgets.Checkbox()
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -697,3 +715,32 @@ def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
                                figsize=figsize, layer=layer)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
+
+
+def test_link_sliders(slider_list):
+    linkage_list = pl._link_sliders(slider_list)
+    assert isinstance(linkage_list, list)
+    assert type(linkage_list[0]).__name__ == 'link'
+
+
+@pytest.mark.parametrize("global_threshold", [True, False])
+def test_toggle_linkage(checkbox, slider_list, global_threshold):
+    """ Test if toggle_linkage runs without error. """
+    column = "Test"
+    linkage_dict = dict()
+    linkage_dict[column] = pl._link_sliders(slider_list) if global_threshold is True else None
+    checkbox.observe(functools.partial(pl._toggle_linkage,
+                                       linkage_dict=linkage_dict,
+                                       slider_list=slider_list,
+                                       key=column), names=["value"])
+    assert True
+
+
+def test_update_threshold(slider):
+    """ Test if update_threshold runs wihtout error. """
+    fig, _ = plt.subplots()
+    slider.observe(functools.partial(pl._update_thresholds, fig=fig,
+                                     min_line=1, min_shade=1,
+                                     max_line=1, max_shade=1),
+                   names=["value"])
+    assert True
