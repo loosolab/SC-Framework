@@ -4,6 +4,7 @@ import scanpy as sc
 import multiprocessing as mp
 import warnings
 import anndata
+import pkg_resources
 from pathlib import Path
 from importlib.resources import files
 from sklearn.mixture import GaussianMixture
@@ -133,7 +134,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         species = species.lower()
 
         # get path of directory where cell cycles gene lists are saved
-        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
+        genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
         # check if given species is available
         available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
