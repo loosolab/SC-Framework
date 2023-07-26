@@ -5,6 +5,7 @@ import multiprocessing as mp
 import warnings
 import anndata
 import pkg_resources
+import glob
 from pathlib import Path
 from importlib.resources import files
 from sklearn.mixture import GaussianMixture
@@ -137,7 +138,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
         # check if given species is available
-        available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
+        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
         if species not in available_species:
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
