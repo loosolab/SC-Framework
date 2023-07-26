@@ -171,7 +171,7 @@ notebooks:
     - micromamba env create -f sctoolbox_env.yml #mamba is faster at creating envs than conda
     - eval "$(micromamba shell hook --shell bash)" # initialize micromamba in the current shell
     - micromamba activate sctoolbox
-    - micromamba install -conda-forge git # needed for sctoolbox install
+    - micromamba install -c conda-forge git # needed for sctoolbox install
     - pip install papermill
     - pip install .[all]
     - python -m ipykernel install --user --name sctoolbox
