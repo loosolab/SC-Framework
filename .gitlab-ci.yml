@@ -169,6 +169,7 @@ notebooks:
   #  - gwdg-shared
   script:
     - micromamba env create -f sctoolbox_env.yml #mamba is faster at creating envs than conda
+    - micromamba shell hook --shell bash # initialize micromamba in the current shell
     - micromamba activate sctoolbox
     - pip install papermill
     - pip install .[all]
