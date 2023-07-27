@@ -97,34 +97,26 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     if not inplace:
         adata = adata.copy()
 
-    # if two lists are given, check if they are lists or paths
-    if s_genes is not None:
-        if isinstance(s_genes, np.ndarray):
-            s_genes = list(s_genes)
-        # check if s_genes is neither a list nor a path
-        if not isinstance(s_genes, str) and not isinstance(s_genes, list):
-            raise ValueError("Please provide a list of genes or a path to a list of genes!")
-        # check if s_genes is a file
-        if isinstance(s_genes, str):
-            # check if file exists
-            if Path(s_genes).is_file():
-                s_genes = utils.read_list_file(s_genes)
-            else:
-                raise FileNotFoundError(f'The list {s_genes} was not found!')
+    # Check if the given s_genes/g2m_genes are lists/paths/None
+    genes_dict = {"s_genes": s_genes, "g2m_genes": g2m_genes}
+    for key, genes in genes_dict.items():
+        if genes is not None:
+            # check if s_genes is a file or list
+            if isinstance(genes, str):
+                if Path(genes).is_file():  # check if file exists
+                    genes = utils.read_list_file(genes)
+                else:
+                    raise FileNotFoundError(f'The file {genes} was not found!')
+            elif isinstance(s_genes, np.ndarray):
+                genes = list(genes)
+            elif not isinstance(genes, list):
+                raise ValueError("Please provide a list of genes or a path to a list of genes to s_genes/g2m_genes! Type of {key} is {type(genes)}")
 
-    if g2m_genes is not None:
-        if isinstance(g2m_genes, np.ndarray):
-            g2m_genes = list(g2m_genes)
-        # check if g2m_genes is neither a list nor a path
-        if not isinstance(g2m_genes, str) and not isinstance(g2m_genes, list):
-            raise ValueError("Please provide a list of genes or a path to a list of genes!")
-        # check if g2m_genes is a file
-        if isinstance(g2m_genes, str):
-            # check if file exists
-            if Path(g2m_genes).is_file():
-                g2m_genes = utils.read_list_file(g2m_genes)
-            else:
-                raise FileNotFoundError(f'The list {g2m_genes} was not found!')
+        # Save genes
+        if key == "s_genes":
+            s_genes = genes
+        elif key == "g2m_genes":
+            g2m_genes = genes
 
     # if two lists are given, use both and ignore species
     if s_genes is not None and g2m_genes is not None:
@@ -141,10 +133,13 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
         if species not in available_species:
+            print(genelist_dir)
+            print(available_files)
+            print(glob.glob(genelist_dir + "*"))
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
         # get cellcylce genes lists
-        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
+        path_cellcycle_genes = genelist_dir + f"{species}_cellcycle_genes.txt"
         cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
                                        sep="\t", names=['gene', 'phase']).set_index('gene')
 
@@ -172,9 +167,6 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     adata.obs['S_score'] = sdata.obs['S_score']
     adata.obs['G2M_score'] = sdata.obs['G2M_score']
     adata.obs['phase'] = sdata.obs['phase']
-
-    # Add phase to uns
-    utils.add_uns_info(adata, "obs_metrics", "phase", how="append")
 
     if not inplace:
         return adata
@@ -269,9 +261,6 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     if plot is True:
         sc.external.pl.scrublet_score_distribution(adata)
 
-    # Save "doublet_score" as a metric for plotting obs
-    utils.add_uns_info(adata, "obs_metrics", "doublet_score", how="append")
-
     # Return adata (or None if inplace)
     if inplace is False:
         return adata
@@ -328,6 +317,8 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         Threshold for the minimum fraction of cells expressing the gene for the group to be considered "Female".
     plot : bool, default True
         Whether to plot the distribution of gene expression per group.
+    save : str, default None
+        If provided, the plot will be saved to this path.
 
     Returns
     -------
@@ -370,7 +361,6 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     if "predicted_sex" in adata.obs.columns:
         adata.obs.drop(columns=["predicted_sex"], inplace=True)
     adata.obs = adata.obs.merge(df, left_on=groupby, right_index=True, how="left")
-    adata.obs[groupby] = adata.obs[groupby].astype("category")  # ensure that groupby is a category
 
     # Plot overview if chosen
     if plot:
@@ -404,9 +394,6 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         axarr[1].set_title("Prediction of female groups")
 
         _save_figure(save)
-
-    # Save information to adata.uns
-    utils.add_uns_info(adata, "obs_metrics", "predicted_sex", how="append")
 
 
 ###############################################################################
@@ -853,9 +840,6 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
                 adata = adata[:, included]  # filter on var
 
         print(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
-
-    # Save information to adata.uns
-    utils.add_uns_info(adata, ["qc_thresholds", which], thresholds)   # saves dict to adata.uns["qc_thresholds"]["obs"] or adata.uns["qc_thresholds"]["var"]
 
     if inplace is False:
         return adata
