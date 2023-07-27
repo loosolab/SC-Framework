@@ -3,6 +3,7 @@
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Fix "shell not found" error for CI pipeline (#129)
 - Pinned scikit-learn to version <=1.2.2 (#128)
+- Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
 
 0.1.1.2 (05-06-2023)
 --------------------
