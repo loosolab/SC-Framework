@@ -20,6 +20,7 @@ def adata():
     adata = sc.read_h5ad(f)
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
+    adata.obs["cat"] = adata.obs["condition"].astype("category")
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
 
@@ -744,3 +745,11 @@ def test_update_threshold(slider):
                                      max_line=1, max_shade=1),
                    names=["value"])
     assert True
+
+
+@pytest.mark.parametrize("groupby", ["condition", "cat"])
+def test_quality_violin(adata, groupby):
+    columns = ['qc_float', 'LISI_score_pca']
+    figure, slider = pl.quality_violin(adata, columns=columns, groupby=groupby)
+    assert type(figure).__name__ == "Figure"
+    assert isinstance(slider, dict)
