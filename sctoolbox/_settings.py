@@ -171,16 +171,17 @@ class SctoolboxConfig(object):
             if os.path.exists(log_file):
                 if os.access(log_file, os.W_OK):
                     if overwrite_log:
-                        self._logger.warning("Log file already exists. The file will be overwritten since 'overwrite_log' is set to True.")
+                        self._logger.warning(f"Log file '{log_file}' already exists. The file will be overwritten since 'overwrite_log' is set to True.")
                     else:
-                        self._logger.warning("Log file already exists. Logging messages will be appended to file. Set overwrite_log=True to overwrite the file.")
+                        self._logger.warning(f"Log file '{log_file}' already exists. Logging messages will be appended to file. Set overwrite_log=True to overwrite the file.")
                 else:
-                    raise ValueError("Log file already exists but cannot be written to. Please choose a different file name.")
+                    raise ValueError(f"Log file '{log_file}' already exists but cannot be written to. Please choose a different file name.")
             else:
                 parent_dir = os.path.dirname(log_file)
                 parent_dir = "." if parent_dir == "" else parent_dir  # if log_file is in current directory, parent_dir is empty
+                self._create_dir(parent_dir)  # create parent directory if it does not exist
                 if not os.access(parent_dir, os.W_OK):
-                    raise ValueError("Log file cannot be created. Please check that the directory exists and is writable.")
+                    raise ValueError(f"Log file '{log_file}' cannot be created. Please check that the directory exists and is writable.")
 
             mode = "w" if overwrite_log else "a"
             F = logging.FileHandler(log_file, mode=mode)

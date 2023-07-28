@@ -38,9 +38,9 @@ def adata():
 
     sc.tl.umap(adata, n_components=3)
     sc.tl.tsne(adata)
-    #sc.tl.pca(adata)
+    # sc.tl.pca(adata)
     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    #sc.tl.dendrogram(adata, groupby='clustering')
+    # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
 
