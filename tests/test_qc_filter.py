@@ -6,6 +6,7 @@ import numpy as np
 import os
 import tempfile
 
+
 # --------------------------- Fixtures ------------------------------ #
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
