@@ -27,6 +27,19 @@ def adata():
 
 
 @pytest.fixture
+def adata_score(adata):
+    """ Prepare adata for scoring/ cell cycle test. """
+
+    # set gene names as index instead of ensemble ids
+    adata.var.reset_index(inplace=True)
+    adata.var['gene'] = adata.var['gene'].astype('str')
+    adata.var.set_index('gene', inplace=True)
+    adata.var_names_make_unique()
+
+    return adata
+
+
+@pytest.fixture
 def gene_set(adata_score):
     return adata_score.var.index.to_list()[:50]
 
