@@ -90,6 +90,22 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
         n_fragments is the number of fragments overlapping the TSS.
 
     """
+    tempfiles = []
+    # Check if fragments are sorted
+    if utils._bed_is_sorted(fragments):
+        logger.info("fragments are sorted")
+    else:
+        logger.info("sorting fragments")
+        # build path to sorted fragments
+        base_name = os.path.basename(fragments)
+        file_name = os.path.splitext(base_name)[0]
+        sorted_bedfile = os.path.join(os.path.split(fragments)[0], (file_name + '_sorted.bed'))
+        tempfiles.append(sorted_bedfile)
+        # sort fragments
+        utils._sort_bed(fragments, sorted_bedfile)
+        # sorted fragments to be used for overlap
+        fragments = sorted_bedfile
+
     # Overlap two bedfiles (FRAGMENTS / TSS_sites)
     logger.info("overlapping fragments with TSS")
     bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
@@ -99,13 +115,6 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
 
     # Read in overlap file
     logger.info("opening overlap file")
-    #overlap_list = []
-    #with open(overlap, 'rb') as file:
-    #    for row in file:
-    #        row = row.decode("utf-8")
-    #        row = row.split('\t')
-    #        line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
-    #        overlap_list.append(line)
 
     overlap_list = utils._read_bedfile(overlap)
 
@@ -113,12 +122,6 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
     tSSe_cells = {}
     # initialize counter for overlap_list
     k = 0
-
-    # fragments:
-    # 1: chr, 2: start, 3:stop, 4:barcode, 5:n
-
-    # tss:
-    # 1: chr, 2: start, 3:stop
 
 
     # Aggregate Overlap
@@ -156,7 +159,7 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
                 tSS_agg[start:stop] = n_fragments
                 tSSe_cells[fragment[3]] = [tSS_agg, n_fragments]
 
-    return tSSe_cells
+    return tSSe_cells, tempfiles
 
 
 def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100):
@@ -282,11 +285,13 @@ def add_tsse_score(adata,
     tmp_files.append(overlap)
 
     # write custom TSS bed file
-    tss_list, tmp_files_tss = write_TSS_bed(gtf, custom_TSS, negativ_shift=negativ_shift, positiv_shift=positiv_shift, temp_dir=temp_dir)
+    tss_list, temp = write_TSS_bed(gtf, custom_TSS, negativ_shift=negativ_shift, positiv_shift=positiv_shift, temp_dir=temp_dir)
     # add temporary file paths to list
-    tmp_files.extend(tmp_files_tss)
+    tmp_files.extend(temp)
     # overlap fragments with custom TSS
-    tSSe_cells = overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list)
+    tSSe_cells, temp = overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list)
+    # add temporary file paths to list
+    tmp_files.extend(temp)
     # calculate per base tSSe
     tSSe_df = pd.DataFrame.from_dict(tSSe_cells, orient='index', columns=['TSS_agg', 'total_ov'])
     # calculate per base tSSe
@@ -294,9 +299,9 @@ def add_tsse_score(adata,
     # calculate global tSSe score
     tsse_score = global_tsse_score(per_base_tsse, negativ_shift, edge_size=edge_size_per_base)
     # add tSSe score to adata
-    tSSe_df['TSSe_score'] = tsse_score
+    tSSe_df['tsse_score'] = tsse_score
     # add tSSe score to adata
-    adata.obs = adata.obs.join(tSSe_df['TSSe_score'])
+    adata.obs = adata.obs.join(tSSe_df['tsse_score'])
 
     # remove temporary files
     if not keep_tmp:

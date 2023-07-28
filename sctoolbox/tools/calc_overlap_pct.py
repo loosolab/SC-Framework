@@ -106,8 +106,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     logger.info('Finished creating fragments file. Now sorting...')
 
     # sort
-    sort_cmd = f'sort -k1,1 -k2,2n {out_unsorted} > {out_sorted}'
-    os.system(sort_cmd)
+    utils.sort_bed(out_unsorted, out_sorted)
     logger.info('Finished sorting fragments')
 
     # remove unsorted

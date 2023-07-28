@@ -454,3 +454,55 @@ def _read_bedfile(bedfile):
             bed_list.append(line)
     file.close()
     return bed_list
+
+
+def _bed_is_sorted(bedfile):
+    """
+    This function checks if a bedfile is sorted by the start position
+
+    Parameters
+    ----------
+    bedfile: str
+        path to bedfile
+
+    Returns
+    -------
+    boolean
+        True if bedfile is sorted
+    """
+    with open(bedfile) as file:
+        counter = 0
+        previous = 0
+        for row in file:
+            row = row.split('\t')
+            if previous > int(row[1]):
+                file.close()
+                return False
+
+            previous = int(row[1])
+
+            counter += 1
+            if counter > 100:
+                break
+
+    file.close()
+    return True
+
+
+def _sort_bed(bedfile, sorted_bedfile):
+    """
+    This function sorts a bedfile by the start position
+
+    Parameters
+    ----------
+    bedfile: str
+        path to bedfile
+    sorted_bedfile: str
+        path to sorted bedfile
+
+    Returns
+    -------
+    None
+    """
+    sort_cmd = f'sort -k1,1 -k2,2n {bedfile} > {sorted_bedfile}'
+    os.system(sort_cmd)
