@@ -474,10 +474,15 @@ def quality_violin(adata, columns,
         table = adata.var
     else:
         raise ValueError("'which' must be either 'obs' or 'var'.")
+    
+    # Check that columns are in table
+    invalid_columns = set(columns) - set(table.columns)
+    if invalid_columns:
+        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
 
     # Order of categories on x axis
     if groupby is not None:
-        # Convert to category 
+        # Convert to category
         if table[groupby].dtype.name != "category":
             table[groupby] = table[groupby].astype('category')
         groups = list(table[groupby].cat.categories)
@@ -490,7 +495,7 @@ def quality_violin(adata, columns,
     if color_list is None:
         color_list = sns.color_palette("Set1", n_colors)
     else:
-        if int(n_colors) <= int(len(color_list)):
+        if int(n_colors) > int(len(color_list)):
             raise ValueError("Increase the color_list variable to at least {} colors.".format(n_colors))
         else:
             color_list = color_list[:n_colors]
@@ -506,11 +511,6 @@ def quality_violin(adata, columns,
     # Setup thresholds if not given
     if thresholds is None:
         thresholds = {col: {} for col in columns}
-
-    # Check that columns are in table
-    invalid_columns = set(columns) - set(table.columns)
-    if invalid_columns:
-        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
 
     # ---------------- Setup figure --------------#
 
