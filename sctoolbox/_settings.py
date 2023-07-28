@@ -189,6 +189,12 @@ class SctoolboxConfig(object):
             F.setFormatter(debug_formatter)  # always use debug formatter for file handler
             self._logger.addHandler(F)
 
+    def close_logfile(self):
+        """ Close all open filehandles of logger """
+        for handler in self._logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.close()
+
     @property
     def logger(self):
         return self._logger
@@ -222,7 +228,8 @@ def settings_from_config(config_file, key=None):
             raise KeyError(f"Key {key} not found in config file {config_file}")
 
     # Set settings
-    for key, value in config_dict.items():
+    preferred_order = ["overwrite_log", "log_file"]  # set overwrite_log before log_file to prevent "log file already exists" warning
+    for key, value in sorted(config_dict.items(), key=lambda x: preferred_order.index(x[0]) if x[0] in preferred_order else 999):
         setattr(settings, key, value)
 
 
