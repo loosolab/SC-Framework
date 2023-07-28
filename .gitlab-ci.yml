@@ -168,7 +168,8 @@ notebooks:
   #  - gwdg
   #  - gwdg-shared
   artifacts:
-    paths: rna-notebooks/pipeline_output/logs/
+    paths:
+      - rna-notebooks/pipeline_output/logs/
   script:
     - micromamba env create -f sctoolbox_env.yml #mamba is faster at creating envs than conda
     - eval "$(micromamba shell hook --shell bash)" # initialize micromamba in the current shell
