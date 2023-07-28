@@ -60,6 +60,9 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
         Axis to flip along. Can be "vertical" (flips up/down) or "horizontal" (flips left/right).
     """
 
+    if key not in adata.obsm:
+        raise KeyError(f"The given key '{key}' cannot be found in adata.obsm. Please check the key value")
+
     if how == "vertical":
         adata.obsm[key][:, 1] = -adata.obsm[key][:, 1]
     elif how == "horizontal":
@@ -498,13 +501,11 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 def _get_3d_dotsize(n):
     """ Utility to get the dotsize for a given number of points. """
     if n < 1000:
-        size = 12
-    if n < 10000:
-        size = 8
+        return 12
+    elif n < 10000:
+        return 8
     else:
-        size = 3
-
-    return size
+        return 3
 
 
 @deco.log_anndata
@@ -688,12 +689,12 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
 
     # Make plots square
     for ax in axes_list:
-        utils._make_square(ax)
+        _make_square(ax)
 
     # Save figure if chosen
     _save_figure(save)
 
-    return axes_list
+    return list(axes_list)
 
 
 @deco.log_anndata
@@ -730,6 +731,9 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     if not isinstance(axarr, list):
         axarr = [axarr]
         color = [color]
+
+    if title and len(title) != len(color):
+        raise ValueError("Color and Title must have the same length.")
 
     colorbar_count = 0
     for i, ax in enumerate(axarr):

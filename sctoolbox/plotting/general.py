@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import scanpy as sc
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -226,7 +225,7 @@ def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
     ax.set_aspect('equal')
 
 
-def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
+def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr", **kwargs):
     """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
 
     Parameters
@@ -243,8 +242,34 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
         Column in table to use for the size of the dots.
     save : str, default None
         If given, the figure will be saved to this path.
+    fillna : float, default 0
+        Replace NaN with given value.
+    cmap : str, default bwr
+        Colormap of the plot.
     kwargs : arguments
         Additional arguments to pass to seaborn.clustermap.
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+        import scanpy as sc
+
+        table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+
+    .. plot::
+        :context: close-figs
+
+        pl.clustermap_dotplot(
+            table=table,
+            x="bulk_labels",
+            y="index",
+            color="n_genes",
+            size="n_counts",
+            cmap="viridis"
+        )
     """
 
     # This code is very hacky
@@ -253,11 +278,12 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
     # and to make the code more flexible, potentially using a class
 
     # Create pivots with colors/size
-    color_pivot = pd.pivot(table, index=y, columns=x, values=color)
-    size_pivot = pd.pivot(table, index=y, columns=x, values=size)
+    # .fillna fixes NaN in table which caused cluster error
+    color_pivot = pd.pivot(table, index=y, columns=x, values=color).fillna(fillna)
+    size_pivot = pd.pivot(table, index=y, columns=x, values=size).fillna(fillna)
 
     # Plot clustermap of values
-    g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
+    g = sns.clustermap(color_pivot, yticklabels=True, cmap=cmap,
                        # vmin=color_min, vmax=color_max, #should be given as kwargs
                        figsize=(5, 12),
                        cbar_kws={'label': color, "orientation": "horizontal"},
@@ -289,7 +315,7 @@ def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
     radius_mat = _scale_values(size_mat, 0.05, 0.5)
 
     circles = [plt.Circle((j, i), radius=r) for r, j, i in zip(radius_mat.flat, x.flat, y.flat)]
-    col = PatchCollection(circles, array=color_mat.flatten(), cmap="bwr")
+    col = PatchCollection(circles, array=color_mat.flatten(), cmap=cmap)
     g.ax_heatmap.add_collection(col)
 
     # Adjust size of individual cells and dendrograms
@@ -447,21 +473,6 @@ def bidirectional_barplot(df,
 ########################################################################################
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
-
-@deco.log_anndata
-def plot_obs_violin(adata, obs_cols):
-    """
-    plot violin plots of the obs columns
-    :param adata:
-    :param obs_cols:
-    :return:
-    """
-
-    for col in obs_cols:
-        sc.pl.violin(adata, col, show=False)
-
-    plt.show()
-
 
 def boxplot(dt, show_median=True, ax=None):
     """
@@ -673,6 +684,11 @@ def plot_venn(groups_dict, title=None, save=None):
     save : `str`, optional (default: `None`)
         Filename to save the plot to.
     """
+    # Check if input is dict
+    if not isinstance(groups_dict, dict):
+        raise ValueError("The 'groups_dict' variable must be a dictionary."
+                         + "Please ensure that you are passing a valid dictionary as input.")
+
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
 

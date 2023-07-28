@@ -197,4 +197,4 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     # Save figure
     _save_figure(save)
 
-    return axarr
+    return list(axarr)

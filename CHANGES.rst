@@ -2,6 +2,12 @@
 --------------------
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Added logging verbose and decorator to ATAC related functions
+- Fix "shell not found" error for CI pipeline (#129)
+- Pinned scikit-learn to version <=1.2.2 (#128)
+- Increase test coverage for plotting functions (#126)
+- Apply fixes to bugs found by increasing the test coverage.
+- Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
+
 
 0.1.1.2 (05-06-2023)
 --------------------
