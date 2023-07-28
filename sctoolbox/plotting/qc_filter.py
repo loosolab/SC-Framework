@@ -474,7 +474,7 @@ def quality_violin(adata, columns,
         table = adata.var
     else:
         raise ValueError("'which' must be either 'obs' or 'var'.")
-    
+
     # Check that columns are in table
     invalid_columns = set(columns) - set(table.columns)
     if invalid_columns:
