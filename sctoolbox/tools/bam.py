@@ -4,9 +4,11 @@ import re
 import os
 import pandas as pd
 import multiprocessing
-import warnings
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def bam_adata_ov(adata, bamfile, cb_col):
@@ -28,6 +30,7 @@ def bam_adata_ov(adata, bamfile, cb_col):
         hitrate of the barcodes in the bamfile
 
     """
+    logger.info("calculating barcode overlap between bamfile and adata.obs")
     bam_obj = open_bam(bamfile, "rb")
 
     sample = []
@@ -48,6 +51,7 @@ def bam_adata_ov(adata, bamfile, cb_col):
     return hitrate
 
 
+@deco.log_anndata
 def check_barcode_tag(adata, bamfile, cb_col):
     """
     Check for the possibilty that the wrong barcode is used.
@@ -68,13 +72,13 @@ def check_barcode_tag(adata, bamfile, cb_col):
     hitrate = bam_adata_ov(adata, bamfile, cb_col)
 
     if hitrate == 0:
-        warnings.warn('None of the barcodes from the bamfile found in the .obs table.\n'
-                      'Consider if you are using the wrong column cb-tag or bamfile.')
+        logger.warning('None of the barcodes from the bamfile found in the .obs table.\n'
+                       'Consider if you are using the wrong column cb-tag or bamfile.')
     elif hitrate <= 0.05:
-        warnings.warn('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
-                      'Consider if you are using the wrong column for cb-tag or bamfile.')
+        logger.warning('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
+                       'Consider if you are using the wrong column for cb-tag or bamfile.')
     elif hitrate > 0.05:
-        print('Barcode tag: OK')
+        logger.info('Barcode tag: OK')
     else:
         raise ValueError("Could not identify barcode hit rate.")
 
@@ -112,7 +116,7 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     utils.create_dir(bam_out)
 
     if os.path.exists(bam_out) and overwrite is False:
-        warnings.warn(f"Output file {bam_out} exists. Skipping.")
+        logger.warning(f"Output file {bam_out} exists. Skipping.")
         return
 
     # Open files
@@ -162,9 +166,10 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     # Close bamfiles
     bam_in_obj.close()
     bam_out_obj.close()
-    print(f"Wrote {written} reads to output bam")
+    logger.info(f"Wrote {written} reads to output bam")
 
 
+@deco.log_anndata
 def split_bam_clusters(adata,
                        bams,
                        groupby,
@@ -214,7 +219,7 @@ def split_bam_clusters(adata,
     index_bams : boolean, default False
         Create an index file for each output bam. Will throw an error if `sort_bams` is False.
     """
-    # check then load modules
+    # then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
@@ -242,10 +247,10 @@ def split_bam_clusters(adata,
 
     # Establish clusters from obs
     clusters = list(set(adata.obs[groupby]))
-    print(f"Found {len(clusters)} groups in .obs.{groupby}: {clusters}")
+    logger.info(f"Found {len(clusters)} groups in .obs.{groupby}: {clusters}")
 
     if writer_threads > len(clusters):
-        print(f"The number of writers ({writer_threads}) is larger than the number of output clusters ({len(clusters)}). Limiting writer_threads to the number of clusters.")
+        logger.info(f"The number of writers ({writer_threads}) is larger than the number of output clusters ({len(clusters)}). Limiting writer_threads to the number of clusters.")
         writer_threads = len(clusters)
 
     # setup barcode <-> cluster dict
@@ -258,7 +263,7 @@ def split_bam_clusters(adata,
     template = open_bam(bams[0], "rb", verbosity=0)
 
     # Get number in reads in input bam(s)
-    print("Reading total number of reads from bams...")
+    logger.info("Reading total number of reads from bams...")
     n_reads = {}
     for path in bams:
         handle = open_bam(path, "rb", verbosity=0)
@@ -266,7 +271,7 @@ def split_bam_clusters(adata,
         handle.close()
 
     # --------- Start splitting --------- #
-    print("Starting splitting of bams...")
+    logger.info("Starting splitting of bams...")
     if parallel:
         # ---------- parallel splitting ---------- #
 
@@ -335,7 +340,7 @@ def split_bam_clusters(adata,
 
         # Loop over bamfile(s)
         for i, bam in enumerate(bams):
-            print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
+            logger.info(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
 
             bam_obj = open_bam(bam, "rb", verbosity=0)
 
@@ -366,7 +371,7 @@ def split_bam_clusters(adata,
             # close progressbar
             pbar.close()
 
-            print(f"Wrote {written} reads to cluster files")
+            logger.info(f"Wrote {written} reads to cluster files")
 
         # Close all files
         for handle in handles.values():
@@ -375,7 +380,7 @@ def split_bam_clusters(adata,
     # ---------- post split functionality ---------- #
     # sort reads
     if sort_bams:
-        print("Sorting output bams...")
+        logger.info("Sorting output bams...")
         for file in tqdm(output_files, desc="Sorting reads", unit="files"):
             temp_file = file + ".tmp"  # temporary sort file
             pysam.sort("-o", temp_file, file)
@@ -383,11 +388,11 @@ def split_bam_clusters(adata,
 
     # index files
     if index_bams:
-        print("Indexing output bams...")
+        logger.info("Indexing output bams...")
         for file in tqdm(output_files, desc="Indexing", unit="files"):
             pysam.index(file, "-@", str(pysam_threads))
 
-    print("Finished splitting bams!")
+    logger.info("Finished splitting bams!")
 
 
 # ------------------------------------------------------------------ #
@@ -757,7 +762,7 @@ def bam_to_bigwig(bam,
         output = bam.replace(".bam", ".bw")
 
     if os.path.exists(output) and overwrite is False:
-        warnings.warn("Output file already exists. Set overwrite=True to overwrite.")
+        logger.warning("Output file already exists. Set overwrite=True to overwrite.")
         return output
 
     # Check required modules
@@ -780,7 +785,7 @@ def bam_to_bigwig(bam,
             f.write(f"{chrom}\t{size}\n")
 
     # Get number of mapped reads in file for normalization
-    print("Getting scaling factor")
+    logger.info("Getting scaling factor")
     scaling_factor = 0
     if scale:
         n_reads = get_bam_reads(bamobj)
@@ -791,24 +796,24 @@ def bam_to_bigwig(bam,
     # Convert bam to bedgraph
     bedgraph_out = utils.get_temporary_filename(tempdir)
     cmd = f"{bedtools_path} genomecov -bg -ibam {bam} > {bedgraph_out}"
-    print("Running: " + cmd)
+    logger.info("Running: " + cmd)
     utils.run_cmd(cmd)
 
     # Sort and scale input
     bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
     cmd = f"sort -k1,1 -k2,2n -T {tempdir} {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
-    print("Running: " + cmd)
+    logger.info("Running: " + cmd)
     utils.run_cmd(cmd)
 
     # Convert bedgraph to bigwig
     cmd = f"{bgtobw_path} {bedgraph_out_sorted} {chromsizes_file} {output}"
-    print("Running: " + cmd)
+    logger.info("Running: " + cmd)
     utils.run_cmd(cmd)
 
     # Remove all temp files
     if remove_temp is True:
         utils.remove_files([chromsizes_file, bedgraph_out, bedgraph_out_sorted])
 
-    print(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
+    logger.info(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
 
     return output

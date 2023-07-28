@@ -7,12 +7,16 @@ import psutil
 import subprocess
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 #################################################################################
 # ------------------------ Uropa annotation of peaks -------------------------- #
 #################################################################################
 
+@deco.log_anndata
 def annotate_adata(adata,
                    gtf,
                    config=None,
@@ -21,7 +25,6 @@ def annotate_adata(adata,
                    coordinate_cols=None,
                    temp_dir="",
                    remove_temp=True,
-                   verbose=True,
                    inplace=True):
 
     """
@@ -71,8 +74,6 @@ def annotate_adata(adata,
     >>> annotate_regions(adata, gtf="genes.gtf",
                                 config=custom_config)
     """
-    # Setup verbose print function
-    print = utils.vprint(verbose)
 
     # Make temporary directory if needed
     utils.create_dir(temp_dir)
@@ -87,7 +88,7 @@ def annotate_adata(adata,
     # check_value(threads, vmin=1, name="threads")
 
     # Establish configuration dict
-    print("Setting up annotation configuration...")
+    logger.info("Setting up annotation configuration...")
     if config is None:
         cfg_dict = {"queries": [{"distance": [10000, 1000],
                                  "feature_anchor": "start",
@@ -99,12 +100,12 @@ def annotate_adata(adata,
         cfg_dict = config
 
     cfg_dict = copy.deepcopy(cfg_dict)  # make sure that config is not being changed in place
-    logger = uropa.utils.UROPALogger()
-    cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
-    print("Config dictionary: {0}".format(cfg_dict))
+    uropa_logger = uropa.utils.UROPALogger()
+    cfg_dict = uropa.utils.format_config(cfg_dict, logger=uropa_logger)
+    logger.info("Config dictionary: {0}".format(cfg_dict))
 
     # Read regions from .var table
-    print("Setting up genomic regions to annotate...")
+    logger.info("Setting up genomic regions to annotate...")
     regions = adata.var.copy()
 
     # Establish columns for coordinates
@@ -128,7 +129,7 @@ def annotate_adata(adata,
         region_dicts.append(d)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = _prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = _prepare_gtf(gtf, temp_dir)
 
     annotations_table = _annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
@@ -156,8 +157,8 @@ def annotate_adata(adata,
     # Check if columns already exist
     existing = set(regions.columns).intersection(annotations_table.columns)
     if len(existing) > 0:
-        print("WARNING: The following annotation columns already exist in adata.var: {0}".format(existing))
-        print("These columns will be overwritten by the annotation")
+        logger.warning("WARNING: The following annotation columns already exist in adata.var: {0}".format(existing))
+        logger.info("These columns will be overwritten by the annotation")
         regions.drop(columns=existing, inplace=True)
 
     # Merge original sites with annotations
@@ -172,7 +173,7 @@ def annotate_adata(adata,
     # Save var input object
     adata.var = regions_annotated
 
-    print("Finished annotation of features! The results are found in the .var table.")
+    logger.info("Finished annotation of features! The results are found in the .var table.")
 
     # Remove temporary directory
     if remove_temp:
@@ -188,8 +189,7 @@ def annotate_narrowPeak(filepath,
                         best=True,
                         threads=1,
                         temp_dir="",
-                        remove_temp=True,
-                        verbose=True):
+                        remove_temp=True):
 
     """
     Annotates narrowPeak files with genes from .gtf using UROPA.
@@ -213,8 +213,6 @@ def annotate_narrowPeak(filepath,
     :return: annotation_table: pandas.Dataframe
         Dataframe containing the annotations.
     """
-    # Setup verbose print function
-    print = utils.vprint(verbose)
 
     # Make temporary directory
     utils.create_dir(temp_dir)
@@ -229,7 +227,7 @@ def annotate_narrowPeak(filepath,
     # check_value(threads, vmin=1, name="threads")
 
     # Establish configuration dict
-    print("Setting up annotation configuration...")
+    logger.info("Setting up annotation configuration...")
     if config is None:
         cfg_dict = {"queries": [{"distance": [10000, 1000],
                                  "feature_anchor": "start",
@@ -241,18 +239,18 @@ def annotate_narrowPeak(filepath,
         cfg_dict = config
 
     cfg_dict = copy.deepcopy(cfg_dict)  # make sure that config is not being changed in place
-    logger = uropa.utils.UROPALogger()
-    cfg_dict = uropa.utils.format_config(cfg_dict, logger=logger)
-    print("Config dictionary: {0}".format(cfg_dict))
+    uropa_logger = uropa.utils.UROPALogger()
+    cfg_dict = uropa.utils.format_config(cfg_dict, logger=uropa_logger)
+    logger.info("Config dictionary: {0}".format(cfg_dict))
 
-    region_dicts = _load_narrowPeak(filepath, print)
+    region_dicts = _load_narrowPeak(filepath)
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = _prepare_gtf(gtf, temp_dir, print)
+    gtf, tempfiles = _prepare_gtf(gtf, temp_dir)
 
     annotation_table = _annotate_features(region_dicts, threads, gtf, cfg_dict, best)
 
-    print("annotation done")
+    logger.info("annotation done")
 
     # Remove temporary directory
     if remove_temp:
@@ -261,18 +259,16 @@ def annotate_narrowPeak(filepath,
     return annotation_table
 
 
-def _load_narrowPeak(filepath, print):
+def _load_narrowPeak(filepath):
     '''
     Load narrowPeak file to annotate.
 
     :param filepath: str
         Path to the narrowPeak file.
-    :param print: function
-        Print function for verbose printing.
     :return: region_dicts: dictionary
         Dictionary with the peak information.
     '''
-    print("load regions_dict from: " + filepath)
+    logger.info("load regions_dict from: " + filepath)
     peaks = pd.read_csv(filepath, header=None, sep='\t')
     peaks = peaks.drop([3, 4, 5, 6, 7, 8, 9], axis=1)
     peaks.columns = ["peak_chr", "peak_start", "peak_end"]
@@ -288,8 +284,7 @@ def _load_narrowPeak(filepath, print):
 
 
 def _prepare_gtf(gtf,
-                 temp_dir,
-                 print):
+                 temp_dir):
     """
     Prepares the .gtf file to use it in the annotation process. Therefore the file properties are checked and if necessary it is sorted, indexed and compressed.
 
@@ -297,8 +292,6 @@ def _prepare_gtf(gtf,
         Path to the .gtf file containing the genes to be annotated.
     :param temp_dir: str
         Path to the temporary directory for storing .gtf files.
-    :param print: function
-        Function for verbose printing.
 
     :return: gtf: str
         Path to the gtf file to use in the annotation.
@@ -315,19 +308,19 @@ def _prepare_gtf(gtf,
     tempfiles = []
 
     # Prepare .gtf file in terms of index and sorting
-    print("Preparing gtf file for annotation...")
+    logger.info("Preparing gtf file for annotation...")
     success = 0
     sort_done = 0
     while success == 0:
         try:  # try to open gtf with Tabix
-            print("- Reading gtf with Tabix")
+            logger.info("- Reading gtf with Tabix")
             g = pysam.TabixFile(gtf)  # gtf can be .gz or not
             g.close()
             success = 1
-            print("Done preparing gtf!")
+            logger.info("Done preparing gtf!")
 
         except Exception:  # if not possible, try to sort gtf
-            print("- Index of gtf not found - trying to index gtf")
+            logger.info("- Index of gtf not found - trying to index gtf")
 
             # First check if gtf was already gzipped
             if not utils._is_gz_file(gtf):
@@ -344,13 +337,13 @@ def _prepare_gtf(gtf,
                 tempfiles.append(gtf_index)
 
             except Exception:
-                print("- Indexing failed - the GTF is probably unsorted")
+                logger.info("- Indexing failed - the GTF is probably unsorted")
 
                 # Start by uncompressing file if file is gz
                 is_gz = utils._is_gz_file(gtf)
                 if is_gz:
                     gtf_uncompressed = os.path.join(temp_dir, "uncompressed.gtf")
-                    print(f"- Uncompressing {gtf} to: {gtf_uncompressed}")
+                    logger.info(f"- Uncompressing {gtf} to: {gtf_uncompressed}")
                     try:
                         utils.gunzip_file(gtf, gtf_uncompressed)
                     except Exception:
@@ -362,7 +355,7 @@ def _prepare_gtf(gtf,
                 if sort_done == 0:  # make sure sort was not already performed
                     gtf_sorted = os.path.join(temp_dir, "sorted.gtf")
                     sort_call = "grep -v \"^#\" {0} | sort -k1,1 -k4,4n > {1}".format(gtf, gtf_sorted)
-                    print("- Attempting to sort gtf with call: '{0}'".format(sort_call))
+                    logger.info("- Attempting to sort gtf with call: '{0}'".format(sort_call))
 
                     try:
                         _ = subprocess.check_output(sort_call, shell=True)
@@ -411,10 +404,10 @@ def _annotate_features(region_dicts,
     region_dict_chunks = [region_dicts[i:i + per_chunk] for i in range(0, n_reg, per_chunk)]
 
     # calculate annotations for each chunk
-    print("Annotating regions...")
+    logger.info("Annotating regions...")
     annotations = []
     if threads == 1:
-        print("NOTE: Increase --threads to speed up computation")
+        logger.info("NOTE: Increase --threads to speed up computation")
         for region_chunk in region_dict_chunks:
             chunk_annotations = _annotate_peaks_chunk(region_chunk, gtf, cfg_dict)
             annotations.extend(chunk_annotations)
@@ -451,7 +444,7 @@ def _annotate_features(region_dicts,
 
         pool.join()
 
-    print("Formatting annotations...")
+    logger.info("Formatting annotations...")
 
     # Select best annotations
     if best is True:

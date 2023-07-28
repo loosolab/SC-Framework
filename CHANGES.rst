@@ -2,6 +2,7 @@
 --------------------
 - fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
+- Added logging verbose and decorator to ATAC related functions
 - Fix "shell not found" error for CI pipeline (#129)
 - Pinned scikit-learn to version <=1.2.2 (#128)
 - Increase test coverage for plotting functions (#126)
