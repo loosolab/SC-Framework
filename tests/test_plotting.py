@@ -721,14 +721,14 @@ def test_plot_differential_genes(pairwise_ranked_genes):
                          [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
                           ("Gm18956", "out.png", None)])
 def test_plot_gene_correlation(adata, gene_list, save, figsize):
-
+    adata_c = adata.copy()
     # set gene names as index instead of ensemble ids
-    adata.var.reset_index(inplace=True)
-    adata.var['gene'] = adata.var['gene'].astype('str')
-    adata.var.set_index('gene', inplace=True)
-    adata.var_names_make_unique()
+    adata_c.var.reset_index(inplace=True)
+    adata_c.var['gene'] = adata_c.var['gene'].astype('str')
+    adata_c.var.set_index('gene', inplace=True)
+    adata_c.var_names_make_unique()
 
-    axes = pl.plot_gene_correlation(adata, "Xkr4", gene_list,
+    axes = pl.plot_gene_correlation(adata_c, "Xkr4", gene_list,
                                     save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
     assert type(axes[0]).__name__.startswith("Axes")
