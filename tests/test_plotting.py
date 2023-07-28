@@ -20,9 +20,11 @@ def adata():
     adata = sc.read_h5ad(f)
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["condition"].astype("category")
+    adata.obs["cat"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+    adata.obs["cat"] = adata.obs["cat"].astype("category")
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
+    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
 
     sc.pp.normalize_total(adata, target_sum=None)
     sc.pp.log1p(adata)
@@ -747,9 +749,26 @@ def test_update_threshold(slider):
     assert True
 
 
-@pytest.mark.parametrize("groupby", ["condition", "cat"])
-def test_quality_violin(adata, groupby):
-    columns = ['qc_float', 'LISI_score_pca']
-    figure, slider = pl.quality_violin(adata, columns=columns, groupby=groupby)
+@pytest.mark.parametrize("columns, which, groupby", [(['qc_float', 'LISI_score_pca'], "obs", "condition"),
+                                                     (['qc_float', 'LISI_score_pca'], "obs", "cat"),
+                                                     (['qc_float_var'], "var", None)])
+@pytest.mark.parametrize("color_list", [None, sns.color_palette("Set1", 3)])
+@pytest.mark.parametrize("title", [None, "Title"])
+def test_quality_violin(adata, groupby, columns, which, title, color_list):
+    figure, slider = pl.quality_violin(adata, columns=columns, groupby=groupby,
+                                       which=which, title=title, color_list=color_list)
     assert type(figure).__name__ == "Figure"
     assert isinstance(slider, dict)
+
+
+def test_quality_violin_fail(adata):
+    with pytest.raises(ValueError, match="'which' must be either 'obs' or 'var'."):
+        pl.quality_violin(adata, columns=["qc_float"], which="Invalid")
+    with pytest.raises(ValueError, match="Increase the color_list variable"):
+        pl.quality_violin(adata, groupby="condition", columns=["qc_float"],
+                          color_list=sns.color_palette("Set1", 1))
+    with pytest.raises(ValueError, match="Length of header does not match"):
+        pl.quality_violin(adata, groupby="condition", columns=["qc_float"],
+                          header=[])
+    with pytest.raises(ValueError, match="The following columns from 'columns' were not found"):
+        pl.quality_violin(adata, columns=["Invalid"])
