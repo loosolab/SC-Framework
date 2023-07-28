@@ -4,6 +4,8 @@ import pytest
 from sctoolbox.utils import decorator as deco
 import sctoolbox.utils as utils
 
+from sctoolbox._settings import settings
+logger = settings.logger
 
 @pytest.fixture
 def adata():
@@ -56,3 +58,24 @@ def test_add_uns_info(adata):
 
     utils.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
     assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
+
+
+def test_user_logging():
+
+    settings.log_file = "test.log"
+    logger.info("test_info")
+    assert "test_info" in open(settings.log_file).read()
+
+    # Set again to the same file
+    settings.log_file = "test.log"
+    logger.info("test_info2")
+    content = open(settings.log_file).read()
+    assert "test_info" in content  # check that the first log is still there
+    assert "test_info2" in content
+
+    # Set to overwrite the file
+    settings.overwrite_log = True
+    logger.info("test_info3")
+    content = open(settings.log_file).read()
+    assert "test_info2" not in content  # previous log was overwritten
+    assert "test_info3" in content      # new log is there

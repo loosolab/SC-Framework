@@ -20,11 +20,11 @@ class SctoolboxConfig(object):
                  adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_path)
                  threads: int = 4,  # default number of threads to use when multiprocessing is available
                  create_dirs: bool = True,  # create output directories if they do not exist
-                 verbosity: int = 1,             # 0 = error, 1 = info, 2 = debug
+                 verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
                  log_file: str = None,           # Path to log file
+                 overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
                  ):
-        """
-        """
+
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
 
         # Save all parameters
@@ -59,13 +59,9 @@ class SctoolboxConfig(object):
             self._validate_string(value)
             self._create_dir(value)
 
-        elif key == "verbosity":
-            self._setup_logger(verbosity=value)
-
         elif key == "log_file":
             if value is not None:
                 self._validate_string(value)
-                self._setup_logger(log_file=value)  # re-setup logger with new log file
 
         elif self.__init__.__annotations__[key] == int:
             self._validate_int(value)
@@ -77,6 +73,12 @@ class SctoolboxConfig(object):
             self._validate_string(value)
 
         object.__setattr__(self, key, value)
+
+        # Setup logger if certain parameters are changed
+        logging_keys = ["verbosity", "overwrite_log", "log_file"]
+        if key in logging_keys:
+            if all([hasattr(self, key) for key in logging_keys]):  #only set logger if all keys were set at least once. This avoids setting the logger when the individual keys are initialized
+                self._setup_logger(verbosity=self.verbosity, log_file=self.log_file, overwrite_log=self.overwrite_log)
 
     def _validate_string(self, string: str):
         if not isinstance(string, str):
@@ -129,7 +131,7 @@ class SctoolboxConfig(object):
     def full_adata_output_prefix(self, value):
         raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
 
-    def _setup_logger(self, verbosity: int = None, log_file: str = None):
+    def _setup_logger(self, verbosity: int = None, log_file: str = None, overwrite_log: bool = False):
         """ Set up logger on the basis of the verbosity level """
 
         # Use current settings if no new settings are provided
@@ -168,7 +170,10 @@ class SctoolboxConfig(object):
         if log_file is not None:
             if os.path.exists(log_file):
                 if os.access(log_file, os.W_OK):
-                    self._logger.warning("Log file already exists. Logging messages will be appended to file.")
+                    if overwrite_log:
+                        self._logger.warning("Log file already exists. The file will be overwritten since 'overwrite_log' is set to True.")
+                    else:
+                        self._logger.warning("Log file already exists. Logging messages will be appended to file. Set overwrite_log=True to overwrite the file.")
                 else:
                     raise ValueError("Log file already exists but cannot be written to. Please choose a different file name.")
             else:
@@ -177,7 +182,8 @@ class SctoolboxConfig(object):
                 if not os.access(parent_dir, os.W_OK):
                     raise ValueError("Log file cannot be created. Please check that the directory exists and is writable.")
 
-            F = logging.FileHandler(log_file)
+            mode = "w" if overwrite_log else "a"
+            F = logging.FileHandler(log_file, mode=mode)
             F.setLevel(logging.DEBUG)        # always log all messages to file
             F.setFormatter(debug_formatter)  # always use debug formatter for file handler
             self._logger.addHandler(F)
