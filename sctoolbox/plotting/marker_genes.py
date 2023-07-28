@@ -577,7 +577,6 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
     return g
 
 
-@deco.log_anndata
 def plot_differential_genes(rank_table, title="Differentially expressed genes",
                             save=None,
                             **kwargs):
