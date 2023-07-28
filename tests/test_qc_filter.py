@@ -144,12 +144,12 @@ def test_validate_threshold_dict_invalid(adata, invalid_threshold_dict):
 
 def test_filter_genes(adata):
     """ Test whether genes were filtered out based on a boolean column"""
+    adata_c = adata.copy()
+    adata_c.var["gene_bool"] = np.random.choice(a=[False, True], size=adata_c.shape[1])
+    n_false = sum(~adata_c.var["gene_bool"])
+    qc.filter_genes(adata_c, "gene_bool", inplace=True)  # removes all genes with boolean True
 
-    adata.var["gene_bool"] = np.random.choice(a=[False, True], size=adata.shape[1])
-    n_false = sum(~adata.var["gene_bool"])
-    qc.filter_genes(adata, "gene_bool", inplace=True)  # removes all genes with boolean True
-
-    assert adata.shape[1] == n_false
+    assert adata_c.shape[1] == n_false
 
 
 def test_filter_cells(adata):
@@ -173,6 +173,7 @@ def test_predict_sex(capsys, adata):
 
     # gene in data
     qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample')
+    print(adata.var)
     assert 'predicted_sex' in adata.obs.columns
 
 
@@ -188,7 +189,6 @@ def test_predict_sex(capsys, adata):
 )
 def test_predict_cell_cycle(adata, species, s_genes, g2m_genes, inplace):
     """ Test if cell cycle is predicted and added to adata.obs """
-
     expected_columns = ["S_score", "G2M_score", "phase"]
     adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])  # remove columns if already present
 
