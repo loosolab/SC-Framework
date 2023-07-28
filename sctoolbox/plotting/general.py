@@ -473,7 +473,6 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-
 def boxplot(dt, show_median=True, ax=None):
     """
     Generate one plot containing one box per column. The median value is shown.
@@ -686,8 +685,9 @@ def plot_venn(groups_dict, title=None, save=None):
     """
     # Check if input is dict
     if not isinstance(groups_dict, dict):
-        raise ValueError("The 'groups_dict' variable must be a dictionary."
-                         + "Please ensure that you are passing a valid dictionary as input.")
+        s = "The 'groups_dict' variable must be a dictionary. "
+        s += "Please ensure that you are passing a valid dictionary as input."
+        raise ValueError(s)
 
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]

@@ -16,12 +16,16 @@ import matplotlib.pyplot as plt
 import sctoolbox
 import sctoolbox.utils as utils
 from sctoolbox.plotting import _save_figure
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
 
+@deco.log_anndata
 def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
     Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`.
@@ -62,6 +66,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
         return adata
 
 
+@deco.log_anndata
 def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -144,10 +149,10 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
 
         # if one list is given as input, get the other list from gene lists dir
         if s_genes is not None:
-            print("g2m_genes list is missing! Using default list instead")
+            logger.info("g2m_genes list is missing! Using default list instead")
             g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
         elif g2m_genes is not None:
-            print("s_genes list is missing! Using default list instead")
+            logger.info("s_genes list is missing! Using default list instead")
             s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
         else:
             s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
@@ -171,6 +176,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         return adata
 
 
+@deco.log_anndata
 def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
     """
     Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
@@ -211,7 +217,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
             pool = mp.Pool(threads, maxtasksperchild=1)  # maxtasksperchild to avoid memory leaks
 
             # Run scrublet for each sub data
-            print("Sending {0} batches to {1} threads".format(len(all_groups), threads))
+            logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
             jobs = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
 
@@ -229,7 +235,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
         else:
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
-                print("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
+                logger.info("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
                 res = _run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)
                 results.append(res)
 
@@ -298,6 +304,7 @@ def _run_scrublet(adata, **kwargs):
     return (adata.obs, adata.uns["scrublet"])
 
 
+@deco.log_anndata
 def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True, save=None):
     """
     Function for predicting sex based on expression of Xist (or another gene).
@@ -326,7 +333,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     """
 
     # Normalize data before estimating expression
-    print("Normalizing adata")
+    logger.info("Normalizing adata")
     adata_copy = adata.copy()  # ensure that adata is not changed during normalization
     sc.pp.normalize_total(adata_copy, target_sum=None)
     sc.pp.log1p(adata_copy)
@@ -338,12 +345,12 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         gene_names_lower = [s.lower() for s in adata_copy.var[gene_column]]
     gene_index = [i for i, gene_name in enumerate(gene_names_lower) if gene_name == gene.lower()]
     if len(gene_index) == 0:
-        print("Selected gene is not present in the data. Prediction is skipped.")
+        logger.info("Selected gene is not present in the data. Prediction is skipped.")
         return
     adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].todense().A1
 
     # Estimate which samples are male/female
-    print("Estimating male/female per group")
+    logger.info("Estimating male/female per group")
     assignment = {}
     for group, table in adata_copy.obs.groupby(groupby):
         n_cells = len(table)
@@ -363,7 +370,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
 
     # Plot overview if chosen
     if plot:
-        print("Plotting violins")
+        logger.info("Plotting violins")
         groups = adata.obs[groupby].unique()
         n_groups = len(groups)
         fig, axarr = plt.subplots(1, 2, sharey=True,
@@ -672,6 +679,7 @@ def validate_threshold_dict(table, thresholds, groupby=None):
                     _validate_minmax(thresholds[col])
 
 
+@deco.log_anndata
 def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
@@ -724,7 +732,7 @@ def get_keys(adata, manual_thresholds):
         if key in legend:
             m_thresholds[key] = value
         else:
-            print('column: ' + key + ' not found in adata.obs')
+            logger.info('column: ' + key + ' not found in adata.obs')
 
     return m_thresholds
 
@@ -733,6 +741,8 @@ def get_keys(adata, manual_thresholds):
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
 
+
+@deco.log_anndata
 def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=True):
     """
     Apply QC thresholds to anndata object.
@@ -765,7 +775,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
     # Check if all columns are found in adata
     not_found = list(set(thresholds) - set(table.columns))
     if len(not_found) > 0:
-        print("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
+        logger.info("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
     thresholds = {k: thresholds[k] for k in thresholds if k not in not_found}
 
     if len(thresholds) == 0:
@@ -838,7 +848,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
             else:
                 adata = adata[:, included]  # filter on var
 
-        print(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
+        logger.info(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
 
     if inplace is False:
         return adata
@@ -878,7 +888,7 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
         # Check if all genes/cells are found in adata
         not_found = list(set(filter) - set(table.index))
         if len(not_found) > 0:
-            print(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
+            logger.info(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
 
         boolean = ~table.index.isin(filter).values
 
@@ -896,12 +906,13 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    print(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
+    logger.info(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
 
     if inplace is False:
         return adata
 
 
+@deco.log_anndata
 def filter_cells(adata, cells, remove_bool=True, inplace=True):
     """
     Remove cells from anndata object.
@@ -928,6 +939,7 @@ def filter_cells(adata, cells, remove_bool=True, inplace=True):
     return ret  # adata objec or None
 
 
+@deco.log_anndata
 def filter_genes(adata, genes, remove_bool=True, inplace=True):
     """
     Remove genes from adata object.

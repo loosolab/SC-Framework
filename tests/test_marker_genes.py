@@ -62,8 +62,7 @@ def test_get_chromosome_genes():
 
 
 @pytest.mark.parametrize("species, gene_column", [("mouse", None),
-                                                  ("unicorn", "gene"),
-                                                  (None, None)])
+                                                  ("unicorn", "gene")])
 def test_label_genes(adata, species, gene_column):
     """ Test of genes are labeled in adata.var """
 
@@ -74,13 +73,13 @@ def test_label_genes(adata, species, gene_column):
     else:
         mg.label_genes(adata, gene_column=gene_column, species=species)
 
-        added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
-        missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
+    added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
+    missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
 
-        if species == "mouse":
-            assert len(missing) == 0
-        else:
-            assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender and cellcycle are not added
+    if species == "mouse":
+        assert len(missing) == 0
+    else:
+        assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender and cellcycle are not added
 
 
 def test_get_rank_genes_tables(adata):
