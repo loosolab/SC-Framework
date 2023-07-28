@@ -81,7 +81,7 @@ def tmp_file():
 
 @pytest.fixture
 def slider():
-    return widgets.FloatSlider(value=7.5, min=0, max=10.0, step=0.1)
+    return widgets.IntRangeSlider(value=[5, 7], min=0, max=10, step=1)
 
 
 @pytest.fixture
@@ -92,6 +92,22 @@ def slider_list(slider):
 @pytest.fixture
 def checkbox():
     return widgets.Checkbox()
+
+
+@pytest.fixture
+def slider_dict(slider):
+    return {c: slider for c in ['LISI_score_pca', 'qc_float']}
+
+
+@pytest.fixture
+def slider_dict_grouped(slider):
+    return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
+
+
+@pytest.fixture
+def slider_dict_grouped_diff(slider):
+    return {"A": {"1": slider, "2": widgets.IntRangeSlider(value=[1, 5], min=0, max=10, step=1)},
+            "B": {"1": slider, "2": widgets.IntRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -772,3 +788,29 @@ def test_quality_violin_fail(adata):
                           header=[])
     with pytest.raises(ValueError, match="The following columns from 'columns' were not found"):
         pl.quality_violin(adata, columns=["Invalid"])
+
+
+def test_get_slider_thresholds_dict(slider_dict):
+    """ Test get_slider_threshold for non grouped slider_dict. """
+    threshold_dict = pl.get_slider_thresholds(slider_dict)
+    assert isinstance(threshold_dict, dict)
+    assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7},
+                              'qc_float': {'min': 5, 'max': 7}}
+
+
+def test_get_slider_thresholds_dict_grouped(slider_dict_grouped):
+    """ Test get_slider_threshold for grouped slider_dict. """
+    threshold_dict = pl.get_slider_thresholds(slider_dict_grouped)
+    assert isinstance(threshold_dict, dict)
+    assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7},
+                              'qc_float': {'min': 5, 'max': 7}}
+
+
+def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
+    """ Test get_slider_threshold for grouped slider_dict with different slider values. """
+    threshold_dict = pl.get_slider_thresholds(slider_dict_grouped_diff)
+    assert isinstance(threshold_dict, dict)
+    assert threshold_dict == {'A': {'1': {'min': 5, 'max': 7},
+                                    '2': {'min': 1, 'max': 5}},
+                              'B': {'1': {'min': 5, 'max': 7},
+                                    '2': {'min': 3, 'max': 4}}}
