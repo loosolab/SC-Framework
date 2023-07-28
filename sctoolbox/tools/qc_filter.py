@@ -7,7 +7,6 @@ import anndata
 import pkg_resources
 import glob
 from pathlib import Path
-from importlib.resources import files
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
