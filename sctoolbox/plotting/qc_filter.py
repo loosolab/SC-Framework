@@ -523,7 +523,7 @@ def quality_violin(adata, columns,
         figsize = (ncols * 4, nrows * 4)  # static plot can be larger
 
     fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
-    axes_list = [axarr] if type(axarr).__name__ == "Axes" else axarr.flatten()
+    axes_list = [axarr] if type(axarr).__name__.startswith("Axes") else axarr.flatten()
 
     # Remove empty axes
     for ax in axes_list[len(columns):]:
