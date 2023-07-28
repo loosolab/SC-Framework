@@ -7,6 +7,7 @@ import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
+
 @pytest.fixture
 def adata():
     """ Load and returns an anndata object. """
@@ -61,6 +62,7 @@ def test_add_uns_info(adata):
 
 
 def test_user_logging():
+    """ Test is logfile is correctly overwritten """
 
     settings.log_file = "test.log"
     logger.info("test_info")

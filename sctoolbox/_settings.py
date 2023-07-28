@@ -77,7 +77,7 @@ class SctoolboxConfig(object):
         # Setup logger if certain parameters are changed
         logging_keys = ["verbosity", "overwrite_log", "log_file"]
         if key in logging_keys:
-            if all([hasattr(self, key) for key in logging_keys]):  #only set logger if all keys were set at least once. This avoids setting the logger when the individual keys are initialized
+            if all([hasattr(self, key) for key in logging_keys]):  # only set logger if all keys were set at least once. This avoids setting the logger when the individual keys are initialized for the first time
                 self._setup_logger(verbosity=self.verbosity, log_file=self.log_file, overwrite_log=self.overwrite_log)
 
     def _validate_string(self, string: str):

@@ -8,7 +8,6 @@ from matplotlib.patches import Rectangle
 from matplotlib_venn import venn2, venn3
 
 from sctoolbox import settings
-import sctoolbox.utils.decorator as deco
 
 
 ########################################################################################
@@ -686,8 +685,9 @@ def plot_venn(groups_dict, title=None, save=None):
     """
     # Check if input is dict
     if not isinstance(groups_dict, dict):
-        raise ValueError("The 'groups_dict' variable must be a dictionary."
-                         + "Please ensure that you are passing a valid dictionary as input.")
+        s = "The 'groups_dict' variable must be a dictionary. "
+        s += "Please ensure that you are passing a valid dictionary as input."
+        raise ValueError(s)
 
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
