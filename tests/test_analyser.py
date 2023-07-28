@@ -8,12 +8,17 @@ import sctoolbox.analyser as an
 import sctoolbox.utilities as utils
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def adata():
     """ Load and returns an anndata object. """
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
-    return sc.read_h5ad(f)
+    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    adata = sc.read_h5ad(f)
+
+    # Add batch column
+    adata.obs['batch'] = ["a", "b"] * 100
+
+    return adata
 
 
 @pytest.fixture
@@ -25,17 +30,6 @@ def adata_no_pca(adata):
     anndata.uns.pop("pca")
 
     return anndata
-
-
-@pytest.fixture
-def adata_batch(adata):
-    """ Adata containing batch column in obs. """
-    anndata_batch = adata.copy()
-
-    # Add batch column
-    anndata_batch.obs['batch'] = ["a", "b"] * 100
-
-    return anndata_batch
 
 
 @pytest.fixture
@@ -107,29 +101,29 @@ def test_subset_PCA(adata):
     assert adata.obsm["X_pca"].shape[1] == 10
 
 
-def test_evaluate_batch_effect(adata_batch):
+def test_evaluate_batch_effect(adata):
     """ Test if AnnData containing LISI column in .obs is returned. """
-    ad = an.evaluate_batch_effect(adata_batch, 'batch')
+    ad = an.evaluate_batch_effect({"adata": adata}, 'batch')
+
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
-    print(ad.obs)
     assert "LISI_score" in ad.obs
 
 
 @pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
-def test_batch_correction(adata_batch, method):
+def test_batch_correction(adata, method):
     """ Test if batch correction returns an anndata """
 
-    adata_corrected = an.batch_correction(adata_batch, batch_key="batch", method=method)
+    adata_corrected = an.batch_correction(adata, batch_key="batch", method=method)
     adata_type = type(adata_corrected).__name__
     assert adata_type == "AnnData"
 
 
-def test_wrap_corrections(adata_batch):
+def test_wrap_corrections(adata):
     """ Test if wrapper returns a dict, and that the keys contains the given methods """
 
-    methods = ["mnn", "harmony"]
-    adata_dict = an.wrap_corrections(adata_batch, batch_key="batch", methods=methods)
+    methods = ["mnn", "scanorama"]  # two fastest methods
+    adata_dict = an.wrap_corrections(adata, batch_key="batch", methods=methods)
 
     assert isinstance(adata_dict, dict)
 
@@ -138,12 +132,12 @@ def test_wrap_corrections(adata_batch):
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
-def test_evaluate_batch_effect_keyerror(adata_batch, key):
+def test_evaluate_batch_effect_keyerror(adata, key):
     with pytest.raises(KeyError, match="adata.obsm .*"):
-        an.evaluate_batch_effect(adata_batch, batch_key='batch', obsm_key=key)
+        an.evaluate_batch_effect(adata, batch_key='batch', obsm_key=key)
 
     with pytest.raises(KeyError, match="adata.obs .*"):
-        an.evaluate_batch_effect(adata_batch, batch_key=key)
+        an.evaluate_batch_effect(adata, batch_key=key)
 
 
 def test_wrap_batch_evaluation(adata_batch_dict):

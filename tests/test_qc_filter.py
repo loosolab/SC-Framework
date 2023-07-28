@@ -6,6 +6,10 @@ import scanpy as sc
 import numpy as np
 import os
 import tempfile
+import matplotlib.pyplot as plt
+
+# Prevent figures from being shown, we just check that they are created
+plt.switch_backend("Agg")
 
 
 # --------------------------- Fixtures ------------------------------ #
@@ -163,7 +167,7 @@ def test_filter_cells(adata):
     assert adata.shape[0] == n_false
 
 
-def test_predict_sex(capsys, adata):
+def test_predict_sex(caplog, adata):
 
     adata = adata.copy()  # copy adata to avoid inplace changes
     # gene not in data
