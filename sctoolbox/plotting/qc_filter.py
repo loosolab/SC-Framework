@@ -219,7 +219,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     return g
 
 
-def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize=None, dpi=300):
+def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=None, dpi=300):
     """
     Grid of violinplots with optional cutoffs.
 
@@ -239,7 +239,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
             - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
     colors : list of str, default None
         List of colors for the violins.
-    filename : str, default None
+    save : str, default None
         Path and name of file to be saved.
     ncols : int, default 3
         Number of violins per row.
@@ -273,8 +273,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         fig.delaxes(axs[i])
 
     # Save plot
-    if filename:
-        _save_figure(filename)
+    _save_figure(save)
 
 
 #####################################################################
@@ -476,9 +475,17 @@ def quality_violin(adata, columns,
     else:
         raise ValueError("'which' must be either 'obs' or 'var'.")
 
+    # Check that columns are in table
+    invalid_columns = set(columns) - set(table.columns)
+    if invalid_columns:
+        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
+
     # Order of categories on x axis
     if groupby is not None:
-        groups = table[groupby].cat.categories
+        # Convert to category
+        if table[groupby].dtype.name != "category":
+            table[groupby] = table[groupby].astype('category')
+        groups = list(table[groupby].cat.categories)
         n_colors = len(groups)
     else:
         groups = None
@@ -488,7 +495,7 @@ def quality_violin(adata, columns,
     if color_list is None:
         color_list = sns.color_palette("Set1", n_colors)
     else:
-        if int(n_colors) <= int(len(color_list)):
+        if int(n_colors) > int(len(color_list)):
             raise ValueError("Increase the color_list variable to at least {} colors.".format(n_colors))
         else:
             color_list = color_list[:n_colors]
@@ -505,11 +512,6 @@ def quality_violin(adata, columns,
     if thresholds is None:
         thresholds = {col: {} for col in columns}
 
-    # Check that columns are in table
-    invalid_columns = set(columns) - set(table.columns)
-    if invalid_columns:
-        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
-
     # ---------------- Setup figure --------------#
 
     # Setting up output figure
@@ -521,7 +523,7 @@ def quality_violin(adata, columns,
         figsize = (ncols * 4, nrows * 4)  # static plot can be larger
 
     fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
-    axes_list = [axarr] if type(axarr).__name__ == "AxesSubplot" else axarr.flatten()
+    axes_list = [axarr] if type(axarr).__name__.startswith("Axes") else axarr.flatten()
 
     # Remove empty axes
     for ax in axes_list[len(columns):]:

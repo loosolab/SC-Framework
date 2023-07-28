@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import scanpy as sc
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -474,19 +473,6 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-def plot_obs_violin(adata, obs_cols):
-    """
-    plot violin plots of the obs columns
-    :param adata:
-    :param obs_cols:
-    :return:
-    """
-
-    for col in obs_cols:
-        sc.pl.violin(adata, col, show=False)
-
-    plt.show()
-
 
 def boxplot(dt, show_median=True, ax=None):
     """
@@ -698,6 +684,11 @@ def plot_venn(groups_dict, title=None, save=None):
     save : `str`, optional (default: `None`)
         Filename to save the plot to.
     """
+    # Check if input is dict
+    if not isinstance(groups_dict, dict):
+        raise ValueError("The 'groups_dict' variable must be a dictionary."
+                         + "Please ensure that you are passing a valid dictionary as input.")
+
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
 

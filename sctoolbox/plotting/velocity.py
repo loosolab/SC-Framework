@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import _save_figure
 
 
 ####################################################################################################
@@ -18,7 +19,33 @@ def pseudotime_heatmap(adata, genes,
                        title=None,
                        save=None,
                        **kwargs):
-    """ Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs. """
+    """
+    Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
+
+    Parameter
+    ---------
+    adata : anndata.AnnData
+        Anndata object
+    genes : list
+        List of genes for heatmap.
+    sortby : str, default None
+        Sort genes by condition
+    layer : str, default None
+        Use different layer of anndata object.
+    figsize : tuple, default None
+        Tuple of integers setting the heatmap figsize.
+    shrink_cbar : float, default 0.5
+        Shrink color bar by set ratio.
+    title : str, default None
+        Set title for plot.
+    save : str, default None
+        Path and name of file to be saved.
+
+    Returns
+    --------
+    ax : matplotlib.Axes
+        Axes object containing the plot.
+    """
 
     adata_sub = adata[:, genes].copy()
 
@@ -53,7 +80,7 @@ def pseudotime_heatmap(adata, genes,
 
     # Setup figure
     fig, axarr = plt.subplots(nrows, 1, sharex=True, figsize=figsize)  # , height_ratios=(1, len(mat)))
-    axarr = [axarr] if type(axarr).__name__.startswith("AxesSubplot") else axarr
+    axarr = [axarr] if type(axarr).__name__.startswith("Axes") else axarr
     i = 0
 
     parameters = {"center": 0,
@@ -77,6 +104,6 @@ def pseudotime_heatmap(adata, genes,
     ax.text(n_cells / 2, n_genes + 1.2, f"Pseudotime (n={n_cells:,} cells)", transform=ax.transData, ha="center", va="top")
 
     # Save figure
-    utils.save_figure(save)
+    _save_figure(save)
 
     return ax
