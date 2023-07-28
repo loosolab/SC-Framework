@@ -3,11 +3,11 @@
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Fix "shell not found" error for CI pipeline (#129)
 - Pinned scikit-learn to version <=1.2.2 (#128)
-- Keep notebook metadata on push to prevetn deleting kernel information
+- Keep notebook metadata on push to prevent deleting kernel information
 - Added sctoolbox as default kernel to RNA & ATAC notebooks
+- Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
 
-0.1.1.2 (05-06-2023)
---------------------
+Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation

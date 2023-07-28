@@ -2,7 +2,7 @@ import pytest
 import os
 import scanpy as sc
 import numpy as np
-import sctoolbox.marker_genes
+import sctoolbox.marker_genes as mg
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -10,10 +10,18 @@ import sctoolbox.marker_genes
 @pytest.fixture
 def adata():
 
+    np.random.seed(1)  # set seed for reproducibility
+
     h5ad = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 
-    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+    sample_names = ["C1_1", "C1_2", "C2_1", "C2_2", "C3_1", "C3_2"]
+    adata.obs["samples"] = np.random.choice(sample_names, size=adata.shape[0])
+    adata.obs["condition"] = adata.obs["samples"].str.split("_", expand=True)[0]
+    adata.obs["condition-col"] = adata.obs["condition"]
+
+    # Raw counts for DESeq2
+    adata.layers["raw"] = adata.layers["spliced"] + adata.layers["unspliced"]
 
     return adata
 
@@ -31,10 +39,10 @@ def test_get_chromosome_genes():
     gtf = os.path.join(os.path.dirname(__file__), 'data', 'genes.gtf')
 
     with pytest.raises(Exception):
-        sctoolbox.marker_genes.get_chromosome_genes(gtf, "NA")
+        mg.get_chromosome_genes(gtf, "NA")
 
-    genes_chr1 = sctoolbox.marker_genes.get_chromosome_genes(gtf, "chr1")
-    genes_chr11 = sctoolbox.marker_genes.get_chromosome_genes(gtf, "chr11")
+    genes_chr1 = mg.get_chromosome_genes(gtf, "chr1")
+    genes_chr11 = mg.get_chromosome_genes(gtf, "chr11")
 
     assert genes_chr1 == ["DDX11L1", "WASH7P", "MIR6859-1"]
     assert genes_chr11 == ["DGAT2"]
@@ -48,10 +56,10 @@ def test_label_genes(adata, species, gene_column):
 
     if species is None:
         with pytest.raises(ValueError):
-            sctoolbox.marker_genes.label_genes(adata, species=species)  # no species given, and it cannot be found in infoprocess
+            mg.label_genes(adata, species=species)  # no species given, and it cannot be found in infoprocess
 
     else:
-        sctoolbox.marker_genes.label_genes(adata, gene_column=gene_column, species=species)
+        mg.label_genes(adata, gene_column=gene_column, species=species)
 
         added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
         missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
@@ -67,7 +75,7 @@ def test_get_rank_genes_tables(adata):
 
     sc.tl.rank_genes_groups(adata, groupby="condition")
 
-    tables = sctoolbox.marker_genes.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx")
+    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx")
 
     assert len(tables) == 3
     assert os.path.exists("rank_genes.xlsx")
@@ -79,8 +87,8 @@ def test_mask_rank_genes(adata):
     sc.tl.rank_genes_groups(adata, groupby="condition")
 
     genes = adata.var.index.tolist()[:10]
-    sctoolbox.marker_genes.mask_rank_genes(adata, genes)
-    tables = sctoolbox.marker_genes.get_rank_genes_tables(adata)
+    mg.mask_rank_genes(adata, genes)
+    tables = mg.get_rank_genes_tables(adata)
 
     for key in tables:
         table_names = tables[key]["names"].tolist()
@@ -100,7 +108,7 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
 
     assert score_name not in adata_score.obs.columns
 
-    out = sctoolbox.marker_genes.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
+    out = mg.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
 
     if inplace:
         assert out is None
@@ -108,3 +116,24 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
     else:
         assert score_name not in adata_score.obs.columns
         assert score_name in out.obs.columns
+
+
+# Outcommented because the CI job currently does not have R and DESeq2 installed
+# Can be outcommented for testing locally
+#
+# @pytest.mark.parametrize("condition_col, error",
+#                         [("not_present", "was not found in adata.obs.columns"),
+#                          ("condition-col", "not a valid column name within R"),
+#                          ("condition", None)])
+# def test_deseq(adata, condition_col, error):
+#    """ Test if deseq2 is run and returns a dataframe """
+#
+#    # test if error is raised
+#    if isinstance(error, str):
+#        with pytest.raises(ValueError, match=error):
+#            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+#
+#    else:  # should run without exceptions
+#        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+#
+#        assert type(df).__name__ == "DataFrame"
