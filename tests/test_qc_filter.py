@@ -163,7 +163,7 @@ def test_filter_cells(adata):
     assert adata.shape[0] == n_false
 
 
-def test_predict_sex(capsys, adata):
+def test_predict_sex(caplog, adata):
 
     adata = adata.copy()  # copy adata to avoid inplace changes
     # gene not in data
