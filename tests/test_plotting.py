@@ -728,8 +728,8 @@ def test_plot_gene_correlation(adata, gene_list, save, figsize):
     adata.var.set_index('gene', inplace=True)
     adata.var_names_make_unique()
 
-    axes = sctoolbox.plotting.plot_gene_correlation(adata, "Xkr4", gene_list,
-                                                    save=save, figsize=figsize)
+    axes = pl.plot_gene_correlation(adata, "Xkr4", gene_list,
+                                    save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
     assert type(axes[0]).__name__.startswith("Axes")
 
