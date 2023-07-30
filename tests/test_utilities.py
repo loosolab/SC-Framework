@@ -27,6 +27,22 @@ def adata2():
 
 
 @pytest.fixture
+def unsorted_fragments():
+    """ Returns adata object with 3 groups """
+
+    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
+    return fragments
+
+
+@pytest.fixture
+def sorted_fragments():
+    """ Returns adata object with 3 groups """
+
+    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
+    return fragments
+
+
+@pytest.fixture
 def berries():
     return ["blueberry", "strawberry", "blackberry"]
 
@@ -227,6 +243,25 @@ def test_get_organism():
 
     # valid call
     assert utils.get_organism("ENSG00000164690") == "Homo_sapiens"
+
+
+def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
+    """ Test if the _bed_is_sorted() function works as expected """
+
+    assert utils._bed_is_sorted(sorted_fragments)
+    assert ~utils._bed_is_sorted(unsorted_fragments)
+
+
+def test_sort_bed(unsorted_fragments):
+    """" Test if the sort bedfile functio works """
+    sorted_bedfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'sorted_bedfile.bed')
+    utils._sort_bed(unsorted_fragments, sorted_bedfile)
+
+    assert utils._bed_is_sorted(sorted_bedfile)
+
+    # Clean up
+    os.remove(sorted_bedfile)
+
 
 # TODO
 # following tests are skipped due to occasional "No internet connection" error.

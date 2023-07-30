@@ -74,6 +74,15 @@ def calc_frip_scores(adata, fragments, temp_dir=''):
 
     # overlap fragments with regions
     logger.info("overlapping bedfiles")
+    if ~utils._bed_is_sorted(fragments):
+        # sort fragments
+        sorted_fragments = os.path.join(temp_dir, "sorted_fragments.bed")
+        utils._sort_bed(fragments, sorted_fragments)
+        fragments = sorted_fragments
+        # add sorted fragments to tempfiles
+        tempfiles.append(sorted_fragments)
+
+    # overlap sorted fragments with regions
     utils._overlap_two_bedfiles(fragments, regions_bed, overlap)
 
     # read in bedfiles
