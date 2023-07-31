@@ -1,6 +1,7 @@
 import anndata
 import functools
 import pandas as pd
+import matplotlib
 
 import sctoolbox.utils.general as utils
 
@@ -45,9 +46,13 @@ def log_anndata(func):
         if funcname not in adata.uns["sctoolbox"]["log"].keys():
             adata.uns["sctoolbox"]["log"][funcname] = {}
 
-        # Convert anndata objects to string representation
-        args_repr = [repr(element) for element in args if isinstance(element, anndata.AnnData)]
-        kwargs_repr = {key: repr(value) if isinstance(value, anndata.AnnData) else value for key, value in kwargs.items()}
+        # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
+        args_repr = args
+        kwargs_repr = kwargs
+        convert = {anndata.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
+        for typ, convfunc in convert.items():
+            args_repr = [convfunc(element) if isinstance(element, typ) else element for element in args_repr]
+            kwargs_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in kwargs_repr.items()}
 
         # log information on run
         d = {}
