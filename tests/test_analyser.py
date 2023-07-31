@@ -33,9 +33,9 @@ def adata_no_pca(adata):
 
 
 @pytest.fixture
-def adata_batch_dict(adata_batch):
+def adata_batch_dict(adata):
     """ dict containing Adata containing batch column in obs. """
-    anndata_batch_dict = adata_batch.copy()
+    anndata_batch_dict = adata.copy()
 
     return {'adata': anndata_batch_dict}
 
