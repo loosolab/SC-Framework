@@ -137,9 +137,10 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
         if species not in available_species:
-            print(genelist_dir)
-            print(available_files)
-            print(glob.glob(genelist_dir + "*"))
+            logger.debug("Species was not found in available species!")
+            logger.debug(f"genelist_dir: {genelist_dir}")
+            logger.debug(f"available_files: {available_files}")
+            logger.debug(f"All files in dir: {glob.glob(genelist_dir + '*')}")
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
         # get cellcylce genes lists
