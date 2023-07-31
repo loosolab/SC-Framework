@@ -103,7 +103,8 @@ def test_subset_PCA(adata):
 
 def test_evaluate_batch_effect(adata):
     """ Test if AnnData containing LISI column in .obs is returned. """
-    ad = an.evaluate_batch_effect({"adata": adata}, 'batch')
+    print(adata)
+    ad = an.evaluate_batch_effect(adata, 'batch')
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
