@@ -1,7 +1,6 @@
 import anndata
 import functools
 import pandas as pd
-import numpy as np
 import matplotlib
 
 import sctoolbox.utils.general as utils
