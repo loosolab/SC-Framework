@@ -114,7 +114,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
             elif isinstance(s_genes, np.ndarray):
                 genes = list(genes)
             elif not isinstance(genes, list):
-                raise ValueError("Please provide a list of genes or a path to a list of genes to s_genes/g2m_genes! Type of {key} is {type(genes)}")
+                raise ValueError(f"Please provide a list of genes or a path to a list of genes to s_genes/g2m_genes! Type of {key} is {type(genes)}")
 
         # Save genes
         if key == "s_genes":
@@ -147,6 +147,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         path_cellcycle_genes = genelist_dir + f"{species}_cellcycle_genes.txt"
         cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
                                        sep="\t", names=['gene', 'phase']).set_index('gene')
+        logger.debug(f"Read {len(cell_cycle_genes)} cell cycle genes list from file: {path_cellcycle_genes}")
 
         # if one list is given as input, get the other list from gene lists dir
         if s_genes is not None:

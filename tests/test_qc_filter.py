@@ -56,35 +56,35 @@ def invalid_threshold_dict():
 
 
 @pytest.fixture
-def s_genes(adata):
+def s_list(adata):
     return adata.var.index[:int(len(adata.var) / 2)].tolist()
 
 
 @pytest.fixture
-def g2m_genes(adata):
+def g2m_list(adata):
     return adata.var.index[int(len(adata.var) / 2):].tolist()
 
 
 @pytest.fixture
-def g2m_file(g2m_genes):
+def g2m_file(g2m_list):
     """ Write a tmp file, which is deleted after usage. """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "g2m_genes.txt")
 
         with open(tmp, "w") as f:
-            f.writelines([g + "\n" for g in g2m_genes])
+            f.writelines([g + "\n" for g in g2m_list])
 
         yield tmp
 
 
 @pytest.fixture
-def s_file(s_genes):
+def s_file(s_list):
     """ Write a tmp file, which is deleted after usage. """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "s_genes.txt")
 
         with open(tmp, "w") as f:
-            f.writelines([g + "\n" for g in s_genes])
+            f.writelines([g + "\n" for g in s_list])
 
         yield tmp
 
@@ -177,7 +177,6 @@ def test_predict_sex(caplog, adata):
 
     # gene in data
     qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample')
-    print(adata.var)
     assert 'predicted_sex' in adata.obs.columns
 
 
@@ -186,29 +185,33 @@ def test_predict_sex(caplog, adata):
     [
         ("mouse", None, None, False),
         (None, "s_file", "g2m_file", True),
-        (None, "s_genes", "g2m_genes", True),
+        (None, "s_list", "g2m_list", True),
         ("unicorn", None, None, False)
     ],
-    indirect=["s_genes", "g2m_genes"]
 )
-def test_predict_cell_cycle(adata, species, s_genes, g2m_genes, inplace):
+def test_predict_cell_cycle(adata, species, s_genes, g2m_genes, inplace, request):
     """ Test if cell cycle is predicted and added to adata.obs """
+
+    # Get value of s_genes and g2m_genes fixtures
+    s_genes = request.getfixturevalue(s_genes) if s_genes is not None else None
+    g2m_genes = request.getfixturevalue(g2m_genes) if g2m_genes is not None else None
+
+    # Remove columns if already present
     expected_columns = ["S_score", "G2M_score", "phase"]
-    adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])  # remove columns if already present
+    adata.obs = adata.obs.drop(columns=[c for c in expected_columns if c in adata.obs.columns])
 
     assert not any(c in adata.obs.columns for c in expected_columns)
 
     if species == "unicorn":
         with pytest.raises(ValueError):
             qc.predict_cell_cycle(adata, species=species)
-            return
-
-    # For other organisms or if s_genes / g2m_genes are given
-    out = qc.predict_cell_cycle(adata, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
-
-    if inplace:
-        assert out is None
-        assert all(c in adata.obs.columns for c in expected_columns)
     else:
-        assert not any(c in adata.obs.columns for c in expected_columns)
-        assert all(c in out.obs.columns for c in expected_columns)
+        # For other organisms or if s_genes / g2m_genes are given
+        out = qc.predict_cell_cycle(adata, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
+
+        if inplace:
+            assert out is None
+            assert all(c in adata.obs.columns for c in expected_columns)
+        else:
+            assert not any(c in adata.obs.columns for c in expected_columns)
+            assert all(c in out.obs.columns for c in expected_columns)
