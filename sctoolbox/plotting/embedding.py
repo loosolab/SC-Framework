@@ -1036,9 +1036,12 @@ def plot_pca_variance(adata, method="pca",
         Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>]. Default: "pca".
     n_pcs : int, optional
         Number of components to plot. Default: 20.
+    n_selected : int, optional
+        Number of components to highlight in the plot with a line. Default: None.
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If None, a new figure is created. Default: None.
-    polt_pca_variance
+    save : str, optional
+        Filename to save the figure. If None, the plot is not saved. Default: None.
 
     Example
     --------
@@ -1056,13 +1059,11 @@ def plot_pca_variance(adata, method="pca",
 
         pl.plot_pca_variance(adata, method="pca",
                       n_pcs=20,
-                      n_selected=None,
-                      ax=None,
-                      save=None)
+                      n_selected=7)
     """
 
     if ax is None:
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
     else:
         # TODO: check if ax is an ax object
         pass
@@ -1074,20 +1075,35 @@ def plot_pca_variance(adata, method="pca",
     var_explained = adata.uns[method]["variance_ratio"][:n_pcs]
     var_explained = var_explained * 100  # to percent
 
+    # Cumulative variance
+    var_cumulative = np.cumsum(var_explained)
+
     # Plot barplot of variance
-    sns.barplot(x=list(range(1, len(var_explained) + 1)),
+    x = list(range(1, len(var_explained) + 1))
+    sns.barplot(x=x,
                 y=var_explained,
-                color="limegreen",
+                color="grey",
                 ax=ax)
+
+    # Plot cumulative variance
+    ax2 = ax.twinx()
+    ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
+    ax2.set_ylabel("Cumulative variance explained (%)", color="blue", fontsize=12)
+    ax2.spines['right'].set_color('blue')
+    ax2.yaxis.label.set_color('blue')
+    ax2.tick_params(axis='y', colors='blue')
 
     # Add number of selected as line
     if n_selected is not None:
-        ax.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
-        ax.legend()
+        ylim = ax2.get_ylim()
+        yrange = ylim[1] - ylim[0]
+        ax2.set_ylim(ylim[0], ylim[1] + yrange * 0.1)  # add 10% to make room for legend of n_seleced line
+        ax2.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
+        ax2.legend()
 
     # Finalize plot
-    ax.set_xlabel('PCs', fontsize=12)
-    ax.set_ylabel("Variance explained (%)")
+    ax.set_xlabel('Principal components', fontsize=12, labelpad=10)
+    ax.set_ylabel("Variance explained (%)", fontsize=12)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
     ax.set_axisbelow(True)
 
