@@ -79,7 +79,8 @@ def test_logfile_verbosity():
 def test_settings_from_config(key, path):
     """ Tests that the function is able to read the config yaml and and applies the settings. """
     settings_from_config(path, key=key)
-    assert all(hasattr(settings, attr) for attr in ["log_file", "overwrite_log"])
+    assert getattr(settings, "overwrite_log")
+    assert getattr(settings, "log_file") == "pipeline_output/logs/01_log.txt"
     settings.reset()
 
 
