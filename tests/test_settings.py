@@ -75,7 +75,6 @@ def test_logfile_verbosity():
         assert "[DEBUG]" in log  # check that debug message from get_adata_subsets is in log file
 
 
-
 @pytest.mark.parametrize("key, path", [(None, config_path_nokey), ("01", config_path)])
 def test_settings_from_config(key, path):
     """ Tests that the function is able to read the config yaml and and applies the settings. """
