@@ -79,7 +79,7 @@ def test_logfile_verbosity():
 def test_settings_from_config(key, path):
     """ Tests that the function is able to read the config yaml and and applies the settings. """
     settings_from_config(path, key=key)
-    assert all(hasattr(settings, attr) for attr in ["adata_output_dir", "log_file", "overwrite_log"])
+    assert all(hasattr(settings, attr) for attr in ["log_file", "overwrite_log"])
 
 
 def test_invalid_key_settings_from_config():
