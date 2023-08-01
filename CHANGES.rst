@@ -5,7 +5,7 @@
 - Added logging verbose and decorator to ATAC related functions
 - Fix "shell not found" error for CI pipeline (#129)
 - Pinned scikit-learn to version <=1.2.2 (#128)
-- Added check for marker gene lists
+- Added check for marker gene lists (#103)
 - Keep notebook metadata on push to prevent deleting kernel information
 - Added sctoolbox as default kernel to RNA & ATAC notebooks
 - Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
