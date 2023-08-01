@@ -1187,7 +1187,7 @@ def plot_pca_correlation(adata, which="obs",
 
     # Get table of pcs and columns
     pc_columns = [f"PC{i+1}" for i in range(n_pcs)]
-    pc_table = pd.DataFrame(mat[:,:n_pcs], columns=pc_columns)
+    pc_table = pd.DataFrame(mat[:, :n_pcs], columns=pc_columns)
     pc_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
 
     # Calculate correlation of columns
@@ -1204,10 +1204,10 @@ def plot_pca_correlation(adata, which="obs",
         corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
 
     # Plot heatmap
-    figsize = figsize if figsize is not None else (len(pc_columns)/1.5, len(numeric_columns)/1.5)
+    figsize = figsize if figsize is not None else (len(pc_columns) / 1.5, len(numeric_columns) / 1.5)
     fig, ax = plt.subplots(figsize=figsize)
 
-    ax = sns.heatmap(corr_table, 
+    ax = sns.heatmap(corr_table,
                      annot=corr_table_annot,
                      fmt='',
                      annot_kws={"fontsize": 9},
