@@ -30,7 +30,6 @@ def find_version(f):
 
 # Find all packages in sctoolbox
 packages = find_namespace_packages("sctoolbox")
-packages = [package for package in packages if not package.startswith("data")]  # remove data package as it is included in manifest
 packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. prefix to all packages
 
 # Find top level modules in sctoolbox
