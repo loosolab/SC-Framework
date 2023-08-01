@@ -409,6 +409,8 @@ def check_marker_lists(adata, marker_dict):
     dict :
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
     """
+    marker_dict = marker_dict.copy()
+
     for key, genes in list(marker_dict.items()):
         found_in_var = list(set(adata.var.index) & set(genes))
         not_found_in_var = list(set(genes) - set(adata.var.index))
