@@ -401,7 +401,8 @@ def check_marker_lists(adata, marker_dict):
     adata : AnnData object
         The anndata object containing features to annotate.
     marker_dict : dict
-        Dictionary containing list of markergenes as values and coresponding cell types as key.
+        A dictionary containing a list of marker genes as values and corresponding cell types as keys.
+        The marker genes given in the lists need to match the index of adata.var.
 
     Returns
     -------
