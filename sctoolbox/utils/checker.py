@@ -4,7 +4,6 @@ import matplotlib
 import numpy as np
 import gzip
 import shutil
-import warnings
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
