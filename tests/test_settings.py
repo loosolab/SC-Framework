@@ -65,12 +65,15 @@ def test_logfile_verbosity():
     assert "[INFO]" in captured       # check that info message from load_h5ad is in written log
     assert "[DEBUG]" not in captured  # check that debug message from get_adata_subsets is NOT in written log, since verbosity=1
 
+    settings.close_logfile()
+
     # Read log file
     with open(settings.log_file, "r") as f:
         log = f.read()
 
         assert "[INFO]" in log   # check that info message from load_h5ad is in log file
         assert "[DEBUG]" in log  # check that debug message from get_adata_subsets is in log file
+
 
 
 @pytest.mark.parametrize("key, path", [(None, config_path_nokey), ("01", config_path)])
