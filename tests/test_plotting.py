@@ -153,6 +153,27 @@ def test_plot_pca_variance_fail(adata):
         pl.plot_pca_variance(adata, method=invalid)
 
 
+@pytest.mark.parametrize("which", ["obs", "var"])
+@pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
+def test_plot_pca_correlation(adata, which, method):
+    """ Test if Axes object is returned without error. """
+
+    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax_type = type(ax).__name__
+
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+                                    {"which": "invalid"},
+                                    {"columns": ["invalid", "columns"]}])
+def test_plot_pca_correlation_fail(adata, kwargs):
+    """ Test that an error is raised upon error """
+
+    with pytest.raises((ValueError, KeyError)):
+        pl.plot_pca_correlation(adata, **kwargs)
+
+
 @pytest.mark.parametrize("method", ["umap"])  # , "tsne"]) # tsne option is currently broken and sends the function to sleep. Will be added if fixed.
 def test_search_dim_red_parameters(adata, method):
     """ Test if search_dim_red_parameters returns an array of axes. """
