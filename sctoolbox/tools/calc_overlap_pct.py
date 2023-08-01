@@ -14,6 +14,9 @@ import sys
 from pathlib import Path
 import multiprocessing as mp
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def check_pct_fragments_in_promoters(adata, qc_col):
@@ -81,14 +84,14 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
         temp_files.append(out_sorted)
     # sort bam if not sorted
     if sort_bam:
-        print("Sorting BAM file...")
+        logger.info("Sorting BAM file...")
         pysam.sort("-o", bam_sorted, bam)
         bam = bam_sorted
         pysam.index(bam)
 
     # check for bam index file
     if not os.path.exists(bam + ".bai"):
-        print("Bamfile has no index - trying to index with pysam...")
+        logger.info("Bamfile has no index - trying to index with pysam...")
         pysam.index(bam)
 
     # sinto = os.path.join('/'.join(sys.executable.split('/')[:-1]),'sinto')
@@ -100,12 +103,12 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     readname_bc = None if cb_tag else "[^:]*"
     # run sinto
     fragments(bam, out_unsorted, nproc=nproc, cellbarcode=cb_tag, readname_barcode=readname_bc)
-    print('Finished creating fragments file. Now sorting...')
+    logger.info('Finished creating fragments file. Now sorting...')
 
     # sort
     sort_cmd = f'sort -k1,1 -k2,2n {out_unsorted} > {out_sorted}'
     os.system(sort_cmd)
-    print('Finished sorting fragments')
+    logger.info('Finished sorting fragments')
 
     # remove unsorted
     os.remove(out_unsorted)
@@ -206,6 +209,7 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
     return out_overlap, temp_files
 
 
+@deco.log_anndata
 def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None,
                                cb_col=None, cb_tag='CB', species=None, nproc=1, sort_bam=False):
     """
@@ -250,6 +254,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
                           cb_col=cb_col, cb_tag=cb_tag, regions_name='promoters', nproc=nproc, sort_bam=sort_bam)
 
 
+@deco.log_anndata
 def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None,
                           cb_tag='CB', regions_name='list', nproc=1, sort_bam=False, sort_regions=False, keep_fragments=False):
     """
@@ -287,7 +292,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
         try:
             barcodes = adata.obs[cb_col].to_list()
         except KeyError:
-            print(f"{cb_col} is not in adata.obs!")
+            logger.error(f"{cb_col} is not in adata.obs!")
             return
     else:
         barcodes = adata.obs.index.to_list()
@@ -296,7 +301,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     # check if regions file is gtf or bed
     file_ext = Path(regions_file).suffix
     if file_ext.lower() == '.gtf':
-        print("Converting GTF to BED...")
+        logger.info("Converting GTF to BED...")
         # convert gtf to bed with columns chr, start, end
         bed_file, temp_files = _convert_gtf_to_bed(regions_file, temp_files=temp_files, out=None)
     elif file_ext.lower() == '.bed':
@@ -308,7 +313,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
     # if only bam file is available -> convert to fragments
     if bam_file and not fragments_file:
-        print('Converting BAM to fragments file! This may take a while...')
+        logger.info('Converting BAM to fragments file! This may take a while...')
         fragments_file, temp_files = create_fragment_file(bam_file,
                                                           cb_tag=cb_tag,
                                                           out=None,
@@ -318,7 +323,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
                                                           temp_files=temp_files)
 
     # overlap reads in fragments with promoter regions, return path to overlapped file
-    print('Finding overlaps...')
+    logger.info('Finding overlaps...')
     overlap_file, temp_files = _overlap_two_beds(fragments_file, bed_file, out=None, temp_files=temp_files)
 
     #
@@ -326,11 +331,11 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
 
     #
-    print('Adding results to adata object...')
-    print("cleaning up...")
+    logger.info('Adding results to adata object...')
+    logger.info("cleaning up...")
     for f in temp_files:
         os.remove(f)
-    print('Done')
+    logger.info('Done')
 
 
 class MPOverlapPct():
@@ -349,7 +354,7 @@ class MPOverlapPct():
 
         # check if there was an overlap
         if not overlap_file:
-            print("There was no overlap!")
+            logger.info("There was no overlap!")
             return
 
         # get unique barcodes from adata.obs
@@ -366,7 +371,7 @@ class MPOverlapPct():
             col_pct_fragments = 'pct_fragments_in_' + regions_name
 
         # calculating percentage
-        print('Calculating percentage...')
+        logger.info('Calculating percentage...')
         # read overlap file as dataframe
         ov_fragments = pd.read_csv(overlap_file, sep="\t", header=None, chunksize=1000000)
         merged_ov_dict = self.mp_counter(ov_fragments, barcodes=barcodes, column=col_n_fragments_in_list, n_threads=n_threads)

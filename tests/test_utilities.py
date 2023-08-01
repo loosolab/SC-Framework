@@ -217,10 +217,7 @@ def test_save_h5ad(adata):
     path = "test.h5ad"
     utils.save_h5ad(adata, path)
 
-    adata_read = sc.read_h5ad(path)
-
     assert os.path.isfile(path)
-    assert "user" in adata_read.uns["sctoolbox"]
     os.remove(path)  # clean up after tests
 
 

@@ -9,11 +9,16 @@ from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 from anndata import AnnData
 
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
+
 
 ############################################################################
 #                             PCA / SVD                                    #
 ############################################################################
 
+@deco.log_anndata
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
     """
     Compute PCA and add information to adata.uns['infoprocess']
@@ -37,7 +42,7 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
     adata_m = anndata if inplace else anndata.copy()
 
     # Computing PCA
-    print("Computing PCA")
+    logger.info("Computing PCA")
     sc.pp.pca(adata_m, use_highly_variable=use_highly_variable, **kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
@@ -212,6 +217,7 @@ def define_PC(anndata):
     return knee
 
 
+@deco.log_anndata
 def subset_PCA(adata, n_pcs, start=0, inplace=True):
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.

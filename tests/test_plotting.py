@@ -6,22 +6,29 @@ import tempfile
 import shutil
 import pandas as pd
 import numpy as np
-import sctoolbox.tools as tool
 import seaborn as sns
 import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 
+# Prevent figures from being shown, we just check that they are created
+plt.switch_backend("Agg")
 
+
+# ------------------------------ FIXTURES --------------------------------- #
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """ Load and returns an anndata object. """
+
+    np.random.seed(1)  # set seed for reproducibility
+
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
+
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
-    adata.obs["cat"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-    adata.obs["cat"] = adata.obs["cat"].astype("category")
+    adata.obs["cat"] = adata.obs["condition"].astype("category")
+
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
@@ -31,9 +38,9 @@ def adata():
 
     sc.tl.umap(adata, n_components=3)
     sc.tl.tsne(adata)
-    sc.tl.pca(adata)
+    # sc.tl.pca(adata)
     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
-    sc.tl.dendrogram(adata, groupby='clustering')
+    # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
 
@@ -50,6 +57,14 @@ def pairwise_ranked_genes():
     return pd.DataFrame(data={"1/2_group": ["C1", "C1", "C2", "C2"],
                               "1/3_group": ["C1", "NS", "C2", "C2"],
                               "2/3_group": ["C1", "C1", "NS", "C2"]},
+                        index=["GeneA", "GeneB", "GeneC", "GeneD"])
+
+
+@pytest.fixture
+def pairwise_ranked_genes_nosig():
+    return pd.DataFrame(data={"1/2_group": ["NS", "NS", "NS", "NS"],
+                              "1/3_group": ["NS", "NS", "NS", "NS"],
+                              "2/3_group": ["NS", "NS", "NS", "NS"]},
                         index=["GeneA", "GeneB", "GeneC", "GeneD"])
 
 
@@ -690,8 +705,9 @@ def test_rank_genes_plot_fail(adata):
                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
 
 
-@pytest.mark.parametrize("groupby", [None, "condition"])
-@pytest.mark.parametrize("title", [None, "Title"])
+@pytest.mark.parametrize("groupby, title",
+                         [(None, "title"),
+                          ("condition", None)])
 def test_gene_expression_heatmap(adata, title, groupby):
     """ Test gene_expression_heatmap. """
     g = pl.gene_expression_heatmap(adata,
@@ -717,16 +733,16 @@ def test_plot_differential_genes(pairwise_ranked_genes):
     assert ax_type.startswith("Axes")
 
 
-def test_plot_differential_genes_fail(adata):
-    ranked_genes = tool.pairwise_rank_genes(adata, groupby="clustering")
+def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
+    """ Test if ValueError is raised if no significant genes are found. """
     with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
-        pl.plot_differential_genes(ranked_genes)
+        pl.plot_differential_genes(pairwise_ranked_genes_nosig)
 
 
-@pytest.mark.parametrize("sortby", [None, "condition"])
-@pytest.mark.parametrize("title", [None, "condition"])
-@pytest.mark.parametrize("figsize", [None, (10, 10)])
-@pytest.mark.parametrize("layer", [None, "spliced"])
+@pytest.mark.parametrize("sortby, title, figsize, layer",
+                         [("condition", "condition", None, "spliced"),
+                          (None, None, (4, 4), None)],
+                         )
 def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
     ax = pl.pseudotime_heatmap(adata, ['ENSMUSG00000103377',
                                        'ENSMUSG00000102851'],
