@@ -895,7 +895,7 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
         if len(not_found) > 0:
             logger.info(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
 
-        boolean = ~table.index.isin(filter).values
+        boolean = ~table.index.isin(filter)
 
     # Remove genes from adata
     if inplace:
