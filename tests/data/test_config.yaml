@@ -1,4 +1,3 @@
 "01":
-  adata_output_dir: "pipeline_output/adatas/"
   log_file: "pipeline_output/logs/01_log.txt"
   overwrite_log: True
