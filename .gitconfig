@@ -2,6 +2,7 @@
 [filter "strip-notebook-output"]
 	clean = "jupyter nbconvert --ClearOutputPreprocessor.enabled=True \
 							   --ClearMetadataPreprocessor.enabled=True \
+							   --ClearMetadataPreprocessor.clear_notebook_metadata=False \
 							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=tags \
 							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=editable \
 							   --ClearMetadataPreprocessor.preserve_cell_metadata_mask=init_cell \
