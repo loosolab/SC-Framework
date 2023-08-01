@@ -4,7 +4,9 @@ import warnings
 import scanpy as sc
 import numpy as np
 import pandas as pd
+import scipy.stats
 from scipy.sparse import issparse
+import itertools
 
 import seaborn as sns
 import matplotlib as mpl
@@ -1106,6 +1108,129 @@ def plot_pca_variance(adata, method="pca",
     ax.set_ylabel("Variance explained (%)", fontsize=12)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
     ax.set_axisbelow(True)
+
+    # Save figure
+    _save_figure(save)
+
+    return ax
+
+
+def plot_pca_correlation(adata, which="obs",
+                         n_pcs=10,
+                         columns=None,
+                         pvalue_threshold=0.01,
+                         method="spearmanr",
+                         figsize=None,
+                         save=None):
+    """
+    Plot a heatmap of the correlation between the first n_pcs and the given columns.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    which : str, default "obs"
+        Whether to use the observations ("obs") or variables ("var") for the correlation.
+    n_pcs : int, default 10
+        Number of principal components to use for the correlation.
+    columns : list of str, default None
+        List of columns to use for the correlation. If None, all numeric columns are used.
+    pvalue_threshold : float, default 0.01
+        Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
+    method : str, default "spearmanr"
+        Method to use for correlation. Must be either "pearsonr" or "spearmanr".
+    figsize : tuple of int, default None
+        Size of the figure in inches. If None, the size is automatically determined.
+    save : str, default None
+        Filename to save the figure.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Axes object containing the heatmap.
+
+
+    Example
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_correlation(adata, which="obs")
+    """
+
+    # Establish which table to use
+    if which == "obs":
+        table = adata.obs.copy()
+        mat = adata.obsm["X_pca"]
+    elif which == "var":
+        table = adata.var.copy()
+        mat = adata.varm["PCs"]
+    else:
+        raise ValueError(f"'which' must be either 'var'/'obs', but '{which}' was given.")
+
+    # Check that method is available
+    try:
+        corr_method = getattr(scipy.stats, method)
+    except AttributeError:
+        s = f"'{method}' is not a valid method within scipy.stats. Please choose one of pearsonr/spearmanr."
+        raise ValueError(s)
+
+    # Get columns
+    if columns is None:
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
+    else:
+        # check that columns is in table
+        for col in columns:
+            if col not in table.columns:
+                raise KeyError(f"Column '{col}' was not found in table.")
+
+    # Get table of pcs and columns
+    pc_columns = [f"PC{i+1}" for i in range(n_pcs)]
+    pc_table = pd.DataFrame(mat[:,:n_pcs], columns=pc_columns)
+    pc_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
+
+    # Calculate correlation of columns
+    combinations = list(itertools.product(numeric_columns, pc_columns))
+
+    corr_table = pd.DataFrame(index=numeric_columns, columns=pc_columns, dtype=float)
+    corr_table_annot = corr_table.copy()
+    for row, col in combinations:
+
+        res = corr_method(pc_table[row], pc_table[col])
+        corr_table.loc[row, col] = res.statistic
+
+        corr_table_annot.loc[row, col] = str(np.round(res.statistic, 2))
+        corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
+
+    # Plot heatmap
+    figsize = figsize if figsize is not None else (len(pc_columns)/1.5, len(numeric_columns)/1.5)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax = sns.heatmap(corr_table, 
+                     annot=corr_table_annot,
+                     fmt='',
+                     annot_kws={"fontsize": 9},
+                     cbar_kws={"label": method},
+                     cmap="seismic",
+                     center=0,
+                     ax=ax)
+    ax.set_aspect(0.8)
+
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+
+    # Set size of cbar to the same height as the heatmap
+    cbar_ax = fig.get_axes()[-1]
+    ax_pos = ax.get_position()
+    cbar_pos = cbar_ax.get_position()
+
+    cbar_ax.set_position([ax_pos.x1 + 2 * cbar_pos.width, ax_pos.y0,
+                          cbar_pos.width, ax_pos.height])
+
+    # Add black borders to axes
+    for ax_obj in [ax, cbar_ax]:
+        for _, spine in ax_obj.spines.items():
+            spine.set_visible(True)
 
     # Save figure
     _save_figure(save)
