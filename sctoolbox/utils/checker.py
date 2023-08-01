@@ -405,7 +405,8 @@ def check_marker_lists(adata, marker_dict):
 
     Returns
     -------
-    Dictionary containing list of markergenes as values and coresponding cell types as key.
+    dict :
+        A dictionary containing a list of marker genes as values and corresponding cell types as keys.
     """
     for key, genes in list(marker_dict.items()):
         found_in_var = list(set(adata.var.index) & set(genes))
