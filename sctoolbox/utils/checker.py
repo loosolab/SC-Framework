@@ -7,6 +7,8 @@ import shutil
 import warnings
 
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def check_module(module):
@@ -414,10 +416,10 @@ def check_marker_lists(adata, marker_dict):
         found_in_var = list(set(adata.var.index) & set(genes))
         not_found_in_var = list(set(genes) - set(adata.var.index))
         if not found_in_var:
-            warnings.warn(f"No marker in {key} marker list can be found in the data. "
-                          + "Please check your marker list. Removing empty marker list form dictionary.")
+            logger.warning(f"No marker in {key} marker list can be found in the data. "
+                           + "Please check your marker list. Removing empty marker list form dictionary.")
             marker_dict.pop(key)
         elif not_found_in_var:
             marker_dict[key] = found_in_var
-            print(f"Removed {not_found_in_var} from {key} marker gene list")
+            logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
     return marker_dict
