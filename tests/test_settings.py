@@ -80,9 +80,11 @@ def test_settings_from_config(key, path):
     """ Tests that the function is able to read the config yaml and and applies the settings. """
     settings_from_config(path, key=key)
     assert all(hasattr(settings, attr) for attr in ["log_file", "overwrite_log"])
+    settings.reset()
 
 
 def test_invalid_key_settings_from_config():
     """ Test that apropriate Error is returned if the given key is not found in the yaml. """
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings_from_config(config_path_nokey, key="01")
+    settings.reset()
