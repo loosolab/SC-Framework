@@ -882,6 +882,9 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
         if filter not in table.columns:
             raise ValueError(f"Column {filter} not found in {table_name}.columns")
 
+        if table[filter].dtype.name != "bool":
+            raise ValueError(f"Column {filter} contains values that are not of type boolean")
+
         boolean = table[filter].values
         if remove_bool is True:
             boolean = ~boolean
