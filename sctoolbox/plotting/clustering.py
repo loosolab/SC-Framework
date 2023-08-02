@@ -1,3 +1,5 @@
+"""Functions for plotting clustering results e.g. UMAPs colored by clusters."""
+
 import numpy as np
 import scanpy as sc
 import matplotlib.pyplot as plt
@@ -17,7 +19,7 @@ def search_clustering_parameters(adata,
                                  embedding="X_umap",
                                  ncols=3,
                                  verbose=True,
-                                 save=None):
+                                 save=None) -> np.ndarray:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -40,8 +42,13 @@ def search_clustering_parameters(adata,
 
     Returns
     -------
-    axarr : array of matplotlib.axes.Axes
+    axarr : np.ndarray
         Array of axes objects containing the plot(s).
+
+    Raises
+    ------
+    ValueError
+        If the length of 'resolution_range' is not 3, if 'step' is larger than 'max' - 'min' or if 'method' is not valid.
 
     Example
     --------
@@ -121,8 +128,8 @@ def search_clustering_parameters(adata,
 
 
 @deco.log_anndata
-def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
-    """ Plot an overview of marker genes and clustering.
+def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None) -> list:
+    """Plot an overview of marker genes and clustering.
 
     Parameters
     ----------
@@ -138,6 +145,11 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
         If given, save the figure to this path.
     figsize : `tuple`, optional (default: `None`)
         Size of the figure. If `None`, use default size.
+
+    Returns
+    -------
+    axarr : list
+        List of axes objects containing the plot(s).
 
     Example
     --------

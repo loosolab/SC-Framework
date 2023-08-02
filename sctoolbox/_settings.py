@@ -1,3 +1,5 @@
+"""Settings for running sctoolbox functions including paths to output directories, logging, verbosity etc."""
+
 import os
 import yaml
 import sys
@@ -5,9 +7,7 @@ import logging
 
 
 class SctoolboxConfig(object):
-    """
-    Config manager for sctoolbox
-    """
+    """Config manager for sctoolbox."""
 
     __frozen = False
 
@@ -34,15 +34,15 @@ class SctoolboxConfig(object):
         self._freeze()  # Freeze the class; no new attributes can be added
 
     def reset(self):
-        """ Reset all settings to default """
+        """Reset all settings to default."""
         self.__init__()
 
     def _freeze(self):
-        """ Set __frozen to True, disallowing new attributes to be added """
+        """Set __frozen to True, disallowing new attributes to be added."""
         self.__frozen = True
 
     def __setattr__(self, key, value):
-        """ Set attribute if it exists in __init__ and is of the correct type """
+        """Set attribute if it exists in __init__ and is of the correct type."""
 
         if self.__frozen and not hasattr(self, key):
             valid_parameters = [key for key in self.__dict__ if not key.startswith("_")]
@@ -93,7 +93,7 @@ class SctoolboxConfig(object):
             raise TypeError("Parameter must be of type bool.")
 
     def _create_dir(self, dirname: str):
-        """ Create a directory if it does not exist yet """
+        """Create a directory if it does not exist yet."""
 
         if dirname == "":  # do not create directory if path is empty
             return
@@ -106,7 +106,7 @@ class SctoolboxConfig(object):
     # Getter / setter for filename prefixes
     @property
     def full_figure_prefix(self):
-        """ Combine figure_dir and figure_prefix on the fly to get the full figure prefix """
+        """Combine figure_dir and figure_prefix on the fly to get the full figure prefix."""
         return self.figure_dir + self.figure_prefix   # figure_dir has trailing slash
 
     @full_figure_prefix.setter
@@ -115,7 +115,7 @@ class SctoolboxConfig(object):
 
     @property
     def full_adata_input_prefix(self):
-        """ Combine adata_input_dir and adata_input_prefix on the fly to get the full adata input prefix """
+        """Combine adata_input_dir and adata_input_prefix on the fly to get the full adata input prefix."""
         return self.adata_input_dir + self.adata_input_prefix
 
     @full_adata_input_prefix.setter
@@ -124,7 +124,7 @@ class SctoolboxConfig(object):
 
     @property
     def full_adata_output_prefix(self):
-        """ Combine adata_output_dir and adata_output_prefix on the fly to get the full adata output prefix """
+        """Combine adata_output_dir and adata_output_prefix on the fly to get the full adata output prefix."""
         return self.adata_output_dir + self.adata_output_prefix
 
     @full_adata_output_prefix.setter
@@ -132,7 +132,7 @@ class SctoolboxConfig(object):
         raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
 
     def _setup_logger(self, verbosity: int = None, log_file: str = None, overwrite_log: bool = False):
-        """ Set up logger on the basis of the verbosity level """
+        """Set up logger on the basis of the verbosity level."""
 
         # Use current settings if no new settings are provided
         if log_file is None:
@@ -190,19 +190,20 @@ class SctoolboxConfig(object):
             self._logger.addHandler(F)
 
     def close_logfile(self):
-        """ Close all open filehandles of logger """
+        """Close all open filehandles of logger."""
         for handler in self._logger.handlers:
             if isinstance(handler, logging.FileHandler):
                 handler.close()
 
     @property
     def logger(self):
+        """Return logger object."""
         return self._logger
 
 
 def settings_from_config(config_file, key=None):
     """
-    Set settings from a config file in yaml format.
+    Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 
     Parameters
     ----------
@@ -211,10 +212,10 @@ def settings_from_config(config_file, key=None):
     key : str, optional
         If given, get settings for a specific key.
 
-    Returns
-    -------
-    None
-        Settings are set in sctoolbox.settings.
+    Raises
+    ------
+    KeyError
+        If key is not found in config file.
     """
 
     # Read yaml file
