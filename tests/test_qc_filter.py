@@ -159,12 +159,33 @@ def test_filter_genes(adata):
 
 def test_filter_cells(adata):
     """ Test whether cells were filtered out based on a boolean column"""
-
+    adata = adata.copy()  # copy adata to avoid inplace changes
     adata.obs["cell_bool"] = np.random.choice(a=[False, True], size=adata.shape[0])
     n_false = sum(~adata.obs["cell_bool"])
     qc.filter_cells(adata, "cell_bool", inplace=True)  # removes all genes with boolean True
 
     assert adata.shape[0] == n_false
+
+
+@pytest.mark.parametrize("which, to_filter", [("obs", ["AAACCCACAGCCTATA", "AAACCCACAGGGCTTC"]),
+                                              ("var", ["ENSMUSG00000051951", "ENSMUSG00000102851"])])
+def test_filter_object(adata, which, to_filter):
+    """ Test wheter cells/genes are filtered based on list of cells/genes. """
+    adata = adata.copy()  # copy adata to avoid inplace changes
+    qc._filter_object(adata, to_filter, which=which)
+    table = adata.obs if which == "obs" else adata.var
+    assert all([i not in table.index for i in to_filter])
+
+
+def test_filter_object_fail(adata):
+    """ Test wheter invlid input raises correct errors. """
+    adata = adata.copy()
+    adata.obs["notbool"] = np.random.choice(a=[False, True, np.nan], size=adata.shape[0])
+    with pytest.raises(ValueError, match="Column notbool contains values that are not of type boolean"):
+        qc._filter_object(adata, "notbool", which="obs")
+
+    with pytest.raises(ValueError, match="Column invalid not found"):
+        qc._filter_object(adata, "invalid", which="obs")
 
 
 def test_predict_sex(caplog, adata):
