@@ -1,3 +1,5 @@
+"""Plots for highly variable genes, e.g. as a result of sc.tl.highly_variable."""
+
 import matplotlib.pyplot as plt
 import sctoolbox.utils.decorator as deco
 import sctoolbox.utils as utils

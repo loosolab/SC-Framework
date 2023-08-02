@@ -117,7 +117,7 @@ def search_umap_parameters(adata,
         2D numpy array of axis objects
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -164,7 +164,7 @@ def search_tsne_parameters(adata,
         2D numpy array of axis objects
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -337,7 +337,7 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None) 
         Flat numpy array of axis objects
 
     Example
-    --------
+    -------
 
     .. plot::
         :context: close-figs
@@ -421,7 +421,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         If none of the variables in var_list are found in any of the adata objects.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -552,7 +552,7 @@ def plot_3D_UMAP(adata, color, save):
         If the given 'color' attribute was not found in adata.obs columns or adata.var index.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -755,7 +755,7 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
         If color and title have different lengths.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -844,7 +844,7 @@ def anndata_overview(adatas,
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
-    ------------
+    ----------
     adatas : dict of anndata.AnnData
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
@@ -878,7 +878,7 @@ def anndata_overview(adatas,
         If any of the adatas is not of type anndata.AnnData or an invalid plot is specified.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -1101,7 +1101,7 @@ def plot_pca_variance(adata, method="pca",
         If the given method is not found in adata.uns.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 

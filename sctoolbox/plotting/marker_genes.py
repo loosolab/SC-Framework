@@ -1,3 +1,5 @@
+"""Plots for marker genes e.g. as results of sc.tl.rank_genes_groups."""
+
 import scanpy as sc
 import numpy as np
 import qnorm
@@ -7,6 +9,7 @@ from scipy.stats import zscore
 
 # for plotting
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -27,7 +30,7 @@ def rank_genes_plot(adata,
                     style="dots",
                     measure="expression",
                     save=None,
-                    **kwargs):
+                    **kwargs) -> dict:
     """
     Plot expression of genes from rank_genes_groups or from a gene list/dict.
 
@@ -51,6 +54,20 @@ def rank_genes_plot(adata,
         Style of the plot. Either `dots` or `heatmap`.
     measure : `str`, optional (default: `expression`)
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
+    save : `str`, optional (default: `None`)
+        If given, save the figure to this path.
+    **kwargs : `dict`, optional
+        Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
+
+    Raises
+    ------
+    ValueError
+        If `style` is not one of `dots` or `heatmap`, if both `genes` and `key` are specified, or if `groupby` is not specified when `genes` is specified.
+
+    Returns
+    -------
+    g : dict
+        Dictionary containing the matplotlib axes objects for the plot.
     """
 
     available_styles = ["dots", "heatmap"]
@@ -154,11 +171,14 @@ def rank_genes_plot(adata,
 #####################################################################
 
 @deco.log_anndata
-def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin",
+def grouped_violin(adata, x,
+                   y=None,
+                   groupby=None, figsize=None,
+                   title=None, style="violin",
                    normalize=False,
                    ax=None,
                    save=None,
-                   **kwargs):
+                   **kwargs) -> matplotlib.axes.Axes:
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
     Can for example show the expression of one gene across groups (x = obs_group, y = gene),
@@ -195,7 +215,7 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
     matplotlib.axes.Axes
 
     Example
-    --------
+    -------
 
     .. plot::
         :context: close-figs
@@ -306,7 +326,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     per group, and are subsequently normalized to 0-1 per gene across groups.
 
     Parameters
-    ------------
+    ----------
     adata : anndata.AnnData object
         An annotated data matrix object containing counts in .X.
     gene_list : list
@@ -316,7 +336,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
     figsize : tuple, optional
         Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
 
-    EXAMPLE
+    Example
     -------
 
     .. plot::
@@ -407,7 +427,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
         If given, save the figure to this path.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
