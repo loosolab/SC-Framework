@@ -26,8 +26,8 @@ def pseudotime_heatmap(adata, genes,
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : anndata.AnnData
         Anndata object
     genes : list
@@ -48,7 +48,7 @@ def pseudotime_heatmap(adata, genes,
         Additional arguments passed to seaborn.heatmap.
 
     Returns
-    --------
+    -------
     ax : matplotlib.Axes
         Axes object containing the plot.
     """
