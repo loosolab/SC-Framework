@@ -145,12 +145,13 @@ def test_plot_pca_variance(adata, n_selected):
 
 
 def test_plot_pca_variance_fail(adata):
-    """ Test if failes on invalid method. """
-    # generate invalid method
-    invalid = "-".join(list(adata.uns.keys())) + "-invalid"
+    """ Test if failes on invalid parameters. """
 
-    with pytest.raises(KeyError):
-        pl.plot_pca_variance(adata, method=invalid)
+    with pytest.raises(KeyError, match="The given method"):
+        pl.plot_pca_variance(adata, method="invalid")
+
+    with pytest.raises(ValueError, match="'ax' parameter needs to be an Axes object."):
+        pl.plot_pca_variance(adata, ax="invalid")
 
 
 @pytest.mark.parametrize("which", ["obs", "var"])
