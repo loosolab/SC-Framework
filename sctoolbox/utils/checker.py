@@ -83,14 +83,14 @@ def is_str_numeric(ans):
 def format_index(adata, from_column=None):
     """
     This formats the index of adata.var by the pattern ["chr", "start", "stop"]
+    The adata is changed inplace.
+
     Parameters
     ----------
-    adata: anndata.AnnData
-    from_column: None or column name (str) in adata.var to be set as index
-
-    Returns
-    -------
-
+    adata : anndata.AnnData
+        The anndata object to reformat.
+    from_column : str, default None
+        Column name in adata.var to be set as index.
     """
     if from_column is None:
         entry = adata.var.index[0]
@@ -151,14 +151,17 @@ def format_index(adata, from_column=None):
 
 def get_index_type(entry):
     """
-    Check the format of the index by regex
+    Check the format of the index by regex.
+
     Parameters
     ----------
-    entry
+    entry : str
+        String to identify the format on.
 
     Returns
     -------
-
+    str or None
+        The index format. Either 'snapatac', 'start_name' or None for unknown format.
     """
 
     regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
@@ -171,14 +174,21 @@ def get_index_type(entry):
 
 
 def validate_regions(adata, coordinate_columns):
-    """ Checks if the regions in adata.var are valid.
+    """
+    Checks if the regions in adata.var are valid.
 
     Parameters
-    -----------
-    adata : AnnData
+    ----------
+    adata : anndata.AnnData
         AnnData object containing the regions to be checked.
     coordinate_columns : list of str
-        List of length 3 for column names in adata.var containing chr, start, end coordinates. """
+        List of length 3 for column names in adata.var containing chr, start, end coordinates.
+
+    Raises
+    ------
+    ValueError
+        If invalid regions are detected.
+    """
 
     # Test whether the first three columns are in the right format
     chr, start, end = coordinate_columns
@@ -294,7 +304,7 @@ def is_integer_array(arr):
 
     Parameters
     ----------
-    x : numpy.array
+    arr : numpy.array
         Array of values to be checked.
 
     Returns
@@ -311,17 +321,21 @@ def is_integer_array(arr):
 
 def check_columns(df, columns, name="dataframe"):
     """
+    TODO do we need this?
+
     Utility to check whether columns are found within a pandas dataframe.
 
     Parameters
-    ------------
+    ----------
     df : pandas.DataFrame
         A pandas dataframe to check.
     columns : list
-        A list of column names to check for within 'df'.
+        A list of column names to check for within `df`.
+    name : str, default dataframe
+        Dataframe name displayed in the error message.
 
     Raises
-    --------
+    ------
     KeyError
         If any of the columns are not in 'df'.
     """
