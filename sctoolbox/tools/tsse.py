@@ -230,6 +230,82 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50):
     return global_tsse_score
 
 
+def tsse_scoring(fragments,
+                   gtf,
+                   negativ_shift=2000,
+                   positiv_shift=2000,
+                   edge_size_total=100,
+                   edge_size_per_base=50,
+                   min_bias=0.01,
+                   keep_tmp=False,
+                   temp_dir=""):
+    """
+    This function calculates the tSSe score for each cell.
+    Calculating the TSSe score is done like described in: "Chromatin accessibility profiling by ATAC-seq" Fiorella et al. 2022
+
+    Parameters
+    ----------
+    fragments: str
+        path to fragments file
+    gtf: str
+        path to gtf file
+    negativ_shift: int
+        number of bases to shift upstream
+    positiv_shift: int
+        number of bases to shift downstream
+    edge_size_total: int
+        number of bases to use for the edges for the global tSSe score
+    edge_size_per_base: int
+        number of bases to use for the edges for the per base tSSe score
+    min_bias: float
+        minimum bias to avoid division by zero
+    keep_tmp: bool
+        keep temporary files
+    temp_dir: str
+        path to temporary directory
+
+    Returns
+    -------
+    tSSe_df: pandas.DataFrame
+        dataframe with the following columns:
+        1: barcode, 2: tSSe, 3: n_fragments
+    """
+
+    tmp_files = []
+    # create temporary file paths
+    custom_TSS = os.path.join(temp_dir, "custom_TSS.bed")
+    overlap = os.path.join(temp_dir, "overlap.bed")
+    # add temporary file paths to list
+    tmp_files.append(custom_TSS)
+    tmp_files.append(overlap)
+
+    # write custom TSS bed file
+    tss_list, temp = write_TSS_bed(gtf, custom_TSS, negativ_shift=negativ_shift, positiv_shift=positiv_shift,
+                                   temp_dir=temp_dir)
+    # add temporary file paths to list
+    tmp_files.extend(temp)
+    # overlap fragments with custom TSS
+    tSSe_cells, temp = overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list)
+    # add temporary file paths to list
+    tmp_files.extend(temp)
+    # calculate per base tSSe
+    tSSe_df = pd.DataFrame.from_dict(tSSe_cells, orient='index', columns=['TSS_agg', 'total_ov'])
+    # calculate per base tSSe
+    per_base_tsse = calc_per_base_tsse(tSSe_df, min_bias=min_bias, edge_size=edge_size_total)
+    # calculate global tSSe score
+    tsse_score = global_tsse_score(per_base_tsse, negativ_shift, edge_size=edge_size_per_base)
+    # add tSSe score to adata
+    tSSe_df['tsse_score'] = tsse_score
+
+    # remove temporary files
+    if not keep_tmp:
+        logger.info("cleaning up temporary files")
+        for tmp_file in tmp_files:
+            os.remove(tmp_file)
+
+    return tSSe_df
+
+
 @deco.log_anndata
 def add_tsse_score(adata,
                    fragments,
@@ -275,38 +351,18 @@ def add_tsse_score(adata,
         AnnData object with added tSSe score
     """
     logger.info("adding tSSe score to adata object")
-    # create list for temporary files
-    tmp_files = []
-    # create temporary file paths
-    custom_TSS = os.path.join(temp_dir, "custom_TSS.bed")
-    overlap = os.path.join(temp_dir, "overlap.bed")
-    # add temporary file paths to list
-    tmp_files.append(custom_TSS)
-    tmp_files.append(overlap)
 
-    # write custom TSS bed file
-    tss_list, temp = write_TSS_bed(gtf, custom_TSS, negativ_shift=negativ_shift, positiv_shift=positiv_shift, temp_dir=temp_dir)
-    # add temporary file paths to list
-    tmp_files.extend(temp)
-    # overlap fragments with custom TSS
-    tSSe_cells, temp = overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list)
-    # add temporary file paths to list
-    tmp_files.extend(temp)
-    # calculate per base tSSe
-    tSSe_df = pd.DataFrame.from_dict(tSSe_cells, orient='index', columns=['TSS_agg', 'total_ov'])
-    # calculate per base tSSe
-    per_base_tsse = calc_per_base_tsse(tSSe_df, min_bias=min_bias, edge_size=edge_size_total)
-    # calculate global tSSe score
-    tsse_score = global_tsse_score(per_base_tsse, negativ_shift, edge_size=edge_size_per_base)
-    # add tSSe score to adata
-    tSSe_df['tsse_score'] = tsse_score
+    tSSe_df = tsse_scoring(fragments,
+                 gtf,
+                 negativ_shift=negativ_shift,
+                 positiv_shift=positiv_shift,
+                 edge_size_total=edge_size_total,
+                 edge_size_per_base=edge_size_per_base,
+                 min_bias=min_bias,
+                 keep_tmp=keep_tmp,
+                 temp_dir=temp_dir)
+
     # add tSSe score to adata
     adata.obs = adata.obs.join(tSSe_df['tsse_score'])
-
-    # remove temporary files
-    if not keep_tmp:
-        logger.info("cleaning up temporary files")
-        for tmp_file in tmp_files:
-            os.remove(tmp_file)
 
     return adata

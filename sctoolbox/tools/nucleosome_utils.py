@@ -1218,7 +1218,7 @@ def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0):
 
 
 @deco.log_anndata
-def add_insertsize_metrics(adata,
+def add_fld_metrics(adata,
                            bam=None,
                            fragments=None,
                            barcode_col=None,
@@ -1275,7 +1275,7 @@ def add_insertsize_metrics(adata,
     Returns
     -------
     adata: AnnData
-        AnnData object with the insert size metrics added to the adata.obs dataframe
+        AnnData object with the fragment length metrics added to the adata.obs dataframe
     """
 
     adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
@@ -1353,24 +1353,24 @@ def add_insertsize_metrics(adata,
     inserts_df = pd.DataFrame(index=barcodes)
 
     if use_momentum:
-        inserts_df['nucleosomal_score_momentum'] = momentum_scores
+        inserts_df['fld_score_momentum'] = momentum_scores
 
     if use_cwt:
-        inserts_df['nucleosomal_score_cwt'] = cwt_scores
+        inserts_df['fld_score_cwt'] = cwt_scores
 
     if use_ct_cwt:
-        inserts_df['nucleosomal_score_ct_cwt'] = ct_cwt_scores
+        inserts_df['fld_score_ct_cwt'] = ct_cwt_scores
 
     adata.obs = adata.obs.join(inserts_df)
 
     if use_momentum:
-        adata.obs['nucleosomal_score_momentum'] = adata.obs['nucleosomal_score_momentum'].fillna(0)
+        adata.obs['fld_score_momentum'] = adata.obs['fld_score_momentum'].fillna(0)
 
     if use_cwt:
-        adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
+        adata.obs['fld_score_cwt'] = adata.obs['fld_score_cwt'].fillna(0)
 
     if use_ct_cwt:
-        adata.obs['nucleosomal_score_ct_cwt'] = adata.obs['nucleosomal_score_ct_cwt'].fillna(0)
+        adata.obs['fld_score_ct_cwt'] = adata.obs['fld_score_ct_cwt'].fillna(0)
 
     adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
