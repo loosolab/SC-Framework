@@ -1067,8 +1067,8 @@ def plot_pca_variance(adata, method="pca",
     if ax is None:
         _, ax = plt.subplots()
     else:
-        # TODO: check if ax is an ax object
-        pass
+        if not type(ax).__name__.startswith("Axes"):
+            raise ValueError("'ax' parameter needs to be an Axes object. Please check your input.")
 
     if method not in adata.uns:
         raise KeyError("The given method '{0}' is not found in adata.uns. Please make sure to run the method before plotting variance.")
