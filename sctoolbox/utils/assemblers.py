@@ -29,22 +29,21 @@ def assemble_from_h5ad(h5ad_files,
 
     Parameters
     ----------
-    h5ad_files: list of str
+    h5ad_files : list of str
         list of h5ad_files
-    qc_columns: dictionary
-        dictionary of existing adata.obs column to add to infoprocess legend
-    merge_column: str
+    merge_column : str
         column name to store sample identifier
-    coordinate_cols: list of str
+    coordinate_cols : list of str
         location information of the peaks
-    set_index: boolean
+    set_index : boolean
         True: index will be formatted and can be set by a given column
-    index_from: str
+    index_from : str
         column to build the index from
 
     Returns
     -------
-
+    anndata.AnnData
+        The concatenated adata object.
     '''
 
     adata_dict = {}
@@ -103,12 +102,23 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
     ----------
     path : str
         Path to the "solo" folder from starsolo.
-    dtype : str, optional
-        The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
-    header : int, list of int, None
-        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
+    dtype : {'filtered', 'raw'}
+        The type of solo data to choose.
+    header : int or list of int or None, default infer
+        Set header parameter for reading metadata tables using pandas.read_csv.
+
+    Returns
+    -------
+    anndata.AnnData
+        An anndata object based on the provided starsolo folder.
+
+    Raises
+    ------
+    ValueError
+        If dtype is not set to 'raw' or 'filtered'
+    FileNotFoundError
+        If path does not exist or files are missing.
     '''
-    # Author : Guilherme Valente & Mette Bentsen
 
     # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
@@ -166,8 +176,17 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         List of samples to use. If None, all samples will be used.
     dtype : str, optional
         The type of Solo data to choose. The options are 'raw' or 'filtered'. Default: filtered.
+
+    Returns
+    -------
+    anndata.AnnData
+        The assembled anndata object.
+
+    Raises
+    ------
+    ValueError
+        If `use_samples` contains not existing names.
     '''
-    # Author : Guilherme Valente
 
     # TODO: test that quant folder is existing
 
@@ -257,6 +276,11 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     Returns
     -------
     anndata object containing the mtx matrix, gene and cell labels
+
+    Raises
+    ------
+    ValueError
+        If barcode or gene files contain duplicates.
     '''
     # Read mtx file
     adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
@@ -296,7 +320,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
 
     Parameters
     ----------
-    path: string
+    path : string
         Path to data files
     mtx : string, optional
         String for glob to find matrix files. Default: '*_matrix.mtx*'
@@ -304,22 +328,17 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
         String for glob to find barcode files. Default: '*_barcodes.tsv*'
     genes : string, optional
         String for glob to find gene label files. Default: '*_genes.tsv*'
-    barcode_index : int
-        Column which contains the cell barcodes. Default: 0 -> Takes first column
-    transpose : boolean
-        Set True to transpose mtx matrix
-    barcode_index : int
-        Column which contains the cell barcodes (Default: 0 -> Takes first column)
-    genes_index : int
-        Column h contains the gene IDs (Default: 0 -> Takes first column)
-    delimiter : string
-        delimiter of genes and barcodes table
-    **kwargs : additional arguments
+    **kwargs : dict
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
     --------
     merged anndata object containing the mtx matrix, gene and cell labels
+
+    Raises
+    ------
+    ValueError
+        If files are not found.
     '''
 
     mtx = glob.glob(os.path.join(path, mtx))
