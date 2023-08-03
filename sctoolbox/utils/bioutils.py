@@ -23,11 +23,13 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
         Anndata object with counts in .X.
     groupby : str
         Column name in adata.obs from which the pseudobulks are created.
-    how : str, default "mean"
-        How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
-    percentile_range : tuple of 2 values, default (0,100)
+    how : {'mean', 'sum'}
+        How to calculate the value per group (psuedobulk).
+    layer : str, default None
+        Name of an anndata layer to use instead of `adata.X`.
+    percentile_range : tuple of 2 values, default (0, 100)
         The percentile of cells used to calculate the mean/sum for each feature.
-        Is used to limit the effect of individual cell outliers, e.g. by setting (0,95) to exclude high values in the calculation.
+        Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.
     chunk_size : int, default 1000
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
 
@@ -35,6 +37,11 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
     -------
     pandas.DataFrame :
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
+
+    Raises
+    ------
+    TypeError
+        If `percentile_range` is not of type `tuple`.
     """
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
@@ -134,14 +141,21 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     Parameters
     ----------
     ensembl_id : str
-    Any Ensembl ID. E.g. ENSG00000164690
+        Any Ensembl ID. E.g. ENSG00000164690
     host : str
-    Ensembl server address.
+        Ensembl server address.
 
     Returns
     -------
     str :
         Organism assigned to the Ensembl ID
+
+    Raises
+    ------
+    ConnectionError
+        If there is an unexpected (or no) response from the server.
+    ValueError
+        If the returned organism is ambiguous.
     """
     # this will redirect
     url = f"{host}{ensembl_id}"
@@ -177,6 +191,11 @@ def gene_id_to_name(ids, species):
     -------
     pandas.DataFrame :
         DataFrame with gene ids and matching gene names.
+
+    Raises
+    ------
+    ValueError
+        If provided Ensembl IDs or organism is invalid.
     """
     if not all(id.startswith("ENS") for id in ids):
         raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
@@ -223,6 +242,11 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
     -------
     scanpy.AnnData or None :
         AnnData object with gene names.
+
+    Raises
+    ------
+    ValueError
+        If invalid parameter choice or column name not found in adata.var.
     """
     if not id_col_name and not index:
         raise ValueError("Either set parameter id_col_name or index.")
@@ -279,21 +303,26 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 
     Parameters
     ----------
-    adata: scanpy.AnnData
+    adata : scanpy.AnnData
         AnnData object
-    column: str
+    column : str
         Column name in adata.var
-    unified_names: str, default "unified_names"
+    unified_column : str, default "unified_names"
         Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
     species : str, default "auto"
         Species of the dataset. On default, species is inferred based on gene ids.
-    inplace: boolean, default True
+    inplace : boolean, default True
         Whether to modify adata or return a copy.
 
     Returns
     -------
     scanpy.AnnData or None :
         AnnData object with modified gene column.
+
+    Raises
+    ------
+    ValueError
+        If column name is not found in `adata.var` or no Ensembl IDs in selected column.
     """
     if column not in adata.var.columns:
         raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
