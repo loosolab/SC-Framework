@@ -1,3 +1,5 @@
+"""Plot velocity related figures e.g. pseudo-time heatmap."""
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -42,6 +44,8 @@ def pseudotime_heatmap(adata, genes,
         Set title for plot.
     save : str, default None
         Path and name of file to be saved.
+    **kwargs : arguments
+        Additional arguments passed to seaborn.heatmap.
 
     Returns
     --------
