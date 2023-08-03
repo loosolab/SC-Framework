@@ -1,6 +1,7 @@
 import anndata
 import functools
 import pandas as pd
+import matplotlib
 
 import sctoolbox.utils.general as utils
 
@@ -45,9 +46,13 @@ def log_anndata(func):
         if funcname not in adata.uns["sctoolbox"]["log"].keys():
             adata.uns["sctoolbox"]["log"][funcname] = {}
 
-        # Convert anndata objects to string representation
-        args_repr = [repr(element) for element in args if isinstance(element, anndata.AnnData)]
-        kwargs_repr = {key: repr(value) if isinstance(value, anndata.AnnData) else value for key, value in kwargs.items()}
+        # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
+        args_repr = {f"arg{i+1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
+        kwargs_repr = kwargs
+        convert = {anndata.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
+        for typ, convfunc in convert.items():
+            args_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in args_repr.items()}
+            kwargs_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in kwargs_repr.items()}
 
         # log information on run
         d = {}
@@ -98,7 +103,7 @@ def get_parameter_table(adata):
 
     # reorder columns
     first_cols = ["func", "args", "kwargs"]
-    complete_table = complete_table.reindex(columns= first_cols + list(set(complete_table.columns) - set(first_cols)))
+    complete_table = complete_table.reindex(columns=first_cols + list(set(complete_table.columns) - set(first_cols)))
 
     return complete_table
 

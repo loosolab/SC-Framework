@@ -62,6 +62,13 @@ def na_dataframe():
     return df
 
 
+@pytest.fixture
+def marker_dict():
+    return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+            "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
+            "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
+
+
 arr_ints = np.random.randint(10, size=(10, 10))
 arr_ints2 = arr_ints.astype(float)
 arr_floats = np.random.rand(10, 10)
@@ -261,6 +268,13 @@ def test_sort_bed(unsorted_fragments):
 
     # Clean up
     os.remove(sorted_bedfile)
+def test_check_marker_lists(adata2, marker_dict):
+    """ Test that check_marker_lists intersects lists correctly. """
+
+    filtered_marker = utils.check_marker_lists(adata2, marker_dict)
+
+    assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+                               "Celltype B": ['ENSMUSG00000102272']}
 
 
 # TODO

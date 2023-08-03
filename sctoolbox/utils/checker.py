@@ -6,6 +6,8 @@ import gzip
 import shutil
 
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def check_module(module):
@@ -388,3 +390,35 @@ def is_regex(regex):
 
     except re.error:
         return False
+
+
+def check_marker_lists(adata, marker_dict):
+    """
+    Remove genes in custom marker genes lists which are not present in dataset.
+
+    Parameters
+    ----------
+    adata : AnnData object
+        The anndata object containing features to annotate.
+    marker_dict : dict
+        A dictionary containing a list of marker genes as values and corresponding cell types as keys.
+        The marker genes given in the lists need to match the index of adata.var.
+
+    Returns
+    -------
+    dict :
+        A dictionary containing a list of marker genes as values and corresponding cell types as keys.
+    """
+    marker_dict = marker_dict.copy()
+
+    for key, genes in list(marker_dict.items()):
+        found_in_var = list(set(adata.var.index) & set(genes))
+        not_found_in_var = list(set(genes) - set(adata.var.index))
+        if not found_in_var:
+            logger.warning(f"No marker in {key} marker list can be found in the data. "
+                           + "Please check your marker list. Removing empty marker list form dictionary.")
+            marker_dict.pop(key)
+        elif not_found_in_var:
+            marker_dict[key] = found_in_var
+            logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
+    return marker_dict

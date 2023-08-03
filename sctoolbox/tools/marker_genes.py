@@ -487,8 +487,20 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
     design_formula = "~ " + " + ".join(confounders + [condition_col])
 
-    # Build sample_df
+    # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
+    for col in cols:
+        if col not in adata.obs.columns:
+            raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
+
+        # Check that column is valid for R
+        pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
+        if not re.match(pattern, col):
+            s = f"Column '{col}' is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: "
+            s += "'A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.'"
+            raise ValueError(s)
+
+    # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)

@@ -44,7 +44,9 @@ pass:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
 lint:
-  image: python:3.10  # pybedtools is not compatible with python 3.11
+  image: 
+    name: python:3.10 # pybedtools is not compatible with python 3.11
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
   stage: test
@@ -79,7 +81,9 @@ test import:
 # Run test coverage
 test coverage:
   stage: test
-  image: python:3.10
+  image: 
+    name: python:3.10
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ] # Fixes shell not found error (See Issue #129)
   tags:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
@@ -89,7 +93,7 @@ test coverage:
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
     paths:
@@ -156,19 +160,21 @@ notebook-output-check:
 
 # Test notebooks when code is pushed to main
 notebooks:
-  image: continuumio/miniconda3:latest
+  image: mambaorg/micromamba:latest
   inherit:
     default: false
   stage: test
   #tags:
   #  - gwdg
   #  - gwdg-shared
+  artifacts:
+    paths:
+      - rna-notebooks/pipeline_output/logs/*.txt
   script:
-    - conda install -c conda-forge mamba
-    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
-    - conda init bash
-    - source ~/.bashrc
-    - conda activate sctoolbox
+    - micromamba env create -f sctoolbox_env.yml #mamba is faster at creating envs than conda
+    - eval "$(micromamba shell hook --shell bash)" # initialize micromamba in the current shell
+    - micromamba activate sctoolbox
+    - micromamba install -c conda-forge git # needed for sctoolbox install
     - pip install papermill
     - pip install .[all]
     - python -m ipykernel install --user --name sctoolbox
@@ -179,6 +185,11 @@ notebooks:
     - python -c "import sys; print(sys.path)" # for debug
     - jupyter kernelspec list  # for debug
     - python scripts/run_notebooks.py
+  after_script:
+    - pwd
+    - ls -l rna-notebooks/pipeline_output/logs/
+    - for f in rna-notebooks/pipeline_output/logs/*; do echo $f; cat $f; done
+
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: manual  # manual trigger
