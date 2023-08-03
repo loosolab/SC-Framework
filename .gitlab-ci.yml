@@ -45,7 +45,7 @@ pass:
 # W503 = Line break occurred before a binary operator
 # D202 = No blank lines allowed after function docstring
 # DOC301 = __init__() should not have a docstring; <- conflicts with "D107 Missing docstring in __init__"
-# DOC203 = Function  return type(s) in docstring not consistent with the return annotation. <- can be adjusted in case we add return types to functions
+# DOC203 = Function return type(s) in docstring not consistent with the return annotation. <- can be adjusted in case we add return types to functions
 lint:
   image: 
     name: python:3.10 # pybedtools is not compatible with python 3.11

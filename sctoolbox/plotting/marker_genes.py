@@ -181,6 +181,7 @@ def grouped_violin(adata, x,
                    **kwargs) -> matplotlib.axes.Axes:
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
+
     Can for example show the expression of one gene across groups (x = obs_group, y = gene),
     expression of multiple genes grouped by cell type (x = gene_list, groupby = obs_cell_type),
     or values from adata.obs across cells (x = obs_group, y = obs_column).
@@ -207,12 +208,17 @@ def grouped_violin(adata, x,
         A matplotlib axes object to plot violinplots in. If None, a new figure and axes is created.
     save : str, default None
         Path to save the figure to. If None, the figure is not saved.
-    kwargs : arguments, optional
+    **kwargs : arguments, optional
         Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
 
     Returns
     -------
     matplotlib.axes.Axes
+
+    Raises
+    ------
+    ValueError
+        If x or y are not columns in adata.obs or a genes in adata.var.index.
 
     Example
     -------
@@ -320,10 +326,11 @@ def grouped_violin(adata, x,
 
 
 @deco.log_anndata
-def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
+def group_expression_boxplot(adata, gene_list, groupby, figsize=None) -> matplotlib.axes.Axes:
     """
-    Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`. The total gene expression is quantile normalized
-    per group, and are subsequently normalized to 0-1 per gene across groups.
+    Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
+
+    The total gene expression is quantile normalized per group, and are subsequently normalized to 0-1 per gene across groups.
 
     Parameters
     ----------
@@ -333,8 +340,12 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
         A list of genes to show expression for.
     groupby : str
         A column in .obs for grouping cells into groups on the x-axis
-    figsize : tuple, optional
-        Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+    figsize : tuple, default None (matplotlib default)
+        Control the size of the output figure, e.g. (6,10).
+
+    Returns
+    -------
+    matplotlib.axes.Axes
 
     Example
     -------
@@ -397,7 +408,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
                             figsize=None,
                             save=None,
                             **kwargs):
-    """ Plot a heatmap of z-score normalized gene expression across clusters/groups.
+    """Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
     ----------
@@ -425,6 +436,18 @@ def gene_expression_heatmap(adata, genes, cluster_column,
         Size of the figure. If `None`, use default size.
     save : `str`, optional (default: `None`)
         If given, save the figure to this path.
+    **kwargs : arguments, optional
+        Additional arguments passed to `seaborn.clustermap`.
+
+    Returns
+    -------
+    g : `seaborn.ClusterGrid`
+        The seaborn ClusterGrid object containing the heatmap.
+
+    Raises
+    ------
+    KeyError
+        If `gene_name_column` is not a column in `adata.var`.
 
     Example
     -------
@@ -553,7 +576,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
 
 @deco.log_anndata
 def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
-    """ Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
+    """Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
     NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
 
@@ -600,7 +623,8 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
 def plot_differential_genes(rank_table, title="Differentially expressed genes",
                             save=None,
                             **kwargs):
-    """ Plot number of differentially expressed genes per contrast in a barplot.
+    """Plot number of differentially expressed genes per contrast in a barplot.
+
     Takes the output of mg.pairwise_rank_genes as input.
 
     Parameters
@@ -609,8 +633,15 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
         Output of mg.pairwise_rank_genes.
     title : `str`, optional (default: `"Differentially expressed genes"`)
         Title of the plot.
+    save : `str`, optional (default: `None`)
+        If given, save the figure to this path.
     **kwargs : keyword arguments
         Keyword arguments passed to pl.bidirectional_barplot.
+
+    Raises
+    ------
+    ValueError
+        If no significant differentially expressed genes are found in the data.
 
     Returns
     -------

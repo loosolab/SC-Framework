@@ -62,7 +62,7 @@ def _add_figure_title(axarr, title, y=1.3, fontsize=16):
         Font size of the title.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
@@ -519,7 +519,7 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.AxesSubplot:
         containing boxplot for every column.
 
     Example
-    --------
+    -------
     .. plot::
         :context: close-figs
 
