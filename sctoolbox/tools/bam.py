@@ -11,24 +11,23 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def bam_adata_ov(adata, bamfile, cb_col):
+def bam_adata_ov(adata, bamfile, cb_col) -> float:
     """
     Check if adata.obs barcodes existing in a column of a bamfile
 
     Parameters
     ----------
-    adata: anndata.AnnData
+    adata : anndata.AnnData
         adata object where adata.obs is stored
-    bamfile: str
+    bamfile : str
         path of the bamfile to investigate
-    cb_col: str
+    cb_col : str
         bamfile column to extract the barcodes from
 
     Returns
-    --------
+    -------
     float
         hitrate of the barcodes in the bamfile
-
     """
     logger.info("calculating barcode overlap between bamfile and adata.obs")
     bam_obj = open_bam(bamfile, "rb")
@@ -52,7 +51,7 @@ def bam_adata_ov(adata, bamfile, cb_col):
 
 
 @deco.log_anndata
-def check_barcode_tag(adata, bamfile, cb_col):
+def check_barcode_tag(adata, bamfile, cb_col) -> None:
     """
     Check for the possibilty that the wrong barcode is used.
 
@@ -65,9 +64,10 @@ def check_barcode_tag(adata, bamfile, cb_col):
     cb_col: str
         bamfile column to extract the barcodes from
 
-    Returns
-    -------
-
+    Raises
+    ------
+    ValueError
+        If barcode hit rate could not be identified
     """
     hitrate = bam_adata_ov(adata, bamfile, cb_col)
 
@@ -85,7 +85,7 @@ def check_barcode_tag(adata, bamfile, cb_col):
 #####################################################################
 
 
-def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False):
+def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False) -> None:
     """
     Subset a bam file based on a list of barcodes.
 
@@ -184,7 +184,7 @@ def split_bam_clusters(adata,
                        max_queue_size=1000,
                        individual_pbars=False,
                        sort_bams=False,
-                       index_bams=False):
+                       index_bams=False) -> None:
     """
     Split BAM files into clusters based on 'groupby' from the anndata.obs table.
 
@@ -204,10 +204,12 @@ def split_bam_clusters(adata,
         Prefix to use for the output files.
     reader_threads : int, default 1
         Number of threads to use for reading.
-    writer_threads : int, default 1,
+    writer_threads : int, default 1
         Number of threads to use for writing.
     parallel : boolean, default False
         Whether to enable parallel processsing.
+    pysam_threads : int, default 4
+        Number of threads for pysam.
     buffer_size : int, default 10000
         The size of the buffer between readers and writers.
     max_queue_size : int, default 1000
@@ -218,6 +220,15 @@ def split_bam_clusters(adata,
         Sort reads in each output bam
     index_bams : boolean, default False
         Create an index file for each output bam. Will throw an error if `sort_bams` is False.
+
+    Raises
+    ------
+    ValueError
+        If groupby column is not in adata.obs
+    ValueError
+        If barcode column is not in adata.obs
+    ValueError
+        If index_bams is set and sort_bams is False
     """
     # then load modules
     utils.check_module("tqdm")
@@ -436,7 +447,7 @@ def open_bam(file, mode, verbosity=3, **kwargs):
     return handle
 
 
-def get_bam_reads(bam_obj):
+def get_bam_reads(bam_obj) -> int:
     """
     Get the number of reads from an open pysam.AlignmentFile
 
@@ -576,7 +587,7 @@ def _monitor_progress(progress_queue,
     return 0  # success
 
 
-def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_size=10000):
+def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_size=10000) -> int:
     """
     Open bam file and add reads to respective output queue.
 
@@ -584,8 +595,6 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     ----------
     path : str
         Path to bam file.
-    read_num : int
-        Number of reads per chunk.
     out_queue : dict
         Dict of multiprocesssing.Queues with cluster as key
     bc2cluster : dict
@@ -601,6 +610,11 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     -------
     int :
         Returns 0 on success.
+
+    Raises
+    ------
+    Exception
+        If buffered reader failes.
     """
     try:
         # open bam
@@ -653,7 +667,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
         raise e
 
 
-def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
+def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) -> int:
     """
     Write reads to given file.
 
@@ -674,6 +688,11 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
     -------
     int :
         Returns 0 on success.
+
+    Raises
+    ------
+    Exception
+        If buffered reader failes.
     """
     try:
         import pysam  # install of pysam was checked in parent function
@@ -729,7 +748,7 @@ def bam_to_bigwig(bam,
                   tempdir=".",
                   remove_temp=True,
                   bedtools_path=None,
-                  bgtobw_path=None):
+                  bgtobw_path=None) -> str:
     """
     Convert reads in a bam-file to bigwig format.
 
