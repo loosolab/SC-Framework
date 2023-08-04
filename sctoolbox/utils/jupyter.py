@@ -1,3 +1,5 @@
+"""Jupyter notebook related functions."""
+
 import os
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
@@ -6,7 +8,7 @@ import sctoolbox.utils as utils
 
 def _is_notebook():
     """
-    Utility to check if function is being run from a notebook or a script.
+    Check if function is run within a notebook.
 
     Returns
     -------
@@ -24,7 +26,9 @@ if _is_notebook():
     @register_line_magic
     def bgcolor(color, cell=None):
         """
-        Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
+        Set background color of current jupyter cell.
+
+        Adapted from https://stackoverflow.com/a/53746904.
         Note: Jupyter notebook v6+ needed
 
         Change color of the cell by either calling the function
@@ -56,6 +60,7 @@ if _is_notebook():
 def clear():
     """
     Clear stout of console or jupyter notebook.
+
     https://stackoverflow.com/questions/37071230/clear-overwrite-standard-output-in-python
     """
     import platform

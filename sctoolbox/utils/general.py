@@ -1,3 +1,5 @@
+"""General utility functions."""
+
 import os
 import re
 import sys
@@ -12,14 +14,14 @@ from datetime import datetime
 # ------------------ Logging about run ----------------- #
 
 def get_user():
-    """ Get the name of the current user.
+    """
+    Get the name of the current user.
 
     Returns
     -------
     str
         The name of the current user.
     """
-
     try:
         username = getpass.getuser()
     except Exception:
@@ -29,14 +31,14 @@ def get_user():
 
 
 def get_datetime():
-    """ Get a string with the current date and time for logging.
+    """
+    Get a string with the current date and time for logging.
 
     Returns
     -------
     str
         A string with the current date and time in the format dd/mm/YY H:M:S
     """
-
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
 
@@ -47,15 +49,14 @@ def get_datetime():
 
 def get_package_versions():
     """
-    Utility to get a dictionary of currently installed python packages and versions.
+    Receive a dictionary of currently installed python packages and versions.
 
     Returns
     -------
-    A dict in the form:
-    {"package1": "1.2.1", "package2":"4.0.1", (...)}
-
+    dict :
+        A dict in the form:
+        `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
     """
-
     # Import freeze
     try:
         from pip._internal.operations import freeze
@@ -76,7 +77,10 @@ def get_package_versions():
 
 
 def get_binary_path(tool):
-    """ Get path to a binary commandline tool. Looks either in the local dir, on path or in the dir of the executing python binary.
+    """
+    Get path to a binary commandline tool.
+
+    Looks either in the local dir, on path or in the dir of the executing python binary.
 
     Parameters
     ----------
@@ -93,7 +97,6 @@ def get_binary_path(tool):
     ValueError
         If executable is not found.
     """
-
     python_dir = os.path.dirname(sys.executable)
     if os.path.exists(tool):
         tool_path = f"./{tool}"
@@ -147,7 +150,7 @@ def run_cmd(cmd):
 
 def setup_R(r_home=None):
     """
-    Setup R installation for rpy2 use.
+    Add R installation for rpy2 use.
 
     Parameters
     ----------
@@ -172,7 +175,20 @@ def setup_R(r_home=None):
 
 
 def _none2null(none_obj):
-    """ rpy2 converter that translates python 'None' to R 'NULL' """
+    """
+    rpy2 converter that translates python 'None' to R 'NULL'.
+
+    Intended to be added as a rpy2 converter object.
+
+    Parameters
+    ----------
+    none_obj :
+        None object to convert to r"NULL".
+
+    Returns
+    -------
+    R NULL object.
+    """
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     from rpy2.robjects import r
 
@@ -220,7 +236,6 @@ def split_list_size(lst, max_size):
     list :
         List of lists (chunks).
     """
-
     chunks = []
     for i in range(0, len(lst), max_size):
         chunks.append(lst[i:i + max_size])
@@ -239,7 +254,6 @@ def write_list_file(lst, path):
     path : str
         Path to output file.
     """
-
     lst = [str(s) for s in lst]
     s = "\n".join(lst)
 
@@ -261,7 +275,6 @@ def read_list_file(path):
     list :
         List of strings read from file.
     """
-
     f = open(path)
     lst = f.read().splitlines()  # get lines without "\n"
     f.close()
@@ -273,8 +286,9 @@ def read_list_file(path):
 
 def clean_flanking_strings(list_of_strings):
     """
-    Remove common suffix and prefix from a list of strings, e.g. running the function on
-    ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
+    Remove common suffix and prefix from a list of strings.
+    
+    E.g. running the function on ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
 
     Parameters
     ----------
@@ -283,9 +297,9 @@ def clean_flanking_strings(list_of_strings):
 
     Returns
     -------
-    List of strings without common suffix and prefix
+    list[str]
+        List of strings without common suffix and prefix
     """
-
     suffix = longest_common_suffix(list_of_strings)
     prefix = os.path.commonprefix(list_of_strings)
 
@@ -372,7 +386,6 @@ def sanitize_string(s, char_list, replace="_"):
     str :
         Sanitized string.
     """
-
     for char in char_list:
         s = s.replace(char, replace)
 

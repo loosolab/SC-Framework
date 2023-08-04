@@ -1,6 +1,5 @@
-"""
-Module to assembling anndata objects
-"""
+"""Module to assemble anndata objects."""
+
 import scanpy as sc
 import pandas as pd
 import os
@@ -23,9 +22,10 @@ def assemble_from_h5ad(h5ad_files,
                        coordinate_cols=None,
                        set_index=True,
                        index_from=None):
-    '''
-    Function to assemble multiple adata files into a single adata object with a sample column in the
-    adata.obs table. This concatenates adata.obs and merges adata.uns.
+    """
+    Assembles multiple adata files into a single adata object.
+
+    This concatenates adata.obs and merges adata.uns.
 
     Parameters
     ----------
@@ -43,9 +43,8 @@ def assemble_from_h5ad(h5ad_files,
     Returns
     -------
     anndata.AnnData
-        The concatenated adata object.
-    '''
-
+        The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
+    """
     adata_dict = {}
     counter = 0
     for h5ad_path in h5ad_files:
@@ -95,8 +94,8 @@ def assemble_from_h5ad(h5ad_files,
 #####################################################################
 
 def from_single_starsolo(path, dtype="filtered", header='infer'):
-    '''
-    This will assemble an anndata object from the starsolo folder.
+    """
+    Assembles an anndata object from the starsolo folder.
 
     Parameters
     ----------
@@ -118,8 +117,7 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
         If dtype is not set to 'raw' or 'filtered'
     FileNotFoundError
         If path does not exist or files are missing.
-    '''
-
+    """
     # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
         raise ValueError("dtype must be either 'raw' or 'filtered'")
@@ -163,7 +161,7 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
 
 
 def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
-    '''
+    """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
     Parameters
@@ -186,8 +184,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     ------
     ValueError
         If `use_samples` contains not existing names.
-    '''
-
+    """
     # TODO: test that quant folder is existing
 
     # Collect configuration into a dictionary
@@ -250,7 +247,8 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 #####################################################################
 
 def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
-    ''' Building adata object from single mtx and two tsv/csv files
+    r"""
+    Build an adata object from single mtx and two tsv/csv files.
 
     Parameters
     ----------
@@ -281,7 +279,7 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     ------
     ValueError
         If barcode or gene files contain duplicates.
-    '''
+    """
     # Read mtx file
     adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
 
@@ -315,8 +313,8 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
 
 
 def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs):
-    '''
-    Building adata object from list of mtx, barcodes and genes files
+    """
+    Build an adata object from list of mtx, barcodes and genes files.
 
     Parameters
     ----------
@@ -339,8 +337,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     ------
     ValueError
         If files are not found.
-    '''
-
+    """
     mtx = glob.glob(os.path.join(path, mtx))
     barcodes = glob.glob(os.path.join(path, barcodes))
     genes = glob.glob(os.path.join(path, genes))
@@ -370,7 +367,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
 
 def convertToAdata(file, output=None, r_home=None, layer=None):
     """
-    Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 

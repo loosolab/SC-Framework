@@ -1,3 +1,5 @@
+"""anndata.AnnData related functions."""
+
 import numpy as np
 import scanpy as sc
 from collections.abc import Sequence  # check if object is iterable
@@ -29,7 +31,6 @@ def get_adata_subsets(adata, groupby):
     ValueError
         If groupby is not found in `adata.obs.columns`.
     """
-
     if groupby not in adata.obs.columns:
         raise ValueError(f"Column '{groupby}' not found in adata.obs")
 
@@ -58,7 +59,6 @@ def add_expr_to_obs(adata, gene):
     Exception
         If the gene is not found in the adata object.
     """
-
     boolean = adata.var.index == gene
     if sum(boolean) == 0:
         raise Exception(f"Gene {gene} not found in adata.var.index")
@@ -72,6 +72,7 @@ def add_expr_to_obs(adata, gene):
 def shuffle_cells(adata, seed=42):
     """
     Shuffle cells in an adata object to improve plotting.
+
     Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
 
     Parameters
@@ -86,7 +87,6 @@ def shuffle_cells(adata, seed=42):
     anndata.AnnData
         Anndata object with shuffled cells.
     """
-
     import random
     state = random.getstate()
 
@@ -100,7 +100,8 @@ def shuffle_cells(adata, seed=42):
 
 
 def get_minimal_adata(adata):
-    """ Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
+    """
+    Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
 
     Parameters
     ----------
@@ -112,7 +113,6 @@ def get_minimal_adata(adata):
     anndata.AnnData
         Minimal copy of anndata object.
     """
-
     adata_minimal = adata.copy()
     adata_minimal.X = None
     adata_minimal.layers = None
@@ -135,7 +135,6 @@ def load_h5ad(path):
     anndata.AnnData :
         Loaded anndata object.
     """
-
     adata_input = settings.full_adata_input_prefix + path
     adata = sc.read_h5ad(filename=adata_input)
 
@@ -156,7 +155,6 @@ def save_h5ad(adata, path):
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
-
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
@@ -166,7 +164,9 @@ def save_h5ad(adata, path):
 
 def add_uns_info(adata, key, value, how="overwrite"):
     """
-    Add information to adata.uns['sctoolbox']. This is used for logging the parameters and options of different steps in the analysis.
+    Add information to adata.uns['sctoolbox'].
+
+    This is used for logging the parameters and options of different steps in the analysis.
 
     Parameters
     ----------
@@ -184,7 +184,6 @@ def add_uns_info(adata, key, value, how="overwrite"):
     ValueError
         If value can not be appended.
     """
-
     if "sctoolbox" not in adata.uns:
         adata.uns["sctoolbox"] = {}
 

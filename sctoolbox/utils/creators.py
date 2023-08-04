@@ -1,6 +1,4 @@
-"""
-Modules for creating files or directories
-"""
+"""Modules for creating files or directories."""
 
 import pathlib
 import gitlab
@@ -18,7 +16,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                     save_token=pathlib.Path.home() / ".gitlab_token",
                     overwrite=False, max_calls=5, period=60):
     """
-    Download file(s) from gitlab
+    Download file(s) from gitlab.
 
     Parameters
     ----------
@@ -105,7 +103,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
 
 def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
     """
-    Create initial folder structure
+    Create initial folder structure.
 
     Parameters
     ----------
@@ -135,7 +133,7 @@ def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
                  starts_with=1, **kwargs):
     """
-    Create and add a new analysis/run
+    Create and add a new analysis/run.
 
     Note: Only works for Notebooks until number 99.
     Needs to be adjusted if we exceed 89 notebooks.
@@ -184,9 +182,8 @@ def add_analysis(dest, analysis_name, method="rna",
 def build_notebooks_regex(starts_with):
     """
     Build regex for notebooks starting with given number.
-    Note: Only works up to 89. If we reach notebook 90 this function needs to be adjusted.
 
-    #TODO Move to utilities.py when cleaned up
+    Note: Only works up to 89. If we reach notebook 90 this function needs to be adjusted.
 
     Parameters
     ----------

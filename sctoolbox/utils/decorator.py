@@ -1,3 +1,5 @@
+"""Decorators and related functions."""
+
 import anndata
 import functools
 import pandas as pd
@@ -8,7 +10,7 @@ import sctoolbox.utils.general as utils
 
 def log_anndata(func):
     """
-    Decorator to log function call inside adata.
+    Decorate function to log adata inside function call.
 
     Parameters
     ----------
@@ -89,7 +91,6 @@ def get_parameter_table(adata):
     ValueError
         If no logs are found.
     """
-
     if "sctoolbox" not in adata.uns.keys() or "log" not in adata.uns["sctoolbox"].keys():
         raise ValueError("No sctoolbox function calls logged in adata.")
 
@@ -114,11 +115,21 @@ def get_parameter_table(adata):
 
 
 def debug_func_log(func):
-    """ Decorator to print function call with arguments and keyword arguments.
+    """
+    Decorate function to print function call with arguments and keyword arguments.
 
     In progress.
-    """
 
+    Parameters
+    ----------
+    func : function
+        Function to decorate.
+
+    Returns
+    -------
+    function :
+        Decorated function
+    """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         print(f"DEBUG: {func.__name__} called with args: {args} and kwargs: {kwargs}")

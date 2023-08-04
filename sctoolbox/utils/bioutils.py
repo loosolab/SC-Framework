@@ -1,3 +1,5 @@
+"""Bio related utility functions."""
+
 import numpy as np
 import pandas as pd
 import re
@@ -43,7 +45,6 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
     TypeError
         If `percentile_range` is not of type `tuple`.
     """
-
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
     if isinstance(percentile_range, tuple) is False:
@@ -104,9 +105,21 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 @deco.log_anndata
 def barcode_index(adata):
     """
-    check if the barcode is the index
-    :param adata:
-    :return:
+    Check if the barcode is the index.
+
+    Will replace the index with `adata.obs["barcode"]` if index does not contain barcodes.
+
+    TODO refactor
+    - name could be more descriptive
+    - return adata
+    - inplace parameter
+    - use logger
+    ...
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata to perform check on.
     """
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
@@ -372,19 +385,25 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 #####################################################################
 
 def _gtf_integrity(gtf):
-    '''
-    Checks the integrity of a gtf file by examining:
+    """
+    Check if the provided file follows the gtf-format.
+
+    Checks the following:
         - file-ending
         - header ##format: gtf
         - number of columns == 9
         - regex pattern of column 9 matches gtf specific format
 
-    :param gtf: str
-        Path to .gtf file containing genomic elements for annotation.
-    :return: boolean
-        True if the file passed all tests
-    '''
+    Parameters
+    ----------
+    gtf : str
+        Path to file.
 
+    Returns
+    -------
+    boolean
+        True if the file is a valid gtf-file.
+    """
     regex_header = '#+.*'
     regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'
 
