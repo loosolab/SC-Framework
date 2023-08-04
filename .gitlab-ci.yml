@@ -52,7 +52,7 @@ docstyle:
     - coverage
   script:
     - pip install pydocstyle
-    - pydocstyle --convention numpy --explain --source setup.py sctoolbox
+    - pydocstyle --convention numpy --explain --source --match-dir '((?!data)|[^\.]).*' setup.py sctoolbox  # exclude dirs starting with "data" or "."
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
