@@ -40,6 +40,28 @@ pass:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
+# check style of the docstrings
+docstyle:
+  image: 
+    name: python:latest
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
+  inherit:
+    default: false # do not inherit before_script
+  stage: test
+  tags:
+    - coverage
+  script:
+    - pip install pydocstyle
+    - pydocstyle --convention numpy --explain --source --match-dir '((?!data)|[^\.]).*' setup.py sctoolbox  # exclude dirs starting with "data" or "."
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+      changes:
+      - setup.py
+      - tests/*.py
+      - sctoolbox/*.py
+
+# lint code and docstrings
 # flake8 ignore rules:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator

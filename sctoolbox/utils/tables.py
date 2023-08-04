@@ -1,3 +1,5 @@
+"""Table related functions."""
+
 import warnings
 import pandas as pd
 from scipy.stats import zscore
@@ -18,7 +20,6 @@ def rename_categories(series):
     pandas.Series
         Series with renamed categories.
     """
-
     n_categories = series.cat.categories
     new_names = [str(i) for i in range(1, len(n_categories) + 1)]
     translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
@@ -29,7 +30,7 @@ def rename_categories(series):
 
 def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):
     """
-    Fill all NA values in pandas depending on the column data type
+    Fill all NA values in a pandas DataFrame depending on the column data type.
 
     Parameters
     ----------
@@ -39,8 +40,12 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         Whether the DataFrame object is modified inplace.
     replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
         dict that contains default values to replace nas depedning on data type
-    """
 
+    Returns
+    -------
+    pd.DataFrame or None
+        DataFrame with replaced NA values.
+    """
     if not inplace:
         df = df.copy()
 
@@ -71,6 +76,7 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
 def _sanitize_sheetname(s, replace="_"):
     """
     Alters given string to produce a valid excel sheetname.
+
     https://www.excelcodex.com/2012/06/worksheets-naming-conventions/
 
     Parameters
@@ -85,7 +91,6 @@ def _sanitize_sheetname(s, replace="_"):
     str :
         Valid excel sheetname
     """
-
     return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
@@ -101,8 +106,12 @@ def write_excel(table_dict, filename, index=False):
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
-    """
 
+    Raises
+    ------
+    Exception
+        If `table_dict` contains items not of type DataFrame.
+    """
     # Check if tables are pandas dataframes
     for name, table in table_dict.items():
         if not isinstance(table, pd.DataFrame):
@@ -122,15 +131,20 @@ def table_zscore(table, how="row"):
     ----------
     table : pandas.DataFrame
         Table to z-score.
-    how : str, default "row"
+    how : {'row', 'col'}
         Whether to z-score rows or columns.
 
     Returns
     -------
     pandas.DataFrame :
         Z-scored table.
-    """
 
+    Raises
+    ------
+    Exception
+        If `how` has invalid selection.
+
+    """
     if how == "row":
         counts_z = table.T.apply(zscore).T
     elif how == "col":

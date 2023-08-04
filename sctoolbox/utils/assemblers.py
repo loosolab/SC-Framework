@@ -1,6 +1,5 @@
-"""
-Module to assembling anndata objects
-"""
+"""Module to assemble anndata objects."""
+
 import scanpy as sc
 import pandas as pd
 import os
@@ -23,30 +22,29 @@ def assemble_from_h5ad(h5ad_files,
                        coordinate_cols=None,
                        set_index=True,
                        index_from=None):
-    '''
-    Function to assemble multiple adata files into a single adata object with a sample column in the
-    adata.obs table. This concatenates adata.obs and merges adata.uns.
+    """
+    Assembles multiple adata files into a single adata object.
+
+    This concatenates adata.obs and merges adata.uns.
 
     Parameters
     ----------
-    h5ad_files: list of str
+    h5ad_files : list of str
         list of h5ad_files
-    qc_columns: dictionary
-        dictionary of existing adata.obs column to add to infoprocess legend
-    merge_column: str
+    merge_column : str
         column name to store sample identifier
-    coordinate_cols: list of str
+    coordinate_cols : list of str
         location information of the peaks
-    set_index: boolean
+    set_index : boolean
         True: index will be formatted and can be set by a given column
-    index_from: str
+    index_from : str
         column to build the index from
 
     Returns
     -------
-
-    '''
-
+    anndata.AnnData
+        The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
+    """
     adata_dict = {}
     counter = 0
     for h5ad_path in h5ad_files:
@@ -96,20 +94,30 @@ def assemble_from_h5ad(h5ad_files,
 #####################################################################
 
 def from_single_starsolo(path, dtype="filtered", header='infer'):
-    '''
-    This will assemble an anndata object from the starsolo folder.
+    """
+    Assembles an anndata object from the starsolo folder.
 
     Parameters
     ----------
     path : str
         Path to the "solo" folder from starsolo.
-    dtype : str, optional
-        The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
-    header : int, list of int, None
-        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
-    '''
-    # Author : Guilherme Valente & Mette Bentsen
+    dtype : {'filtered', 'raw'}
+        The type of solo data to choose.
+    header : int or list of int or None, default infer
+        Set header parameter for reading metadata tables using pandas.read_csv.
 
+    Returns
+    -------
+    anndata.AnnData
+        An anndata object based on the provided starsolo folder.
+
+    Raises
+    ------
+    ValueError
+        If dtype is not set to 'raw' or 'filtered'
+    FileNotFoundError
+        If path does not exist or files are missing.
+    """
     # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
         raise ValueError("dtype must be either 'raw' or 'filtered'")
@@ -153,11 +161,11 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
 
 
 def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
-    '''
+    """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
     Parameters
-    -----------
+    ----------
     path : str
         The directory where the quant folder from snakemake preprocessing is located.
     configuration : list
@@ -166,9 +174,17 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         List of samples to use. If None, all samples will be used.
     dtype : str, optional
         The type of Solo data to choose. The options are 'raw' or 'filtered'. Default: filtered.
-    '''
-    # Author : Guilherme Valente
 
+    Returns
+    -------
+    anndata.AnnData
+        The assembled anndata object.
+
+    Raises
+    ------
+    ValueError
+        If `use_samples` contains not existing names.
+    """
     # TODO: test that quant folder is existing
 
     # Collect configuration into a dictionary
@@ -231,7 +247,8 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 #####################################################################
 
 def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
-    ''' Building adata object from single mtx and two tsv/csv files
+    r"""
+    Build an adata object from single mtx and two tsv/csv files.
 
     Parameters
     ----------
@@ -257,7 +274,12 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     Returns
     -------
     anndata object containing the mtx matrix, gene and cell labels
-    '''
+
+    Raises
+    ------
+    ValueError
+        If barcode or gene files contain duplicates.
+    """
     # Read mtx file
     adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
 
@@ -291,12 +313,12 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
 
 
 def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs):
-    '''
-    Building adata object from list of mtx, barcodes and genes files
+    """
+    Build an adata object from list of mtx, barcodes and genes files.
 
     Parameters
     ----------
-    path: string
+    path : string
         Path to data files
     mtx : string, optional
         String for glob to find matrix files. Default: '*_matrix.mtx*'
@@ -304,24 +326,18 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
         String for glob to find barcode files. Default: '*_barcodes.tsv*'
     genes : string, optional
         String for glob to find gene label files. Default: '*_genes.tsv*'
-    barcode_index : int
-        Column which contains the cell barcodes. Default: 0 -> Takes first column
-    transpose : boolean
-        Set True to transpose mtx matrix
-    barcode_index : int
-        Column which contains the cell barcodes (Default: 0 -> Takes first column)
-    genes_index : int
-        Column h contains the gene IDs (Default: 0 -> Takes first column)
-    delimiter : string
-        delimiter of genes and barcodes table
-    **kwargs : additional arguments
+    **kwargs : dict
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
-    --------
+    -------
     merged anndata object containing the mtx matrix, gene and cell labels
-    '''
 
+    Raises
+    ------
+    ValueError
+        If files are not found.
+    """
     mtx = glob.glob(os.path.join(path, mtx))
     barcodes = glob.glob(os.path.join(path, barcodes))
     genes = glob.glob(os.path.join(path, genes))
@@ -351,7 +367,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
 
 def convertToAdata(file, output=None, r_home=None, layer=None):
     """
-    Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 

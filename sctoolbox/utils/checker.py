@@ -1,3 +1,5 @@
+"""Module for type checking functions."""
+
 import re
 import importlib
 import matplotlib
@@ -47,7 +49,6 @@ def _is_interactive():
     boolean :
         True if interactive, False otherwise.
     """
-
     backend = matplotlib.get_backend()
 
     if backend == 'module://ipympl.backend_nbagg':
@@ -61,18 +62,53 @@ def _is_interactive():
 #####################################################################
 
 def _is_gz_file(filepath):
+    """
+    Check wheather file is a compressed .gz file.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to file.
+
+    Returns
+    -------
+    boolean
+        True if the file is a compressed .gz file.
+    """
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == b'\x1f\x8b'
 
 
 def gunzip_file(f_in, f_out):
+    """
+    Decompress file.
+
+    Parameters
+    ----------
+    f_in : str
+        Path to compressed input file.
+    f_out : str
+        Destination to decompressed output file.
+    """
     with gzip.open(f_in, 'rb') as h_in:
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
 
 
 def is_str_numeric(ans):
-    """ Check if string can be converted to number. """
+    """
+    Check if string can be converted to number.
+
+    Parameters
+    ----------
+    ans : str
+        String to check.
+
+    Returns
+    -------
+    boolean
+        True if string can be converted to float.
+    """
     try:
         float(ans)
         return True
@@ -82,15 +118,17 @@ def is_str_numeric(ans):
 
 def format_index(adata, from_column=None):
     """
-    This formats the index of adata.var by the pattern ["chr", "start", "stop"]
+    Format adata.var index.
+
+    This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
+    The adata is changed inplace.
+
     Parameters
     ----------
-    adata: anndata.AnnData
-    from_column: None or column name (str) in adata.var to be set as index
-
-    Returns
-    -------
-
+    adata : anndata.AnnData
+        The anndata object to reformat.
+    from_column : str, default None
+        Column name in adata.var to be set as index.
     """
     if from_column is None:
         entry = adata.var.index[0]
@@ -151,16 +189,18 @@ def format_index(adata, from_column=None):
 
 def get_index_type(entry):
     """
-    Check the format of the index by regex
+    Check the format of the index by regex.
+
     Parameters
     ----------
-    entry
+    entry : str
+        String to identify the format on.
 
     Returns
     -------
-
+    str or None
+        The index format. Either 'snapatac', 'start_name' or None for unknown format.
     """
-
     regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
     regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
 
@@ -171,15 +211,21 @@ def get_index_type(entry):
 
 
 def validate_regions(adata, coordinate_columns):
-    """ Checks if the regions in adata.var are valid.
+    """
+    Check if the regions in adata.var are valid.
 
     Parameters
-    -----------
-    adata : AnnData
+    ----------
+    adata : anndata.AnnData
         AnnData object containing the regions to be checked.
     coordinate_columns : list of str
-        List of length 3 for column names in adata.var containing chr, start, end coordinates. """
+        List of length 3 for column names in adata.var containing chr, start, end coordinates.
 
+    Raises
+    ------
+    ValueError
+        If invalid regions are detected.
+    """
     # Test whether the first three columns are in the right format
     chr, start, end = coordinate_columns
 
@@ -202,7 +248,8 @@ def format_adata_var(adata,
                      coordinate_columns=None,
                      columns_added=["chr", "start", "end"]):
     """
-    Formats the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
+    Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
+
     If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
     If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
     "*[_:-]start[_:-]stop"
@@ -210,15 +257,25 @@ def format_adata_var(adata,
     If the index can be formatted, the formatted columns (columns_added) will be added.
     If the index cannot be formatted, an error will be raised.
 
-    :param adata: AnnData
+    NOTE: adata object is changed inplace.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
         The anndata object containing features to annotate.
-    :param coordinate_columns: list of str or None
+    coordinate_columns : list[str] | None, default None
         List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
         If None, the index will be formatted.
-    :param columns_added: list of str
+    columns_added : list[str], default ['chr', 'start', 'end']
         List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
-    """
 
+    Raises
+    ------
+    KeyError
+        If `coordinate_columns` are not available.
+    ValueError
+        If regions are of incorrect format.
+    """
     # Test whether the first three columns are in the right format
     format_index = True
     if coordinate_columns is not None:
@@ -294,7 +351,7 @@ def is_integer_array(arr):
 
     Parameters
     ----------
-    x : numpy.array
+    arr : numpy.array
         Array of values to be checked.
 
     Returns
@@ -302,7 +359,6 @@ def is_integer_array(arr):
     boolean :
         True if all values are integers, False otherwise.
     """
-
     # https://stackoverflow.com/a/7236784
     boolean = np.equal(np.mod(arr, 1), 0)
 
@@ -311,17 +367,21 @@ def is_integer_array(arr):
 
 def check_columns(df, columns, error=True, name="dataframe"):
     """
-    Utility to check whether columns are found within a pandas dataframe.
+    Check whether columns are found within a pandas dataframe.
+
+    TODO do we need this?
 
     Parameters
-    ------------
+    ----------
     df : pandas.DataFrame
         A pandas dataframe to check.
     error : boolean, default True
         If True raise errror if not all columns are found.
         If False return true or false
     columns : list
-        A list of column names to check for within 'df'.
+        A list of column names to check for within `df`.
+    name : str, default dataframe
+        Dataframe name displayed in the error message.
 
     Returns
     -------
@@ -334,7 +394,6 @@ def check_columns(df, columns, error=True, name="dataframe"):
     KeyError
         If any of the columns are not in 'df' and error is set to True.
     """
-
     df_columns = df.columns
 
     not_found = []
@@ -358,6 +417,8 @@ def check_file_ending(file, pattern="gtf"):
     """
     Check if a file has a certain file ending.
 
+    TODO do we need this?
+
     Parameters
     ----------
     file : str
@@ -370,7 +431,6 @@ def check_file_ending(file, pattern="gtf"):
     ValueError
         If file does not have the expected file ending.
     """
-
     valid = False
     if is_regex:
         if re.match(pattern, file):
@@ -398,7 +458,6 @@ def is_regex(regex):
     boolean :
         True if string is a valid regex, False otherwise.
     """
-
     try:
         re.compile(regex)
         return True
