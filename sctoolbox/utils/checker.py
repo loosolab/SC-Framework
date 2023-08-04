@@ -309,7 +309,7 @@ def is_integer_array(arr):
     return np.all(boolean)
 
 
-def check_columns(df, columns, name="dataframe"):
+def check_columns(df, columns, error=True, name="dataframe"):
     """
     Utility to check whether columns are found within a pandas dataframe.
 
@@ -317,13 +317,22 @@ def check_columns(df, columns, name="dataframe"):
     ------------
     df : pandas.DataFrame
         A pandas dataframe to check.
+    error : boolean, default True
+        If True raise errror if not all columns are found.
+        If False return true or false
     columns : list
         A list of column names to check for within 'df'.
 
+    Returns
+    -------
+    Boolean or None
+        True or False depending on if columns are in dataframe
+        None if error is set to True
+
     Raises
-    --------
+    ------
     KeyError
-        If any of the columns are not in 'df'.
+        If any of the columns are not in 'df' and error is set to True.
     """
 
     df_columns = df.columns
@@ -335,8 +344,14 @@ def check_columns(df, columns, name="dataframe"):
                 not_found.append(column)
 
     if len(not_found) > 0:
-        error_str = f"Columns '{not_found}' are not found in {name}. Available columns are: {list(df_columns)}"
-        raise KeyError(error_str)
+        if error:
+            error_str = f"Columns '{not_found}' are not found in {name}. Available columns are: {list(df_columns)}"
+            raise KeyError(error_str)
+        else:
+            return False
+    else:
+        if not error:
+            return True
 
 
 def check_file_ending(file, pattern="gtf"):
