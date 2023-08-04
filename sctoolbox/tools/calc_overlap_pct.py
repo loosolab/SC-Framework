@@ -19,22 +19,31 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]):
+def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]) -> str:
     """
     Create fragments file out of a BAM file using the package sinto
 
-    :param bam: str
+    Parameter
+    ---------
+    bam : str
         Path to .bam file.
-    :param cb_tag: str
+    cb_tag : str
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    :param nproc: int
-        Number of threads for parallelization.
-    :param out: str
+    out : str
         Path to save fragments file. If none, the file will be saved in the same folder as tha BAM file.
-    :param sort_bam: boolean
+    nproc : int
+        Number of threads for parallelization.
+    sort_bam : boolean
         Set to True if the provided BAM file is not sorted.
-    :return: str
-        Path to fragments file.
+    keep_temp : boolean
+        If true keep temporary files.
+    temp_files : list, default []
+        List of temporary files.
+
+    Returns
+    -------
+    tuple of str
+        Path to fragments and temp files.
     """
 
     utils.check_module("pysam")
@@ -101,12 +110,19 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     Extract 'chr', 'start' and 'stop' from .gtf file and convert it to sorted BED file.
     BED file will be sorted by chromosome name and start position.
 
-    :param gtf: str
+    Parameter
+    ---------
+    gtf : str
         Path to .gtf file.
-    :param out: str
+    out : str, default None
         Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
-    :return: out_sorted: str
-        Path to .bed file.
+    temp_files : list, default []
+        List of temporary files.
+
+    Returns
+    -------
+    tuple of str
+        Path to fragments and temp files.
     """
 
     if not out:
@@ -146,16 +162,23 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
     Overlap two BED files using Bedtools Intersect.
     The result is a BED file containing regions in bed1 that overlaps with at least one region in bed2.
 
-    :param bed1: str
+    Parameter
+    ---------
+    bed1 : str
         Path to first BED file.
-    :param bed2: str
+    bed2 : str
         Path to second BED file.
-    :param out: str
+    out : str, default None
         Path to save overlapped file. If none, the file will be saved in the same folder as tha BAM file.
-    :return: out_overlap: str
-        Path to new .bed file.
-    """
+    temp_files : list, default []
+        List of temporary files.
 
+    Returns
+    -------
+    tuple of str or False
+        Path to fragments and temp files.
+        False if no overlap is found
+    """
     utils.check_module("pybedtools")
     import pybedtools
 
@@ -197,27 +220,34 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
     as new columns (n_total_fragments, n_fragments_in_promoters and pct_fragments_in_promoters).
 
-    :param adata: anndata.AnnData
+    Parameter
+    ---------
+    adata : anndata.AnnData
         The anndata object containig cell barcodes in adata.obs.
-    :param gtf_file: str
+    gtf_file : str, default None
         Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.
-    :param bam_file: str
+    bam_file : str, default None
         Path to BAM file. If None, a fragments file must be provided in the parameter 'fragments_file'.
-    :param fragments_file: str
+    fragments_file : str, default None
         Path to fragments file. If None, a BAM file must be provided in the parameter 'bam_file'. The
         BAM file will be converted into fragments file.
-    :param cb_col: str
+    cb_col : str, default None
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
-    :param cb_tag: str
+    cb_tag : str, default 'CB
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-     :param species: str
+    species : str, default None
         Name of the species, will only be used if gtf_file is None to use internal GTF files.
         Species are {bos_taurus, caenorhabditis_elegans, canis_lupus_familiaris, danio_rerio, drosophila_melanogaster,
         gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
-    :param nproc: int
+    nproc : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    :param sort_bam: boolean
+    sort_bam : boolean, default False
         Set to True if the provided BAM file is not sorted.
+
+    Raises
+    ------
+    ValueError
+        If no species and no gtf_file is given.
     """
 
     # exit if no gtf file and no species
@@ -241,26 +271,37 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
     as new columns.
 
-    :param adata: anndata.AnnData
+    Parameter
+    ---------
+    adata : anndata.AnnData
         The anndata object containig cell barcodes in adata.obs.
-    :param regions_file: str
+    regions_file : str
         Path to BED or GTF file containing regions of interest.
-    :param bam_file: str
+    bam_file : str, default None
         Path to BAM file. If None, a fragments file must be provided in the parameter 'fragments_file'.
-    :param fragments_file: str
+    fragments_file : str, default None
         Path to fragments file. If None, a BAM file must be provided in the parameter 'bam_file'. The
         BAM file will be converted into fragments file.
-    :param cb_col: str
+    cb_col : str, default None
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
-    :param cb_tag: str
+    cb_tag : str, default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    :param regions_name: int
+    regions_name : str, default 'list'
         The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name
-        to be added to the anndata object (e.g. pct_fragments_in_{regions_name}). Defaults to 'list'.
-    :param nproc: int
+        to be added to the anndata object (e.g. pct_fragments_in_{regions_name}).
+    nproc : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    :param sort_bam: boolean
+    sort_bam : boolean, default False
         Set to True if the provided BAM file is not sorted.
+    sort_regions : boolean, default False
+        If True sort bed file on regions.
+    keep_fragments : boolean, default False
+        If True keep fragment files.
+
+    Raises
+    ------
+    ValueError
+        If bam_file and fragment file is not provided.
     """
 
     if not bam_file and not fragments_file:
