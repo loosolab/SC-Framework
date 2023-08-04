@@ -124,11 +124,6 @@ def debug_func_log(func):
     ----------
     func : function
         Function to decorate.
-
-    Returns
-    -------
-    function :
-        Decorated function
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

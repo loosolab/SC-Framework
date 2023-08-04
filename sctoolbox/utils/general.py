@@ -182,7 +182,7 @@ def _none2null(none_obj):
 
     Parameters
     ----------
-    none_obj :
+    none_obj : object
         None object to convert to r"NULL".
 
     Returns
@@ -287,7 +287,7 @@ def read_list_file(path):
 def clean_flanking_strings(list_of_strings):
     """
     Remove common suffix and prefix from a list of strings.
-    
+
     E.g. running the function on ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
 
     Parameters

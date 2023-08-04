@@ -388,6 +388,8 @@ def _gtf_integrity(gtf):
     """
     Check if the provided file follows the gtf-format.
 
+    TODO rather return False than raise an error.
+
     Checks the following:
         - file-ending
         - header ##format: gtf
@@ -403,6 +405,11 @@ def _gtf_integrity(gtf):
     -------
     boolean
         True if the file is a valid gtf-file.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the file is not in gtf-format.
     """
     regex_header = '#+.*'
     regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'

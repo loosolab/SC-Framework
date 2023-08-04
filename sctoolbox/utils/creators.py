@@ -133,7 +133,7 @@ def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
                  starts_with=1, **kwargs):
     """
-    Create and add a new analysis/run.
+    Create and add a new analysis/run
 
     Note: Only works for Notebooks until number 99.
     Needs to be adjusted if we exceed 89 notebooks.
@@ -144,11 +144,11 @@ def add_analysis(dest, analysis_name, method="rna",
         Path to experiment.
     analysis_name : str
         Name of the new analysis run.
-    method : str, default rna
-        Which notebooks should be downloaded. Either 'rna' or 'atac'.
-    dirs : list, default ['figures', 'data', 'logs']
+    method : {'rna', 'atac'}
+        Type of notebooks to download.
+    dirs : list[str], default ['figures', 'data', 'logs']
         Internal folders to create besides 'notebooks' directory.
-    start_with : int, default 1
+    starts_with : int, default 1
         Notebook the analysis will start with.
     **kwargs : dict
         Forwarded to `gitlab_download`.
@@ -157,6 +157,8 @@ def add_analysis(dest, analysis_name, method="rna",
     ------
     FileNotFoundError
         If path to experiment does not exist.
+    ValueError
+        If `method` is invalid.
     """
     analysis_path = pathlib.Path(dest) / "Analysis"
     if not analysis_path.exists():
