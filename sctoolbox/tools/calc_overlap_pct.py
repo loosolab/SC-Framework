@@ -3,7 +3,6 @@ Module to calculate percentage of reads from a BAM or fragments file that overla
 in a GTF file using 'pct_reads_in_promoters' function. The function 'pct_reads_overlap' calculates percentage of
 reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
 as first columns.
-
 """
 
 from collections import Counter
@@ -23,19 +22,19 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     """
     Create fragments file out of a BAM file using the package sinto
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     bam : str
         Path to .bam file.
-    cb_tag : str
+    cb_tag : str, default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    out : str
+    out : str, default None
         Path to save fragments file. If none, the file will be saved in the same folder as tha BAM file.
-    nproc : int
+    nproc : int, default 1
         Number of threads for parallelization.
-    sort_bam : boolean
+    sort_bam : boolean, default False
         Set to True if the provided BAM file is not sorted.
-    keep_temp : boolean
+    keep_temp : boolean, default False
         If true keep temporary files.
     temp_files : list, default []
         List of temporary files.
@@ -110,8 +109,8 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     Extract 'chr', 'start' and 'stop' from .gtf file and convert it to sorted BED file.
     BED file will be sorted by chromosome name and start position.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     gtf : str
         Path to .gtf file.
     out : str, default None
@@ -162,8 +161,8 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
     Overlap two BED files using Bedtools Intersect.
     The result is a BED file containing regions in bed1 that overlaps with at least one region in bed2.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     bed1 : str
         Path to first BED file.
     bed2 : str
@@ -220,8 +219,8 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
     as new columns (n_total_fragments, n_fragments_in_promoters and pct_fragments_in_promoters).
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : anndata.AnnData
         The anndata object containig cell barcodes in adata.obs.
     gtf_file : str, default None
@@ -271,8 +270,8 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
     as new columns.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : anndata.AnnData
         The anndata object containig cell barcodes in adata.obs.
     regions_file : str
@@ -297,6 +296,10 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
         If True sort bed file on regions.
     keep_fragments : boolean, default False
         If True keep fragment files.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
