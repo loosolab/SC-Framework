@@ -39,6 +39,11 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         Whether the DataFrame object is modified inplace.
     replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
         dict that contains default values to replace nas depedning on data type
+
+    Returns
+    -------
+    pd.DataFrame or None
+        DataFrame with replaced NA values.
     """
 
     if not inplace:
@@ -101,6 +106,11 @@ def write_excel(table_dict, filename, index=False):
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
+
+    Raises
+    ------
+    Exception
+        If `table_dict` contains items not of type DataFrame.
     """
 
     # Check if tables are pandas dataframes
@@ -122,13 +132,19 @@ def table_zscore(table, how="row"):
     ----------
     table : pandas.DataFrame
         Table to z-score.
-    how : str, default "row"
+    how : {'row', 'col'}
         Whether to z-score rows or columns.
 
     Returns
     -------
     pandas.DataFrame :
         Z-scored table.
+
+    Raises
+    ------
+    Exception
+        If `how` has invalid selection.
+
     """
 
     if how == "row":
