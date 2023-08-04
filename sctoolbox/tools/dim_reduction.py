@@ -91,12 +91,23 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
 def lsi(data, scale_embeddings=True, n_comps=50):
     """Run Latent Semantic Indexing.
 
-    Note: Function is from muon package.
+    Parameters
+    ----------
+    data : anndata.AnnData
+        AnnData object with peak counts.
+    scale_embeddings : boolean, default True
+        Scale embeddings to zero mean and unit variance.
+    n_comps : int, default 50
+        Number of components to calculate with SVD.
 
-    :param anndata.AnnData data: AnnData object with peak counts.
-    :param bool scale_embeddings: Scale embeddings to zero mean and unit variance, defaults to True.
-    :param int n_comps: Number of components to calculate with SVD, defaults to 50.
-    :raises TypeError: data must be anndata object.
+    Notes
+    -----
+    Function is taken from muon package.
+
+    Raises
+    ------
+    TypeError
+        data must be anndata object.
     """
     if isinstance(data, AnnData):
         adata = data
@@ -138,18 +149,17 @@ def apply_svd(adata, layer=None):
     """ Singular value decomposition of anndata object.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         The anndata object to be decomposed.
-    layer : string, optional
-        The layer to be decomposed. If None, the layer is set to "X". Default: None.
+    layer : str, default None
+        The layer to be decomposed. If None, the layer is set to "X".
 
-    Returns:
-    --------
+    Returns
+    -------
     adata : anndata.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
     """
-
     if layer is None:
         mat = adata.X
     else:
@@ -198,6 +208,11 @@ def define_PC(anndata):
     -------
     int :
         An int representing the number of PCs until elbow, defining PCs with significant variance.
+
+    Raises
+    ------
+    ValueError:
+        If PCA is not found in anndata.
     """
     # check if pca exists
     if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
@@ -224,7 +239,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
     Additionally, subset the PCs in adata.varm["PCs"] and the variance ratio in adata.uns["pca"]["variance_ratio"].
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing the PCA coordinates.
     n_pcs : int
@@ -235,7 +250,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
         Whether to work inplace on the anndata object.
 
     Returns
-    --------
+    -------
     adata or None
         Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
     """
