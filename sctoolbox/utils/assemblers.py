@@ -167,7 +167,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
     Parameters
-    -----------
+    ----------
     path : str
         The directory where the quant folder from snakemake preprocessing is located.
     configuration : list
@@ -332,7 +332,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
-    --------
+    -------
     merged anndata object containing the mtx matrix, gene and cell labels
 
     Raises
