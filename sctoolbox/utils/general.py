@@ -50,7 +50,7 @@ def get_package_versions():
     Utility to get a dictionary of currently installed python packages and versions.
 
     Returns
-    --------
+    -------
     A dict in the form:
     {"package1": "1.2.1", "package2":"4.0.1", (...)}
 
@@ -149,12 +149,16 @@ def setup_R(r_home=None):
     """
     Setup R installation for rpy2 use.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r_home : str, default None
         Path to the R home directory. If None will construct path based on location of python executable.
         E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
 
+    Raises
+    ------
+    Exception
+        If path to R is invalid.
     """
     # Set R installation path
     if not r_home:
@@ -182,7 +186,7 @@ def split_list(lst, n):
     Split list into n chunks.
 
     Parameters
-    -----------
+    ----------
     lst : list
         List to be chunked
     n : int
@@ -205,7 +209,7 @@ def split_list_size(lst, max_size):
     Split list into chunks of max_size.
 
     Parameters
-    -----------
+    ----------
     lst : list
         List to be chunked
     max_size : int
@@ -229,7 +233,7 @@ def write_list_file(lst, path):
     Write a list to a file with one element per line.
 
     Parameters
-    -----------
+    ----------
     lst : list
         A list of values/strings to write to file
     path : str
@@ -273,12 +277,12 @@ def clean_flanking_strings(list_of_strings):
     ['path/a.txt', 'path/b.txt', 'path/c.txt'] would yield ['a', 'b', 'c'].
 
     Parameters
-    -----------
+    ----------
     list_of_strings : list of str
         List of strings.
 
     Returns
-    --------
+    -------
     List of strings without common suffix and prefix
     """
 
