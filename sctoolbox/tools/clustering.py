@@ -32,6 +32,16 @@ def recluster(adata, column, clusters,
         Name of the new column in adata.obs. If None, the column name is set to `<column>_recluster`.
     plot : bool, default True
         If a plot should be generated of the re-clustering.
+    embedding : str, default 'X_umap'
+        Select which embeding should be used.
+
+    Raises
+    ------
+    ValueError:
+        1. If clustering method is not valid.
+        2. If task is not valid.
+    KeyError:
+        If the given embeding is not in the data.
     """
 
     adata_copy = adata.copy()
