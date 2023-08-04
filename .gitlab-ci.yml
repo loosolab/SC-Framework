@@ -43,7 +43,7 @@ pass:
 # check style of the docstrings
 docstyle:
   image: 
-    name: python:3.10 # pybedtools is not compatible with python 3.11
+    name: python:latest
     entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
