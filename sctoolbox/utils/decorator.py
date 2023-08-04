@@ -83,6 +83,11 @@ def get_parameter_table(adata):
     -------
     pd.DataFrame
         Table with all function calls and their parameters.
+
+    Raises
+    ------
+    ValueError
+        If no logs are found.
     """
 
     if "sctoolbox" not in adata.uns.keys() or "log" not in adata.uns["sctoolbox"].keys():
