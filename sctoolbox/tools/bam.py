@@ -57,11 +57,11 @@ def check_barcode_tag(adata, bamfile, cb_col) -> None:
 
     Parameters
     ----------
-    adata: anndata.AnnData
+    adata : anndata.AnnData
         adata object where adata.obs is stored
-    bamfile: str
+    bamfile : str
         path of the bamfile to investigate
-    cb_col: str
+    cb_col : str
         bamfile column to extract the barcodes from
 
     Raises
@@ -223,12 +223,10 @@ def split_bam_clusters(adata,
 
     Raises
     ------
-    ValueError
-        If groupby column is not in adata.obs
-    ValueError
-        If barcode column is not in adata.obs
-    ValueError
-        If index_bams is set and sort_bams is False
+    ValueError:
+        1. If groupby column is not in adata.obs
+        2. If barcode column is not in adata.obs
+        3. If index_bams is set and sort_bams is False
     """
     # then load modules
     utils.check_module("tqdm")
@@ -595,8 +593,8 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     ----------
     path : str
         Path to bam file.
-    out_queue : dict
-        Dict of multiprocesssing.Queues with cluster as key
+    out_queues : dict
+        Dict of multiprocesssing.Queues with cluster as key.
     bc2cluster : dict
         Dict of clusters with barcode as key.
     tag : str
