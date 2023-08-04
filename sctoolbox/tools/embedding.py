@@ -19,9 +19,9 @@ def wrap_umap(adatas, threads=4):
     -------
     None
         UMAP coordinates are added to each adata.obsm["X_umap"].
-    """
 
-    # TODO: Check that adatas is a list of anndata objects
+    TODO Check that adatas is a list of anndata objects
+    """
     pool = mp.Pool(threads)
 
     jobs = []
