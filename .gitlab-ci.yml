@@ -47,7 +47,7 @@ docstyle:
     entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
-  stage: code style
+  stage: test
   tags:
     - coverage
   script:
@@ -74,7 +74,7 @@ lint:
     entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
-  stage: code style
+  stage: test
   tags:
     - coverage
   script:
