@@ -75,7 +75,7 @@ def shuffle_cells(adata, seed=42):
     Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object to shuffle cells in.
     seed : int, default 42
