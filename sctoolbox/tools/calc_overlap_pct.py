@@ -19,27 +19,6 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def check_pct_fragments_in_promoters(adata, qc_col):
-    """
-    Check if percentage of reads in promoters is in adata.obs.
-
-    Parameters
-    -----------
-    adata : anndata.AnnData
-        AnnData object.
-
-    Returns
-    --------
-    boolean
-        True if pct_reads_in_promoters column is in adata.obs, otherwise False.
-    """
-
-    if qc_col in adata.obs.columns:
-        return True
-    else:
-        return False
-
-
 def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]):
     """
     Create fragments file out of a BAM file using the package sinto
