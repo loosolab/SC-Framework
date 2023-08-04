@@ -87,6 +87,11 @@ def get_binary_path(tool):
     -------
     str :
         Full path to the tool.
+
+    Raises
+    ------
+    ValueError
+        If executable is not found.
     """
 
     python_dir = os.path.dirname(sys.executable)
@@ -118,6 +123,11 @@ def run_cmd(cmd):
     ----------
     cmd : str
         Command to be run.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        If command has an error.
     """
     try:
         subprocess.check_call(cmd, shell=True)
