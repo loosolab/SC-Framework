@@ -565,11 +565,13 @@ def connectionPlot(adata,
                    receptor_col="receptor_gene",
                    receptor_hue="receptor_score",
                    receptor_size="receptor_percent",
+                   receptor_genes=None,
                    # ligand params
                    ligand_cluster_col="ligand_cluster",
                    ligand_col="ligand_gene",
                    ligand_hue="ligand_score",
                    ligand_size="ligand_percent",
+                   ligand_genes=None,
                    filter=None,
                    lw_multiplier=2,
                    wspace=0.4,
@@ -601,6 +603,8 @@ def connectionPlot(adata,
             Name of column containing receptor scores. Shown as point color.
         receptor_size : str, default 'receptor_percent'
             Name of column containing receptor expression percentage. Shown as point size.
+        receptor_genes : list, default None
+            Restrict receptors to given genes.
         ligand_cluster_col : str, default 'ligand_cluster'
             Name of column containing cluster names of ligands. Shown on x-axis.
         ligand_col : str, default 'ligand_gene'
@@ -609,6 +613,8 @@ def connectionPlot(adata,
             Name of column containing ligand scores. Shown as point color.
         ligand_size : str, default 'ligand_percent'
             Name of column containing ligand expression percentage. Shown as point size.
+        ligand_genes : list, default None
+            Restrict ligands to given genes.
         filter : str, default None
             Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
         lw_multiplier : int, default 2
@@ -627,6 +633,14 @@ def connectionPlot(adata,
     _check_interactions(adata)
 
     data = get_interactions(adata).copy()
+
+    # filter receptor genes
+    if receptor_genes:
+        data = data[data[receptor_col].isin(receptor_genes)]
+    
+    # filter ligand genes
+    if ligand_genes:
+        data = data[data[ligand_col].isin(ligand_genes)]
 
     # filter interactions
     if filter:
