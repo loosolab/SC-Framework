@@ -55,7 +55,7 @@ def annotate_adata(adata,
         Whether to add the annotations to the adata object in place. Default: True.
 
     Returns
-    --------
+    -------
     If inplace == True, the annotation is added to adata.var in place.
     Else, a copy of the adata object is returned with the annotations added.
 
@@ -64,7 +64,7 @@ def annotate_adata(adata,
         .. [1] Kondili M, Fust A, Preussner J, Kuenne C, Braun T, and Looso M. UROPA: a tool for Universal RObust Peak Annotation. Scientific Reports 7 (2017), doi: 10.1038/s41598-017-02464-y
 
     Examples
-    ---------
+    --------
     >>> custom_config = {"queries": [{"distance": [10000, 1000],
                                       "feature_anchor": "start",
                                       "feature": "gene"}],
