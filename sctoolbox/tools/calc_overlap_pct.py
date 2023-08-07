@@ -1,6 +1,8 @@
-"""
+"""Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions.
+
 Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
-in a GTF file using 'pct_reads_in_promoters' function. The function 'pct_reads_overlap' calculates percentage of
+in a GTF file using 'pct_reads_in_promoters' function.
+The function 'pct_reads_overlap' calculates percentage of
 reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
 as first columns.
 """
@@ -20,7 +22,7 @@ logger = settings.logger
 
 def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]) -> str:
     """
-    Create fragments file out of a BAM file using the package sinto
+    Create fragments file out of a BAM file using the package sinto.
 
     Parameters
     ----------
@@ -44,7 +46,6 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     tuple of str
         Path to fragments and temp files.
     """
-
     utils.check_module("pysam")
     utils.check_module("sinto")
     import pysam
@@ -106,6 +107,8 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
 
 def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     """
+    Convert GTF-file to BED file.
+
     Extract 'chr', 'start' and 'stop' from .gtf file and convert it to sorted BED file.
     BED file will be sorted by chromosome name and start position.
 
@@ -123,7 +126,6 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     tuple of str
         Path to fragments and temp files.
     """
-
     if not out:
         path = os.path.splitext(gtf)
         out_unsorted = f"{path[0]}_tmp.bed"
@@ -159,6 +161,7 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
 def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
     """
     Overlap two BED files using Bedtools Intersect.
+
     The result is a BED file containing regions in bed1 that overlaps with at least one region in bed2.
 
     Parameters
@@ -214,10 +217,12 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
 def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None,
                                cb_col=None, cb_tag='CB', species=None, nproc=1, sort_bam=False):
     """
-    A wrapper function for pct_fragments_overlap.
+    Calculate the percentage of fragments in promoters.
+
     This function calculates for each cell, the percentage of fragments in a BAM alignment file
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
     as new columns (n_total_fragments, n_fragments_in_promoters and pct_fragments_in_promoters).
+    This is a wrapper function for pct_fragments_overlap.
 
     Parameters
     ----------
@@ -248,7 +253,6 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
     ValueError
         If no species and no gtf_file is given.
     """
-
     # exit if no gtf file and no species
     if not gtf_file and not species:
         raise ValueError('Please provide a GTF file or specify a species!')
@@ -266,6 +270,8 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None,
                           cb_tag='CB', regions_name='list', nproc=1, sort_bam=False, sort_regions=False, keep_fragments=False):
     """
+    Calculate the percentage of fragments.
+
     This function calculates for each cell, the percentage of fragments in a BAM alignment file
     that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
     as new columns.
@@ -306,7 +312,6 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     ValueError
         If bam_file and fragment file is not provided.
     """
-
     if not bam_file and not fragments_file:
         raise ValueError("Either BAM file or fragments file has to be provided!")
 
@@ -362,6 +367,9 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 class MPOverlapPct():
+    """
+    TODO Write Docstring.
+    """
 
     def __init__(self):
 
@@ -374,7 +382,9 @@ class MPOverlapPct():
                  adata,
                  regions_name='list',
                  n_threads=8):
-
+        """
+        TODO Write Docstring.
+        """
         # check if there was an overlap
         if not overlap_file:
             logger.info("There was no overlap!")
@@ -411,6 +421,9 @@ class MPOverlapPct():
         return adata
 
     def get_barcodes_sum(self, df, barcodes, col_name):
+        """
+        TODO Write Docstring.
+        """
         # drop columns we dont need
         df.drop(df.iloc[:, 5:], axis=1, inplace=True)
         df.columns = ['chr', 'start', 'end', 'barcode', col_name]
@@ -426,6 +439,9 @@ class MPOverlapPct():
         return count_dict
 
     def log_result(self, result):
+        """
+        TODO Write Docstring.
+        """
         if self.merged_dict:
             self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
             # print('merging')
@@ -433,7 +449,9 @@ class MPOverlapPct():
             self.merged_dict = result
 
     def mp_counter(self, fragments, barcodes, column, n_threads=8):
-
+        """
+        TODO Write Docstring.
+        """
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
         for chunk in fragments:
