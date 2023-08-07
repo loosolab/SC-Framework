@@ -1,7 +1,4 @@
-"""
-Tools for dimensionality reduction with PCA/SVD.
-"""
-
+"""Tools for dimensionality reduction with PCA/SVD."""
 import numpy as np
 import scanpy as sc
 import scipy
@@ -21,7 +18,7 @@ logger = settings.logger
 @deco.log_anndata
 def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
     """
-    Compute PCA and add information to adata.uns['infoprocess']
+    Compute PCA and add information to adata.uns['infoprocess'].
 
     Parameters
     ----------
@@ -89,7 +86,8 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
 
 
 def lsi(data, scale_embeddings=True, n_comps=50):
-    """Run Latent Semantic Indexing.
+    """
+    Run Latent Semantic Indexing.
 
     Parameters
     ----------
@@ -146,7 +144,8 @@ def lsi(data, scale_embeddings=True, n_comps=50):
 
 
 def apply_svd(adata, layer=None):
-    """ Singular value decomposition of anndata object.
+    """
+    Singular value decomposition of anndata object.
 
     Parameters
     ----------
@@ -236,6 +235,7 @@ def define_PC(anndata):
 def subset_PCA(adata, n_pcs, start=0, inplace=True):
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
+
     Additionally, subset the PCs in adata.varm["PCs"] and the variance ratio in adata.uns["pca"]["variance_ratio"].
 
     Parameters
@@ -254,7 +254,6 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
     adata or None
         Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
     """
-
     if inplace is False:
         adata = adata.copy()
 
