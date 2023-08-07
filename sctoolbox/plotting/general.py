@@ -61,8 +61,8 @@ def _add_figure_title(axarr, title, y=1.3, fontsize=16):
     fontsize : `int`, optional (default: `16`)
         Font size of the title.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -262,8 +262,8 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr"
     sns.clustermap
         Clustermap containing the plot.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -518,8 +518,8 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.AxesSubplot:
     matplotlib.AxesSubplot
         containing boxplot for every column.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -595,8 +595,8 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     ValueError
         If y or color_by is not a column name of table. Or if hlines is not a number or list of numbers for color_by=None.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 

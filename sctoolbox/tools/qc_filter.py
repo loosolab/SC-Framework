@@ -312,7 +312,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     Function for predicting sex based on expression of Xist (or another gene).
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         An anndata object to predict sex for.
     groupby : str
@@ -428,7 +428,7 @@ def _get_thresholds(data,
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
 
     Returns
-    --------
+    -------
     thresholds : dict
         Dictionary with min and max thresholds.
     """
@@ -523,7 +523,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
         Columns to calculate automatic thresholds for. If None, will take all numeric columns.
 
     Returns
-    --------
+    -------
     dict
         A dict containing thresholds for each data column, either grouped by groupby or directly containing "min" and "max" per column.
     """
@@ -750,7 +750,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
     Apply QC thresholds to anndata object.
 
     Parameters
-    -------------
+    ----------
     adata : AnnData
         Anndata object to filter.
     thresholds : dict
@@ -761,7 +761,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
         Column in table to group by. Default: None.
 
     Returns
-    ---------
+    -------
     adata : AnnData
         Anndata object with QC thresholds applied.
     """
@@ -920,7 +920,7 @@ def filter_cells(adata, cells, remove_bool=True, inplace=True):
     Remove cells from anndata object.
 
     Parameters
-    -----------
+    ----------
     adata : AnnData
         Anndata object to filter.
     cells : str or list of str

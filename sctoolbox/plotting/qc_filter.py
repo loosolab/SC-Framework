@@ -177,8 +177,8 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     -------
     ClusterGrid object
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -441,8 +441,8 @@ def quality_violin(adata, columns,
     """
     Plot quality measurements for cells/features in an anndata object.
 
-    Note
-    ----
+    Notes
+    -----
     Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
 
     Parameters

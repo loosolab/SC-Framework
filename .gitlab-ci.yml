@@ -67,7 +67,6 @@ docstyle:
 # W503 = Line break occurred before a binary operator
 # D202 = No blank lines allowed after function docstring
 # DOC301 = __init__() should not have a docstring; <- conflicts with "D107 Missing docstring in __init__"
-# DOC203 = Function return type(s) in docstring not consistent with the return annotation. <- can be adjusted in case we add return types to functions
 lint:
   image: 
     name: python:3.10 # pybedtools is not compatible with python 3.11
@@ -80,7 +79,7 @@ lint:
   script:
     - pip install flake8
     - pip install pydoclint
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301,DOC203 --arg-type-hints-in-signature False --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301 --arg-type-hints-in-signature False --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR

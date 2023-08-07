@@ -126,7 +126,7 @@ def _insertsize_from_bam(bam,
                          regions='chr1:1-2000000',
                          chunk_size=100000):
     """
-    Get fragment insertsize distributions per barcode from bam file.
+     insertsize distributions per barcode from bam file.
 
     Parameters
     ----------

@@ -10,8 +10,8 @@ def violin_HVF_distribution(adata):
     """
     Plot the distribution of the HVF as violinplot.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : AnnData
         AnnData object containing columns ['highly_variable', 'n_cells_by_counts'] column.
     """
@@ -34,8 +34,8 @@ def scatter_HVF_distribution(adata):
     """
     Plot the distribution of the HVF as scatterplot.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : AnnData
         AnnData object containing columns ['variability_score', 'n_cells'] column.
     """
