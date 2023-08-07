@@ -1,5 +1,4 @@
-""" Functionality to split bam files into smaller bam files based on clustering in adata.obs """
-
+""" Functionality to split bam files into smaller bam files based on clustering in adata.obs. """
 import re
 import os
 import pandas as pd
@@ -13,7 +12,7 @@ logger = settings.logger
 
 def bam_adata_ov(adata, bamfile, cb_col) -> float:
     """
-    Check if adata.obs barcodes existing in a column of a bamfile
+    Check if adata.obs barcodes existing in a column of a bamfile.
 
     Parameters
     ----------
@@ -447,7 +446,7 @@ def open_bam(file, mode, verbosity=3, **kwargs):
 
 def get_bam_reads(bam_obj) -> int:
     """
-    Get the number of reads from an open pysam.AlignmentFile
+    Get the number of reads from an open pysam.AlignmentFile.
 
     Parameters
     ----------
@@ -484,7 +483,7 @@ def _monitor_progress(progress_queue,
                       total_reads,
                       individual_pbars=False):
     """
-    Function for monitoring read/write progress of split_bam_clusters.
+    Monitoring read/write progress of split_bam_clusters.
 
     Parameters
     ----------
@@ -773,7 +772,6 @@ def bam_to_bigwig(bam,
     -------
     str : Path to output file.
     """
-
     # Set output name and check if bigwig already exists
     if output is None:
         output = bam.replace(".bam", ".bw")
