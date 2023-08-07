@@ -104,10 +104,10 @@ def _insertsize_from_bam(bam,
                          regions='chr1:1-2000000',
                          chunk_size=100000):
     """
-    Get fragment insertsize distributions per barcode from bam file.
+     insertsize distributions per barcode from bam file.
 
     Parameters
-    -----------
+    ----------
     bam : str
         Path to bam file
     barcode_tag : str, default "CB"
@@ -120,7 +120,7 @@ def _insertsize_from_bam(bam,
         Size of bp chunks to read from bam file.
 
     Returns
-    --------
+    -------
     pandas.DataFrame
         DataFrame with insertsize distributions per barcode.
     """
@@ -230,14 +230,14 @@ def _insertsize_from_fragments(fragments, barcodes=None):
     Get fragment insertsize distributions per barcode from fragments file.
 
     Parameters
-    -----------
+    ----------
     fragments : str
         Path to fragments.bed(.gz) file.
     barcodes : list of str, default None
         Only collect fragment sizes for the barcodes in barcodes
 
     Returns
-    --------
+    -------
     pandas.DataFrame
         DataFrame with insertsize distributions per barcode.
     """
@@ -301,7 +301,7 @@ def _add_fragment(count_dict, barcode, size, count=1):
     Add fragment of size 'size' to count_dict.
 
     Parameters
-    -----------
+    ----------
     count_dict : dict
         Dictionary containing the counts per insertsize.
     barcode : str
@@ -312,7 +312,7 @@ def _add_fragment(count_dict, barcode, size, count=1):
         Number of reads to add to count_dict.
 
     Returns
-    --------
+    -------
     count_dict : dict
         Updated count_dict
     """

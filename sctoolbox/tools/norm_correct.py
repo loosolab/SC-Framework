@@ -456,8 +456,8 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
     anndata.Anndata or None:
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
-    NOTES
-    -------
+    Notes
+    -----
     - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
     - indicates the effective number of different categories represented in the local neighborhood of each cell.
     - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.

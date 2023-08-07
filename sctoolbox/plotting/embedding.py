@@ -551,7 +551,7 @@ def plot_3D_UMAP(adata, color, save):
     KeyError
         If the given 'color' attribute was not found in adata.obs columns or adata.var index.
 
-    s
+    Examples
     --------
     .. plot::
         :context: close-figs
