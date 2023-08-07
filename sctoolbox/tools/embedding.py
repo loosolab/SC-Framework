@@ -1,3 +1,4 @@
+"""Embedding tools."""
 import scanpy as sc
 import multiprocessing as mp
 
