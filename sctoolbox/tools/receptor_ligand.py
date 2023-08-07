@@ -701,49 +701,45 @@ def connectionPlot(adata,
         data["alpha"] = minmax_scale(data[connection_alpha], feature_range=(0, 1))
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
+    else:
+        data["alpha"] = 1
 
+    # find receptor label location
+    for i, label in enumerate(axs[0].get_yticklabels()):
+        data.loc[data[receptor_col] == label.get_text(), "rec_index"] = i
+
+    # find ligand label location
+    for i, label in enumerate(axs[1].get_yticklabels()):
+        data.loc[data[ligand_col] == label.get_text(), "lig_index"] = i
+
+    # add receptor-ligand lines
+    # draws strongest connection for each pair
     for rec, color in zip(receptors, colors):
-        # find receptor label location
-        rec_index = None
-        for i, label in enumerate(axs[0].get_yticklabels()):
-            if label.get_text() == rec:
-                rec_index = i
-                break
+        pairs = data.loc[data[receptor_col] == rec]
+        
+        for lig in set(pairs[ligand_col]):
+            # get all connections for current pair
+            connections = pairs.loc[pairs[ligand_col] == lig]
+            
+            # get max connection
+            max_con = connections.loc[connections["alpha"].idxmax()]
+            
+            # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
+            # Draw a line between the different points, defined in different coordinate
+            # systems.
+            con = ConnectionPatch(
+                # x in axes coordinates, y in data coordinates
+                xyA=(1, max_con["rec_index"]), coordsA=axs[0].get_yaxis_transform(),
+                # x in axes coordinates, y in data coordinates
+                xyB=(0, max_con["lig_index"]), coordsB=axs[1].get_yaxis_transform(),
+                arrowstyle="-",
+                color=color,
+                zorder=-1000,
+                alpha=max_con["alpha"],
+                linewidth=max_con["alpha"] * lw_multiplier
+            )
 
-        for lig in data.loc[data[receptor_col] == rec, ligand_col]:
-            # find ligand label location
-            lig_index = None
-            for i, label in enumerate(axs[1].get_yticklabels()):
-                if label.get_text() == lig:
-                    lig_index = i
-                    break
-
-            # TODO
-            # a r-l pair can have multiple clusters, which results in overlapping connection lines
-            # add the moment these lines are plotted on top of each other
-            # compute line alpha
-            if connection_alpha:
-                alphas = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"]
-            else:
-                alphas = [1]
-
-            for alpha in alphas:
-                # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
-                # Draw a line between the different points, defined in different coordinate
-                # systems.
-                con = ConnectionPatch(
-                    # x in axes coordinates, y in data coordinates
-                    xyA=(1, rec_index), coordsA=axs[0].get_yaxis_transform(),
-                    # x in axes coordinates, y in data coordinates
-                    xyB=(0, lig_index), coordsB=axs[1].get_yaxis_transform(),
-                    arrowstyle="-",
-                    color=color,
-                    zorder=-1000,
-                    alpha=alpha,
-                    linewidth=alpha * lw_multiplier
-                )
-
-                axs[1].add_artist(con)
+            axs[1].add_artist(con)
 
     # ----- legends -----
     # set receptor plot legend position
