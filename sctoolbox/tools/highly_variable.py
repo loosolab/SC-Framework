@@ -1,3 +1,4 @@
+"""Tools to calculate and annotate highly variable genes."""
 import numpy as np
 from kneed import KneeLocator
 import statsmodels.api as sm
