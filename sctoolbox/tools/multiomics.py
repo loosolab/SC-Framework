@@ -1,3 +1,4 @@
+"""Tools for multiomics analysis."""
 import anndata as ad
 import pandas as pd
 from functools import reduce
@@ -9,26 +10,35 @@ import sctoolbox.utils as utils
 def merge_anndata(anndata_dict, join="inner"):
     """
     Merge two h5ad files for dual cellxgene deplyoment.
-    Important: Depending on the size of the anndata objects the function takes
-    around 60 to 300 GB of RAM!
-
-    To save RAM and runtime the function generates a minimal anndata object.
-    Only .X, .var, .obs and .obsm are kept. Layers, .varm, etc is removed.
 
     Parameters
     ----------
     anndata_dict : dict
-        dictionary with labels as keys and anndata objects as values
+        Dictionary with labels as keys and anndata objects as values.
     join : str, deafult 'inner'
-        set how to join cells of the adata objects: ['inner', 'outer']
-        This only affects the cells since the var/gene section is simply added
+        Set how to join cells of the adata objects: ['inner', 'outer'].
+        This only affects the cells since the var/gene section is simply added.
 
-        - 'inner': only keep overlapping cells
-        - 'outer': keep all cells. This will add placeholder cells/dots to plots currently disabled
+        - 'inner': only keep overlapping cells.
+        - 'outer': keep all cells. This will add placeholder cells/dots to plots currently disabled.
 
     Returns
     -------
-    merged anndata.AnnData object
+    anndata.AnnData
+        Merged anndata object.
+
+    Notes
+    -----
+    Important: Depending on the size of the anndata objects the function takes
+    around 60 to 300 GB of RAM!
+    To save RAM and runtime the function generates a minimal anndata object.
+    Only .X, .var, .obs and .obsm are kept. Layers, .varm, etc is removed.
+
+    Raises
+    ------
+    ValueError:
+        1. If join is not either 'inner' or 'outer'
+        2. If no indices of both adata.obs tables are overlapping.
     """
     if join == "outer":
         warnings.warn("'outer' join is currently not supported. Proceeding with 'inner' ...")
