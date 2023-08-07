@@ -1,3 +1,4 @@
+"""Module for cell clustering."""
 import scanpy as sc
 import warnings
 import matplotlib.pyplot as plt
@@ -43,7 +44,6 @@ def recluster(adata, column, clusters,
     KeyError:
         If the given embeding is not in the data.
     """
-
     adata_copy = adata.copy()
 
     # --- Get ready --- #
