@@ -220,8 +220,8 @@ def grouped_violin(adata, x,
     ValueError
         If x or y are not columns in adata.obs or a genes in adata.var.index.
 
-    Example
-    -------
+    Examples
+    --------
 
     .. plot::
         :context: close-figs
@@ -347,8 +347,8 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None) -> matplot
     -------
     matplotlib.axes.Axes
 
-    Example
-    -------
+    Examples
+    --------
 
     .. plot::
         :context: close-figs
@@ -449,8 +449,8 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     KeyError
         If `gene_name_column` is not a column in `adata.var`.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 

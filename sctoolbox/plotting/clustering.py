@@ -50,8 +50,8 @@ def search_clustering_parameters(adata,
     ValueError
         If the length of 'resolution_range' is not 3, if 'step' is larger than 'max' - 'min' or if 'method' is not valid.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -151,8 +151,8 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     axarr : list
         List of axes objects containing the plot(s).
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 

@@ -116,8 +116,8 @@ def search_umap_parameters(adata,
     np.ndarray
         2D numpy array of axis objects
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -163,8 +163,8 @@ def search_tsne_parameters(adata,
     np.ndarray
         2D numpy array of axis objects
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -336,8 +336,8 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None) 
     np.ndarray
         Flat numpy array of axis objects
 
-    Example
-    -------
+    Examples
+    --------
 
     .. plot::
         :context: close-figs
@@ -420,8 +420,8 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
     ValueError
         If none of the variables in var_list are found in any of the adata objects.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -551,8 +551,8 @@ def plot_3D_UMAP(adata, color, save):
     KeyError
         If the given 'color' attribute was not found in adata.obs columns or adata.var index.
 
-    Example
-    -------
+    s
+    --------
     .. plot::
         :context: close-figs
 
@@ -754,8 +754,8 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
     ValueError
         If color and title have different lengths.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -877,8 +877,8 @@ def anndata_overview(adatas,
     ValueError
         If any of the adatas is not of type anndata.AnnData or an invalid plot is specified.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -1100,8 +1100,8 @@ def plot_pca_variance(adata, method="pca",
     KeyError
         If the given method is not found in adata.uns.
 
-    Example
-    -------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
