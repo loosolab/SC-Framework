@@ -428,7 +428,7 @@ def _get_thresholds(data,
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
 
     Returns
-    --------
+    -------
     thresholds : dict
         Dictionary with min and max thresholds.
     """

@@ -21,19 +21,19 @@ def get_chromosome_genes(gtf, chromosomes):
     Get a list of all genes in the gtf for certain chromosome(s)
 
     Parameters
-    ------------
+    ----------
     gtf : str
         Path to the gtf file.
     chromosomes : str or list
         A chromosome or a list of chromosome names to search for genes in.
 
     Returns
-    ---------
+    -------
     list :
         A list of all genes in the gtf for the given chromosome(s).
 
-    Note
-    ------
+    Notes
+    -----
     This function is not directly used by the framework, but is used to create the marker gene lists for 'label_genes'.
     """
 
@@ -151,14 +151,14 @@ def add_gene_expression(adata, gene):
     Add values of gene/feature per cell to the adata.obs dataframe.
 
     Parameters
-    ------------
+    ----------
     adata : anndata.AnnData
         Anndata object containing gene expression/counts.
     gene : str
         Name of the gene/feature from the adata.var index to be added to adata.obs.
 
     Returns
-    -----------
+    -------
     None
         A column named "<gene>_values" is added to adata.obs with the expression/count values from .X
     """
@@ -293,7 +293,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing ranked genes.
     key : str, optional
@@ -304,7 +304,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group). Default: None (no file is written).
 
     Returns
-    --------
+    -------
     dict :
         A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
     """
@@ -407,7 +407,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing ranked genes.
     genes : list
@@ -451,7 +451,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing raw counts.
     sample_col : str
@@ -467,12 +467,12 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
 
     Returns
-    -----------
+    -------
     A dataframe containing the results of the DESeq2 analysis.
     Also adds the dataframe to adata.uns["deseq_result"]
 
     See also
-    -----------
+    --------
     sctoolbox.utils.pseudobulk_table
     """
 

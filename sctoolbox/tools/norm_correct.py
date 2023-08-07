@@ -201,13 +201,13 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
 
 
 def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
-    """ Perform TF-IDF normalization on a sparse matrix.
+    """Perform TF-IDF normalization on a sparse matrix.
     The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.
 
     Note: this function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
 
     Parameters
-    -----------
+    ----------
     matrix : scipy.sparse matrix
         The matrix to be normalized.
     tf_type : string, optional

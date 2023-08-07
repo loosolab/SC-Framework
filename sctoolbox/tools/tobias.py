@@ -32,7 +32,7 @@ def write_TOBIAS_config(out_path,
     Write a TOBIAS config file from input bams/fasta/blacklist etc.
 
     Parameters
-    -----------
+    ----------
     out_path : string
         Path to output yaml file.
     bams : list of strings, optional
