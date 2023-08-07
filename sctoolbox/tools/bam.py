@@ -1,4 +1,4 @@
-""" Functionality to split bam files into smaller bam files based on clustering in adata.obs. """
+"""Functionality to split bam files into smaller bam files based on clustering in adata.obs."""
 import re
 import os
 import pandas as pd
@@ -483,7 +483,7 @@ def _monitor_progress(progress_queue,
                       total_reads,
                       individual_pbars=False):
     """
-    Monitoring read/write progress of split_bam_clusters.
+    Monitor read/write progress of split_bam_clusters.
 
     Parameters
     ----------
