@@ -35,11 +35,13 @@ def _check_in_list(element, alist):
 
     TODO Do we need this function?
     """
+
     return element in alist
 
 
 def _check_true(element, alist):  # true regardless of input
     """TODO WHY?."""
+
     return True
 
 
@@ -78,6 +80,7 @@ def add_insertsize(adata,
         2. If bam and fragments is not given.
         3. If no barcodes between bam- or fragment-file and adata overlap
     """
+
     adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
 
     if bam is not None and fragments is not None:
@@ -152,6 +155,7 @@ def _insertsize_from_bam(bam,
         1. No reads found in bam-file.
         2. If no reads in bam-file overlap with barcodes.
     """
+
     # Load modules
     utils.check_module("pysam")
     import pysam
@@ -268,6 +272,7 @@ def _insertsize_from_fragments(fragments, barcodes=None):
     pandas.DataFrame
         DataFrame with insertsize distributions per barcode.
     """
+
     # Open fragments file
     if utils._is_gz_file(fragments):
         f = gzip.open(fragments, "rt")
@@ -342,6 +347,7 @@ def _add_fragment(count_dict, barcode, size, count=1):
     count_dict : dict
         Updated count_dict
     """
+
     # Initialize if barcode is seen for the first time
     if barcode not in count_dict:
         count_dict[barcode] = {"mean_insertsize": 0, "insertsize_count": 0}

@@ -55,6 +55,7 @@ def annot_ct(adata=None, genes_adata=None, output_path=None, db_path=None,
         If inplace is True, the annotation is added to adata.obs in place.
         Else, a copy of the adata object is returned with the annotations added.
     """
+
     go_on = True
 
     if not inplace:
@@ -155,6 +156,7 @@ def modify_ct(adata=None, annotation_dir=None, clustering_column="leiden_0.1", c
         If inplace is True, the modified annotation is added to adata.obs in place.
         Else, a copy of the adata object is returned with the annotations added.
     """
+
     if not inplace:
         adata = adata.copy()
 
@@ -192,6 +194,7 @@ def show_tables(annotation_dir=None, n=5, clustering_column="leiden_0.1"):
     clustering_column : str, default "leiden_0.1"
         The clustering column of the obs table which has been used for cell type annotation.
     """
+
     path = f'{annotation_dir}/ranked/output/{clustering_column}/ranks'
 
     files = os.listdir(path)
@@ -220,6 +223,7 @@ def get_panglao(path, tissue="all", species="Hs"):
         Dictionary which contains a dictionary per cell type. The inner dictionary contains the corresponding
         marker genes (keys) and the values of the ubiquitousness indices (values).
     """
+
     tissues = [tissue]
     panglao_dict = {}
     panglao_rank_dict = {}
@@ -286,6 +290,7 @@ def calc_ranks(cm_dict, annotated_clusters):
         The dictionary which contains the scores, the quantity of hits, the overall marker genes and
         the ubiquitousness index per cell type for each cluster.
     """
+
     ct_dict = {}
     data_genes = []
     data_hits = []
@@ -360,6 +365,7 @@ def get_cell_types(cluster_path, db_path, tissue="all", db="panglao", species="H
         The dictionary which contains the scores, the quantity of hits, the overall marker genes and
         the ubiquitousness index per cell type for each cluster.
     """
+
     if db == "panglao":
         db_dict = get_panglao(db_path, tissue=tissue, species=species)
     else:
@@ -386,6 +392,7 @@ def get_annotated_clusters(cluster_path):
     dictionary :
         Dictionary which contains the summed up ranked scores per gene for each cluster.
     """
+
     annotated_clusters = {}
     files = os.listdir(cluster_path)
     for file in [x for x in files if not x.startswith(".")]:
@@ -435,6 +442,7 @@ def perform_cell_type_annotation(output, db_path, cluster_path, tissue="all", db
     species : str, default "hs"
         The species of the data.
     """
+
     opath = output + "/ranks/"
     if not os.path.exists(opath):
         os.makedirs(opath)
@@ -460,6 +468,7 @@ def write_annotation(ct_dict, output):
     output : str
         The path to the folder where the annotation file will be written.
     """
+
     with open(output + "/annotation.txt", "w") as c_file:
         for dic in ct_dict.keys():
             sorted_dict = dict(
@@ -483,6 +492,7 @@ def main():
 
     TODO Do we need to keep this function?
     """
+
     if len(sys.argv) == 6:
         output, db_path, cluster_path, tissue, db = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], \
             sys.argv[5]

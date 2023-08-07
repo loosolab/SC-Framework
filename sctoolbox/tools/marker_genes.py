@@ -42,6 +42,7 @@ def get_chromosome_genes(gtf, chromosomes):
     ValueError:
         If not all given chromosomes are found in the GTF-file.
     """
+
     if isinstance(chromosomes, str):
         chromosomes = [chromosomes]
 
@@ -96,6 +97,7 @@ def label_genes(adata, species, gene_column=None):
     list of str :
         List containing the column names added to adata.var.
     """
+
     # Location of gene lists
     genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
@@ -167,6 +169,7 @@ def add_gene_expression(adata, gene):
     ValueError:
         If gene is not in adata.var.index.
     """
+
     # Get expression
     if gene in adata.var.index:
         gene_idx = np.argwhere(adata.var.index == gene)[0][0]
@@ -213,6 +216,7 @@ def run_rank_genes(adata, groupby,
     ValueError:
         If number of groups defined by the groupby parameter is < 2.
     """
+
     # Check that adata is an AnnData object
     # if not isinstance(adata, AnnData):
     #     raise ValueError("adata must be an AnnData object.")
@@ -271,6 +275,7 @@ def pairwise_rank_genes(adata, groupby,
     pandas.DataFrame
         Dataframe containinge the pairwise ranked gened between the groups.
     """
+
     groups = adata.obs[groupby].astype("category").cat.categories
     contrasts = list(itertools.combinations(groups, 2))
 
@@ -350,6 +355,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
         1. If var_columns is no list.
         2. If not all columns given in var_columns are in adata.var.
     """
+
     # Check input type
     if not isinstance(var_columns, list):
         raise ValueError("var_columns must be a list of strings.")
@@ -468,6 +474,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
     ValueError:
         If genes is not of type list.
     """
+
     if not inplace:
         adata = adata.copy()
 
@@ -528,6 +535,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     --------
     sctoolbox.utils.pseudobulk_table
     """
+
     utils.setup_R()
     from diffexpr.py_deseq import py_DESeq2
 
@@ -643,6 +651,7 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
     ValueError:
         If gene_set is not a string and not a list.
     """
+
     if not inplace:
         adata = adata.copy()
 

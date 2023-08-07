@@ -23,6 +23,7 @@ def wrap_umap(adatas, threads=4):
 
     TODO Check that adatas is a list of anndata objects
     """
+
     pool = mp.Pool(threads)
 
     jobs = []

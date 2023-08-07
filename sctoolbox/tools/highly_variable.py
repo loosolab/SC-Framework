@@ -47,6 +47,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
     anndata.Anndata or None:
         Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
     """
+
     adata_m = anndata if inplace else anndata.copy()
 
     logger.info("Annotating highy variable genes (HVG)")
@@ -111,6 +112,7 @@ def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inpl
         If inplace is False, the function returns None
         If inplace is True, the function returns an anndata object.
     """
+
     utils.check_module("kneed")
     utils.check_module("statsmodels")
 

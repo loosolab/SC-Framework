@@ -46,6 +46,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     tuple of str
         Path to fragments and temp files.
     """
+
     utils.check_module("pysam")
     utils.check_module("sinto")
     import pysam
@@ -126,6 +127,7 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     tuple of str
         Path to fragments and temp files.
     """
+
     if not out:
         path = os.path.splitext(gtf)
         out_unsorted = f"{path[0]}_tmp.bed"
@@ -181,6 +183,7 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
         Path to fragments and temp files.
         False if no overlap is found
     """
+
     utils.check_module("pybedtools")
     import pybedtools
 
@@ -253,6 +256,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
     ValueError
         If no species and no gtf_file is given.
     """
+
     # exit if no gtf file and no species
     if not gtf_file and not species:
         raise ValueError('Please provide a GTF file or specify a species!')
@@ -312,6 +316,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     ValueError
         If bam_file and fragment file is not provided.
     """
+
     if not bam_file and not fragments_file:
         raise ValueError("Either BAM file or fragments file has to be provided!")
 
@@ -385,6 +390,7 @@ class MPOverlapPct():
         """
         TODO Write Docstring.
         """
+
         # check if there was an overlap
         if not overlap_file:
             logger.info("There was no overlap!")
@@ -424,6 +430,7 @@ class MPOverlapPct():
         """
         TODO Write Docstring.
         """
+
         # drop columns we dont need
         df.drop(df.iloc[:, 5:], axis=1, inplace=True)
         df.columns = ['chr', 'start', 'end', 'barcode', col_name]
@@ -442,6 +449,7 @@ class MPOverlapPct():
         """
         TODO Write Docstring.
         """
+
         if self.merged_dict:
             self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
             # print('merging')
@@ -452,6 +460,7 @@ class MPOverlapPct():
         """
         TODO Write Docstring.
         """
+
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
         for chunk in fragments:

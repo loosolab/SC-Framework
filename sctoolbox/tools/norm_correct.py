@@ -47,6 +47,7 @@ def atac_norm(adata, method):
     ValueError
         If method is not valid. Needs to be either 'total' or 'tfidf'.
     """
+
     if isinstance(method, str):
         method = [method]
 
@@ -95,6 +96,7 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
     anndata.AnnData or None:
         Returns normalized and logged anndata object. Or None if inplace = True.
     """
+
     adata_m = anndata if inplace else anndata.copy()
 
     # Normalizing and logaritimyzing
@@ -129,6 +131,7 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
     anndata.Anndata or None:
         Anndata with expression values normalized and log converted and PCA computed.
     """
+
     adata_m = anndata if inplace else anndata.copy()
 
     # Normalization and converting to log
@@ -177,6 +180,7 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
     AttributeError:
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
     """
+
     if isinstance(data, anndata.AnnData):
         adata = data
     else:
@@ -241,6 +245,7 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
     -----
     This function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
     """
+
     # t - term (peak)
     # d - document (cell)
     # N - count of corpus (total set of cells)
@@ -314,6 +319,7 @@ def wrap_corrections(adata,
     ValueError
         If not all methods in methods are valid.
     """
+
     # Ensure that methods can be looped over
     if isinstance(methods, str):
         methods = [methods]
@@ -378,6 +384,7 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         1. If batch_key column is not in adata.obs
         2. If batch correction method is invalid.
     """
+
     if not callable(method):
         method = method.lower()
 
@@ -506,6 +513,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         1. If obsm_key is not in adata.obsm.
         2. If batch_key is no column in adata.obs.
     """
+
     # Load LISI
     utils.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
@@ -554,6 +562,7 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
     dict of anndata.AnnData
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
+
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:

@@ -28,6 +28,7 @@ def add_cellxgene_annotation(adata, csv):
     csv : str
         Path to the annotation file from cellxgene containing cell annotation.
     """
+
     anno_table = pd.read_csv(csv, sep=",", comment='#')
     anno_table.set_index("index", inplace=True)
     anno_name = anno_table.columns[-1]
@@ -62,6 +63,7 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
 
     TODO make this more robust
     """
+
     # if column_name in adata.obs.columns:
     #    raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
 
@@ -132,6 +134,7 @@ def _match_database(marker_db, input_genes):
     str
         Name of best matching column in database
     """
+
     user_database = pd.read_csv(marker_db, sep="\t")
 
     highest_perc = -1
@@ -169,6 +172,7 @@ def _get_rank_genes(d) -> list:
     list
         A list of unique gene names from  adata.uns["rank_genes_groups"]['names']
     """
+
     names_dict = {}  # collect names in a dict to remove duplicates
     for lst in d["names"]:
         for name in lst:
@@ -260,6 +264,7 @@ def run_scsa(adata,
         2. If no species and no user database is provided.
         3. If SCSA run failes
     """
+
     if species is not None:
         species = species.capitalize()
 

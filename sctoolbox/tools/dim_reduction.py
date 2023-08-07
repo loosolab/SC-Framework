@@ -36,6 +36,7 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
     anndata.AnnData or None:
         Returns anndata object with PCA components. Or None if inplace = True.
     """
+
     adata_m = anndata if inplace else anndata.copy()
 
     # Computing PCA
@@ -107,6 +108,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     TypeError
         data must be anndata object.
     """
+
     if isinstance(data, AnnData):
         adata = data
     else:
@@ -159,6 +161,7 @@ def apply_svd(adata, layer=None):
     adata : anndata.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
     """
+
     if layer is None:
         mat = adata.X
     else:
@@ -213,6 +216,7 @@ def define_PC(anndata):
     ValueError:
         If PCA is not found in anndata.
     """
+
     # check if pca exists
     if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
@@ -254,6 +258,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
     adata or None
         Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
     """
+
     if inplace is False:
         adata = adata.copy()
 

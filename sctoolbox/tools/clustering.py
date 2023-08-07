@@ -44,6 +44,7 @@ def recluster(adata, column, clusters,
     KeyError:
         If the given embeding is not in the data.
     """
+
     adata_copy = adata.copy()
 
     # --- Get ready --- #

@@ -40,6 +40,7 @@ def merge_anndata(anndata_dict, join="inner"):
         1. If join is not either 'inner' or 'outer'
         2. If no indices of both adata.obs tables are overlapping.
     """
+
     if join == "outer":
         warnings.warn("'outer' join is currently not supported. Proceeding with 'inner' ...")
         join = "inner"

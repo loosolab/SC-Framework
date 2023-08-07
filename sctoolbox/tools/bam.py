@@ -28,6 +28,7 @@ def bam_adata_ov(adata, bamfile, cb_col) -> float:
     float
         hitrate of the barcodes in the bamfile
     """
+
     logger.info("calculating barcode overlap between bamfile and adata.obs")
     bam_obj = open_bam(bamfile, "rb")
 
@@ -68,6 +69,7 @@ def check_barcode_tag(adata, bamfile, cb_col) -> None:
     ValueError
         If barcode hit rate could not be identified
     """
+
     hitrate = bam_adata_ov(adata, bamfile, cb_col)
 
     if hitrate == 0:
@@ -103,6 +105,7 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     overwrite : bool, default False
         Overwrite output file if it exists.
     """
+
     # check then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
@@ -227,6 +230,7 @@ def split_bam_clusters(adata,
         2. If barcode column is not in adata.obs
         3. If index_bams is set and sort_bams is False
     """
+
     # then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
@@ -427,6 +431,7 @@ def open_bam(file, mode, verbosity=3, **kwargs):
     pysam.AlignmentFile :
         Object to work on SAM/BAM files.
     """
+
     # check then load modules
     utils.check_module("pysam")
     import pysam
@@ -458,6 +463,7 @@ def get_bam_reads(bam_obj) -> int:
     int :
         number of reads in the bam file
     """
+
     # check then load modules
     utils.check_module("pysam")
     import pysam
@@ -505,6 +511,7 @@ def _monitor_progress(progress_queue,
     int :
         Returns 0 on success.
     """
+
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
@@ -613,6 +620,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     Exception
         If buffered reader failes.
     """
+
     try:
         # open bam
         bam = open_bam(path, "rb", verbosity=0)
@@ -691,6 +699,7 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) 
     Exception
         If buffered reader failes.
     """
+
     try:
         import pysam  # install of pysam was checked in parent function
 
@@ -772,6 +781,7 @@ def bam_to_bigwig(bam,
     -------
     str : Path to output file.
     """
+
     # Set output name and check if bigwig already exists
     if output is None:
         output = bam.replace(".bam", ".bw")
