@@ -501,7 +501,7 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-def boxplot(dt, show_median=True, ax=None) -> matplotlib.AxesSubplot:
+def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
     """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
@@ -515,7 +515,7 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.AxesSubplot:
 
     Returns
     -------
-    matplotlib.AxesSubplot
+    matplotlib.axes.Axes
         containing boxplot for every column.
 
     Examples
