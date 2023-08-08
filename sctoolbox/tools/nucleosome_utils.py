@@ -1,10 +1,13 @@
 """Tools for scATAC nucleosome analysis."""
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import pywt
 import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
+from typing import Tuple
+import anndata
 import sctoolbox.tools as tools
 
 import sctoolbox.utils.decorator as deco
@@ -12,7 +15,7 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def moving_average(series, n=10):
+def moving_average(series, n=10) -> np.array:
     """
     Move average filter to smooth out data.
 
@@ -28,7 +31,7 @@ def moving_average(series, n=10):
 
     Returns
     -------
-    numpy.array:
+    np.array
         Smoothed array
     """
 
@@ -50,7 +53,7 @@ def moving_average(series, n=10):
     return smoothed
 
 
-def multi_ma(series, n=2, window_size=10, n_threads=8):
+def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
     """
     Multiprocessing wrapper for moving average filter.
 
@@ -94,7 +97,7 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
     return series
 
 
-def scale(series_arr):
+def scale(series_arr) -> np.ndarray:
     """
     Scale a series array to a range of 0 to 1.
 
@@ -127,7 +130,7 @@ def scale(series_arr):
         return scaled_arr
 
 
-def calc_densities(features):
+def calc_densities(features) -> np.ndarray:
     """
     Calculate the density of a feature array, for each feature.
 
@@ -156,7 +159,7 @@ def calc_densities(features):
     return densities
 
 
-def call_peaks(data, n_threads=4, distance=50, width=10):
+def call_peaks(data, n_threads=4, distance=50, width=10) -> np.ndarray:
     """
     Find peaks for multiple arrays at once.
 
@@ -201,7 +204,7 @@ def call_peaks(data, n_threads=4, distance=50, width=10):
     return peaks
 
 
-def call_peaks_worker(array, distance=50, width=10):
+def call_peaks_worker(array, distance=50, width=10) -> np.ndarray:
     """
     Worker function for multiprocessing of scipy.signal.find_peaks.
 
@@ -225,7 +228,7 @@ def call_peaks_worker(array, distance=50, width=10):
     return peaks
 
 
-def filter_peaks(peaks, reference, peaks_thr, operator='bigger'):
+def filter_peaks(peaks, reference, peaks_thr, operator='bigger') -> np.ndarray:
     """
     Filter peaks based on a reference array and a threshold.
 
@@ -267,7 +270,7 @@ def filter_peaks(peaks, reference, peaks_thr, operator='bigger'):
 
 # ////////////////////////// Momentum \\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def momentum_diff(data, remove=150, shift=80, smooth=True):
+def momentum_diff(data, remove=150, shift=80, smooth=True) -> Tuple[np.array, np.array, np.array]:
     """
     Calculate the momentum of a series by subtracting the original series with a shifted version of itself.
 
@@ -284,7 +287,7 @@ def momentum_diff(data, remove=150, shift=80, smooth=True):
 
     Returns
     -------
-    tuple of len 3 containing np.ndarrays
+    Tuple[np.array, np.array, np.array]
         Index 1: np.array containg the momentum
         Index 2: np.array containg the shifted data a (data[:-shift])
         Index 3: np.array containg the shifted data b (data[shift:])
@@ -314,7 +317,7 @@ def score_by_momentum(data,
                       peaks_thr=0.03,
                       period=160,
                       penalty_scale=100,
-                      plotting=True):
+                      plotting=True) -> np.ndarray:
     """
     Calculate momentum and score cells based on the number of peaks and the distance between them.
 
@@ -404,7 +407,7 @@ def score_by_momentum(data,
 
 # //////////////////////////// CWT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def add_adapters(features, shift=250, smooth=False, window_size=30):
+def add_adapters(features, shift=250, smooth=False, window_size=30) -> np.ndarray:
     """
     Add adapters to the beginning of the features array for transient oscillations.
 
@@ -435,7 +438,7 @@ def add_adapters(features, shift=250, smooth=False, window_size=30):
     return features
 
 
-def cross_point_shift(peaks, reference, convergence=0.01):
+def cross_point_shift(peaks, reference, convergence=0.01) -> np.ndarray:
     """
     Cross point shift peaks to the left to the first point where the reference is below the convergence threshold.
 
@@ -471,7 +474,7 @@ def cross_point_shift(peaks, reference, convergence=0.01):
     return corrected_peaks
 
 
-def half_wave_shift(peaks, scale):
+def half_wave_shift(peaks, scale) -> np.ndarray:
     """
     Shift the peaks to the left by half a wavelength.
 
@@ -486,7 +489,6 @@ def half_wave_shift(peaks, scale):
     -------
     np.ndarray
         Array of corrected peaks.
-
     """
 
     freq = pywt.scale2frequency('gaus1', scale)
@@ -503,7 +505,7 @@ def single_cwt_ov(features,
                   peaks_thr=0.5,
                   perform_cross_point_shift=True,
                   convergence=0.1,
-                  plotting=True):
+                  plotting=True) -> np.ndarray:
     """
     Apply Continues Wavelet Transformation (CWT) to a single sample and plot the results.
 
@@ -557,7 +559,7 @@ def single_cwt_ov(features,
     return coef, filtered_peaks
 
 
-def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8):
+def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8) -> np.ndarray:
     """
     Multiprocess Continues Wavelet Transformation (CWT).
 
@@ -598,7 +600,7 @@ def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8):
     return coef_arr
 
 
-def cwt_worker(feature, wavelet="gaus1", scales=16):
+def cwt_worker(feature, wavelet="gaus1", scales=16) -> np.array:
     """
     Perform the CWT on a single feature.
 
@@ -632,7 +634,7 @@ def wrap_cwt(data,
              scales=16,
              n_threads=8,
              peaks_thr=0.1,
-             convergence=0.01):
+             convergence=0.01) -> Tuple[np.array, np.array, np.array]:
     """
     Find peaks in multiple fragment length distributions.
 
@@ -659,10 +661,10 @@ def wrap_cwt(data,
 
     Returns
     -------
-    tuple of length 3:
-        1: peaks
-        2: wav features
-        3: coeficients
+    Tuple[np.array, np.array, np.array]
+        Index 1: peaks
+        Index 2: wav features
+        Index 3: coeficients
     """
 
     wav_features = add_adapters(data, shift=adapter)
@@ -699,7 +701,7 @@ def score_by_cwt(data,
                  peaks_thr=0.05,
                  penalty_scale=100,
                  period=160,
-                 n_threads=8):
+                 n_threads=8) -> np.array:
     """
     Calculate scores for each cell using CWT.
 
@@ -796,7 +798,7 @@ def score_by_cwt(data,
 
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(scaled, densities):
+def density_plot(scaled, densities) -> matplotlib.axes.Axes:
     """
     Plot the density of the fragment length distributions.
 
@@ -840,7 +842,7 @@ def plot_single_momentum_ov(peaks,
                             shift_r,
                             sample_n=0,
                             shift=80,
-                            remove=150):
+                            remove=150) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
     """
     Plot the momentum of a single sample with found peaks and the original data.
 
@@ -865,9 +867,9 @@ def plot_single_momentum_ov(peaks,
 
     Returns
     -------
-    tuple of length 2:
-        1: matplotlib figure
-        2: list (legnth 3) of matplotlib.axes.Axes objects
+    Tuple[plt.figure, list[matplotlib.axes.Axes]]
+        Tuple at index 1: matplotlib figure
+        Tuple at index 2: list (legnth 3) of matplotlib.axes.Axes objects
     """
     single_m = momentum[sample_n]
     single_d = data[sample_n]
@@ -912,7 +914,7 @@ def plot_wavl_ov(feature,
                  perform_cross_point_shift=True,
                  perform_half_wave_shift=True,
                  scale=35,
-                 convergence=0.1):
+                 convergence=0.1) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
     """
     Plot the original data, the wavelet transformation and the found peaks as an overview.
 
@@ -939,9 +941,9 @@ def plot_wavl_ov(feature,
 
     Returns
     -------
-    tuple of length 2:
-        1: matplotlib figure
-        2: list (legnth 3) of matplotlib.axes.Axes objects
+    Tuple[plt.figure, list[matplotlib.axes.Axes]]
+        Index 1: matplotlib figure
+        Index 2: list (legnth 3) of matplotlib.axes.Axes objects
     """
 
     # index frequence of interest
@@ -996,7 +998,7 @@ def custome_wavelet(amplitude=1.0,
                     phase_shift=np.pi / 0.65,
                     mu=0.0,
                     sigma=150.0,
-                    plotting=True):
+                    plotting=True) -> np.array:
     """
     Implement a custom wavelet.
 
@@ -1046,7 +1048,7 @@ def custome_wavelet(amplitude=1.0,
     return wavelet
 
 
-def custome_cwt(data, mode='convolve', plot_wavl=False):
+def custome_cwt(data, mode='convolve', plot_wavl=False) -> np.array:
     """
     Get custom implementation of the continuous wavelet transformation.
 
@@ -1086,7 +1088,7 @@ def score_by_ct_cwt(data,
                     operator='bigger',
                     plotting_mask=False,
                     plotting_ov=True,
-                    sample=0):
+                    sample=0) -> np.array:
     """
     Get score by custom continuous wavelet transformation and score mask.
 
@@ -1147,7 +1149,9 @@ def score_by_ct_cwt(data,
     return scores
 
 
-def build_score_mask(plotting=True, mu_list=[42, 200, 360, 550], sigma_list=[25, 35, 45, 25]):
+def build_score_mask(plotting=True,
+                     mu_list=[42, 200, 360, 550],
+                     sigma_list=[25, 35, 45, 25]) -> np.array:
     """
     Build a score mask for the score by custom continuous wavelet transformation.
 
@@ -1191,7 +1195,7 @@ def build_score_mask(plotting=True, mu_list=[42, 200, 360, 550], sigma_list=[25,
     return gaussians
 
 
-def gauss(x, mu, sigma):
+def gauss(x, mu, sigma) -> float:
     """
     Calculate the values of the Gaussian function for a given x, mu and sigma.
 
@@ -1215,7 +1219,7 @@ def gauss(x, mu, sigma):
     return gaussian
 
 
-def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0):
+def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0) -> None:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
 
@@ -1275,7 +1279,7 @@ def add_insertsize_metrics(adata,
                            wavl_scale=35,
                            plotting=True,
                            plot_sample=0,
-                           n_threads=8):
+                           n_threads=8) -> anndata.AnnData:
     """
     Add insert size metrics to an AnnData object.
 
