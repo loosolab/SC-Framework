@@ -10,9 +10,9 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 
-# type hin imports
+# type hint imports
 from typing import Any
-import rpy2
+import rpy2.rinterface_lib
 
 
 # ------------------ Logging about run ----------------- #
