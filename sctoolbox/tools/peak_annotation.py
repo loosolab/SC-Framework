@@ -1,3 +1,4 @@
+"""Tools for peak annotation required by scATAC-seq."""
 import pandas as pd
 import numpy as np
 import copy
@@ -26,10 +27,12 @@ def annotate_adata(adata,
                    temp_dir="",
                    remove_temp=True,
                    inplace=True):
-
     """
-    Annotate adata .var features with genes from .gtf using UROPA [1]_. The function assumes that the adata.var contains genomic coordinates in the first
-    three columns, e.g. "chromosome", "start", "end". If specific columns should be used, please adjust the names via 'coordinate_cols'.
+    Annotate adata .var features with genes from .gtf using UROPA [1]_.
+
+    The function assumes that the adata.var contains genomic coordinates in the first
+    three columns, e.g. "chromosome", "start", "end".
+    If specific columns should be used, please adjust the names via 'coordinate_cols'.
 
     Parameters
     ----------
@@ -37,27 +40,29 @@ def annotate_adata(adata,
         The anndata object containing features to annotate.
     gtf : str
         Path to .gtf file containing genomic elements for annotation.
-    config : dict, optional
-        A dictionary indicating how regions should be annotated. Default is to annotate feature 'gene' within -10000;1000bp of the gene start. See 'Examples' of how to set up a custom configuration dictionary.
-    best : boolean
-        Whether to return the best annotation or all valid annotations. Default: True (only best are kept).
-    coordinate_cols : list of str, optional
-        A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates. Default: None (the first three columns are taken).
-    threads : int, optional
-        Number of threads to use for multiprocessing. Default: 1.
-    remove_temp : boolean, optional
-        option to remove temporary directory after execution. Default: True (clean up)
-    verbose : boolean
-        Whether to write output to stdout. Default: True.
-    temp_dir : str, optional
-        Path to a directory to store files. Is only used if input .gtf-file needs sorting. Default: "" (current working dir).
-    inplace : boolean
-        Whether to add the annotations to the adata object in place. Default: True.
+    config : dict, default None
+        A dictionary indicating how regions should be annotated.
+        Default (None) is to annotate feature 'gene' within -10000;1000bp of the gene start.
+        See 'Examples' of how to set up a custom configuration dictionary.
+    best : bool, default True
+        Whether to return the best annotation or all valid annotations.
+    threads : int, default 1
+        Number of threads to use for multiprocessing.
+    coordinate_cols : list of str, default None
+        A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates.
+        If None the first three columns are taken.
+    temp_dir : str, default ''
+        Path to a directory to store files. Is only used if input .gtf-file needs sorting.
+    remove_temp : boolean, default True
+        If True remove temporary directory after execution.
+    inplace : boolean, default True
+        Whether to add the annotations to the adata object in place.
 
     Returns
     -------
-    If inplace == True, the annotation is added to adata.var in place.
-    Else, a copy of the adata object is returned with the annotations added.
+    anndata.anndata or None
+        If inplace == True, the annotation is added to adata.var in place.
+        Else, a copy of the adata object is returned with the annotations added.
 
     References
     ----------
@@ -190,27 +195,31 @@ def annotate_narrowPeak(filepath,
                         threads=1,
                         temp_dir="",
                         remove_temp=True):
-
     """
-    Annotates narrowPeak files with genes from .gtf using UROPA.
+    Annotate narrowPeak files with genes from .gtf using UROPA.
 
-    :param filepath: str
-        Path to the narrowPeak file to be annotated
-    :param gtf: str
-        Path to the .gtf file containing the genes to be annotated
-    :param config: dict, optional
-        A dictionary indicating how regions should be annotated. Default is to annotate feature 'gene' within -10000;1000bp of the gene start. See 'Examples' of how to set up a custom configuration dictionary.
-    :param best: boolean
-        Whether to return the best annotation or all valid annotations. Default: True (only best are kept).
-    :param threads: int, optional
+    Parameters
+    ----------
+    filepath : str
+        Path to the narrowPeak file to be annotated.
+    gtf : str
+        Path to the .gtf file containing the genes to be annotated.
+    config : dict, default None
+        A dictionary indicating how regions should be annotated.
+        Default (None) is to annotate feature 'gene' within -10000;1000bp of the gene start.
+        See 'Examples' of how to set up a custom configuration dictionary.
+    best : boolean, default True
+        Whether to return the best annotation or all valid annotations.
+    threads : in, default 1
         Number of threads to perform the annotation.
-    :param temp_dir: str, optional
-        Path to the directory where the temporary files should be written. Default: location of the script
-    :param remove_temp: boolean, optional
-        option to remove temporary directory after execution. Default: True (clean up)
-    :param verbose: boolean
-        Whether to write output to stdout. Default: True.
-    :return: annotation_table: pandas.Dataframe
+    temp_dir : str, default ''
+        Path to the directory where the temporary files should be written.
+    remove_temp : boolean, default True
+        If True remove temporary directory after execution.
+
+    Returns
+    -------
+    pandas.Dataframe
         Dataframe containing the annotations.
     """
 
@@ -260,14 +269,20 @@ def annotate_narrowPeak(filepath,
 
 
 def _load_narrowPeak(filepath):
-    '''
+    """
     Load narrowPeak file to annotate.
 
-    :param filepath: str
+    Parameters
+    ----------
+    filepath : str
         Path to the narrowPeak file.
-    :return: region_dicts: dictionary
+
+    Returns
+    -------
+    dict
         Dictionary with the peak information.
-    '''
+    """
+
     logger.info("load regions_dict from: " + filepath)
     peaks = pd.read_csv(filepath, header=None, sep='\t')
     peaks = peaks.drop([3, 4, 5, 6, 7, 8, 9], axis=1)
@@ -283,21 +298,34 @@ def _load_narrowPeak(filepath):
     return region_dicts
 
 
-def _prepare_gtf(gtf,
-                 temp_dir):
+def _prepare_gtf(gtf, temp_dir):
     """
-    Prepares the .gtf file to use it in the annotation process. Therefore the file properties are checked and if necessary it is sorted, indexed and compressed.
+    Prepare the .gtf file to use it in the annotation process.
 
-    :param gtf: str
+    Therefore the file properties are checked and if necessary it is sorted,
+    indexed and compressed.
+
+    Parameters
+    ----------
+    gtf : str
         Path to the .gtf file containing the genes to be annotated.
-    :param temp_dir: str
+    temp_dir : str
         Path to the temporary directory for storing .gtf files.
 
-    :return: gtf: str
-        Path to the gtf file to use in the annotation.
-    :return: tempfiles: list of str
-        List of temporary files created.
+    Returns
+    -------
+    tuple of length 2:
+        1: str : Path to the gtf file to use in the annotation.
+        2: list : List of paths to temporary files created.
+
+    Raises
+    ------
+    ValueError:
+        1: If GTF-file could not be uncompressed. Whiel trying to sort the GTF-file.
+        2: If one subprocess during the sorting step fails.
+        3: If GTF-file could not be read. For example, due to an invalid format.
     """
+
     utils.check_module("pysam")
     import pysam
 
@@ -381,22 +409,28 @@ def _annotate_features(region_dicts,
                        gtf,
                        cfg_dict,
                        best):
-    '''
+    """
+    Annotate features.
 
-    :param region_dicts: dictionary
-        dictionary with peak information.
-    :param threads: int
-        number of threads to perform the annotation.
-    :param gtf: str
+    Parameters
+    ----------
+    region_dicts : dict
+        Dictionary with peak information.
+    threads : int
+        Number of threads to perform the annotation.
+    gtf : str
         Path to the .gtf file
-    :param cfg_dict:
-        A dictionary indicating how regions should be annotated. Default is to annotate feature 'gene' within -10000;1000bp of the gene start. See 'Examples' of how to set up a custom configuration dictionary.
-    :param best: boolean
-        Whether to return the best annotation or all valid annotations. Default: True (only best are kept).
+    cfg_dict : dict
+        A dictionary indicating how regions should be annotated.
+        Set to None to annotate feature 'gene' within -10000;1000bp of the gene start.
+    best : bool
+        Whether to return the best annotation or all valid annotations.
 
-    :return: pandas.Dataframe
+    Returns
+    -------
+    pandas.Dataframe
         Dataframe with the annotation
-    '''
+    """
 
     # split input regions into cores
     n_reg = len(region_dicts)
@@ -479,7 +513,23 @@ def _annotate_features(region_dicts,
 
 
 def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
-    """ Multiprocessing safe function to annotate a chunk of regions """
+    """
+    Multiprocessing safe function to annotate a chunk of regions.
+
+    Parameters
+    ----------
+    region_dicts : dict
+        Dictionary with peak information.
+    gtf : str
+        Path to the .gtf file
+    cfg_dict : dict
+        A dictionary indicating how regions should be annotated.
+
+    Returns
+    -------
+    list
+        All valid annotations.
+    """
 
     import pysam
     import uropa

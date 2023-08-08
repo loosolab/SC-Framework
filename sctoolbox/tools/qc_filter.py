@@ -1,3 +1,4 @@
+"""Tools for quality control."""
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -28,23 +29,28 @@ logger = settings.logger
 @deco.log_anndata
 def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
-    Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`.
+    Calculate the qc metrics using `scanpy.pp.calculate_qc_metrics`.
 
     Parameters
     ----------
     adata : anndata.AnnData
         Anndata object the quality metrics are added to.
     percent_top : [int], default None
-        Which proportions of top genes to cover. For more information see `scanpy.pp.calculate_qc_metrics(percent_top)`.
+        Which proportions of top genes to cover.
     inplace : bool, default False
         If the anndata object should be modified in place.
     **kwargs : arguments
-        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics. See https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html.
+        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics.
 
     Returns
     -------
     anndata.AnnData or None:
         Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.
+
+    See Also
+    --------
+    scanpy.pp.calculate_qc_metrics
+        https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
     """
     # add metrics to copy of anndata
     if not inplace:
@@ -96,6 +102,13 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     -------
     scanpy.AnnData or None :
         If inplace is False, return a copy of anndata object with the new column in the obs table.
+
+    Raises
+    ------
+    ValueError:
+        1: If s_genes or g2m_genes is not None and not of type list.
+        2: If no cellcycle genes available for the given species.
+        3. If given species is not supported and s_genes or g2m_genes are not given.
     """
 
     if not inplace:
@@ -181,10 +194,10 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
 @deco.log_anndata
 def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
     """
-    Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
-    as well as a "scrublet" key in adata.uns.
+    Estimate doublet cells using scrublet.
 
-    Note: Groupby should be set if the adata consists of multiple samples, as this improves the doublet estimation.
+    Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
+    as well as a "scrublet" key in adata.uns.
 
     Parameters
     ----------
@@ -197,9 +210,17 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     plot : bool, default True
         Whether to plot the doublet score distribution.
     groupby : str, default None
-        Key in adata.obs to use for batching during doublet estimation. If threads > 1, the adata is split into separate runs across threads. Otherwise each batch is run separately.
+        Key in adata.obs to use for batching during doublet estimation.
+        If threads > 1, the adata is split into separate runs across threads.
+        Otherwise each batch is run separately.
+    threads : int, default 4
+        Number of threads used for estimation.
     **kwargs :
         Additional arguments are passed to scanpy.external.pp.scrublet.
+
+    Notes
+    -----
+    Groupby should be set if the adata consists of multiple samples, as this improves the doublet estimation.
 
     Returns
     -------
@@ -309,7 +330,7 @@ def _run_scrublet(adata, **kwargs):
 @deco.log_anndata
 def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True, save=None):
     """
-    Function for predicting sex based on expression of Xist (or another gene).
+    Predict sex based on expression of Xist (or another gene).
 
     Parameters
     ----------
@@ -330,8 +351,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
 
     Returns
     -------
-    None :
-        adata is updated inplace. Adds a column "predicted_sex" to adata.obs.
+    None
     """
 
     # Normalize data before estimating expression
@@ -413,7 +433,9 @@ def _get_thresholds(data,
                     n_std=3,
                     plot=True):
     """
-    Get automatic min/max thresholds for input data array. The function will fit a gaussian mixture model, and find the threshold
+    Get automatic min/max thresholds for input data array.
+
+    The function will fit a gaussian mixture model, and find the threshold
     based on the mean and standard deviation of the largest mixture in the model.
 
     Parameters
@@ -429,7 +451,7 @@ def _get_thresholds(data,
 
     Returns
     -------
-    thresholds : dict
+    dict
         Dictionary with min and max thresholds.
     """
 
@@ -525,7 +547,13 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
     Returns
     -------
     dict
-        A dict containing thresholds for each data column, either grouped by groupby or directly containing "min" and "max" per column.
+        A dict containing thresholds for each data column,
+        either grouped by groupby or directly containing "min" and "max" per column.
+
+    Raises
+    ------
+    ValueError:
+        If which is not set to 'obs' or 'var'
     """
 
     # Find out which data to find thresholds for
@@ -567,7 +595,8 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
 
 
 def thresholds_as_table(threshold_dict):
-    """ Show the threshold dictionary as a table.
+    """
+    Show the threshold dictionary as a table.
 
     Parameters
     ----------
@@ -611,9 +640,8 @@ def thresholds_as_table(threshold_dict):
 ######################################################################################
 
 def _validate_minmax(d):
-    """
-    Validate that the dict 'd' contains the keys 'min' and 'max'.
-    """
+    """Validate that the dict 'd' contains the keys 'min' and 'max'."""
+
     allowed = set(["min", "max"])
     keys = set(d.keys())
 
@@ -624,7 +652,9 @@ def _validate_minmax(d):
 
 def validate_threshold_dict(table, thresholds, groupby=None):
     """
-    Validate threshold dictionary. Thresholds can be in the format:
+    Validate threshold dictionary.
+
+    Thresholds can be in the format:
 
     .. code-block:: python
 
@@ -647,8 +677,8 @@ def validate_threshold_dict(table, thresholds, groupby=None):
         Table to validate thresholds for.
     thresholds : dict
         Dictionary of thresholds to validate.
-    groupby : str, optional
-        Column for grouping thresholds. Default: None (no grouping)
+    groupby : str, deafult None
+        Column for grouping thresholds.
 
     Raises
     ------
@@ -684,11 +714,23 @@ def validate_threshold_dict(table, thresholds, groupby=None):
 @deco.log_anndata
 def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
-    return the thresholds for the filtering
-    :param adata: anndata.AnnData
-    :param manual_thresholds:
-    :param automatic_thresholds:
-    :return:
+    Get the thresholds for the filtering.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object to find QC thresholds for.
+    manual_thresholds : dict
+        Dictionary containing manually set thresholds
+    only_automatic_thresholds : bool, default True
+        If True, only set automatic thresholds.
+    groupby : str, default None
+        Group cells by column in adata.obs.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the thresholds
     """
     manual_thresholds = get_keys(adata, manual_thresholds)
 
@@ -724,10 +766,21 @@ def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=T
 
 def get_keys(adata, manual_thresholds):
     """
-    get the keys of the obs columns
-    :param adata:
-    :return:
+    Get threshold dictionary with keys that overlap with adata.obs.columns.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object
+    manual_thresholds : dict
+        Dictionary with adata.obs colums as keys.
+
+    Returns
+    -------
+    dict
+        Dictionary with key - adata.obs.column overlap
     """
+
     m_thresholds = {}
     legend = adata.obs.columns
     for key, value in manual_thresholds.items():
@@ -755,15 +808,24 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
         Anndata object to filter.
     thresholds : dict
         Dictionary of thresholds to apply.
-    which : str
-       Which table to filter on. Must be one of "obs" / "var". Default: "obs".
-    groupby : str
-        Column in table to group by. Default: None.
+    which : str, default 'obs'
+       Which table to filter on. Must be one of "obs" / "var".
+    groupby : str, default None
+        Column in table to group by.
+    inplace : bool, default True
+        Change adata inplace or return a changed copy.
 
     Returns
     -------
     adata : AnnData
         Anndata object with QC thresholds applied.
+
+    Raises
+    ------
+    ValueError:
+        1: If the keys in thresholds do not match with the columns in adata.[which].
+        2: If grouped thesholds are not found. For example do not contain min and max values.
+        3: If thresholds do not contain min and max values.
     """
 
     table = adata.obs if which == "obs" else adata.var
@@ -861,9 +923,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
 ###############################################################################
 
 def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
-    """
-    Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes.
-    """
+    """Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes."""
 
     # Decide which element type (genes/cells) we are dealing with
     if which == "obs":

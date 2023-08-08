@@ -1,3 +1,4 @@
+"""Tools for a receptor-ligand analysis."""
 import pandas as pd
 from collections import Counter
 import scipy
@@ -24,37 +25,47 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False):
-    """
+    r"""
     Download table of receptor-ligand interactions and store in adata.
-
-    Note: This will remove all information stored in adata.uns['receptor-ligand']
 
     Parameters
     ----------
-        adata : anndata.AnnData
-            Analysis object the database will be added to.
-        dp_path : str
-            Path to database table. A valid database needs a column with receptor gene ids/ symbols and ligand gene ids/ symbols.
-            Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
-            Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
-        ligand_column : str
-            Name of the column with ligand gene names.
-            Use 'ligand_gene_symbol' for the urls provided above.
-        receptor_column : str
-            Name of column with receptor gene names.
-            Use 'receptor_gene_symbol' for the urls provided above.
-        sep : str, default '\t'
-            Separator of database table.
-        inplace : boolean, default False
-            Whether to copy `adata` or modify it inplace.
-        overwrite : boolean, default False
-            If True will overwrite existing database.
+    adata : anndata.AnnData
+        Analysis object the database will be added to.
+    db_path : str
+        Path to database table. A valid database needs a column with receptor gene ids/symbols and ligand gene ids/symbols.
+        Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
+        Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+    ligand_column : str
+        Name of the column with ligand gene names.
+        Use 'ligand_gene_symbol' for the urls provided above.
+    receptor_column : str
+        Name of column with receptor gene names.
+        Use 'receptor_gene_symbol' for the urls provided above.
+    sep : str, default '\t'
+        Separator of database table.
+    inplace : boolean, default False
+        Whether to copy `adata` or modify it inplace.
+    overwrite : boolean, default False
+        If True will overwrite existing database.
+
+    Notes
+    -----
+    This will remove all information stored in adata.uns['receptor-ligand']
 
     Returns
     -------
-        AnnData : optional
-            Copy of adata with added database path and database table to adata.uns['receptor-ligand']
+    anndata.AnnData or None
+        If not inplace, return copy of adata with added database path and
+        database table to adata.uns['receptor-ligand']
+
+    Raises
+    ------
+    ValueError:
+        1: If ligand_column is not in database.
+        2: If receptor_column is not in database.
     """
+
     # datbase already existing?
     if not overwrite and "receptor-ligand" in adata.uns and "database" in adata.uns["receptor-ligand"]:
         warnings.warn("Database already exists! Skipping. Set `overwrite=True` to replace.")
@@ -93,24 +104,35 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     Parameters
     ----------
-        adata : anndata.AnnData
-            AnnData object that holds the expression values and clustering
-        cluster_column : str
-            Name of the cluster column in adata.obs.
-        gene_index : str, default None
-            Column in adata.var that holds gene symbols/ ids. Corresponds to `download_db(ligand_column, receptor_column)`. Uses index when None.
-        normalize : int, default 1000
-            Correct clusters to given size.
-        inplace : boolean, default False
-            Whether to copy `adata` or modify it inplace.
-        overwrite : boolean, default False
-            If True will overwrite existing interaction table.
+    adata : anndata.AnnData
+        AnnData object that holds the expression values and clustering
+    cluster_column : str
+        Name of the cluster column in adata.obs.
+    gene_index : str, default None
+        Column in adata.var that holds gene symbols/ ids.
+        Corresponds to `download_db(ligand_column, receptor_column)`.
+        Uses index when None.
+    normalize : int, default 1000
+        Correct clusters to given size.
+    inplace : boolean, default False
+        Whether to copy `adata` or modify it inplace.
+    overwrite : boolean, default False
+        If True will overwrite existing interaction table.
 
     Returns
     -------
-        anndata.AnnData or None :
-            Copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
+    anndata.AnnData or None
+        If not inpalce, return copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
+
+    Raises
+    ------
+    ValueError:
+        1: If receptor-ligand database cannot be found.
+        2: Id database genes do not match adata genes.
+    Exception:
+        If not interactions were found.
     """
+
     if "receptor-ligand" not in adata.uns.keys():
         raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(...)` before running this function.")
 
@@ -247,22 +269,23 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
     Parameters
     ----------
-        adata : anndata.AnnData
-            AnnData object
-        min_perc : float
-            Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
-        output : str, default None
-            Path to output file.
-        figsize : int tuple, default (5, 20)
-            Figure size
-        dpi : float, default 100
-            The resolution of the figure in dots-per-inch.
+    adata : anndata.AnnData
+        AnnData object
+    min_perc : float
+        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+    output : str, default None
+        Path to output file.
+    figsize : int tuple, default (5, 20)
+        Figure size
+    dpi : float, default 100
+        The resolution of the figure in dots-per-inch.
 
     Returns
     -------
-        numpy array of matplotlib.axes._subplots.AxesSubplot :
-            Object containing all plots. As returned by matplotlib.pyplot.subplots
+    numpy array of matplotlib.axes._subplots.AxesSubplot :
+        Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
+
     # check if data is available
     _check_interactions(adata)
 
@@ -316,38 +339,44 @@ def hairball(adata,
 
     Parameters
     ----------
-        adata : anndata.AnnData
-            AnnData object
-        min_perc : float
-            Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
-        interaction_score : float, default 0
-            Interaction score must be above this threshold for the interaction to be counted in the graph.
-        interaction_perc : float, default None
-            Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
-        output : str, default None
-            Path to output file.
-        title : str, default 'Network'
-            The plots title.
-        color_min : float, default 0
-            Min value for color range.
-        color_max : float, default max
-            Max value for color range.
-        cbar_label : str, default 'Interaction count'
-            Label above the colorbar.
-        show_count : bool, default False
-            Show the interaction count in the hairball.
-        restrict_to : list of str, default None
-            Only show given clusters provided in list.
-        additional_nodes : list, default None
-            List of additional node names displayed in the hairball.
-        hide_edges : list of tuples, default None
-            List of tuples with node names that should not have an edge shown. Order doesn't matter. E.g. `[("a", "b")]` to omit the edge between node a and b.
+    adata : anndata.AnnData
+        AnnData object
+    min_perc : float
+        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+    interaction_score : float, default 0
+        Interaction score must be above this threshold for the interaction to be counted in the graph.
+    interaction_perc : float, default None
+        Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
+    output : str, default None
+        Path to output file.
+    title : str, default 'Network'
+        The plots title.
+    color_min : float, default 0
+        Min value for color range.
+    color_max : float, default max
+        Max value for color range.
+    cbar_label : str, default 'Interaction count'
+        Label above the colorbar.
+    show_count : bool, default False
+        Show the interaction count in the hairball.
+    restrict_to : list of str, default None
+        Only show given clusters provided in list.
+    additional_nodes : list, default None
+        List of additional node names displayed in the hairball.
+    hide_edges : list of tuples, default None
+        List of tuples with node names that should not have an edge shown. Order doesn't matter. E.g. `[("a", "b")]` to omit the edge between node a and b.
 
     Returns
     -------
-        numpy array of matplotlib.axes._subplots.AxesSubplot :
-            Object containing all plots. As returned by matplotlib.pyplot.subplots
+    numpy array of matplotlib.axes._subplots.AxesSubplot :
+        Object containing all plots. As returned by matplotlib.pyplot.subplots
+
+    Raises
+    ------
+    ValueError:
+        If restrict_to contains invalid clusters.
     """
+
     # check if data is available
     _check_interactions(adata)
 
@@ -435,19 +464,34 @@ def hairball(adata,
 
 def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)):
     """
-    CURRENTLY NOT FUNCTIONAL!
-
     Show cluster interactions over timepoints.
 
-    Parameters:
-        datalist (list): List of interaction DataFrames. Each DataFrame represents a timepoint.
-        datalabel (list): List of strings. Used to label the violins.
-        cluster_a (str): Name of the first interacting cluster.
-        cluster_b (str): Name of the second interacting cluster.
-        min_perc (float): Minimum percentage of cells in a cluster each gene must be expressed in.
-        output (str): Path to output file.
-        figsize (int tuple): Tuple of plot (width, height).
+    CURRENTLY NOT FUNCTIONAL!
+
+    TODO Implement function
+
+    Parameters
+    ----------
+    datalist : list
+        List of interaction DataFrames. Each DataFrame represents a timepoint.
+    datalabel : list
+        List of strings. Used to label the violins.
+    cluster_a : str
+        Name of the first interacting cluster.
+    cluster_b : str
+        Name of the second interacting cluster.
+    min_perc : float
+        Minimum percentage of cells in a cluster each gene must be expressed in.
+    output : str
+        Path to output file.
+    figsize : int tuple, default (12, 6)
+        Tuple of plot (width, height).
+
+    Returns
+    -------
+    str
     """
+
     return "Function to be implemented"
 
     fig, axs = plt.subplots(1, len(datalist), figsize=figsize)
@@ -470,9 +514,12 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
         fig.savefig(output)
 
 
-def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster, ligand_cluster, figsize=(4, 4), dpi=100, output=None):
+def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster,
+                         ligand_cluster, figsize=(4, 4), dpi=100, output=None):
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
+
+    TODO add checks & error messages
 
     Parameters
     ----------
@@ -488,7 +535,7 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
         Name of the receptor cluster.
     ligand_cluster : str
         Name of the ligand cluster.
-    figsize : number tuple, default (4, 4)
+    figsize : int tuple, default (4, 4)
         Figure size in inch.
     dpi : int, default 100
         Dots per inch.
@@ -499,9 +546,7 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
     -------
     matplotlib.Axes
         The plotting object.
-
     """
-    # TODO add checks & error messages
 
     table = []
 
@@ -579,50 +624,56 @@ def connectionPlot(adata,
 
     Parameters
     ----------
-        adata : anndata.AnnData
-            AnnData object
-        restrict_to : str list, default None
-            Restrict plot to given cluster names.
-        figsize : int tuple, default (10, 15)
-            Figure size
-        dpi : float, default 100
-            The resolution of the figure in dots-per-inch.
-        connection_alpha : str, default 'interaction_score'
-            Name of column that sets alpha value of lines between plots. None to disable.
-        output : str, default None
-            Path to output file.
-        title : str, default None
-            Title of the plot
-        receptor_cluster_col : str, default 'receptor_cluster'
-            Name of column containing cluster names of receptors. Shown on x-axis.
-        receptor_col : str, default 'receptor_gene'
-            Name of column containing gene names of receptors. Shown on y-axis.
-        receptor_hue : str, default 'receptor_score'
-            Name of column containing receptor scores. Shown as point color.
-        receptor_size : str, default 'receptor_percent'
-            Name of column containing receptor expression percentage. Shown as point size.
-        ligand_cluster_col : str, default 'ligand_cluster'
-            Name of column containing cluster names of ligands. Shown on x-axis.
-        ligand_col : str, default 'ligand_gene'
-            Name of column containing gene names of ligands. Shown on y-axis.
-        ligand_hue : str, default 'ligand_score'
-            Name of column containing ligand scores. Shown as point color.
-        ligand_size : str, default 'ligand_percent'
-            Name of column containing ligand expression percentage. Shown as point size.
-        filter : str, default None
-            Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
-        lw_multiplier : int, default 2
-            Linewidth multiplier.
-        wspace : float, default 0.4
-            Width between plots. Fraction of total width.
-        line_colors : str, default 'rainbow'
-            Name of colormap used to color lines. All lines are black if None.
+    adata : anndata.AnnData
+        AnnData object
+    restrict_to : str list, default None
+        Restrict plot to given cluster names.
+    figsize : int tuple, default (10, 15)
+        Figure size
+    dpi : float, default 100
+        The resolution of the figure in dots-per-inch.
+    connection_alpha : str, default 'interaction_score'
+        Name of column that sets alpha value of lines between plots. None to disable.
+    output : str, default None
+        Path to output file.
+    title : str, default None
+        Title of the plot
+    receptor_cluster_col : str, default 'receptor_cluster'
+        Name of column containing cluster names of receptors. Shown on x-axis.
+    receptor_col : str, default 'receptor_gene'
+        Name of column containing gene names of receptors. Shown on y-axis.
+    receptor_hue : str, default 'receptor_score'
+        Name of column containing receptor scores. Shown as point color.
+    receptor_size : str, default 'receptor_percent'
+        Name of column containing receptor expression percentage. Shown as point size.
+    ligand_cluster_col : str, default 'ligand_cluster'
+        Name of column containing cluster names of ligands. Shown on x-axis.
+    ligand_col : str, default 'ligand_gene'
+        Name of column containing gene names of ligands. Shown on y-axis.
+    ligand_hue : str, default 'ligand_score'
+        Name of column containing ligand scores. Shown as point color.
+    ligand_size : str, default 'ligand_percent'
+        Name of column containing ligand expression percentage. Shown as point size.
+    filter : str, default None
+        Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
+    lw_multiplier : int, default 2
+        Linewidth multiplier.
+    wspace : float, default 0.4
+        Width between plots. Fraction of total width.
+    line_colors : str, default 'rainbow'
+        Name of colormap used to color lines. All lines are black if None.
 
     Returns
     -------
-        numpy array of matplotlib.axes._subplots.AxesSubplot :
-            Object containing all plots. As returned by matplotlib.pyplot.subplots
+    numpy array of matplotlib.axes._subplots.AxesSubplot :
+        Object containing all plots. As returned by matplotlib.pyplot.subplots
+
+    Raises
+    ------
+    Exception:
+        If no onteractions between clsuters are found.
     """
+
     # check if data is available
     _check_interactions(adata)
 
@@ -763,7 +814,7 @@ def connectionPlot(adata,
 @deco.log_anndata
 def get_interactions(anndata, min_perc=None, interaction_score=None, interaction_perc=None, group_a=None, group_b=None):
     """
-    Get interaction table from anndata. Apply filters if any.
+    Get interaction table from anndata and apply filters.
 
     Parameters
     ----------
@@ -829,7 +880,8 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
 
 
 def _check_interactions(anndata):
-    """ Return error message if anndata object doesn't contain interaction data. """
+    """Return error message if anndata object doesn't contain interaction data."""
+
     # is interaction table available?
     if "receptor-ligand" not in anndata.uns.keys() or "interactions" not in anndata.uns["receptor-ligand"].keys():
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
