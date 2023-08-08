@@ -1,5 +1,5 @@
 """Tools for multiomics analysis."""
-import anndata as ad
+import anndata
 import pandas as pd
 from functools import reduce
 import warnings
@@ -7,7 +7,7 @@ import warnings
 import sctoolbox.utils as utils
 
 
-def merge_anndata(anndata_dict, join="inner"):
+def merge_anndata(anndata_dict, join="inner") -> anndata.AnnData:
     """
     Merge two h5ad files for dual cellxgene deplyoment.
 
@@ -51,7 +51,7 @@ def merge_anndata(anndata_dict, join="inner"):
     # Generate minimal anndata objects
     minimal_adata_dict = dict()
     for label, adata in anndata_dict.items():
-        minimal_adata_dict[label] = ad.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
+        minimal_adata_dict[label] = anndata.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
         if not adata.obs.index.is_unique:
             warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
             minimal_adata_dict[label].obs_names_make_unique()
@@ -88,7 +88,7 @@ def merge_anndata(anndata_dict, join="inner"):
         # save obs in list
         obs_list.append(adata.obs)
     # Merge X and var
-    merged_adata = ad.concat(minimal_adata_dict, join="outer", label="source", axis=1)
+    merged_adata = anndata.concat(minimal_adata_dict, join="outer", label="source", axis=1)
 
     # Merge obs
     merged_adata.obs = reduce(lambda left, right: pd.merge(left, right,
