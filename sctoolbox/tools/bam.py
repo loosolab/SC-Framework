@@ -784,7 +784,8 @@ def bam_to_bigwig(bam,
 
     Returns
     -------
-    str : Path to output file.
+    str
+        Path to output file.
     """
 
     # Set output name and check if bigwig already exists
