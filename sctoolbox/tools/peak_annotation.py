@@ -6,6 +6,8 @@ import os
 import multiprocessing as mp
 import psutil
 import subprocess
+import anndata
+from typing import Optional, Union, Tuple
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -26,7 +28,7 @@ def annotate_adata(adata,
                    coordinate_cols=None,
                    temp_dir="",
                    remove_temp=True,
-                   inplace=True):
+                   inplace=True) -> Optional[anndata.AnnData]:
     """
     Annotate adata .var features with genes from .gtf using UROPA [1]_.
 
@@ -60,7 +62,7 @@ def annotate_adata(adata,
 
     Returns
     -------
-    anndata.anndata or None
+    Optional[anndata.AnnData]
         If inplace == True, the annotation is added to adata.var in place.
         Else, a copy of the adata object is returned with the annotations added.
 
@@ -194,7 +196,7 @@ def annotate_narrowPeak(filepath,
                         best=True,
                         threads=1,
                         temp_dir="",
-                        remove_temp=True):
+                        remove_temp=True) -> pd.DataFrame:
     """
     Annotate narrowPeak files with genes from .gtf using UROPA.
 
@@ -219,7 +221,7 @@ def annotate_narrowPeak(filepath,
 
     Returns
     -------
-    pandas.Dataframe
+    pd.DataFrame
         Dataframe containing the annotations.
     """
 
@@ -268,7 +270,7 @@ def annotate_narrowPeak(filepath,
     return annotation_table
 
 
-def _load_narrowPeak(filepath):
+def _load_narrowPeak(filepath) -> list[dict[str, Union[str, int]]]:
     """
     Load narrowPeak file to annotate.
 
@@ -279,8 +281,8 @@ def _load_narrowPeak(filepath):
 
     Returns
     -------
-    dict
-        Dictionary with the peak information.
+    list[dict[str, Union[str, int]]]
+        List of dictionaries containing peak range information.
     """
 
     logger.info("load regions_dict from: " + filepath)
@@ -298,7 +300,7 @@ def _load_narrowPeak(filepath):
     return region_dicts
 
 
-def _prepare_gtf(gtf, temp_dir):
+def _prepare_gtf(gtf, temp_dir) -> Tuple[str, list[str]]:
     """
     Prepare the .gtf file to use it in the annotation process.
 
@@ -314,9 +316,9 @@ def _prepare_gtf(gtf, temp_dir):
 
     Returns
     -------
-    tuple of length 2:
-        1: str : Path to the gtf file to use in the annotation.
-        2: list : List of paths to temporary files created.
+    Tuple[str, list[str]]
+        Index 1: str : Path to the gtf file to use in the annotation.
+        Index 2: list : List of paths to temporary files created.
 
     Raises
     ------
@@ -408,7 +410,7 @@ def _annotate_features(region_dicts,
                        threads,
                        gtf,
                        cfg_dict,
-                       best):
+                       best) -> pd.DataFrame:
     """
     Annotate features.
 
@@ -428,7 +430,7 @@ def _annotate_features(region_dicts,
 
     Returns
     -------
-    pandas.Dataframe
+    pd.DataFrame
         Dataframe with the annotation
     """
 
@@ -512,7 +514,7 @@ def _annotate_features(region_dicts,
     return annotations_table
 
 
-def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
+def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict) -> list[str]:
     """
     Multiprocessing safe function to annotate a chunk of regions.
 
@@ -527,8 +529,8 @@ def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict):
 
     Returns
     -------
-    list
-        All valid annotations.
+    list[str]
+        List of all valid annotations.
     """
 
     import pysam
