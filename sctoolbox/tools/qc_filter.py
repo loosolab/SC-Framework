@@ -11,6 +11,7 @@ from pathlib import Path
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
+from typing import Optional, Tuple, Union
 # import scrublet as scr
 
 # toolbox functions
@@ -27,7 +28,7 @@ logger = settings.logger
 ###############################################################################
 
 @deco.log_anndata
-def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
+def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs) -> Optional[anndata.AnnData]:
     """
     Calculate the qc metrics using `scanpy.pp.calculate_qc_metrics`.
 
@@ -44,7 +45,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
 
     Returns
     -------
-    anndata.AnnData or None:
+    Optional[anndata.AnnData]
         Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.
 
     See Also
@@ -73,7 +74,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
 
 
 @deco.log_anndata
-def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
+def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True) -> Optional[anndata.AnnData]:
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
 
@@ -100,7 +101,7 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[anndata.AnnData]
         If inplace is False, return a copy of anndata object with the new column in the obs table.
 
     Raises
@@ -192,7 +193,8 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
 
 
 @deco.log_anndata
-def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
+def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True,
+                      groupby=None, threads=4, **kwargs) -> Optional[anndata.AnnData]:
     """
     Estimate doublet cells using scrublet.
 
@@ -224,7 +226,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
 
     Returns
     -------
-    anndata.Anndata or None :
+    Optional[anndata.AnnData]
         If inplace is False, the function returns a copy of the adata object.
         If inplace is True, the function returns None.
     """
@@ -294,7 +296,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
         return adata
 
 
-def _run_scrublet(adata, **kwargs):
+def _run_scrublet(adata, **kwargs) -> Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]:
     """
     Thread-safe wrapper for running scrublet, which also takes care of catching any warnings.
 
@@ -307,7 +309,7 @@ def _run_scrublet(adata, **kwargs):
 
     Returns
     -------
-    tuple : (obs, uns)
+    Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]
         Tuple containing .obs and .uns["scrublet"] of the adata object after scrublet.
     """
 
@@ -328,7 +330,8 @@ def _run_scrublet(adata, **kwargs):
 
 
 @deco.log_anndata
-def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True, save=None):
+def predict_sex(adata, groupby, gene="Xist",
+                gene_column=None, threshold=0.3, plot=True, save=None) -> None:
     """
     Predict sex based on expression of Xist (or another gene).
 
@@ -431,7 +434,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
 def _get_thresholds(data,
                     max_mixtures=5,
                     n_std=3,
-                    plot=True):
+                    plot=True) -> dict[str, float]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -451,7 +454,7 @@ def _get_thresholds(data,
 
     Returns
     -------
-    dict
+    dict[str, float]
         Dictionary with min and max thresholds.
     """
 
@@ -529,7 +532,7 @@ def _get_thresholds(data,
     return thresholds
 
 
-def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
+def automatic_thresholds(adata, which="obs", groupby=None, columns=None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -546,7 +549,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
 
     Returns
     -------
-    dict
+    dict[str, dict[str, Union[float, dict[str, float]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
@@ -594,7 +597,7 @@ def automatic_thresholds(adata, which="obs", groupby=None, columns=None):
     return thresholds
 
 
-def thresholds_as_table(threshold_dict):
+def thresholds_as_table(threshold_dict) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
@@ -605,7 +608,7 @@ def thresholds_as_table(threshold_dict):
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
     """
 
     rows = []
@@ -639,7 +642,7 @@ def thresholds_as_table(threshold_dict):
 #                     STEP 2:     DEFINE CUSTOM CUTOFFS                              #
 ######################################################################################
 
-def _validate_minmax(d):
+def _validate_minmax(d) -> None:
     """Validate that the dict 'd' contains the keys 'min' and 'max'."""
 
     allowed = set(["min", "max"])
@@ -650,7 +653,7 @@ def _validate_minmax(d):
         raise ValueError("Keys {0} not allowed".format(not_allowed))
 
 
-def validate_threshold_dict(table, thresholds, groupby=None):
+def validate_threshold_dict(table, thresholds, groupby=None) -> None:
     """
     Validate threshold dictionary.
 
