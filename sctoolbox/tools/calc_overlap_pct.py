@@ -1,4 +1,5 @@
-"""Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions.
+"""
+Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions.
 
 Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
 in a GTF file using 'pct_reads_in_promoters' function.
@@ -14,13 +15,14 @@ import pandas as pd
 import sys
 from pathlib import Path
 import multiprocessing as mp
+from typing import Tuple, Union
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]) -> str:
+def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]) -> Tuple[str, str]:
     """
     Create fragments file out of a BAM file using the package sinto.
 
@@ -43,7 +45,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
 
     Returns
     -------
-    tuple of str
+    Tuple[str, str]
         Path to fragments and temp files.
     """
 
@@ -106,7 +108,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     return out_sorted, temp_files
 
 
-def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
+def _convert_gtf_to_bed(gtf, out=None, temp_files=[]) -> Tuple[str, str]:
     """
     Convert GTF-file to BED file.
 
@@ -124,7 +126,7 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
 
     Returns
     -------
-    tuple of str
+    Tuple[str, str]
         Path to fragments and temp files.
     """
 
@@ -160,7 +162,7 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]):
     return out_sorted, temp_files
 
 
-def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
+def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]) -> Union[bool, Tuple[str, str]]:
     """
     Overlap two BED files using Bedtools Intersect.
 
@@ -179,7 +181,7 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
 
     Returns
     -------
-    tuple of str or False
+    Union[bool, Tuple[str, str]]
         Path to fragments and temp files.
         False if no overlap is found
     """
@@ -218,7 +220,7 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]):
 
 @deco.log_anndata
 def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None,
-                               cb_col=None, cb_tag='CB', species=None, nproc=1, sort_bam=False):
+                               cb_col=None, cb_tag='CB', species=None, nproc=1, sort_bam=False) -> None:
     """
     Calculate the percentage of fragments in promoters.
 
@@ -271,8 +273,9 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 
 
 @deco.log_anndata
-def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None, cb_col=None,
-                          cb_tag='CB', regions_name='list', nproc=1, sort_bam=False, sort_regions=False, keep_fragments=False):
+def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None,
+                          cb_col=None, cb_tag='CB', regions_name='list', nproc=1,
+                          sort_bam=False, sort_regions=False, keep_fragments=False) -> None:
     """
     Calculate the percentage of fragments.
 
@@ -374,6 +377,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 class MPOverlapPct():
     """
     TODO Write Docstring.
+    TODO Type hinting
     """
 
     def __init__(self):
@@ -426,7 +430,7 @@ class MPOverlapPct():
 
         return adata
 
-    def get_barcodes_sum(self, df, barcodes, col_name):
+    def get_barcodes_sum(self, df, barcodes, col_name) -> dict:
         """
         TODO Write Docstring.
         """
@@ -445,7 +449,7 @@ class MPOverlapPct():
 
         return count_dict
 
-    def log_result(self, result):
+    def log_result(self, result) -> None:
         """
         TODO Write Docstring.
         """
