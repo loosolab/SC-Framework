@@ -10,10 +10,14 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 
+# type hint imports
+from typing import Any
+import rpy2.rinterface_lib.sexp
+
 
 # ------------------ Logging about run ----------------- #
 
-def get_user():
+def get_user() -> str:
     """
     Get the name of the current user.
 
@@ -22,6 +26,7 @@ def get_user():
     str
         The name of the current user.
     """
+
     try:
         username = getpass.getuser()
     except Exception:
@@ -30,7 +35,7 @@ def get_user():
     return username
 
 
-def get_datetime():
+def get_datetime() -> str:
     """
     Get a string with the current date and time for logging.
 
@@ -39,6 +44,7 @@ def get_datetime():
     str
         A string with the current date and time in the format dd/mm/YY H:M:S
     """
+
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
 
@@ -47,16 +53,17 @@ def get_datetime():
 
 # ------------------ Packages and tools ----------------- #
 
-def get_package_versions():
+def get_package_versions() -> dict[str, str]:
     """
     Receive a dictionary of currently installed python packages and versions.
 
     Returns
     -------
-    dict :
+    dict[str, str] :
         A dict in the form:
         `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
     """
+
     # Import freeze
     try:
         from pip._internal.operations import freeze
@@ -76,7 +83,7 @@ def get_package_versions():
     return package_dict
 
 
-def get_binary_path(tool):
+def get_binary_path(tool) -> str:
     """
     Get path to a binary commandline tool.
 
@@ -97,6 +104,7 @@ def get_binary_path(tool):
     ValueError
         If executable is not found.
     """
+
     python_dir = os.path.dirname(sys.executable)
     if os.path.exists(tool):
         tool_path = f"./{tool}"
@@ -118,7 +126,7 @@ def get_binary_path(tool):
     return tool_path
 
 
-def run_cmd(cmd):
+def run_cmd(cmd) -> None:
     """
     Run a commandline command.
 
@@ -132,6 +140,7 @@ def run_cmd(cmd):
     subprocess.CalledProcessError
         If command has an error.
     """
+
     try:
         subprocess.check_call(cmd, shell=True)
         print(f"Command '{cmd}' ran successfully!")
@@ -148,7 +157,7 @@ def run_cmd(cmd):
 #                           R setup                                 #
 #####################################################################
 
-def setup_R(r_home=None):
+def setup_R(r_home=None) -> None:
     """
     Add R installation for rpy2 use.
 
@@ -163,6 +172,7 @@ def setup_R(r_home=None):
     Exception
         If path to R is invalid.
     """
+
     # Set R installation path
     if not r_home:
         # https://stackoverflow.com/a/54845971
@@ -174,7 +184,7 @@ def setup_R(r_home=None):
     os.environ['R_HOME'] = r_home
 
 
-def _none2null(none_obj):
+def _none2null(none_obj) -> rpy2.rinterface_lib.sexp.NULLType:
     """
     rpy2 converter that translates python 'None' to R 'NULL'.
 
@@ -187,8 +197,10 @@ def _none2null(none_obj):
 
     Returns
     -------
-    R NULL object.
+    rpy2.rinterface_lib.sexp.NULLType
+        R NULL object.
     """
+
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     from rpy2.robjects import r
 
@@ -197,7 +209,7 @@ def _none2null(none_obj):
 
 # ----------------- List functions ---------------- #
 
-def split_list(lst, n):
+def split_list(lst, n) -> list[list[Any]]:
     """
     Split list into n chunks.
 
@@ -210,9 +222,10 @@ def split_list(lst, n):
 
     Returns
     -------
-    list :
+    list[list[Any]] :
         List of lists (chunks).
     """
+
     chunks = []
     for i in range(0, n):
         chunks.append(lst[i::n])
@@ -220,7 +233,7 @@ def split_list(lst, n):
     return chunks
 
 
-def split_list_size(lst, max_size):
+def split_list_size(lst, max_size) -> list[list[Any]]:
     """
     Split list into chunks of max_size.
 
@@ -233,9 +246,10 @@ def split_list_size(lst, max_size):
 
     Returns
     -------
-    list :
+    list[list[Any]] :
         List of lists (chunks).
     """
+
     chunks = []
     for i in range(0, len(lst), max_size):
         chunks.append(lst[i:i + max_size])
@@ -243,7 +257,7 @@ def split_list_size(lst, max_size):
     return chunks
 
 
-def write_list_file(lst, path):
+def write_list_file(lst, path) -> None:
     """
     Write a list to a file with one element per line.
 
@@ -254,6 +268,7 @@ def write_list_file(lst, path):
     path : str
         Path to output file.
     """
+
     lst = [str(s) for s in lst]
     s = "\n".join(lst)
 
@@ -261,7 +276,7 @@ def write_list_file(lst, path):
         f.write(s)
 
 
-def read_list_file(path):
+def read_list_file(path) -> list[str]:
     """
     Read a list from a file with one element per line.
 
@@ -272,9 +287,10 @@ def read_list_file(path):
 
     Returns
     -------
-    list :
+    list[str] :
         List of strings read from file.
     """
+
     f = open(path)
     lst = f.read().splitlines()  # get lines without "\n"
     f.close()
@@ -284,7 +300,7 @@ def read_list_file(path):
 
 # ----------------- String functions ---------------- #
 
-def clean_flanking_strings(list_of_strings):
+def clean_flanking_strings(list_of_strings) -> list[str]:
     """
     Remove common suffix and prefix from a list of strings.
 
@@ -300,6 +316,7 @@ def clean_flanking_strings(list_of_strings):
     list[str]
         List of strings without common suffix and prefix
     """
+
     suffix = longest_common_suffix(list_of_strings)
     prefix = os.path.commonprefix(list_of_strings)
 
@@ -309,7 +326,7 @@ def clean_flanking_strings(list_of_strings):
     return list_of_strings_clean
 
 
-def longest_common_suffix(list_of_strings):
+def longest_common_suffix(list_of_strings) -> str:
     """
     Find the longest common suffix of a list of strings.
 
@@ -323,6 +340,7 @@ def longest_common_suffix(list_of_strings):
     str :
         Longest common suffix of the list of strings.
     """
+
     reversed_strings = [s[::-1] for s in list_of_strings]
     reversed_lcs = os.path.commonprefix(reversed_strings)
     lcs = reversed_lcs[::-1]
@@ -330,7 +348,7 @@ def longest_common_suffix(list_of_strings):
     return lcs
 
 
-def remove_prefix(s, prefix):
+def remove_prefix(s, prefix) -> str:
     """
     Remove prefix from a string.
 
@@ -346,10 +364,11 @@ def remove_prefix(s, prefix):
     str :
         String without prefix.
     """
+
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
-def remove_suffix(s, suffix):
+def remove_suffix(s, suffix) -> str:
     """
     Remove suffix from a string.
 
@@ -365,10 +384,11 @@ def remove_suffix(s, suffix):
     str :
         String without suffix.
     """
+
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
-def sanitize_string(s, char_list, replace="_"):
+def sanitize_string(s, char_list, replace="_") -> str:
     """
     Replace every occurrence of given substrings.
 
@@ -386,6 +406,7 @@ def sanitize_string(s, char_list, replace="_"):
     str :
         Sanitized string.
     """
+
     for char in char_list:
         s = s.replace(char, replace)
 

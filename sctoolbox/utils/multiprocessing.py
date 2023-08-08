@@ -3,8 +3,11 @@
 import time
 import sctoolbox.utils as utils
 
+# type hint import
+import tqdm
 
-def get_pbar(total, description):
+
+def get_pbar(total, description) -> tqdm.tqdm:
     """
     Get a progress bar depending on whether the user is using a notebook or not.
 
@@ -17,9 +20,10 @@ def get_pbar(total, description):
 
     Returns
     -------
-    tqdm
+    tqdm.tqdm
         A progress bar object.
     """
+
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
@@ -29,7 +33,7 @@ def get_pbar(total, description):
     return pbar
 
 
-def monitor_jobs(jobs, description="Progress"):
+def monitor_jobs(jobs, description="Progress") -> None:
     """
     Monitor the status of jobs submitted to a pool.
 
@@ -40,6 +44,7 @@ def monitor_jobs(jobs, description="Progress"):
     description : str, default "Progress"
         Description to be shown in the progress bar.
     """
+
     if isinstance(jobs, dict):
         jobs = list(jobs.values())
 

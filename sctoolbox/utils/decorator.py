@@ -5,10 +5,12 @@ import functools
 import pandas as pd
 import matplotlib
 
+from typing import Callable
+
 import sctoolbox.utils.general as utils
 
 
-def log_anndata(func):
+def log_anndata(func) -> Callable:
     """
     Decorate function to log adata inside function call.
 
@@ -19,9 +21,10 @@ def log_anndata(func):
 
     Returns
     -------
-    function :
+    Callable :
         Decorated function
     """
+
     # TODO store datatypes not supported by scanpy.write as string representation (repr())
 
     @functools.wraps(func)  # preserve information of the decorated func
@@ -72,7 +75,7 @@ def log_anndata(func):
     return wrapper
 
 
-def get_parameter_table(adata):
+def get_parameter_table(adata) -> pd.DataFrame:
     """
     Get a table of all function calls with their parameters from the adata.uns["sctoolbox"] dictionary.
 
@@ -91,6 +94,7 @@ def get_parameter_table(adata):
     ValueError
         If no logs are found.
     """
+
     if "sctoolbox" not in adata.uns.keys() or "log" not in adata.uns["sctoolbox"].keys():
         raise ValueError("No sctoolbox function calls logged in adata.")
 
@@ -114,7 +118,7 @@ def get_parameter_table(adata):
     return complete_table
 
 
-def debug_func_log(func):
+def debug_func_log(func) -> None:
     """
     Decorate function to print function call with arguments and keyword arguments.
 
@@ -125,6 +129,7 @@ def debug_func_log(func):
     func : function
         Function to decorate.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         print(f"DEBUG: {func.__name__} called with args: {args} and kwargs: {kwargs}")

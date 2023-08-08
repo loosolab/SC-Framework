@@ -8,6 +8,8 @@ from scipy import sparse
 from scipy.io import mmread
 import anndata as ad
 
+from typing import Optional
+
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -21,7 +23,7 @@ def assemble_from_h5ad(h5ad_files,
                        merge_column='sample',
                        coordinate_cols=None,
                        set_index=True,
-                       index_from=None):
+                       index_from=None) -> sc.AnnData:
     """
     Assembles multiple adata files into a single adata object.
 
@@ -42,9 +44,10 @@ def assemble_from_h5ad(h5ad_files,
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
     """
+
     adata_dict = {}
     counter = 0
     for h5ad_path in h5ad_files:
@@ -93,7 +96,7 @@ def assemble_from_h5ad(h5ad_files,
 #          ASSEMBLING ANNDATA FROM STARSOLO OUTPUT FOLDERS          #
 #####################################################################
 
-def from_single_starsolo(path, dtype="filtered", header='infer'):
+def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
     """
     Assembles an anndata object from the starsolo folder.
 
@@ -108,7 +111,7 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         An anndata object based on the provided starsolo folder.
 
     Raises
@@ -118,6 +121,7 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
     FileNotFoundError
         If path does not exist or files are missing.
     """
+
     # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
         raise ValueError("dtype must be either 'raw' or 'filtered'")
@@ -160,7 +164,7 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
     return adata
 
 
-def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
+def from_quant(path, configuration=[], use_samples=None, dtype="filtered") -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
@@ -177,7 +181,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         The assembled anndata object.
 
     Raises
@@ -185,6 +189,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     ValueError
         If `use_samples` contains not existing names.
     """
+
     # TODO: test that quant folder is existing
 
     # Collect configuration into a dictionary
@@ -246,7 +251,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 #          CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT            #
 #####################################################################
 
-def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
+def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs) -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -273,13 +278,15 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
 
     Returns
     -------
-    anndata object containing the mtx matrix, gene and cell labels
+    sc.AnnData
+        Anndata object containing the mtx matrix, gene and cell labels
 
     Raises
     ------
     ValueError
         If barcode or gene files contain duplicates.
     """
+
     # Read mtx file
     adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
 
@@ -312,7 +319,7 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     return adata
 
 
-def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs):
+def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and genes files.
 
@@ -331,13 +338,15 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
 
     Returns
     -------
-    merged anndata object containing the mtx matrix, gene and cell labels
+    sc.AnnData
+        Merged anndata object containing the mtx matrix, gene and cell labels
 
     Raises
     ------
     ValueError
         If files are not found.
     """
+
     mtx = glob.glob(os.path.join(path, mtx))
     barcodes = glob.glob(os.path.join(path, barcodes))
     genes = glob.glob(os.path.join(path, genes))
@@ -365,7 +374,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     return adata
 
 
-def convertToAdata(file, output=None, r_home=None, layer=None):
+def convertToAdata(file, output=None, r_home=None, layer=None) -> Optional[sc.AnnData]:
     """
     Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -386,9 +395,10 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
 
     Returns
     -------
-    anndata.AnnData or None:
+    Optional[sc.AnnData] :
         Returns converted anndata object if output is None.
     """
+
     # Setup R
     utils.setup_R(r_home)
 

@@ -8,6 +8,9 @@ import apybiomart
 from scipy.sparse import issparse
 import gzip
 import argparse
+import scanpy
+
+from typing import Optional
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -15,7 +18,7 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
-                     percentile_range=(0, 100), chunk_size=1000):
+                     percentile_range=(0, 100), chunk_size=1000) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -37,7 +40,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
 
     Raises
@@ -45,6 +48,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
     TypeError
         If `percentile_range` is not of type `tuple`.
     """
+
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
     if isinstance(percentile_range, tuple) is False:
@@ -103,7 +107,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 #####################################################################
 
 @deco.log_anndata
-def barcode_index(adata):
+def barcode_index(adata) -> None:
     """
     Check if the barcode is the index.
 
@@ -121,6 +125,7 @@ def barcode_index(adata):
     adata : anndata.AnnData
         Anndata to perform check on.
     """
+
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
@@ -147,7 +152,7 @@ def barcode_index(adata):
 #                  Converting between gene id and name              #
 #####################################################################
 
-def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
     """
     Get the organism name to the given Ensembl ID.
 
@@ -170,6 +175,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     ValueError
         If the returned organism is ambiguous.
     """
+
     # this will redirect
     url = f"{host}{ensembl_id}"
     response = requests.get(url)
@@ -189,7 +195,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     return species
 
 
-def gene_id_to_name(ids, species):
+def gene_id_to_name(ids, species) -> pd.DataFrame:
     """
     Get Ensembl gene names to Ensembl gene id.
 
@@ -202,7 +208,7 @@ def gene_id_to_name(ids, species):
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         DataFrame with gene ids and matching gene names.
 
     Raises
@@ -210,6 +216,7 @@ def gene_id_to_name(ids, species):
     ValueError
         If provided Ensembl IDs or organism is invalid.
     """
+
     if not all(id.startswith("ENS") for id in ids):
         raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
 
@@ -232,7 +239,7 @@ def gene_id_to_name(ids, species):
 
 
 @deco.log_anndata
-def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Add gene names to adata.var.
 
@@ -253,7 +260,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData] :
         AnnData object with gene names.
 
     Raises
@@ -261,6 +268,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
     ValueError
         If invalid parameter choice or column name not found in adata.var.
     """
+
     if not id_col_name and not index:
         raise ValueError("Either set parameter id_col_name or index.")
     elif not index and id_col_name not in adata.var.columns:
@@ -310,7 +318,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
 
 @deco.log_anndata
-def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
 
@@ -329,7 +337,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData] :
         AnnData object with modified gene column.
 
     Raises
@@ -337,6 +345,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
     ValueError
         If column name is not found in `adata.var` or no Ensembl IDs in selected column.
     """
+
     if column not in adata.var.columns:
         raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
 
@@ -384,7 +393,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 #                   Check integrity of gtf file                     #
 #####################################################################
 
-def _gtf_integrity(gtf):
+def _gtf_integrity(gtf) -> bool:
     """
     Check if the provided file follows the gtf-format.
 
@@ -403,7 +412,7 @@ def _gtf_integrity(gtf):
 
     Returns
     -------
-    boolean
+    bool
         True if the file is a valid gtf-file.
 
     Raises
@@ -411,6 +420,7 @@ def _gtf_integrity(gtf):
     argparse.ArgumentTypeError
         If the file is not in gtf-format.
     """
+
     regex_header = '#+.*'
     regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'
 

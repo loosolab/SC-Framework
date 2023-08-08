@@ -7,12 +7,14 @@ import numpy as np
 import gzip
 import shutil
 
+from typing import Optional
+
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def check_module(module):
+def check_module(module) -> None:
     """
     Check if <module> can be imported without error.
 
@@ -26,6 +28,7 @@ def check_module(module):
     ImportError
         If the module is not available for import.
     """
+
     error = 0
     try:
         importlib.import_module(module)
@@ -40,15 +43,16 @@ def check_module(module):
         raise ImportError(s)
 
 
-def _is_interactive():
+def _is_interactive() -> bool:
     """
     Check if matplotlib backend is interactive.
 
     Returns
     -------
-    boolean :
+    bool :
         True if interactive, False otherwise.
     """
+
     backend = matplotlib.get_backend()
 
     if backend == 'module://ipympl.backend_nbagg':
@@ -61,7 +65,7 @@ def _is_interactive():
 # ------------------------- Type checking ------------------------ #
 #####################################################################
 
-def _is_gz_file(filepath):
+def _is_gz_file(filepath) -> bool:
     """
     Check wheather file is a compressed .gz file.
 
@@ -72,14 +76,15 @@ def _is_gz_file(filepath):
 
     Returns
     -------
-    boolean
+    bool
         True if the file is a compressed .gz file.
     """
+
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == b'\x1f\x8b'
 
 
-def gunzip_file(f_in, f_out):
+def gunzip_file(f_in, f_out) -> None:
     """
     Decompress file.
 
@@ -90,12 +95,13 @@ def gunzip_file(f_in, f_out):
     f_out : str
         Destination to decompressed output file.
     """
+
     with gzip.open(f_in, 'rb') as h_in:
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
 
 
-def is_str_numeric(ans):
+def is_str_numeric(ans) -> bool:
     """
     Check if string can be converted to number.
 
@@ -106,9 +112,10 @@ def is_str_numeric(ans):
 
     Returns
     -------
-    boolean
+    bool
         True if string can be converted to float.
     """
+
     try:
         float(ans)
         return True
@@ -116,7 +123,7 @@ def is_str_numeric(ans):
         return False
 
 
-def format_index(adata, from_column=None):
+def format_index(adata, from_column=None) -> None:
     """
     Format adata.var index.
 
@@ -130,6 +137,7 @@ def format_index(adata, from_column=None):
     from_column : str, default None
         Column name in adata.var to be set as index.
     """
+
     if from_column is None:
         entry = adata.var.index[0]
         index_type = get_index_type(entry)
@@ -187,7 +195,7 @@ def format_index(adata, from_column=None):
             adata.var.set_index('new_index', inplace=True)
 
 
-def get_index_type(entry):
+def get_index_type(entry) -> Optional[str]:
     """
     Check the format of the index by regex.
 
@@ -198,9 +206,10 @@ def get_index_type(entry):
 
     Returns
     -------
-    str or None
+    Optional[str]
         The index format. Either 'snapatac', 'start_name' or None for unknown format.
     """
+
     regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
     regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
 
@@ -210,7 +219,7 @@ def get_index_type(entry):
         return 'start_name'
 
 
-def validate_regions(adata, coordinate_columns):
+def validate_regions(adata, coordinate_columns) -> None:
     """
     Check if the regions in adata.var are valid.
 
@@ -226,6 +235,7 @@ def validate_regions(adata, coordinate_columns):
     ValueError
         If invalid regions are detected.
     """
+
     # Test whether the first three columns are in the right format
     chr, start, end = coordinate_columns
 
@@ -246,7 +256,7 @@ def validate_regions(adata, coordinate_columns):
 
 def format_adata_var(adata,
                      coordinate_columns=None,
-                     columns_added=["chr", "start", "end"]):
+                     columns_added=["chr", "start", "end"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
@@ -276,6 +286,7 @@ def format_adata_var(adata,
     ValueError
         If regions are of incorrect format.
     """
+
     # Test whether the first three columns are in the right format
     format_index = True
     if coordinate_columns is not None:
@@ -321,7 +332,7 @@ def format_adata_var(adata,
         validate_regions(adata, columns_added)
 
 
-def in_range(value, limits, include_limits=True):
+def in_range(value, limits, include_limits=True) -> bool:
     """
     Check if a value is in a given range.
 
@@ -339,13 +350,14 @@ def in_range(value, limits, include_limits=True):
     bool :
         Returns whether the value is between the set limits.
     """
+
     if include_limits:
         return value >= limits[0] and value <= limits[1]
     else:
         return value > limits[0] and value < limits[1]
 
 
-def is_integer_array(arr):
+def is_integer_array(arr) -> bool:
     """
     Check if all values of arr are integers.
 
@@ -356,16 +368,17 @@ def is_integer_array(arr):
 
     Returns
     -------
-    boolean :
+    bool :
         True if all values are integers, False otherwise.
     """
+
     # https://stackoverflow.com/a/7236784
     boolean = np.equal(np.mod(arr, 1), 0)
 
     return np.all(boolean)
 
 
-def check_columns(df, columns, error=True, name="dataframe"):
+def check_columns(df, columns, error=True, name="dataframe") -> Optional[bool]:
     """
     Check whether columns are found within a pandas dataframe.
 
@@ -375,17 +388,17 @@ def check_columns(df, columns, error=True, name="dataframe"):
     ----------
     df : pandas.DataFrame
         A pandas dataframe to check.
+    columns : list
+        A list of column names to check for within `df`.
     error : boolean, default True
         If True raise errror if not all columns are found.
         If False return true or false
-    columns : list
-        A list of column names to check for within `df`.
     name : str, default dataframe
         Dataframe name displayed in the error message.
 
     Returns
     -------
-    Boolean or None
+    Optional[bool]
         True or False depending on if columns are in dataframe
         None if error is set to True
 
@@ -394,6 +407,7 @@ def check_columns(df, columns, error=True, name="dataframe"):
     KeyError
         If any of the columns are not in 'df' and error is set to True.
     """
+
     df_columns = df.columns
 
     not_found = []
@@ -413,7 +427,7 @@ def check_columns(df, columns, error=True, name="dataframe"):
             return True
 
 
-def check_file_ending(file, pattern="gtf"):
+def check_file_ending(file, pattern="gtf") -> None:
     """
     Check if a file has a certain file ending.
 
@@ -431,6 +445,7 @@ def check_file_ending(file, pattern="gtf"):
     ValueError
         If file does not have the expected file ending.
     """
+
     valid = False
     if is_regex:
         if re.match(pattern, file):
@@ -444,7 +459,7 @@ def check_file_ending(file, pattern="gtf"):
         raise ValueError(f"File '{file}' does not have the expected file ending '{pattern}'")
 
 
-def is_regex(regex):
+def is_regex(regex) -> bool:
     """
     Check if a string is a valid regex.
 
@@ -455,9 +470,10 @@ def is_regex(regex):
 
     Returns
     -------
-    boolean :
+    bool :
         True if string is a valid regex, False otherwise.
     """
+
     try:
         re.compile(regex)
         return True
@@ -466,7 +482,7 @@ def is_regex(regex):
         return False
 
 
-def check_marker_lists(adata, marker_dict):
+def check_marker_lists(adata, marker_dict) -> dict[str, list[str]]:
     """
     Remove genes in custom marker genes lists which are not present in dataset.
 
@@ -480,9 +496,10 @@ def check_marker_lists(adata, marker_dict):
 
     Returns
     -------
-    dict :
+    dict[str, list[str]] :
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
     """
+
     marker_dict = marker_dict.copy()
 
     for key, genes in list(marker_dict.items()):

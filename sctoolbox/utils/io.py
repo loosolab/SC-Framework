@@ -6,7 +6,7 @@ import warnings
 import glob
 
 
-def create_dir(path):
+def create_dir(path) -> None:
     """
     Create a directory if it is not existing yet.
 
@@ -17,6 +17,7 @@ def create_dir(path):
     path : str
         Path to the directory to be created.
     """
+
     base = os.path.basename(path)
     if "." in base:  # path is expected to be a file
         dirname = os.path.dirname(path)  # the last dir of the path
@@ -28,7 +29,7 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
-def get_temporary_filename(tempdir="."):
+def get_temporary_filename(tempdir=".") -> str:
     """
     Get a writeable temporary filename by creating a temporary file and closing it again.
 
@@ -41,6 +42,7 @@ def get_temporary_filename(tempdir="."):
     str
         Name of the temporary file.
     """
+
     filehandle = tempfile.NamedTemporaryFile(mode="w", dir=tempdir, delete=True)
     filename = filehandle.name
     filehandle.close()  # remove the file again
@@ -48,7 +50,7 @@ def get_temporary_filename(tempdir="."):
     return filename
 
 
-def remove_files(file_list):
+def remove_files(file_list) -> None:
     """
     Delete all files in a file list. Prints a warning if deletion was not possible.
 
@@ -57,6 +59,7 @@ def remove_files(file_list):
     file_list : list[str]
         List of files to delete.
     """
+
     for f in file_list:
         try:
             os.remove(f)
@@ -64,7 +67,7 @@ def remove_files(file_list):
             warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
 
-def rm_tmp(temp_dir, tempfiles=None):
+def rm_tmp(temp_dir, tempfiles=None) -> None:
     """
     Delete given directory.
 
@@ -80,6 +83,7 @@ def rm_tmp(temp_dir, tempfiles=None):
     tempfiles : list[str], default None
         Paths to files to be deleted before removing the temp directory.
     """
+
     try:
         if tempfiles is None:
             for f in glob.glob(temp_dir + "/*gtf*"):

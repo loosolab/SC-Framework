@@ -14,7 +14,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                     commit=None, out_path="./", private=False,
                     load_token=pathlib.Path.home() / ".gitlab_token",
                     save_token=pathlib.Path.home() / ".gitlab_token",
-                    overwrite=False, max_calls=5, period=60):
+                    overwrite=False, max_calls=5, period=60) -> None:
     """
     Download file(s) from gitlab.
 
@@ -52,6 +52,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
     ValueError
         If repository is inaccesible.
     """
+
     def limited(until):
         duration = int(round(until - time.time()))
         print('Rate limited, sleeping for {:d} seconds'.format(duration))
@@ -101,7 +102,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
         print("Error:", e)
 
 
-def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
+def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]) -> None:
     """
     Create initial folder structure.
 
@@ -117,6 +118,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
     Exception
         If directory exists.
     """
+
     print("Setting up experiment:")
     if pathlib.Path(dest).exists():
         raise Exception(f"Directory '{dest}' already exists. "
@@ -131,9 +133,9 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
 
 def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
-                 starts_with=1, **kwargs):
+                 starts_with=1, **kwargs) -> None:
     """
-    Create and add a new analysis/run
+    Create and add a new analysis/run.
 
     Note: Only works for Notebooks until number 99.
     Needs to be adjusted if we exceed 89 notebooks.
@@ -160,6 +162,7 @@ def add_analysis(dest, analysis_name, method="rna",
     ValueError
         If `method` is invalid.
     """
+
     analysis_path = pathlib.Path(dest) / "Analysis"
     if not analysis_path.exists():
         raise FileNotFoundError("Analysis directory not found."
@@ -181,7 +184,7 @@ def add_analysis(dest, analysis_name, method="rna",
     gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
 
 
-def build_notebooks_regex(starts_with):
+def build_notebooks_regex(starts_with) -> str:
     """
     Build regex for notebooks starting with given number.
 
@@ -202,6 +205,7 @@ def build_notebooks_regex(starts_with):
     ValueError
         If `starts_with` is < 1 or > 89.
     """
+
     if starts_with < 1:
         raise ValueError("starts_with needs to be at least 1")
     elif 1 <= starts_with < 10:
