@@ -17,6 +17,7 @@ def create_dir(path):
     path : str
         Path to the directory to be created.
     """
+
     base = os.path.basename(path)
     if "." in base:  # path is expected to be a file
         dirname = os.path.dirname(path)  # the last dir of the path
@@ -41,6 +42,7 @@ def get_temporary_filename(tempdir="."):
     str
         Name of the temporary file.
     """
+
     filehandle = tempfile.NamedTemporaryFile(mode="w", dir=tempdir, delete=True)
     filename = filehandle.name
     filehandle.close()  # remove the file again
@@ -57,6 +59,7 @@ def remove_files(file_list):
     file_list : list[str]
         List of files to delete.
     """
+
     for f in file_list:
         try:
             os.remove(f)
@@ -80,6 +83,7 @@ def rm_tmp(temp_dir, tempfiles=None):
     tempfiles : list[str], default None
         Paths to files to be deleted before removing the temp directory.
     """
+
     try:
         if tempfiles is None:
             for f in glob.glob(temp_dir + "/*gtf*"):

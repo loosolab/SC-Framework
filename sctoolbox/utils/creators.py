@@ -52,6 +52,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
     ValueError
         If repository is inaccesible.
     """
+
     def limited(until):
         duration = int(round(until - time.time()))
         print('Rate limited, sleeping for {:d} seconds'.format(duration))
@@ -117,6 +118,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
     Exception
         If directory exists.
     """
+
     print("Setting up experiment:")
     if pathlib.Path(dest).exists():
         raise Exception(f"Directory '{dest}' already exists. "
@@ -160,6 +162,7 @@ def add_analysis(dest, analysis_name, method="rna",
     ValueError
         If `method` is invalid.
     """
+
     analysis_path = pathlib.Path(dest) / "Analysis"
     if not analysis_path.exists():
         raise FileNotFoundError("Analysis directory not found."
@@ -202,6 +205,7 @@ def build_notebooks_regex(starts_with):
     ValueError
         If `starts_with` is < 1 or > 89.
     """
+
     if starts_with < 1:
         raise ValueError("starts_with needs to be at least 1")
     elif 1 <= starts_with < 10:

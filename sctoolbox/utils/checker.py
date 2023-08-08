@@ -26,6 +26,7 @@ def check_module(module):
     ImportError
         If the module is not available for import.
     """
+
     error = 0
     try:
         importlib.import_module(module)
@@ -49,6 +50,7 @@ def _is_interactive():
     boolean :
         True if interactive, False otherwise.
     """
+
     backend = matplotlib.get_backend()
 
     if backend == 'module://ipympl.backend_nbagg':
@@ -75,6 +77,7 @@ def _is_gz_file(filepath):
     boolean
         True if the file is a compressed .gz file.
     """
+
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == b'\x1f\x8b'
 
@@ -90,6 +93,7 @@ def gunzip_file(f_in, f_out):
     f_out : str
         Destination to decompressed output file.
     """
+
     with gzip.open(f_in, 'rb') as h_in:
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
@@ -109,6 +113,7 @@ def is_str_numeric(ans):
     boolean
         True if string can be converted to float.
     """
+
     try:
         float(ans)
         return True
@@ -130,6 +135,7 @@ def format_index(adata, from_column=None):
     from_column : str, default None
         Column name in adata.var to be set as index.
     """
+
     if from_column is None:
         entry = adata.var.index[0]
         index_type = get_index_type(entry)
@@ -201,6 +207,7 @@ def get_index_type(entry):
     str or None
         The index format. Either 'snapatac', 'start_name' or None for unknown format.
     """
+
     regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
     regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
 
@@ -226,6 +233,7 @@ def validate_regions(adata, coordinate_columns):
     ValueError
         If invalid regions are detected.
     """
+
     # Test whether the first three columns are in the right format
     chr, start, end = coordinate_columns
 
@@ -276,6 +284,7 @@ def format_adata_var(adata,
     ValueError
         If regions are of incorrect format.
     """
+
     # Test whether the first three columns are in the right format
     format_index = True
     if coordinate_columns is not None:
@@ -339,6 +348,7 @@ def in_range(value, limits, include_limits=True):
     bool :
         Returns whether the value is between the set limits.
     """
+
     if include_limits:
         return value >= limits[0] and value <= limits[1]
     else:
@@ -359,6 +369,7 @@ def is_integer_array(arr):
     boolean :
         True if all values are integers, False otherwise.
     """
+
     # https://stackoverflow.com/a/7236784
     boolean = np.equal(np.mod(arr, 1), 0)
 
@@ -394,6 +405,7 @@ def check_columns(df, columns, error=True, name="dataframe"):
     KeyError
         If any of the columns are not in 'df' and error is set to True.
     """
+
     df_columns = df.columns
 
     not_found = []
@@ -431,6 +443,7 @@ def check_file_ending(file, pattern="gtf"):
     ValueError
         If file does not have the expected file ending.
     """
+
     valid = False
     if is_regex:
         if re.match(pattern, file):
@@ -458,6 +471,7 @@ def is_regex(regex):
     boolean :
         True if string is a valid regex, False otherwise.
     """
+
     try:
         re.compile(regex)
         return True
@@ -483,6 +497,7 @@ def check_marker_lists(adata, marker_dict):
     dict :
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
     """
+
     marker_dict = marker_dict.copy()
 
     for key, genes in list(marker_dict.items()):

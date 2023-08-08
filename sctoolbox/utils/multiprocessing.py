@@ -20,6 +20,7 @@ def get_pbar(total, description):
     tqdm
         A progress bar object.
     """
+
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
@@ -40,6 +41,7 @@ def monitor_jobs(jobs, description="Progress"):
     description : str, default "Progress"
         Description to be shown in the progress bar.
     """
+
     if isinstance(jobs, dict):
         jobs = list(jobs.values())
 

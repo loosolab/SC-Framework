@@ -45,6 +45,7 @@ def assemble_from_h5ad(h5ad_files,
     anndata.AnnData
         The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
     """
+
     adata_dict = {}
     counter = 0
     for h5ad_path in h5ad_files:
@@ -118,6 +119,7 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
     FileNotFoundError
         If path does not exist or files are missing.
     """
+
     # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
         raise ValueError("dtype must be either 'raw' or 'filtered'")
@@ -185,6 +187,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     ValueError
         If `use_samples` contains not existing names.
     """
+
     # TODO: test that quant folder is existing
 
     # Collect configuration into a dictionary
@@ -280,6 +283,7 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     ValueError
         If barcode or gene files contain duplicates.
     """
+
     # Read mtx file
     adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
 
@@ -338,6 +342,7 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     ValueError
         If files are not found.
     """
+
     mtx = glob.glob(os.path.join(path, mtx))
     barcodes = glob.glob(os.path.join(path, barcodes))
     genes = glob.glob(os.path.join(path, genes))
@@ -389,6 +394,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
     anndata.AnnData or None:
         Returns converted anndata object if output is None.
     """
+
     # Setup R
     utils.setup_R(r_home)
 

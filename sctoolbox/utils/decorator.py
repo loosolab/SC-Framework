@@ -22,6 +22,7 @@ def log_anndata(func):
     function :
         Decorated function
     """
+
     # TODO store datatypes not supported by scanpy.write as string representation (repr())
 
     @functools.wraps(func)  # preserve information of the decorated func
@@ -91,6 +92,7 @@ def get_parameter_table(adata):
     ValueError
         If no logs are found.
     """
+
     if "sctoolbox" not in adata.uns.keys() or "log" not in adata.uns["sctoolbox"].keys():
         raise ValueError("No sctoolbox function calls logged in adata.")
 
@@ -125,6 +127,7 @@ def debug_func_log(func):
     func : function
         Function to decorate.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         print(f"DEBUG: {func.__name__} called with args: {args} and kwargs: {kwargs}")

@@ -15,6 +15,7 @@ def _is_notebook():
     boolean :
         True if running from a notebook, False otherwise.
     """
+
     try:
         _ = get_ipython()
         return True
@@ -47,6 +48,7 @@ if _is_notebook():
         cell : str, default None
             Code of the cell that will be evaluated.
         """
+    
         script = f"""
                 var cell = this.closest('.code_cell');
                 var editor = cell.querySelector('.CodeMirror-sizer');
@@ -63,6 +65,7 @@ def clear():
 
     https://stackoverflow.com/questions/37071230/clear-overwrite-standard-output-in-python
     """
+
     import platform
 
     if _is_notebook():

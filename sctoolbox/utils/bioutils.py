@@ -45,6 +45,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
     TypeError
         If `percentile_range` is not of type `tuple`.
     """
+
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
     if isinstance(percentile_range, tuple) is False:
@@ -121,6 +122,7 @@ def barcode_index(adata):
     adata : anndata.AnnData
         Anndata to perform check on.
     """
+
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
@@ -170,6 +172,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     ValueError
         If the returned organism is ambiguous.
     """
+
     # this will redirect
     url = f"{host}{ensembl_id}"
     response = requests.get(url)
@@ -210,6 +213,7 @@ def gene_id_to_name(ids, species):
     ValueError
         If provided Ensembl IDs or organism is invalid.
     """
+
     if not all(id.startswith("ENS") for id in ids):
         raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
 
@@ -261,6 +265,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
     ValueError
         If invalid parameter choice or column name not found in adata.var.
     """
+
     if not id_col_name and not index:
         raise ValueError("Either set parameter id_col_name or index.")
     elif not index and id_col_name not in adata.var.columns:
@@ -337,6 +342,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
     ValueError
         If column name is not found in `adata.var` or no Ensembl IDs in selected column.
     """
+
     if column not in adata.var.columns:
         raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
 
@@ -411,6 +417,7 @@ def _gtf_integrity(gtf):
     argparse.ArgumentTypeError
         If the file is not in gtf-format.
     """
+
     regex_header = '#+.*'
     regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'
 

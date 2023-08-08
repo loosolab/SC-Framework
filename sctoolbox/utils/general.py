@@ -22,6 +22,7 @@ def get_user():
     str
         The name of the current user.
     """
+
     try:
         username = getpass.getuser()
     except Exception:
@@ -39,6 +40,7 @@ def get_datetime():
     str
         A string with the current date and time in the format dd/mm/YY H:M:S
     """
+
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
 
@@ -57,6 +59,7 @@ def get_package_versions():
         A dict in the form:
         `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
     """
+
     # Import freeze
     try:
         from pip._internal.operations import freeze
@@ -97,6 +100,7 @@ def get_binary_path(tool):
     ValueError
         If executable is not found.
     """
+
     python_dir = os.path.dirname(sys.executable)
     if os.path.exists(tool):
         tool_path = f"./{tool}"
@@ -132,6 +136,7 @@ def run_cmd(cmd):
     subprocess.CalledProcessError
         If command has an error.
     """
+
     try:
         subprocess.check_call(cmd, shell=True)
         print(f"Command '{cmd}' ran successfully!")
@@ -163,6 +168,7 @@ def setup_R(r_home=None):
     Exception
         If path to R is invalid.
     """
+
     # Set R installation path
     if not r_home:
         # https://stackoverflow.com/a/54845971
@@ -189,6 +195,7 @@ def _none2null(none_obj):
     -------
     R NULL object.
     """
+
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     from rpy2.robjects import r
 
@@ -213,6 +220,7 @@ def split_list(lst, n):
     list :
         List of lists (chunks).
     """
+
     chunks = []
     for i in range(0, n):
         chunks.append(lst[i::n])
@@ -236,6 +244,7 @@ def split_list_size(lst, max_size):
     list :
         List of lists (chunks).
     """
+
     chunks = []
     for i in range(0, len(lst), max_size):
         chunks.append(lst[i:i + max_size])
@@ -254,6 +263,7 @@ def write_list_file(lst, path):
     path : str
         Path to output file.
     """
+
     lst = [str(s) for s in lst]
     s = "\n".join(lst)
 
@@ -275,6 +285,7 @@ def read_list_file(path):
     list :
         List of strings read from file.
     """
+
     f = open(path)
     lst = f.read().splitlines()  # get lines without "\n"
     f.close()
@@ -300,6 +311,7 @@ def clean_flanking_strings(list_of_strings):
     list[str]
         List of strings without common suffix and prefix
     """
+
     suffix = longest_common_suffix(list_of_strings)
     prefix = os.path.commonprefix(list_of_strings)
 
@@ -323,6 +335,7 @@ def longest_common_suffix(list_of_strings):
     str :
         Longest common suffix of the list of strings.
     """
+
     reversed_strings = [s[::-1] for s in list_of_strings]
     reversed_lcs = os.path.commonprefix(reversed_strings)
     lcs = reversed_lcs[::-1]
@@ -346,6 +359,7 @@ def remove_prefix(s, prefix):
     str :
         String without prefix.
     """
+
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
@@ -365,6 +379,7 @@ def remove_suffix(s, suffix):
     str :
         String without suffix.
     """
+
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
@@ -386,6 +401,7 @@ def sanitize_string(s, char_list, replace="_"):
     str :
         Sanitized string.
     """
+
     for char in char_list:
         s = s.replace(char, replace)
 
