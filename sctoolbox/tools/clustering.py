@@ -9,7 +9,7 @@ import sctoolbox.utils.decorator as deco
 @deco.log_anndata
 def recluster(adata, column, clusters,
               task="join", method="leiden", resolution=1, key_added=None,
-              plot=True, embedding="X_umap"):
+              plot=True, embedding="X_umap") -> None:
     """
     Recluster an anndata object based on an existing clustering column in .obs.
 
