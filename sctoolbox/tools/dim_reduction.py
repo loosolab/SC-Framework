@@ -4,7 +4,8 @@ import scanpy as sc
 import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
-from anndata import AnnData
+import anndata
+from typing import Optional
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -16,7 +17,7 @@ logger = settings.logger
 ############################################################################
 
 @deco.log_anndata
-def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
+def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs) -> Optional[anndata.AnnData]:
     """
     Compute PCA and add information to adata.uns['infoprocess'].
 
@@ -33,7 +34,7 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
 
     Returns
     -------
-    anndata.AnnData or None:
+    Optional[anndata.AnnData]
         Returns anndata object with PCA components. Or None if inplace = True.
     """
 
@@ -86,7 +87,7 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
 #        return adata_m
 
 
-def lsi(data, scale_embeddings=True, n_comps=50):
+def lsi(data, scale_embeddings=True, n_comps=50) -> None:
     """
     Run Latent Semantic Indexing.
 
@@ -109,7 +110,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
         data must be anndata object.
     """
 
-    if isinstance(data, AnnData):
+    if isinstance(data, anndata.AnnData):
         adata = data
     else:
         raise TypeError("Expected AnnData object!")
@@ -145,7 +146,7 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.uns["pca"] = adata.uns["lsi"]
 
 
-def apply_svd(adata, layer=None):
+def apply_svd(adata, layer=None) -> anndata.AnnData:
     """
     Singular value decomposition of anndata object.
 
@@ -158,7 +159,7 @@ def apply_svd(adata, layer=None):
 
     Returns
     -------
-    adata : anndata.AnnData
+    anndata.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
     """
 
@@ -195,7 +196,7 @@ def apply_svd(adata, layer=None):
 #                         Subset number of PCs                             #
 ############################################################################
 
-def define_PC(anndata):
+def define_PC(anndata) -> int:
     """
     Define threshold for most variable PCA components.
 
@@ -208,7 +209,7 @@ def define_PC(anndata):
 
     Returns
     -------
-    int :
+    int
         An int representing the number of PCs until elbow, defining PCs with significant variance.
 
     Raises
@@ -236,7 +237,7 @@ def define_PC(anndata):
 
 
 @deco.log_anndata
-def subset_PCA(adata, n_pcs, start=0, inplace=True):
+def subset_PCA(adata, n_pcs, start=0, inplace=True) -> Optional[anndata.AnnData]:
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
 
@@ -255,7 +256,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
 
     Returns
     -------
-    adata or None
+    Optional[anndata.AnnData]
         Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
     """
 
