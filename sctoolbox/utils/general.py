@@ -10,10 +10,14 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 
+# type hin imports
+from typing import Any
+import rpy2
+
 
 # ------------------ Logging about run ----------------- #
 
-def get_user():
+def get_user() -> str:
     """
     Get the name of the current user.
 
@@ -31,7 +35,7 @@ def get_user():
     return username
 
 
-def get_datetime():
+def get_datetime() -> str:
     """
     Get a string with the current date and time for logging.
 
@@ -49,13 +53,13 @@ def get_datetime():
 
 # ------------------ Packages and tools ----------------- #
 
-def get_package_versions():
+def get_package_versions() -> dict[str, str]:
     """
     Receive a dictionary of currently installed python packages and versions.
 
     Returns
     -------
-    dict :
+    dict[str, str] :
         A dict in the form:
         `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
     """
@@ -79,7 +83,7 @@ def get_package_versions():
     return package_dict
 
 
-def get_binary_path(tool):
+def get_binary_path(tool) -> str:
     """
     Get path to a binary commandline tool.
 
@@ -122,7 +126,7 @@ def get_binary_path(tool):
     return tool_path
 
 
-def run_cmd(cmd):
+def run_cmd(cmd) -> None:
     """
     Run a commandline command.
 
@@ -153,7 +157,7 @@ def run_cmd(cmd):
 #                           R setup                                 #
 #####################################################################
 
-def setup_R(r_home=None):
+def setup_R(r_home=None) -> None:
     """
     Add R installation for rpy2 use.
 
@@ -180,7 +184,7 @@ def setup_R(r_home=None):
     os.environ['R_HOME'] = r_home
 
 
-def _none2null(none_obj):
+def _none2null(none_obj) -> rpy2.rinterface_lib.sexp.NULLType:
     """
     rpy2 converter that translates python 'None' to R 'NULL'.
 
@@ -193,7 +197,8 @@ def _none2null(none_obj):
 
     Returns
     -------
-    R NULL object.
+    rpy2.rinterface_lib.sexp.NULLType
+        R NULL object.
     """
 
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
@@ -204,7 +209,7 @@ def _none2null(none_obj):
 
 # ----------------- List functions ---------------- #
 
-def split_list(lst, n):
+def split_list(lst, n) -> list[list[Any]]:
     """
     Split list into n chunks.
 
@@ -217,7 +222,7 @@ def split_list(lst, n):
 
     Returns
     -------
-    list :
+    list[list[Any]] :
         List of lists (chunks).
     """
 
@@ -228,7 +233,7 @@ def split_list(lst, n):
     return chunks
 
 
-def split_list_size(lst, max_size):
+def split_list_size(lst, max_size) -> list[list[Any]]:
     """
     Split list into chunks of max_size.
 
@@ -241,7 +246,7 @@ def split_list_size(lst, max_size):
 
     Returns
     -------
-    list :
+    list[list[Any]] :
         List of lists (chunks).
     """
 
@@ -252,7 +257,7 @@ def split_list_size(lst, max_size):
     return chunks
 
 
-def write_list_file(lst, path):
+def write_list_file(lst, path) -> None:
     """
     Write a list to a file with one element per line.
 
@@ -271,7 +276,7 @@ def write_list_file(lst, path):
         f.write(s)
 
 
-def read_list_file(path):
+def read_list_file(path) -> list[str]:
     """
     Read a list from a file with one element per line.
 
@@ -282,7 +287,7 @@ def read_list_file(path):
 
     Returns
     -------
-    list :
+    list[str] :
         List of strings read from file.
     """
 
@@ -295,7 +300,7 @@ def read_list_file(path):
 
 # ----------------- String functions ---------------- #
 
-def clean_flanking_strings(list_of_strings):
+def clean_flanking_strings(list_of_strings) -> list[str]:
     """
     Remove common suffix and prefix from a list of strings.
 
@@ -321,7 +326,7 @@ def clean_flanking_strings(list_of_strings):
     return list_of_strings_clean
 
 
-def longest_common_suffix(list_of_strings):
+def longest_common_suffix(list_of_strings) -> str:
     """
     Find the longest common suffix of a list of strings.
 
@@ -343,7 +348,7 @@ def longest_common_suffix(list_of_strings):
     return lcs
 
 
-def remove_prefix(s, prefix):
+def remove_prefix(s, prefix) -> str:
     """
     Remove prefix from a string.
 
@@ -363,7 +368,7 @@ def remove_prefix(s, prefix):
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
-def remove_suffix(s, suffix):
+def remove_suffix(s, suffix) -> str:
     """
     Remove suffix from a string.
 
@@ -383,7 +388,7 @@ def remove_suffix(s, suffix):
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
-def sanitize_string(s, char_list, replace="_"):
+def sanitize_string(s, char_list, replace="_") -> str:
     """
     Replace every occurrence of given substrings.
 

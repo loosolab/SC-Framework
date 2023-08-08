@@ -14,7 +14,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                     commit=None, out_path="./", private=False,
                     load_token=pathlib.Path.home() / ".gitlab_token",
                     save_token=pathlib.Path.home() / ".gitlab_token",
-                    overwrite=False, max_calls=5, period=60):
+                    overwrite=False, max_calls=5, period=60) -> None:
     """
     Download file(s) from gitlab.
 
@@ -102,7 +102,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
         print("Error:", e)
 
 
-def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
+def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]) -> None:
     """
     Create initial folder structure.
 
@@ -133,7 +133,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
 
 def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
-                 starts_with=1, **kwargs):
+                 starts_with=1, **kwargs) -> None:
     """
     Create and add a new analysis/run
 
@@ -184,7 +184,7 @@ def add_analysis(dest, analysis_name, method="rna",
     gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
 
 
-def build_notebooks_regex(starts_with):
+def build_notebooks_regex(starts_with) -> str:
     """
     Build regex for notebooks starting with given number.
 

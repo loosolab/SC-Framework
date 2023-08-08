@@ -5,8 +5,11 @@ import pandas as pd
 from scipy.stats import zscore
 import sctoolbox.utils as utils
 
+# type hint imports
+from typing import Optional
 
-def rename_categories(series):
+
+def rename_categories(series) -> pd.Series:
     """
     Rename categories in a pandas series to numbers between 1-(number of categories).
 
@@ -17,7 +20,7 @@ def rename_categories(series):
 
     Returns
     -------
-    pandas.Series
+    pd.Series
         Series with renamed categories.
     """
 
@@ -29,7 +32,7 @@ def rename_categories(series):
     return series
 
 
-def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):
+def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
     """
     Fill all NA values in a pandas DataFrame depending on the column data type.
 
@@ -44,7 +47,7 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
 
     Returns
     -------
-    pd.DataFrame or None
+    Optional[pd.DataFrame]
         DataFrame with replaced NA values.
     """
 
@@ -75,7 +78,7 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         return df
 
 
-def _sanitize_sheetname(s, replace="_"):
+def _sanitize_sheetname(s, replace="_") -> str:
     """
     Alters given string to produce a valid excel sheetname.
 
@@ -97,7 +100,7 @@ def _sanitize_sheetname(s, replace="_"):
     return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
-def write_excel(table_dict, filename, index=False):
+def write_excel(table_dict, filename, index=False) -> None:
     """
     Write a dictionary of tables to a single excel file with one table per sheet.
 
@@ -127,7 +130,7 @@ def write_excel(table_dict, filename, index=False):
             table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
 
 
-def table_zscore(table, how="row"):
+def table_zscore(table, how="row") -> pd.DataFrame:
     """
     Z-score a table.
 
@@ -140,7 +143,7 @@ def table_zscore(table, how="row"):
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         Z-scored table.
 
     Raises

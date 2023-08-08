@@ -6,13 +6,13 @@ from IPython.display import HTML, display
 import sctoolbox.utils as utils
 
 
-def _is_notebook():
+def _is_notebook() -> bool:
     """
     Check if function is run within a notebook.
 
     Returns
     -------
-    boolean :
+    bool :
         True if running from a notebook, False otherwise.
     """
 
@@ -25,7 +25,7 @@ def _is_notebook():
 
 if _is_notebook():
     @register_line_magic
-    def bgcolor(color, cell=None):
+    def bgcolor(color, cell=None) -> None:
         """
         Set background color of current jupyter cell.
 
@@ -48,7 +48,7 @@ if _is_notebook():
         cell : str, default None
             Code of the cell that will be evaluated.
         """
-    
+
         script = f"""
                 var cell = this.closest('.code_cell');
                 var editor = cell.querySelector('.CodeMirror-sizer');
@@ -59,7 +59,7 @@ if _is_notebook():
         display(HTML(f'<img src onerror="{script}">'))
 
 
-def clear():
+def clear() -> None:
     """
     Clear stout of console or jupyter notebook.
 

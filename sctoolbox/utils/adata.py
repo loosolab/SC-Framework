@@ -10,7 +10,7 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def get_adata_subsets(adata, groupby):
+def get_adata_subsets(adata, groupby) -> dict[str, sc.AnnData]:
     """
     Split an anndata object into a dict of sub-anndata objects based on a grouping column.
 
@@ -23,7 +23,7 @@ def get_adata_subsets(adata, groupby):
 
     Returns
     -------
-    dict
+    dict[str, sc.AnnData]
         Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
 
     Raises
@@ -44,7 +44,7 @@ def get_adata_subsets(adata, groupby):
 
 
 @deco.log_anndata
-def add_expr_to_obs(adata, gene):
+def add_expr_to_obs(adata, gene) -> None:
     """
     Add expression of a gene from adata.X to adata.obs as a new column.
 
@@ -71,7 +71,7 @@ def add_expr_to_obs(adata, gene):
 
 
 @deco.log_anndata
-def shuffle_cells(adata, seed=42):
+def shuffle_cells(adata, seed=42) -> sc.AnnData:
     """
     Shuffle cells in an adata object to improve plotting.
 
@@ -86,7 +86,7 @@ def shuffle_cells(adata, seed=42):
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         Anndata object with shuffled cells.
     """
 
@@ -102,7 +102,7 @@ def shuffle_cells(adata, seed=42):
     return adata
 
 
-def get_minimal_adata(adata):
+def get_minimal_adata(adata) -> sc.AnnData:
     """
     Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
 
@@ -113,7 +113,7 @@ def get_minimal_adata(adata):
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         Minimal copy of anndata object.
     """
 
@@ -125,7 +125,7 @@ def get_minimal_adata(adata):
     return adata_minimal
 
 
-def load_h5ad(path):
+def load_h5ad(path) -> sc.AnnData:
     """
     Load an anndata object from .h5ad file.
 
@@ -136,7 +136,7 @@ def load_h5ad(path):
 
     Returns
     -------
-    anndata.AnnData :
+    sc.AnnData :
         Loaded anndata object.
     """
 
@@ -149,7 +149,7 @@ def load_h5ad(path):
 
 
 @deco.log_anndata
-def save_h5ad(adata, path):
+def save_h5ad(adata, path) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -168,7 +168,7 @@ def save_h5ad(adata, path):
     logger.info(f"The adata object was saved to: {adata_output}")
 
 
-def add_uns_info(adata, key, value, how="overwrite"):
+def add_uns_info(adata, key, value, how="overwrite") -> None:
     """
     Add information to adata.uns['sctoolbox'].
 

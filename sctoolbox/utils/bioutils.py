@@ -8,6 +8,9 @@ import apybiomart
 from scipy.sparse import issparse
 import gzip
 import argparse
+import scanpy
+
+from typing import Optional
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -15,7 +18,7 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
-                     percentile_range=(0, 100), chunk_size=1000):
+                     percentile_range=(0, 100), chunk_size=1000) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -37,7 +40,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
 
     Raises
@@ -104,7 +107,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 #####################################################################
 
 @deco.log_anndata
-def barcode_index(adata):
+def barcode_index(adata) -> None:
     """
     Check if the barcode is the index.
 
@@ -149,7 +152,7 @@ def barcode_index(adata):
 #                  Converting between gene id and name              #
 #####################################################################
 
-def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
     """
     Get the organism name to the given Ensembl ID.
 
@@ -192,7 +195,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     return species
 
 
-def gene_id_to_name(ids, species):
+def gene_id_to_name(ids, species) -> pd.DataFrame:
     """
     Get Ensembl gene names to Ensembl gene id.
 
@@ -205,7 +208,7 @@ def gene_id_to_name(ids, species):
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         DataFrame with gene ids and matching gene names.
 
     Raises
@@ -236,7 +239,7 @@ def gene_id_to_name(ids, species):
 
 
 @deco.log_anndata
-def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Add gene names to adata.var.
 
@@ -257,7 +260,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData] :
         AnnData object with gene names.
 
     Raises
@@ -315,7 +318,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
 
 @deco.log_anndata
-def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
 
@@ -334,7 +337,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData] :
         AnnData object with modified gene column.
 
     Raises
@@ -390,7 +393,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 #                   Check integrity of gtf file                     #
 #####################################################################
 
-def _gtf_integrity(gtf):
+def _gtf_integrity(gtf) -> bool:
     """
     Check if the provided file follows the gtf-format.
 
@@ -409,7 +412,7 @@ def _gtf_integrity(gtf):
 
     Returns
     -------
-    boolean
+    bool
         True if the file is a valid gtf-file.
 
     Raises

@@ -6,7 +6,7 @@ import warnings
 import glob
 
 
-def create_dir(path):
+def create_dir(path) -> None:
     """
     Create a directory if it is not existing yet.
 
@@ -29,7 +29,7 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
-def get_temporary_filename(tempdir="."):
+def get_temporary_filename(tempdir=".") -> str:
     """
     Get a writeable temporary filename by creating a temporary file and closing it again.
 
@@ -50,7 +50,7 @@ def get_temporary_filename(tempdir="."):
     return filename
 
 
-def remove_files(file_list):
+def remove_files(file_list) -> None:
     """
     Delete all files in a file list. Prints a warning if deletion was not possible.
 
@@ -67,7 +67,7 @@ def remove_files(file_list):
             warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
 
-def rm_tmp(temp_dir, tempfiles=None):
+def rm_tmp(temp_dir, tempfiles=None) -> None:
     """
     Delete given directory.
 
