@@ -135,7 +135,7 @@ def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
                  starts_with=1, **kwargs) -> None:
     """
-    Create and add a new analysis/run
+    Create and add a new analysis/run.
 
     Note: Only works for Notebooks until number 99.
     Needs to be adjusted if we exceed 89 notebooks.
