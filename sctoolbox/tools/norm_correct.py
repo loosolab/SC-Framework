@@ -8,6 +8,7 @@ import multiprocessing as mp
 import anndata
 import scanpy as sc
 import scanpy.external as sce
+from typing import Optional
 
 import sctoolbox.utils as utils
 from sctoolbox.tools.dim_reduction import lsi, compute_PCA
@@ -22,7 +23,7 @@ logger = settings.logger
 #####################################################################
 
 @deco.log_anndata
-def atac_norm(adata, method):
+def atac_norm(adata, method) -> dict[str, anndata.AnnData]:
     """
     Normalize count matrix using different methods.
 
@@ -38,7 +39,7 @@ def atac_norm(adata, method):
 
     Returns
     -------
-    dict of anndata.AnnData
+    dict[str, anndata.AnnData]
         Dictionary containing method name as key, and anndata as values.
         Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
 
@@ -74,7 +75,8 @@ def atac_norm(adata, method):
     return adatas
 
 
-def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log_kwargs={}):
+def adata_normalize_total(anndata, excl=True, inplace=False,
+                          norm_kwargs={}, log_kwargs={}) -> Optional[anndata.AnnData]:
     """
     Normalize the total counts and converting to log.
 
@@ -93,7 +95,7 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
 
     Returns
     -------
-    anndata.AnnData or None:
+    Optional[anndata.AnnData]
         Returns normalized and logged anndata object. Or None if inplace = True.
     """
 
@@ -111,7 +113,8 @@ def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log
         return adata_m
 
 
-def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
+def norm_log_PCA(anndata, exclude_HEG=True,
+                 use_HVG_PCA=True, inplace=False) -> Optional[anndata.AnnData]:
     """
     Define the ideal number of highly variable genes (HGV), annotate them and compute PCA.
 
@@ -128,7 +131,7 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
 
     Returns
     -------
-    anndata.Anndata or None:
+    Optional[anndata.AnnData]
         Anndata with expression values normalized and log converted and PCA computed.
     """
 
@@ -147,7 +150,7 @@ def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
         return adata_m
 
 
-def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
+def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4) -> None:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
@@ -221,7 +224,7 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
     adata.X = np.nan_to_num(tf_idf, 0)
 
 
-def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
+def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq") -> sparse.csr_matrix:
     """
     Perform TF-IDF normalization on a sparse matrix.
 
@@ -238,7 +241,7 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
 
     Returns
     -------
-    scipy.sparse.csr_matrix
+    sparse.csr_matrix
         tfidf normalized sparse matrix.
 
     Notes
@@ -288,7 +291,7 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
 def wrap_corrections(adata,
                      batch_key,
                      methods=["bbknn", "mnn"],
-                     method_kwargs={}):
+                     method_kwargs={}) -> dict[str, anndata.AnnData]:
     """
     Calculate multiple batch corrections for adata using the 'batch_correction' function.
 
@@ -311,7 +314,7 @@ def wrap_corrections(adata,
 
     Returns
     -------
-    dict of anndata.Anndata :
+    dict[str, anndata.AnnData]
         Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.
 
     Raises
@@ -348,7 +351,7 @@ def wrap_corrections(adata,
 
 
 @deco.log_anndata
-def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
+def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs) -> anndata.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
 
@@ -375,7 +378,7 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
     Returns
     -------
-    anndata.AnnData :
+    anndata.AnnData
         A copy of the anndata with applied batch correction.
 
     Raises
@@ -475,7 +478,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
 
 @deco.log_anndata
-def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', max_dims=5, inplace=False):
+def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap',
+                          col_name='LISI_score', max_dims=5, inplace=False) -> Optional[anndata.AnnData]:
     """
     Evaluate batch effect methods using LISI.
 
@@ -496,7 +500,7 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
 
     Returns
     -------
-    anndata.Anndata or None:
+    Optional[anndata.AnnData]
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
     Notes
@@ -537,7 +541,8 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], threads=1, max_dims=5, inplace=False):
+def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'],
+                          threads=1, max_dims=5, inplace=False) -> dict[str, anndata.AnnData]:
     """
     Evaluate batch correction methods for a dict of anndata objects (using LISI score calculation).
 
@@ -559,7 +564,7 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
 
     Returns
     -------
-    dict of anndata.AnnData
+    dict[str, anndata.AnnData]
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
 
