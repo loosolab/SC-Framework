@@ -375,13 +375,11 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 class MPOverlapPct():
-    """
-    TODO Write Docstring.
-    TODO Type hinting
-    """
-
+# class to calculate percentage of fragments overlapping with regions of interest
+# This class will be removed in the future and replaced by a function due to over engineering
+# Therefore this will be documented sparsely
     def __init__(self):
-
+        # init class variables
         self.merged_dict = None
 
     def calc_pct(self,
@@ -391,9 +389,7 @@ class MPOverlapPct():
                  adata,
                  regions_name='list',
                  n_threads=8):
-        """
-        TODO Write Docstring.
-        """
+        # calculate percentage of fragments overlapping with regions of interest
 
         # check if there was an overlap
         if not overlap_file:
@@ -430,10 +426,8 @@ class MPOverlapPct():
 
         return adata
 
-    def get_barcodes_sum(self, df, barcodes, col_name) -> dict:
-        """
-        TODO Write Docstring.
-        """
+    def get_barcodes_sum(self, df, barcodes, col_name):
+        # get the sum of reads counts in each cell barcode
 
         # drop columns we dont need
         df.drop(df.iloc[:, 5:], axis=1, inplace=True)
@@ -449,11 +443,8 @@ class MPOverlapPct():
 
         return count_dict
 
-    def log_result(self, result) -> None:
-        """
-        TODO Write Docstring.
-        """
-
+    def log_result(self, result):
+        # log results from mp_counter
         if self.merged_dict:
             self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
             # print('merging')
@@ -461,17 +452,20 @@ class MPOverlapPct():
             self.merged_dict = result
 
     def mp_counter(self, fragments, barcodes, column, n_threads=8):
-        """
-        TODO Write Docstring.
-        """
-
+        # count reads for each cell barcode in parallel
+        # init pool
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
+        # split fragments into chunks
         for chunk in fragments:
+            # apply async job wit callback function
             job = pool.apply_async(self.get_barcodes_sum, args=(chunk, barcodes, column), callback=self.log_result)
             jobs.append(job)
+        # monitor progress
         utils.monitor_jobs(jobs, description="Progress")
+        # close pool
         pool.close()
+        # wait for all jobs to finish
         pool.join()
         # reset settings
         returns = self.merged_dict
