@@ -5,6 +5,8 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import warnings
 import scanpy as sc
+import anndata
+from typing import Optional
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -14,7 +16,8 @@ logger = settings.logger
 
 
 @deco.log_anndata
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
+def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000),
+              step=10, inplace=True, save=None, **kwargs) -> Optional[anndata.AnnData]:
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
 
@@ -44,8 +47,10 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 
     Returns
     -------
-    anndata.Anndata or None:
+    Optional[anndata.AnnData]
         Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
+        If inplace is False, the function returns None
+        Else returns a chagned copy of the input anndata object.
     """
 
     adata_m = anndata if inplace else anndata.copy()
@@ -85,7 +90,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 
 
 @deco.log_anndata
-def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True):
+def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True) -> Optional[anndata.AnnData]:
     """
     Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.var. If show is True, the plot is shown.
 
@@ -108,7 +113,7 @@ def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inpl
 
     Returns
     -------
-    anndata.AnnData or None
+    Optional[anndata.AnnData]
         If inplace is False, the function returns None
         If inplace is True, the function returns an anndata object.
     """
