@@ -8,8 +8,9 @@ import numpy as np
 import scanpy as sc
 import itertools
 import warnings
-from anndata import ImplicitModificationWarning
+import anndata
 from pathlib import Path
+from typing import Optional
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -17,7 +18,7 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def get_chromosome_genes(gtf, chromosomes):
+def get_chromosome_genes(gtf, chromosomes) -> list[str]:
     """
     Get a list of all genes in the gtf for certain chromosome(s).
 
@@ -30,7 +31,7 @@ def get_chromosome_genes(gtf, chromosomes):
 
     Returns
     -------
-    list :
+    list[str]
         A list of all genes in the gtf for the given chromosome(s).
 
     Notes
@@ -77,7 +78,7 @@ def get_chromosome_genes(gtf, chromosomes):
 
 
 @deco.log_anndata
-def label_genes(adata, species, gene_column=None):
+def label_genes(adata, species, gene_column=None) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial, cell cycle phase and gender genes.
 
@@ -94,7 +95,7 @@ def label_genes(adata, species, gene_column=None):
 
     Returns
     -------
-    list of str :
+    list[str]
         List containing the column names added to adata.var.
     """
 
@@ -153,7 +154,7 @@ def label_genes(adata, species, gene_column=None):
 
 
 @deco.log_anndata
-def add_gene_expression(adata, gene):
+def add_gene_expression(adata, gene) -> None:
     """
     Add values of gene/feature per cell to the adata.obs dataframe.
 
@@ -189,7 +190,7 @@ def run_rank_genes(adata, groupby,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
                    max_out_group_fraction=0.8,
-                   **kwargs):
+                   **kwargs) -> None:
     """
     Run scanpy rank_genes_groups and filter_rank_genes_groups.
 
@@ -232,7 +233,7 @@ def run_rank_genes(adata, groupby,
     params = {'method': 't-test'}  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
     params.update(kwargs)
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute.*")
+        warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
         sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
 
     sc.tl.filter_rank_genes_groups(adata,
@@ -251,7 +252,7 @@ def pairwise_rank_genes(adata, groupby,
                         min_in_group_fraction=0.25,
                         max_out_group_fraction=0.5,
                         **kwargs
-                        ):
+                        ) -> pd.DataFrame:
     """
     Rank genes pairwise between groups in 'groupby'.
 
@@ -272,7 +273,7 @@ def pairwise_rank_genes(adata, groupby,
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
         Dataframe containinge the pairwise ranked gened between the groups.
     """
 
@@ -327,7 +328,8 @@ def pairwise_rank_genes(adata, groupby,
 
 
 @deco.log_anndata
-def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
+def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False,
+                          var_columns=[], save_excel=None) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -346,7 +348,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
     Returns
     -------
-    dict :
+    dict[str, pd.DataFrame]
         A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
 
     Raises
@@ -449,7 +451,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
 
 @deco.log_anndata
-def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
+def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True) -> Optional[anndata.AnnData]:
     """
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
 
@@ -466,8 +468,9 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
 
     Returns
     -------
-    anndata.AnnData or None
-        If inplace = True, modifies adata.uns[key]["names"] in place and returns None. Otherwise, returns a copy of adata.
+    Optional[anndata.AnnData]
+        If inplace = True, modifies adata.uns[key]["names"] in place and returns None.
+        Otherwise, returns a copy of adata.
 
     Raises
     ------
@@ -495,7 +498,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
 #####################################################################
 
 @deco.log_anndata
-def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
+def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)) -> pd.DataFrame:
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
@@ -517,8 +520,9 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
     Returns
     -------
-    A dataframe containing the results of the DESeq2 analysis.
-    Also adds the dataframe to adata.uns["deseq_result"]
+    pd.DataFrame
+        A dataframe containing the results of the DESeq2 analysis.
+        Also adds the dataframe to adata.uns["deseq_result"]
 
     Raises
     ------
@@ -623,7 +627,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
 
 @deco.log_anndata
-def score_genes(adata, gene_set, score_name='score', inplace=True):
+def score_genes(adata, gene_set, score_name='score', inplace=True) -> Optional[anndata.AnnData]:
     """
     Assign a score to each cell depending on the expression of a set of genes.
 
@@ -641,7 +645,7 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
 
     Returns
     -------
-    anndata.Anndata or None :
+    Optional[anndata.AnnData]
         If inplace is False, return a copy of anndata object with the new column in the obs table.
 
     Raises
