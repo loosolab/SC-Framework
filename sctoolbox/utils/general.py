@@ -12,7 +12,7 @@ from datetime import datetime
 
 # type hint imports
 from typing import Any
-import rpy2.rinterface_lib
+import rpy2.rinterface_lib.sexp
 
 
 # ------------------ Logging about run ----------------- #
