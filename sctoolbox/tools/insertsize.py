@@ -17,9 +17,11 @@ logger = settings.logger
 # --------------------- Insertsize distribution ----------------------- #
 # --------------------------------------------------------------------- #
 
-def _check_in_list(element, alist):
+def _check_in_list(element, alist) -> bool:
     """
     Check if element is in list.
+
+    TODO Do we need this function?
 
     Parameters
     ----------
@@ -30,16 +32,14 @@ def _check_in_list(element, alist):
 
     Returns
     -------
-    boolean
+    bool
         True if element is in list else False
-
-    TODO Do we need this function?
     """
 
     return element in alist
 
 
-def _check_true(element, alist):  # true regardless of input
+def _check_true(element, alist) -> True:  # true regardless of input
     """TODO WHY?."""
 
     return True
@@ -51,7 +51,7 @@ def add_insertsize(adata,
                    fragments=None,
                    barcode_col=None,
                    barcode_tag="CB",
-                   regions=None):
+                   regions=None) -> None:
     """
     Add information on insertsize to the adata object using either a .bam-file or a fragments file.
 
@@ -127,7 +127,7 @@ def _insertsize_from_bam(bam,
                          barcode_tag="CB",
                          barcodes=None,
                          regions='chr1:1-2000000',
-                         chunk_size=100000):
+                         chunk_size=100000) -> pd.DataFrame:
     """
      insertsize distributions per barcode from bam file.
 
@@ -146,7 +146,7 @@ def _insertsize_from_bam(bam,
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
         DataFrame with insertsize distributions per barcode.
 
     Raises
@@ -256,7 +256,7 @@ def _insertsize_from_bam(bam,
     return table
 
 
-def _insertsize_from_fragments(fragments, barcodes=None):
+def _insertsize_from_fragments(fragments, barcodes=None) -> pd.DataFrame:
     """
     Get fragment insertsize distributions per barcode from fragments file.
 
@@ -269,7 +269,7 @@ def _insertsize_from_fragments(fragments, barcodes=None):
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
         DataFrame with insertsize distributions per barcode.
     """
 
@@ -327,7 +327,7 @@ def _insertsize_from_fragments(fragments, barcodes=None):
     return table
 
 
-def _add_fragment(count_dict, barcode, size, count=1):
+def _add_fragment(count_dict, barcode, size, count=1) -> dict[str, int]:
     """
     Add fragment of size 'size' to count_dict.
 
@@ -344,7 +344,7 @@ def _add_fragment(count_dict, barcode, size, count=1):
 
     Returns
     -------
-    count_dict : dict
+    dict[str, int]
         Updated count_dict
     """
 
