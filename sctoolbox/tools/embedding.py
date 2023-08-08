@@ -5,9 +5,11 @@ import multiprocessing as mp
 import sctoolbox.utils as utils
 
 
-def wrap_umap(adatas, threads=4):
+def wrap_umap(adatas, threads=4) -> None:
     """
     Compute umap for a list of adatas in parallel.
+
+    TODO Check that adatas is a list of anndata objects
 
     Parameters
     ----------
@@ -15,13 +17,6 @@ def wrap_umap(adatas, threads=4):
         List of anndata objects to compute umap on.
     threads : int, default 4
         Number of threads to use.
-
-    Returns
-    -------
-    None
-        UMAP coordinates are added to each adata.obsm["X_umap"].
-
-    TODO Check that adatas is a list of anndata objects
     """
 
     pool = mp.Pool(threads)
