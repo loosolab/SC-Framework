@@ -3,11 +3,16 @@ import re
 import os
 import pandas as pd
 import multiprocessing
+from typing import TYPE_CHECKING
+
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
+
+if TYPE_CHECKING:
+    import pysam
 
 
 def bam_adata_ov(adata, bamfile, cb_col) -> float:
@@ -411,7 +416,7 @@ def split_bam_clusters(adata,
 # ---------------------- bam helper functions ---------------------- #
 # ------------------------------------------------------------------ #
 
-def open_bam(file, mode, verbosity=3, **kwargs):
+def open_bam(file, mode, verbosity=3, **kwargs) -> pysam.AlignmentFile:
     """
     Open bam file with pysam.AlignmentFile. On a specific verbosity level.
 
@@ -487,7 +492,7 @@ def _monitor_progress(progress_queue,
                       reader_jobs,
                       writer_jobs,
                       total_reads,
-                      individual_pbars=False):
+                      individual_pbars=False) -> int:
     """
     Monitor read/write progress of split_bam_clusters.
 
