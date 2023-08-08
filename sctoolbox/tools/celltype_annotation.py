@@ -4,6 +4,8 @@ import pandas as pd
 import pkg_resources
 import copy
 import subprocess
+from typing import Optional
+import anndata
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -17,7 +19,7 @@ logger = settings.logger
 
 
 @deco.log_anndata
-def add_cellxgene_annotation(adata, csv):
+def add_cellxgene_annotation(adata, csv) -> None:
     """
     Add columns from cellxgene annotation to the adata .obs table.
 
@@ -41,9 +43,11 @@ def add_cellxgene_annotation(adata, csv):
 
 
 @deco.log_anndata
-def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
+def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype") -> dict[str, str]:
     """
     Get cell type assignment based on marker genes.
+
+    TODO make this more robust
 
     Parameters
     ----------
@@ -58,10 +62,9 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
 
     Returns
     -------
-    Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
-    Also adds the cell type assignment to adata.obs[<column_name>] in place.
-
-    TODO make this more robust
+    dict[str, str]
+        Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
+        Also adds the cell type assignment to adata.obs[<column_name>] in place.
     """
 
     # if column_name in adata.obs.columns:
@@ -118,7 +121,7 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
 #                  Predict cell types using SCSA                    #
 #####################################################################
 
-def _match_database(marker_db, input_genes):
+def _match_database(marker_db, input_genes) -> str:
     """
     Find best matching column in the marker database for the input genes.
 
@@ -196,7 +199,7 @@ def run_scsa(adata,
              tissue='All',
              user_db=None,
              celltype_column="cell_name"
-             ):
+             ) -> Optional[anndata.Anndata]:
     """
     Run SCSA cell type annotation and assign cell types to cluster in an adata object.
 
@@ -250,8 +253,9 @@ def run_scsa(adata,
 
     Returns
     -------
-    AnnData or Noen
+    Optional[anndata.Anndata]
         If inplace==False, returns adata with cell types in adata.obs
+        Else return None
 
     Raises
     ------
