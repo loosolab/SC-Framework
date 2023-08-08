@@ -96,6 +96,40 @@ def multi_ma(series, n=2, window_size=10, n_threads=8):
     return series
 
 
+def unscale(scaled_data):
+    """
+    Unscales a series array to a range of 0 to 1. If the array is 2D, the scaling is done on axis=1.
+
+    Parameters
+    ----------
+    scaled_data: array
+        Array of data to be unscaled 1D or 2D
+
+    Returns
+    -------
+    unscaled : array
+        Unscaled array
+    """
+
+    if len(scaled_data.shape) == 1:
+        # Find the minimum non-zero value
+        min_value = min(scaled_data[scaled_data > 0])
+        # Scale the data by the inverse of the minimum value
+        unscaled = (1 / min_value) * scaled_data
+
+    elif len(scaled_data.shape) == 2:
+        # Mask for non-zero elements
+        mask = scaled_data != 0
+
+        # Find the minimum non-zero value for each row
+        min_values = np.where(mask, scaled_data, np.inf).min(axis=1)
+
+        # Scale the rows by the inverse of their respective minimum values
+        unscaled = scaled_data * (1.0 / min_values)[:, np.newaxis]
+
+    return unscaled
+
+
 def scale(series_arr):
     """
     Scales a series array to a range of 0 to 1. If the array is 2D, the scaling is done on axis=1.
@@ -758,6 +792,9 @@ def density_plot(count_table, max_abundance=600):
 
     """
     count_table = count_table
+    # handle 0,1 min/max scaled count_table
+    if count_table.dtype != 'int64':
+        count_table = unscale(count_table)
     # get the maximal abundance of a fragment length over all cells
     max_value = np.max(np.around(count_table).astype(int))
     # Init empty densities list
