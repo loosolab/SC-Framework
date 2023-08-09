@@ -16,6 +16,8 @@ from matplotlib.patches import ConnectionPatch
 import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
 import warnings
+from typing import Optional
+import anndata
 
 import sctoolbox.utils.decorator as deco
 
@@ -24,7 +26,7 @@ import sctoolbox.utils.decorator as deco
 
 
 @deco.log_anndata
-def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False):
+def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False) -> Optional[anndata.AnnData]:
     r"""
     Download table of receptor-ligand interactions and store in adata.
 
@@ -55,7 +57,7 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
 
     Returns
     -------
-    anndata.AnnData or None
+    Optional[anndata.AnnData]
         If not inplace, return copy of adata with added database path and
         database table to adata.uns['receptor-ligand']
 
@@ -98,7 +100,8 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
 
 
 @deco.log_anndata
-def calculate_interaction_table(adata, cluster_column, gene_index=None, normalize=1000, inplace=False, overwrite=False):
+def calculate_interaction_table(adata, cluster_column, gene_index=None,
+                                normalize=1000, inplace=False, overwrite=False) -> Optional[anndata.AnnData]:
     """
     Calculate an interaction table of the clusters defined in adata.
 
@@ -121,7 +124,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
     Returns
     -------
-    anndata.AnnData or None
+    Optional[anndata.AnnData]
         If not inpalce, return copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
 
     Raises
@@ -263,7 +266,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None, normaliz
 
 
 @deco.log_anndata
-def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100):
+def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100) -> np.array[matplotlib.axes._subplots.AxesSubplot]:
     """
     Generate violin plot of pairwise cluster interactions.
 
@@ -282,7 +285,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
     Returns
     -------
-    numpy array of matplotlib.axes._subplots.AxesSubplot :
+    np.array[matplotlib.axes._subplots.AxesSubplot]
         Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
 
@@ -333,7 +336,7 @@ def hairball(adata,
              show_count=False,
              restrict_to=None,
              additional_nodes=None,
-             hide_edges=None):
+             hide_edges=None) -> np.array[matplotlib.axes._subplots.AxesSubplot]:
     """
     Generate network graph of interactions between clusters.
 
@@ -368,7 +371,7 @@ def hairball(adata,
 
     Returns
     -------
-    numpy array of matplotlib.axes._subplots.AxesSubplot :
+    np.array[matplotlib.axes._subplots.AxesSubplot]
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises
@@ -462,7 +465,7 @@ def hairball(adata,
     return axes
 
 
-def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)):
+def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)) -> str:
     """
     Show cluster interactions over timepoints.
 
@@ -515,7 +518,7 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
 
 
 def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster,
-                         ligand_cluster, figsize=(4, 4), dpi=100, output=None):
+                         ligand_cluster, figsize=(4, 4), dpi=100, output=None) -> matplotlib.axes.Axes:
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
 
@@ -544,7 +547,7 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
 
     Returns
     -------
-    matplotlib.Axes
+    matplotlib.axes.Axes
         The plotting object.
     """
 
@@ -618,7 +621,7 @@ def connectionPlot(adata,
                    filter=None,
                    lw_multiplier=2,
                    wspace=0.4,
-                   line_colors="rainbow"):
+                   line_colors="rainbow") -> np.array[matplotlib.axes._subplots.AxesSubplot]:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -665,7 +668,7 @@ def connectionPlot(adata,
 
     Returns
     -------
-    numpy array of matplotlib.axes._subplots.AxesSubplot :
+    np.array[matplotlib.axes._subplots.AxesSubplot]
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises
@@ -812,7 +815,7 @@ def connectionPlot(adata,
 
 
 @deco.log_anndata
-def get_interactions(anndata, min_perc=None, interaction_score=None, interaction_perc=None, group_a=None, group_b=None):
+def get_interactions(anndata, min_perc=None, interaction_score=None, interaction_perc=None, group_a=None, group_b=None) -> pd.DataFrame:
     """
     Get interaction table from anndata and apply filters.
 
@@ -833,7 +836,7 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame
         Table that contains interactions. Columns:
 
             - receptor_cluster      = name of the receptor cluster
