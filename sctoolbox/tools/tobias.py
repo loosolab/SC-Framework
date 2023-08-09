@@ -28,7 +28,7 @@ def write_TOBIAS_config(out_path,
                         plot_correction=True,
                         plot_venn=True,
                         coverage=True,
-                        wilson=True):
+                        wilson=True) -> None:
     """
     Write a TOBIAS config file from input bams/fasta/blacklist etc.
 
