@@ -594,7 +594,7 @@ def test_bidirectional_barplot(df_bidir_bar):
 
 def test_bidirectional_barplot_fail(df):
     """ test bidorectional_barplot with invalid input. """
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError, match='Column left_label not found in dataframe.'):
         pl.bidirectional_barplot(df)
 
 
