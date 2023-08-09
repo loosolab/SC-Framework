@@ -715,7 +715,7 @@ def validate_threshold_dict(table, thresholds, groupby=None) -> None:
 
 
 @deco.log_anndata
-def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
+def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
     """
     Get the thresholds for the filtering.
 
@@ -732,7 +732,7 @@ def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=T
 
     Returns
     -------
-    dict
+    dict[str, dict[str, Union[float, dict[str, float]]]]
         Dictionary containing the thresholds
     """
     manual_thresholds = get_keys(adata, manual_thresholds)
@@ -767,7 +767,7 @@ def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=T
         return manual_thresholds
 
 
-def get_keys(adata, manual_thresholds):
+def get_keys(adata, manual_thresholds) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
     """
     Get threshold dictionary with keys that overlap with adata.obs.columns.
 
@@ -780,7 +780,7 @@ def get_keys(adata, manual_thresholds):
 
     Returns
     -------
-    dict
+    dict[str, dict[str, Union[float, dict[str, float]]]]
         Dictionary with key - adata.obs.column overlap
     """
 
@@ -801,7 +801,7 @@ def get_keys(adata, manual_thresholds):
 
 
 @deco.log_anndata
-def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=True):
+def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=True) -> anndata.AnnData:
     """
     Apply QC thresholds to anndata object.
 
@@ -820,7 +820,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
 
     Returns
     -------
-    adata : AnnData
+    anndata.AnnData
         Anndata object with QC thresholds applied.
 
     Raises
@@ -978,7 +978,7 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
 
 
 @deco.log_anndata
-def filter_cells(adata, cells, remove_bool=True, inplace=True):
+def filter_cells(adata, cells, remove_bool=True, inplace=True) -> Optional[anndata.AnnData]:
     """
     Remove cells from anndata object.
 
@@ -995,7 +995,7 @@ def filter_cells(adata, cells, remove_bool=True, inplace=True):
 
     Returns
     -------
-    anndata.AnnData or None
+    Optional[anndata.AnnData]
         If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
     """
 
@@ -1005,7 +1005,7 @@ def filter_cells(adata, cells, remove_bool=True, inplace=True):
 
 
 @deco.log_anndata
-def filter_genes(adata, genes, remove_bool=True, inplace=True):
+def filter_genes(adata, genes, remove_bool=True, inplace=True) -> Optional[anndata.AnnData]:
     """
     Remove genes from adata object.
 
@@ -1022,7 +1022,7 @@ def filter_genes(adata, genes, remove_bool=True, inplace=True):
 
     Returns
     -------
-    anndata.AnnData or None
+    Optional[anndata.AnnData]
         If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
     """
 
