@@ -11,8 +11,10 @@ import getpass
 from datetime import datetime
 
 # type hint imports
-from typing import Any
-import rpy2.rinterface_lib.sexp
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import rpy2.rinterface_lib.sexp
 
 
 # ------------------ Logging about run ----------------- #
@@ -184,7 +186,7 @@ def setup_R(r_home=None) -> None:
     os.environ['R_HOME'] = r_home
 
 
-def _none2null(none_obj) -> rpy2.rinterface_lib.sexp.NULLType:
+def _none2null(none_obj) -> "rpy2.rinterface_lib.sexp.NULLType":
     """
     rpy2 converter that translates python 'None' to R 'NULL'.
 
