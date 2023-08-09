@@ -1,3 +1,5 @@
+"""Test bam related functions."""
+
 import os
 import pytest
 import sctoolbox.bam
@@ -7,7 +9,7 @@ import scanpy as sc
 
 @pytest.fixture
 def bam_handle():
-    """ Fixture for a bam file handle. """
+    """Fixture for a bam file handle."""
     bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
     handle = sctoolbox.bam.open_bam(bam_f, "rb")
 
@@ -15,11 +17,13 @@ def bam_handle():
 
 
 def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
+    """Test open_bam success."""
 
     assert type(bam_handle).__name__ == "AlignmentFile"
 
 
 def test_get_bam_reads(bam_handle):
+    """Test get_bam_reads success."""
 
     total = sctoolbox.bam.get_bam_reads(bam_handle)
 
@@ -27,6 +31,7 @@ def test_get_bam_reads(bam_handle):
 
 
 def test_split_bam_clusters(bam_handle):
+    """Test split_bam_clusters success."""
 
     bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
@@ -51,7 +56,7 @@ def test_split_bam_clusters(bam_handle):
 
 
 def test_bam_to_bigwig():
-    """ Test whether the bigwig is written. """
+    """Test whether the bigwig is written."""
 
     bigwig_out = "mm10_atac.bw"
 

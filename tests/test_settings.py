@@ -1,3 +1,5 @@
+"""Test settings class."""
+
 import pytest
 import os
 import numpy as np
@@ -18,13 +20,13 @@ config_path_nokey = os.path.join(os.path.dirname(__file__), 'data', "test_config
                           ("adata_input_dir", "data"),
                           ("threads", 4)])
 def test_valid_settings(key, value):
-    """ Test that valid settings can be set. """
+    """Test that valid settings can be set."""
     setattr(settings, key, value)
     assert hasattr(settings, key)
 
 
 def test_invalid_keys():
-    """ Assert if invalid settings raise ValueError or KeyError. """
+    """Assert if invalid settings raise ValueError or KeyError."""
 
     with pytest.raises(ValueError):
         settings.invalid_key = "value"
@@ -39,14 +41,14 @@ def test_invalid_keys():
                           ("create_dirs", 1),  # should be bool
                           ("threads", "4")])
 def test_invalid_values(key, value):
-    """ Assert that invalid values raise TypeError. """
+    """Assert that invalid values raise TypeError."""
 
     with pytest.raises(TypeError):
         setattr(settings, key, value)
 
 
 def test_logfile_verbosity():
-    """ Check that info messages to stdout respect verbosity, and that all messages (including debug) are written to log file. """
+    """Check that info messages to stdout respect verbosity, and that all messages (including debug) are written to log file."""
 
     sys.stdout = mystdout = StringIO()  # for capturing stdout
 
@@ -77,7 +79,7 @@ def test_logfile_verbosity():
 
 @pytest.mark.parametrize("key, path", [(None, config_path_nokey), ("01", config_path)])
 def test_settings_from_config(key, path):
-    """ Tests that the function is able to read the config yaml and and applies the settings. """
+    """Tests that the function is able to read the config yaml and and applies the settings."""
     settings_from_config(path, key=key)
     assert getattr(settings, "overwrite_log")
     assert getattr(settings, "log_file") == "pipeline_output/logs/01_log.txt"
@@ -85,7 +87,7 @@ def test_settings_from_config(key, path):
 
 
 def test_invalid_key_settings_from_config():
-    """ Test that apropriate Error is returned if the given key is not found in the yaml. """
+    """Test that apropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings_from_config(config_path_nokey, key="01")
     settings.reset()
