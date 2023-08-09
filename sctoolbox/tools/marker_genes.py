@@ -189,6 +189,9 @@ def run_rank_genes(adata, groupby,
     # if not isinstance(adata, AnnData):
     #     raise ValueError("adata must be an AnnData object.")
 
+    if adata.obs[groupby].dtype.name != "category":
+        adata.obs[groupby] = adata.obs[groupby].astype("category")
+
     if "log1p" in adata.uns:
         adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
