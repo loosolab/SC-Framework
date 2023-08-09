@@ -3,11 +3,14 @@
 import time
 import sctoolbox.utils as utils
 
-# type hint import
-import tqdm
+# type hint imports
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import tqdm
 
 
-def get_pbar(total, description) -> tqdm.tqdm:
+def get_pbar(total, description) -> "tqdm.tqdm":
     """
     Get a progress bar depending on whether the user is using a notebook or not.
 
