@@ -200,7 +200,7 @@ def run_scsa(adata,
              tissue='All',
              user_db=None,
              celltype_column="cell_name"
-             ) -> Optional[anndata.Anndata]:
+             ) -> Optional[anndata.AnnData]:
     """
     Run SCSA cell type annotation and assign cell types to cluster in an adata object.
 
@@ -254,7 +254,7 @@ def run_scsa(adata,
 
     Returns
     -------
-    Optional[anndata.Anndata]
+    Optional[anndata.AnnData]
         If inplace==False, returns adata with cell types in adata.obs
         Else return None
 

@@ -416,7 +416,7 @@ def split_bam_clusters(adata,
 # ---------------------- bam helper functions ---------------------- #
 # ------------------------------------------------------------------ #
 
-def open_bam(file, mode, verbosity=3, **kwargs) -> pysam.AlignmentFile:
+def open_bam(file, mode, verbosity=3, **kwargs) -> "pysam.AlignmentFile":
     """
     Open bam file with pysam.AlignmentFile. On a specific verbosity level.
 
@@ -433,7 +433,7 @@ def open_bam(file, mode, verbosity=3, **kwargs) -> pysam.AlignmentFile:
 
     Returns
     -------
-    pysam.AlignmentFile :
+    "pysam.AlignmentFile"
         Object to work on SAM/BAM files.
     """
 

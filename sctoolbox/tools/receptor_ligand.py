@@ -266,7 +266,7 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None,
 
 
 @deco.log_anndata
-def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100) -> np.array[matplotlib.axes._subplots.AxesSubplot]:
+def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100) -> np.array:
     """
     Generate violin plot of pairwise cluster interactions.
 
@@ -285,7 +285,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
     Returns
     -------
-    np.array[matplotlib.axes._subplots.AxesSubplot]
+    np.array
         Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
 
@@ -336,7 +336,7 @@ def hairball(adata,
              show_count=False,
              restrict_to=None,
              additional_nodes=None,
-             hide_edges=None) -> np.array[matplotlib.axes._subplots.AxesSubplot]:
+             hide_edges=None) -> np.array:
     """
     Generate network graph of interactions between clusters.
 
@@ -371,7 +371,7 @@ def hairball(adata,
 
     Returns
     -------
-    np.array[matplotlib.axes._subplots.AxesSubplot]
+    np.array
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises
@@ -621,7 +621,7 @@ def connectionPlot(adata,
                    filter=None,
                    lw_multiplier=2,
                    wspace=0.4,
-                   line_colors="rainbow") -> np.array[matplotlib.axes._subplots.AxesSubplot]:
+                   line_colors="rainbow") -> np.array:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -668,7 +668,7 @@ def connectionPlot(adata,
 
     Returns
     -------
-    np.array[matplotlib.axes._subplots.AxesSubplot]
+    np.array
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises
