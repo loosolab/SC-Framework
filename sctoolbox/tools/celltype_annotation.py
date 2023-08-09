@@ -163,7 +163,8 @@ def _match_database(marker_db, input_genes) -> str:
 
 
 def _get_rank_genes(d) -> list:
-    """Get a list of unique rank genes from the nested adata.uns["rank_genes_groups"] dictionary.
+    """
+    Get a list of unique rank genes from the nested adata.uns["rank_genes_groups"] dictionary.
 
     Parameters
     ----------
