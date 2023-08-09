@@ -433,7 +433,7 @@ def open_bam(file, mode, verbosity=3, **kwargs) -> "pysam.AlignmentFile":
 
     Returns
     -------
-    "pysam.AlignmentFile"
+    pysam.AlignmentFile
         Object to work on SAM/BAM files.
     """
 

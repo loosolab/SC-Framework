@@ -11,6 +11,8 @@
 - Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
 - Increase test coverage for plotting functions (#126)
 - Apply fixes to bugs found by increasing the test coverage.
+- Added type hinting to functions.
+- Revised doc-strings.
 
 Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
 - Fixed assembling atac notebook 01
