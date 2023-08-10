@@ -133,7 +133,7 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
 def test_run_rank_genes(adata):
     """Test ranking genes function."""
 
-    adata.uns["log1p"] = {"base": [1,2,3]}
+    adata.uns["log1p"] = {"base": [1, 2, 3]}
     mg.run_rank_genes(adata, groupby="samples", n_genes=10)
     assert adata.uns["rank_genes_groups"]
 
