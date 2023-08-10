@@ -170,7 +170,7 @@ def test_filter_cells(adata):
 @pytest.mark.parametrize("which, to_filter", [("obs", ["AAACCCACAGCCTATA", "AAACCCACAGGGCTTC"]),
                                               ("var", ["ENSMUSG00000051951", "ENSMUSG00000102851"])])
 def test_filter_object(adata, which, to_filter):
-    """ Test wheter cells/genes are filtered based on list of cells/genes. """
+    """Test whether cells/genes are filtered based on a list of cells/genes."""
     adata = adata.copy()  # copy adata to avoid inplace changes
     qc._filter_object(adata, to_filter, which=which)
     table = adata.obs if which == "obs" else adata.var
@@ -178,7 +178,7 @@ def test_filter_object(adata, which, to_filter):
 
 
 def test_filter_object_fail(adata):
-    """ Test wheter invlid input raises correct errors. """
+    """Test whether invalid input raises the correct errors."""
     adata = adata.copy()
     adata.obs["notbool"] = np.random.choice(a=[False, True, np.nan], size=adata.shape[0])
     with pytest.raises(ValueError, match="Column notbool contains values that are not of type boolean"):
