@@ -353,7 +353,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     # Try to flatten for adata.X beeing matrix or np-ndarray. If not flatten for scipy sparse matrix
     try:
         adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].flatten()
-    except:
+    except AttributeError:
         adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].todense().A1
 
     # Estimate which samples are male/female
