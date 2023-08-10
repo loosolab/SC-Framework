@@ -11,6 +11,7 @@
 - Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
 - Increase test coverage for plotting functions (#126)
 - Apply fixes to bugs found by increasing the test coverage.
+- Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 
 Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
 - Fixed assembling atac notebook 01
