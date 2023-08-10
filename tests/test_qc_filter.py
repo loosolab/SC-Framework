@@ -169,7 +169,7 @@ def test_filter_cells(adata):
 
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
 def test_predict_sex(caplog, adata, threshold):
-
+    """Test if predict_sex."""
     adata = adata.copy()  # copy adata to avoid inplace changes
 
     # gene not in data
@@ -183,7 +183,7 @@ def test_predict_sex(caplog, adata, threshold):
 
 
 def test_predict_sex_diff_types(caplog, adata):
-    """Test predict sex for different adata.X types."""
+    """Test predict_sex for different adata.X types."""
 
     adata_ndarray = adata.copy()
     adata_ndarray.X = adata_ndarray.X.toarray()
