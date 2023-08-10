@@ -179,7 +179,8 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
 
 
 @deco.log_anndata
-def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
+def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True,
+                      groupby=None, threads=4, fill_na=True, **kwargs):
     """
     Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
     as well as a "scrublet" key in adata.uns.
@@ -197,7 +198,12 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     plot : bool, default True
         Whether to plot the doublet score distribution.
     groupby : str, default None
-        Key in adata.obs to use for batching during doublet estimation. If threads > 1, the adata is split into separate runs across threads. Otherwise each batch is run separately.
+        Key in adata.obs to use for batching during doublet estimation. If threads > 1,
+        the adata is split into separate runs across threads. Otherwise each batch is run separately.
+    fill_na : bool, default True
+        If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
+        a doublet score. Keep in mind that this does not mean that it is no doublet.
+        By setting this parameter true it is assmuned that it is no doublet.
     **kwargs :
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
@@ -263,6 +269,9 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     adata.obs["doublet_score"] = obs_table["doublet_score"]
     adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
     adata.uns["scrublet"] = uns_dict
+
+    if fill_na:
+        utils.fill_na(adata.obs)
 
     # Check if all values in colum are of type boolean
     if adata.obs["predicted_doublet"].dtype.name != "bool":
