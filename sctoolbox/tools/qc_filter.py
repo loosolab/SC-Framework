@@ -274,7 +274,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True,
         utils.fill_na(adata.obs)
 
     # Check if all values in colum are of type boolean
-    if adata.obs["predicted_doublet"].dtype.name != "bool":
+    if adata.obs["predicted_doublet"].dtype != "bool":
         logger.warning("Could not estimate doublets for every barcode. Columns can contain NAN values.")
 
     # Plot the distribution of scrublet scores

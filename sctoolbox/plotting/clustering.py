@@ -175,12 +175,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
         axarr = [axarr]  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
-    marker_genes_dict = marker_genes_dict.copy()
-    for group in list(marker_genes_dict.keys()):
-        genes = marker_genes_dict[group]
-        marker_genes_dict[group] = [gene for gene in genes if gene in adata.var_names]
-        if len(marker_genes_dict[group]) == 0:
-            del marker_genes_dict[group]  # Remove group if no genes are left in the data
+    marker_genes_dict = utils.check_marker_lists(adata, marker_genes_dict)
 
     # Plot marker gene expression on the right
     ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])
