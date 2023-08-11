@@ -328,6 +328,10 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     save : str, default None
         If provided, the plot will be saved to this path.
 
+    Notes
+    -----
+    adata.X will be converted to numpy.ndarray if it is of type numpy.matrix.
+
     Returns
     -------
     None :
@@ -350,7 +354,11 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         logger.info("Selected gene is not present in the data. Prediction is skipped.")
         return
 
-    # Try to flatten for adata.X beeing matrix or np-ndarray. If not flatten for scipy sparse matrix
+    # If adata.X is of type amtrx convert to ndarray
+    if isinstance(adata_copy.X, np.matrix):
+        adata_copy.X = adata_copy.X.getA()
+
+    # Try to flatten for adata.X np.ndarray. If not flatten for scipy sparse matrix
     try:
         adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].flatten()
     except AttributeError:
