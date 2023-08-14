@@ -354,7 +354,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         logger.info("Selected gene is not present in the data. Prediction is skipped.")
         return
 
-    # If adata.X is of type amtrx convert to ndarray
+    # If adata.X is of type matrix convert to ndarray
     if isinstance(adata_copy.X, np.matrix):
         adata_copy.X = adata_copy.X.getA()
 
