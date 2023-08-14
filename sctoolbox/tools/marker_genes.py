@@ -118,19 +118,6 @@ def label_genes(adata, species, gene_column=None):
         adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
     var_cols.append("is_mito")
 
-    # Annotate cell cycle genes
-    path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
-    if os.path.exists(path_cellcycle_genes):
-        table = pd.read_csv(path_cellcycle_genes, header=None, sep="\t")
-        cc_dict = dict(zip(table[0], table[1]))
-
-        adata.var["cellcycle"] = [cc_dict.get(gene, "NA") for gene in adata_genes]  # assigns cell cycle phase or "NA"
-        var_cols.append("cellcycle")
-    else:
-        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
-        logger.warning(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
-
     # Annotate gender genes
     path_gender_genes = genelist_dir + species + "_gender_genes.txt"
     if os.path.exists(path_gender_genes):
