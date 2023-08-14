@@ -937,7 +937,7 @@ def anndata_overview(adatas,
 
                 # Plot depending on type
                 if plot_type == "PCA-var":
-                    plot_pca_variance(adata, ax=ax)  # this plot takes no color
+                    plot_pca_variance(adata, ax=ax, show_cumulative=False)  # this plot takes no color
 
                 elif plot_type == "LISI":
 
@@ -950,10 +950,8 @@ def anndata_overview(adatas,
                         raise ValueError(e)
 
                     # Plot LISI scores
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
-                        boxplot(adata.obs[lisi_columns], ax=ax)
-                        LISI_axes.append(ax)
+                    boxplot(adata.obs[lisi_columns], ax=ax)
+                    LISI_axes.append(ax)
 
                 else:
                     with warnings.catch_warnings():
@@ -1025,6 +1023,7 @@ def anndata_overview(adatas,
 def plot_pca_variance(adata, method="pca",
                       n_pcs=20,
                       n_selected=None,
+                      show_cumulative=True,
                       ax=None,
                       save=None):
     """
@@ -1088,20 +1087,22 @@ def plot_pca_variance(adata, method="pca",
                 ax=ax)
 
     # Plot cumulative variance
-    ax2 = ax.twinx()
-    ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
-    ax2.set_ylabel("Cumulative variance explained (%)", color="blue", fontsize=12)
-    ax2.spines['right'].set_color('blue')
-    ax2.yaxis.label.set_color('blue')
-    ax2.tick_params(axis='y', colors='blue')
+    if show_cumulative:
+        ax2 = ax.twinx()
+        ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
+        ax2.set_ylabel("Cumulative variance explained (%)", color="blue", fontsize=12)
+        ax2.spines['right'].set_color('blue')
+        ax2.yaxis.label.set_color('blue')
+        ax2.tick_params(axis='y', colors='blue')
 
     # Add number of selected as line
     if n_selected is not None:
-        ylim = ax2.get_ylim()
-        yrange = ylim[1] - ylim[0]
-        ax2.set_ylim(ylim[0], ylim[1] + yrange * 0.1)  # add 10% to make room for legend of n_seleced line
-        ax2.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
-        ax2.legend()
+        if show_cumulative:
+            ylim = ax2.get_ylim()
+            yrange = ylim[1] - ylim[0]
+            ax2.set_ylim(ylim[0], ylim[1] + yrange * 0.1)  # add 10% to make room for legend of n_seleced line
+        ax.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
+        ax.legend()
 
     # Finalize plot
     ax.set_xlabel('Principal components', fontsize=12, labelpad=10)
@@ -1115,12 +1116,14 @@ def plot_pca_variance(adata, method="pca",
     return ax
 
 
+@deco.log_anndata
 def plot_pca_correlation(adata, which="obs",
                          n_pcs=10,
                          columns=None,
                          pvalue_threshold=0.01,
                          method="spearmanr",
                          figsize=None,
+                         title=None,
                          save=None):
     """
     Plot a heatmap of the correlation between the first n_pcs and the given columns.
@@ -1186,6 +1189,7 @@ def plot_pca_correlation(adata, which="obs",
                 raise KeyError(f"Column '{col}' was not found in table.")
 
     # Get table of pcs and columns
+    n_pcs = min(n_pcs, mat.shape[1])  # make sure we don't exceed the number of pcs available
     pc_columns = [f"PC{i+1}" for i in range(n_pcs)]
     pc_table = pd.DataFrame(mat[:, :n_pcs], columns=pc_columns)
     pc_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
@@ -1213,7 +1217,7 @@ def plot_pca_correlation(adata, which="obs",
                      annot_kws={"fontsize": 9},
                      cbar_kws={"label": method},
                      cmap="seismic",
-                     center=0,
+                     vmin=-1, vmax=1,  # center is 0
                      ax=ax)
     ax.set_aspect(0.8)
 
@@ -1231,6 +1235,10 @@ def plot_pca_correlation(adata, which="obs",
     for ax_obj in [ax, cbar_ax]:
         for _, spine in ax_obj.spines.items():
             spine.set_visible(True)
+
+    # Add title
+    if title is not None:
+        ax.set_title(str(title))
 
     # Save figure
     _save_figure(save)
