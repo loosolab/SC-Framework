@@ -7,6 +7,7 @@ from scipy.stats import zscore
 
 # for plotting
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -618,9 +619,9 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     return ax
 
 
-def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, save=None):
+def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, save=None) -> list[matplotlib.axes.Axes]:
     """
-    Plot gene expression of one refrence gene against teh expression of a set of genes.
+    Plot gene expression of one refrence gene against the expression of a set of genes.
 
     Parameters
     ---------
@@ -637,7 +638,7 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
 
     Returns
     -------
-    axes_list : list
+    list[matplotlib.axes.Axes]
         List containing all axis objects.
 
     EXAMPLE
@@ -654,6 +655,7 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
         gene_list=("HES4", "PRMT2", "ITGB2")
         pl.plot_gene_correlation(adata, "Xkr4", gene_list)
     """
+
     if isinstance(gene_list, str):
         gene_list = [gene_list]
 
