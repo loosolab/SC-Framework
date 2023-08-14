@@ -2,7 +2,6 @@ import pytest
 import os
 import scanpy as sc
 import numpy as np
-import tempfile
 import sctoolbox.marker_genes as mg
 
 
@@ -41,40 +40,6 @@ def adata_score(adata):
 
 
 @pytest.fixture
-def s_genes(adata_score):
-    return adata_score.var.index[:int(len(adata_score.var) / 2)].tolist()
-
-
-@pytest.fixture
-def g2m_genes(adata_score):
-    return adata_score.var.index[int(len(adata_score.var) / 2):].tolist()
-
-
-@pytest.fixture
-def g2m_file(g2m_genes):
-    """ Write a tmp file, which is deleted after usage. """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = os.path.join(tmpdir, "g2m_genes.txt")
-
-        with open(tmp, "w") as f:
-            f.writelines([g + "\n" for g in g2m_genes])
-
-        yield tmp
-
-
-@pytest.fixture
-def s_file(s_genes):
-    """ Write a tmp file, which is deleted after usage. """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = os.path.join(tmpdir, "s_genes.txt")
-
-        with open(tmp, "w") as f:
-            f.writelines([g + "\n" for g in s_genes])
-
-        yield tmp
-
-
-@pytest.fixture
 def gene_set(adata_score):
     return adata_score.var.index.to_list()[:50]
 
@@ -97,8 +62,7 @@ def test_get_chromosome_genes():
 
 
 @pytest.mark.parametrize("species, gene_column", [("mouse", None),
-                                                  ("unicorn", "gene"),
-                                                  (None, None)])
+                                                  ("unicorn", "gene")])
 def test_label_genes(adata, species, gene_column):
     """ Test of genes are labeled in adata.var """
 
@@ -109,13 +73,13 @@ def test_label_genes(adata, species, gene_column):
     else:
         mg.label_genes(adata, gene_column=gene_column, species=species)
 
-        added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
-        missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
+    added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
+    missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
 
-        if species == "mouse":
-            assert len(missing) == 0
-        else:
-            assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender and cellcycle are not added
+    if species == "mouse":
+        assert len(missing) == 0
+    else:
+        assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender and cellcycle are not added
 
 
 def test_get_rank_genes_tables(adata):
@@ -144,37 +108,6 @@ def test_mask_rank_genes(adata):
 
 
 @pytest.mark.parametrize(
-    "species, s_genes, g2m_genes, inplace",
-    [
-        # ("mouse", None, None, False),  # can not test on species as no cell cycle genes are present in testdata
-        (None, "s_file", "g2m_file", True),
-        (None, "s_genes", "g2m_genes", True),
-        ("unicorn", None, None, False)
-    ],
-    indirect=["s_genes", "g2m_genes"]
-)
-def test_predict_cell_cycle(adata_score, species, s_genes, g2m_genes, inplace):
-    """ Test if cell cycle is predicted and added to adata.obs """
-    expected_columns = ["S_score", "G2M_score", "phase"]
-
-    assert not any(c in adata_score.obs.columns for c in expected_columns)
-
-    if species == "unicorn":
-        with pytest.raises(ValueError):
-            mg.predict_cell_cycle(adata_score, species=species)
-            return
-
-    out = mg.predict_cell_cycle(adata_score, species=species, s_genes=s_genes, g2m_genes=g2m_genes, inplace=inplace)
-
-    if inplace:
-        assert out is None
-        assert all(c in adata_score.obs.columns for c in expected_columns)
-    else:
-        assert not any(c in adata_score.obs.columns for c in expected_columns)
-        assert all(c in out.obs.columns for c in expected_columns)
-
-
-@pytest.mark.parametrize(
     "score_name, gene_set, inplace",
     [
         ("test1", "gene_set", False),
@@ -195,6 +128,24 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
     else:
         assert score_name not in adata_score.obs.columns
         assert score_name in out.obs.columns
+
+
+def test_run_rank_genes(adata):
+    """Test ranking genes function."""
+
+    adata.uns["log1p"] = {"base": [1, 2, 3]}
+    mg.run_rank_genes(adata, groupby="samples", n_genes=10)
+    assert adata.uns["rank_genes_groups"]
+
+
+def test_run_rank_genes_fail(adata):
+    """Test if invalid input is catched."""
+
+    adata = adata.copy()
+    adata.obs["invalid_cat"] = "invalid"
+
+    with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
+        mg.run_rank_genes(adata, groupby="invalid_cat")
 
 
 # Outcommented because the CI job currently does not have R and DESeq2 installed

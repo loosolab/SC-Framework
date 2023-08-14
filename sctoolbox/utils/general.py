@@ -5,6 +5,42 @@ from os.path import join, dirname, exists
 import subprocess
 import shutil
 from pathlib import Path
+import getpass
+from datetime import datetime
+
+
+# ------------------ Logging about run ----------------- #
+
+def get_user():
+    """ Get the name of the current user.
+
+    Returns
+    -------
+    str
+        The name of the current user.
+    """
+
+    try:
+        username = getpass.getuser()
+    except Exception:
+        username = "unknown"
+
+    return username
+
+
+def get_datetime():
+    """ Get a string with the current date and time for logging.
+
+    Returns
+    -------
+    str
+        A string with the current date and time in the format dd/mm/YY H:M:S
+    """
+
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")  # dd/mm/YY H:M:S
+
+    return dt_string
 
 
 # ------------------ Packages and tools ----------------- #

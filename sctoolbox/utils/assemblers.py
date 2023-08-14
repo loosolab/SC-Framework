@@ -10,6 +10,8 @@ from scipy.io import mmread
 import anndata as ad
 
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 #####################################################################
@@ -54,6 +56,7 @@ def assemble_from_h5ad(h5ad_files,
 
         adata = sc.read_h5ad(h5ad_path)
         if set_index:
+            logger.info("formatting index")
             utils.format_index(adata, index_from)
 
         # Establish columns for coordinates
@@ -63,6 +66,8 @@ def assemble_from_h5ad(h5ad_files,
             utils.check_columns(adata.var, coordinate_cols,
                                 "coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
+        # Format coordinate columns
+        logger.info("formatting coordinate columns")
         utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
 
         # check if the barcode is the index otherwise set it
@@ -130,12 +135,12 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
             raise FileNotFoundError(f"File '{f}' was not found. Please check that path contains the full output of starsolo.")
 
     # Setup main adata object from matrix/barcodes/genes
-    print("Setting up adata from solo files")
+    logger.info("Setting up adata from solo files")
     adata = from_single_mtx(matrix_f, barcodes_f, genes_f, header=header)
     adata.var.columns = ["gene", "type"]  # specific to the starsolo format
 
     # Add in velocity information
-    print("Adding velocity information from spliced/unspliced/ambiguous")
+    logger.info("Adding velocity information from spliced/unspliced/ambiguous")
     spliced = sparse.csr_matrix(mmread(spliced_f).transpose())
     unspliced = sparse.csr_matrix(mmread(unspliced_f).transpose())
     ambiguous = sparse.csr_matrix(mmread(ambiguous_f).transpose())
@@ -179,7 +184,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     # Establishing which samples to use for assembly
     sample_dirs = glob.glob(os.path.join(path, "*"))
     sample_names = [os.path.basename(x) for x in sample_dirs]
-    print(f"Found samples: {sample_names}")
+    logger.info(f"Found samples: {sample_names}")
 
     # Subset to use_samples if they are provided
     if use_samples is not None:
@@ -187,7 +192,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         sample_names = [sample_names[i] for i in idx]
         sample_dirs = [sample_dirs[i] for i in idx]
 
-        print(f"Using samples: {sample_names}")
+        logger.info(f"Using samples: {sample_names}")
         if len(sample_names) == 0:
             raise ValueError("None of the given 'use_samples' match the samples found in the directory.")
 
@@ -195,7 +200,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     adata_list = []
     for sample_name, sample_dir in zip(sample_names, sample_dirs):
 
-        print(f"Assembling sample '{sample_name}'")
+        logger.info(f"Assembling sample '{sample_name}'")
         solo_dir = os.path.join(sample_dir, "solo")
         adata = from_single_starsolo(solo_dir, dtype=dtype)
 
@@ -212,7 +217,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         adata_list.append(adata)
 
     # Concatenating the adata objects
-    print("Concatenating anndata objects")
+    logger.info("Concatenating anndata objects")
     adata = adata_list[0].concatenate(adata_list[1:], join="outer")
 
     # Add information to uns

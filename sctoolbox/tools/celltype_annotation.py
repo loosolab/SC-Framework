@@ -5,12 +5,17 @@ import copy
 import subprocess
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 #####################################################################
 #                 Celltypes loaded from cellxgene                   #
 #####################################################################
 
+
+@deco.log_anndata
 def add_cellxgene_annotation(adata, csv):
     """
     Add columns from cellxgene annotation to the adata .obs table.
@@ -36,6 +41,8 @@ def add_cellxgene_annotation(adata, csv):
 #              Predict cell types from marker genes dict            #
 #####################################################################
 
+
+@deco.log_anndata
 def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
     """
     Get cell type assignment based on marker genes.
@@ -140,10 +147,10 @@ def _match_database(marker_db, input_genes):
             best_column = column
 
     if highest_perc == 0:
-        print("No match found in the marker database")
+        logger.info("No match found in the marker database")
         sys.exit()
 
-    print(f"Best match between input genes and database were found in column '{best_column}' with {n_overlap} genes ({highest_perc:.1f}%)")
+    logger.info(f"Best match between input genes and database were found in column '{best_column}' with {n_overlap} genes ({highest_perc:.1f}%)")
 
     return best_column
 
@@ -170,6 +177,7 @@ def _get_rank_genes(d):
     return genes
 
 
+@deco.log_anndata
 def run_scsa(adata,
              gene_column=None,
              gene_symbol='auto',
@@ -287,8 +295,8 @@ def run_scsa(adata,
 
     # ---- Find out which gene symbol to use ---- #
     all_genes = _get_rank_genes(result)
-    print("Found {} genes from input ranked genes".format(len(all_genes)))
-    print("Checking if genes are in the database...")
+    logger.info("Found {} genes from input ranked genes".format(len(all_genes)))
+    logger.info("Checking if genes are in the database...")
 
     # Read database and find best matching gene column
     gene_column = _match_database(marker_db, all_genes)
@@ -316,7 +324,7 @@ def run_scsa(adata,
     scsa_cmd += f"--cellcol {celltype_column} --genecol {gene_column}"
 
     # ---- run SCSA command ---- #
-    print('Running SCSA...')
+    logger.info('Running SCSA...')
     p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = p.stderr
     stdout = p.stdout
@@ -335,9 +343,9 @@ def run_scsa(adata,
     df_max = df_max.astype(str)
     dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
 
-    print(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
+    logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
     for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
-        print(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
+        logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
     # Save results to uns dictionary
     scsa_uns_dict = {"SCSA": {"results": df,

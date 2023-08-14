@@ -5,8 +5,12 @@ import warnings
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
+@deco.log_anndata
 def search_clustering_parameters(adata,
                                  method="leiden",
                                  resolution_range=(0.1, 1, 0.1),
@@ -92,13 +96,13 @@ def search_clustering_parameters(adata,
     for i, res in enumerate(resolutions):
 
         if verbose is True:
-            print(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
+            logger.info(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
 
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
         adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
-        n_clusters = len(adata.obs[key_added].cat.categories)
+        n_clusters = adata.obs[key_added].nunique()
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
@@ -116,6 +120,7 @@ def search_clustering_parameters(adata,
     return axarr
 
 
+@deco.log_anndata
 def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
     """ Plot an overview of marker genes and clustering.
 
@@ -170,12 +175,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
         axarr = [axarr]  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
-    marker_genes_dict = marker_genes_dict.copy()
-    for group in list(marker_genes_dict.keys()):
-        genes = marker_genes_dict[group]
-        marker_genes_dict[group] = [gene for gene in genes if gene in adata.var_names]
-        if len(marker_genes_dict[group]) == 0:
-            del marker_genes_dict[group]  # Remove group if no genes are left in the data
+    marker_genes_dict = utils.check_marker_lists(adata, marker_genes_dict)
 
     # Plot marker gene expression on the right
     ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])

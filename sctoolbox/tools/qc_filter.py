@@ -4,8 +4,9 @@ import scanpy as sc
 import multiprocessing as mp
 import warnings
 import anndata
+import pkg_resources
+import glob
 from pathlib import Path
-from importlib.resources import files
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
@@ -15,12 +16,16 @@ import matplotlib.pyplot as plt
 import sctoolbox
 import sctoolbox.utils as utils
 from sctoolbox.plotting import _save_figure
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
 
+@deco.log_anndata
 def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
     """
     Calculating the qc metrics using `scanpy.pp.calculate_qc_metrics`.
@@ -61,6 +66,7 @@ def calculate_qc_metrics(adata, percent_top=None, inplace=False, **kwargs):
         return adata
 
 
+@deco.log_anndata
 def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=True):
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -95,34 +101,26 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     if not inplace:
         adata = adata.copy()
 
-    # if two lists are given, check if they are lists or paths
-    if s_genes is not None:
-        if isinstance(s_genes, np.ndarray):
-            s_genes = list(s_genes)
-        # check if s_genes is neither a list nor a path
-        if not isinstance(s_genes, str) and not isinstance(s_genes, list):
-            raise ValueError("Please provide a list of genes or a path to a list of genes!")
-        # check if s_genes is a file
-        if isinstance(s_genes, str):
-            # check if file exists
-            if Path(s_genes).is_file():
-                s_genes = utils.read_list_file(s_genes)
-            else:
-                raise FileNotFoundError(f'The list {s_genes} was not found!')
+    # Check if the given s_genes/g2m_genes are lists/paths/None
+    genes_dict = {"s_genes": s_genes, "g2m_genes": g2m_genes}
+    for key, genes in genes_dict.items():
+        if genes is not None:
+            # check if s_genes is a file or list
+            if isinstance(genes, str):
+                if Path(genes).is_file():  # check if file exists
+                    genes = utils.read_list_file(genes)
+                else:
+                    raise FileNotFoundError(f'The file {genes} was not found!')
+            elif isinstance(s_genes, np.ndarray):
+                genes = list(genes)
+            elif not isinstance(genes, list):
+                raise ValueError(f"Please provide a list of genes or a path to a list of genes to s_genes/g2m_genes! Type of {key} is {type(genes)}")
 
-    if g2m_genes is not None:
-        if isinstance(g2m_genes, np.ndarray):
-            g2m_genes = list(g2m_genes)
-        # check if g2m_genes is neither a list nor a path
-        if not isinstance(g2m_genes, str) and not isinstance(g2m_genes, list):
-            raise ValueError("Please provide a list of genes or a path to a list of genes!")
-        # check if g2m_genes is a file
-        if isinstance(g2m_genes, str):
-            # check if file exists
-            if Path(g2m_genes).is_file():
-                g2m_genes = utils.read_list_file(g2m_genes)
-            else:
-                raise FileNotFoundError(f'The list {g2m_genes} was not found!')
+        # Save genes
+        if key == "s_genes":
+            s_genes = genes
+        elif key == "g2m_genes":
+            g2m_genes = genes
 
     # if two lists are given, use both and ignore species
     if s_genes is not None and g2m_genes is not None:
@@ -133,25 +131,30 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
         species = species.lower()
 
         # get path of directory where cell cycles gene lists are saved
-        genelist_dir = files(__name__.split('.')[0]).joinpath("data/gene_lists/")
+        genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
         # check if given species is available
-        available_files = [str(path) for path in list(genelist_dir.glob("*_cellcycle_genes.txt"))]
+        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
         if species not in available_species:
+            logger.debug("Species was not found in available species!")
+            logger.debug(f"genelist_dir: {genelist_dir}")
+            logger.debug(f"available_files: {available_files}")
+            logger.debug(f"All files in dir: {glob.glob(genelist_dir + '*')}")
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
         # get cellcylce genes lists
-        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
+        path_cellcycle_genes = genelist_dir + f"{species}_cellcycle_genes.txt"
         cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
                                        sep="\t", names=['gene', 'phase']).set_index('gene')
+        logger.debug(f"Read {len(cell_cycle_genes)} cell cycle genes list from file: {path_cellcycle_genes}")
 
         # if one list is given as input, get the other list from gene lists dir
         if s_genes is not None:
-            print("g2m_genes list is missing! Using default list instead")
+            logger.info("g2m_genes list is missing! Using default list instead")
             g2m_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['g2m_genes'])].index.tolist()
         elif g2m_genes is not None:
-            print("s_genes list is missing! Using default list instead")
+            logger.info("s_genes list is missing! Using default list instead")
             s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
         else:
             s_genes = cell_cycle_genes[cell_cycle_genes['phase'].isin(['s_genes'])].index.tolist()
@@ -171,14 +174,13 @@ def predict_cell_cycle(adata, species, s_genes=None, g2m_genes=None, inplace=Tru
     adata.obs['G2M_score'] = sdata.obs['G2M_score']
     adata.obs['phase'] = sdata.obs['phase']
 
-    # Add phase to uns
-    utils.add_uns_info(adata, "obs_metrics", "phase", how="append")
-
     if not inplace:
         return adata
 
 
-def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=None, threads=4, **kwargs):
+@deco.log_anndata
+def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True,
+                      groupby=None, threads=4, fill_na=True, **kwargs):
     """
     Estimate doublet cells using scrublet. Adds additional columns "doublet_score" and "predicted_doublet" in adata.obs,
     as well as a "scrublet" key in adata.uns.
@@ -196,7 +198,12 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     plot : bool, default True
         Whether to plot the doublet score distribution.
     groupby : str, default None
-        Key in adata.obs to use for batching during doublet estimation. If threads > 1, the adata is split into separate runs across threads. Otherwise each batch is run separately.
+        Key in adata.obs to use for batching during doublet estimation. If threads > 1,
+        the adata is split into separate runs across threads. Otherwise each batch is run separately.
+    fill_na : bool, default True
+        If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
+        a doublet score. Keep in mind that this does not mean that it is no doublet.
+        By setting this parameter true it is assmuned that it is no doublet.
     **kwargs :
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
@@ -218,7 +225,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
             pool = mp.Pool(threads, maxtasksperchild=1)  # maxtasksperchild to avoid memory leaks
 
             # Run scrublet for each sub data
-            print("Sending {0} batches to {1} threads".format(len(all_groups), threads))
+            logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
             jobs = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
 
@@ -236,7 +243,7 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
         else:
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
-                print("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
+                logger.info("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
                 res = _run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)
                 results.append(res)
 
@@ -263,12 +270,17 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True, groupby=No
     adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
     adata.uns["scrublet"] = uns_dict
 
+    if fill_na:
+        adata.obs[["doublet_score", "predicted_doublet"]] = (
+            utils.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
+
+    # Check if all values in colum are of type boolean
+    if adata.obs["predicted_doublet"].dtype != "bool":
+        logger.warning("Could not estimate doublets for every barcode. Columns can contain NAN values.")
+
     # Plot the distribution of scrublet scores
     if plot is True:
         sc.external.pl.scrublet_score_distribution(adata)
-
-    # Save "doublet_score" as a metric for plotting obs
-    utils.add_uns_info(adata, "obs_metrics", "doublet_score", how="append")
 
     # Return adata (or None if inplace)
     if inplace is False:
@@ -308,6 +320,7 @@ def _run_scrublet(adata, **kwargs):
     return (adata.obs, adata.uns["scrublet"])
 
 
+@deco.log_anndata
 def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, plot=True, save=None):
     """
     Function for predicting sex based on expression of Xist (or another gene).
@@ -326,6 +339,12 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         Threshold for the minimum fraction of cells expressing the gene for the group to be considered "Female".
     plot : bool, default True
         Whether to plot the distribution of gene expression per group.
+    save : str, default None
+        If provided, the plot will be saved to this path.
+
+    Notes
+    -----
+    adata.X will be converted to numpy.ndarray if it is of type numpy.matrix.
 
     Returns
     -------
@@ -334,7 +353,7 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     """
 
     # Normalize data before estimating expression
-    print("Normalizing adata")
+    logger.info("Normalizing adata")
     adata_copy = adata.copy()  # ensure that adata is not changed during normalization
     sc.pp.normalize_total(adata_copy, target_sum=None)
     sc.pp.log1p(adata_copy)
@@ -346,12 +365,21 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         gene_names_lower = [s.lower() for s in adata_copy.var[gene_column]]
     gene_index = [i for i, gene_name in enumerate(gene_names_lower) if gene_name == gene.lower()]
     if len(gene_index) == 0:
-        print("Selected gene is not present in the data. Prediction is skipped.")
+        logger.info("Selected gene is not present in the data. Prediction is skipped.")
         return
-    adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].todense().A1
+
+    # If adata.X is of type matrix convert to ndarray
+    if isinstance(adata_copy.X, np.matrix):
+        adata_copy.X = adata_copy.X.getA()
+
+    # Try to flatten for adata.X np.ndarray. If not flatten for scipy sparse matrix
+    try:
+        adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].flatten()
+    except AttributeError:
+        adata_copy.obs["gene_expr"] = adata_copy.X[:, gene_index].todense().A1
 
     # Estimate which samples are male/female
-    print("Estimating male/female per group")
+    logger.info("Estimating male/female per group")
     assignment = {}
     for group, table in adata_copy.obs.groupby(groupby):
         n_cells = len(table)
@@ -368,11 +396,10 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
     if "predicted_sex" in adata.obs.columns:
         adata.obs.drop(columns=["predicted_sex"], inplace=True)
     adata.obs = adata.obs.merge(df, left_on=groupby, right_index=True, how="left")
-    adata.obs[groupby] = adata.obs[groupby].astype("category")  # ensure that groupby is a category
 
     # Plot overview if chosen
     if plot:
-        print("Plotting violins")
+        logger.info("Plotting violins")
         groups = adata.obs[groupby].unique()
         n_groups = len(groups)
         fig, axarr = plt.subplots(1, 2, sharey=True,
@@ -402,9 +429,6 @@ def predict_sex(adata, groupby, gene="Xist", gene_column=None, threshold=0.3, pl
         axarr[1].set_title("Prediction of female groups")
 
         _save_figure(save)
-
-    # Save information to adata.uns
-    utils.add_uns_info(adata, "obs_metrics", "predicted_sex", how="append")
 
 
 ###############################################################################
@@ -684,6 +708,7 @@ def validate_threshold_dict(table, thresholds, groupby=None):
                     _validate_minmax(thresholds[col])
 
 
+@deco.log_anndata
 def get_thresholds_wrapper(adata, manual_thresholds, only_automatic_thresholds=True, groupby=None):
     """
     return the thresholds for the filtering
@@ -736,7 +761,7 @@ def get_keys(adata, manual_thresholds):
         if key in legend:
             m_thresholds[key] = value
         else:
-            print('column: ' + key + ' not found in adata.obs')
+            logger.info('column: ' + key + ' not found in adata.obs')
 
     return m_thresholds
 
@@ -745,6 +770,8 @@ def get_keys(adata, manual_thresholds):
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
 
+
+@deco.log_anndata
 def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=True):
     """
     Apply QC thresholds to anndata object.
@@ -777,14 +804,14 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
     # Check if all columns are found in adata
     not_found = list(set(thresholds) - set(table.columns))
     if len(not_found) > 0:
-        print("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
+        logger.info("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
     thresholds = {k: thresholds[k] for k in thresholds if k not in not_found}
 
     if len(thresholds) == 0:
         raise ValueError(f"The thresholds given do not match the columns given in adata.{which}. Please adjust the 'which' parameter if needed.")
 
     if groupby is not None:
-        groups = table[groupby].cat.categories
+        groups = table[groupby].unique()
 
     # Check that thresholds contain min/max
     for column, d in thresholds.items():
@@ -850,10 +877,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
             else:
                 adata = adata[:, included]  # filter on var
 
-        print(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
-
-    # Save information to adata.uns
-    utils.add_uns_info(adata, ["qc_thresholds", which], thresholds)   # saves dict to adata.uns["qc_thresholds"]["obs"] or adata.uns["qc_thresholds"]["var"]
+        logger.info(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
 
     if inplace is False:
         return adata
@@ -885,6 +909,9 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
         if filter not in table.columns:
             raise ValueError(f"Column {filter} not found in {table_name}.columns")
 
+        if table[filter].dtype.name != "bool":
+            raise ValueError(f"Column {filter} contains values that are not of type boolean")
+
         boolean = table[filter].values
         if remove_bool is True:
             boolean = ~boolean
@@ -893,9 +920,9 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
         # Check if all genes/cells are found in adata
         not_found = list(set(filter) - set(table.index))
         if len(not_found) > 0:
-            print(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
+            logger.info(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
 
-        boolean = ~table.index.isin(filter).values
+        boolean = ~table.index.isin(filter)
 
     # Remove genes from adata
     if inplace:
@@ -911,12 +938,13 @@ def _filter_object(adata, filter, which="obs", remove_bool=True, inplace=True):
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    print(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
+    logger.info(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
 
     if inplace is False:
         return adata
 
 
+@deco.log_anndata
 def filter_cells(adata, cells, remove_bool=True, inplace=True):
     """
     Remove cells from anndata object.
@@ -943,6 +971,7 @@ def filter_cells(adata, cells, remove_bool=True, inplace=True):
     return ret  # adata objec or None
 
 
+@deco.log_anndata
 def filter_genes(adata, genes, remove_bool=True, inplace=True):
     """
     Remove genes from adata object.

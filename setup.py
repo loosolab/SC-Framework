@@ -9,7 +9,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['episcanpy', 'pyyaml', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_lignad": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
+                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
 
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
                   "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
@@ -30,7 +30,6 @@ def find_version(f):
 
 # Find all packages in sctoolbox
 packages = find_namespace_packages("sctoolbox")
-packages = [package for package in packages if not package.startswith("data")]  # remove data package as it is included in manifest
 packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. prefix to all packages
 
 # Find top level modules in sctoolbox
@@ -50,6 +49,7 @@ setup(
         'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
+        'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba==0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
         'kneed',

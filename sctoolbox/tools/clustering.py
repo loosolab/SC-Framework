@@ -2,8 +2,10 @@ import scanpy as sc
 import warnings
 import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 
 
+@deco.log_anndata
 def recluster(adata, column, clusters,
               task="join", method="leiden", resolution=1, key_added=None,
               plot=True, embedding="X_umap"):

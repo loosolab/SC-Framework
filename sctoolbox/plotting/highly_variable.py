@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
+import sctoolbox.utils.decorator as deco
 import sctoolbox.utils as utils
 
 
+@deco.log_anndata
 def violin_HVF_distribution(adata):
     """
     Plot the distribution of the HVF as violinplot.
@@ -25,6 +27,7 @@ def violin_HVF_distribution(adata):
     plt.show()
 
 
+@deco.log_anndata
 def scatter_HVF_distribution(adata):
     """
     Plot the distribution of the HVF as scatterplot.

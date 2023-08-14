@@ -11,6 +11,9 @@ from anndata import ImplicitModificationWarning
 from pathlib import Path
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def get_chromosome_genes(gtf, chromosomes):
@@ -67,36 +70,30 @@ def get_chromosome_genes(gtf, chromosomes):
     return gene_names
 
 
-def label_genes(adata,
-                gene_column=None,
-                species=None):
+@deco.log_anndata
+def label_genes(adata, species, gene_column=None):
     """
     Label genes as ribosomal, mitochrondrial, cell cycle phase and gender genes.
+    Gene labels are added inplace.
 
     Parameters
-    ------------
+    ----------
     adata : anndata.Anndata
-        adata object
-    gene_column : str, optional
-        Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
-    species : str, optional
-        Name of the species. If not provided, the species is inferred adata.uns["infoprocess"]["species"]
+        The anndata object.
+    species : str
+        Name of the species.
+    gene_column : str, default None
+        Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
 
-    Notes
-    --------
-    Author: Guilherme Valente & Mette Bentsen
-
+    Returns
+    -------
+    list of str :
+        List containing the column names added to adata.var.
     """
 
     # Location of gene lists
     genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
-    # Get organism from the adata object
-    if species is None:
-        try:
-            species = adata.uns['infoprocess']['species']
-        except KeyError:
-            raise ValueError("Species not provided and could not be found in adata.uns['infoprocess']['species']")
     species = species.lower()
 
     # Get the full list of genes from adata
@@ -106,21 +103,20 @@ def label_genes(adata,
         adata_genes = adata.var[gene_column]
 
     # ------- Annotate genes in adata ------ #
-    added = []
+    var_cols = []  # store names of new var columns
 
     # Annotate ribosomal genes
     adata.var["is_ribo"] = adata_genes.str.lower().str.startswith(('rps', 'rpl'))
-    added.append("is_ribo")
+    var_cols.append("is_ribo")
 
     # Annotate mitochrondrial genes
     path_mito_genes = genelist_dir + species + "_mito_genes.txt"
     if os.path.exists(path_mito_genes):
         gene_list = utils.read_list_file(path_mito_genes)
         adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
-        added.append("is_mito")
-
     else:
         adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
+    var_cols.append("is_mito")
 
     # Annotate cell cycle genes
     path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
@@ -129,30 +125,27 @@ def label_genes(adata,
         cc_dict = dict(zip(table[0], table[1]))
 
         adata.var["cellcycle"] = [cc_dict.get(gene, "NA") for gene in adata_genes]  # assigns cell cycle phase or "NA"
-
+        var_cols.append("cellcycle")
     else:
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
-        print(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
+        logger.warning(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
     # Annotate gender genes
     path_gender_genes = genelist_dir + species + "_gender_genes.txt"
     if os.path.exists(path_gender_genes):
         gene_list = utils.read_list_file(path_gender_genes)
         adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
-        added.append("is_gender")
-
+        var_cols.append("is_gender")
     else:
         available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
-        print(f"No gender genes available for species '{species}'. Available species are: {available_species}")
+        logger.warning(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
-    # --------- Save information -------- #
-
-    # Add information to adata.uns
-    utils.add_uns_info(adata, "genes_labeled", added)
+    return var_cols
 
 
+@deco.log_anndata
 def add_gene_expression(adata, gene):
     """
     Add values of gene/feature per cell to the adata.obs dataframe.
@@ -184,6 +177,7 @@ def add_gene_expression(adata, gene):
 #                 Scanpy rank genes groups                 #
 ############################################################
 
+@deco.log_anndata
 def run_rank_genes(adata, groupby,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
@@ -195,11 +189,14 @@ def run_rank_genes(adata, groupby,
     # if not isinstance(adata, AnnData):
     #     raise ValueError("adata must be an AnnData object.")
 
+    if adata.obs[groupby].dtype.name != "category":
+        adata.obs[groupby] = adata.obs[groupby].astype("category")
+
     if "log1p" in adata.uns:
         adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
     # Check number of groups in groupby
-    if len(adata.obs[groupby].cat.categories) < 2:
+    if adata.obs[groupby].nunique() < 2:
         raise ValueError("groupby must contain at least two groups.")
 
     # Catch ImplicitModificationWarning from scanpy
@@ -219,6 +216,7 @@ def run_rank_genes(adata, groupby,
     adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
+@deco.log_anndata
 def pairwise_rank_genes(adata, groupby,
                         foldchange_threshold=1,
                         min_in_group_fraction=0.25,
@@ -293,6 +291,7 @@ def pairwise_rank_genes(adata, groupby,
     return merged
 
 
+@deco.log_anndata
 def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
     """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -405,6 +404,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
     return group_tables
 
 
+@deco.log_anndata
 def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
     """
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
@@ -445,6 +445,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
 #                       DEseq2 on pseudobulks                       #
 #####################################################################
 
+@deco.log_anndata
 def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
@@ -564,6 +565,7 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     return deseq_table
 
 
+@deco.log_anndata
 def score_genes(adata, gene_set, score_name='score', inplace=True):
     """
     Assign a score to each cell depending on the expression of a set of genes.
