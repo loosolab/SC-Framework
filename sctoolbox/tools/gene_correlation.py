@@ -56,6 +56,7 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -
 def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> pd.DataFrame:
     """
     Calculates the correlation of the reference gene vs all other genes.
+
     Additionally, plots umap highlighting correlating gene expression.
 
     Parameter
@@ -123,7 +124,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> p
 
 def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B) -> pd.DataFrame:
     """
-    Compare two conditions
+    Compare two conditions.
 
     Parameter
     ---------
