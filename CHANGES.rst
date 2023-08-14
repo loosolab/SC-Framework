@@ -12,6 +12,9 @@
 - Increase test coverage for plotting functions (#126)
 - Apply fixes to bugs found by increasing the test coverage.
 - run_rank_genes() auto converts groupby column to type 'category' (#137)
+- Fix parameter for gene/cell filtering (#136)
+- Add Check to _filter_object() if column contains only boolean (#110)
+- Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 
 Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
 - Fixed assembling atac notebook 01
