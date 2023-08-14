@@ -484,7 +484,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 
             # Set title
             if j == 0:
-                axes[j, i].set_title(adata_names[i])
+                axes[j, i].set_title(list(adata_names)[i])
             else:
                 axes[j, i].set_title("")
 
