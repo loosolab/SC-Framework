@@ -442,7 +442,7 @@ def quality_violin(adata, columns,
                    thresholds=None,
                    global_threshold=True,
                    interactive=True,
-                   save=None) -> Tuple[Union[matplotlib.figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
+                   save=None) -> Tuple[Union["matplotlib.figure", ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
     """
     Plot quality measurements for cells/features in an anndata object.
 
