@@ -375,11 +375,17 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 class MPOverlapPct():
-# class to calculate percentage of fragments overlapping with regions of interest
-# This class will be removed in the future and replaced by a function due to over engineering
-# Therefore this will be documented sparsely
+    """
+    Class to calculate percentage of fragments overlapping with regions of interest.
+
+    Notes
+    -----
+    This class will be removed in the future and replaced by a function due to over engineering.
+    Therefore this will be documented sparsely.
+    """
+
     def __init__(self):
-        # init class variables
+        """Init class variables."""
         self.merged_dict = None
 
     def calc_pct(self,
@@ -389,7 +395,7 @@ class MPOverlapPct():
                  adata,
                  regions_name='list',
                  n_threads=8):
-        # calculate percentage of fragments overlapping with regions of interest
+        """Calculate percentage of fragments overlapping with regions of interest."""
 
         # check if there was an overlap
         if not overlap_file:
@@ -427,7 +433,7 @@ class MPOverlapPct():
         return adata
 
     def get_barcodes_sum(self, df, barcodes, col_name):
-        # get the sum of reads counts in each cell barcode
+        """Get the sum of reads counts in each cell barcode."""
 
         # drop columns we dont need
         df.drop(df.iloc[:, 5:], axis=1, inplace=True)
@@ -444,7 +450,8 @@ class MPOverlapPct():
         return count_dict
 
     def log_result(self, result):
-        # log results from mp_counter
+        """Log results from mp_counter."""
+
         if self.merged_dict:
             self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
             # print('merging')
@@ -452,7 +459,8 @@ class MPOverlapPct():
             self.merged_dict = result
 
     def mp_counter(self, fragments, barcodes, column, n_threads=8):
-        # count reads for each cell barcode in parallel
+        """Count reads for each cell barcode in parallel."""
+
         # init pool
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
