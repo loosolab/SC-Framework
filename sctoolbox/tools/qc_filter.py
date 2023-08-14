@@ -271,7 +271,8 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True,
     adata.uns["scrublet"] = uns_dict
 
     if fill_na:
-        utils.fill_na(adata.obs)
+        adata.obs[["doublet_score", "predicted_doublet"]] = (
+            utils.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
 
     # Check if all values in colum are of type boolean
     if adata.obs["predicted_doublet"].dtype != "bool":
