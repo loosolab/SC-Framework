@@ -11,12 +11,12 @@ from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.plotting.embedding import umap_marker_overview
 
 
-def correlate_conditions(adata, gene, condition_col, condition_A, condition_B):
+def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -> pd.DataFrame:
     """
     Calculates the correlation of a gene expression over two conditions and compares the two conditions.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : anndata.AnnData
         Annotated data matrix.
     gene : str
@@ -27,6 +27,11 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B):
         First condition.
     condition_B : str
         Second condition.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containing the correlation of a gene expression over two conditions.
     """
 
     # Subset adata on conditions
@@ -48,7 +53,7 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B):
     return comparison
 
 
-def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
+def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> pd.DataFrame:
     """
     Calculates the correlation of the reference gene vs all other genes.
     Additionally, plots umap highlighting correlating gene expression.
@@ -67,7 +72,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
 
     Returns
     -------
-    corr_df : pandas.DataFrame
+    pd.DataFrame
         Dataframe containing correlation of refrence gene to other genes.
     """
     def spearmanr_of_gene(df, gene, ref):
@@ -116,7 +121,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None):
     return corr_df
 
 
-def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
+def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B) -> pd.DataFrame:
     """
     Compare two conditions
 
@@ -133,14 +138,12 @@ def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B):
 
     Returns
     -------
-    df_cond : pandas.DataFrame
+    pd.DataFrame
         Dataframe containing single correlation and Fischer Z transformation
     """
+
     def independent_corr(gene_row, n_xy, n_ab):
-        """
-        z-transforms correlation coefficient xy (of n cells) and
-        ab (of n2 cells) and p-value of the difference.
-        """
+        """z-transforms correlation coefficient xy (of n cells) andab (of n2 cells) and p-value of the difference."""
         if (1 - gene_row['correlation_A']) == 0 or (1 - gene_row['correlation_B']) == 0:
             return np.nan, np.nan
         # Fisher's r-to-Z Transformation
