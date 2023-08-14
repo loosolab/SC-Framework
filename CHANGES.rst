@@ -13,6 +13,9 @@
 - Apply fixes to bugs found by increasing the test coverage.
 - Added type hinting to functions.
 - Revised doc-strings.
+- Fix parameter for gene/cell filtering (#136)
+- Add Check to _filter_object() if column contains only boolean (#110)
+- Add support of matrix and numpy.ndarray type of adata.X for predict_sex (#111)
 
 Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
 - Fixed assembling atac notebook 01
