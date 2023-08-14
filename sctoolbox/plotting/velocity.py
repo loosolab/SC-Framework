@@ -9,6 +9,11 @@ import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import _save_figure
 
+# type hint imports
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import matplotlib
+
 
 ####################################################################################################
 #                        Plots correlating gene expression with pseudotime                         #
@@ -22,7 +27,7 @@ def pseudotime_heatmap(adata, genes,
                        shrink_cbar=0.5,
                        title=None,
                        save=None,
-                       **kwargs):
+                       **kwargs) -> matplotlib.Axes:
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 

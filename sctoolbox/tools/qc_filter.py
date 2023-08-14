@@ -214,6 +214,8 @@ def estimate_doublets(adata, threshold=0.25, inplace=True, plot=True,
     groupby : str, default None
         Key in adata.obs to use for batching during doublet estimation. If threads > 1,
         the adata is split into separate runs across threads. Otherwise each batch is run separately.
+    threads : int, default 4
+        Number of threads to use.
     fill_na : bool, default True
         If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
         a doublet score. Keep in mind that this does not mean that it is no doublet.

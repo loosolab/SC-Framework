@@ -316,7 +316,8 @@ def _search_dim_red_parameters(adata, method,
 
 @deco.log_anndata
 def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None) -> np.ndarray:
-    """Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
+    """
+    Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
     Parameters
     ----------
@@ -338,7 +339,6 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None) 
 
     Examples
     --------
-
     .. plot::
         :context: close-figs
 

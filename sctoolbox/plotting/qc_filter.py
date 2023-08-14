@@ -15,6 +15,11 @@ import sctoolbox.utils as utils
 from sctoolbox.plotting.general import violinplot, _save_figure
 import sctoolbox.utils.decorator as deco
 
+# type hint imports
+from typing import Tuple, Union, List, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    import matplotlib
+
 
 ########################################################################################
 # ---------------------------- Plots for counting cells ------------------------------ #
@@ -45,7 +50,7 @@ def _n_cells_pieplot(adata, groupby,
 @deco.log_anndata
 def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
                     add_labels=False,
-                    **kwargs):
+                    **kwargs) -> np.ndarray:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -157,7 +162,7 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
 
 
 @deco.log_anndata
-def group_correlation(adata, groupby, method="spearman", save=None):
+def group_correlation(adata, groupby, method="spearman", save=None) -> sns.ClusterGrid:
     """Plot correlation matrix between groups in `groupby`.
 
     The function expects the count data in .X to be normalized across cells.
@@ -175,7 +180,7 @@ def group_correlation(adata, groupby, method="spearman", save=None):
 
     Returns
     -------
-    ClusterGrid object
+    sns.ClusterGrid
 
     Examples
     --------
@@ -292,7 +297,7 @@ def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=Non
 #####################################################################
 
 @deco.log_anndata
-def plot_insertsize(adata, barcodes=None):
+def plot_insertsize(adata, barcodes=None) -> "matplotlib.Axes":
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
@@ -342,7 +347,7 @@ def plot_insertsize(adata, barcodes=None):
 ###########################################################################
 
 
-def _link_sliders(sliders):
+def _link_sliders(sliders) -> "list[ipywidgets.widgets.link]":
     """Link the values between interactive sliders.
 
     Parameters
@@ -352,7 +357,7 @@ def _link_sliders(sliders):
 
     Returns
     -------
-    list : list of ipywidgets.widgets.link
+    list[ipywidgets.widgets.link]
         List of links between sliders.
     """
 
@@ -437,7 +442,7 @@ def quality_violin(adata, columns,
                    thresholds=None,
                    global_threshold=True,
                    interactive=True,
-                   save=None):
+                   save=None) -> Tuple[Union[matplotlib.figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
     """
     Plot quality measurements for cells/features in an anndata object.
 
@@ -474,8 +479,8 @@ def quality_violin(adata, columns,
 
     Returns
     -------
-    tuple of box, dict
-        box contains the sliders and figure to show in notebook, and the dictionary contains the sliders determined by sliders
+    Tuple[Union[matplotlib.figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
 
     Raises
     ------

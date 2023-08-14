@@ -18,6 +18,11 @@ import sctoolbox.utils as utils
 from sctoolbox.plotting.general import bidirectional_barplot, _save_figure
 import sctoolbox.utils.decorator as deco
 
+# type checking
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import seaborn
+
 
 @deco.log_anndata
 def rank_genes_plot(adata,
@@ -222,7 +227,6 @@ def grouped_violin(adata, x,
 
     Examples
     --------
-
     .. plot::
         :context: close-figs
 
@@ -349,7 +353,6 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None) -> matplot
 
     Examples
     --------
-
     .. plot::
         :context: close-figs
 
@@ -407,7 +410,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
                             show_col_dendrogram=False,
                             figsize=None,
                             save=None,
-                            **kwargs):
+                            **kwargs) -> "seaborn.ClusterGrid":
     """Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
@@ -441,7 +444,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
 
     Returns
     -------
-    g : `seaborn.ClusterGrid`
+    g : seaborn.ClusterGrid
         The seaborn ClusterGrid object containing the heatmap.
 
     Raises
@@ -575,7 +578,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
 
 
 @deco.log_anndata
-def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
+def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None) -> "seaborn.clustermap":
     """Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
     NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
@@ -622,7 +625,7 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
 
 def plot_differential_genes(rank_table, title="Differentially expressed genes",
                             save=None,
-                            **kwargs):
+                            **kwargs) -> matplotlib.axes.Axes:
     """Plot number of differentially expressed genes per contrast in a barplot.
 
     Takes the output of mg.pairwise_rank_genes as input.
@@ -645,7 +648,7 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
 
     Returns
     -------
-    `matplotlib.axes.Axes`
+    matplotlib.axes.Axes
         Axes object.
     """
     group_columns = [col for col in rank_table.columns if "_group" in col]
