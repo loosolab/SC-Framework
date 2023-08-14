@@ -36,27 +36,27 @@ def rank_genes_plot(adata,
 
     Parameters
     ----------
-    adata : `anndata.AnnData`
+    adata : sc.AnnData
         Annotated data matrix.
-    genes : `list` or `dict`, optional (default: `None`)
+    genes : list or dict, default None
         List of genes to plot. If a dict is passed, the keys are the group names and the values are lists of genes.
-    key : `str`, optional (default: `None`)
+    key : str, default None
         Key from `adata.uns` to plot. If specified, `genes` must be `None`.
-    n_genes : `int`, optional (default: `15`)
+    n_genes : int, default 15
         Number of genes to plot if `key` is specified.
-    dendrogram : `bool`, optional (default: `False`)
+    dendrogram : bool, default False
         Whether to show the dendrogram for groups.
-    groupby : `str`, optional (default: `None`)
+    groupby : str, default None
         Key from `adata.obs` to group cells by.
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title for the plot.
-    style : `str`, optional (default: `dots`)
+    style : str, default "dots"
         Style of the plot. Either `dots` or `heatmap`.
-    measure : `str`, optional (default: `expression`)
+    measure : str, default "expression"
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         If given, save the figure to this path.
-    **kwargs : `dict`, optional
+    **kwargs : dict
         Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
 
     Raises
@@ -333,7 +333,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None) -> matplot
 
     Parameters
     ----------
-    adata : anndata.AnnData object
+    adata : sc.AnnData
         An annotated data matrix object containing counts in .X.
     gene_list : list
         A list of genes to show expression for.
@@ -410,31 +410,31 @@ def gene_expression_heatmap(adata, genes, cluster_column,
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata : sc.AnnData
         Annotated data matrix.
-    genes : `list`
+    genes : list
         List of genes to plot. Must match names in `adata.var.index`.
-    cluster_column : `str`
+    cluster_column : str
         Key in `adata.obs` for which to cluster the x-axis.
-    gene_name_column : `str`, optional (default: `None`)
+    gene_name_column : str, default None
         Column in `adata.var` for which to use for gene row names. Default is to use the index.
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    groupby : `str`, optional (default: `None`)
+    groupby : str, default None
         Key in `adata.obs` for which to plot a colorbar per cluster.
-    row_cluster : `bool`, optional (default: `True`)
+    row_cluster : bool, default True
         Whether to cluster the rows.
-    col_cluster : `bool`, optional (default: `False`)
+    col_cluster : bool, default False
         Whether to cluster the columns.
-    show_row_dendrogram : `bool`, optional (default: `False`)
+    show_row_dendrogram : bool, default False
         Whether to show the dendrogram for the rows.
-    show_col_dendrogram : `bool`, optional (default: `False`)
+    show_col_dendrogram : bool, default False
         Whether to show the dendrogram for the columns.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : tuple, default None
         Size of the figure. If `None`, use default size.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         If given, save the figure to this path.
-    **kwargs : arguments, optional
+    **kwargs : dict
         Additional arguments passed to `seaborn.clustermap`.
 
     Returns
@@ -573,14 +573,14 @@ def gene_expression_heatmap(adata, genes, cluster_column,
 
 
 @deco.log_anndata
-def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None) -> "seaborn.clustermap":
+def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None) -> "sns.clustermap":
     """Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
     NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
 
     Parameters
     ----------
-    adata : anndata.AnnData object
+    adata : sc.AnnData
         An annotated data matrix object containing counts in .X.
     groupby : str
         A column in .obs for grouping cells into groups on the x-axis
@@ -593,7 +593,7 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None) -> "s
 
     Returns
     -------
-    g : seaborn.clustermap
+    g : sns.clustermap
         The seaborn clustermap object
     """
     _, ax = plt.subplots(figsize=figsize)
@@ -627,11 +627,11 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
 
     Parameters
     ----------
-    rank_table : `pandas.DataFrame`
+    rank_table : pd.DataFrame
         Output of mg.pairwise_rank_genes.
-    title : `str`, optional (default: `"Differentially expressed genes"`)
+    title : str, default "Differentially expressed genes"
         Title of the plot.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         If given, save the figure to this path.
     **kwargs : keyword arguments
         Keyword arguments passed to pl.bidirectional_barplot.

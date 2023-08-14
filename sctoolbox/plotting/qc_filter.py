@@ -162,7 +162,7 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
 
 
 @deco.log_anndata
-def group_correlation(adata, groupby, method="spearman", save=None) -> sns.ClusterGrid:
+def group_correlation(adata, groupby, method="spearman", save=None) -> sns.matrix.ClusterGrid:
     """Plot correlation matrix between groups in `groupby`.
 
     The function expects the count data in .X to be normalized across cells.
@@ -180,7 +180,7 @@ def group_correlation(adata, groupby, method="spearman", save=None) -> sns.Clust
 
     Returns
     -------
-    sns.ClusterGrid
+    sns.matrix.ClusterGrid
 
     Examples
     --------
@@ -352,7 +352,7 @@ def _link_sliders(sliders) -> "list[ipywidgets.widgets.link]":
 
     Parameters
     ----------
-    sliders : list of ipywidgets.widgets.Slider
+    sliders : list[ipywidgets.widgets.Slider]
         List of sliders to link.
 
     Returns

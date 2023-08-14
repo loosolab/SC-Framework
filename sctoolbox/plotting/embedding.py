@@ -399,7 +399,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 
     Parameters
     ----------
-    adata_list : list of anndata.AnnData
+    adata_list : list[sc.AnnData]
         List of AnnData objects to compare.
     var_list : list of str
         List of variables to color in plot.
@@ -845,7 +845,7 @@ def anndata_overview(adatas,
 
     Parameters
     ----------
-    adatas : dict of anndata.AnnData
+    adatas : dict[str, sc.AnnData]
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
     color_by : str or list of str

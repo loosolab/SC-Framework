@@ -52,13 +52,13 @@ def _add_figure_title(axarr, title, y=1.3, fontsize=16):
 
     Parameters
     ----------
-    axarr : `list` of `matplotlib.axes.Axes`
+    axarr : list[matplotlib.Axes]
         List of axes to add the title to.
-    title : `str`
+    title : str
         Title to add at the top of plot.
-    y : `float`, optional (default: `1.3`)
+    y : float, default 1.3
         Vertical position of the title in relation to the content. Larger number moves the title further up.
-    fontsize : `int`, optional (default: `16`)
+    fontsize : int, default 16
         Font size of the title.
 
     Examples
@@ -111,15 +111,15 @@ def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
 
     Parameters
     ----------
-    data : pandas.DataFrame
+    data : pd.DataFrame
         Dataframe containing the coordinates of points to label.
     x : str
         Name of the column in data to use for x axis coordinates.
     y : str
         Name of the column in data to use for y axis coordinates.
-    label_col : str, optional (default: `None`)
+    label_col : str, default None
         Name of the column in data to use for labels. If `None`, the index of data is used.
-    ax : matplotlib.axes.Axes, optional (default: `None`)
+    ax : matplotlib.axes.Axes, default None
         Axis to plot on. If `None`, the current open figure axis is used.
     **kwargs : arguments
         Additional arguments to pass to matplotlib.axes.Axes.annotate.
@@ -238,7 +238,7 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr"
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Dataframe containing the data to plot.
     x : str
         Column in table to plot on the x-axis.
@@ -401,15 +401,15 @@ def bidirectional_barplot(df,
 
     Parameters
     ----------
-    df : `pandas.DataFrame`
+    df : pd.DataFrame
         Dataframe with the following columns: left_label, right_label, left_value, right_value.
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    colors : `dict`, optional (default: `None`)
+    colors : dict, default None
         Dictionary with label names as keys and colors as values.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : tuple, default None
         Figure size.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         If given, the figure will be saved to this path.
 
     Returns
@@ -506,7 +506,7 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
 
     Parameters
     ----------
-    dt : pandas.DataFrame
+    dt : pd.DataFrame
         pandas datafame containing numerical values in every column.
     show_median : boolean, default True
         If True show median value as small box inside the boxplot.
@@ -568,7 +568,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Values to create the violins from.
     y : str
         Column name of table. Values that will be shown on y-axis.
@@ -705,12 +705,12 @@ def plot_venn(groups_dict, title=None, save=None):
 
     Parameters
     ----------
-    groups_dict : `dict`
+    groups_dict : dict
         A dictionary where the keys are group names (strings) and the values
         are lists of items belonging to that group (e.g. {'Group A': ['A', 'B', 'C'], ...}).
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         Filename to save the plot to.
 
     Raises

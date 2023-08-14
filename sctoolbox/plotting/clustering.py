@@ -133,7 +133,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata : anndata.AnnData
         Annotated data matrix.
     groupby : `str`
         Key in `adata.obs` for which to plot the clustering.
