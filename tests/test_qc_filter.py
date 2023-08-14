@@ -167,17 +167,36 @@ def test_filter_cells(adata):
     assert adata.shape[0] == n_false
 
 
-def test_predict_sex(caplog, adata):
-
+@pytest.mark.parametrize("threshold", [0.3, 0.0])
+def test_predict_sex(caplog, adata, threshold):
+    """Test if predict_sex warns on invalid gene and succeeds."""
     adata = adata.copy()  # copy adata to avoid inplace changes
+
     # gene not in data
     with caplog.at_level(logging.INFO):
         qc.predict_sex(adata, groupby='sample')
         assert "Selected gene is not present in the data. Prediction is skipped." in caplog.records[1].message
 
     # gene in data
-    qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample')
+    qc.predict_sex(adata, gene='Xkr4', gene_column='gene', groupby='sample', threshold=threshold)
     assert 'predicted_sex' in adata.obs.columns
+
+
+def test_predict_sex_diff_types(caplog, adata):
+    """Test predict_sex for different adata.X types."""
+
+    adata_ndarray = adata.copy()
+    adata_ndarray.X = adata_ndarray.X.toarray()
+    adata_matrix = adata_ndarray.copy()
+    adata_matrix.X = np.asmatrix(adata_matrix.X)
+
+    # ndarray
+    qc.predict_sex(adata_ndarray, gene='Xkr4', gene_column='gene', groupby='sample')
+    assert 'predicted_sex' in adata_ndarray.obs.columns
+
+    # matrix
+    qc.predict_sex(adata_matrix, gene='Xkr4', gene_column='gene', groupby='sample')
+    assert 'predicted_sex' in adata_matrix.obs.columns
 
 
 @pytest.mark.parametrize(
