@@ -9,6 +9,8 @@ from tqdm import tqdm
 from sctoolbox.utils.checker import check_columns
 from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.plotting.embedding import umap_marker_overview
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -> pd.DataFrame:
@@ -76,10 +78,13 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> p
     pd.DataFrame
         Dataframe containing correlation of refrence gene to other genes.
     """
+
     def spearmanr_of_gene(df, gene, ref):
+        """Get tuple of gene and spearman correlation of gene to reference."""
         return (gene, spearmanr(ref, df.loc[:, gene]))
 
     def map_correlation_strength(x):
+        """Map correlation to describing strings."""
         if 0 <= x < 0.2:
             return "very weak (0.00-0.19)"
         elif x < 0.4:
@@ -100,7 +105,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> p
     # Get expression values of reference gene
     ref = df.loc[:, gene]
 
-    print(f"Calculating the correlation to {gene}")
+    logger.info(f"Calculating the correlation to {gene}")
     results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(df, gene, ref) for gene in tqdm(adata.var.index.values.tolist())))
     corr_df = pd.DataFrame.from_dict(results, orient="index")
     corr_df.columns = ["correlation", "p-value"]
