@@ -19,12 +19,13 @@ def rename_categories(series):
         Series with renamed categories.
     """
 
-    n_categories = series.cat.categories
+    series_cat = series.astype("category")
+    n_categories = series_cat.cat.categories
     new_names = [str(i) for i in range(1, len(n_categories) + 1)]
-    translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
-    series = series.cat.rename_categories(translate_dict)
+    translate_dict = dict(zip(series_cat.cat.categories.tolist(), new_names))
+    series_cat = series_cat.cat.rename_categories(translate_dict)
 
-    return series
+    return series_cat
 
 
 def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):

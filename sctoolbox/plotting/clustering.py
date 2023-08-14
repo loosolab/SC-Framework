@@ -102,7 +102,7 @@ def search_clustering_parameters(adata,
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
         adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
-        n_clusters = len(adata.obs[key_added].cat.categories)
+        n_clusters = adata.obs[key_added].nunique()
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"

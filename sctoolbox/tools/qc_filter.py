@@ -811,7 +811,7 @@ def apply_qc_thresholds(adata, thresholds, which="obs", groupby=None, inplace=Tr
         raise ValueError(f"The thresholds given do not match the columns given in adata.{which}. Please adjust the 'which' parameter if needed.")
 
     if groupby is not None:
-        groups = table[groupby].cat.categories
+        groups = table[groupby].unique()
 
     # Check that thresholds contain min/max
     for column, d in thresholds.items():

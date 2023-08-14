@@ -130,6 +130,24 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
         assert score_name in out.obs.columns
 
 
+def test_run_rank_genes(adata):
+    """Test ranking genes function."""
+
+    adata.uns["log1p"] = {"base": [1, 2, 3]}
+    mg.run_rank_genes(adata, groupby="samples", n_genes=10)
+    assert adata.uns["rank_genes_groups"]
+
+
+def test_run_rank_genes_fail(adata):
+    """Test if invalid input is catched."""
+
+    adata = adata.copy()
+    adata.obs["invalid_cat"] = "invalid"
+
+    with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
+        mg.run_rank_genes(adata, groupby="invalid_cat")
+
+
 # Outcommented because the CI job currently does not have R and DESeq2 installed
 # Can be outcommented for testing locally
 #
