@@ -850,8 +850,6 @@ def density_plot(scaled, densities) -> matplotlib.axes.Axes:
     matplotlib.axes.Axes
         Axes object of density plot.
     """
-<<<<<<< HEAD
-=======
     count_table = count_table
     # handle 0,1 min/max scaled count_table
     if count_table.dtype != 'int64':
@@ -872,7 +870,6 @@ def density_plot(scaled, densities) -> matplotlib.axes.Axes:
 
     # Log normalization + 1 to avoid log(0)
     densities_log = np.log1p(densities)
->>>>>>> da69b8f (revised density plot and added documentation)
 
     # plot density
     normalized = np.log2(densities)  # normalize log2
