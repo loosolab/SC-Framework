@@ -196,7 +196,7 @@ def run_rank_genes(adata, groupby,
         adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
     # Check number of groups in groupby
-    if len(adata.obs[groupby].cat.categories) < 2:
+    if adata.obs[groupby].nunique() < 2:
         raise ValueError("groupby must contain at least two groups.")
 
     # Catch ImplicitModificationWarning from scanpy

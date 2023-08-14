@@ -559,7 +559,7 @@ def plot_3D_UMAP(adata, color, save):
     if color in adata.obs.columns and isinstance(adata.obs[color][0], str):
 
         df["category"] = adata.obs[color].values  # color should be interpreted as a categorical variable
-        categories = df["category"].astype("category").cat.categories
+        categories = df["category"].unique()
         n_groups = len(categories)
         color_list = sns.color_palette("Set1", n_groups)
         color_list = list(map(colors.to_hex, color_list))  # convert to hex
@@ -898,8 +898,7 @@ def anndata_overview(adatas,
             categories = []
             for adata in adatas.values():
                 if color in adata.obs.columns:  # color can also be an index in var
-                    if adata.obs[color].dtype.name == "category":
-                        categories += list(adata.obs[color].cat.categories)
+                    categories += list(adata.obs[color].unique())
             categories = sorted(list(set(categories)))
 
             # Create color palette equal for all columns
