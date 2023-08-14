@@ -27,7 +27,7 @@ def pseudotime_heatmap(adata, genes,
                        shrink_cbar=0.5,
                        title=None,
                        save=None,
-                       **kwargs) -> matplotlib.Axes:
+                       **kwargs) -> "matplotlib.Axes":
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 
