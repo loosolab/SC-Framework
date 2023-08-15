@@ -58,7 +58,7 @@ lint:
   script:
     - python --version
     - pip install flake8
-    - pip install pydoclint
+    - pip install pydoclint==0.1.4  # https://github.com/jsh9/pydoclint/issues/59
     - pip install flake8-docstrings  # adds pydocstyle to flake
     - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301 --arg-type-hints-in-signature False --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
