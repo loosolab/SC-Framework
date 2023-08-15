@@ -775,7 +775,7 @@ def score_by_cwt(data,
 
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(count_table, max_abundance=600):
+def density_plot(count_table, max_abundance=600, target_height=1000):
     """
     This function plots the density of the fragment length distribution over all cells.
     The density is calculated by binning the abundances of the fragment lengths.
@@ -806,7 +806,7 @@ def density_plot(count_table, max_abundance=600):
     # loop over all fragment lengths from 0 to 1000
     for i in range(0, len(count_table[0])):
         column = count_table[:, i]
-        # round abundances to be integers, that they are countable 
+        # round abundances to be integers, that they are countable
         rounded = np.around(column).astype(int)
         # count the abundance of the abundances with boundaries 0 to maximal abundance
         gradient = np.bincount(rounded, minlength=max_value + 1)
@@ -817,24 +817,45 @@ def density_plot(count_table, max_abundance=600):
     densities_log = np.log1p(densities)
 
     # Transpose the matrix
-    densities_log = densities_log.T
+    densities = densities_log.T
+
+    # get the section of interest
+    densities = densities[:max_abundance]
 
     # calculate the mean of the FLD
     mean = count_table.sum(axis=0) / len(count_table)
+
+    # Stretch or compress densities' y-axis to the target height
+    num_rows = densities.shape[0]
+    old_y = np.linspace(0, num_rows - 1, num_rows)
+    new_y = np.linspace(0, num_rows - 1, 1000)
+
+    # Interpolate the densities along the y-axis
+    densities_interpolated = np.array([np.interp(new_y, old_y, densities[:, i]) for i in range(densities.shape[1])]).T
+
+    # scaling factor for mean
+    scaling_factor = len(new_y) / len(old_y)
+
+    # Apply the scaling factor to the mean values
+    mean_interpolated = mean * scaling_factor
 
     # Initialize subplots
     fig, ax = plt.subplots()
 
     # Display the image
-    im = ax.imshow(densities_log[:max_abundance], origin="lower")
+    im = ax.imshow(densities_interpolated, aspect='auto', origin="lower")
 
     # Plot additional data
-    ax.plot(mean, color="red", markersize=1)
+    ax.plot(mean_interpolated, color="red", markersize=1)
 
     # Set labels and title
     ax.set_title('Fragment Length Density Plot')
     ax.set_xlabel('Fragment Length', color='blue')
     ax.set_ylabel('Abundance', color='blue')
+
+    # Adjust y-ticks to show original scale
+    ax.set_yticks(np.linspace(0, target_height - 1, 6))
+    ax.set_yticklabels(np.linspace(0, num_rows - 1, 6).astype(int))
 
     # Add colorbar to the plot
     fig.colorbar(im, ax=ax, label='Density (log scale)')
