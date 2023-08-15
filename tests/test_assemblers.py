@@ -1,9 +1,12 @@
+"""Test functions to assemble adata objects."""
+
 import os
 import anndata
 import sctoolbox.assemblers
 
 
 def test_from_single_starsolo():
+    """Test from_single_starsolo success."""
 
     SOLO_DIR = os.path.join(os.path.dirname(__file__), 'data', 'solo')
     adata = sctoolbox.assemblers.from_single_starsolo(SOLO_DIR, dtype="filtered", header=None)
@@ -12,6 +15,7 @@ def test_from_single_starsolo():
 
 
 def test_from_single_mtx():
+    """Test from_single_mtx success."""
 
     MTX_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'matrix.mtx')
     BARCODES_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'barcodes.tsv')

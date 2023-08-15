@@ -1,3 +1,5 @@
+"""Test functions related to annotation."""
+
 import argparse
 
 import pytest
@@ -14,12 +16,14 @@ uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 @pytest.fixture
 def adata_atac():
+    """Load atac anndata."""
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture
 def adata_atac_emptyvar(adata_atac):
+    """Create anndata with empty adata.var."""
     adata = adata_atac.copy()
     adata.var = adata.var.drop(columns=adata.var.columns)
     return adata
@@ -27,6 +31,7 @@ def adata_atac_emptyvar(adata_atac):
 
 @pytest.fixture
 def adata_atac_invalid(adata_atac):
+    """Create adata with invalid adata.var index."""
     adata = adata_atac.copy()
     adata.var.iloc[0, 1] = 500  # start
     adata.var.iloc[0, 2] = 100  # end
@@ -36,6 +41,7 @@ def adata_atac_invalid(adata_atac):
 
 @pytest.fixture
 def adata_rna():
+    """Load rna anndata."""
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
@@ -43,7 +49,7 @@ def adata_rna():
 # ------------------------- Tests ------------------------- #
 
 def test_add_cellxgene_annotation(adata_rna):
-    """ Test if 'cellxgene' column is added to adata.obs. """
+    """Test if 'cellxgene' column is added to adata.obs."""
 
     csv_f = os.path.join(os.path.dirname(__file__), 'data', 'cellxgene_anno.csv')
     anno.add_cellxgene_annotation(adata_rna, csv_f)
@@ -55,6 +61,7 @@ def test_add_cellxgene_annotation(adata_rna):
                          [(True, 1, None, True, None),
                           (False, 2, uropa_config, False, ["chr", "start", "stop"])])
 def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_cols):
+    """Test annotate_adata success."""
 
     adata_atac.var["distance_to_gene"] = 100  # initialize distance column to test the warning message
     gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
@@ -72,6 +79,7 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
 
 @pytest.mark.parametrize("config", [None, uropa_config])
 def test_annotate_narrowPeak(config):
+    """Test annotate_narrowPeak success."""
 
     gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
     peaks_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'cropped_testing.narrowPeak')
@@ -83,7 +91,7 @@ def test_annotate_narrowPeak(config):
 
 @pytest.mark.parametrize("inplace", [True, False])
 def test_annot_HVG(adata_rna, inplace):
-    """ Test if 'highly_variable' column is added to adata.var. """
+    """Test if 'highly_variable' column is added to adata.var."""
 
     sc.pp.log1p(adata_rna)
     out = anno.annot_HVG(adata_rna, inplace=inplace)
@@ -96,6 +104,7 @@ def test_annot_HVG(adata_rna, inplace):
 
 
 def touch_file(f):
+    """Create file if not existing."""
     try:
         open(f, 'x')
     except FileExistsError:
@@ -103,6 +112,7 @@ def touch_file(f):
 
 
 def test_rm_tmp():
+    """Test create_dir and rm_tmp success."""
 
     temp_dir = "tempdir"
     utils.create_dir(temp_dir)
@@ -140,6 +150,7 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac',
 # indirect test of gtf_integrity as well
 @pytest.mark.parametrize("key, gtf", [(key, gtf_files[key]) for key in gtf_files])
 def test_prepare_gtf(key, gtf):
+    """Test _prepare_gtf success and failure."""
 
     if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
         gtf_out, tempfiles = anno._prepare_gtf(gtf, "")

@@ -1,3 +1,5 @@
+"""Test functions to download and create experiment folders."""
+
 import sctoolbox.creators as creator
 import pytest
 from glob import glob
@@ -7,7 +9,7 @@ from unittest.mock import patch, Mock
 
 
 def test_setup_experiment():
-    """ Test experiment setup function"""
+    """Test experiment setup function."""
     dirs = ['raw', 'preprocessing', 'Analysis']
     creator.setup_experiment("./tmp/exp1", dirs=dirs)
     f = glob("./tmp/exp1/*/")
@@ -16,7 +18,7 @@ def test_setup_experiment():
 
 
 def test_gitlab_download():
-    """Test gitlab download"""
+    """Test gitlab download."""
     def side_effect(search):
 
         def repo_tree(path, ref):
@@ -53,5 +55,5 @@ def test_gitlab_download():
 @pytest.mark.parametrize("starts,regex", [(1, '[0]*[1-9]?[1-9].*.ipynb'), (5, '[0]*[1-9]?[5-9].*.ipynb'),
                                           (10, '[0]*([1][0-9]|[2-9][0-9]).*.ipynb'), (21, '[0]*([2][1-9]|[3-9][0-9]).*.ipynb')])
 def test_build_notebooks_regex(starts, regex):
-    """ Test build notebook regex function"""
+    """Test build notebook regex function."""
     assert creator.build_notebooks_regex(starts) == regex

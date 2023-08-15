@@ -1,3 +1,5 @@
+"""Functions for plotting QC-related figures e.g. number of cells per group and violins."""
+
 from math import ceil
 import pandas as pd
 import copy
@@ -12,6 +14,11 @@ from matplotlib.patches import Rectangle
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import violinplot, _save_figure
 import sctoolbox.utils.decorator as deco
+
+# type hint imports
+from typing import Tuple, Union, List, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    import matplotlib
 
 
 ########################################################################################
@@ -30,15 +37,8 @@ def _n_cells_pieplot(adata, groupby,
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.
-
-    Returns
-    -------
-
-
-    Examples
-    --------
-
-
+    figsize : tuple, default None
+        Size of figure, e.g. (4, 8).
     """
 
     # Get counts
@@ -50,7 +50,7 @@ def _n_cells_pieplot(adata, groupby,
 @deco.log_anndata
 def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
                     add_labels=False,
-                    **kwargs):
+                    **kwargs) -> np.ndarray:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -73,6 +73,11 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
     **kwargs : arguments
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
+    Returns
+    -------
+    axarr : np.ndarray
+        Array of axes objects containing the plot(s).
+
     Examples
     --------
     .. plot::
@@ -84,7 +89,6 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
         :context: close-figs
 
         pl.n_cells_barplot(adata, x="louvain", groupby="condition")
-
     """
 
     # Get cell counts for groups or all
@@ -158,9 +162,9 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
 
 
 @deco.log_anndata
-def group_correlation(adata, groupby, method="spearman", save=None):
-    """
-    Plot correlation matrix between groups in `groupby`.
+def group_correlation(adata, groupby, method="spearman", save=None) -> sns.matrix.ClusterGrid:
+    """Plot correlation matrix between groups in `groupby`.
+
     The function expects the count data in .X to be normalized across cells.
 
     Parameters
@@ -171,12 +175,14 @@ def group_correlation(adata, groupby, method="spearman", save=None):
         Name of the column in adata.obs to group cells by.
     method : str, default "spearman"
         Correlation method to use. See pandas.DataFrame.corr for options.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
 
     Returns
     -------
-    ClusterGrid object
+    sns.matrix.ClusterGrid
 
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -252,6 +258,11 @@ def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=Non
         Size of figure in inches.
     dpi : int, default 300
         Dots per inch.
+
+    Raises
+    ------
+    ValueError
+        If threshold table indices are not column names in anndata.obs or anndata.var.
     """
     # test if threshold indexes are column names in .obs or .var
     invalid_index = set(thresholds.index.get_level_values(0)) - set(anndata.obs.columns) - set(anndata.var.columns)
@@ -286,21 +297,26 @@ def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=Non
 #####################################################################
 
 @deco.log_anndata
-def plot_insertsize(adata, barcodes=None):
+def plot_insertsize(adata, barcodes=None) -> "matplotlib.Axes":
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
     Parameters
-    -----------
+    ----------
     adata : AnnData
         AnnData object containing insertsize distribution in adata.uns["insertsize_distribution"].
     barcodes : list of str, default None
         Subset of barcodes to plot information for. If None, all barcodes are used.
 
     Returns
-    --------
+    -------
     ax : matplotlib.Axes
         Axes object containing the plot.
+
+    Raises
+    ------
+    ValueError
+        If adata.uns["insertsize_distribution"] is not set.
     """
 
     if "insertsize_distribution" not in adata.uns:
@@ -331,17 +347,17 @@ def plot_insertsize(adata, barcodes=None):
 ###########################################################################
 
 
-def _link_sliders(sliders):
-    """ Link the values between interactive sliders.
+def _link_sliders(sliders) -> "list[ipywidgets.widgets.link]":
+    """Link the values between interactive sliders.
 
     Parameters
-    ------------
-    sliders : list of ipywidgets.widgets.Slider
+    ----------
+    sliders : list[ipywidgets.widgets.Slider]
         List of sliders to link.
 
     Returns
-    --------
-    list : list of ipywidgets.widgets.link
+    -------
+    list[ipywidgets.widgets.link]
         List of links between sliders.
     """
 
@@ -360,7 +376,7 @@ def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
     Either link or unlink sliders depending on the new value of the checkbox.
 
     Parameters
-    -----------
+    ----------
     checkbox : ipywidgets.widgets.Checkbox
         Checkbox to toggle linkage.
     linkage_dict : dict
@@ -388,7 +404,7 @@ def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
 
 
 def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
-    """ Update the locations of thresholds in plot """
+    """Update the locations of thresholds in plot."""
 
     tmin, tmax = slider["new"]  # threshold values from slider
 
@@ -426,16 +442,16 @@ def quality_violin(adata, columns,
                    thresholds=None,
                    global_threshold=True,
                    interactive=True,
-                   save=None):
+                   save=None) -> Tuple[Union["matplotlib.figure", ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
     """
-    A function to plot quality measurements for cells in an anndata object.
+    Plot quality measurements for cells/features in an anndata object.
 
-    Note
-    ------
+    Notes
+    -----
     Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
 
     Parameters
-    -------------
+    ----------
     adata : anndata.AnnData
         Anndata object containing quality measures in .obs/.var
     columns : list
@@ -462,9 +478,15 @@ def quality_violin(adata, columns,
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
 
     Returns
-    -----------
-    tuple of box, dict
-        box contains the sliders and figure to show in notebook, and the dictionary contains the sliders determined by sliders
+    -------
+    Tuple[Union[matplotlib.figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
+
+    Raises
+    ------
+    ValueError
+        If 'which' is not 'obs' or 'var' or if columns are not in table.
+
     """
 
     is_interactive = utils._is_interactive()
@@ -678,8 +700,8 @@ def quality_violin(adata, columns,
     return figure, slider_dict
 
 
-def get_slider_thresholds(slider_dict):
-    """ Get thresholds from sliders.
+def get_slider_thresholds(slider_dict) -> dict:
+    """Get thresholds from sliders.
 
     Parameters
     ----------
@@ -688,8 +710,9 @@ def get_slider_thresholds(slider_dict):
 
     Returns
     -------
-    dict in the format threshold_dict[column][group] = {"min": <min_threshold>, "max": <max_threshold>} or
-    threshold_dict[column] = {"min": <min_threshold>, "max": <max_threshold>} if no grouping
+    dict
+        dict in the format threshold_dict[column][group] = {"min": <min_threshold>, "max": <max_threshold>} or
+        threshold_dict[column] = {"min": <min_threshold>, "max": <max_threshold>} if no grouping
 
     """
 
