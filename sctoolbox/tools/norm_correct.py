@@ -23,11 +23,11 @@ logger = settings.logger
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
-def atac_norm(**kwargs):
+def atac_norm(*args, **kwargs):
     """ Deprecated function. Use normalize_adata instead. """
 
     logger.warning("The function 'atac_norm' is deprecated. Use 'normalize_adata' instead.")
-    return normalize_adata(**kwargs)
+    return normalize_adata(*args, **kwargs)
 
 
 @deco.log_anndata

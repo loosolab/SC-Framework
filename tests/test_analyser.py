@@ -66,20 +66,14 @@ def test_wrap_umap(adata):
         assert "X_umap" in adata.obsm
 
 
-def test_adata_normalize_total(adata):
+@pytest.mark.parametrize("method", ["total", "tfidf"])
+def test_normalize_adata(adata, method):
     """ Test that data was normalized"""
-    an.adata_normalize_total(adata, inplace=True)
+    result_dict = an.normalize_adata(adata, method=method)
+    adata = result_dict[method]
     mat = adata.X.todense()
 
     assert not utils.is_integer_array(mat)
-
-
-def test_norm_log_PCA(adata_no_pca):
-    """ Test if the returned adata has pca coordinates and highly variable genes """
-    an.norm_log_PCA(adata_no_pca, inplace=True)
-
-    check = ("X_pca" in adata_no_pca.obsm) and ("highly_variable" in adata_no_pca.var.columns)
-    assert check
 
 
 def test_define_PC(adata):
