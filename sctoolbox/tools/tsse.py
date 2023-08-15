@@ -223,7 +223,7 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50):
     """
     # calculate global tSSe score
     logger.info("calculating global tSSe score")
-    center = per_base_tsse[:, negativ_shift - edge_size : negativ_shift + edge_size]
+    center = per_base_tsse[:, negativ_shift - edge_size:negativ_shift + edge_size]
     global_tsse_score = np.sum(center, axis=1) / (edge_size * 2)
 
     return global_tsse_score
