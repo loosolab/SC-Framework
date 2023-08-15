@@ -97,42 +97,6 @@ def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
     return series
 
 
-def unscale(scaled_data) -> np.ndarray:
-    """
-    Unscales a series array to a range of 0 to 1.
-    
-    If the array is 2D, the scaling is done on axis=1.
-
-    Parameters
-    ----------
-    scaled_data: array
-        Array of data to be unscaled 1D or 2D
-
-    Returns
-    -------
-    np.ndarray
-        Unscaled array
-    """
-
-    if len(scaled_data.shape) == 1:
-        # Find the minimum non-zero value
-        min_value = min(scaled_data[scaled_data > 0])
-        # Scale the data by the inverse of the minimum value
-        unscaled = (1 / min_value) * scaled_data
-
-    elif len(scaled_data.shape) == 2:
-        # Mask for non-zero elements
-        mask = scaled_data != 0
-
-        # Find the minimum non-zero value for each row
-        min_values = np.where(mask, scaled_data, np.inf).min(axis=1)
-
-        # Scale the rows by the inverse of their respective minimum values
-        unscaled = scaled_data * (1.0 / min_values)[:, np.newaxis]
-
-    return unscaled
-
-
 def scale(series_arr) -> np.ndarray:
     """
     Scale a series array to a range of 0 to 1.
@@ -850,29 +814,6 @@ def density_plot(scaled, densities) -> matplotlib.axes.Axes:
     matplotlib.axes.Axes
         Axes object of density plot.
     """
-<<<<<<< HEAD
-=======
-    count_table = count_table
-    # handle 0,1 min/max scaled count_table
-    if count_table.dtype != 'int64':
-        count_table = unscale(count_table)
-    # get the maximal abundance of a fragment length over all cells
-    max_value = np.max(np.around(count_table).astype(int))
-    # Init empty densities list
-    densities = []
-    # loop over all fragment lengths from 0 to 1000
-    for i in range(0, len(count_table[0])):
-        column = count_table[:, i]
-        # round abundances to be integers, that they are countable 
-        rounded = np.around(column).astype(int)
-        # count the abundance of the abundances with boundaries 0 to maximal abundance
-        gradient = np.bincount(rounded, minlength=max_value + 1)
-        densities.append(gradient)
-    densities = np.array(densities)
-
-    # Log normalization + 1 to avoid log(0)
-    densities_log = np.log1p(densities)
->>>>>>> da69b8f (revised density plot and added documentation)
 
     # plot density
     normalized = np.log2(densities)  # normalize log2
