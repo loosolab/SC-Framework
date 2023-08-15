@@ -182,7 +182,7 @@ def add_uns_info(adata, key, value, how="overwrite") -> None:
         The key to add to adata.uns['sctoolbox']. If the key is a list, it represents a path within a nested dictionary.
     value : any
         The value to add to adata.uns['sctoolbox'].
-    how : str, default overwrite
+    how : str, default "overwrite"
         When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
 
     Raises
