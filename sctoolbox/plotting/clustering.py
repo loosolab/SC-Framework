@@ -1,3 +1,5 @@
+"""Functions for plotting clustering results e.g. UMAPs colored by clusters."""
+
 import numpy as np
 import scanpy as sc
 import matplotlib.pyplot as plt
@@ -17,7 +19,7 @@ def search_clustering_parameters(adata,
                                  embedding="X_umap",
                                  ncols=3,
                                  verbose=True,
-                                 save=None):
+                                 save=None) -> np.ndarray:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -40,10 +42,15 @@ def search_clustering_parameters(adata,
 
     Returns
     -------
-    axarr : array of matplotlib.axes.Axes
+    axarr : np.ndarray
         Array of axes objects containing the plot(s).
 
-    Example
+    Raises
+    ------
+    ValueError
+        If the length of 'resolution_range' is not 3, if 'step' is larger than 'max' - 'min' or if 'method' is not valid.
+
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -102,7 +109,7 @@ def search_clustering_parameters(adata,
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
         adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
-        n_clusters = len(adata.obs[key_added].cat.categories)
+        n_clusters = adata.obs[key_added].nunique()
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
@@ -121,12 +128,12 @@ def search_clustering_parameters(adata,
 
 
 @deco.log_anndata
-def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
-    """ Plot an overview of marker genes and clustering.
+def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None) -> list:
+    """Plot an overview of marker genes and clustering.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata : anndata.AnnData
         Annotated data matrix.
     groupby : `str`
         Key in `adata.obs` for which to plot the clustering.
@@ -139,7 +146,12 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     figsize : `tuple`, optional (default: `None`)
         Size of the figure. If `None`, use default size.
 
-    Example
+    Returns
+    -------
+    axarr : list
+        List of axes objects containing the plot(s).
+
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -175,12 +187,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
         axarr = [axarr]  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
-    marker_genes_dict = marker_genes_dict.copy()
-    for group in list(marker_genes_dict.keys()):
-        genes = marker_genes_dict[group]
-        marker_genes_dict[group] = [gene for gene in genes if gene in adata.var_names]
-        if len(marker_genes_dict[group]) == 0:
-            del marker_genes_dict[group]  # Remove group if no genes are left in the data
+    marker_genes_dict = utils.check_marker_lists(adata, marker_genes_dict)
 
     # Plot marker gene expression on the right
     ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])

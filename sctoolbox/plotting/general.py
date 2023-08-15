@@ -1,8 +1,11 @@
+"""General plotting functions for sctoolbox, e.g. general plots for wrappers, and saving and adding titles to figures."""
+
 import pandas as pd
 import numpy as np
 import warnings
 
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
@@ -16,8 +19,7 @@ from sctoolbox import settings
 ########################################################################################
 
 def _save_figure(path, dpi=600):
-    """
-    Save the current figure to a file.
+    """Save the current figure to a file.
 
     Parameters
     ----------
@@ -37,7 +39,7 @@ def _save_figure(path, dpi=600):
 
 
 def _make_square(ax):
-    """ Utility function to set the aspect ratio of a plot to be a square """
+    """Force a plot to be square using aspect ratio regardless of the x/y ranges."""
 
     xrange = np.diff(ax.get_xlim())[0]
     yrange = np.diff(ax.get_ylim())[0]
@@ -47,25 +49,20 @@ def _make_square(ax):
 
 
 def _add_figure_title(axarr, title, y=1.3, fontsize=16):
-    """
-    Add a figure title to the top of a multi-axes figure.
+    """Add a figure title to the top of a multi-axes figure.
 
     Parameters
     ----------
-    axarr : `list` of `matplotlib.axes.Axes`
+    axarr : list[matplotlib.Axes]
         List of axes to add the title to.
-    title : `str`
+    title : str
         Title to add at the top of plot.
-    y : `float`, optional (default: `1.3`)
+    y : float, default 1.3
         Vertical position of the title in relation to the content. Larger number moves the title further up.
-    fontsize : `int`, optional (default: `16`)
+    fontsize : int, default 16
         Font size of the title.
 
-    Returns
-    -------
-    None - adds a title to the figure directly.
-
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -110,22 +107,28 @@ def _add_figure_title(axarr, title, y=1.3, fontsize=16):
     _ = axarr[0].text(tx, ty, title, va="bottom", ha="center", fontsize=fontsize)
 
 
-def _add_labels(data, x, y, label_col=None, ax=None, **kwargs):
-    """
-    Add labels to a scatter plot.
+def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
+    """Add labels to a scatter plot.
 
     Parameters
     ----------
-    data : pandas.DataFrame
+    data : pd.DataFrame
         Dataframe containing the coordinates of points to label.
     x : str
         Name of the column in data to use for x axis coordinates.
     y : str
         Name of the column in data to use for y axis coordinates.
-    label_col : str, optional (default: `None`)
+    label_col : str, default None
         Name of the column in data to use for labels. If `None`, the index of data is used.
-    kwargs : arguments
+    ax : matplotlib.axes.Axes, default None
+        Axis to plot on. If `None`, the current open figure axis is used.
+    **kwargs : arguments
         Additional arguments to pass to matplotlib.axes.Axes.annotate.
+
+    Returns
+    -------
+    list
+        List of matplotlib.text.Annotation objects.
     """
 
     if ax is None:
@@ -152,9 +155,8 @@ def _add_labels(data, x, y, label_col=None, ax=None, **kwargs):
 #############################################################################
 
 
-def _scale_values(array, mini, maxi):
-    """
-    Small utility to scale values in array to a given range.
+def _scale_values(array, mini, maxi) -> np.ndarray:
+    """Small utility to scale values in array to a given range.
 
     Parameters
     ----------
@@ -164,6 +166,11 @@ def _scale_values(array, mini, maxi):
         Minimum value of the scale.
     maxi : float
         Maximum value of the scale.
+
+    Returns
+    -------
+    np.ndarray
+        Scaled array values.
     """
     val_range = array.max() - array.min()
     a = (array - array.min()) / val_range
@@ -171,7 +178,7 @@ def _scale_values(array, mini, maxi):
 
 
 def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
-    """ Fill in an axis with a legend for the dotplot size scale.
+    """Fill in an axis with a legend for the dotplot size scale.
 
     Parameters
     ----------
@@ -185,6 +192,8 @@ def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
         Minimum radius of the dots.
     radius_max : float
         Maximum radius of the dots.
+    title : str
+        Title of the legend.
     """
 
     # Current issue: The sizes start at 0, which means there are dots for 0 values.
@@ -225,12 +234,12 @@ def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
     ax.set_aspect('equal')
 
 
-def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr", **kwargs):
-    """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
+def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr", **kwargs) -> sns.clustermap:
+    """Plot a heatmap with dots instead of cells which can contain the dimension of "size".
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Dataframe containing the data to plot.
     x : str
         Column in table to plot on the x-axis.
@@ -246,10 +255,15 @@ def clustermap_dotplot(table, x, y, color, size, save=None, fillna=0, cmap="bwr"
         Replace NaN with given value.
     cmap : str, default bwr
         Colormap of the plot.
-    kwargs : arguments
+    **kwargs : arguments
         Additional arguments to pass to seaborn.clustermap.
 
-    Example
+    Returns
+    -------
+    sns.clustermap
+        Clustermap containing the plot.
+
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -377,8 +391,10 @@ def bidirectional_barplot(df,
                           title=None,
                           colors=None,
                           figsize=None,
-                          save=None):
-    """ Plot a bidirectional barplot. The input is a dataframe with the following columns:
+                          save=None) -> matplotlib.axes.Axes:
+    """Plot a bidirectional barplot.
+
+    The input is a dataframe with the following columns:
     - left_label
     - right_label
     - left_value
@@ -386,21 +402,33 @@ def bidirectional_barplot(df,
 
     Parameters
     ----------
-    df : `pandas.DataFrame`
+    df : pd.DataFrame
         Dataframe with the following columns: left_label, right_label, left_value, right_value.
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    colors : `dict`, optional (default: `None`)
+    colors : dict, default None
         Dictionary with label names as keys and colors as values.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : tuple, default None
         Figure size.
+    save : str, default None
+        If given, the figure will be saved to this path.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        Axes containing the plot.
+
+    Raises
+    ------
+    KeyError
+        If df does not contain the required columns.
     """
 
     # Check that df contains columns left/right_label and left/right value
     required_columns = ["left_label", "right_label", "left_value", "right_value"]
     for col in required_columns:
         if col not in df.columns:
-            raise ValueError(f"Column {col} not found in dataframe.")
+            raise KeyError(f"Column {col} not found in dataframe.")
 
     # Example data
     labels_left = df["left_label"].tolist()
@@ -474,25 +502,24 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-def boxplot(dt, show_median=True, ax=None):
-    """
-    Generate one plot containing one box per column. The median value is shown.
+def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
+    """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
     ----------
-    dt : pandas.DataFrame
+    dt : pd.DataFrame
         pandas datafame containing numerical values in every column.
-    show_median: boolean, default True
+    show_median : boolean, default True
         If True show median value as small box inside the boxplot.
-    ax : matplotlib.axes.Axes, optional
-        Axes object to plot on. If None, a new figure is created. Default: None.
+    ax : matplotlib.axes.Axes, default None
+        Axes object to plot on. If None, a new figure is created.
 
     Returns
     -------
-    AxesSubplot
+    matplotlib.axes.Axes
         containing boxplot for every column.
 
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -543,13 +570,12 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
-def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
-    """
-    Creates a violinplot. With optional horizontal lines for each violin.
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True) -> matplotlib.axes.Axes:
+    """Plot a violinplot with optional horizontal lines for each violin.
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Values to create the violins from.
     y : str
         Column name of table. Values that will be shown on y-axis.
@@ -571,7 +597,12 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
     matplotlib.axes.Axes :
         Object containing the violinplot.
 
-    Example
+    Raises
+    ------
+    ValueError
+        If y or color_by is not a column name of table. Or if hlines is not a number or list of numbers for color_by=None.
+
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -677,18 +708,22 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 ########################################################################################
 
 def plot_venn(groups_dict, title=None, save=None):
-    """
-    Plots a Venn diagram from a dictionary of groups of lists.
+    """Plot a Venn diagram from a dictionary of 2-3 groups of lists.
 
     Parameters
     ----------
-    groups_dict : `dict`
+    groups_dict : dict
         A dictionary where the keys are group names (strings) and the values
         are lists of items belonging to that group (e.g. {'Group A': ['A', 'B', 'C'], ...}).
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         Filename to save the plot to.
+
+    Raises
+    ------
+    ValueError
+        If groups_dict is not a dictionary or number of groups is not 2 or 3.
     """
     # Check if input is dict
     if not isinstance(groups_dict, dict):
