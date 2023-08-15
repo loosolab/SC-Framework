@@ -376,11 +376,16 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 class MPOverlapPct():
     """
-    TODO Write Docstring.
-    TODO Type hinting
+    Class to calculate percentage of fragments overlapping with regions of interest.
+
+    Notes
+    -----
+    This class will be removed in the future and replaced by a function due to over engineering.
+    Therefore this will be documented sparsely.
     """
 
     def __init__(self):
+        """Init class variables."""
 
         self.merged_dict = None
 
@@ -391,9 +396,7 @@ class MPOverlapPct():
                  adata,
                  regions_name='list',
                  n_threads=8):
-        """
-        TODO Write Docstring.
-        """
+        """Calculate percentage of fragments overlapping with regions of interest."""
 
         # check if there was an overlap
         if not overlap_file:
@@ -431,9 +434,7 @@ class MPOverlapPct():
         return adata
 
     def get_barcodes_sum(self, df, barcodes, col_name) -> dict:
-        """
-        TODO Write Docstring.
-        """
+        """Get the sum of reads counts in each cell barcode."""
 
         # drop columns we dont need
         df.drop(df.iloc[:, 5:], axis=1, inplace=True)
@@ -450,9 +451,7 @@ class MPOverlapPct():
         return count_dict
 
     def log_result(self, result) -> None:
-        """
-        TODO Write Docstring.
-        """
+        """Log results from mp_counter."""
 
         if self.merged_dict:
             self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
@@ -461,9 +460,7 @@ class MPOverlapPct():
             self.merged_dict = result
 
     def mp_counter(self, fragments, barcodes, column, n_threads=8):
-        """
-        TODO Write Docstring.
-        """
+        """Count reads for each cell barcode in parallel."""
 
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
