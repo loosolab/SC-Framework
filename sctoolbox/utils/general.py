@@ -413,3 +413,26 @@ def sanitize_string(s, char_list, replace="_") -> str:
         s = s.replace(char, replace)
 
     return s
+
+
+def identify_columns(df, regex) -> list[str]:
+    """
+    Get columns from pd.DataFrame that match the given regex.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Pandas dataframe to be checked.
+    regex : Union(list[str], str)
+        List of multiple regex or one regex as string.
+
+    Returns
+    -------
+    list[str]
+        List of column names that match one of the provided regex.
+    """
+
+    if isinstance(regex, list):
+        regex = "(" + ")|(".join(regex) + ")"
+
+    return df.filter(regex=(regex)).columns.to_list()
