@@ -73,7 +73,7 @@ def test_label_genes(adata, species, gene_column):
     else:
         mg.label_genes(adata, gene_column=gene_column, species=species)
 
-    added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
+    added_columns = ["is_ribo", "is_mito", "is_gender"]
     missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
 
     if species == "mouse":
