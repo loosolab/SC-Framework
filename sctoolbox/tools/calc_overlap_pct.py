@@ -386,6 +386,7 @@ class MPOverlapPct():
 
     def __init__(self):
         """Init class variables."""
+
         self.merged_dict = None
 
     def calc_pct(self,
@@ -432,7 +433,7 @@ class MPOverlapPct():
 
         return adata
 
-    def get_barcodes_sum(self, df, barcodes, col_name):
+    def get_barcodes_sum(self, df, barcodes, col_name) -> dict:
         """Get the sum of reads counts in each cell barcode."""
 
         # drop columns we dont need
@@ -449,7 +450,7 @@ class MPOverlapPct():
 
         return count_dict
 
-    def log_result(self, result):
+    def log_result(self, result) -> None:
         """Log results from mp_counter."""
 
         if self.merged_dict:
@@ -461,19 +462,13 @@ class MPOverlapPct():
     def mp_counter(self, fragments, barcodes, column, n_threads=8):
         """Count reads for each cell barcode in parallel."""
 
-        # init pool
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
-        # split fragments into chunks
         for chunk in fragments:
-            # apply async job wit callback function
             job = pool.apply_async(self.get_barcodes_sum, args=(chunk, barcodes, column), callback=self.log_result)
             jobs.append(job)
-        # monitor progress
         utils.monitor_jobs(jobs, description="Progress")
-        # close pool
         pool.close()
-        # wait for all jobs to finish
         pool.join()
         # reset settings
         returns = self.merged_dict
