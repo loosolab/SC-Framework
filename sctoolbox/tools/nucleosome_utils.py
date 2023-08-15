@@ -794,7 +794,11 @@ def density_plot(count_table, max_abundance=600):
     count_table = count_table
     # handle 0,1 min/max scaled count_table
     if count_table.dtype != 'int64':
-        count_table = unscale(count_table)
+        if np.max(count_table) > 1:
+            rounded = (np.round(count_table)).astype('int64')
+            count_table = rounded
+        else:
+            count_table = unscale(count_table)
     # get the maximal abundance of a fragment length over all cells
     max_value = np.max(np.around(count_table).astype(int))
     # Init empty densities list
