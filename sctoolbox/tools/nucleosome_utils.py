@@ -1281,21 +1281,21 @@ def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0):
 
 @deco.log_anndata
 def add_fld_metrics(adata,
-                           bam=None,
-                           fragments=None,
-                           barcode_col=None,
-                           barcode_tag="CB",
-                           regions=None,
-                           use_momentum=True,
-                           use_cwt=True,
-                           use_ct_cwt=True,
-                           peaks_thr_mom=0.03,
-                           peaks_thr_cwt=0.05,
-                           peaks_thr_ct_cwt=0.01,
-                           wavl_scale=35,
-                           plotting=True,
-                           plot_sample=0,
-                           n_threads=12):
+                    bam=None,
+                    fragments=None,
+                    barcode_col=None,
+                    barcode_tag="CB",
+                    regions=None,
+                    use_momentum=True,
+                    use_cwt=True,
+                    use_ct_cwt=True,
+                    peaks_thr_mom=0.03,
+                    peaks_thr_cwt=0.05,
+                    peaks_thr_ct_cwt=0.01,
+                    wavl_scale=35,
+                    plotting=True,
+                    plot_sample=0,
+                    n_threads=12):
     """
     Wrapper function to add insert size metrics to an AnnData object. This function can either take a bam file or a
     fragments file as input. If both are provided, an error is raised. If none are provided, an error is raised.

@@ -123,7 +123,6 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
     # initialize counter for overlap_list
     k = 0
 
-
     # Aggregate Overlap
     logger.info("aggregating fragments")
     for tss in tqdm(tss_list, desc='Aggregating'):
@@ -224,21 +223,21 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50):
     """
     # calculate global tSSe score
     logger.info("calculating global tSSe score")
-    center = per_base_tsse[:,negativ_shift-edge_size:negativ_shift+edge_size]
-    global_tsse_score = np.sum(center, axis=1) / (edge_size*2)
+    center = per_base_tsse[:, negativ_shift - edge_size : negativ_shift + edge_size]
+    global_tsse_score = np.sum(center, axis=1) / (edge_size * 2)
 
     return global_tsse_score
 
 
 def tsse_scoring(fragments,
-                   gtf,
-                   negativ_shift=2000,
-                   positiv_shift=2000,
-                   edge_size_total=100,
-                   edge_size_per_base=50,
-                   min_bias=0.01,
-                   keep_tmp=False,
-                   temp_dir=""):
+                 gtf,
+                 negativ_shift=2000,
+                 positiv_shift=2000,
+                 edge_size_total=100,
+                 edge_size_per_base=50,
+                 min_bias=0.01,
+                 keep_tmp=False,
+                 temp_dir=""):
     """
     This function calculates the tSSe score for each cell.
     Calculating the TSSe score is done like described in: "Chromatin accessibility profiling by ATAC-seq" Fiorella et al. 2022
@@ -353,14 +352,14 @@ def add_tsse_score(adata,
     logger.info("adding tSSe score to adata object")
 
     tSSe_df = tsse_scoring(fragments,
-                 gtf,
-                 negativ_shift=negativ_shift,
-                 positiv_shift=positiv_shift,
-                 edge_size_total=edge_size_total,
-                 edge_size_per_base=edge_size_per_base,
-                 min_bias=min_bias,
-                 keep_tmp=keep_tmp,
-                 temp_dir=temp_dir)
+                           gtf,
+                           negativ_shift=negativ_shift,
+                           positiv_shift=positiv_shift,
+                           edge_size_total=edge_size_total,
+                           edge_size_per_base=edge_size_per_base,
+                           min_bias=min_bias,
+                           keep_tmp=keep_tmp,
+                           temp_dir=temp_dir)
 
     # add tSSe score to adata
     adata.obs = adata.obs.join(tSSe_df['tsse_score'])

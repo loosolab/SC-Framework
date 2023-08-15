@@ -10,7 +10,6 @@ from collections import Counter
 import os
 import pkg_resources
 import pandas as pd
-import sys
 from pathlib import Path
 import multiprocessing as mp
 import sctoolbox.utils as utils
@@ -333,9 +332,12 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
 
 class MPOverlapPct():
-# class to calculate percentage of fragments overlapping with regions of interest
-# This class will be removed in the future and replaced by a function due to over engineering
-# Therefore this will be documented sparsely
+    """
+    class to calculate percentage of fragments overlapping with regions of interest
+    This class will be removed in the future and replaced by a function due to over engineering
+    Therefore this will be documented sparsely
+    """
+
     def __init__(self):
         # init class variables
         self.merged_dict = None

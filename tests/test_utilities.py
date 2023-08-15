@@ -268,6 +268,8 @@ def test_sort_bed(unsorted_fragments):
 
     # Clean up
     os.remove(sorted_bedfile)
+
+
 def test_check_marker_lists(adata2, marker_dict):
     """ Test that check_marker_lists intersects lists correctly. """
 

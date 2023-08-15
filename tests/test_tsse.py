@@ -43,7 +43,6 @@ def test_write_TSS(gtf):
     # Add tss_file to tempfiles
     tempfiles.append(tss_file)
 
-
     # Check if file exists
     assert os.path.exists(tss_file)
     # Check if file is not empty
@@ -52,12 +51,12 @@ def test_write_TSS(gtf):
     assert np.loadtxt(tss_file, dtype=str).shape[1] == 3
     # Check if the tss_list columns are in the expected format
     assert tss_list[0][0] == 'chr1'
-    assert type(tss_list[0][1]) == int
-    assert type(tss_list[0][2]) == int
+    assert type(tss_list[0][1]) is int
+    assert type(tss_list[0][2]) is int
 
     # Remove temporary files
     for tempfile in tempfiles:
-       os.remove(tempfile)
+        os.remove(tempfile)
 
 
 def test_overlap_and_aggregate(gtf, fragments):
@@ -69,7 +68,7 @@ def test_overlap_and_aggregate(gtf, fragments):
 
     tempfiles = [tss_file, overlap]
     # Write TSS file
-    tss_list, temp= tools.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
+    tss_list, temp = tools.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
     tempfiles.extend(temp)
 
     # overlap_and_aggregate
@@ -77,7 +76,7 @@ def test_overlap_and_aggregate(gtf, fragments):
     tempfiles.extend(temp)
 
     # Check if agg is a dictionary
-    assert type(agg) == dict
+    assert type(agg) is dict
     # check if overlap file exists
     assert os.path.exists(overlap)
     # Check if file is not empty
@@ -93,14 +92,14 @@ def test_overlap_and_aggregate(gtf, fragments):
 def test_add_tsse_score(adata, fragments, gtf):
 
     adata = tools.add_tsse_score(adata,
-                   fragments,
-                   gtf,
-                   negativ_shift=2000,
-                   positiv_shift=2000,
-                   edge_size_total=100,
-                   edge_size_per_base=50,
-                   min_bias=0.01,
-                   keep_tmp=False,
-                   temp_dir="")
+                                 fragments,
+                                 gtf,
+                                 negativ_shift=2000,
+                                 positiv_shift=2000,
+                                 edge_size_total=100,
+                                 edge_size_per_base=50,
+                                 min_bias=0.01,
+                                 keep_tmp=False,
+                                 temp_dir="")
 
     assert 'tsse_score' in adata.obs.columns
