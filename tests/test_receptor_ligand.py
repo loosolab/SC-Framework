@@ -4,11 +4,16 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import random
+import matplotlib.pyplot as plt
 
 import sctoolbox.receptor_ligand as rl
 
 
 # ------------------------------ FIXTURES -------------------------------- #
+
+# Prevent figures from being shown, we just check that they are created
+plt.switch_backend("Agg")
+
 
 @pytest.fixture
 def adata():

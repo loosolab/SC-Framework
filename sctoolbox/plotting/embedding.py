@@ -19,6 +19,7 @@ from numba import errors as numba_errors
 from sctoolbox._settings import settings
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
+import sctoolbox.utils.decorator as deco
 
 
 #############################################################################
@@ -44,6 +45,7 @@ def sc_colormap():
     return sc_cmap
 
 
+@deco.log_anndata
 def flip_embedding(adata, key="X_umap", how="vertical"):
     """
     Flip the embedding in adata.obsm[key] along the given axis.
@@ -58,6 +60,9 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
         Axis to flip along. Can be "vertical" (flips up/down) or "horizontal" (flips left/right).
     """
 
+    if key not in adata.obsm:
+        raise KeyError(f"The given key '{key}' cannot be found in adata.obsm. Please check the key value")
+
     if how == "vertical":
         adata.obsm[key][:, 1] = -adata.obsm[key][:, 1]
     elif how == "horizontal":
@@ -70,6 +75,7 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
 # -------------------- UMAP / tSNE embeddings ----------------------#
 #####################################################################
 
+@deco.log_anndata
 def search_umap_parameters(adata,
                            min_dist_range=(0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
                            spread_range=(0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
@@ -119,6 +125,7 @@ def search_umap_parameters(adata,
     return _search_dim_red_parameters(**args, **kwargs)
 
 
+@deco.log_anndata
 def search_tsne_parameters(adata,
                            perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
                            color=None, verbose=True, threads=4, save=None, **kwargs):
@@ -298,6 +305,7 @@ def _search_dim_red_parameters(adata, method, perplexity_range=None, learning_ra
 # -------------------------- Different group embeddings ------------------------------#
 #######################################################################################
 
+@deco.log_anndata
 def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None):
     """ Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -386,12 +394,12 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         List of names for the adata objects. Default: None (adatas will be named adata_1, adata_2, etc.).
     kwargs : arguments
         Additional arguments to pass to sc.pl.umap/sc.pl.tsne/sc.pl.pca.
-    
+
     Example
     --------
     .. plot::
         :context: close-figs
-        
+
         import scanpy as sc
 
     .. plot::
@@ -401,7 +409,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
         adata2 = sc.datasets.pbmc3k_processed()
         adata_list = [adata1, adata2]
         var_list = ['n_counts', 'n_cells']
-    
+
     .. plot::
         :context: close-figs
 
@@ -493,15 +501,14 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 def _get_3d_dotsize(n):
     """ Utility to get the dotsize for a given number of points. """
     if n < 1000:
-        size = 12
-    if n < 10000:
-        size = 8
+        return 12
+    elif n < 10000:
+        return 8
     else:
-        size = 3
-
-    return size
+        return 3
 
 
+@deco.log_anndata
 def plot_3D_UMAP(adata, color, save):
     """ Save 3D UMAP plot to a html file.
 
@@ -624,6 +631,7 @@ def plot_3D_UMAP(adata, color, save):
         print("Please specify save parameter for html export")
 
 
+@deco.log_anndata
 def umap_marker_overview(adata, markers, ncols=3, figsize=None,
                          save=None,
                          cbar_label="Relative expr.",
@@ -681,14 +689,15 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
 
     # Make plots square
     for ax in axes_list:
-        utils._make_square(ax)
+        _make_square(ax)
 
     # Save figure if chosen
     _save_figure(save)
 
-    return axes_list
+    return list(axes_list)
 
 
+@deco.log_anndata
 def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     """
     Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
@@ -722,6 +731,9 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs):
     if not isinstance(axarr, list):
         axarr = [axarr]
         color = [color]
+
+    if title and len(title) != len(color):
+        raise ValueError("Color and Title must have the same length.")
 
     colorbar_count = 0
     for i, ax in enumerate(axarr):
@@ -1007,6 +1019,7 @@ def anndata_overview(adatas,
     return axs
 
 
+@deco.log_anndata
 def plot_pca_variance(adata, method="pca",
                       n_pcs=20,
                       n_selected=None,

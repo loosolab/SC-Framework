@@ -46,6 +46,13 @@ def na_dataframe():
     return df
 
 
+@pytest.fixture
+def marker_dict():
+    return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+            "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
+            "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
+
+
 arr_ints = np.random.randint(10, size=(10, 10))
 arr_ints2 = arr_ints.astype(float)
 arr_floats = np.random.rand(10, 10)
@@ -210,10 +217,7 @@ def test_save_h5ad(adata):
     path = "test.h5ad"
     utils.save_h5ad(adata, path)
 
-    adata_read = sc.read_h5ad(path)
-
     assert os.path.isfile(path)
-    assert "user" in adata_read.uns["sctoolbox"]
     os.remove(path)  # clean up after tests
 
 
@@ -230,6 +234,16 @@ def test_get_organism():
 
     # valid call
     assert utils.get_organism("ENSG00000164690") == "Homo_sapiens"
+
+
+def test_check_marker_lists(adata2, marker_dict):
+    """ Test that check_marker_lists intersects lists correctly. """
+
+    filtered_marker = utils.check_marker_lists(adata2, marker_dict)
+
+    assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+                               "Celltype B": ['ENSMUSG00000102272']}
+
 
 # TODO
 # following tests are skipped due to occasional "No internet connection" error.

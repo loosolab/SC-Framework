@@ -1,7 +1,27 @@
 0.2 (in progress)
 --------------------
-- Implemented prepare_for_cellxgene to prepare adata for cellxgene deployment
+- implemented prepare_for_cellxgene
+- fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
+- Added logging verbose and decorator to ATAC related functions
+- Fix "shell not found" error for CI pipeline (#129)
+- Pinned scikit-learn to version <=1.2.2 (#128)
+- Added check for marker gene lists (#103)
+- Keep notebook metadata on push to prevent deleting kernel information
+- Added sctoolbox as default kernel to RNA & ATAC notebooks
+- Added check of column validity to tools.marker_genes.run_DESeq2() (#134)
+- Increase test coverage for plotting functions (#126)
+- Apply fixes to bugs found by increasing the test coverage.
+- Fix parameter for gene/cell filtering (#136)
+- Add Check to _filter_object() if column contains only boolean (#110)
+- Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
+
+Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
+- Fixed assembling atac notebook 01
+- Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
+- Added custome cwt implementation
+- Added additional parameters to add_insertsize_metrics
+- Revised nucleosomal score scoring
 
 0.1.1 (24-05-2023)
 --------------------

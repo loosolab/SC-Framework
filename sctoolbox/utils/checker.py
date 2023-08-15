@@ -6,6 +6,8 @@ import gzip
 import shutil
 
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 def check_module(module):
@@ -78,6 +80,96 @@ def is_str_numeric(ans):
         return False
 
 
+def format_index(adata, from_column=None):
+    """
+    This formats the index of adata.var by the pattern ["chr", "start", "stop"]
+    Parameters
+    ----------
+    adata: anndata.AnnData
+    from_column: None or column name (str) in adata.var to be set as index
+
+    Returns
+    -------
+
+    """
+    if from_column is None:
+        entry = adata.var.index[0]
+        index_type = get_index_type(entry)
+
+        if index_type == 'snapatac':
+            adata.var['name'] = adata.var['name'].str.replace("b'", "")
+            adata.var['name'] = adata.var['name'].str.replace("'", "")
+
+            # split the peak column into chromosome start and end
+            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
+            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+            # set types
+            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
+            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
+            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
+            # remove start_end column
+            adata.var.drop('start_end', axis=1, inplace=True)
+
+            adata.var = adata.var.set_index('name')
+
+        elif index_type == "start_name":
+            coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+            new_index = []
+            for line in adata.var.index:
+                new_index.append(re.search(coordinate_pattern, line).group(0))
+            adata.var['new_index'] = new_index
+            adata.var.set_index('new_index', inplace=True)
+
+    else:
+        entry = list(adata.var[from_column])[0]
+        index_type = get_index_type(entry)
+
+        if index_type == 'snapatac':
+            adata.var['name'] = adata.var['name'].str.replace("b'", "")
+            adata.var['name'] = adata.var['name'].str.replace("'", "")
+
+            # split the peak column into chromosome start and end
+            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
+            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+            # set types
+            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
+            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
+            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
+            # remove start_end column
+            adata.var.drop('start_end', axis=1, inplace=True)
+
+            adata.var = adata.var.set_index('name')
+
+        elif index_type == "start_name":
+            coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+            new_index = []
+            for line in adata.var[from_column]:
+                new_index.append(re.search(coordinate_pattern, line).group(0))
+            adata.var['new_index'] = new_index
+            adata.var.set_index('new_index', inplace=True)
+
+
+def get_index_type(entry):
+    """
+    Check the format of the index by regex
+    Parameters
+    ----------
+    entry
+
+    Returns
+    -------
+
+    """
+
+    regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
+    regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
+
+    if re.match(regex_snapatac, entry):
+        return 'snapatac'
+    if re.match(regex_start_name, entry):
+        return 'start_name'
+
+
 def validate_regions(adata, coordinate_columns):
     """ Checks if the regions in adata.var are valid.
 
@@ -129,7 +221,6 @@ def format_adata_var(adata,
 
     # Test whether the first three columns are in the right format
     format_index = True
-    print(coordinate_columns)
     if coordinate_columns is not None:
         try:
             validate_regions(adata, coordinate_columns)
@@ -299,3 +390,35 @@ def is_regex(regex):
 
     except re.error:
         return False
+
+
+def check_marker_lists(adata, marker_dict):
+    """
+    Remove genes in custom marker genes lists which are not present in dataset.
+
+    Parameters
+    ----------
+    adata : AnnData object
+        The anndata object containing features to annotate.
+    marker_dict : dict
+        A dictionary containing a list of marker genes as values and corresponding cell types as keys.
+        The marker genes given in the lists need to match the index of adata.var.
+
+    Returns
+    -------
+    dict :
+        A dictionary containing a list of marker genes as values and corresponding cell types as keys.
+    """
+    marker_dict = marker_dict.copy()
+
+    for key, genes in list(marker_dict.items()):
+        found_in_var = list(set(adata.var.index) & set(genes))
+        not_found_in_var = list(set(genes) - set(adata.var.index))
+        if not found_in_var:
+            logger.warning(f"No marker in {key} marker list can be found in the data. "
+                           + "Please check your marker list. Removing empty marker list form dictionary.")
+            marker_dict.pop(key)
+        elif not_found_in_var:
+            marker_dict[key] = found_in_var
+            logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
+    return marker_dict
