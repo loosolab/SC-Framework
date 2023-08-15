@@ -15,6 +15,7 @@
 - Fix parameter for gene/cell filtering (#136)
 - Add Check to _filter_object() if column contains only boolean (#110)
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
+- Add method to get pd.DataFrame columsn with list of regex (#90)
 
 Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):
 - Fixed assembling atac notebook 01
