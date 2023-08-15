@@ -245,6 +245,17 @@ def test_check_marker_lists(adata2, marker_dict):
                                "Celltype B": ['ENSMUSG00000102272']}
 
 
+@pytest.mark.parametrize("regex, result", [(".*_str",
+                                            ["category_str"]),
+                                           ([".*_str", ".*_num"],
+                                            ["category_str", "category_num"]),
+                                           (["INVALID"], [])])
+def test_identify_columns(na_dataframe, regex, result):
+    """Test if identify returns matching columns."""
+
+    assert utils.identify_columns(na_dataframe, regex) == result
+
+
 # TODO
 # following tests are skipped due to occasional "No internet connection" error.
 # This may be related to too many requests in a short period of time.
