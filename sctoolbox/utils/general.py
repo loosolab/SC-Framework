@@ -419,11 +419,11 @@ def identify_columns(df, regex) -> list[str]:
     """
     Get columns from pd.DataFrame that match the given regex.
 
-    Paramaters
+    Parameters
     ----------
     df : pd.DataFrame
         Pandas dataframe to be checked.
-    regex_list : list[str] or str
+    regex : Union(list[str], str)
         List of multiple regex or one regex as string.
 
     Returns
