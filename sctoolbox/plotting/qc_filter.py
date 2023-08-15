@@ -511,10 +511,7 @@ def quality_violin(adata, columns,
 
     # Order of categories on x axis
     if groupby is not None:
-        # Convert to category
-        if table[groupby].dtype.name != "category":
-            table[groupby] = table[groupby].astype('category')
-        groups = list(table[groupby].cat.categories)
+        groups = list(table[groupby].astype('category').cat.categories)
         n_colors = len(groups)
     else:
         groups = None
