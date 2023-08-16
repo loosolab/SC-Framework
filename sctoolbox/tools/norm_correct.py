@@ -22,7 +22,7 @@ logger = settings.logger
 #####################################################################
 
 def atac_norm(*args, **kwargs):
-    """ Deprecated function. Use normalize_adata instead. """
+    """Normalize ATAC data - deprecated functionality. Use normalize_adata instead."""
 
     logger.warning("The function 'atac_norm' is deprecated. Use 'normalize_adata' instead.")
     return normalize_adata(*args, **kwargs)
@@ -31,7 +31,7 @@ def atac_norm(*args, **kwargs):
 @deco.log_anndata
 def normalize_adata(adata, method, exclude_highly_expressed=True, target_sum=None) -> dict[str, anndata.AnnData]:
     """
-    A function that normalizes count matrix and calculates dimension reduction using different methods.
+    Normalize the count matrix and calculate dimension reduction using different methods.
 
     Parameters
     ----------

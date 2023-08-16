@@ -169,7 +169,7 @@ def test_plot_pca_variance_fail(adata):
 @pytest.mark.parametrize("which", ["obs", "var"])
 @pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
 def test_plot_pca_correlation(adata, which, method):
-    """ Test if Axes object is returned without error. """
+    """Test if Axes object is returned without error."""
 
     ax = pl.plot_pca_correlation(adata, which=which, method=method)
     ax_type = type(ax).__name__
@@ -181,7 +181,7 @@ def test_plot_pca_correlation(adata, which, method):
                                     {"which": "invalid"},
                                     {"columns": ["invalid", "columns"]}])
 def test_plot_pca_correlation_fail(adata, kwargs):
-    """ Test that an error is raised upon error """
+    """Test that an exception is raised upon error."""
 
     with pytest.raises((ValueError, KeyError)):
         pl.plot_pca_correlation(adata, **kwargs)

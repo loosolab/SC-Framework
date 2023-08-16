@@ -1182,7 +1182,7 @@ def plot_pca_correlation(adata, which="obs",
                          method="spearmanr",
                          figsize=None,
                          title=None,
-                         save=None):
+                         save=None) -> matplotlib.axes.Axes:
     """
     Plot a heatmap of the correlation between the first n_pcs and the given columns.
 
@@ -1202,6 +1202,8 @@ def plot_pca_correlation(adata, which="obs",
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
     figsize : tuple of int, default None
         Size of the figure in inches. If None, the size is automatically determined.
+    title : str, default None
+        Title of the plot. If None, no title is added.
     save : str, default None
         Filename to save the figure.
 
@@ -1210,8 +1212,7 @@ def plot_pca_correlation(adata, which="obs",
     ax : matplotlib.axes.Axes
         Axes object containing the heatmap.
 
-
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs

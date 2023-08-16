@@ -70,7 +70,7 @@ def test_wrap_umap(adata):
 
 @pytest.mark.parametrize("method", ["total", "tfidf"])
 def test_normalize_adata(adata, method):
-    """ Test that data was normalized"""
+    """Test that data was normalized."""
     result_dict = an.normalize_adata(adata, method=method)
     adata = result_dict[method]
     mat = adata.X.todense()
