@@ -20,15 +20,15 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -
     Parameters
     ----------
     adata : anndata.AnnData
-        Annotated data matrix.
+        Annotated adata object.
     gene : str
         Gene of interest.
     condition_col : str
         Column in adata.obs containing conditions.
     condition_A : str
-        First condition.
+        Name of the first condition.
     condition_B : str
-        Second condition.
+        Name of the second condition.
 
     Returns
     -------
@@ -131,8 +131,8 @@ def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B) -> pd.Data
     """
     Compare two conditions.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     df_cond_A : pandas.DataFrame
         Dataframe containing correlation analysis from correlate_ref_vs_all
     df_cond_B : pandas.DataFrame

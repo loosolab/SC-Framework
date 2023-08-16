@@ -621,10 +621,10 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
 
 def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, save=None) -> list[matplotlib.axes.Axes]:
     """
-    Plot gene expression of one refrence gene against the expression of a set of genes.
+    Plot the gene expression of one reference gene against the expression of a set of genes.
 
     Parameters
-    ---------
+    ----------
     adata : anndata.AnnData object
         An annotated data matrix object containing counts in .X.
     ref_gene : str
