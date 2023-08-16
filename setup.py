@@ -1,3 +1,5 @@
+"""Sctoolbox a collection of single cell analysis functions."""
+
 from setuptools import setup
 from setuptools import find_namespace_packages
 import re
@@ -18,8 +20,25 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
 
-# Find version for package
-def find_version(f):
+def find_version(f) -> str:
+    """
+    Get package version from file.
+
+    Parameters
+    ----------
+    f : str
+        Path to version file.
+
+    Returns
+    -------
+    str
+        Version string.
+
+    Raises
+    ------
+    RuntimeError
+        If version string is missing.
+    """
     version_file = open(f).read()
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     if version_match:
@@ -49,6 +68,7 @@ setup(
         'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
+        'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba==0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
         'kneed',

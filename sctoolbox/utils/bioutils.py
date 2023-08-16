@@ -1,3 +1,5 @@
+"""Bio related utility functions."""
+
 import numpy as np
 import pandas as pd
 import re
@@ -6,6 +8,9 @@ import apybiomart
 from scipy.sparse import issparse
 import gzip
 import argparse
+import scanpy
+
+from typing import Optional
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -13,7 +18,7 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
-                     percentile_range=(0, 100), chunk_size=1000):
+                     percentile_range=(0, 100), chunk_size=1000) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -23,18 +28,25 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
         Anndata object with counts in .X.
     groupby : str
         Column name in adata.obs from which the pseudobulks are created.
-    how : str, default "mean"
-        How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
-    percentile_range : tuple of 2 values, default (0,100)
+    how : {'mean', 'sum'}
+        How to calculate the value per group (psuedobulk).
+    layer : str, default None
+        Name of an anndata layer to use instead of `adata.X`.
+    percentile_range : tuple of 2 values, default (0, 100)
         The percentile of cells used to calculate the mean/sum for each feature.
-        Is used to limit the effect of individual cell outliers, e.g. by setting (0,95) to exclude high values in the calculation.
+        Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.
     chunk_size : int, default 1000
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
+
+    Raises
+    ------
+    TypeError
+        If `percentile_range` is not of type `tuple`.
     """
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
@@ -95,12 +107,25 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 #####################################################################
 
 @deco.log_anndata
-def barcode_index(adata):
+def barcode_index(adata) -> None:
     """
-    check if the barcode is the index
-    :param adata:
-    :return:
+    Check if the barcode is the index.
+
+    Will replace the index with `adata.obs["barcode"]` if index does not contain barcodes.
+
+    TODO refactor
+    - name could be more descriptive
+    - return adata
+    - inplace parameter
+    - use logger
+    ...
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata to perform check on.
     """
+
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
@@ -127,22 +152,30 @@ def barcode_index(adata):
 #                  Converting between gene id and name              #
 #####################################################################
 
-def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
     """
     Get the organism name to the given Ensembl ID.
 
     Parameters
     ----------
     ensembl_id : str
-    Any Ensembl ID. E.g. ENSG00000164690
+        Any Ensembl ID. E.g. ENSG00000164690
     host : str
-    Ensembl server address.
+        Ensembl server address.
 
     Returns
     -------
     str :
         Organism assigned to the Ensembl ID
+
+    Raises
+    ------
+    ConnectionError
+        If there is an unexpected (or no) response from the server.
+    ValueError
+        If the returned organism is ambiguous.
     """
+
     # this will redirect
     url = f"{host}{ensembl_id}"
     response = requests.get(url)
@@ -162,7 +195,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     return species
 
 
-def gene_id_to_name(ids, species):
+def gene_id_to_name(ids, species) -> pd.DataFrame:
     """
     Get Ensembl gene names to Ensembl gene id.
 
@@ -175,9 +208,15 @@ def gene_id_to_name(ids, species):
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         DataFrame with gene ids and matching gene names.
+
+    Raises
+    ------
+    ValueError
+        If provided Ensembl IDs or organism is invalid.
     """
+
     if not all(id.startswith("ENS") for id in ids):
         raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
 
@@ -200,7 +239,7 @@ def gene_id_to_name(ids, species):
 
 
 @deco.log_anndata
-def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Add gene names to adata.var.
 
@@ -221,9 +260,15 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData] :
         AnnData object with gene names.
+
+    Raises
+    ------
+    ValueError
+        If invalid parameter choice or column name not found in adata.var.
     """
+
     if not id_col_name and not index:
         raise ValueError("Either set parameter id_col_name or index.")
     elif not index and id_col_name not in adata.var.columns:
@@ -273,28 +318,34 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
 
 @deco.log_anndata
-def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
 
     Parameters
     ----------
-    adata: scanpy.AnnData
+    adata : scanpy.AnnData
         AnnData object
-    column: str
+    column : str
         Column name in adata.var
-    unified_names: str, default "unified_names"
+    unified_column : str, default "unified_names"
         Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
     species : str, default "auto"
         Species of the dataset. On default, species is inferred based on gene ids.
-    inplace: boolean, default True
+    inplace : boolean, default True
         Whether to modify adata or return a copy.
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData] :
         AnnData object with modified gene column.
+
+    Raises
+    ------
+    ValueError
+        If column name is not found in `adata.var` or no Ensembl IDs in selected column.
     """
+
     if column not in adata.var.columns:
         raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
 
@@ -342,19 +393,33 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 #                   Check integrity of gtf file                     #
 #####################################################################
 
-def _gtf_integrity(gtf):
-    '''
-    Checks the integrity of a gtf file by examining:
+def _gtf_integrity(gtf) -> bool:
+    """
+    Check if the provided file follows the gtf-format.
+
+    TODO rather return False than raise an error.
+
+    Checks the following:
         - file-ending
         - header ##format: gtf
         - number of columns == 9
         - regex pattern of column 9 matches gtf specific format
 
-    :param gtf: str
-        Path to .gtf file containing genomic elements for annotation.
-    :return: boolean
-        True if the file passed all tests
-    '''
+    Parameters
+    ----------
+    gtf : str
+        Path to file.
+
+    Returns
+    -------
+    bool
+        True if the file is a valid gtf-file.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the file is not in gtf-format.
+    """
 
     regex_header = '#+.*'
     regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'

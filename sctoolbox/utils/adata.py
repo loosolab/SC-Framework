@@ -1,3 +1,4 @@
+"""anndata.AnnData related functions."""
 
 import numpy as np
 import scanpy as sc
@@ -10,7 +11,7 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def get_adata_subsets(adata, groupby):
+def get_adata_subsets(adata, groupby) -> dict[str, sc.AnnData]:
     """
     Split an anndata object into a dict of sub-anndata objects based on a grouping column.
 
@@ -23,8 +24,13 @@ def get_adata_subsets(adata, groupby):
 
     Returns
     -------
-    dict :
+    dict[str, sc.AnnData]
         Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
+
+    Raises
+    ------
+    ValueError
+        If groupby is not found in `adata.obs.columns`.
     """
 
     if groupby not in adata.obs.columns:
@@ -39,7 +45,7 @@ def get_adata_subsets(adata, groupby):
 
 
 @deco.log_anndata
-def add_expr_to_obs(adata, gene):
+def add_expr_to_obs(adata, gene) -> None:
     """
     Add expression of a gene from adata.X to adata.obs as a new column.
 
@@ -49,6 +55,11 @@ def add_expr_to_obs(adata, gene):
         Anndata object to add expression to.
     gene : str
         Gene name to add expression of.
+
+    Raises
+    ------
+    Exception
+        If the gene is not found in the adata object.
     """
 
     boolean = adata.var.index == gene
@@ -61,22 +72,23 @@ def add_expr_to_obs(adata, gene):
 
 
 @deco.log_anndata
-def shuffle_cells(adata, seed=42):
+def shuffle_cells(adata, seed=42) -> sc.AnnData:
     """
     Shuffle cells in an adata object to improve plotting.
+
     Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object to shuffle cells in.
+    seed : int, default 42
+        Seed for random number generator.
 
     Returns
     -------
-    anndata.AnnData :
+    sc.AnnData
         Anndata object with shuffled cells.
-    seed : int, default 42
-        Seed for random number generator.
     """
 
     import random
@@ -91,8 +103,9 @@ def shuffle_cells(adata, seed=42):
     return adata
 
 
-def get_minimal_adata(adata):
-    """ Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
+def get_minimal_adata(adata) -> sc.AnnData:
+    """
+    Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
 
     Parameters
     ----------
@@ -101,7 +114,7 @@ def get_minimal_adata(adata):
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         Minimal copy of anndata object.
     """
 
@@ -113,7 +126,7 @@ def get_minimal_adata(adata):
     return adata_minimal
 
 
-def load_h5ad(path):
+def load_h5ad(path) -> sc.AnnData:
     """
     Load an anndata object from .h5ad file.
 
@@ -124,7 +137,7 @@ def load_h5ad(path):
 
     Returns
     -------
-    anndata.AnnData :
+    sc.AnnData :
         Loaded anndata object.
     """
 
@@ -137,7 +150,7 @@ def load_h5ad(path):
 
 
 @deco.log_anndata
-def save_h5ad(adata, path):
+def save_h5ad(adata, path) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -156,9 +169,11 @@ def save_h5ad(adata, path):
     logger.info(f"The adata object was saved to: {adata_output}")
 
 
-def add_uns_info(adata, key, value, how="overwrite"):
+def add_uns_info(adata, key, value, how="overwrite") -> None:
     """
-    Add information to adata.uns['sctoolbox']. This is used for logging the parameters and options of different steps in the analysis.
+    Add information to adata.uns['sctoolbox'].
+
+    This is used for logging the parameters and options of different steps in the analysis.
 
     Parameters
     ----------
@@ -170,6 +185,11 @@ def add_uns_info(adata, key, value, how="overwrite"):
         The value to add to adata.uns['sctoolbox'].
     how : str, default overwrite
         When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
+
+    Raises
+    ------
+    ValueError
+        If value can not be appended.
     """
 
     if "sctoolbox" not in adata.uns:
