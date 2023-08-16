@@ -876,7 +876,7 @@ def test_pairwise_scatter_invalid(adata, columns):
 @pytest.mark.parametrize("thresholds", [None,
                                         {"qcvar1": {"min": 0.1}, "qcvar2": {"min": 0.4}}])
 def test_pairwise_scatter(adata, thresholds):
-    """Test pairwise scatterplot with different input"""
+    """Test pairwise scatterplot with different input."""
     axarr = pl.pairwise_scatter(adata.obs, columns=["qcvar1", "qcvar2"], thresholds=thresholds)
 
     assert axarr.shape == (2, 2)
