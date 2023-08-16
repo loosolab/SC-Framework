@@ -291,7 +291,7 @@ def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, 
 
         out.var.drop(columns=drop_var, inplace=True)
 
-    # rename obs columns
+    # rename var columns
     if rename_var:
         out.var.rename(columns=rename_var, inplace=True)
 
