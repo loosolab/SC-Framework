@@ -1,3 +1,5 @@
+"""Plot velocity related figures e.g. pseudo-time heatmap."""
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -6,6 +8,11 @@ from scipy.sparse import issparse
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import _save_figure
+
+# type hint imports
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import matplotlib
 
 
 ####################################################################################################
@@ -20,12 +27,12 @@ def pseudotime_heatmap(adata, genes,
                        shrink_cbar=0.5,
                        title=None,
                        save=None,
-                       **kwargs):
+                       **kwargs) -> "matplotlib.Axes":
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : anndata.AnnData
         Anndata object
     genes : list
@@ -42,9 +49,11 @@ def pseudotime_heatmap(adata, genes,
         Set title for plot.
     save : str, default None
         Path and name of file to be saved.
+    **kwargs : arguments
+        Additional arguments passed to seaborn.heatmap.
 
     Returns
-    --------
+    -------
     ax : matplotlib.Axes
         Axes object containing the plot.
     """

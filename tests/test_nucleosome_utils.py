@@ -1,3 +1,5 @@
+"""Test nucleosome utilities."""
+
 import pytest
 import os
 import numpy as np
@@ -11,12 +13,14 @@ from scipy.signal import find_peaks
 
 @pytest.fixture
 def count_table():
+    """Return fragment count table."""
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
     return atac._insertsize_from_fragments(fragments, barcodes=None)
 
 
 @pytest.fixture
 def disturbed_sine(freq=3.1415 * 2):
+    """Return list of disturbed sine wave and sine wave."""
     in_array = np.linspace(0, freq, 1000)
     sine_wave = np.sin(in_array)
     in_array = np.linspace(0, 500, 1000)
@@ -29,6 +33,7 @@ def disturbed_sine(freq=3.1415 * 2):
 
 @pytest.fixture
 def stack_sines(disturbed_sine):
+    """Return multiple sine waves and disturbed sine waves."""
 
     sines = []
     disturbed_sine_waves = []
@@ -45,7 +50,7 @@ def stack_sines(disturbed_sine):
 
 @pytest.fixture
 def modulation():
-    """This fixture creates a modulation curve"""
+    """Create a modulation curve."""
     def gaussian(x, mu, sig):  # Gaussian function
         return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
@@ -64,6 +69,7 @@ def modulation():
 
 @pytest.fixture
 def fragment_distributions():
+    """Load nucleosomal test data."""
     testdata = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'nucleosomal_score.csv'), delimiter=None)
 
     return testdata
@@ -71,6 +77,7 @@ def fragment_distributions():
 
 @pytest.fixture
 def density_reference():
+    """Load test densities."""
     densities = np.loadtxt(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'densities.txt'), delimiter=None)
 
     return densities
@@ -78,14 +85,14 @@ def density_reference():
 
 @pytest.fixture
 def adata():
-    """ Fixture for an AnnData object. """
+    """Fixture for an AnnData object."""
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
 
 @pytest.fixture
 def bamfile():
-    """ Fixture for an Bamfile.  """
+    """Fixture for an Bamfile."""
     bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
     return bamfile
 
@@ -94,9 +101,9 @@ def bamfile():
 
 def test_moving_average(disturbed_sine):
     """
-    Test that the moving average function works as expected, by comparing a smoothed disturbed sine wave to the original
-    and inspecting the difference.
+    Test that the moving average function works as expected.
 
+    Compares a smoothed disturbed sine wave to the original and inspects the difference.
     """
     disturbed_sine_wave, sine_wave = disturbed_sine
     smoothed_sine = nu.moving_average(disturbed_sine_wave, n=10)
@@ -111,9 +118,7 @@ def test_moving_average(disturbed_sine):
 
 
 def test_multi_ma(stack_sines):
-    """
-    Test that the multi_ma function works as expected by comparing a smoothed disturbed sine wave to the original
-    """
+    """Test that the multi_ma function works as expected by comparing a smoothed disturbed sine wave to the original."""
     sine_stack, dist_stack = stack_sines
     smoothed = nu.multi_ma(dist_stack)
 
@@ -131,7 +136,7 @@ def test_multi_ma(stack_sines):
 
 
 def test_scale(count_table):
-    """ Test that the scale function works as expected by checking that the max value is 1 and the min value is 0 """
+    """Test that the scale function works as expected by checking that the max value is 1 and the min value is 0."""
     table = count_table
 
     dist = table[[c for c in table.columns if isinstance(c, int)]]
@@ -149,21 +154,21 @@ def test_scale(count_table):
 
 
 def test_calc_densities(fragment_distributions, density_reference):
-    """ Test that the calc_densities function works as expected by asserting known values """
+    """Test that the calc_densities function works as expected by asserting known values."""
     densities = nu.calc_densities(fragment_distributions)
 
     assert np.array_equal(densities, density_reference)
 
 
 def test_call_peaks_worker(modulation):
-    """ Test that the call_peaks_worker function works as expected """
+    """Test that the call_peaks_worker function works as expected."""
     peaks = nu.call_peaks_worker(modulation)
 
     assert peaks[0] == 333
 
 
 def test_call_peaks(stack_sines):
-    """ Test that the call_peaks function works as expected """
+    """Test that the call_peaks function works as expected."""
     sine_stack, dist_stack = stack_sines  # get the stack of sines
     peaks = nu.call_peaks(sine_stack)
 
@@ -172,7 +177,7 @@ def test_call_peaks(stack_sines):
 
 
 def test_filter_peaks(disturbed_sine):
-    """ Test that the filter_peaks function works as expected """
+    """Test that the filter_peaks function works as expected."""
     peaks = np.array([50, 250, 400, 500, 999])
     disturbed_sine_wave, sine_wave = disturbed_sine
 
@@ -188,8 +193,9 @@ def test_filter_peaks(disturbed_sine):
 
 def test_momentum_diff(modulation):
     """
-    Test that the momentum_diff function works as expected, by modeling overlapping gaussian curves and checking that
-    the function finds the correct peaks.
+    Test momentum_diff success.
+
+    Models the overlapping gaussian curves and checks if the function finds the correct peaks.
     """
     sum_c = modulation  # get the sum of the gaussian curves
 
@@ -204,7 +210,7 @@ def test_momentum_diff(modulation):
 
 
 def test_add_adapters():
-    """Test the add_adapters function"""
+    """Test the add_adapters function."""
     input = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 3, 4, 5, 6, 7, 8, 9]])
 
     added = nu.add_adapters(input, shift=10, smooth=False)  # add adapters to the input array
@@ -214,7 +220,7 @@ def test_add_adapters():
 
 
 def test_cross_point_shift(modulation):
-    """This test checks that the cross_point_shift function works as expected"""
+    """Test cross_point_shift function success."""
     sum_c = modulation  # get the sum of the gaussian curves
     mom, a, b = nu.momentum_diff(sum_c, remove=0, shift=50, smooth=False)  # Calculate the momentum difference
     peaks, _ = find_peaks(mom, height=0.1)  # Find peaks in the momentum difference
@@ -226,7 +232,7 @@ def test_cross_point_shift(modulation):
 
 
 def test_single_cwt_ov(modulation):
-    """Tests the single_cwt_ov function"""
+    """Tests the single_cwt_ov function."""
     features = [modulation]
     coef, filtered_peaks = nu.single_cwt_ov(features, shift=0, sample=0, freq=4)
 
@@ -234,7 +240,7 @@ def test_single_cwt_ov(modulation):
 
 
 def test_score_by_momentum(fragment_distributions):
-    """Tests the score_by_cwt function, by scoring data of different quality from high to low"""
+    """Tests the score_by_cwt function, by scoring data of different quality from high to low."""
     testdata = fragment_distributions
     testdata = nu.scale(testdata)  # scale
     testdata = nu.multi_ma(testdata)  # smooth
@@ -245,7 +251,7 @@ def test_score_by_momentum(fragment_distributions):
 
 
 def test_score_by_cwt(fragment_distributions):
-    """Tests the score_by_cwt function, by scoring data of different quality from high to low"""
+    """Tests the score_by_cwt function, by scoring data of different quality from high to low."""
     testdata = fragment_distributions
     testdata = nu.scale(testdata)
     scores = nu.score_by_cwt(testdata, plotting=False)
@@ -255,7 +261,7 @@ def test_score_by_cwt(fragment_distributions):
 
 
 def test_density_plot(density_reference, fragment_distributions):
-    """ Tests the density_plot function """
+    """Tests the density_plot function."""
     scaled = nu.scale(fragment_distributions)
     ax = nu.density_plot(scaled, density_reference)
 
@@ -265,7 +271,7 @@ def test_density_plot(density_reference, fragment_distributions):
 
 
 def test_plot_single_momentum_ov(fragment_distributions):
-    """ Tests the plot_single_momentum_ov function """
+    """Tests the plot_single_momentum_ov function."""
     scaled = nu.scale(fragment_distributions)
 
     mom, shift_l, shift_r = nu.momentum_diff(scaled, remove=0, shift=50, smooth=False)  # Calculate the momentum difference
@@ -298,7 +304,7 @@ def test_plot_single_momentum_ov(fragment_distributions):
 
 
 def test_plot_wavl_ov(fragment_distributions):
-    """ Tests the plot_single_momentum_ov function """
+    """Tests the plot_single_momentum_ov function."""
     plot_sample = 0
     scaled = nu.scale(fragment_distributions)
 
@@ -329,7 +335,7 @@ def test_plot_wavl_ov(fragment_distributions):
 
 
 def test_add_insertsize_metrics(adata, bamfile):
-    """ check that the add_insertsize_metrics function works as expected """
+    """Check that the add_insertsize_metrics function works as expected."""
 
     adata = nu.add_fld_metrics(adata, bamfile, plotting=False)
 
