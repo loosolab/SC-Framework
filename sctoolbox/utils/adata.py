@@ -6,6 +6,8 @@ from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
 import scipy
 
+from typing import Optional
+
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -238,9 +240,9 @@ def add_uns_info(adata, key, value, how="overwrite") -> None:
                 d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
 
 
-def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, rename_var=None, inplace=False):
+def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, rename_var=None, inplace=False) -> Optional[sc.AnnData]:
     """
-    Prepares the given adata for cellxgene deployment.
+    Prepare the given adata for cellxgene deployment.
 
     Parameters
     ----------
@@ -258,14 +260,14 @@ def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, 
 
     Returns
     -------
-    scanpy.Anndata or None:
+    Optional[sc.AnnData] :
         Returns the deployment ready Anndata object.
     """
     out = adata if inplace else adata.copy()
 
     # TODO remove more adata internals not needed for cellxgene
 
-    ##### .obs #####
+    # ----- .obs -----
     # remove obs columns
     if keep_obs:
         drop_obs = set(out.obs.columns) - set(keep_obs)
@@ -282,7 +284,7 @@ def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, 
 
     out.obs.index.names = ['index']
 
-    ##### .var #####
+    # ----- .var -----
     # remove var columns
     if keep_var:
         drop_var = set(out.var.columns) - set(keep_var)
@@ -299,14 +301,14 @@ def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, 
 
     out.var.index.names = ['index']
 
-    ###### .X ######
+    # ----- .X -----
     # convert .X to sparse matrix if needed
     if not scipy.sparse.isspmatrix(out.X):
         out.X = scipy.sparse.csc_matrix(out.X)
 
     out.X = out.X.astype("float32")
 
-    ##### .uns #####
+    # ----- .uns -----
     # apply color fix
     # https://github.com/chanzuckerberg/cellxgene/issues/2598
     for key in out.uns.keys():
