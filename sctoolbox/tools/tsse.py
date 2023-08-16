@@ -18,7 +18,7 @@ logger = settings.logger
 
 def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_dir=None) -> Tuple[list, list]:
     """
-    Function to write a custom TSS file from a gene gtf file.
+    Write a custom TSS file from a gene gtf file.
 
     negativ_shift and positiv_shift are the number of bases of the flanks.
     The output is a bed file with the following columns:
@@ -64,7 +64,8 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_
 
 def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shift=2000, positiv_shift=2000) -> dict:
     """
-    Function to overlap the fragments with the custom TSS file and aggregates the fragments in a dictionary.
+    Overlap the fragments with the custom TSS file and aggregates the fragments in a dictionary.
+
     The dictionary has the following structure:
     {barcode: [tss_agg, n_fragments]}
     tss_agg is a numpy array with the aggregated fragments around the TSS with flanks of negativ_shift and positiv_shift.
@@ -169,21 +170,22 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
 def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100) -> np.ndarray:
     """
     Calculate per base tSSe by dividing the tSSe by the bias. The bias is calculated by averaging the edges of the tSSe.
+
     The edges are defined by the edge_size.
 
     Parameters
     ----------
-    tSSe_df: pandas.DataFrame
+    tSSe_df : pd.DataFrame
         dataframe with the following columns:
         1: barcode, 2: tSSe, 3: n_fragments
-    min_bias: float, default 0.01
+    min_bias : float, default 0.01
         minimum bias to avoid division by zero
-    edge_size: int, default 100
+    edge_size : int, default 100
         number of bases to use for the edges
 
     Returns
     -------
-    numpy.ndarray
+    np.ndarray
         numpy array with the per base tSSe
     """
     # make np.array for calculation
@@ -210,11 +212,11 @@ def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100) -> np.ndarray:
 
 def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50) -> np.ndarray:
     """
-    Function to calculate the global tSSe score by averaging the per base tSSe around the TSS.
+    Calculate the global tSSe score by averaging the per base tSSe around the TSS.
 
     Parameters
     ----------
-    per_base_tsse : numpy.ndarray
+    per_base_tsse : np.ndarray
         numpy array with the per base tSSe
     negativ_shift : int
         number of bases to shift upstream
@@ -223,7 +225,7 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50) -> np.ndarray:
 
     Returns
     -------
-    numpy.ndarray
+    np.ndarray
         numpy array with the global tSSe score
     """
     # calculate global tSSe score
@@ -244,7 +246,8 @@ def tsse_scoring(fragments,
                  keep_tmp=False,
                  temp_dir="") -> pd.DataFrame:
     """
-    Function to calculate the tSSe score for each cell.
+    Calculate the tSSe score for each cell.
+
     Calculating the TSSe score is done like described in: "Chromatin accessibility profiling by ATAC-seq" Fiorella et al. 2022
 
     Parameters
@@ -322,7 +325,8 @@ def add_tsse_score(adata,
                    keep_tmp=False,
                    temp_dir="") -> anndata.AnnData:
     """
-    Function to add the tSSe score to the adata object.
+    Add the tSSe score to the adata object.
+
     Calculating the TSSe score is done like described in: "Chromatin accessibility profiling by ATAC-seq" Fiorella et al. 2022
 
     Parameters
@@ -345,6 +349,8 @@ def add_tsse_score(adata,
         minimum bias to avoid division by zero
     keep_tmp : bool, default False
         keep temporary files
+    temp_dir : str, default ""
+        path to temporary directory
 
     Returns
     -------

@@ -1,4 +1,4 @@
-"""Module containing functions for calculating the FRiP score"""
+"""Module containing functions for calculating the FRiP score."""
 from tqdm import tqdm
 import os
 import pandas as pd
@@ -14,7 +14,7 @@ logger = settings.logger
 
 def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n') -> pd.DataFrame:
     """
-    Function to count the number of fragments per barcode.
+    Count the number of fragments per barcode.
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n') -> pd.Data
 @deco.log_anndata
 def calc_frip_scores(adata, fragments, temp_dir='') -> Tuple[anndata.AnnData, float]:
     """
-    Function to calculate the FRiP score for each barcode and adds it to adata.obs.
+    Calculate the FRiP score for each barcode and adds it to adata.obs.
 
     Parameters
     ----------

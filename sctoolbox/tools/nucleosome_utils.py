@@ -806,7 +806,8 @@ def score_by_cwt(data,
 
 def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotlib.axes.Axes:
     """
-    Function to plot the density of the fragment length distribution over all cells.
+    Plot the density of the fragment length distribution over all cells.
+
     The density is calculated by binning the abundances of the fragment lengths.
 
     Parameters
