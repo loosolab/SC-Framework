@@ -1212,6 +1212,13 @@ def plot_pca_correlation(adata, which="obs",
     ax : matplotlib.axes.Axes
         Axes object containing the heatmap.
 
+    Raises
+    ------
+    ValueError
+        If "which" is not "obs" or "var", or if "method" is not "pearsonr" or "spearmanr".
+    KeyError
+        If any of the given columns is not found in the respective table.
+
     Examples
     --------
     .. plot::
