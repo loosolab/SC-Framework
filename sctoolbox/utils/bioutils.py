@@ -471,17 +471,17 @@ def _gtf_integrity(gtf) -> bool:
     return True  # the function only returns of no error is raised
 
 
-def _overlap_two_bedfiles(bed1, bed2, overlap):
+def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
     """
-    This function overlaps two bedfiles and writes the overlap to a new bedfile
+    Function to overlap two bedfiles and writes the overlap to a new bedfile.
 
     Parameters
     ----------
-    bed1: str
+    bed1 : str
         path to bedfile1
-    bed2: str
+    bed2 : str
         path to bedfile2
-    overlap: str
+    overlap : str
         path to output bedfile
 
     Returns
@@ -496,18 +496,18 @@ def _overlap_two_bedfiles(bed1, bed2, overlap):
     os.system(intersect_cmd)
 
 
-def _read_bedfile(bedfile):
+def _read_bedfile(bedfile) -> list:
     """
-    This function reads in a bedfile and returns a list of the rows
+    Function to read in a bedfile and returns a list of the rows.
 
     Parameters
     ----------
-    bedfile: str
+    bedfile : str
         path to bedfile
 
     Returns
     -------
-    bed_list: list
+    list
         list of bedfile rows
     """
     bed_list = []
@@ -521,13 +521,13 @@ def _read_bedfile(bedfile):
     return bed_list
 
 
-def _bed_is_sorted(bedfile):
+def _bed_is_sorted(bedfile) -> bool:
     """
-    This function checks if a bedfile is sorted by the start position
+    Function to check if a bedfile is sorted by the start position.
 
     Parameters
     ----------
-    bedfile: str
+    bedfile : str
         path to bedfile
 
     Returns
@@ -554,15 +554,15 @@ def _bed_is_sorted(bedfile):
     return True
 
 
-def _sort_bed(bedfile, sorted_bedfile):
+def _sort_bed(bedfile, sorted_bedfile) -> None:
     """
-    This function sorts a bedfile by the start position
+    Function sorts a bedfile by the start position.
 
     Parameters
     ----------
-    bedfile: str
+    bedfile : str
         path to bedfile
-    sorted_bedfile: str
+    sorted_bedfile : str
         path to sorted bedfile
 
     Returns

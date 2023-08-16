@@ -1,3 +1,4 @@
+"""Test the tsse_score related functions."""
 import pytest
 import numpy as np
 import scanpy as sc
@@ -7,34 +8,34 @@ import os
 
 @pytest.fixture
 def adata():
-    """ Fixture for an AnnData object. """
+    """Fixture for an AnnData object."""
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
 
 @pytest.fixture
 def fragments():
-    """ Fixture for a fragments object. """
+    """Fixture for a fragments object."""
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
     return fragments
 
 
 @pytest.fixture
 def gtf():
-    """ Fixture for a gtf object. """
+    """Fixture for a gtf object."""
     gtf = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
     return gtf
 
 
 @pytest.fixture
 def tss_file():
-    """ Fixture for a tss_file object. """
+    """Fixture for a tss_file object."""
     tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_tss.bed')
     return tss_file
 
 
 def test_write_TSS(gtf):
-    """ Test write_TSS function. """
+    """Test write_TSS function."""
     # Build temporary TSS file path
     temp_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
     tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes_tss.bed')
@@ -60,7 +61,7 @@ def test_write_TSS(gtf):
 
 
 def test_overlap_and_aggregate(gtf, fragments):
-
+    """Test overlap_and_aggregate function."""
     # Build temporary TSS file path
     temp_dir = tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac')
     tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes_tss.bed')
@@ -90,7 +91,7 @@ def test_overlap_and_aggregate(gtf, fragments):
 
 
 def test_add_tsse_score(adata, fragments, gtf):
-
+    """Test add_tsse_score function."""
     adata = tools.add_tsse_score(adata,
                                  fragments,
                                  gtf,

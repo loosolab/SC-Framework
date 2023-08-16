@@ -1,3 +1,4 @@
+"""Module containing functions for calculating the FRiP score"""
 from tqdm import tqdm
 import os
 import pandas as pd
@@ -5,25 +6,28 @@ import pandas as pd
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
+
+from typing import Tuple
+import anndata
 logger = settings.logger
 
 
-def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n'):
+def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n') -> pd.DataFrame:
     """
-    This function counts the number of fragments per barcode
+    Function to count the number of fragments per barcode.
 
     Parameters
     ----------
-    df: pd.DataFrame
+    df : pd.DataFrame
         dataframe containing the columns barcode and n
-    barcodes_col: str
+    barcodes_col : str, default "barcode"
         name of the column containing the barcodes
-    n_fragments_col: str
+    n_fragments_col : str, default "n"
         name of the column containing the number of fragments
 
     Returns
     -------
-    counts: pd.DataFrame
+    counts : pd.DataFrame
         dataframe containing the columns barcode and n
     """
 
@@ -34,24 +38,23 @@ def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n'):
 
 
 @deco.log_anndata
-def calc_frip_scores(adata, fragments, temp_dir=''):
+def calc_frip_scores(adata, fragments, temp_dir='') -> Tuple[anndata.AnnData, float]:
     """
-    This function calculates the FRiP score for each barcode and adds it to adata.obs
+    Function to calculate the FRiP score for each barcode and adds it to adata.obs.
 
     Parameters
     ----------
-    adata: AnnData
+    adata : anndata.AnnData
         AnnData object containing the fragments
-    fragments: str
+    fragments : str
         path to fragments bedfile
-    temp_dir: str
+    temp_dir : str, default ""
         path to temp directory
 
     Returns
     -------
-    adata: AnnData
+    Tuple[anndata.AnnData, float]
         AnnData object containing the fragments
-    total_frip: float
         total FRiP score
     """
 

@@ -98,18 +98,18 @@ def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
     return series
 
 
-def unscale(scaled_data):
+def unscale(scaled_data) -> np.ndarray:
     """
     Unscales a series array to a range of 0 to 1. If the array is 2D, the scaling is done on axis=1.
 
     Parameters
     ----------
-    scaled_data: array
+    scaled_data : np.ndarray
         Array of data to be unscaled 1D or 2D
 
     Returns
     -------
-    unscaled : array
+    np.ndarray
         Unscaled array
     """
 
@@ -806,19 +806,22 @@ def score_by_cwt(data,
 
 def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotlib.axes.Axes:
     """
-    This function plots the density of the fragment length distribution over all cells.
+    Function to plot the density of the fragment length distribution over all cells.
     The density is calculated by binning the abundances of the fragment lengths.
 
     Parameters
     ----------
-    count_table: array
+    count_table : np.ndarray
         Array of arrays of the fragment length distributions
-    max_abundance: int
+    max_abundance : int, default 600
         Maximal abundance of a fragment length of a cell (for better visability)
+    target_height : int, default 1000
+        Target height of the plot
 
     Returns
     -------
-
+    matplotlib.axes.Axes
+        Axes of the plot
     """
     count_table = count_table
     # handle 0,1 min/max scaled count_table

@@ -30,7 +30,7 @@ def adata2():
 
 @pytest.fixture
 def unsorted_fragments():
-    """ Returns adata object with 3 groups """
+    """Return adata object with 3 groups."""
 
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
     return fragments
@@ -38,7 +38,7 @@ def unsorted_fragments():
 
 @pytest.fixture
 def sorted_fragments():
-    """ Returns adata object with 3 groups """
+    """Return adata object with 3 groups."""
 
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
     return fragments
@@ -258,14 +258,14 @@ def test_get_organism():
 
 
 def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
-    """ Test if the _bed_is_sorted() function works as expected """
+    """Test if the _bed_is_sorted() function works as expected."""
 
     assert utils._bed_is_sorted(sorted_fragments)
     assert ~utils._bed_is_sorted(unsorted_fragments)
 
 
 def test_sort_bed(unsorted_fragments):
-    """" Test if the sort bedfile functio works """
+    """Test if the sort bedfile functio works."""
     sorted_bedfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'sorted_bedfile.bed')
     utils._sort_bed(unsorted_fragments, sorted_bedfile)
 
