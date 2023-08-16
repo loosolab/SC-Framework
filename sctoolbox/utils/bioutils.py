@@ -473,7 +473,7 @@ def _gtf_integrity(gtf) -> bool:
 
 def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
     """
-    Function to overlap two bedfiles and writes the overlap to a new bedfile.
+    Overlap two bedfiles and writes the overlap to a new bedfile.
 
     Parameters
     ----------
@@ -498,7 +498,7 @@ def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
 
 def _read_bedfile(bedfile) -> list:
     """
-    Function to read in a bedfile and returns a list of the rows.
+    Read in a bedfile and returns a list of the rows.
 
     Parameters
     ----------
@@ -523,7 +523,7 @@ def _read_bedfile(bedfile) -> list:
 
 def _bed_is_sorted(bedfile) -> bool:
     """
-    Function to check if a bedfile is sorted by the start position.
+    Check if a bedfile is sorted by the start position.
 
     Parameters
     ----------
@@ -556,7 +556,7 @@ def _bed_is_sorted(bedfile) -> bool:
 
 def _sort_bed(bedfile, sorted_bedfile) -> None:
     """
-    Function sorts a bedfile by the start position.
+    Sort a bedfile by the start position.
 
     Parameters
     ----------

@@ -36,6 +36,8 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_
         number of bases to shift upstream
     positiv_shift : int, default 2000
         number of bases to shift downstream
+    temp_dir : str, default None
+        path to temporary directory
 
     Returns
     -------
