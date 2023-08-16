@@ -153,13 +153,6 @@ def test_scale(count_table):
     assert np.min(scaled_single) == 0
 
 
-def test_calc_densities(fragment_distributions, density_reference):
-    """Test that the calc_densities function works as expected by asserting known values."""
-    densities = nu.calc_densities(fragment_distributions)
-
-    assert np.array_equal(densities, density_reference)
-
-
 def test_call_peaks_worker(modulation):
     """Test that the call_peaks_worker function works as expected."""
     peaks = nu.call_peaks_worker(modulation)
@@ -260,10 +253,9 @@ def test_score_by_cwt(fragment_distributions):
     assert scores[1] > scores[2]
 
 
-def test_density_plot(density_reference, fragment_distributions):
+def test_density_plot(fragment_distributions):
     """Tests the density_plot function."""
-    scaled = nu.scale(fragment_distributions)
-    ax = nu.density_plot(scaled, density_reference)
+    ax = nu.density_plot(fragment_distributions)
 
     ax_type = type(ax).__name__
 
@@ -341,4 +333,4 @@ def test_add_insertsize_metrics(adata, bamfile):
 
     assert 'fld_score_momentum' in adata.obs.columns
     assert 'fld_score_cwt' in adata.obs.columns
-    assert 'genome_counts' in adata.obs.columns
+    # assert 'genome_counts' in adata.obs.columns

@@ -1491,7 +1491,7 @@ def add_fld_metrics(adata,
     if use_ct_cwt:
         adata.obs['fld_score_ct_cwt'] = adata.obs['fld_score_ct_cwt'].fillna(0)
 
-    adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
+    # adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
     return adata
 
