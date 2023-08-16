@@ -532,7 +532,7 @@ def _bed_is_sorted(bedfile) -> bool:
 
     Returns
     -------
-    boolean
+    bool
         True if bedfile is sorted
     """
     with open(bedfile) as file:
