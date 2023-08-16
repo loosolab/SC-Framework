@@ -796,6 +796,10 @@ def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
     if len(columns) < 2:
         raise ValueError("'columns' must contain at least two columns to compare.")
 
+    for col in columns:
+        if col not in table.columns:
+            raise ValueError(f"Column '{col}' not found in table.")
+
     if thresholds is None:
         thresholds = {}
 
