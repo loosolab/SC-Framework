@@ -816,7 +816,7 @@ def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
             ax = axarr[i_row, i_col]
 
             if i_row == i_col:  # plot histogram
-                sns.histplot(table[c_col], ax=axarr[i_row, i_col], color="black")
+                sns.histplot(table[c_col], ax=ax, color="black")
                 ax.set_xlabel("")  # labels are set afterwards
                 ax.set_ylabel("")  # labels are set afterwards
             else:
@@ -847,13 +847,18 @@ def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
                     for ax in axarr[i, scatter_idx]:
                         ax.axhline(thresholds[col][key], color="darkgrey", lw=1, linestyle="--")
 
+    # Fix y-axis legends for first histogram
+    ax = axarr[0, 0].twinx()  # create new axis for correct y-values
+    ax.set_ylim(axarr[0, 1].get_ylim())
+    ax.yaxis.set_label_position('left')
+    ax.yaxis.set_ticks_position('left')
+    axarr[0, 0].set_yticks([])  # remove original axis
+    axarr[0, 0] = ax
+
     # Set labels
     for i, col in enumerate(columns):
         axarr[i, 0].set_ylabel(col)     # left column contains y labels
         axarr[-1, i].set_xlabel(col)    # bottom row contains x labels
-
-    # Fix y-axis legends for first histogram
-    axarr[0, 0].set_yticklabels(axarr[0, 1].get_yticklabels(), )
 
     # Remove ticklabels from middle plots
     _ = [ax.axes.yaxis.set_ticklabels([]) for ax in axarr[:, 1:].flatten()]  # remove y ticklabels from all but first column
