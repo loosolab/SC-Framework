@@ -7,15 +7,9 @@ build-job:       # This job runs in the build stage, which runs first.
   services:
       - name: "docker:dind"
         alias: docker
-  #variables:  # not strictly needed, depending on runner configuration
-  #  DOCKER_HOST: "tcp://docker:2375"
-  #  DOCKER_TLS_CERTDIR: ""
   before_script:
       - apk update && apk add git
       - apt-get update -qq && apt-get install -y -qq git 
-      - echo $CI_REGISTRY_USER
-      - echo $CI_REGISTRY_PASSWORD
-      - echo $CI_REGISTRY
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
       - ls .
