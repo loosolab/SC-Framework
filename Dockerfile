@@ -1,22 +1,22 @@
-FROM python:3.10.12
+FROM mambaorg/micromamba:latest
 
 LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 
-ARG INSTALL_ALL=TRUE
-ARG INSTALL_JUPYTER=TRUE
+COPY . /tmp
 
-COPY sc_framework /app
-
+#RUN apt-get update && \
+#    apt-get clean
+USER root
+# Install Python packages \
 RUN apt-get update && \
-    apt-get clean
+    apt-get install -y openssh-client && \
+    apt-get install -y python3-pip && \
+    apt-get clean \
+USER mambauser
 
-# Install Python packages
-RUN pip install /app[all]
-
-# Install Jupyter if needed
-RUN if [ "$INSTALL_JUPYTER" = "TRUE" ]; then \
-        pip install jupyter notebook; \
-    fi
+RUN micromamba install -y -n base -f /tmp/sctoolbox_env.yml && \
+    micromamba clean --all --yes && \
+    pip install /tmp/.
 
 # Set the time zone
 RUN sh -c "echo 'Europe/Berlin' > /etc/timezone" && \
