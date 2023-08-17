@@ -1,5 +1,6 @@
 0.2 (in progress)
 --------------------
+- implemented prepare_for_cellxgene
 - fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Added logging verbose and decorator to ATAC related functions
