@@ -1,3 +1,5 @@
+"""Test multiomics functions."""
+
 import pytest
 import os
 import anndata
@@ -9,7 +11,7 @@ import sctoolbox.multiomics as multi
 
 @pytest.fixture
 def adata():
-    """ Load and returns an anndata object. """
+    """Load and returns an anndata object."""
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
     return sc.read_h5ad(f)
@@ -17,7 +19,7 @@ def adata():
 
 @pytest.fixture
 def adata2(adata):
-    """ Build second adata from first """
+    """Build second adata from first."""
     adata2 = adata.copy()
     adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(200, 50))
     adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(200, 3))
@@ -25,7 +27,7 @@ def adata2(adata):
 
 
 def test_merge_anndata(adata, adata2):
-    """ Test if anndata are merged correctly """
+    """Test if anndata are merged correctly."""
     adata_to_merge = {"1": adata, "2": adata2}
     merged_adata = multi.merge_anndata(adata_to_merge)
 
@@ -53,7 +55,7 @@ def test_merge_anndata(adata, adata2):
 
 
 def test_deep_merge_anndata(adata, adata2):
-    """ Test if anndata are merged correctly by checking obsm coordinates and matrix values for each cell"""
+    """Test if anndata are merged correctly by checking obsm coordinates and matrix values for each cell."""
     adata_to_merge = {"1": adata, "2": adata2}
     merged_adata = multi.merge_anndata(adata_to_merge)
 

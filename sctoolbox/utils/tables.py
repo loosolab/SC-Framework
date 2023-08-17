@@ -1,10 +1,15 @@
+"""Table related functions."""
+
 import warnings
 import pandas as pd
 from scipy.stats import zscore
 import sctoolbox.utils as utils
 
+# type hint imports
+from typing import Optional
 
-def rename_categories(series):
+
+def rename_categories(series) -> pd.Series:
     """
     Rename categories in a pandas series to numbers between 1-(number of categories).
 
@@ -15,7 +20,7 @@ def rename_categories(series):
 
     Returns
     -------
-    pandas.Series
+    pd.Series
         Series with renamed categories.
     """
 
@@ -28,9 +33,9 @@ def rename_categories(series):
     return series_cat
 
 
-def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):
+def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
     """
-    Fill all NA values in pandas depending on the column data type
+    Fill all NA values in a pandas DataFrame depending on the column data type.
 
     Parameters
     ----------
@@ -40,6 +45,11 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         Whether the DataFrame object is modified inplace.
     replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
         dict that contains default values to replace nas depedning on data type
+
+    Returns
+    -------
+    Optional[pd.DataFrame]
+        DataFrame with replaced NA values.
     """
 
     if not inplace:
@@ -69,9 +79,10 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         return df
 
 
-def _sanitize_sheetname(s, replace="_"):
+def _sanitize_sheetname(s, replace="_") -> str:
     """
     Alters given string to produce a valid excel sheetname.
+
     https://www.excelcodex.com/2012/06/worksheets-naming-conventions/
 
     Parameters
@@ -90,7 +101,7 @@ def _sanitize_sheetname(s, replace="_"):
     return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
-def write_excel(table_dict, filename, index=False):
+def write_excel(table_dict, filename, index=False) -> None:
     """
     Write a dictionary of tables to a single excel file with one table per sheet.
 
@@ -102,6 +113,11 @@ def write_excel(table_dict, filename, index=False):
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
+
+    Raises
+    ------
+    Exception
+        If `table_dict` contains items not of type DataFrame.
     """
 
     # Check if tables are pandas dataframes
@@ -115,7 +131,7 @@ def write_excel(table_dict, filename, index=False):
             table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
 
 
-def table_zscore(table, how="row"):
+def table_zscore(table, how="row") -> pd.DataFrame:
     """
     Z-score a table.
 
@@ -123,13 +139,18 @@ def table_zscore(table, how="row"):
     ----------
     table : pandas.DataFrame
         Table to z-score.
-    how : str, default "row"
+    how : {'row', 'col'}
         Whether to z-score rows or columns.
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame :
         Z-scored table.
+
+    Raises
+    ------
+    Exception
+        If `how` has invalid selection.
     """
 
     if how == "row":

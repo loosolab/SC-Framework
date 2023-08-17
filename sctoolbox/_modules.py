@@ -4,7 +4,8 @@ import os
 
 
 def import_submodules(globals):
-    """ Import all functions from submodules into the upper module namespace (e.g. sctoolbox.plotting, sctoolbox.utilities, ...).
+    """Import all functions from submodules into the upper module namespace.
+
     This enables usage with `sctoolbox.plotting.plot_umap()` as well as `sctoolbox.plotting.embedding.plot_umap()`.
 
     Parameters
