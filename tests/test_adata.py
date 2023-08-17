@@ -14,6 +14,10 @@ def adata_icxg():
     # has .X of type numpy.array
     obj = sc.datasets.pbmc3k_processed()
 
+    # make broken colormap
+    obj.obs["broken_louvain"] = obj.obs["louvain"]
+    obj.uns["broken_louvain_colors"] = obj.uns["louvain_colors"][1:]
+
     # make 8-digit hex colors
     obj.uns["louvain_colors"] = [e + "00" for e in obj.uns["louvain_colors"]]
 
@@ -62,6 +66,9 @@ def test_prepare_for_cellxgene(adata_icxg):
     # .X is sparse float32
     assert scipy.sparse.isspmatrix(cxg_adata.X)
     assert cxg_adata.X.dtype == "float32"
+    
+    # broken color mapping is fixed also checks if renaming worked
+    assert len(cxg_adata.uns["BROKEN_LOUVAIN_colors"]) == len(set(cxg_adata.obs["BROKEN_LOUVAIN"]))
 
     # colors are stored as 6-digit hex code
     for key in cxg_adata.uns.keys():
