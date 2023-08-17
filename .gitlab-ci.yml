@@ -3,6 +3,7 @@ build-job:       # This job runs in the build stage, which runs first.
   only:
       changes:
         - setup.py
+        - sctoolbox_env.yml
   image: docker:latest
   services:
       - name: "docker:dind"
