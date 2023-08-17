@@ -280,6 +280,41 @@ def prepare_for_cellxgene(adata,
     Optional[sc.AnnData] :
         Returns the deployment ready Anndata object.
     """
+
+    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
+        """Clean either obs or var section of given adata object."""
+        if axis == "obs":
+            sec_table = obj.obs
+        elif axis == "var":
+            sec_table = obj.var
+
+        # drop columns
+        if keep:
+            drop = set(sec_table.columns) - set(keep)
+            sec_table.drop(columns=drop, inplace=True)
+
+            # drop matching color maps
+            for col in drop:
+                if f"{col}_colors" in obj.uns.keys():
+                    obj.uns.pop(f"{col}_colors")
+
+        # rename columns
+        if rename:
+            sec_table.rename(columns=rename, inplace=True)
+
+            # rename color maps
+            for old, new in rename.items():
+                if f"{old}_colors" in obj.uns.keys():
+                    obj.uns[f"{new}_colors"] = obj.uns.pop(f"{old}_colors")
+
+        # convert Int32 to float64 columns
+        for c in sec_table:
+            if sec_table[c].dtype == 'Int32':
+                sec_table[c] = sec_table[c].astype('float64')
+        
+        sec_table.index.names = ['index']
+
+
     out = adata if inplace else adata.copy()
 
     # TODO remove more adata internals not needed for cellxgene
@@ -290,58 +325,10 @@ def prepare_for_cellxgene(adata,
             raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
-    # remove obs columns
-    if keep_obs:
-        drop_obs = set(out.obs.columns) - set(keep_obs)
-
-        out.obs.drop(columns=drop_obs, inplace=True)
-
-        # drop matching color maps
-        for col in drop_obs:
-            if f"{col}_colors" in out.uns.keys():
-                out.uns.pop(f"{col}_colors")
-
-    # rename obs columns
-    if rename_obs:
-        out.obs.rename(columns=rename_obs, inplace=True)
-
-        # rename color maps
-        for old, new in rename_obs.items():
-            if f"{old}_colors" in out.uns.keys():
-                out.uns[f"{new}_colors"] = out.uns.pop(f"{old}_colors")
-
-    for c in out.obs:
-        if out.obs[c].dtype == 'Int32':
-            out.obs[c] = out.obs[c].astype('float64')
-
-    out.obs.index.names = ['index']
+    clean_section(out, axis="obs", keep=keep_obs, rename=rename_obs)
 
     # ----- .var -----
-    # remove var columns
-    if keep_var:
-        drop_var = set(out.var.columns) - set(keep_var)
-
-        out.var.drop(columns=drop_var, inplace=True)
-
-        # drop matching color maps
-        for col in drop_var:
-            if f"{col}_colors" in out.uns.keys():
-                out.uns.pop(f"{col}_colors")
-
-    # rename var columns
-    if rename_var:
-        out.var.rename(columns=rename_var, inplace=True)
-
-        # rename color maps
-        for old, new in rename_var.items():
-            if f"{old}_colors" in out.uns.keys():
-                out.uns[f"{new}_colors"] = out.uns.pop(f"{old}_colors")
-
-    for c in out.var:
-        if out.var[c].dtype == 'Int32':
-            out.var[c] = out.var[c].astype('float64')
-
-    out.var.index.names = ['index']
+    clean_section(out, axis="var", keep=keep_var, rename=rename_var)
 
     # ----- .X -----
     # convert .X to sparse matrix if needed
@@ -351,15 +338,13 @@ def prepare_for_cellxgene(adata,
     out.X = out.X.astype("float32")
 
     # ----- .uns -----
-    # fix colors not in 6-digit hex format
-    # https://github.com/chanzuckerberg/cellxgene/issues/2598
     for key in out.uns.keys():
         if key.endswith('colors'):
+            # fix colors not in 6-digit hex format
+            # https://github.com/chanzuckerberg/cellxgene/issues/2598
             out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in out.uns[key]])
 
-    # fix number of colors < number of categories
-    for key in out.uns.keys():
-        if key.endswith('colors'):
+            # fix number of colors < number of categories
             obs_key = key.split("_colors")[0]
             if len(out.uns[key]) != len(set(out.obs[obs_key])):
                 logger.warning(f"Coloring for adata.obs['{obs_key}'] broken. Reverting to {cmap if cmap else 'scanpy default'} color map.")
