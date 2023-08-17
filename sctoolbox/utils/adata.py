@@ -240,7 +240,13 @@ def add_uns_info(adata, key, value, how="overwrite") -> None:
                 d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
 
 
-def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, rename_var=None, inplace=False) -> Optional[sc.AnnData]:
+def prepare_for_cellxgene(adata,
+                          keep_obs=None,
+                          keep_var=None,
+                          rename_obs=None,
+                          rename_var=None,
+                          embedding_names=["pca", "umap", "tsne"],
+                          inplace=False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
 
@@ -256,7 +262,14 @@ def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, 
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
     rename_var : dict or None, default None
         Dictionary of .var columns to rename. Key is the old name, value the new one.
+    embedding_names : list[str] or None, default ["pca", "umap", "tsne"]
+        List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check.
     inplace : bool, default False
+
+    Raises
+    ------
+    ValueError
+        If not at least one of the named embeddings are found in the adata.
 
     Returns
     -------
@@ -266,6 +279,11 @@ def prepare_for_cellxgene(adata, keep_obs=None, keep_var=None, rename_obs=None, 
     out = adata if inplace else adata.copy()
 
     # TODO remove more adata internals not needed for cellxgene
+
+    # ----- .obsm -----
+    if embedding_names:
+        if not any(e in k for e in embedding_names for k in out.obsm.keys()):
+            raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
     # remove obs columns

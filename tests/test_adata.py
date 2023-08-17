@@ -67,3 +67,33 @@ def test_prepare_for_cellxgene(adata_icxg):
     for key in cxg_adata.uns.keys():
         if key.endswith('colors'):
             assert all(len(c) <= 7 for c in cxg_adata.uns[key])
+
+
+@pytest.mark.parametrize("inplace", [True, False])
+@pytest.mark.parametrize("embedding_names", [["umap", "pca", "tsne"], ["invalid"]])
+def test_prepare_cellxgene_emb(adata_icxg, inplace, embedding_names):
+    """Test inplace and embedding check."""
+    adata = adata_icxg.copy() if inplace else adata_icxg
+
+    if "invalid" in embedding_names:
+        with pytest.raises(ValueError):
+            ad.prepare_for_cellxgene(adata, embedding_names=embedding_names)
+    else:
+        out = ad.prepare_for_cellxgene(
+            adata,
+            embedding_names=embedding_names,
+            keep_obs=[adata.obs.columns[0]],
+            keep_var=[adata.var.columns[0]],
+            inplace=inplace
+        )
+
+        if inplace:
+            assert len(adata.obs.columns) == 1
+            assert len(adata.var.columns) == 1
+            assert len(adata_icxg.obs.columns) > 1
+            assert len(adata_icxg.var.columns) > 1
+        else:
+            assert len(out.obs.columns) == 1
+            assert len(out.var.columns) == 1
+            assert len(adata.obs.columns) > 1
+            assert len(adata.var.columns) > 1
