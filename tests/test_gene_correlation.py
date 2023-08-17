@@ -1,3 +1,4 @@
+"""Tests for gene correlation methods."""
 import pytest
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref
 
 @pytest.fixture
 def adata():
-
+    """Fixture for simple adata to test with."""
     h5ad = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 
@@ -32,7 +33,7 @@ def adata():
 @pytest.mark.parametrize("gene, save", [("Xkr4", None),
                                         ("Xkr4", "output.png")])
 def test_correlate_ref_vs_all(adata, gene, save):
-    """ Test if correlation between a reference gene to other genes is calculated. """
+    """Test if correlation between a reference gene to other genes is calculated."""
     results = correlate_ref_vs_all(adata, gene, save=save)
 
     # Test if dataframe is returned
@@ -49,13 +50,13 @@ def test_correlate_ref_vs_all(adata, gene, save):
 
 @pytest.mark.parametrize("gene", ["Invalid Gene"])
 def test_correlate_ref_vs_all_invalid(adata, gene):
-    """ Test if error is thrown if given gene is not in dataset. """
+    """Test if error is thrown if given gene is not in dataset."""
     with pytest.raises(Exception):
         correlate_ref_vs_all(adata, gene)
 
 
 def test_compare_two_conditons(adata):
-    """ Test if two conditions can be compared wihtout the wrapper function. """
+    """Test if two conditions can be compared wihtout the wrapper function."""
 
     adata_subsets = get_adata_subsets(adata, groupby="condition")
 
@@ -87,7 +88,7 @@ def test_compare_two_conditons(adata):
 
 
 def test_correlate_conditions(adata):
-    """ Test wrapper for correlation and comparison """
+    """Test wrapper for correlation and comparison."""
     comparison = correlate_conditions(adata, "Xkr4", "condition", "C1", "C2")
 
     # Test if dataframe is returned
@@ -111,5 +112,6 @@ def test_correlate_conditions(adata):
 
 
 def test_invalid_condition_correlate_conditions(adata):
+    """Test if error is raised when condition is invalid."""
     with pytest.raises(Exception):
         correlate_conditions(adata, "Xkr4", "condition", "Invalid Condition", "C2")

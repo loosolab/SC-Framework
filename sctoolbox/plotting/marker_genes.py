@@ -679,10 +679,12 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
         Reference gene to which other genes are comapred to.
     gene_list : list
         A list of genes to show expression for.
-    save : str, default None
-        Save the figure to a file.
+    ncols : int, default 3
+        Number of columns in plot grid.
     figsize : tuple, default None
         Control the size of the output figure, e.g. (6,10).
+    save : str, default None
+        Save the figure to a file.
 
     Returns
     -------

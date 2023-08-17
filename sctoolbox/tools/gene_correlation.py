@@ -1,3 +1,4 @@
+"""Tools for gene-gene correlation."""
 import pandas as pd
 import numpy as np
 from scipy.stats import spearmanr
@@ -15,7 +16,7 @@ logger = settings.logger
 
 def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -> pd.DataFrame:
     """
-    Calculates the correlation of a gene expression over two conditions and compares the two conditions.
+    Calculate the correlation of a gene expression over two conditions and compares the two conditions.
 
     Parameters
     ----------
@@ -34,6 +35,11 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -
     -------
     pd.DataFrame
         Dataframe containing the correlation of a gene expression over two conditions.
+
+    Raises
+    ------
+    ValueError
+        If one or both condition columns are not in adata.obs.
     """
 
     # Subset adata on conditions
@@ -57,12 +63,12 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -
 
 def correlate_ref_vs_all(adata, ref_gene, correlation_threshold=0.4, save=None) -> pd.DataFrame:
     """
-    Calculates the correlation of the reference gene vs all other genes.
+    Calculate the correlation of the reference gene vs all other genes.
 
     Additionally, plots umap highlighting correlating gene expression.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : anndata.AnnData
         Annotated data matrix.
     ref_gene : str
