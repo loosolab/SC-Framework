@@ -5,6 +5,7 @@ import scanpy as sc
 from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
 import scipy
+import matplotlib.pyplot as plt
 
 from typing import Optional
 
@@ -246,6 +247,7 @@ def prepare_for_cellxgene(adata,
                           rename_obs=None,
                           rename_var=None,
                           embedding_names=["pca", "umap", "tsne"],
+                          cmap="viridis",
                           inplace=False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -264,6 +266,8 @@ def prepare_for_cellxgene(adata,
         Dictionary of .var columns to rename. Key is the old name, value the new one.
     embedding_names : list[str] or None, default ["pca", "umap", "tsne"]
         List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.
+    cmap : str, default viridis
+        Use this replacement color map for broken color maps. If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
     inplace : bool, default False
 
     Raises
@@ -352,6 +356,18 @@ def prepare_for_cellxgene(adata,
     for key in out.uns.keys():
         if key.endswith('colors'):
             out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in adata.uns[key]])
+
+    # fix number of colors < number of categories
+    for key in out.uns.keys():
+        if key.endswith('colors'):
+            obs_key = key.split("_colors")[0]
+            if len(out.uns[key]) != len(set(out.obs[obs_key])):
+                logger.warning(f"Coloring for adata.obs['{obs_key}'] broken. Reverting to {cmap if cmap else 'scanpy default'} color map.")
+
+                # scanpy replaces broken colormap before plotting
+                basis = list(out.obsm.keys())[0]
+                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=cmap, show=False)
+                plt.close()  # prevent that plot is shown
 
     if not inplace:
         return out
