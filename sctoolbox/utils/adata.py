@@ -355,7 +355,7 @@ def prepare_for_cellxgene(adata,
     # https://github.com/chanzuckerberg/cellxgene/issues/2598
     for key in out.uns.keys():
         if key.endswith('colors'):
-            out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in adata.uns[key]])
+            out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in out.uns[key]])
 
     # fix number of colors < number of categories
     for key in out.uns.keys():
