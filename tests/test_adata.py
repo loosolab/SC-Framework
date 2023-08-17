@@ -66,7 +66,7 @@ def test_prepare_for_cellxgene(adata_icxg):
     # .X is sparse float32
     assert scipy.sparse.isspmatrix(cxg_adata.X)
     assert cxg_adata.X.dtype == "float32"
-    
+
     # broken color mapping is fixed also checks if renaming worked
     assert len(cxg_adata.uns["BROKEN_LOUVAIN_colors"]) == len(set(cxg_adata.obs["BROKEN_LOUVAIN"]))
 
