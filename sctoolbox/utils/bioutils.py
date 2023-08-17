@@ -556,7 +556,7 @@ def _bed_is_sorted(bedfile) -> bool:
 
 def _sort_bed(bedfile, sorted_bedfile) -> None:
     """
-    Sort a bedfile by the start position.
+    Sort a bedfile by the start position from small to big.
 
     Parameters
     ----------
