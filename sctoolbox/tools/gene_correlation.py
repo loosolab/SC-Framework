@@ -55,7 +55,7 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -
     return comparison
 
 
-def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> pd.DataFrame:
+def correlate_ref_vs_all(adata, ref_gene, correlation_threshold=0.4, save=None) -> pd.DataFrame:
     """
     Calculates the correlation of the reference gene vs all other genes.
 
@@ -65,7 +65,7 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> p
     ---------
     adata : anndata.AnnData
         Annotated data matrix.
-    gene : str
+    ref_gene : str
         Reference gene.
     correlation_threshold : float, default 0.4
         Threshold for correlation value. Correlating genes with a correlation >= threshold will be plotted
@@ -79,9 +79,9 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> p
         Dataframe containing correlation of refrence gene to other genes.
     """
 
-    def spearmanr_of_gene(df, gene, ref):
+    def spearmanr_of_gene(ref, gene, gene_name):
         """Get tuple of gene and spearman correlation of gene to reference."""
-        return (gene, spearmanr(ref, df.loc[:, gene]))
+        return (gene_name, spearmanr(ref, gene))
 
     def map_correlation_strength(x):
         """Map correlation to describing strings."""
@@ -103,10 +103,10 @@ def correlate_ref_vs_all(adata, gene, correlation_threshold=0.4, save=None) -> p
     # Convert anndata to pandas dataframe
     df = adata.to_df()
     # Get expression values of reference gene
-    ref = df.loc[:, gene]
+    ref = df.loc[:, ref_gene]
 
-    logger.info(f"Calculating the correlation to {gene}")
-    results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(df, gene, ref) for gene in tqdm(adata.var.index.values.tolist())))
+    logger.info(f"Calculating the correlation to {ref_gene}")
+    results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(ref, df.loc[:, gene], gene) for gene in tqdm(adata.var.index.values.tolist())))
     corr_df = pd.DataFrame.from_dict(results, orient="index")
     corr_df.columns = ["correlation", "p-value"]
 
@@ -137,9 +137,9 @@ def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B) -> pd.Data
         Dataframe containing correlation analysis from correlate_ref_vs_all
     df_cond_B : pandas.DataFrame
         Dataframe containing correlation analysis from correlate_ref_vs_all
-    n_cells_A :  int
+    n_cells_A : int
         Number of cells within condition A
-    n_cells_B :  int
+    n_cells_B : int
         Number of cells within condition B
 
     Returns
