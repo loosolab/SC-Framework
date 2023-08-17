@@ -311,9 +311,8 @@ def prepare_for_cellxgene(adata,
         for c in sec_table:
             if sec_table[c].dtype == 'Int32':
                 sec_table[c] = sec_table[c].astype('float64')
-        
-        sec_table.index.names = ['index']
 
+        sec_table.index.names = ['index']
 
     out = adata if inplace else adata.copy()
 
