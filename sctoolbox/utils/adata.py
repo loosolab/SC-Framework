@@ -263,7 +263,7 @@ def prepare_for_cellxgene(adata,
     rename_var : dict or None, default None
         Dictionary of .var columns to rename. Key is the old name, value the new one.
     embedding_names : list[str] or None, default ["pca", "umap", "tsne"]
-        List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check.
+        List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.
     inplace : bool, default False
 
     Raises
@@ -282,7 +282,7 @@ def prepare_for_cellxgene(adata,
 
     # ----- .obsm -----
     if embedding_names:
-        if not any(e in k for e in embedding_names for k in out.obsm.keys()):
+        if not any(f"X_{e}" == k for e in embedding_names for k in out.obsm.keys()):
             raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
@@ -292,9 +292,19 @@ def prepare_for_cellxgene(adata,
 
         out.obs.drop(columns=drop_obs, inplace=True)
 
+        # drop matching color maps
+        for col in drop_obs:
+            if f"{col}_colors" in out.uns.keys():
+                out.uns.pop(f"{col}_colors")
+
     # rename obs columns
     if rename_obs:
         out.obs.rename(columns=rename_obs, inplace=True)
+
+        # rename color maps
+        for old, new in rename_obs.items():
+            if f"{old}_colors" in out.uns.keys():
+                out.uns[f"{new}_colors"] = out.uns.pop(f"{old}_colors")
 
     for c in out.obs:
         if out.obs[c].dtype == 'Int32':
@@ -309,9 +319,19 @@ def prepare_for_cellxgene(adata,
 
         out.var.drop(columns=drop_var, inplace=True)
 
+        # drop matching color maps
+        for col in drop_var:
+            if f"{col}_colors" in out.uns.keys():
+                out.uns.pop(f"{col}_colors")
+
     # rename obs columns
     if rename_var:
         out.var.rename(columns=rename_var, inplace=True)
+
+        # rename color maps
+        for old, new in rename_var.items():
+            if f"{old}_colors" in out.uns.keys():
+                out.uns[f"{new}_colors"] = out.uns.pop(f"{old}_colors")
 
     for c in out.var:
         if out.var[c].dtype == 'Int32':
@@ -327,7 +347,7 @@ def prepare_for_cellxgene(adata,
     out.X = out.X.astype("float32")
 
     # ----- .uns -----
-    # apply color fix
+    # fix colors not in 6-digit hex format
     # https://github.com/chanzuckerberg/cellxgene/issues/2598
     for key in out.uns.keys():
         if key.endswith('colors'):
