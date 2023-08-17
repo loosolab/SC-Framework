@@ -328,7 +328,7 @@ def prepare_for_cellxgene(adata,
             if f"{col}_colors" in out.uns.keys():
                 out.uns.pop(f"{col}_colors")
 
-    # rename obs columns
+    # rename var columns
     if rename_var:
         out.var.rename(columns=rename_var, inplace=True)
 
