@@ -718,8 +718,6 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
     fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
     axes_list = axarr.flatten()
 
-    # Convert anndata to pandas dataframe
-    df = adata.to_df()
     # Get expression values of reference gene
     ref = adata[:, ref_gene].to_df().loc[:, ref_gene]
 
