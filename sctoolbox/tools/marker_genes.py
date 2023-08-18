@@ -98,9 +98,9 @@ def label_genes(adata, species, gene_column=None) -> list[str]:
     list[str]
         List containing the column names added to adata.var.
 
-    See also
+    See Also
     --------
-    sctoolbox.tools.qc_filter.predict_cell_cycle for cell cycle prediction.
+    sctoolbox.tools.qc_filter.predict_cell_cycle : for cell cycle prediction.
     """
 
     # Location of gene lists
