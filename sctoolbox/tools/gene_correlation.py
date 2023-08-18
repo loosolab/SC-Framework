@@ -106,13 +106,11 @@ def correlate_ref_vs_all(adata, ref_gene, correlation_threshold=0.4, save=None) 
         else:
             raise ValueError("Invalid correlation value.")
 
-    # Convert anndata to pandas dataframe
-    df = adata.to_df()
     # Get expression values of reference gene
-    ref = df.loc[:, ref_gene]
+    ref = adata[:, ref_gene].to_df().loc[:, ref_gene]
 
     logger.info(f"Calculating the correlation to {ref_gene}")
-    results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(ref, df.loc[:, gene], gene) for gene in tqdm(adata.var.index.values.tolist())))
+    results = dict(Parallel(n_jobs=-1)(delayed(spearmanr_of_gene)(ref, adata[:, gene].to_df().loc[:,gene], gene) for gene in tqdm(adata.var.index.values.tolist())))
     corr_df = pd.DataFrame.from_dict(results, orient="index")
     corr_df.columns = ["correlation", "p-value"]
 

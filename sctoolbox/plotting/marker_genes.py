@@ -721,11 +721,11 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
     # Convert anndata to pandas dataframe
     df = adata.to_df()
     # Get expression values of reference gene
-    ref = df.loc[:, ref_gene]
+    ref = adata[:, ref_gene].to_df().loc[:, ref_gene]
 
     for i, gene in enumerate(gene_list):
         ax = axes_list[i]
-        gene_expr = df.loc[:, gene]
+        gene_expr = ref = adata[:, gene].to_df().loc[:, gene]
         sns.regplot(x=ref, y=gene_expr, ax=ax)
 
     # Hide axes not used
