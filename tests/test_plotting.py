@@ -760,6 +760,25 @@ def test_plot_differential_genes(pairwise_ranked_genes):
     assert ax_type.startswith("Axes")
 
 
+@pytest.mark.parametrize("gene_list,save,figsize",
+                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
+                          ("Gm18956", "out.png", None)])
+def test_plot_gene_correlation(adata, gene_list, save, figsize):
+    """Test gene correlation."""
+
+    adata_c = adata.copy()
+    # set gene names as index instead of ensemble ids
+    adata_c.var.reset_index(inplace=True)
+    adata_c.var['gene'] = adata_c.var['gene'].astype('str')
+    adata_c.var.set_index('gene', inplace=True)
+    adata_c.var_names_make_unique()
+
+    axes = pl.plot_gene_correlation(adata_c, "Xkr4", gene_list,
+                                    save=save, figsize=figsize)
+    assert type(axes).__name__ == "ndarray"
+    assert type(axes[0]).__name__.startswith("Axes")
+
+
 def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
     """Test if ValueError is raised if no significant genes are found."""
     with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
