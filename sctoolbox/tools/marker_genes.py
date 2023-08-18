@@ -80,7 +80,7 @@ def get_chromosome_genes(gtf, chromosomes) -> list[str]:
 @deco.log_anndata
 def label_genes(adata, species, gene_column=None) -> list[str]:
     """
-    Label genes as ribosomal, mitochrondrial, cell cycle phase and gender genes.
+    Label genes as ribosomal, mitochrondrial and gender genes.
 
     Gene labels are added inplace.
 

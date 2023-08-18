@@ -1249,10 +1249,7 @@ def plot_pca_correlation(adata, which="obs",
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
         numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
     else:
-        # check that columns is in table
-        for col in columns:
-            if col not in table.columns:
-                raise KeyError(f"Column '{col}' was not found in table.")
+        utils.check_columns(table, columns)
 
     # Get table of pcs and columns
     n_pcs = min(n_pcs, mat.shape[1])  # make sure we don't exceed the number of pcs available
