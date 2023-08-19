@@ -1,29 +1,26 @@
-FROM mambaorg/micromamba:latest
+FROM condaforge/mambaforge
 
 LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 
-COPY . /tmp
+COPY . /tmp/
 
-#RUN apt-get update && \
-#    apt-get clean
-USER root
-# Install Python packages \
-RUN apt-get update && \
-    apt-get install -y openssh-client && \
-    apt-get install -y python3-pip && \
-    apt-get clean \
-USER mambauser
+RUN mamba update -n base mamba && \
+    mamba --version
 
-RUN micromamba install -y -n base -f /tmp/sctoolbox_env.yml && \
-    micromamba clean --all --yes && \
-    pip install /tmp/.
+RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
+
+RUN pip install "/tmp/[all]" 
+
+# Change user to root to clear tmp
+RUN rm -r /tmp/*
 
 # Set the time zone
-RUN sh -c "echo 'Europe/Berlin' > /etc/timezone" && \
-    dpkg-reconfigure -f noninteractive tzdata
+RUN apt-get update && \
+    echo 'Europe/Berlin' > apt-get install -y tzdata
 
 # Generate an ssh key
-RUN mkdir .ssh && \
+RUN apt-get install -y openssh-client && \
+    mkdir .ssh && \
     ssh-keygen -t ed25519 -N "" -f .ssh/id_ed25519
 
 ENV ROOT=TRUE \
