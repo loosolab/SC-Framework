@@ -3,19 +3,14 @@ build-job:       # This job runs in the build stage, which runs first.
   only:
       changes:
         - setup.py
+        - sctoolbox_env.yml
   image: docker:latest
   services:
       - name: "docker:dind"
         alias: docker
-  #variables:  # not strictly needed, depending on runner configuration
-  #  DOCKER_HOST: "tcp://docker:2375"
-  #  DOCKER_TLS_CERTDIR: ""
   before_script:
       - apk update && apk add git
       - apt-get update -qq && apt-get install -y -qq git 
-      - echo $CI_REGISTRY_USER
-      - echo $CI_REGISTRY_PASSWORD
-      - echo $CI_REGISTRY
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
       - ls .
@@ -39,21 +34,21 @@ cache:
     - venv/
 
 # Install package for all jobs (unless inherit is false)
-default:
-  before_script:
-    - python --version  # For debugging
-    - uname -a          # For debugging
-    - cat /etc/os-release    # For debugging
-    - gcc --version
-    - pip install virtualenv
-    - virtualenv venv
-    - source venv/bin/activate
-    - apt update
-    - apt -y install r-base  # needed for rpy2 install
-    - pip install rpy2   # resolve dependencies for diffexpr
-    - pip install numpy  # resolve dependencies for diffexpr
-    - pip install pandas # resolve dependencies for diffexpr
-    - pip install .[all]
+#default:
+#  before_script:
+#    - python --version  # For debugging
+#    - uname -a          # For debugging
+#    - cat /etc/os-release    # For debugging
+#    - gcc --version
+#    - pip install virtualenv
+#    - virtualenv venv
+#    - source venv/bin/activate
+#    - apt update
+#    - apt -y install r-base  # needed for rpy2 install
+#    - pip install rpy2   # resolve dependencies for diffexpr
+#    - pip install numpy  # resolve dependencies for diffexpr
+#    - pip install pandas # resolve dependencies for diffexpr
+#    - pip install .[all]
 
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
@@ -111,9 +106,7 @@ test import:
 # Run test coverage
 test coverage:
   stage: test
-  image: 
-    name: python:3.10
-    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ] # Fixes shell not found error (See Issue #129)
+  image: "$CI_REGISTRY_IMAGE:latest"
   tags:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
