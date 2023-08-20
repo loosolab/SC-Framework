@@ -20,6 +20,7 @@
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 - Add method to get pd.DataFrame columns with list of regex (#90)
 - Changed all line endings to LF (#138)
+- Add CI/CD container build pipeline for testing
 
 ## Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):   
 - Fixed assembling atac notebook 01
