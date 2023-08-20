@@ -3,6 +3,7 @@ FROM condaforge/mambaforge
 LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 
 COPY . /tmp/
+COPY scripts .
 
 RUN mamba update -n base mamba && \
     mamba --version
