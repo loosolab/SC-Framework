@@ -1,21 +1,25 @@
+# The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml)has changed.
+# If yes then a new docker image will be build and pushed to the container registry.
+# The newly build image is then used for testing later. 
+# If no changes were made to the enviroment nothing is build and the latest image is used later on.
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  only:
+  only: # Condition to check for changes
       changes:
         - setup.py
         - sctoolbox_env.yml
-  image: docker:latest
+  image: docker:latest # image as building environment
   services:
-      - name: "docker:dind"
+      - name: "docker:dind" # docker in docker to build
         alias: docker
   before_script:
-      - apk update && apk add git
+      - apk update && apk add git # install git for authentification and pushing to registry
       - apt-get update -qq && apt-get install -y -qq git 
-      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
       - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:latest" .
-      - docker push "$CI_REGISTRY_IMAGE:latest"
+      - docker build --pull -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
+      - docker push "$CI_REGISTRY_IMAGE:latest" # push image to registry
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
