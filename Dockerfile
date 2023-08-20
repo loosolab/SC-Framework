@@ -15,9 +15,12 @@ RUN pip install "/tmp/[all]"
 # Change user to root to clear tmp
 RUN rm -r /tmp/*
 
-# Set the time zone
+# Install missing libraries
 RUN apt-get update && \
-    echo 'Europe/Berlin' > apt-get install -y tzdata
+    apt-get install -y libcurl4
+
+# Set the time zone
+RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \
