@@ -1494,9 +1494,3 @@ def add_fld_metrics(adata,
     # adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
     return adata
-
-
-if __name__ == "__main__":
-
-    print('This script is not meant to be run directly. Please import it into a Jupyter notebook.')
-    print("Done!")
