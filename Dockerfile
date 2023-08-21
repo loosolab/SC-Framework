@@ -5,17 +5,23 @@ LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 COPY . /tmp/
 COPY scripts /scripts/
 
+# make scripts executeable
+RUN chmod +x scripts/bedGraphToBigWig 
+
+# update mamba
 RUN mamba update -n base mamba && \
     mamba --version
 
+# install enviroment
 RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
 
+# install sctoolbox
 RUN pip install "/tmp/[all]" && \
     pip install pytest && \
     pip install pytest-cov && \
     pip install pytest-html 
 
-# Change user to root to clear tmp
+# clear tmp
 RUN rm -r /tmp/*
 
 # Install missing libraries
