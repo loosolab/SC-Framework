@@ -202,7 +202,7 @@ def test_search_tsne_parameters(adata):
 
     axarr = pl.search_tsne_parameters(adata, color="condition",
                                       learning_rate_range=(100, 300, 100),
-                                      perplexity_range=(20, 30, 5), n_jobs=4)
+                                      perplexity_range=(20, 30, 5))
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
