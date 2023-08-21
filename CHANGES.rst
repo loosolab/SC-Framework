@@ -1,5 +1,5 @@
 0.2 (in progress)
---------------------
+=================
 - implemented prepare_for_cellxgene
 - fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
@@ -24,7 +24,12 @@
 - Removed outdated normalization methods
 - Changed all line endings to LF (#138)
 
-## Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):   
+Changes to notebooks
+--------------------
+- Added display of 3D UMAP html in notebook 04 (#119)
+
+ATAC notebooks
+^^^^^^^^^^^^^^
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation
@@ -32,7 +37,7 @@
 - Revised nucleosomal score scoring
 
 0.1.1 (24-05-2023)
---------------------
+==================
 - Fixed import issue
 - Make version accessible
 - Added check for CHANGES.rst in gitlab-ci
@@ -41,5 +46,5 @@
 - Added check for sctoolbox/_version.py file in gitlab-ci
 
 0.1 (22-05-2023)
---------------------
+================
 - First version
