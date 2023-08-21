@@ -8,13 +8,21 @@ import sctoolbox.atac as atac
 import sctoolbox.nucleosome_utils as nu
 from scipy.signal import find_peaks
 
-# ------------------------ Fixtures ------------------------ #
+# Prevent figures from being shown
+import matplotlib.pyplot as plt
+plt.switch_backend("Agg")
+
+# ------------------------ Fixtures and data ------------------------ #
+
+
+# Get the paths to the test data; not as fixtures because they are used in parametrized tests
+fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
+bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
 
 
 @pytest.fixture
 def count_table():
     """Return fragment count table."""
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
     return atac._insertsize_from_fragments(fragments, barcodes=None)
 
 
@@ -88,13 +96,6 @@ def adata():
     """Fixture for an AnnData object."""
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
-
-
-@pytest.fixture
-def bamfile():
-    """Fixture for an Bamfile."""
-    bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    return bamfile
 
 
 # ------------------------ Tests ------------------------ #
@@ -326,11 +327,18 @@ def test_plot_wavl_ov(fragment_distributions):
     assert ax3_type.startswith("Axes")
 
 
-def test_add_insertsize_metrics(adata, bamfile):
+@pytest.mark.parametrize("kwargs", [{"bam": bamfile, "plotting": True},
+                                    {"fragments": fragments},
+                                    {"bam": bamfile, "fragments": fragments}  # both are not allowed
+                                    ])
+def test_add_insertsize_metrics(adata, kwargs):
     """Check that the add_insertsize_metrics function works as expected."""
 
-    adata = nu.add_fld_metrics(adata, bamfile, plotting=False)
+    if "bam" in kwargs and "fragments" in kwargs:
+        with pytest.raises(ValueError, match="Please provide either a bam file or a fragments file "):
+            nu.add_fld_metrics(adata, **kwargs)
+    else:
+        nu.add_fld_metrics(adata, **kwargs)
 
-    assert 'fld_score_momentum' in adata.obs.columns
-    assert 'fld_score_cwt' in adata.obs.columns
-    # assert 'genome_counts' in adata.obs.columns
+        assert 'fld_score_momentum' in adata.obs.columns
+        assert 'fld_score_cwt' in adata.obs.columns
