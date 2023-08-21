@@ -10,13 +10,17 @@ RUN mamba update -n base mamba && \
 
 RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
 
-RUN pip install "/tmp/[all]" 
+RUN pip install "/tmp/[all]" && \
+    pip install pytest && \
+    pip install pytest-cov && \
+    pip install pytest-html 
 
 # Change user to root to clear tmp
 RUN rm -r /tmp/*
 
 # Install missing libraries
 RUN apt-get update && \
+    apt-get install bedtools && \
     apt-get install -y libcurl4
 
 # Set the time zone
