@@ -165,16 +165,22 @@ def test_plot_pca_variance_fail(adata):
         pl.plot_pca_variance(adata, method=invalid)
 
 
-@pytest.mark.parametrize("method", ["umap"])  # , "tsne"]) # tsne option is currently broken and sends the function to sleep. Will be added if fixed.
-def test_search_dim_red_parameters(adata, method):
+def test_search_umap_parameters(adata):
     """Test if search_dim_red_parameters returns an array of axes."""
 
-    axarr = pl._search_dim_red_parameters(adata, color="condition",
-                                          method=method,
-                                          min_dist_range=(0.1, 0.3, 0.1),
-                                          spread_range=(2.0, 3.0, 0.5),
-                                          learning_rate_range=(100, 300, 100),
-                                          perplexity_range=(20, 30, 5))
+    axarr = pl.search_umap_parameters(adata, color="condition",
+                                      min_dist_range=(0.1, 0.3, 0.1),
+                                      spread_range=(2.0, 3.0, 0.5))
+    assert type(axarr).__name__ == "ndarray"
+    assert axarr.shape == (2, 2)
+
+
+def test_search_tsne_parameters(adata):
+    """Test if search_dim_red_parameters returns an array of axes."""
+
+    axarr = pl.search_tsne_parameters(adata, color="condition",
+                                      learning_rate_range=(100, 300, 100),
+                                      perplexity_range=(20, 30, 5))
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
