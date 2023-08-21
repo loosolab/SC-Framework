@@ -37,23 +37,6 @@ cache:
     - .cache/pip
     - venv/
 
-# Install package for all jobs (unless inherit is false)
-#default:
-#  before_script:
-#    - python --version  # For debugging
-#    - uname -a          # For debugging
-#    - cat /etc/os-release    # For debugging
-#    - gcc --version
-#    - pip install virtualenv
-#    - virtualenv venv
-#    - source venv/bin/activate
-#    - apt update
-#    - apt -y install r-base  # needed for rpy2 install
-#    - pip install rpy2   # resolve dependencies for diffexpr
-#    - pip install numpy  # resolve dependencies for diffexpr
-#    - pip install pandas # resolve dependencies for diffexpr
-#    - pip install .[all]
-
 # This is a a rule that always passes for branches without jobs being run - otherwise some branches cannot be merged
 pass:
   inherit:
@@ -115,11 +98,6 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
-    - apt-get install bedtools  #needed for some tests
-    - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pip install pytest
-    - pip install pytest-cov
-    - pip install pytest-html
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
@@ -175,7 +153,7 @@ check_version:
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
-  image: python:3.10
+  image: "$CI_REGISTRY_IMAGE:latest"
   inherit:
     default: false
   stage: test
@@ -187,7 +165,7 @@ notebook-output-check:
 
 # Test notebooks when code is pushed to main
 notebooks:
-  image: mambaorg/micromamba:latest
+  image: "$CI_REGISTRY_IMAGE:latest"
   inherit:
     default: false
   stage: test
@@ -198,12 +176,7 @@ notebooks:
     paths:
       - rna-notebooks/pipeline_output/logs/*.txt
   script:
-    - micromamba env create -f sctoolbox_env.yml #mamba is faster at creating envs than conda
-    - eval "$(micromamba shell hook --shell bash)" # initialize micromamba in the current shell
-    - micromamba activate sctoolbox
-    - micromamba install -c conda-forge git # needed for sctoolbox install
     - pip install papermill
-    - pip install .[all]
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
