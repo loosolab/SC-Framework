@@ -1,10 +1,12 @@
 0.2 (in progress)
 --------------------
+- implemented prepare_for_cellxgene
 - fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Added logging verbose and decorator to ATAC related functions
 - Fix "shell not found" error for CI pipeline (#129)
 - Pinned scikit-learn to version <=1.2.2 (#128)
+- Added script for gene correlation and comparison between two conditions
 - Added check for marker gene lists (#103)
 - Keep notebook metadata on push to prevent deleting kernel information
 - Added sctoolbox as default kernel to RNA & ATAC notebooks
@@ -20,6 +22,8 @@
 - Add method to get pd.DataFrame columns with list of regex (#90)
 - Add ATAC quality metrics TSSe (ENCODE), FRiP
 - Revised FLD density plotting
+- Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
+- Removed outdated normalization methods
 - Changed all line endings to LF (#138)
 
 ## Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):   

@@ -5,7 +5,9 @@ import warnings
 import scanpy as sc
 import numpy as np
 import pandas as pd
+import scipy.stats
 from scipy.sparse import issparse
+import itertools
 
 import seaborn as sns
 import matplotlib
@@ -507,7 +509,7 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 
             # Set title
             if j == 0:
-                axes[j, i].set_title(adata_names[i])
+                axes[j, i].set_title(list(adata_names)[i])
             else:
                 axes[j, i].set_title("")
 
@@ -982,7 +984,7 @@ def anndata_overview(adatas,
 
                 # Plot depending on type
                 if plot_type == "PCA-var":
-                    plot_pca_variance(adata, ax=ax)  # this plot takes no color
+                    plot_pca_variance(adata, ax=ax, show_cumulative=False)  # this plot takes no color
 
                 elif plot_type == "LISI":
 
@@ -995,10 +997,8 @@ def anndata_overview(adatas,
                         raise ValueError(e)
 
                     # Plot LISI scores
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
-                        boxplot(adata.obs[lisi_columns], ax=ax)
-                        LISI_axes.append(ax)
+                    boxplot(adata.obs[lisi_columns], ax=ax)
+                    LISI_axes.append(ax)
 
                 else:
                     with warnings.catch_warnings():
@@ -1070,6 +1070,7 @@ def anndata_overview(adatas,
 def plot_pca_variance(adata, method="pca",
                       n_pcs=20,
                       n_selected=None,
+                      show_cumulative=True,
                       ax=None,
                       save=None) -> matplotlib.axes.Axes:
     """Plot the pca variance explained by each component as a barplot.
@@ -1084,6 +1085,8 @@ def plot_pca_variance(adata, method="pca",
         Number of components to plot.
     n_selected : int, default None
         Number of components to highlight in the plot with a red line.
+    show_cumulative : bool, default True
+        Whether to show the cumulative variance explained in a second y-axis.
     ax : matplotlib.axes.Axes, default None
         Axes object to plot on. If None, a new figure is created.
     save : str, default None (not saved)
@@ -1115,16 +1118,14 @@ def plot_pca_variance(adata, method="pca",
 
         pl.plot_pca_variance(adata, method="pca",
                       n_pcs=20,
-                      n_selected=None,
-                      ax=None,
-                      save=None)
+                      n_selected=7)
     """
 
     if ax is None:
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
     else:
-        # TODO: check if ax is an ax object
-        pass
+        if not type(ax).__name__.startswith("Axes"):
+            raise ValueError("'ax' parameter needs to be an Axes object. Please check your input.")
 
     if method not in adata.uns:
         raise KeyError("The given method '{0}' is not found in adata.uns. Please make sure to run the method before plotting variance.")
@@ -1133,22 +1134,174 @@ def plot_pca_variance(adata, method="pca",
     var_explained = adata.uns[method]["variance_ratio"][:n_pcs]
     var_explained = var_explained * 100  # to percent
 
+    # Cumulative variance
+    var_cumulative = np.cumsum(var_explained)
+
     # Plot barplot of variance
-    sns.barplot(x=list(range(1, len(var_explained) + 1)),
+    x = list(range(1, len(var_explained) + 1))
+    sns.barplot(x=x,
                 y=var_explained,
-                color="limegreen",
+                color="grey",
                 ax=ax)
+
+    # Plot cumulative variance
+    if show_cumulative:
+        ax2 = ax.twinx()
+        ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
+        ax2.set_ylabel("Cumulative variance explained (%)", color="blue", fontsize=12)
+        ax2.spines['right'].set_color('blue')
+        ax2.yaxis.label.set_color('blue')
+        ax2.tick_params(axis='y', colors='blue')
 
     # Add number of selected as line
     if n_selected is not None:
+        if show_cumulative:
+            ylim = ax2.get_ylim()
+            yrange = ylim[1] - ylim[0]
+            ax2.set_ylim(ylim[0], ylim[1] + yrange * 0.1)  # add 10% to make room for legend of n_seleced line
         ax.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
         ax.legend()
 
     # Finalize plot
-    ax.set_xlabel('PCs', fontsize=12)
-    ax.set_ylabel("Variance explained (%)")
+    ax.set_xlabel('Principal components', fontsize=12, labelpad=10)
+    ax.set_ylabel("Variance explained (%)", fontsize=12)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
     ax.set_axisbelow(True)
+
+    # Save figure
+    _save_figure(save)
+
+    return ax
+
+
+@deco.log_anndata
+def plot_pca_correlation(adata, which="obs",
+                         n_pcs=10,
+                         columns=None,
+                         pvalue_threshold=0.01,
+                         method="spearmanr",
+                         figsize=None,
+                         title=None,
+                         save=None) -> matplotlib.axes.Axes:
+    """
+    Plot a heatmap of the correlation between the first n_pcs and the given columns.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    which : str, default "obs"
+        Whether to use the observations ("obs") or variables ("var") for the correlation.
+    n_pcs : int, default 10
+        Number of principal components to use for the correlation.
+    columns : list of str, default None
+        List of columns to use for the correlation. If None, all numeric columns are used.
+    pvalue_threshold : float, default 0.01
+        Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
+    method : str, default "spearmanr"
+        Method to use for correlation. Must be either "pearsonr" or "spearmanr".
+    figsize : tuple of int, default None
+        Size of the figure in inches. If None, the size is automatically determined.
+    title : str, default None
+        Title of the plot. If None, no title is added.
+    save : str, default None
+        Filename to save the figure.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Axes object containing the heatmap.
+
+    Raises
+    ------
+    ValueError
+        If "which" is not "obs" or "var", or if "method" is not "pearsonr" or "spearmanr".
+    KeyError
+        If any of the given columns is not found in the respective table.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_correlation(adata, which="obs")
+    """
+
+    # Establish which table to use
+    if which == "obs":
+        table = adata.obs.copy()
+        mat = adata.obsm["X_pca"]
+    elif which == "var":
+        table = adata.var.copy()
+        mat = adata.varm["PCs"]
+    else:
+        raise ValueError(f"'which' must be either 'var'/'obs', but '{which}' was given.")
+
+    # Check that method is available
+    try:
+        corr_method = getattr(scipy.stats, method)
+    except AttributeError:
+        s = f"'{method}' is not a valid method within scipy.stats. Please choose one of pearsonr/spearmanr."
+        raise ValueError(s)
+
+    # Get columns
+    if columns is None:
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
+    else:
+        utils.check_columns(table, columns)
+
+    # Get table of pcs and columns
+    n_pcs = min(n_pcs, mat.shape[1])  # make sure we don't exceed the number of pcs available
+    pc_columns = [f"PC{i+1}" for i in range(n_pcs)]
+    pc_table = pd.DataFrame(mat[:, :n_pcs], columns=pc_columns)
+    pc_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
+
+    # Calculate correlation of columns
+    combinations = list(itertools.product(numeric_columns, pc_columns))
+
+    corr_table = pd.DataFrame(index=numeric_columns, columns=pc_columns, dtype=float)
+    corr_table_annot = corr_table.copy()
+    for row, col in combinations:
+
+        res = corr_method(pc_table[row], pc_table[col])
+        corr_table.loc[row, col] = res.statistic
+
+        corr_table_annot.loc[row, col] = str(np.round(res.statistic, 2))
+        corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
+
+    # Plot heatmap
+    figsize = figsize if figsize is not None else (len(pc_columns) / 1.5, len(numeric_columns) / 1.5)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax = sns.heatmap(corr_table,
+                     annot=corr_table_annot,
+                     fmt='',
+                     annot_kws={"fontsize": 9},
+                     cbar_kws={"label": method},
+                     cmap="seismic",
+                     vmin=-1, vmax=1,  # center is 0
+                     ax=ax)
+    ax.set_aspect(0.8)
+
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+
+    # Set size of cbar to the same height as the heatmap
+    cbar_ax = fig.get_axes()[-1]
+    ax_pos = ax.get_position()
+    cbar_pos = cbar_ax.get_position()
+
+    cbar_ax.set_position([ax_pos.x1 + 2 * cbar_pos.width, ax_pos.y0,
+                          cbar_pos.width, ax_pos.height])
+
+    # Add black borders to axes
+    for ax_obj in [ax, cbar_ax]:
+        for _, spine in ax_obj.spines.items():
+            spine.set_visible(True)
+
+    # Add title
+    if title is not None:
+        ax.set_title(str(title))
 
     # Save figure
     _save_figure(save)
