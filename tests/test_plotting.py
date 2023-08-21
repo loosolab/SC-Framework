@@ -166,7 +166,7 @@ def test_plot_pca_variance_fail(adata):
 
 
 def test_search_umap_parameters(adata):
-    """Test if search_dim_red_parameters returns an array of axes."""
+    """Test if search_umap_parameters returns an array of axes."""
 
     axarr = pl.search_umap_parameters(adata, color="condition",
                                       min_dist_range=(0.1, 0.3, 0.1),
@@ -176,7 +176,7 @@ def test_search_umap_parameters(adata):
 
 
 def test_search_tsne_parameters(adata):
-    """Test if search_dim_red_parameters returns an array of axes."""
+    """Test if search_tsne_parameters returns an array of axes."""
 
     axarr = pl.search_tsne_parameters(adata, color="condition",
                                       learning_rate_range=(100, 300, 100),
