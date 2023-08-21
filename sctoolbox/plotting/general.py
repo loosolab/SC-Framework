@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import warnings
 
 import seaborn as sns
 import matplotlib
@@ -546,7 +547,13 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
         # TODO: check if ax is an ax object
         pass
 
-    sns.boxplot(data=dt, ax=ax)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
+
+        dt_melt = dt.melt()
+        ax = sns.boxplot(data=dt_melt, x="variable", y="value", ax=ax)
+        ax.set_xlabel("")
+        ax.set_ylabel("")
 
     if show_median:
         # From:

@@ -15,7 +15,7 @@ from matplotlib.patches import Patch
 
 # sctoolbox functions
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import bidirectional_barplot, _save_figure
+from sctoolbox.plotting.general import bidirectional_barplot, _save_figure, _make_square
 import sctoolbox.utils.decorator as deco
 
 
@@ -665,3 +665,80 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     ax.set_xlabel("Number of genes")
 
     return ax
+
+
+def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, save=None) -> list[matplotlib.axes.Axes]:
+    """
+    Plot the gene expression of one reference gene against the expression of a set of genes.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData object
+        An annotated data matrix object containing counts in .X.
+    ref_gene : str
+        Reference gene to which other genes are comapred to.
+    gene_list : list
+        A list of genes to show expression for.
+    ncols : int, default 3
+        Number of columns in plot grid.
+    figsize : tuple, default None
+        Control the size of the output figure, e.g. (6,10).
+    save : str, default None
+        Save the figure to a file.
+
+    Returns
+    -------
+    list[matplotlib.axes.Axes]
+        List containing all axis objects.
+
+    EXAMPLE
+    -------
+
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+
+    .. plot::
+        :context: close-figs
+
+        gene_list=("HES4", "PRMT2", "ITGB2")
+        pl.plot_gene_correlation(adata, "Xkr4", gene_list)
+    """
+
+    if isinstance(gene_list, str):
+        gene_list = [gene_list]
+
+    # Find out how many rows we need
+    nrows = int(np.ceil(len(gene_list) / ncols))
+
+    if figsize is None:
+        figsize = (ncols * 3, nrows * 3)
+
+    fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
+    axes_list = axarr.flatten()
+
+    # Get expression values of reference gene
+    ref = adata[:, ref_gene].to_df()[ref_gene]
+
+    for i, gene in enumerate(gene_list):
+        ax = axes_list[i]
+        gene_expr = adata[:, gene].to_df()[gene]
+        sns.regplot(x=ref, y=gene_expr, ax=ax)
+
+    # Hide axes not used
+    for ax in axes_list[len(gene_list):]:
+        ax.set_visible(False)
+    axes_list = axes_list[:len(gene_list)]
+
+    # Make plots square
+    for ax in axes_list:
+        _make_square(ax)
+
+    fig.tight_layout()
+
+    # Save figure if chosen
+    if save:
+        _save_figure(save)
+
+    return axes_list
