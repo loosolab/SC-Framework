@@ -157,12 +157,34 @@ def test_plot_pca_variance(adata, n_selected):
 
 
 def test_plot_pca_variance_fail(adata):
-    """Test if failes on invalid method."""
-    # generate invalid method
-    invalid = "-".join(list(adata.uns.keys())) + "-invalid"
+    """Test if function fails on invalid parameters."""
 
-    with pytest.raises(KeyError):
-        pl.plot_pca_variance(adata, method=invalid)
+    with pytest.raises(KeyError, match="The given method"):
+        pl.plot_pca_variance(adata, method="invalid")
+
+    with pytest.raises(ValueError, match="'ax' parameter needs to be an Axes object."):
+        pl.plot_pca_variance(adata, ax="invalid")
+
+
+@pytest.mark.parametrize("which", ["obs", "var"])
+@pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
+def test_plot_pca_correlation(adata, which, method):
+    """Test if Axes object is returned without error."""
+
+    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax_type = type(ax).__name__
+
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+                                    {"which": "invalid"},
+                                    {"columns": ["invalid", "columns"]}])
+def test_plot_pca_correlation_fail(adata, kwargs):
+    """Test that an exception is raised upon error."""
+
+    with pytest.raises((ValueError, KeyError)):
+        pl.plot_pca_correlation(adata, **kwargs)
 
 
 def test_search_umap_parameters(adata):

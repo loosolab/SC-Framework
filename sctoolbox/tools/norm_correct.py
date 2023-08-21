@@ -11,8 +11,7 @@ import scanpy.external as sce
 from typing import Optional
 
 import sctoolbox.utils as utils
-from sctoolbox.tools.dim_reduction import lsi, compute_PCA
-from sctoolbox.tools import highly_variable as hv
+from sctoolbox.tools.dim_reduction import lsi
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -22,10 +21,17 @@ logger = settings.logger
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
+def atac_norm(*args, **kwargs):
+    """Normalize ATAC data - deprecated functionality. Use normalize_adata instead."""
+
+    logger.warning("The function 'atac_norm' is deprecated. Use 'normalize_adata' instead.")
+    return normalize_adata(*args, **kwargs)
+
+
 @deco.log_anndata
-def atac_norm(adata, method) -> dict[str, anndata.AnnData]:
+def normalize_adata(adata, method, exclude_highly_expressed=True, target_sum=None) -> dict[str, anndata.AnnData]:
     """
-    Normalize count matrix using different methods.
+    Normalize the count matrix and calculate dimension reduction using different methods.
 
     Parameters
     ----------
@@ -33,9 +39,12 @@ def atac_norm(adata, method) -> dict[str, anndata.AnnData]:
         Annotated data matrix.
     method : str or list of str
         Normalization method. Either 'total' and/or 'tfidf'.
-
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
+    exclude_highly_expressed : boolean, default True
+        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    target_sum : int, default None
+        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
 
     Returns
     -------
@@ -58,7 +67,7 @@ def atac_norm(adata, method) -> dict[str, anndata.AnnData]:
 
         if method_str == "total":  # perform total normalization and pca
             logger.info('Performing total normalization and PCA...')
-            sc.pp.normalize_total(adata, exclude_highly_expressed=True)
+            sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
             sc.pp.log1p(adata)
             sc.pp.pca(adata)
 
@@ -73,81 +82,6 @@ def atac_norm(adata, method) -> dict[str, anndata.AnnData]:
         adatas[method_str] = adata
 
     return adatas
-
-
-def adata_normalize_total(anndata, excl=True, inplace=False,
-                          norm_kwargs={}, log_kwargs={}) -> Optional[anndata.AnnData]:
-    """
-    Normalize the total counts and converting to log.
-
-    Parameters
-    ----------
-    anndata : anndata.AnnData
-        Anndata object to normalize.
-    excl : boolean, default True
-        Decision to exclude highly expressed genes (HEG) from normalization.
-    inplace : boolean, default False
-        Whether the anndata object is modified inplace.
-    norm_kwargs : dict, default {}
-        Additional parameters forwarded to scanpy.pp.normalize_total().
-    log_kwargs : dict, default {}
-        Additional parameters forwarded to scanpy.pp.log1p().
-
-    Returns
-    -------
-    Optional[anndata.AnnData]
-        Returns normalized and logged anndata object. Or None if inplace = True.
-    """
-
-    adata_m = anndata if inplace else anndata.copy()
-
-    # Normalizing and logaritimyzing
-    # print("Normalizing the data and converting to log")
-    sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True, **norm_kwargs)
-    sc.pp.log1p(adata_m, copy=False, **log_kwargs)
-
-    # Adding info in anndata.uns["infoprocess"]
-    # cr.build_infor(adata_m, "Scanpy normalization", "exclude_highly_expressed= " + str(excl), inplace=True)
-
-    if not inplace:
-        return adata_m
-
-
-def norm_log_PCA(anndata, exclude_HEG=True,
-                 use_HVG_PCA=True, inplace=False) -> Optional[anndata.AnnData]:
-    """
-    Define the ideal number of highly variable genes (HGV), annotate them and compute PCA.
-
-    Parameters
-    ----------
-    anndata : anndata.AnnData
-        Anndata object to work on.
-    exclude_HEG : boolean, default True
-        If True, highly expressed genes (HEG) will be not considered in the normalization.
-    use_HVG_PCA : boolean, default True
-        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-    inplace : boolean, default False
-        Whether to work inplace on the anndata object.
-
-    Returns
-    -------
-    Optional[anndata.AnnData]
-        Anndata with expression values normalized and log converted and PCA computed.
-    """
-
-    adata_m = anndata if inplace else anndata.copy()
-
-    # Normalization and converting to log
-    adata_normalize_total(adata_m, exclude_HEG, inplace=True)
-
-    # Annotate highly variable genes
-    hv.annot_HVG(adata_m, inplace=True)
-
-    # Compute PCA
-    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
-
-    if not inplace:
-        return adata_m
 
 
 def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4) -> None:
@@ -430,15 +364,13 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs) -
         adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
 
-        # Make sure that the batch_key is still a categorical
-        adata.obs[batch_key] = adata.obs[batch_key].astype("category")
-
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.tl.pca(adata)  # rerun pca
         sc.pp.neighbors(adata)
 
     elif method == "harmony":
         adata = adata.copy()  # there is no copy option for harmony
+        adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
 
         sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]

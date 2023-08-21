@@ -20,6 +20,8 @@
 - Add Check to _filter_object() if column contains only boolean (#110)
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 - Add method to get pd.DataFrame columns with list of regex (#90)
+- Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
+- Removed outdated normalization methods
 - Changed all line endings to LF (#138)
 - Diabled threads parameter for tSNE (#130)
 
