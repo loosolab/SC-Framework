@@ -136,7 +136,7 @@ def search_umap_parameters(adata,
 @deco.log_anndata
 def search_tsne_parameters(adata,
                            perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
-                           color=None, verbose=True, threads=4, save=None, **kwargs) -> np.ndarray:
+                           color=None, verbose=True, threads=1, save=None, **kwargs) -> np.ndarray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -151,8 +151,9 @@ def search_tsne_parameters(adata,
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     verbose : bool, default True
         Print progress to console.
-    threads : int, default 4
-        Number of threads to use for tSNE calculation.
+    threads : int, default 1
+        The threads paramerter is currently not supported. Please leave at 1.
+        This may be fixed in the future.
     save : str, default None (not saved)
         Path to save the figure to.
     **kwargs : arguments
@@ -175,6 +176,11 @@ def search_tsne_parameters(adata,
 
     args = locals()  # get all arguments passed to function
     args["method"] = "tsne"
+    if args["threads"] > 1:
+        warnings.warn("tSNE is not supported to be run in parrallel. "
+                      + "The threads parameter is set to 1. You can run each tSNE "
+                      + "instance on multiple threads by setting the parameter n_jobs.")
+        args["threads"] = 1
     kwargs = args.pop("kwargs")
 
     return _search_dim_red_parameters(**args, **kwargs)
@@ -205,7 +211,8 @@ def _search_dim_red_parameters(adata, method,
     verbose : bool, default True
         Print progress to console.
     threads : int, default 4
-        Number of threads to use for UMAP calculation.
+        Number of threads to use for UMAP calculation. tSNE does not support running muliple instances in parallel.
+        To run tSNE in parallel set the n_jobs parameter.
     save : str, default None
         Path to save the figure to.
     **kwargs : arguments
@@ -215,7 +222,13 @@ def _search_dim_red_parameters(adata, method,
     -------
     np.ndarray
         2D numpy array of axis objects
+
+    Notes
+    -----
+    There are some issues running tSNE in parallel. For this reason the multithreading for tSNE is disabled.
+    This may change in the future. The n_jobs parameter for scanpy.tl.tsne still works, which can be set instead.
     """
+
     def get_loop_params(r):
         """Get parameters to loop over."""
         # Check validity of range parameters
@@ -249,11 +262,11 @@ def _search_dim_red_parameters(adata, method,
     for r in [range_1, range_2]:
         loop_params.append(get_loop_params(r))
 
-    # Calculate umap for each combination of spread/dist
+    # Calculate umap/tsne for each combination of spread/dist
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=numba_errors.NumbaDeprecationWarning, message="The 'nopython' keyword argument")  # numba warning for 0.59.0
-
-        pool = mp.Pool(threads)
+        if threads > 1:
+            pool = mp.Pool(threads)
         jobs = {}
         for i, r2_param in enumerate(loop_params[1]):  # rows
             for j, r1_param in enumerate(loop_params[0]):  # columns
@@ -261,12 +274,15 @@ def _search_dim_red_parameters(adata, method,
                         range_2[0].rsplit('_', 1)[0]: r2_param,
                         "copy": True}
                 kwds |= kwargs
-                job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
+                if threads > 1:
+                    job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
+                else:
+                    job = tool_func(adata, n_jobs = threads, **kwds)
                 jobs[(i, j)] = job
-        pool.close()
-
-        utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
-        pool.join()
+        if threads > 1:
+            pool.close()
+            utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
+            pool.join()
 
     # Figure with rows=spread, cols=dist
     fig, axes = plt.subplots(len(loop_params[1]), len(loop_params[0]),
@@ -278,11 +294,15 @@ def _search_dim_red_parameters(adata, method,
     for i, r2_param in enumerate(loop_params[1]):  # rows
         for j, r1_param in enumerate(loop_params[0]):  # columns
 
+            if threads > 1:
+                jobs[(i, j)] = jobs[(i, j)].get()
+
             # Add precalculated UMAP to adata
-            adata.obsm[f"X_{method}"] = jobs[(i, j)].get().obsm[f"X_{method}"]
+            adata.obsm[f"X_{method}"] = jobs[(i, j)].obsm[f"X_{method}"]
 
             if verbose is True:
-                print(f"Plotting umap for spread={r2_param} and dist={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
+                print(f"Plotting {method} for spread={r2_param} and dist={r1_param}"
+                      + f" ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
 
             # Set legend loc for last column
             if i == 0 and j == (len(loop_params[0]) - 1):
