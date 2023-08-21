@@ -277,7 +277,7 @@ def _search_dim_red_parameters(adata, method,
                 if threads > 1:
                     job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
                 else:
-                    job = tool_func(adata, n_jobs = threads, **kwds)
+                    job = tool_func(adata, **kwds)
                 jobs[(i, j)] = job
         if threads > 1:
             pool.close()
