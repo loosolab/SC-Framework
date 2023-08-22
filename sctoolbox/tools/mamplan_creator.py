@@ -116,12 +116,11 @@ class Mamplan():
         with open(out, 'w') as outfile:
             yaml.dump(self.to_dict(), outfile, default_flow_style=False, default_style=None)
 
-    def _get_department_whitelist(self,
-                                 gitlab_url="https://gitlab.gwdg.de/",
-                                 repo="metadata_whitelists",
-                                 file_path="whitelists/department",
-                                 branch="main"):
-        """Read department whitelist from gitlab."""
+    def _get_whitelist(self, file_path,
+                       gitlab_url="https://gitlab.gwdg.de/",
+                       repo="metadata_whitelists",
+                       branch="main"):
+        """Read whitelist from gitlab."""
 
         gl = gitlab.Gitlab(gitlab_url)
         projects = gl.projects.list(search=repo)
@@ -284,6 +283,9 @@ class Mamplan():
 
     @init_container.setter
     def init_container(self, init_container):
+        valid_init = self._get_whitelist("whitelists/init_container")
+        if init_container not in valid_init:
+            raise ValueError(f"Invalid organization found.\nValid organizations are:\n{valid_init}")
         self._init_container = init_container
 
     @property
@@ -316,7 +318,7 @@ class Mamplan():
     def organization(self, organization):
         if not isinstance(organization, list):
             organization = [organization]
-        valid_organizations = self._get_department_whitelist()
+        valid_organizations = self._get_whitelist("whitelists/department")
         if not set(organization).issubset(valid_organizations):
             raise ValueError(f"Invalid organization found.\nValid organizations are:\n{valid_organizations}")
         self._organization = organization
