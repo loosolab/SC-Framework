@@ -35,13 +35,16 @@ class Mamplan():
                  mem_request=None):
         """Initialize mamplan object."""
 
+        bucket = f"mampok-local-bioi-{exp_id}-{tool}"
+        self._check_bucket(bucket)
+
         self.exp_id = exp_id
         self.files = files
         self.tool = tool
         self.analyst = analyst
         self.datatype = datatype
         self.label = label if label else f"{exp_id}: BCU"
-        self.bucket = f"mampok-local-bioi-{exp_id}-{tool}"
+        self.bucket = bucket
         self.mampok_url = mampok_url
         self.cluster = cluster
         self.active = False
@@ -61,6 +64,13 @@ class Mamplan():
         self.mem_limit = mem_limit
         self.cpu_request = cpu_request
         self.mem_request = mem_request
+
+    def _check_bucket(self, bucket):
+        if not 3 < len(bucket) < 65:
+            raise ValueError("The bucket name is to long. "
+                             + "Please shorten the ID. "
+                             + "Allowed bucket length is: 3 < x < 65. "
+                             + f"Current length: {len(bucket)}")
 
     def to_dict(self):
         """Return object as dictionary."""
@@ -203,7 +213,7 @@ class Mamplan():
 
     @bucket.setter
     def bucket(self, bucket):
-        # TODO bucket name has a char limit check for that limit. (3-65)
+        self._check_bucket(bucket)
         self._bucket = bucket.replace("_", "-").lower()
 
     @property
