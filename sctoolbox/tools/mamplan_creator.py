@@ -3,6 +3,7 @@
 from datetime import date, datetime
 import yaml
 from Bio.Entrez import efetch
+from urllib.error import HTTPError
 
 VALID_TOOLS = ["cellxgene-new", "cellxgene-fix", "cellxgene-vip-latest"]
 VALID_DATATYPES = ["scrna", "scatac"]
@@ -12,34 +13,53 @@ VALID_CLUSTER = ["BN", "GWDGmangt", "GWDG"]
 class Mamplan():
     """Class for mamplan creation."""
 
-    def __init__(self, exp_id, files, tool, analyst, datatype, cluster="BN"):
+    def __init__(self, exp_id, files, tool, analyst, datatype,
+                 cluster="BN",
+                 label=None,
+                 mampok_url=True,
+                 icinga=False,
+                 replicas=1,
+                 autoscaling=True,
+                 random=False,
+                 init_container="s3download",
+                 supress_s3=False,
+                 organization=["Ag-nerds"],
+                 owner=None,
+                 user=None,
+                 pubmedid=None,
+                 citation=None,
+                 cpu_limit=None,
+                 mem_limit=None,
+                 cpu_request=None,
+                 mem_request=None):
         """Initialize mamplan object."""
-
-        if not isinstance(files, list):
-            files = [files]
 
         self.exp_id = exp_id
         self.files = files
         self.tool = tool
         self.analyst = analyst
         self.datatype = datatype
-        self.label = f"{exp_id}: BCU"
+        self.label = label if label else f"{exp_id}: BCU"
         self.bucket = f"mampok-local-bioi-{exp_id}-{tool}"
-        self.mampok_url = True
+        self.mampok_url = mampok_url
         self.cluster = cluster
         self.active = False
-        self.icinga = False
-        self.replicas = 1
-        self.autoscaling = True
-        self.random = False
-        self.init_container = "s3download"
-        self.supress_s3 = False
+        self.icinga = icinga
+        self.replicas = replicas
+        self.autoscaling = autoscaling
+        self.random = random
+        self.init_container = init_container
+        self.supress_s3 = supress_s3
         self.creationdate = date.today().strftime("%d/%m/%Y")
-        self.organization = ["AG-nerds"]
-        self.owner = None
-        self.user = None
-        self.pubmedid = None
-        self.citation = None
+        self.organization = organization
+        self.owner = owner
+        self.user = user
+        self.pubmedid = pubmedid
+        self.citation = citation
+        self.cpu_limit = cpu_limit
+        self.mem_limit = mem_limit
+        self.cpu_request = cpu_request
+        self.mem_request = mem_request
 
     def to_dict(self):
         """Return object as dictionary."""
@@ -83,6 +103,8 @@ class Mamplan():
         if self.citation:
             mamplan_dict["tags"]["citation"] = self.citation
 
+        # TODO Add cpu request and limit
+
         return mamplan_dict
 
     def save(self, out):
@@ -100,7 +122,7 @@ class Mamplan():
 
     @exp_id.setter
     def exp_id(self, exp_id):
-        self._exp_id = exp_id.replace("_", "-")
+        self._exp_id = exp_id.replace("_", "-").lower()
 
     @property
     def files(self):
@@ -157,7 +179,7 @@ class Mamplan():
 
     @bucket.setter
     def bucket(self, bucket):
-        self._bucket = bucket.replace("_", "-")
+        self._bucket = bucket.replace("_", "-").lower()
 
     @property
     def mampok_url(self):
@@ -166,7 +188,7 @@ class Mamplan():
     @mampok_url.setter
     def mampok_url(self, mampok_url):
         if not isinstance(mampok_url, bool):
-            raise ValueError("mampok_url needs to be a aboolean.")
+            raise ValueError("'mampok_url' needs to be a a boolean.")
         self._mampok_url = mampok_url
 
     @property
@@ -284,6 +306,8 @@ class Mamplan():
 
     @user.setter
     def user(self, user):
+        if not isinstance(user, list):
+            user = [user]
         self._user = user
 
     @property
@@ -293,11 +317,11 @@ class Mamplan():
     @pubmedid.setter
     def pubmedid(self, pubmedid):
         # Is this check needed? Nice to have but what if pubmed is down or user is offline?
-        #if pubmedid:
-        #    try:
-        #        efetch(db='pubmed', id=pubmedid, retmode='xml')
-        #    except HTTPError:
-        #        raise ValueError("Invalid pubmed id given.")
+        if pubmedid:
+            try:
+                efetch(db='pubmed', id=pubmedid, retmode='xml')
+            except HTTPError:
+                raise ValueError("Invalid pubmed id given.")
         self._pubmedid = pubmedid
 
     @property
