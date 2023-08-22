@@ -78,6 +78,9 @@ def test_prepare_for_cellxgene(adata_icxg):
         if key.endswith('colors'):
             assert all(len(c) <= 7 for c in cxg_adata.uns[key])
 
+    # check if redundant colors are deleted
+    assert "no_match_colors" not in cxg_adata.uns.keys()
+
 
 @pytest.mark.parametrize("inplace", [True, False])
 @pytest.mark.parametrize("embedding_names", [["umap", "pca", "tsne"], ["invalid"]])
