@@ -24,6 +24,7 @@
 - Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
 - Removed outdated normalization methods
 - Changed all line endings to LF (#138)
+- Diabled threads parameter for tSNE (#130)
 
 Changes to ATAC notebooks:
 **************************
