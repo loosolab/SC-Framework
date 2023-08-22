@@ -1,8 +1,13 @@
+# 
 extract-version:
   stage: .pre
-  image: python:3.10
   script:
     - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
+    - echo "BUILD_VERSION=$VERSION" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+    expire_in: 1 hour
 
 # The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml)has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
@@ -19,14 +24,16 @@ build-job:       # This job runs in the build stage, which runs first.
       - name: "docker:dind" # docker in docker to build
         alias: docker
   before_script:
-      - echo $VERSION
+      - echo $BUILD_VERSION
       - apk update && apk add git # install git for authentification and pushing to registry
       - apt-get update -qq && apt-get install -y -qq git 
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
       - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:$VERSION" . # build the image from Dockerfile in the repository
-      - docker push "$CI_REGISTRY_IMAGE:$VERSION" # push image to registry
+      - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" . # build the image from Dockerfile in the repository
+      - docker push "$CI_REGISTRY_IMAGE:$BUILD_VERSION" # push image to registry
+  dependencies:
+    - build
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -99,7 +106,7 @@ test import:
 # Run test coverage
 test coverage:
   stage: test
-  image: "$CI_REGISTRY_IMAGE:$VERSION"
+  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
   tags:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
@@ -126,6 +133,8 @@ test coverage:
       - sctoolbox/*.py    
     - when: manual
       allow_failure: True
+  dependencies:
+    - build
 
 #Changes.rst file must be changed in merge requests
 check_changes:
@@ -161,7 +170,7 @@ check_version:
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
-  image: "$CI_REGISTRY_IMAGE:$VERSION"
+  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
   inherit:
     default: false
   stage: test
@@ -170,10 +179,12 @@ notebook-output-check:
     - python scripts/check_notebooks.py */*.ipynb
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+  dependencies:
+    - build
 
 # Test notebooks when code is pushed to main
 notebooks:
-  image: "$CI_REGISTRY_IMAGE:$VERSION"
+  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
   inherit:
     default: false
   stage: test
@@ -205,6 +216,8 @@ notebooks:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
+  dependencies:
+    - build
 
 
 # ----------------------------- Gitlab pages ---------------------------------#
