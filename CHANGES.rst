@@ -1,6 +1,8 @@
 0.2 (in progress)
 =================
 - implemented prepare_for_cellxgene
+- fix error in prepare_for_cellxgene caused by .uns[_color] not matching .obs column. (#176)
+- implemented prepare_for_cellxgene (#147)
 - fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Added logging verbose and decorator to ATAC related functions
@@ -20,9 +22,13 @@
 - Add Check to _filter_object() if column contains only boolean (#110)
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 - Add method to get pd.DataFrame columns with list of regex (#90)
+- Add ATAC quality metrics TSSe (ENCODE), FRiP
+- Revised FLD density plotting
+- Adjusted style of default values in docs (#33)
 - Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
 - Removed outdated normalization methods
 - Changed all line endings to LF (#138)
+- Diabled threads parameter for tSNE (#130)
 
 Changes to notebooks
 --------------------

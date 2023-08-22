@@ -12,7 +12,6 @@ from collections import Counter
 import os
 import pkg_resources
 import pandas as pd
-import sys
 from pathlib import Path
 import multiprocessing as mp
 from typing import Tuple, Union
@@ -97,8 +96,7 @@ def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, ke
     logger.info('Finished creating fragments file. Now sorting...')
 
     # sort
-    sort_cmd = f'sort -k1,1 -k2,2n {out_unsorted} > {out_sorted}'
-    os.system(sort_cmd)
+    utils._sort_bed(out_unsorted, out_sorted)
     logger.info('Finished sorting fragments')
 
     # remove unsorted
@@ -200,14 +198,9 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]) -> Union[bool, Tuple[
         out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
 
     temp_files.append(out_overlap)
-    # a = pybedtools.BedTool(bed1)
-    # b = pybedtools.BedTool(bed2)
-    # a.intersect(b, u=True, sorted=True, output=out_overlap)
 
-    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
-    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {out_overlap}'
-    # run command
-    os.system(intersect_cmd)
+    # overlap two bed files
+    utils._overlap_two_bedfiles(bed1, bed2, out_overlap)
 
     # check if there is an overlap
     bed_file = pybedtools.BedTool(out_overlap)
@@ -464,11 +457,16 @@ class MPOverlapPct():
 
         pool = mp.Pool(n_threads, maxtasksperchild=48)
         jobs = []
+        # split fragments into chunks
         for chunk in fragments:
+            # apply async job wit callback function
             job = pool.apply_async(self.get_barcodes_sum, args=(chunk, barcodes, column), callback=self.log_result)
             jobs.append(job)
+        # monitor progress
         utils.monitor_jobs(jobs, description="Progress")
+        # close pool
         pool.close()
+        # wait for all jobs to finish
         pool.join()
         # reset settings
         returns = self.merged_dict

@@ -35,7 +35,7 @@ def get_temporary_filename(tempdir=".") -> str:
 
     Parameters
     ----------
-    tempdir : str, default .
+    tempdir : str, default "."
 
     Returns
     -------
