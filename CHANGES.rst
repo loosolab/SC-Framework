@@ -20,11 +20,16 @@
 - Add Check to _filter_object() if column contains only boolean (#110)
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 - Add method to get pd.DataFrame columns with list of regex (#90)
+- Add ATAC quality metrics TSSe (ENCODE), FRiP
+- Revised FLD density plotting
+- Adjusted style of default values in docs (#33)
 - Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
 - Removed outdated normalization methods
 - Changed all line endings to LF (#138)
+- Diabled threads parameter for tSNE (#130)
 
-## Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):   
+Changes to ATAC notebooks:
+**************************
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation

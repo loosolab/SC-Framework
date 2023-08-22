@@ -89,7 +89,7 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
 def search_umap_parameters(adata,
                            min_dist_range=(0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
                            spread_range=(0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
-                           color=None, n_components=2, verbose=True, threads=4, save=None, **kwargs) -> np.ndarray:
+                           color=None, n_components=2, threads=4, save=None, **kwargs) -> np.ndarray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
@@ -104,8 +104,6 @@ def search_umap_parameters(adata,
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     n_components : int, default 2
         Number of components in UMAP calculation.
-    verbose : bool
-        Print progress to console. Default: True.
     threads : int, default 4
         Number of threads to use for UMAP calculation.
     save : str, default None
@@ -138,7 +136,7 @@ def search_umap_parameters(adata,
 @deco.log_anndata
 def search_tsne_parameters(adata,
                            perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
-                           color=None, verbose=True, threads=4, save=None, **kwargs) -> np.ndarray:
+                           color=None, threads=4, save=None, **kwargs) -> np.ndarray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -151,10 +149,9 @@ def search_tsne_parameters(adata,
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
     color : str, default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
-    verbose : bool, default True
-        Print progress to console.
-    threads : int, default 4
-        Number of threads to use for tSNE calculation.
+    threads : int, default 1
+        The threads paramerter is currently not supported. Please leave at 1.
+        This may be fixed in the future.
     save : str, default None (not saved)
         Path to save the figure to.
     **kwargs : arguments
@@ -185,7 +182,7 @@ def search_tsne_parameters(adata,
 def _search_dim_red_parameters(adata, method,
                                min_dist_range=None, spread_range=None,  # for UMAP
                                perplexity_range=None, learning_rate_range=None,  # for tSNE
-                               color=None, verbose=True, threads=4, save=None, **kwargs) -> np.ndarray:
+                               color=None, threads=4, save=None, **kwargs) -> np.ndarray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
@@ -204,10 +201,9 @@ def _search_dim_red_parameters(adata, method,
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
     color : str, default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
-    verbose : bool, default True
-        Print progress to console.
     threads : int, default 4
-        Number of threads to use for UMAP calculation.
+        Number of threads to use for calculating embeddings. In case of UMAP, the embeddings will be calculated in parallel with each job using 1 thread.
+        For tSNE, the embeddings are calculated serially, but each calculation uses 'threads' as 'n_jobs' within sc.tl.tsne.
     save : str, default None
         Path to save the figure to.
     **kwargs : arguments
@@ -218,6 +214,7 @@ def _search_dim_red_parameters(adata, method,
     np.ndarray
         2D numpy array of axis objects
     """
+
     def get_loop_params(r):
         """Get parameters to loop over."""
         # Check validity of range parameters
@@ -244,31 +241,51 @@ def _search_dim_red_parameters(adata, method,
 
     # Get tool and plotting function
     tool_func = getattr(sc.tl, method)
-    plot_func = getattr(sc.pl, method)
 
     # Setup loop parameter
     loop_params = list()
     for r in [range_1, range_2]:
         loop_params.append(get_loop_params(r))
 
-    # Calculate umap for each combination of spread/dist
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=numba_errors.NumbaDeprecationWarning, message="The 'nopython' keyword argument")  # numba warning for 0.59.0
+    # Should the functions be run in parallel?
+    run_parallel = False
+    if threads > 1 and method == "umap":
+        run_parallel = True
 
-        pool = mp.Pool(threads)
+    # Calculate umap/tsne for each combination of spread/dist
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=numba_errors.NumbaDeprecationWarning)  # numba warning for 0.59.0 (only for UMAP)
+        warnings.filterwarnings("ignore", category=UserWarning, message="In previous versions of scanpy, calling tsne with n_jobs > 1 would use MulticoreTSNE.")
+
+        if run_parallel:
+            pool = mp.Pool(threads)
+        else:
+            pbar = utils.get_pbar(len(loop_params[0]) * len(loop_params[1]), f"Computing {method.upper()}s")
+
+        # Setup jobs
         jobs = {}
         for i, r2_param in enumerate(loop_params[1]):  # rows
             for j, r1_param in enumerate(loop_params[0]):  # columns
                 kwds = {range_1[0].rsplit('_', 1)[0]: r1_param,
                         range_2[0].rsplit('_', 1)[0]: r2_param,
                         "copy": True}
-                kwds |= kwargs
-                job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
-                jobs[(i, j)] = job
-        pool.close()
+                if method == "tsne":
+                    kwds["n_jobs"] = threads
+                kwds |= kwargs  # gives the option to overwrite e.g. n_jobs if given in kwargs
 
-        utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
-        pool.join()
+                logger.debug(f"Running '{method}' with kwds: {kwds}")
+
+                if run_parallel:
+                    job = pool.apply_async(tool_func, args=(adata, ), kwds=kwds)
+                else:
+                    job = tool_func(adata, **kwds)  # run the tool function one by one; returns an anndata object
+                    pbar.update(1)
+                jobs[(i, j)] = job
+
+        if run_parallel:
+            pool.close()
+            utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
+            pool.join()
 
     # Figure with rows=spread, cols=dist
     fig, axes = plt.subplots(len(loop_params[1]), len(loop_params[0]),
@@ -280,11 +297,13 @@ def _search_dim_red_parameters(adata, method,
     for i, r2_param in enumerate(loop_params[1]):  # rows
         for j, r1_param in enumerate(loop_params[0]):  # columns
 
-            # Add precalculated UMAP to adata
-            adata.obsm[f"X_{method}"] = jobs[(i, j)].get().obsm[f"X_{method}"]
+            if run_parallel:
+                jobs[(i, j)] = jobs[(i, j)].get()
 
-            if verbose is True:
-                print(f"Plotting umap for spread={r2_param} and dist={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
+            # Add precalculated UMAP to adata
+            adata.obsm[f"X_{method}"] = jobs[(i, j)].obsm[f"X_{method}"]
+
+            logger.debug(f"Plotting {method} for row={r2_param} and col={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
 
             # Set legend loc for last column
             if i == 0 and j == (len(loop_params[0]) - 1):
@@ -294,7 +313,7 @@ def _search_dim_red_parameters(adata, method,
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-                plot_func(adata, color=color, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
+                sc.pl.embedding(adata, basis="X_" + method, color=color, title='', legend_loc=legend_loc, show=False, ax=axes[i, j])
 
             if j == 0:
                 axes[i, j].set_ylabel(f"{range_2[0].rsplit('_', 1)[0]}: {r2_param}", fontsize=14)

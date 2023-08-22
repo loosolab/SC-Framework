@@ -8,6 +8,8 @@ import apybiomart
 from scipy.sparse import issparse
 import gzip
 import argparse
+import os
+import sys
 import scanpy
 
 from typing import Optional
@@ -467,3 +469,105 @@ def _gtf_integrity(gtf) -> bool:
         raise argparse.ArgumentTypeError('gtf file is corrupted')
 
     return True  # the function only returns of no error is raised
+
+
+def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
+    """
+    Overlap two bedfiles and writes the overlap to a new bedfile.
+
+    Parameters
+    ----------
+    bed1 : str
+        path to bedfile1
+    bed2 : str
+        path to bedfile2
+    overlap : str
+        path to output bedfile
+
+    Returns
+    -------
+    None
+
+    """
+    # Overlap two bedfiles
+    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
+    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {overlap}'
+    # run command
+    os.system(intersect_cmd)
+
+
+def _read_bedfile(bedfile) -> list:
+    """
+    Read in a bedfile and returns a list of the rows.
+
+    Parameters
+    ----------
+    bedfile : str
+        path to bedfile
+
+    Returns
+    -------
+    list
+        list of bedfile rows
+    """
+    bed_list = []
+    with open(bedfile, 'rb') as file:
+        for row in file:
+            row = row.decode("utf-8")
+            row = row.split('\t')
+            line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
+            bed_list.append(line)
+    file.close()
+    return bed_list
+
+
+def _bed_is_sorted(bedfile) -> bool:
+    """
+    Check if a bedfile is sorted by the start position.
+
+    Parameters
+    ----------
+    bedfile : str
+        path to bedfile
+
+    Returns
+    -------
+    bool
+        True if bedfile is sorted
+    """
+    with open(bedfile) as file:
+        counter = 0
+        previous = 0
+        for row in file:
+            row = row.split('\t')
+            if previous > int(row[1]):
+                file.close()
+                return False
+
+            previous = int(row[1])
+
+            counter += 1
+            if counter > 100:
+                break
+
+    file.close()
+    return True
+
+
+def _sort_bed(bedfile, sorted_bedfile) -> None:
+    """
+    Sort a bedfile by the start position.
+
+    Parameters
+    ----------
+    bedfile : str
+        path to bedfile
+    sorted_bedfile : str
+        path to sorted bedfile
+
+    Returns
+    -------
+    None
+    """
+    sort_cmd = f'sort -k1,1 -k2,2n {bedfile} > {sorted_bedfile}'
+    os.system(sort_cmd)
