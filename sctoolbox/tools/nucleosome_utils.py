@@ -1,5 +1,6 @@
 """Tools for scATAC nucleosome analysis."""
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import pywt
@@ -97,6 +98,40 @@ def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
     return series
 
 
+def unscale(scaled_data) -> np.ndarray:
+    """
+    Unscales a series array to a range of 0 to 1. If the array is 2D, the scaling is done on axis=1.
+
+    Parameters
+    ----------
+    scaled_data : np.ndarray
+        Array of data to be unscaled 1D or 2D
+
+    Returns
+    -------
+    np.ndarray
+        Unscaled array
+    """
+
+    if len(scaled_data.shape) == 1:
+        # Find the minimum non-zero value
+        min_value = min(scaled_data[scaled_data > 0])
+        # Scale the data by the inverse of the minimum value
+        unscaled = (1 / min_value) * scaled_data
+
+    elif len(scaled_data.shape) == 2:
+        # Mask for non-zero elements
+        mask = scaled_data != 0
+
+        # Find the minimum non-zero value for each row
+        min_values = np.where(mask, scaled_data, np.inf).min(axis=1)
+
+        # Scale the rows by the inverse of their respective minimum values
+        unscaled = scaled_data * (1.0 / min_values)[:, np.newaxis]
+
+    return unscaled
+
+
 def scale(series_arr) -> np.ndarray:
     """
     Scale a series array to a range of 0 to 1.
@@ -128,35 +163,6 @@ def scale(series_arr) -> np.ndarray:
         scaled_arr = np.divide(series_arr.T, maxis).T
 
         return scaled_arr
-
-
-def calc_densities(features) -> np.ndarray:
-    """
-    Calculate the density of a feature array, for each feature.
-
-    The density is stored in a matrice of size (n_features, 1000).
-
-    Parameters
-    ----------
-    features : np.ndarray
-        Array of features to calculate the density for
-
-    Returns
-    -------
-    np.ndarray
-        Array of densities
-    """
-
-    # calculate densities for a binned grid X,y of size original bins / 1000
-    densities = []
-    for i in range(0, len(features[0])):
-        column = features[:, i]
-        scaled_1000 = np.around(column * 1000).astype(int)
-        gradient = np.bincount(scaled_1000, minlength=1001)
-        densities.append(gradient)
-    densities = np.array(densities)
-
-    return densities
 
 
 def call_peaks(data, n_threads=4, distance=50, width=10) -> np.ndarray:
@@ -798,39 +804,96 @@ def score_by_cwt(data,
 
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(scaled, densities) -> matplotlib.axes.Axes:
+def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotlib.axes.Axes:
     """
-    Plot the density of the fragment length distributions.
+    Plot the density of the fragment length distribution over all cells.
+
+    The density is calculated by binning the abundances of the fragment lengths.
 
     Parameters
     ----------
-    scaled : np.array
-        Array of arrays of the scaled fragment length distributions
-    densities : np.array
-        2D array of the densities
+    count_table : np.ndarray
+        Array of arrays of the fragment length distributions
+    max_abundance : int, default 600
+        Maximal abundance of a fragment length of a cell (for better visability)
+    target_height : int, default 1000
+        Target height of the plot
 
     Returns
     -------
     matplotlib.axes.Axes
-        Axes object of density plot.
+        Axes of the plot
     """
+    count_table = count_table
+    # handle 0,1 min/max scaled count_table
+    if count_table.dtype != 'int64':
+        if np.max(count_table) > 1:
+            rounded = (np.round(count_table)).astype('int64')
+            count_table = rounded
+        else:
+            count_table = unscale(count_table)
+    # get the maximal abundance of a fragment length over all cells
+    max_value = np.max(np.around(count_table).astype(int))
+    # Init empty densities list
+    densities = []
+    # loop over all fragment lengths from 0 to 1000
+    for i in range(0, len(count_table[0])):
+        column = count_table[:, i]
+        # round abundances to be integers, that they are countable
+        rounded = np.around(column).astype(int)
+        # count the abundance of the abundances with boundaries 0 to maximal abundance
+        gradient = np.bincount(rounded, minlength=max_value + 1)
+        densities.append(gradient)
+    densities = np.array(densities)
 
-    # plot density
-    normalized = np.log2(densities)  # normalize log2
-    rotated = np.rot90(normalized, k=3)  # rotate 90'
-    rotated = np.flip(rotated, axis=1)
-    stretch = len(rotated[0]) / len(rotated[:, 0])  # calculate stretch for good visibility
-    mean = scaled.sum(axis=0) / len(scaled)
-    scaled_mean = mean * 1000
+    # Log normalization + 1 to avoid log(0)
+    densities_log = np.log1p(densities)
 
+    # Transpose the matrix
+    densities = densities_log.T
+
+    # get the section of interest
+    densities = densities[:max_abundance]
+
+    # calculate the mean of the FLD
+    mean = count_table.sum(axis=0) / len(count_table)
+
+    # Stretch or compress densities' y-axis to the target height
+    num_rows = densities.shape[0]
+    old_y = np.linspace(0, num_rows - 1, num_rows)
+    new_y = np.linspace(0, num_rows - 1, 1000)
+
+    # Interpolate the densities along the y-axis
+    densities_interpolated = np.array([np.interp(new_y, old_y, densities[:, i]) for i in range(densities.shape[1])]).T
+
+    # scaling factor for mean
+    scaling_factor = len(new_y) / len(old_y)
+
+    # Apply the scaling factor to the mean values
+    mean_interpolated = mean * scaling_factor
+
+    # Initialize subplots
     fig, ax = plt.subplots()
-    ax.set_title('Fragment Size Density Plot')
+
+    # Display the image
+    im = ax.imshow(densities_interpolated, aspect='auto', origin="lower")
+
+    # Plot additional data
+    ax.plot(mean_interpolated, color="red", markersize=1)
+
+    # Set labels and title
+    ax.set_title('Fragment Length Density Plot')
     ax.set_xlabel('Fragment Length', color='blue')
-    ax.set_ylabel('Abundance')
-    ax.imshow(rotated[:-1, :], cmap='viridis', interpolation='nearest', aspect=stretch)
-    ax.plot(scaled_mean, color="red", markersize=1)
-    plt.gca().invert_yaxis()
-    # plt.show()  # plots are shown automatically in jupyter notebook
+    ax.set_ylabel('Abundance', color='blue')
+
+    # Adjust y-ticks to show original scale
+    ax.set_yticks(np.linspace(0, target_height - 1, 6))
+    ax.set_yticklabels(np.linspace(0, num_rows - 1, 6).astype(int))
+
+    # Add colorbar to the plot
+    fig.colorbar(im, ax=ax, label='Density (log scale)')
+
+    plt.show()
 
     return ax
 
@@ -1264,22 +1327,22 @@ def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0) -> None:
 
 
 @deco.log_anndata
-def add_insertsize_metrics(adata,
-                           bam=None,
-                           fragments=None,
-                           barcode_col=None,
-                           barcode_tag="CB",
-                           regions=None,
-                           use_momentum=True,
-                           use_cwt=True,
-                           use_ct_cwt=True,
-                           peaks_thr_mom=0.03,
-                           peaks_thr_cwt=0.05,
-                           peaks_thr_ct_cwt=0.01,
-                           wavl_scale=35,
-                           plotting=True,
-                           plot_sample=0,
-                           n_threads=8) -> anndata.AnnData:
+def add_fld_metrics(adata,
+                    bam=None,
+                    fragments=None,
+                    barcode_col=None,
+                    barcode_tag="CB",
+                    regions=None,
+                    use_momentum=True,
+                    use_cwt=True,
+                    use_ct_cwt=True,
+                    peaks_thr_mom=0.03,
+                    peaks_thr_cwt=0.05,
+                    peaks_thr_ct_cwt=0.01,
+                    wavl_scale=35,
+                    plotting=True,
+                    plot_sample=0,
+                    n_threads=12) -> anndata.AnnData:
     """
     Add insert size metrics to an AnnData object.
 
@@ -1346,8 +1409,12 @@ def add_insertsize_metrics(adata,
         count_table = tools._insertsize_from_fragments(fragments, barcodes=adata_barcodes)
 
     dist = count_table[[c for c in count_table.columns if isinstance(c, int)]]
-    dists_arr = dist.to_numpy()
-    dists_arr = np.nan_to_num(dists_arr)
+    # remove all rows containing only 0
+    filtered_dist = dist.loc[~(dist == 0).all(axis=1)]
+    # extract available barcodes
+    barcodes = filtered_dist.index.to_numpy()
+    # get numpy array for calculation
+    dists_arr = filtered_dist.to_numpy()
 
     # scale the data
     scaled_ori = scale(dists_arr)
@@ -1355,8 +1422,7 @@ def add_insertsize_metrics(adata,
     # plot the densityplot of the fragment length distribution
     if plotting:
         logger.info("plotting density...")
-        densities = calc_densities(scaled_ori)
-        density_plot(scaled_ori, densities)
+        density_plot(dists_arr, max_abundance=600)
 
     if use_momentum:
         # prepare the data to be used for the momentum method
@@ -1402,35 +1468,29 @@ def add_insertsize_metrics(adata,
                                         plotting_ov=True,
                                         sample=plot_sample)
 
-    # select total inserts count and mean from count table
-    inserts_table = count_table[[c for c in count_table.columns if isinstance(c, str)]]
+    # create a dataframe with the scores and match the barcodes
+    inserts_df = pd.DataFrame(index=barcodes)
 
     if use_momentum:
-        inserts_table['nucleosomal_score_momentum'] = momentum_scores
+        inserts_df['fld_score_momentum'] = momentum_scores
 
     if use_cwt:
-        inserts_table['nucleosomal_score_cwt'] = cwt_scores
+        inserts_df['fld_score_cwt'] = cwt_scores
 
     if use_ct_cwt:
-        inserts_table['nucleosomal_score_ct_cwt'] = ct_cwt_scores
+        inserts_df['fld_score_ct_cwt'] = ct_cwt_scores
 
-    adata.obs = adata.obs.join(inserts_table)
+    adata.obs = adata.obs.join(inserts_df)
 
     if use_momentum:
-        adata.obs['nucleosomal_score_momentum'] = adata.obs['nucleosomal_score_momentum'].fillna(0)
+        adata.obs['fld_score_momentum'] = adata.obs['fld_score_momentum'].fillna(0)
 
     if use_cwt:
-        adata.obs['nucleosomal_score_cwt'] = adata.obs['nucleosomal_score_cwt'].fillna(0)
+        adata.obs['fld_score_cwt'] = adata.obs['fld_score_cwt'].fillna(0)
 
     if use_ct_cwt:
-        adata.obs['nucleosomal_score_ct_cwt'] = adata.obs['nucleosomal_score_ct_cwt'].fillna(0)
+        adata.obs['fld_score_ct_cwt'] = adata.obs['fld_score_ct_cwt'].fillna(0)
 
-    adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
+    # adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
     return adata
-
-
-if __name__ == "__main__":
-
-    print('This script is not meant to be run directly. Please import it into a Jupyter notebook.')
-    print("Done!")
