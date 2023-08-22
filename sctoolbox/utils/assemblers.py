@@ -104,9 +104,9 @@ def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
     ----------
     path : str
         Path to the "solo" folder from starsolo.
-    dtype : {'filtered', 'raw'}
+    dtype : {'filtered', 'raw'}, default "filtered"
         The type of solo data to choose.
-    header : int or list of int or None, default infer
+    header : int or list of int or None, default "infer"
         Set header parameter for reading metadata tables using pandas.read_csv.
 
     Returns

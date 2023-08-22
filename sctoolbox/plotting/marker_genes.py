@@ -584,12 +584,15 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None) -> "s
         An annotated data matrix object containing counts in .X.
     groupby : str
         A column in .obs for grouping cells into groups on the x-axis
-    gene_list : list, optional
-        A list of genes to show expression for. Default: None (all genes)
-    save : str, optional
-        Save the figure to a file. Default: None (do not save)
-    figsize : tuple, optional
-        Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+    gene_list : list, default None
+        A list of genes to show expression for.
+        If None, all genes are selected.
+    save : str, default None
+        Save the figure to a file.
+        If None, figure is not saved.
+    figsize : tuple, default None
+        Control the size of the output figure, e.g. (6,10).
+        If None, takes the matplotlib default.
 
     Returns
     -------
