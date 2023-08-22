@@ -64,7 +64,7 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
     """Test annotate_adata success."""
 
     adata_atac.var["distance_to_gene"] = 100  # initialize distance column to test the warning message
-    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
+    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'chr4_mm10_genes.gtf')
 
     out = anno.annotate_adata(adata_atac, gtf=gtf_path, threads=threads, inplace=inplace,
                               config=config, best=best, coordinate_cols=coordinate_cols)

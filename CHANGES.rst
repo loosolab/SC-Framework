@@ -1,10 +1,13 @@
 0.2 (in progress)
 --------------------
+- fix error in prepare_for_cellxgene caused by .uns[_color] not matching .obs column. (#176)
+- implemented prepare_for_cellxgene (#147)
 - fixed raw value copy issue in rna/02-batch notebook
 - Added parameters for the TOBIAS flags in the config file to write_TOBIAS_config()
 - Added logging verbose and decorator to ATAC related functions
 - Fix "shell not found" error for CI pipeline (#129)
 - Pinned scikit-learn to version <=1.2.2 (#128)
+- Added script for gene correlation and comparison between two conditions
 - Added check for marker gene lists (#103)
 - Keep notebook metadata on push to prevent deleting kernel information
 - Added sctoolbox as default kernel to RNA & ATAC notebooks
@@ -19,9 +22,16 @@
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 - Add method to get pd.DataFrame columns with list of regex (#90)
 - Added 'pairwise_scatter' method for plotting QC metrics (#54)
+- Add ATAC quality metrics TSSe (ENCODE), FRiP
+- Revised FLD density plotting
+- Adjusted style of default values in docs (#33)
+- Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
+- Removed outdated normalization methods
 - Changed all line endings to LF (#138)
+- Diabled threads parameter for tSNE (#130)
 
-## Changes to ATAC notebooks (0.1.1.2 - 05-06-2023):   
+Changes to ATAC notebooks:
+**************************
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation

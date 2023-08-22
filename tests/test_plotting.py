@@ -160,24 +160,52 @@ def test_plot_pca_variance(adata, n_selected):
 
 
 def test_plot_pca_variance_fail(adata):
-    """Test if failes on invalid method."""
-    # generate invalid method
-    invalid = "-".join(list(adata.uns.keys())) + "-invalid"
+    """Test if function fails on invalid parameters."""
 
-    with pytest.raises(KeyError):
-        pl.plot_pca_variance(adata, method=invalid)
+    with pytest.raises(KeyError, match="The given method"):
+        pl.plot_pca_variance(adata, method="invalid")
+
+    with pytest.raises(ValueError, match="'ax' parameter needs to be an Axes object."):
+        pl.plot_pca_variance(adata, ax="invalid")
 
 
-@pytest.mark.parametrize("method", ["umap"])  # , "tsne"]) # tsne option is currently broken and sends the function to sleep. Will be added if fixed.
-def test_search_dim_red_parameters(adata, method):
-    """Test if search_dim_red_parameters returns an array of axes."""
+@pytest.mark.parametrize("which", ["obs", "var"])
+@pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
+def test_plot_pca_correlation(adata, which, method):
+    """Test if Axes object is returned without error."""
 
-    axarr = pl._search_dim_red_parameters(adata, color="condition",
-                                          method=method,
-                                          min_dist_range=(0.1, 0.3, 0.1),
-                                          spread_range=(2.0, 3.0, 0.5),
-                                          learning_rate_range=(100, 300, 100),
-                                          perplexity_range=(20, 30, 5))
+    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax_type = type(ax).__name__
+
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+                                    {"which": "invalid"},
+                                    {"columns": ["invalid", "columns"]}])
+def test_plot_pca_correlation_fail(adata, kwargs):
+    """Test that an exception is raised upon error."""
+
+    with pytest.raises((ValueError, KeyError)):
+        pl.plot_pca_correlation(adata, **kwargs)
+
+
+def test_search_umap_parameters(adata):
+    """Test if search_umap_parameters returns an array of axes."""
+
+    axarr = pl.search_umap_parameters(adata, color="condition",
+                                      min_dist_range=(0.1, 0.3, 0.1),
+                                      spread_range=(2.0, 3.0, 0.5))
+    assert type(axarr).__name__ == "ndarray"
+    assert axarr.shape == (2, 2)
+
+
+def test_search_tsne_parameters(adata):
+    """Test if search_tsne_parameters returns an array of axes."""
+
+    axarr = pl.search_tsne_parameters(adata, color="condition",
+                                      learning_rate_range=(100, 300, 100),
+                                      perplexity_range=(20, 30, 5))
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
@@ -761,6 +789,25 @@ def test_plot_differential_genes(pairwise_ranked_genes):
     ax = pl.plot_differential_genes(pairwise_ranked_genes)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("gene_list,save,figsize",
+                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
+                          ("Gm18956", "out.png", None)])
+def test_plot_gene_correlation(adata, gene_list, save, figsize):
+    """Test gene correlation."""
+
+    adata_c = adata.copy()
+    # set gene names as index instead of ensemble ids
+    adata_c.var.reset_index(inplace=True)
+    adata_c.var['gene'] = adata_c.var['gene'].astype('str')
+    adata_c.var.set_index('gene', inplace=True)
+    adata_c.var_names_make_unique()
+
+    axes = pl.plot_gene_correlation(adata_c, "Xkr4", gene_list,
+                                    save=save, figsize=figsize)
+    assert type(axes).__name__ == "ndarray"
+    assert type(axes[0]).__name__.startswith("Axes")
 
 
 def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
