@@ -32,8 +32,6 @@ build-job:       # This job runs in the build stage, which runs first.
       - ls .
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" . # build the image from Dockerfile in the repository
       - docker push "$CI_REGISTRY_IMAGE:$BUILD_VERSION" # push image to registry
-  dependencies:
-    - build
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -133,8 +131,6 @@ test coverage:
       - sctoolbox/*.py    
     - when: manual
       allow_failure: True
-  dependencies:
-    - build
 
 #Changes.rst file must be changed in merge requests
 check_changes:
@@ -179,8 +175,6 @@ notebook-output-check:
     - python scripts/check_notebooks.py */*.ipynb
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
-  dependencies:
-    - build
 
 # Test notebooks when code is pushed to main
 notebooks:
@@ -216,8 +210,6 @@ notebooks:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       when: manual
       allow_failure: True  # the manual rule is allowed to fail
-  dependencies:
-    - build
 
 
 # ----------------------------- Gitlab pages ---------------------------------#
