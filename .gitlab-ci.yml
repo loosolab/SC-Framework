@@ -1,8 +1,7 @@
-# Change pip's cache directory to be inside the project directory since we can
-# only cache local items.
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  VERSION: $(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
+extract-version:
+  stage: .pre
+  script:
+    - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
 
 # The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml)has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
@@ -28,6 +27,10 @@ build-job:       # This job runs in the build stage, which runs first.
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$VERSION" . # build the image from Dockerfile in the repository
       - docker push "$CI_REGISTRY_IMAGE:$VERSION" # push image to registry
 
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 # Pip's cache doesn't store the python packages
 # https://pip.pypa.io/en/stable/topics/caching/
 #
@@ -100,6 +103,7 @@ test coverage:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
+    - echo $VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
