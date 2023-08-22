@@ -1,4 +1,4 @@
-# 
+# get the sctoolbox version as global variable 
 extract-version:
   stage: .pre
   image: python:3.10
