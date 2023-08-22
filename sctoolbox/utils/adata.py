@@ -186,7 +186,7 @@ def add_uns_info(adata, key, value, how="overwrite") -> None:
         The key to add to adata.uns['sctoolbox']. If the key is a list, it represents a path within a nested dictionary.
     value : any
         The value to add to adata.uns['sctoolbox'].
-    how : str, default "overwrite"
+    how : str, default overwrite
         When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
 
     Raises
@@ -337,14 +337,21 @@ def prepare_for_cellxgene(adata,
     out.X = out.X.astype("float32")
 
     # ----- .uns -----
-    for key in out.uns.keys():
+    for key in list(out.uns):  # avoid RuntimeError by forcing a copy of dict keys.
         if key.endswith('colors'):
+            obs_key = key.split("_colors")[0]
+            # delete colors if they don't match a .obs column.
+            if obs_key not in out.obs.columns:
+                out.uns.pop(key)
+
+                logger.warning(f"Deleted .uns[{key}] since it did not match a .obs column.")
+                continue
+
             # fix colors not in 6-digit hex format
             # https://github.com/chanzuckerberg/cellxgene/issues/2598
             out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in out.uns[key]])
 
             # fix number of colors < number of categories
-            obs_key = key.split("_colors")[0]
             if len(out.uns[key]) != len(set(out.obs[obs_key])):
                 logger.warning(f"Coloring for adata.obs['{obs_key}'] broken. Reverting to {cmap if cmap else 'scanpy default'} color map.")
 
