@@ -179,6 +179,7 @@ class Mamplan():
 
     @bucket.setter
     def bucket(self, bucket):
+        # TODO bucket name has a char limit check for that limit.
         self._bucket = bucket.replace("_", "-").lower()
 
     @property
