@@ -222,7 +222,7 @@ class Mamplan():
 
     @cluster.setter
     def cluster(self, cluster):
-        valid_cluster = self._get_whitelist("misc/json/cluster")
+        valid_cluster = self._get_whitelist("whitelists/cluster")
         if cluster not in valid_cluster:
             raise ValueError(f"Invalid cluster found.\nValid clusters are:\n{valid_cluster}")
         self._cluster = cluster
