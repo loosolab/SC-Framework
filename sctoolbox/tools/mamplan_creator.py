@@ -23,7 +23,7 @@ class Mamplan():
                  random=False,
                  init_container="s3download",
                  supress_s3=False,
-                 organization=["Ag-nerds"],
+                 organization=["AG-nerds"],
                  owner=None,
                  user=None,
                  pubmedid=None,
@@ -307,7 +307,7 @@ class Mamplan():
 
     @user.setter
     def user(self, user):
-        if not isinstance(user, list):
+        if user and not isinstance(user, list):
             user = [user]
         self._user = user
 
