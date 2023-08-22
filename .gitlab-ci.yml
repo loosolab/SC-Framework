@@ -19,10 +19,6 @@ extract-version:
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
-  only: # Condition to check for changes
-      changes:
-        - setup.py
-        - sctoolbox_env.yml
   image: docker:latest # image as building environment
   services:
       - name: "docker:dind" # docker in docker to build
@@ -36,6 +32,10 @@ build-job:       # This job runs in the build stage, which runs first.
       - ls .
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" . # build the image from Dockerfile in the repository
       - docker push "$CI_REGISTRY_IMAGE:$BUILD_VERSION" # push image to registry
+  rules:
+    - changes: # Check for changes
+        - setup.py
+        - sctoolbox_env.yml
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
