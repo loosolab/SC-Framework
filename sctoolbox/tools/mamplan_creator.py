@@ -9,7 +9,6 @@ import base64
 
 VALID_TOOLS = ["cellxgene-new", "cellxgene-fix", "cellxgene-vip-latest"]
 VALID_DATATYPES = ["scrna", "scatac"]
-VALID_CLUSTER = ["BN", "GWDGmangt", "GWDG"]
 
 
 class Mamplan():
@@ -204,7 +203,7 @@ class Mamplan():
 
     @bucket.setter
     def bucket(self, bucket):
-        # TODO bucket name has a char limit check for that limit.
+        # TODO bucket name has a char limit check for that limit. (3-65)
         self._bucket = bucket.replace("_", "-").lower()
 
     @property
@@ -223,8 +222,9 @@ class Mamplan():
 
     @cluster.setter
     def cluster(self, cluster):
-        if cluster not in VALID_CLUSTER:
-            raise ValueError(f"Invalid cluster given. Valid clusters are {VALID_CLUSTER}")
+        valid_cluster = self._get_whitelist("misc/json/cluster")
+        if cluster not in valid_cluster:
+            raise ValueError(f"Invalid cluster found.\nValid clusters are:\n{valid_cluster}")
         self._cluster = cluster
 
     @property
