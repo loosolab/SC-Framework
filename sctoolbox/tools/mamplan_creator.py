@@ -4,6 +4,8 @@ from datetime import date, datetime
 import yaml
 from Bio.Entrez import efetch
 from urllib.error import HTTPError
+import gitlab
+import base64
 
 VALID_TOOLS = ["cellxgene-new", "cellxgene-fix", "cellxgene-vip-latest"]
 VALID_DATATYPES = ["scrna", "scatac"]
@@ -104,6 +106,8 @@ class Mamplan():
             mamplan_dict["tags"]["citation"] = self.citation
 
         # TODO Add cpu request and limit
+        if self.cpu_limit or self.cpu_request or self.mem_limit or self.mem_request:
+            mamplan_dict["container"]["main"]["resources"] = dict()
 
         return mamplan_dict
 
@@ -111,6 +115,28 @@ class Mamplan():
         """Save object as YAML file."""
         with open(out, 'w') as outfile:
             yaml.dump(self.to_dict(), outfile, default_flow_style=False, default_style=None)
+
+    def _get_department_whitelist(self,
+                                 gitlab_url="https://gitlab.gwdg.de/",
+                                 repo="metadata_whitelists",
+                                 file_path="whitelists/department",
+                                 branch="main"):
+        """Read department whitelist from gitlab."""
+
+        gl = gitlab.Gitlab(gitlab_url)
+        projects = gl.projects.list(search=repo)
+
+        for p in projects:
+            if p.name == repo:
+                project = p
+
+        if not project:
+            raise ValueError("Repository not found")
+
+        f = project.files.get(file_path=file_path, ref=branch)
+        file_content = base64.b64decode(f.content).decode("utf-8")
+
+        return yaml.safe_load(file_content)["whitelist"]
 
     #######################################################
     #                   Getter & Setter
@@ -290,7 +316,9 @@ class Mamplan():
     def organization(self, organization):
         if not isinstance(organization, list):
             organization = [organization]
-        # TODO check if organization is valid
+        valid_organizations = self._get_department_whitelist()
+        if not set(organization).issubset(valid_organizations):
+            raise ValueError(f"Invalid organization found.\nValid organizations are:\n{valid_organizations}")
         self._organization = organization
 
     @property
