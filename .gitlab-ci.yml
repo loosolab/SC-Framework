@@ -6,9 +6,12 @@ extract-version:
     - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
     - echo "BUILD_VERSION=$VERSION" >> build.env
   artifacts:
+    when: always
     reports:
       dotenv: build.env
     expire_in: 1 hour
+  rules:
+    - when: always
 
 # The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml)has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
