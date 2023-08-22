@@ -33,9 +33,13 @@ build-job:       # This job runs in the build stage, which runs first.
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" . # build the image from Dockerfile in the repository
       - docker push "$CI_REGISTRY_IMAGE:$BUILD_VERSION" # push image to registry
   rules:
-    - changes: # Check for changes
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - changes:
         - setup.py
         - sctoolbox_env.yml
+    - when: manual
+      allow_failure: true
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
