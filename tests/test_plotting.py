@@ -633,11 +633,14 @@ def test_scale_values(array, mini, maxi):
 def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
-    pl.clustermap_dotplot(table=table, x="bulk_labels",
-                          y="index", color="n_genes",
-                          size="n_counts", cmap="viridis",
-                          vmin=0, vmax=10)
-    assert True
+    axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
+                                 y="index", color="n_genes",
+                                 size="n_counts", cmap="viridis",
+                                 vmin=0, vmax=10)
+
+    assert isinstance(axes, list)
+    ax_type = type(axes[0]).__name__
+    assert ax_type.startswith("Axes")
 
 
 def test_bidirectional_barplot(df_bidir_bar):
