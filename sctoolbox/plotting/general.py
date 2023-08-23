@@ -158,7 +158,7 @@ def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
 def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
                        fillna=0, title=None, figsize=None,
                        dend_height=2, dend_width=2, palette="vlag", x_rot=45, show_grid=False,
-                       save=None) -> sns.clustermap:
+                       save=None) -> list:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -174,8 +174,6 @@ def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
         Column in table to use for the size of the dots.
     hue : str
         Column in table to use for the color of the dots.
-    size : str
-        Column in table to use for the size of the dots.
     cluster_on : str, default hue
         Decide which values to use for creating the dendrograms. Either "hue" or "size".
     fillna : float, default 0
