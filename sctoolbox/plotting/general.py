@@ -330,8 +330,8 @@ def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
     else:
         ax.set_title(title)
 
-    if save:
-        plt.savefig(save, dpi=300, bbox_inches="tight")
+    # Save figure
+    _save_figure(save)
 
     return axes
 

@@ -634,9 +634,9 @@ def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
     axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
-                                 y="index", color="n_genes",
-                                 size="n_counts", cmap="viridis",
-                                 vmin=0, vmax=10)
+                                 y="index", hue="n_genes",
+                                 size="n_counts", palette="viridis",
+                                 title="Title", show_grid=True)
 
     assert isinstance(axes, list)
     ax_type = type(axes[0]).__name__
