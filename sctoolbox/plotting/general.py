@@ -7,7 +7,6 @@ import warnings
 import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sciclust
 
