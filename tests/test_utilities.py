@@ -310,7 +310,6 @@ def test_scale_values(array, mini, maxi):
             assert all((mini <= result[i]) & (result[i] <= maxi))
 
 
-
 # TODO
 # following tests are skipped due to occasional "No internet connection" error.
 # This may be related to too many requests in a short period of time.
