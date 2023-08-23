@@ -60,7 +60,7 @@ def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to 
                                             "Median Reads per Cell", "Median Gene per Cell"],
                           ncol=3,
                           order=None,
-                          save=None):
+                          save=None) -> np.ndarray:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -91,7 +91,7 @@ def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to 
     .. plot::
         :context: close-figs
 
-
+        pl.plot_starsolo_quality("data/quant/")
     """
 
     # Prepare functions for converting labels
@@ -124,7 +124,7 @@ def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to 
     # Fill in plot per measure
     for i, measure in enumerate(measures):
         if measure not in available_measures:
-            raise KeyError("")
+            raise KeyError(f"Measure '{measure}' not found in summary table. Available measures: {available_measures}")
 
         # Plot data to barplot
         ax = axes[i]
@@ -174,13 +174,14 @@ def plot_starsolo_UMI(folder, ncol=3, save=None):
     .. plot::
         :context: close-figs
 
+        pl.plot_starsolo_UMI("data/quant/", ncol=2)
     """
 
     summary_table = _read_starsolo_summary(folder)
     umi_files = glob.glob(folder + "/**/solo/Gene/UMIperCellSorted.txt")
 
     if len(umi_files) == 0:
-        raise ValueError
+        raise ValueError("No UMI files found in folder. Please check the path and try again.")
 
     names = utils.clean_flanking_strings(umi_files)
 
