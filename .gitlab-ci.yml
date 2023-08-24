@@ -123,7 +123,7 @@ test coverage:
 #Changes.rst file must be changed in merge requests
 check_changes:
   image:
-    name: alpine/git:latest
+    name: cicirello/pyaction:latest
     entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
   inherit:
     default: false
