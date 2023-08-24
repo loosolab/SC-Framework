@@ -30,7 +30,7 @@ current_commit = subprocess.check_output(cmd, shell=True, text=True)
 current_date = read_date(current_commit)
 
 # Get the last commit message from the target branch
-cmd = "git log -n 1 dev CHANGES.rst"
+cmd = "git log -n 1 dev -- CHANGES.rst"
 target_commit = subprocess.check_output(cmd, shell=True, text=True)
 target_date = read_date(target_commit)
 
