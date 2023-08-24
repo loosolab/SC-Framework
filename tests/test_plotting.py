@@ -908,3 +908,19 @@ def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
                                     '2': {'min': 1, 'max': 5}},
                               'B': {'1': {'min': 5, 'max': 7},
                                     '2': {'min': 3, 'max': 4}}}
+
+
+def test_plot_starsolo_quality():
+    """Test plot_starsolo_quality success."""
+    quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+    res = pl.plot_starsolo_quality(quant_folder, order=["KO-2", "KO-1", "Ctrl-2", "Ctrl-1"])
+
+    assert isinstance(res, np.ndarray)
+
+
+def plot_starsolo_UMI():
+    """Test plot_starsolo_UMI success."""
+    quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+    res = pl.plot_starsolo_UMI(quant_folder)
+
+    assert isinstance(res, np.ndarray)
