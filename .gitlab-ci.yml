@@ -128,10 +128,7 @@ check_changes:
   inherit:
     default: false
   script:
-    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-    - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
-    - cat changed_files.txt
-    - if grep -q "CHANGES.rst" changed_files.txt; then echo "The 'CHANGES.rst' file was changed."; else echo "The 'CHANGES.rst' file must be changed for merge requests!"; exit 1; fi
+    - python scripts/check_changes.py $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
