@@ -123,7 +123,7 @@ def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to 
     ncol = min(ncol, len(measures))
     row = int(np.ceil(len(measures) / ncol))
     fig, axes = plt.subplots(row, ncol, figsize=(ncol * 4, row * 4))
-    axes = axes.flatten()
+    axes = axes.flatten() if len(measures) > 1 else np.array([axes])  # axes is a list of axes objects
     _ = [ax.axis('off') for ax in axes[len(measures):]]  # hide additional plots
 
     # Fill in plot per measure
@@ -199,7 +199,7 @@ def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
     ncol = min(len(names), ncol)
     nrow = int(np.ceil(len(names) / ncol))
     fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 4, nrow * 4))
-    axes = axes.flatten()
+    axes = axes.flatten() if len(names) > 1 else np.array([axes])  # axes is a list of axes objects
     _ = [ax.axis('off') for ax in axes[len(names):]]  # hide additional plots
 
     for i, f in enumerate(umi_files):
