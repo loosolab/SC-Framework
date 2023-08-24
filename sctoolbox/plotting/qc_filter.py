@@ -27,22 +27,27 @@ if TYPE_CHECKING:
 ########################################################################################
 
 def _read_starsolo_summary(folder) -> pd.DataFrame:
-    """Get summary table from an output folder containing multiple starsolo runs
+    """Get summary table from an output folder containing multiple starsolo runs.
 
     Parameters
     ----------
     folder : str
         Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
 
+    Raises
+    ------
+    ValueError
+        If no summary files are found in the folder.
+
     Returns
     -------
-    summary_table : pandas.DataFrame
+    summary_table : pd.DataFrame
         Table with summary statistics from all runs.
     """
 
     summary_files = glob.glob(folder + "/**/solo/Gene/Summary.csv")
     if len(summary_files) == 0:
-        raise ValueError("")
+        raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
 
     # Read statistics from summary files
     names = utils.clean_flanking_strings(summary_files)
@@ -152,7 +157,7 @@ def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to 
     return axes
 
 
-def plot_starsolo_UMI(folder, ncol=3, save=None):
+def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
     """Plot UMI distribution for each condition in a folder.
 
     Parameters
@@ -168,6 +173,11 @@ def plot_starsolo_UMI(folder, ncol=3, save=None):
     -------
     axes : np.ndarray
         Array of axes objects containing the plot(s).
+
+    Raises
+    ------
+    ValueError
+        If no UMI files ('UMIperCellSorted.txt') are found in the folder.
 
     Examples
     --------
