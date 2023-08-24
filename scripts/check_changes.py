@@ -35,8 +35,11 @@ target_commit = subprocess.check_output(cmd, shell=True, text=True)
 target_date = read_date(target_commit)
 
 # Check that the current commit is newer than the target commit
-if current_date <= target_date:  # if the date is the same, the current commit == latest target commit
-    print(f"The CHANGES.rst file was not updated. The version on {target_branch} was updated '{target_date}' but the current version was last updated '{current_date}'. Please update the CHANGES.rst file.")
+if current_date == target_date:
+    print(f"The CHANGES.rst file was not updated since the version on {target_branch}. Please update the CHANGES.rst file.")
+    sys.exit(1)  # exit with error
+if current_date < target_date:
+    print(f"The CHANGES.rst file is not up-to-date. The version on {target_branch} was updated '{target_date}' but the current version was last updated '{current_date}'. Please update the CHANGES.rst file.")
     sys.exit(1)  # exit with error
 else:
     print(f"CHANGES.rst file was updated (version on {target_branch} committed '{target_date}'; current version was committed '{current_date}').")
