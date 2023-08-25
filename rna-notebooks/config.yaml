@@ -30,3 +30,9 @@
   figure_dir: "pipeline_output/figures/05_markers/"
   log_file: "pipeline_output/logs/05_log.txt"
   overwrite_log: True
+
+"99":
+  adata_input_dir: "pipeline_output/adatas/"
+  adata_output_dir: "pipeline_output/adatas/deployment/"
+  log_file: "pipeline_output/logs/99_log.txt"
+  overwrite_log: True
