@@ -281,7 +281,7 @@ def prepare_for_cellxgene(adata,
         Returns the deployment ready Anndata object.
     """
 
-    def clean_section(obj, axis="obs", keep=None, rename: dict = {}) -> None:
+    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
         if axis == "obs":
             sec_table = obj.obs
