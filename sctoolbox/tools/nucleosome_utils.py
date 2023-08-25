@@ -323,7 +323,9 @@ def score_by_momentum(data,
                       peaks_thr=0.03,
                       period=160,
                       penalty_scale=100,
-                      plotting=True) -> np.ndarray:
+                      plotting=True,
+                      score_by_distances=True,
+                      score_by_mask=False) -> np.ndarray:
     """
     Calculate momentum and score cells based on the number of peaks and the distance between them.
 
@@ -345,6 +347,10 @@ def score_by_momentum(data,
         penalty factor for each peak that is not in the expected period.
     plotting : bool, default True
         Plot the momentum and the peaks of the reference sample.
+    score_by_distances : bool, default True
+        Score cells based on the distance between peaks.
+    score_by_mask : bool, default False
+        Score cells based on a mask.
 
     Returns
     -------
@@ -374,6 +380,25 @@ def score_by_momentum(data,
                                 remove=remove)
 
     logger.info('calc scores...')
+
+    if score_by_distances:
+        scores = distances_score(peaks, momentum, period, penalty_scale)
+    if score_by_mask:
+        scores = score_mask(peaks, momentum, plotting=False)
+
+    scores = np.array(scores)
+
+    if plotting:
+        fig, ax = plt.subplots()
+        ax.hist(np.sort(scores), bins=100, log=True)
+        ax.set_title('Scores')
+        ax.set_xlabel('Score')
+        ax.set_ylabel('Abundance')
+
+    return scores
+
+def distances_score(peaks, momentum, period, penalty_scale):
+
     scores = []
     for i in range(len(peaks)):
         peak_list = peaks[i]
@@ -398,15 +423,6 @@ def score_by_momentum(data,
             score = float(np.sum(np.array(corrected_scores))) + 0
 
         scores.append(score)
-
-    scores = np.array(scores)
-
-    if plotting:
-        fig, ax = plt.subplots()
-        ax.hist(np.sort(scores), bins=100, log=True)
-        ax.set_title('Scores')
-        ax.set_xlabel('Score')
-        ax.set_ylabel('Abundance')
 
     return scores
 
@@ -802,6 +818,257 @@ def score_by_cwt(data,
     return scores
 
 
+# ///////////////////////// Custome Convolution \\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+def custome_wavelet(amplitude=1.0,
+                    frequency=3.0,
+                    phase_shift=np.pi / 0.65,
+                    mu=0.0,
+                    sigma=150.0,
+                    plotting=True) -> np.array:
+    """
+    Implement a custom wavelet.
+
+    The wavelet is a sine curve multiplied by a Gaussian curve.
+
+    Parameters
+    ----------
+    amplitude : float, default 1.0
+        Amplitude of the sine curve.
+    frequency : float, default 3
+        Frequency of the sine curve.
+    phase_shift : float, default np.pi / 0.65
+        Phase shift of the sine curve.
+    mu : float, default 0.0
+        Mean of the Gaussian.
+    sigma : float, default 150.0
+        Standard deviation of the Gaussian.
+    plotting : bool, default True
+        If true, the wavelet is plotted.
+
+    Returns
+    -------
+    np.array
+        Array of the wavelet
+    """
+
+    center = amplitude  # Center of the sine wave
+
+    wing_size = 300
+    # Create an array of x values
+    x = np.linspace(-wing_size, wing_size, wing_size * 2)
+
+    # Compute the centered sine curve values for each x
+    sine_curve = amplitude * np.sin(2 * np.pi * frequency * x + phase_shift) + center
+
+    # Compute the Gaussian values for each x
+    gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+    wavelet = sine_curve * gaussian
+
+    if plotting:
+        fig, ax = plt.subplots()
+        ax.plot(wavelet)
+        ax.set_title('Wavelet')
+        ax.set_xlabel('Interval')
+        ax.set_ylabel('Amplitude')
+
+    return wavelet
+
+
+def custome_conv(data, mode='convolve', plot_wavl=False) -> np.array:
+    """
+    Get custom implementation of a continuous wavelet transformation based convolution.
+
+    Parameters
+    ----------
+    data : np.array
+        Array of arrays of the fragment length distributions.
+    mode : str, default 'concolve'
+        Mode of the convolution. Either 'convolve' or 'fftconvolve'.
+    plot_wavl : bool, default False
+        If true, the wavelet is plotted.
+
+    Returns
+    -------
+    np.array
+        Array of convolved data.
+    """
+
+    # Get the wavelet
+    wavelet = custome_wavelet(plotting=plot_wavl)
+
+    # convolve with the data
+    convolved_data = []
+    for cell in data:
+        if mode == 'convolve':
+            convolved_data.append(np.convolve(cell, wavelet, mode='same'))
+        elif mode == 'fftconvolve':
+            convolved_data.append(fftconvolve(data, wavelet, mode='same'))
+
+    return np.array(convolved_data)
+
+
+def score_by_conv(data,
+                  plot_wavl=False,
+                  n_threads=12,
+                  peaks_thr=0.01,
+                  operator='bigger',
+                  plotting_mask=False,
+                  plotting_ov=True,
+                  sample=0) -> np.array:
+    """
+    Get a score by a continues wavelet transformation based convolution of the distribution with a single wavelet and score mask.
+
+    Parameters
+    ----------
+    data : np.array
+        Array of arrays of the fragment length distributions.
+    plot_wavl : bool, default False
+        If true, the wavelet is plotted.
+    n_threads : int, default 12
+        Number of threads to use for the peak calling.
+    peaks_thr : float, default 0.01
+        Threshold for the peak calling.
+    operator : str, default 'bigger'
+        Operator to use for the peak calling. Either 'bigger' or 'smaller'.
+    plotting_mask : bool, default False
+        If true, the score mask is plotted.
+    plotting_ov : bool, default True
+        If true, the overlay of the score mask and the convolved data is plotted.
+    sample : int, default 0
+        Index of the sample to plot.
+
+    Returns
+    -------
+    np.array
+        Array of scores for each sample
+    """
+
+    convolved_data = custome_conv(data, plot_wavl=plot_wavl)
+
+    peaks = call_peaks(convolved_data, n_threads=n_threads)
+
+    filtered_peaks = filter_peaks(peaks, reference=convolved_data, peaks_thr=peaks_thr, operator=operator)
+
+    scores = score_mask(peaks, convolved_data, plotting=False)
+
+    if plotting_ov:
+        plot_custom_conv(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample)
+
+    return scores
+
+
+def score_mask(peaks, convolved_data, plotting=False):
+    """
+    compute a score for each sample based on the convolved data and the peaks multiplied by a score mask.
+
+    Parameters
+    ----------
+    peaks : np.array
+        Array of arrays of the peaks.
+    convolved_data : np.array
+        Array of arrays of the convolved data.
+    plotting : bool, default False
+        If true, the score mask is plotted.
+
+    Returns
+    -------
+    np.array
+        Array of scores for each sample
+    """
+
+    score_mask = build_score_mask(plotting=plotting)
+    scores = []
+    for i, peak_list in enumerate(peaks):
+        conv = convolved_data[i]
+
+        if len(peak_list) == 0:
+            score = 0
+        elif len(peak_list) == 1:
+            score = conv[peak_list[0]] * score_mask[0][peak_list[0]]
+
+        elif len(peak_list) > 1:
+            score = 0
+            for j in range(1, len(peak_list)):
+                if j <= 3:
+                    score += conv[peak_list[j]] * score_mask[j][peak_list[j]]
+                else:
+                    score += conv[peak_list[j]] * score_mask[3][peak_list[j]]
+
+        scores.append(score)
+
+    return np.array(scores)
+
+
+def build_score_mask(plotting=True,
+                     mu_list=[42, 200, 360, 550],
+                     sigma_list=[25, 35, 45, 25]) -> np.array:
+    """
+    Build a score mask for the score by custom continuous wavelet transformation.
+
+    Mask is a sum of 4 Gaussian curves with mu and sigma specified
+    for the expected peak positions and deviations.
+
+    Parameters
+    ----------
+    plotting : bool, default True
+        If true, the score mask is plotted.
+    mu_list : list, default [42, 200, 360, 550]
+        List of mu values for the Gaussian curves.
+    sigma_list : list, default [25, 35, 45, 25]
+        List of sigma values for the Gaussian curves.
+
+    Returns
+    -------
+    np.array
+        Array of the score mask
+    """
+
+    # Create an array of x values
+    x = np.linspace(0, 1000, 1000)
+    gaussians = []
+    for mu, sigma in zip(mu_list, sigma_list):
+        gaussians.append(scale((1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)))
+
+    gaussians = np.array(gaussians)
+
+    if plotting:
+        fig, ax = plt.subplots()
+
+        ax.plot(gaussians[0])
+        ax.plot(gaussians[1])
+        ax.plot(gaussians[2])
+        ax.plot(gaussians[3])
+        ax.set_title('score-mask')
+        ax.set_xlabel('position')
+        ax.set_ylabel('scoring')
+
+    return gaussians
+
+
+def gauss(x, mu, sigma) -> float:
+    """
+    Calculate the values of the Gaussian function for a given x, mu and sigma.
+
+    Parameters
+    ----------
+    x : array
+        x values
+    mu : float
+        mu value
+    sigma : float
+        sigma value
+
+    Returns
+    -------
+    float
+        Value of the Gaussian function for the given x, mu and sigma.
+    """
+
+    gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+
+    return gaussian
+
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotlib.axes.Axes:
@@ -1056,233 +1323,7 @@ def plot_wavl_ov(feature,
     return fig, [ax1, ax2, ax3]
 
 
-def custome_wavelet(amplitude=1.0,
-                    frequency=3.0,
-                    phase_shift=np.pi / 0.65,
-                    mu=0.0,
-                    sigma=150.0,
-                    plotting=True) -> np.array:
-    """
-    Implement a custom wavelet.
-
-    The wavelet is a sine curve multiplied by a Gaussian curve.
-
-    Parameters
-    ----------
-    amplitude : float, default 1.0
-        Amplitude of the sine curve.
-    frequency : float, default 3
-        Frequency of the sine curve.
-    phase_shift : float, default np.pi / 0.65
-        Phase shift of the sine curve.
-    mu : float, default 0.0
-        Mean of the Gaussian.
-    sigma : float, default 150.0
-        Standard deviation of the Gaussian.
-    plotting : bool, default True
-        If true, the wavelet is plotted.
-
-    Returns
-    -------
-    np.array
-        Array of the wavelet
-    """
-
-    center = amplitude  # Center of the sine wave
-
-    wing_size = 300
-    # Create an array of x values
-    x = np.linspace(-wing_size, wing_size, wing_size * 2)
-
-    # Compute the centered sine curve values for each x
-    sine_curve = amplitude * np.sin(2 * np.pi * frequency * x + phase_shift) + center
-
-    # Compute the Gaussian values for each x
-    gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-    wavelet = sine_curve * gaussian
-
-    if plotting:
-        fig, ax = plt.subplots()
-        ax.plot(wavelet)
-        ax.set_title('Wavelet')
-        ax.set_xlabel('Interval')
-        ax.set_ylabel('Amplitude')
-
-    return wavelet
-
-
-def custome_cwt(data, mode='convolve', plot_wavl=False) -> np.array:
-    """
-    Get custom implementation of the continuous wavelet transformation.
-
-    Parameters
-    ----------
-    data : np.array
-        Array of arrays of the fragment length distributions.
-    mode : str, default 'concolve'
-        Mode of the convolution. Either 'convolve' or 'fftconvolve'.
-    plot_wavl : bool, default False
-        If true, the wavelet is plotted.
-
-    Returns
-    -------
-    np.array
-        Array of convolved data.
-    """
-
-    # Get the wavelet
-    wavelet = custome_wavelet(plotting=plot_wavl)
-
-    # convolve with the data
-    convolved_data = []
-    for cell in data:
-        if mode == 'convolve':
-            convolved_data.append(np.convolve(cell, wavelet, mode='same'))
-        elif mode == 'fftconvolve':
-            convolved_data.append(fftconvolve(data, wavelet, mode='same'))
-
-    return np.array(convolved_data)
-
-
-def score_by_ct_cwt(data,
-                    plot_wavl=False,
-                    n_threads=12,
-                    peaks_thr=0.01,
-                    operator='bigger',
-                    plotting_mask=False,
-                    plotting_ov=True,
-                    sample=0) -> np.array:
-    """
-    Get score by custom continuous wavelet transformation and score mask.
-
-    Parameters
-    ----------
-    data : np.array
-        Array of arrays of the fragment length distributions.
-    plot_wavl : bool, default False
-        If true, the wavelet is plotted.
-    n_threads : int, default 12
-        Number of threads to use for the peak calling.
-    peaks_thr : float, default 0.01
-        Threshold for the peak calling.
-    operator : str, default 'bigger'
-        Operator to use for the peak calling. Either 'bigger' or 'smaller'.
-    plotting_mask : bool, default False
-        If true, the score mask is plotted.
-    plotting_ov : bool, default True
-        If true, the overlay of the score mask and the convolved data is plotted.
-    sample : int, default 0
-        Index of the sample to plot.
-
-    Returns
-    -------
-    np.array
-        Array of scores for each sample
-    """
-
-    convolved_data = custome_cwt(data, plot_wavl=plot_wavl)
-
-    peaks = call_peaks(convolved_data, n_threads=n_threads)
-
-    filtered_peaks = filter_peaks(peaks, reference=convolved_data, peaks_thr=peaks_thr, operator=operator)
-
-    score_mask = build_score_mask(plotting=plotting_mask)
-    scores = []
-    for i, peak_list in enumerate(filtered_peaks):
-        conv = convolved_data[i]
-
-        if len(peak_list) == 0:
-            score = 0
-        elif len(peak_list) == 1:
-            score = conv[peak_list[0]] * score_mask[0][peak_list[0]]
-
-        elif len(peak_list) > 1:
-            score = 0
-            for j in range(1, len(peak_list)):
-                if j <= 3:
-                    score += conv[peak_list[j]] * score_mask[j][peak_list[j]]
-                else:
-                    score += conv[peak_list[j]] * score_mask[3][peak_list[j]]
-
-        scores.append(score)
-
-    if plotting_ov:
-        plot_custom_cwt(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample)
-
-    return scores
-
-
-def build_score_mask(plotting=True,
-                     mu_list=[42, 200, 360, 550],
-                     sigma_list=[25, 35, 45, 25]) -> np.array:
-    """
-    Build a score mask for the score by custom continuous wavelet transformation.
-
-    Mask is a sum of 4 Gaussian curves with mu and sigma specified
-    for the expected peak positions and deviations.
-
-    Parameters
-    ----------
-    plotting : bool, default True
-        If true, the score mask is plotted.
-    mu_list : list, default [42, 200, 360, 550]
-        List of mu values for the Gaussian curves.
-    sigma_list : list, default [25, 35, 45, 25]
-        List of sigma values for the Gaussian curves.
-
-    Returns
-    -------
-    np.array
-        Array of the score mask
-    """
-
-    # Create an array of x values
-    x = np.linspace(0, 1000, 1000)
-    gaussians = []
-    for mu, sigma in zip(mu_list, sigma_list):
-        gaussians.append(scale((1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)))
-
-    gaussians = np.array(gaussians)
-
-    if plotting:
-        fig, ax = plt.subplots()
-
-        ax.plot(gaussians[0])
-        ax.plot(gaussians[1])
-        ax.plot(gaussians[2])
-        ax.plot(gaussians[3])
-        ax.set_title('score-mask')
-        ax.set_xlabel('position')
-        ax.set_ylabel('scoring')
-
-    return gaussians
-
-
-def gauss(x, mu, sigma) -> float:
-    """
-    Calculate the values of the Gaussian function for a given x, mu and sigma.
-
-    Parameters
-    ----------
-    x : array
-        x values
-    mu : float
-        mu value
-    sigma : float
-        sigma value
-
-    Returns
-    -------
-    float
-        Value of the Gaussian function for the given x, mu and sigma.
-    """
-
-    gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-
-    return gaussian
-
-
-def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0) -> None:
+def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0) -> None:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
 
@@ -1459,7 +1500,7 @@ def add_fld_metrics(adata,
 
     if use_ct_cwt:
         logger.info("calculating scores using the custom continues wavelet transformation...")
-        ct_cwt_scores = score_by_ct_cwt(data=scaled_ori,
+        conv_scores = score_by_conv(data=scaled_ori,
                                         plot_wavl=False,
                                         n_threads=n_threads,
                                         peaks_thr=peaks_thr_ct_cwt,
@@ -1478,7 +1519,7 @@ def add_fld_metrics(adata,
         inserts_df['fld_score_cwt'] = cwt_scores
 
     if use_ct_cwt:
-        inserts_df['fld_score_ct_cwt'] = ct_cwt_scores
+        inserts_df['fld_score_conv'] = conv_scores
 
     adata.obs = adata.obs.join(inserts_df)
 
@@ -1489,7 +1530,7 @@ def add_fld_metrics(adata,
         adata.obs['fld_score_cwt'] = adata.obs['fld_score_cwt'].fillna(0)
 
     if use_ct_cwt:
-        adata.obs['fld_score_ct_cwt'] = adata.obs['fld_score_ct_cwt'].fillna(0)
+        adata.obs['fld_score_conv'] = adata.obs['fld_score_conv'].fillna(0)
 
     # adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
