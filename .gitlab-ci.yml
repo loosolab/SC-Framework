@@ -6,7 +6,8 @@ extract-version:
     - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
     - echo "BUILD_VERSION=$VERSION" >> build.env
   artifacts:
-    when: always
+    reports:
+      dotenv: build.env
   rules:
     - when: always
 
