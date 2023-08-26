@@ -10,6 +10,7 @@ from scipy.signal import fftconvolve
 from typing import Tuple
 import anndata
 import sctoolbox.tools as tools
+import sctoolbox.plotting as plotting
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -820,12 +821,12 @@ def score_by_cwt(data,
 
 # ///////////////////////// Custome Convolution \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def custome_wavelet(amplitude=1.0,
-                    frequency=3.0,
-                    phase_shift=np.pi / 0.65,
-                    mu=0.0,
-                    sigma=150.0,
-                    plotting=True) -> np.array:
+def custom_wavelet(amplitude=1.0,
+                   frequency=3.0,
+                   phase_shift=np.pi / 0.65,
+                   mu=0.0,
+                   sigma=150.0,
+                   plotting=True) -> np.array:
     """
     Implement a custom wavelet.
 
@@ -852,14 +853,12 @@ def custome_wavelet(amplitude=1.0,
         Array of the wavelet
     """
 
-    center = amplitude  # Center of the sine wave
-
     wing_size = 300
     # Create an array of x values
     x = np.linspace(-wing_size, wing_size, wing_size * 2)
 
     # Compute the centered sine curve values for each x
-    sine_curve = amplitude * np.sin(2 * np.pi * frequency * x + phase_shift) + center
+    sine_curve = amplitude * np.sin(2 * np.pi * frequency * x + phase_shift)
 
     # Compute the Gaussian values for each x
     gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
@@ -875,7 +874,7 @@ def custome_wavelet(amplitude=1.0,
     return wavelet
 
 
-def custome_conv(data, mode='convolve', plot_wavl=False) -> np.array:
+def custom_conv(data, mode='convolve', plot_wavl=False) -> np.array:
     """
     Get custom implementation of a continuous wavelet transformation based convolution.
 
@@ -895,7 +894,7 @@ def custome_conv(data, mode='convolve', plot_wavl=False) -> np.array:
     """
 
     # Get the wavelet
-    wavelet = custome_wavelet(plotting=plot_wavl)
+    wavelet = custom_wavelet(plotting=plot_wavl)
 
     # convolve with the data
     convolved_data = []
@@ -944,13 +943,13 @@ def score_by_conv(data,
         Array of scores for each sample
     """
 
-    convolved_data = custome_conv(data, plot_wavl=plot_wavl)
+    convolved_data = custom_conv(data, plot_wavl=plot_wavl)
 
     peaks = call_peaks(convolved_data, n_threads=n_threads)
 
     filtered_peaks = filter_peaks(peaks, reference=convolved_data, peaks_thr=peaks_thr, operator=operator)
 
-    scores = score_mask(peaks, convolved_data, plotting=False)
+    scores = score_mask(peaks, convolved_data, plotting=plotting_mask)
 
     if plotting_ov:
         plot_custom_conv(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample)
@@ -1071,7 +1070,7 @@ def gauss(x, mu, sigma) -> float:
 
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotlib.axes.Axes:
+def density_plot(count_table, max_abundance=600, target_height=1000, save=False, figure_name='density_plot') -> matplotlib.axes.Axes:
     """
     Plot the density of the fragment length distribution over all cells.
 
@@ -1085,6 +1084,10 @@ def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotl
         Maximal abundance of a fragment length of a cell (for better visability)
     target_height : int, default 1000
         Target height of the plot
+    save : bool, default False
+        If true, the plot is saved.
+    figure_name : str, default 'density_plot'
+        Name of the figure to save.
 
     Returns
     -------
@@ -1159,6 +1162,9 @@ def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotl
 
     # Add colorbar to the plot
     fig.colorbar(im, ax=ax, label='Density (log scale)')
+
+    if save:
+        plotting._save_fig(figure_name)
 
     plt.show()
 
