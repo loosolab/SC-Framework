@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import pywt
+import tqdm
 import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
@@ -129,6 +130,8 @@ def unscale(scaled_data) -> np.ndarray:
 
         # Scale the rows by the inverse of their respective minimum values
         unscaled = scaled_data * (1.0 / min_values)[:, np.newaxis]
+
+    unscaled = unscaled.astype(int)
 
     return unscaled
 
@@ -821,44 +824,21 @@ def score_by_cwt(data,
 
 # ///////////////////////// Custome Convolution \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def custom_wavelet(amplitude=1.0,
-                   frequency=3.0,
-                   phase_shift=np.pi / 0.65,
-                   mu=0.0,
-                   sigma=150.0,
-                   plotting=True) -> np.array:
-    """
-    Implement a custom wavelet.
+def cos_wavelet(wavelength=100,
+                amplitude=1.0,
+                phase_shift=0,
+                mu=0.0,
+                sigma=0.4,
+                plotting=False):
+    scale = int(wavelength * 1.5)
+    sigma = sigma * scale  # This ensures sigma is scaled with scale
+    frequency = 1.5 / scale
 
-    The wavelet is a sine curve multiplied by a Gaussian curve.
-
-    Parameters
-    ----------
-    amplitude : float, default 1.0
-        Amplitude of the sine curve.
-    frequency : float, default 3
-        Frequency of the sine curve.
-    phase_shift : float, default np.pi / 0.65
-        Phase shift of the sine curve.
-    mu : float, default 0.0
-        Mean of the Gaussian.
-    sigma : float, default 150.0
-        Standard deviation of the Gaussian.
-    plotting : bool, default True
-        If true, the wavelet is plotted.
-
-    Returns
-    -------
-    np.array
-        Array of the wavelet
-    """
-
-    wing_size = 300
     # Create an array of x values
-    x = np.linspace(-wing_size, wing_size, wing_size * 2)
+    x = np.linspace(-scale, scale, scale * 2)
 
     # Compute the centered sine curve values for each x
-    sine_curve = amplitude * np.sin(2 * np.pi * frequency * x + phase_shift)
+    sine_curve = amplitude * np.cos(2 * np.pi * frequency * x + phase_shift)
 
     # Compute the Gaussian values for each x
     gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
@@ -871,12 +851,79 @@ def custom_wavelet(amplitude=1.0,
         ax.set_xlabel('Interval')
         ax.set_ylabel('Amplitude')
 
+        # Save figure
+        fig.savefig('wavelet_plot.png')
+
+        # Optionally, to show the figure
+        plt.show()
+
     return wavelet
 
 
-def custom_conv(data, mode='convolve', plot_wavl=False) -> np.array:
+def get_wavelets(wavelengths, sigma=0.4):
+
+    wavelets = []
+    for wavelength in wavelengths:
+        wavelet = cos_wavelet(wavelength=wavelength,
+                              amplitude=1.0,
+                              phase_shift=0,
+                              mu=0.0,
+                              sigma=sigma,
+                              plotting=False)
+        wavelets.append(wavelet)
+
+    return wavelets
+
+
+def wavelet_transformation(data, wavelets):
+
+    convolved_data = []
+    for wavelet in wavelets:
+        convolved_data.append(np.convolve(data, wavelet, mode='same'))
+
+    convolved_data = np.array(convolved_data)
+    return convolved_data
+
+
+def plot_wavelet_transformation(convolution, wavelengths):
+
+    xmin = 0
+    xmax = convolution.shape[1]
+    ymin, ymax = wavelengths[0], wavelengths[-1]
+
+    # Create a figure and set the size
+    # plt.figure(figsize=(15, 15))  # (width, height) in inches
+    plt.imshow(convolution, aspect='auto', cmap='jet', extent=[xmin, xmax, ymax, ymin])
+    plt.colorbar(label='Fit')
+    plt.xlabel('Fragment Length (bp)')
+    plt.ylabel('Wavelength (bp)')
+    plt.title('Wavelet Transformation')
+
+    plt.grid(color='white', linestyle='--', linewidth=0.5)
+
+    # Save the figure
+    # plt.savefig('continues_wavelet_transformation.png')
+
+    plt.show()
+
+
+# TODO multithreading
+def wavelet_transform_fld(dists_arr, wavelengths, sigma=0.4):
+    wavelets = get_wavelets(wavelengths, sigma=sigma)
+    dataset_convolution = []
+
+    # Wrap the iterable with tqdm to show progress
+    for cell in tqdm(dists_arr, desc="Processing cells"):
+        dataset_convolution.append(wavelet_transformation(cell, wavelets))
+
+    dataset_convolution = np.array(dataset_convolution)
+
+    return dataset_convolution
+
+
+def custom_conv(data, wavelength=150, sigma=0.4, mode='convolve', plot_wavl=False) -> np.array:
     """
-    Get custom implementation of a continuous wavelet transformation based convolution.
+    Get custom implementation of a wavelet transformation based convolution.
 
     Parameters
     ----------
@@ -894,7 +941,12 @@ def custom_conv(data, mode='convolve', plot_wavl=False) -> np.array:
     """
 
     # Get the wavelet
-    wavelet = custom_wavelet(plotting=plot_wavl)
+    wavelet = cos_wavelet(wavelength=wavelength,
+                amplitude=1.0,
+                phase_shift=0,
+                mu=0.0,
+                sigma=sigma,
+                plotting=plot_wavl)
 
     # convolve with the data
     convolved_data = []
@@ -908,6 +960,8 @@ def custom_conv(data, mode='convolve', plot_wavl=False) -> np.array:
 
 
 def score_by_conv(data,
+                  wavelength=150,
+                  sigma=0.4,
                   plot_wavl=False,
                   n_threads=12,
                   peaks_thr=0.01,
@@ -943,7 +997,7 @@ def score_by_conv(data,
         Array of scores for each sample
     """
 
-    convolved_data = custom_conv(data, plot_wavl=plot_wavl)
+    convolved_data = custom_conv(data, wavelength=wavelength, sigma=sigma, plot_wavl=plot_wavl)
 
     peaks = call_peaks(convolved_data, n_threads=n_threads)
 
@@ -1070,7 +1124,7 @@ def gauss(x, mu, sigma) -> float:
 
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(count_table, max_abundance=600, target_height=1000, save=False, figure_name='density_plot') -> matplotlib.axes.Axes:
+def density_plot(count_table, max_abundance=600, target_height=1000, save=False, figure_name='density_plot', colormap='jet') -> matplotlib.axes.Axes:
     """
     Plot the density of the fragment length distribution over all cells.
 
@@ -1088,6 +1142,8 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
         If true, the plot is saved.
     figure_name : str, default 'density_plot'
         Name of the figure to save.
+    colormap : str, default 'jet'
+        Color map of the plot.
 
     Returns
     -------
@@ -1101,7 +1157,8 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
             rounded = (np.round(count_table)).astype('int64')
             count_table = rounded
         else:
-            count_table = unscale(count_table)
+            #count_table = unscale(count_table)
+            count_table = (count_table * 1000).astype('int64')
     # get the maximal abundance of a fragment length over all cells
     max_value = np.max(np.around(count_table).astype(int))
     # Init empty densities list
@@ -1146,7 +1203,7 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
     fig, ax = plt.subplots()
 
     # Display the image
-    im = ax.imshow(densities_interpolated, aspect='auto', origin="lower")
+    im = ax.imshow(densities_interpolated, aspect='auto', origin="lower", cmap=colormap)
 
     # Plot additional data
     ax.plot(mean_interpolated, color="red", markersize=1)
@@ -1356,20 +1413,21 @@ def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0) -> None:
 
     points_y_data = single_d[sample_peaks]
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
 
-    ax1.set_ylabel('convolution of sample: ' + str(sample_n))
-    ax1.set_xlabel('fragment length', color='blue')
+    ax1.set_title("Sample: " + str(sample_n) + " - Convolution")
+    ax1.set_ylabel('Convolution: ' + str(sample_n))
+    ax1.set_xlabel('Fragment Length', color='blue')
     ax1.plot(single_m)
     ax1.scatter(points_x, points_y, color='red', zorder=2)
 
-    ax2.set_ylabel('scaled abundance of sample: ' + str(sample_n))
-    ax2.set_xlabel('fragment length', color='blue')
+    ax2.set_ylabel('Abundance' + str(sample_n))
+    ax2.set_xlabel('Fragment Length', color='blue')
     ax2.plot(single_d)
     ax2.scatter(points_x, points_y_data, color='red', zorder=2)
 
-    ax3.set_ylabel('scores all')
-    ax3.set_xlabel('fragment length', color='blue')
+    ax3.set_ylabel('Scores all')
+    ax3.set_xlabel('Fragment Length', color='blue')
     ax3.hist(scores, bins=100, log=True)
 
 
