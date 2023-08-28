@@ -1049,7 +1049,7 @@ def plot_single_momentum_ov(peaks,
     points_ori_x = points_x_corrected + remove
     points_ori_y = single_d[points_ori_x]
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
     ax1.set_title('Shifted Distributions a and b')
     ax1.set_ylabel('Number of Fragments')
     ax1.set_xlabel('Fragment Length - ' + str(remove) + 'bp-shift', color='blue')
