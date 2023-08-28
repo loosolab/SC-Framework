@@ -973,6 +973,8 @@ def plot_wavelet_transformation(convolution,
         ax2.set_ylabel('Wavelength (bp)')
         ax2.grid(color='white', linestyle='--', linewidth=0.5)
 
+        plt.tight_layout()
+
     else:
         # Create a figure and set the size
         plt.imshow(convolution, aspect='auto', cmap='jet', extent=[xmin, xmax, ymax, ymin])
@@ -1054,18 +1056,24 @@ def plot_single_momentum_ov(peaks,
     ax1.plot(a)
     ax1.plot(b)
 
+    ax2.set_title('Momentum')
     ax2.set_ylabel('Momentum')
     ax2.set_xlabel('Fragment Length - ' + str(remove) + 'bp-shift', color='blue')
     ax2.plot(single_m)
     ax2.scatter(points_x, points_y, color='red', zorder=2)
 
+    ax3.set_title('FLD with Peaks')
     ax3.set_ylabel('Number of Fragments')
     ax3.set_xlabel('Fragment Length', color='blue')
     ax3.plot(single_d)
     ax3.scatter(points_ori_x, points_ori_y, color='red', zorder=2)
 
+    plt.tight_layout()
+
     if save:
         plotting._save_figure(figure_name)
+
+    plt.show()
 
     return fig, [ax1, ax2, ax3]
 
@@ -1120,10 +1128,12 @@ def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0, save=False
     ax3.set_xlabel('Fragment Length', color='blue')
     ax3.hist(scores, bins=100, log=True)
 
-    plt.show()
+    plt.tight_layout()
 
     if save:
         plotting._save_figure(figure_name)
+
+    plt.show()
 
     return ax1, ax2, ax3
 
