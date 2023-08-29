@@ -1042,9 +1042,7 @@ def plot_single_momentum_ov(peaks,
     points_x = sample_peaks
     points_y = single_m[sample_peaks]
 
-    points_x_corrected = sample_peaks - int(shift / 2)
-
-    points_ori_x = points_x_corrected + remove
+    points_ori_x = points_x + remove
     points_ori_y = single_d[points_ori_x]
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
@@ -1242,7 +1240,7 @@ def add_fld_metrics(adata,
         logger.info("calculating scores using the momentum method...")
         momentum_scores = score_by_momentum(data=smooth,
                                             shift=80,
-                                            remove=100,
+                                            remove=0,
                                             sample_to_inspect=plot_sample,
                                             peaks_thr=peaks_thr_mom,
                                             period=160,
