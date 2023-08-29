@@ -897,8 +897,6 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
 
     # Display the image
     im = ax.imshow(densities_interpolated, aspect='auto', origin="lower", cmap=colormap)
-    # Add colorbar to the plot
-    ax.colorbar(im, label='Density (log scaled)')
 
     # Plot additional data
     ax.plot(mean_interpolated, color="red", markersize=1)
