@@ -29,6 +29,7 @@
 - Removed outdated normalization methods.
 - Changed all line endings to LF (#138)
 - Diabled threads parameter for tSNE (#130)
+- Fixed issues with clustered dotplot with new code (#122)
 
 Changes to notebooks
 --------------------

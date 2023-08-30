@@ -295,6 +295,21 @@ def test_identify_columns(na_dataframe, regex, result):
     assert utils.identify_columns(na_dataframe, regex) == result
 
 
+@pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
+                                             (np.array([[1, 2, 3], [1, 2, 3]]), 1, 100),
+                                             (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
+def test_scale_values(array, mini, maxi):
+    """Test that scaled values are in given range."""
+    result = utils.scale_values(array, mini, maxi)
+
+    assert len(result) == len(array)
+    if len(result.shape) == 1:
+        assert all((mini <= result) & (result <= maxi))
+    else:
+        for i in range(len(result)):
+            assert all((mini <= result[i]) & (result[i] <= maxi))
+
+
 # TODO
 # following tests are skipped due to occasional "No internet connection" error.
 # This may be related to too many requests in a short period of time.

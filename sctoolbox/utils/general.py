@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 import getpass
 from datetime import datetime
+import numpy as np
 
 # type hint imports
 from typing import Any, TYPE_CHECKING
@@ -436,3 +437,25 @@ def identify_columns(df, regex) -> list[str]:
         regex = "(" + ")|(".join(regex) + ")"
 
     return df.filter(regex=(regex)).columns.to_list()
+
+
+def scale_values(array, mini, maxi) -> np.ndarray:
+    """Small utility to scale values in array to a given range.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to scale.
+    mini : float
+        Minimum value of the scale.
+    maxi : float
+        Maximum value of the scale.
+
+    Returns
+    -------
+    np.ndarray
+        Scaled array values.
+    """
+    val_range = array.max() - array.min()
+    a = (array - array.min()) / val_range
+    return a * (maxi - mini) + mini
