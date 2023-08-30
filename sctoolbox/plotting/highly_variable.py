@@ -1,12 +1,21 @@
+"""Plots for highly variable genes, e.g. as a result of sc.tl.highly_variable."""
+
 import matplotlib.pyplot as plt
+import sctoolbox.utils.decorator as deco
+import sctoolbox.utils as utils
 
 
+@deco.log_anndata
 def violin_HVF_distribution(adata):
     """
-    plot the distribution of the HVF
-    :param adata:
-    :return:
+    Plot the distribution of the HVF as violinplot.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing columns ['highly_variable', 'n_cells_by_counts'] column.
     """
+    utils.check_columns(adata.var, ['highly_variable', 'n_cells_by_counts'])
     # get the number of cells per highly variable feature
     hvf_var = adata.var[adata.var['highly_variable']]  # 'highly_variable' is a boolean column
     n_cells = hvf_var['n_cells_by_counts']
@@ -20,12 +29,17 @@ def violin_HVF_distribution(adata):
     plt.show()
 
 
+@deco.log_anndata
 def scatter_HVF_distribution(adata):
     """
-    plot the distribution of the HVF
-    :param adata:
-    :return:
+    Plot the distribution of the HVF as scatterplot.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing columns ['variability_score', 'n_cells'] column.
     """
+    utils.check_columns(adata.var, ['variability_score', 'n_cells'])
     variabilities = adata.var[['variability_score', 'n_cells']]
     fig, ax = plt.subplots()
     ax.scatter(variabilities['n_cells'], variabilities['variability_score'])

@@ -1,3 +1,4 @@
+"""Tools for TOBIAS usage."""
 import yaml
 import os
 import sctoolbox.utils as utils
@@ -22,30 +23,50 @@ def write_TOBIAS_config(out_path,
                         gtf=None,
                         motifs=None,
                         organism="human",
-                        output="TOBIAS_output"):
+                        output="TOBIAS_output",
+                        plot_comparison=True,
+                        plot_correction=True,
+                        plot_venn=True,
+                        coverage=True,
+                        wilson=True) -> None:
     """
     Write a TOBIAS config file from input bams/fasta/blacklist etc.
 
     Parameters
-    -----------
-    out_path : string
+    ----------
+    out_path : str
         Path to output yaml file.
-    bams : list of strings, optional
+    bams : list of strs, default []
         List of paths to bam files.
-    names : list of strings, optional
-        List of names for the bams. If None, the names are set to the bam file names with common prefix and suffix removed. Default: None.
-    fasta : string, optional
-        Path to fasta file. Default: None.
-    blacklist : string, optional
-        Path to blacklist file. Default: None.
-    gtf : string, optional
-        Path to gtf file. Default: None.
-    motifs : string, optional
-        Path to motif file. Default: None.
-    organism : string, optional
-        Organism name. TOBIAS supports 'human', 'mouse' or 'zebrafish'. Default: "human".
-    output : string, optional
-        Output directory of the TOBIAS run. Default: "TOBIAS_output".
+    names : list of str, default None
+        List of names for the bams. If None, the names are set to the bam file names with common prefix and suffix removed.
+    fasta : str, default None
+        Path to fasta file.
+    blacklist : str, default None
+        Path to blacklist file.
+    gtf : str, default None
+        Path to gtf file.
+    motifs : str, default None
+        Path to motif file.
+    organism : str, default 'human'
+        Organism name. TOBIAS supports 'human', 'mouse' or 'zebrafish'.
+    output : str, default 'Tobias_output'
+        Output directory of the TOBIAS run.
+    plot_comparison : bool, default True
+        Flag for the step of plotting comparison of the TOBIAS run.
+    plot_correction : bool, default True
+        Flag for the step of plotting correction of the TOBIAS run.
+    plot_venn : bool, default True
+        Flag for the step of plotting venn diagramms of the TOBIAS run.
+    coverage : bool, default True
+        Flag for coverage step of the TOBIAS run.
+    wilson : bool, default True
+        Flag for wilson step of the TOBIAS run.
+
+    Raises
+    ------
+    ValueError:
+        If organism is not valid.
     """
 
     # Check organism input
@@ -72,11 +93,11 @@ def write_TOBIAS_config(out_path,
                         "output": output}
 
     # Flags for parts of pipeline to include/exclude
-    data["flags"] = {"plot_comparison": True,
-                     "plot_correction": True,
-                     "plot_venn": True,
-                     "coverage": True,
-                     "wilson": True}
+    data["flags"] = {"plot_comparison": plot_comparison,
+                     "plot_correction": plot_correction,
+                     "plot_venn": plot_venn,
+                     "coverage": coverage,
+                     "wilson": wilson}
 
     # Default module parameters
     data["macs"] = "--nomodel --shift -100 --extsize 200 --broad"

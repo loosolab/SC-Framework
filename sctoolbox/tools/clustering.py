@@ -1,12 +1,15 @@
+"""Module for cell clustering."""
 import scanpy as sc
 import warnings
 import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 
 
+@deco.log_anndata
 def recluster(adata, column, clusters,
               task="join", method="leiden", resolution=1, key_added=None,
-              plot=True, embedding="X_umap"):
+              plot=True, embedding="X_umap") -> None:
     """
     Recluster an anndata object based on an existing clustering column in .obs.
 
@@ -30,6 +33,16 @@ def recluster(adata, column, clusters,
         Name of the new column in adata.obs. If None, the column name is set to `<column>_recluster`.
     plot : bool, default True
         If a plot should be generated of the re-clustering.
+    embedding : str, default 'X_umap'
+        Select which embeding should be used.
+
+    Raises
+    ------
+    ValueError:
+        1. If clustering method is not valid.
+        2. If task is not valid.
+    KeyError:
+        If the given embeding is not in the data.
     """
 
     adata_copy = adata.copy()

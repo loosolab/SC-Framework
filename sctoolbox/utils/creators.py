@@ -1,6 +1,4 @@
-"""
-Modules for creating files or directories
-"""
+"""Modules for creating files or directories."""
 
 import pathlib
 import gitlab
@@ -16,19 +14,19 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                     commit=None, out_path="./", private=False,
                     load_token=pathlib.Path.home() / ".gitlab_token",
                     save_token=pathlib.Path.home() / ".gitlab_token",
-                    overwrite=False, max_calls=5, period=60):
+                    overwrite=False, max_calls=5, period=60) -> None:
     """
-    Download file(s) from gitlab
+    Download file(s) from gitlab.
 
     Parameters
     ----------
-    internal_path :  str
+    internal_path : str
         path to directory in repository
     file_regex : str
         regex for target file(s)
     host : str, default 'https://gitlab.gwdg.de/'
         Link to host
-    repo : str, default 'loosolab_SC_RNA_framework'
+    repo : str, default 'sc_framework'
         Name of the repository
     branch :  str, default 'main'
         What branch to use
@@ -36,7 +34,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
         What commit to use, overwrites branch
     out_path : str, default './'
         Where the fike/dir should be downloaded to
-    private, boolean, default False
+    private :  boolean, default False
         Set true if repo is private
     load_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
         Load token from file. Set to None for new token
@@ -49,10 +47,12 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
     period : int, deafult 60
         period length in seconds
 
-    Returns
-    -------
-    None
+    Raises
+    ------
+    ValueError
+        If repository is inaccesible.
     """
+
     def limited(until):
         duration = int(round(until - time.time()))
         print('Rate limited, sleeping for {:d} seconds'.format(duration))
@@ -84,7 +84,7 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
                 break
 
         if not project:
-            raise ValueError("Reposiotry not found")
+            raise ValueError("Repository not found")
 
         items = project.repository_tree(path=internal_path, ref=branch)
         for item in items:
@@ -102,21 +102,23 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
         print("Error:", e)
 
 
-def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
+def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]) -> None:
     """
-    Create initial folder structure
+    Create initial folder structure.
 
     Parameters
     ----------
-    dest :  str
+    dest : str
         Path to new experiment
-    dir : list, default ['raw', 'preprocessing', 'Analysis']
+    dirs : list, default ['raw', 'preprocessing', 'Analysis']
         Internal folders to create
 
-    Returns
-    -------
-    None
+    Raises
+    ------
+    Exception
+        If directory exists.
     """
+
     print("Setting up experiment:")
     if pathlib.Path(dest).exists():
         raise Exception(f"Directory '{dest}' already exists. "
@@ -131,32 +133,36 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]):
 
 def add_analysis(dest, analysis_name, method="rna",
                  dirs=['figures', 'data', 'logs'],
-                 starts_with=1, **kwargs):
+                 starts_with=1, **kwargs) -> None:
     """
-    Create and add a new analysis/run
+    Create and add a new analysis/run.
 
     Note: Only works for Notebooks until number 99.
     Needs to be adjusted if we exceed 89 notebooks.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     dest : str
-        Path to experiment
+        Path to experiment.
     analysis_name : str
-        Name of the new analysis run
-    method : str, default rna
-        Which notebooks should be downloaded. ['rna', 'atac']
-    dirs : list, default ['figures', 'data', 'logs']
-        Internal folders to create. Notebook directory is required.
-    start_with : int, default 1
-        Notebook the analysis will start with
-    kwargs : kwargs
-        forwarded to gitlab_download
+        Name of the new analysis run.
+    method : {'rna', 'atac'}
+        Type of notebooks to download.
+    dirs : list[str], default ['figures', 'data', 'logs']
+        Internal folders to create besides 'notebooks' directory.
+    starts_with : int, default 1
+        Notebook the analysis will start with.
+    **kwargs : dict
+        Forwarded to `gitlab_download`.
 
-    Returns
-    -------
-    None
+    Raises
+    ------
+    FileNotFoundError
+        If path to experiment does not exist.
+    ValueError
+        If `method` is invalid.
     """
+
     analysis_path = pathlib.Path(dest) / "Analysis"
     if not analysis_path.exists():
         raise FileNotFoundError("Analysis directory not found."
@@ -178,12 +184,11 @@ def add_analysis(dest, analysis_name, method="rna",
     gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
 
 
-def build_notebooks_regex(starts_with):
+def build_notebooks_regex(starts_with) -> str:
     """
     Build regex for notebooks starting with given number.
-    Note: Only works up to 89. If we reach notebook 90 this function needs to be adjusted.
 
-    @ToDo Move to utilities.py when cleaned up
+    Note: Only works up to 89. If we reach notebook 90 this function needs to be adjusted.
 
     Parameters
     ----------
@@ -192,8 +197,15 @@ def build_notebooks_regex(starts_with):
 
     Returns
     -------
-    notebook regex
+    str
+        notebook regex
+
+    Raises
+    ------
+    ValueError
+        If `starts_with` is < 1 or > 89.
     """
+
     if starts_with < 1:
         raise ValueError("starts_with needs to be at least 1")
     elif 1 <= starts_with < 10:

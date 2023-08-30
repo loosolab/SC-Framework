@@ -1,9 +1,12 @@
+"""Functions for plotting QC-related figures e.g. number of cells per group and violins."""
+
 from math import ceil
 import pandas as pd
 import copy
 import numpy as np
 import ipywidgets
 import functools  # for partial functions
+import glob
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -11,12 +14,223 @@ from matplotlib.patches import Rectangle
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import violinplot, _save_figure
+import sctoolbox.utils.decorator as deco
+
+# type hint imports
+from typing import Tuple, Union, List, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    import matplotlib
+
+
+########################################################################################
+# ------------------------------ QC plots for starsolo ------------------------------- #
+########################################################################################
+
+def _read_starsolo_summary(folder) -> pd.DataFrame:
+    """Get summary table from an output folder containing multiple starsolo runs.
+
+    Parameters
+    ----------
+    folder : str
+        Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
+
+    Raises
+    ------
+    ValueError
+        If no summary files are found in the folder.
+
+    Returns
+    -------
+    summary_table : pd.DataFrame
+        Table with summary statistics from all runs.
+    """
+
+    summary_files = glob.glob(folder + "/**/solo/Gene/Summary.csv")
+    if len(summary_files) == 0:
+        raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
+
+    # Read statistics from summary files
+    names = utils.clean_flanking_strings(summary_files)
+    summary_tables = []
+    for name, f in zip(names, summary_files):
+        star_table = pd.read_csv(f, index_col=0, header=None, names=[name])
+        summary_tables.append(star_table)
+    summary_table = pd.concat(summary_tables, axis=1)
+
+    return summary_table
+
+
+def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to Genome: Unique",
+                                            "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells",
+                                            "Median Reads per Cell", "Median Gene per Cell"],
+                          ncol=3,
+                          order=None,
+                          save=None) -> np.ndarray:
+    """Plot quality measures from starsolo as barplots per condition.
+
+    Parameters
+    ----------
+    folder : str
+        Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
+    measures : list of str, default ["Number of Reads", "Reads Mapped to Genome: Unique", "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells", "Median Reads per Cell", "Median Gene per Cell"]
+        List of measures to plot. Must be available in the solo summary table.
+    ncol : int, default 3
+        Number of columns in the plot.
+    order : list of str, default None
+        Order of conditions in the plot. If None, the order is alphabetical.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
+
+    Returns
+    -------
+    axes : np.ndarray
+        Array of axes objects containing the plot(s).
+
+    Raises
+    ------
+    KeyError
+        If a measure is not available in the solo summary table.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_starsolo_quality("data/quant/")
+    """
+
+    # Prepare functions for converting labels
+    def format_million(label):
+        return '{:,.0f} M'.format(int(label) / 10**6)
+
+    def format_thousand(label):
+        return '{:,.0f} K'.format(int(label) / 10**3)
+
+    def format_percent(label):
+        return '{:,.0f}%'.format(float(label) * 100)
+
+    # Get summary table
+    summary_table = _read_starsolo_summary(folder)
+    available_measures = summary_table.index.tolist()
+
+    if order is None:
+        order = sorted(summary_table.columns.tolist())
+        summary_table = summary_table[order]
+    else:
+        summary_table = summary_table[order]
+
+    # Setup plot
+    ncol = min(ncol, len(measures))
+    row = int(np.ceil(len(measures) / ncol))
+    fig, axes = plt.subplots(row, ncol, figsize=(ncol * 4, row * 4))
+    axes = axes.flatten() if len(measures) > 1 else np.array([axes])  # axes is a list of axes objects
+    _ = [ax.axis('off') for ax in axes[len(measures):]]  # hide additional plots
+
+    # Fill in plot per measure
+    for i, measure in enumerate(measures):
+        if measure not in available_measures:
+            raise KeyError(f"Measure '{measure}' not found in summary table. Available measures: {available_measures}")
+
+        # Plot data to barplot
+        ax = axes[i]
+        data = summary_table.loc[measure].astype(float)
+        sns.barplot(x=data.index, y=data.values, ax=ax, edgecolor="black")
+        ax.set_title(measure)
+
+        # Format yticklabels
+        if data.max() < 1:  # convert to %
+            ax.set_ylim(0, 1)
+            ax.set_yticks(ax.get_yticks(), [format_percent(value) for value in ax.get_yticks()])
+        elif data.max() < 10000:
+            pass  # no format; show raw values
+        elif data.max() < 10**6:  # convert to thousands
+            ax.set_yticks(ax.get_yticks(), [format_thousand(value) for value in ax.get_yticks()])
+        else:  # convert to millions
+            ax.set_yticks(ax.get_yticks(), [format_million(value) for value in ax.get_yticks()])
+
+        ax.set_xticks(ax.get_xticks())  # prevent locator error
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+    fig.tight_layout()
+    _save_figure(save)
+
+    return axes
+
+
+def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
+    """Plot UMI distribution for each condition in a folder.
+
+    Parameters
+    ----------
+    folder : str
+        Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
+    ncol : int, default 3
+        Number of columns in the plot.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
+
+    Returns
+    -------
+    axes : np.ndarray
+        Array of axes objects containing the plot(s).
+
+    Raises
+    ------
+    ValueError
+        If no UMI files ('UMIperCellSorted.txt') are found in the folder.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_starsolo_UMI("data/quant/", ncol=2)
+    """
+
+    summary_table = _read_starsolo_summary(folder)
+    umi_files = glob.glob(folder + "/**/solo/Gene/UMIperCellSorted.txt")
+
+    if len(umi_files) == 0:
+        raise ValueError("No UMI files found in folder. Please check the path and try again.")
+
+    names = utils.clean_flanking_strings(umi_files)
+
+    # Setup plot
+    ncol = min(len(names), ncol)
+    nrow = int(np.ceil(len(names) / ncol))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 4, nrow * 4))
+    axes = axes.flatten() if len(names) > 1 else np.array([axes])  # axes is a list of axes objects
+    _ = [ax.axis('off') for ax in axes[len(names):]]  # hide additional plots
+
+    for i, f in enumerate(umi_files):
+
+        ax = axes[i]
+        name = names[i]
+
+        df_knee = pd.read_table(f, header=None, names=[name])
+        cut = int(summary_table.loc["Estimated Number of Cells", name])
+
+        df_knee.plot.line(logx=True, logy=True, legend=False, ax=ax)
+        df_knee[:cut].plot.line(logx=True, legend=False, ax=ax, color='red')
+        ax.axvline(x=cut, color='grey', linestyle='-')
+
+        vmax = df_knee.iloc[0, 0]
+        ax.text(cut * 1.2, vmax, str(cut) + ' cells', verticalalignment='center')
+        ax.set_title(name)
+        ax.set_xlabel('Barcodes')
+        ax.set_ylabel('UMI count')
+
+    fig.tight_layout()
+    _save_figure(save)
+
+    return axes
 
 
 ########################################################################################
 # ---------------------------- Plots for counting cells ------------------------------ #
 ########################################################################################
 
+@deco.log_anndata
 def _n_cells_pieplot(adata, groupby,
                      figsize=None):
     """
@@ -28,15 +242,8 @@ def _n_cells_pieplot(adata, groupby,
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.
-
-    Returns
-    -------
-
-
-    Examples
-    --------
-
-
+    figsize : tuple, default None
+        Size of figure, e.g. (4, 8).
     """
 
     # Get counts
@@ -45,9 +252,10 @@ def _n_cells_pieplot(adata, groupby,
     # in progress
 
 
+@deco.log_anndata
 def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
                     add_labels=False,
-                    **kwargs):
+                    **kwargs) -> np.ndarray:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -70,6 +278,11 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
     **kwargs : arguments
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
+    Returns
+    -------
+    axarr : np.ndarray
+        Array of axes objects containing the plot(s).
+
     Examples
     --------
     .. plot::
@@ -81,7 +294,6 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
         :context: close-figs
 
         pl.n_cells_barplot(adata, x="louvain", groupby="condition")
-
     """
 
     # Get cell counts for groups or all
@@ -154,9 +366,10 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
     return axarr
 
 
-def group_correlation(adata, groupby, method="spearman", save=None):
-    """
-    Plot correlation matrix between groups in `groupby`.
+@deco.log_anndata
+def group_correlation(adata, groupby, method="spearman", save=None) -> sns.matrix.ClusterGrid:
+    """Plot correlation matrix between groups in `groupby`.
+
     The function expects the count data in .X to be normalized across cells.
 
     Parameters
@@ -167,12 +380,14 @@ def group_correlation(adata, groupby, method="spearman", save=None):
         Name of the column in adata.obs to group cells by.
     method : str, default "spearman"
         Correlation method to use. See pandas.DataFrame.corr for options.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
 
     Returns
     -------
-    ClusterGrid object
+    sns.matrix.ClusterGrid
 
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -219,7 +434,8 @@ def group_correlation(adata, groupby, method="spearman", save=None):
     return g
 
 
-def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize=None, dpi=300):
+@deco.log_anndata
+def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=None, dpi=300):
     """
     Grid of violinplots with optional cutoffs.
 
@@ -239,7 +455,7 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
             - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
     colors : list of str, default None
         List of colors for the violins.
-    filename : str, default None
+    save : str, default None
         Path and name of file to be saved.
     ncols : int, default 3
         Number of violins per row.
@@ -247,6 +463,11 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         Size of figure in inches.
     dpi : int, default 300
         Dots per inch.
+
+    Raises
+    ------
+    ValueError
+        If threshold table indices are not column names in anndata.obs or anndata.var.
     """
     # test if threshold indexes are column names in .obs or .var
     invalid_index = set(thresholds.index.get_level_values(0)) - set(anndata.obs.columns) - set(anndata.var.columns)
@@ -273,29 +494,34 @@ def qc_violins(anndata, thresholds, colors=None, filename=None, ncols=3, figsize
         fig.delaxes(axs[i])
 
     # Save plot
-    if filename:
-        _save_figure(filename)
+    _save_figure(save)
 
 
 #####################################################################
 # --------------------------- Insertsize -------------------------- #
 #####################################################################
 
-def plot_insertsize(adata, barcodes=None):
+@deco.log_anndata
+def plot_insertsize(adata, barcodes=None) -> "matplotlib.Axes":
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
     Parameters
-    -----------
+    ----------
     adata : AnnData
         AnnData object containing insertsize distribution in adata.uns["insertsize_distribution"].
     barcodes : list of str, default None
         Subset of barcodes to plot information for. If None, all barcodes are used.
 
     Returns
-    --------
+    -------
     ax : matplotlib.Axes
         Axes object containing the plot.
+
+    Raises
+    ------
+    ValueError
+        If adata.uns["insertsize_distribution"] is not set.
     """
 
     if "insertsize_distribution" not in adata.uns:
@@ -326,17 +552,17 @@ def plot_insertsize(adata, barcodes=None):
 ###########################################################################
 
 
-def _link_sliders(sliders):
-    """ Link the values between interactive sliders.
+def _link_sliders(sliders) -> "list[ipywidgets.widgets.link]":
+    """Link the values between interactive sliders.
 
     Parameters
-    ------------
-    sliders : list of ipywidgets.widgets.Slider
+    ----------
+    sliders : list[ipywidgets.widgets.Slider]
         List of sliders to link.
 
     Returns
-    --------
-    list : list of ipywidgets.widgets.link
+    -------
+    list[ipywidgets.widgets.link]
         List of links between sliders.
     """
 
@@ -355,7 +581,7 @@ def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
     Either link or unlink sliders depending on the new value of the checkbox.
 
     Parameters
-    -----------
+    ----------
     checkbox : ipywidgets.widgets.Checkbox
         Checkbox to toggle linkage.
     linkage_dict : dict
@@ -383,7 +609,7 @@ def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
 
 
 def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
-    """ Update the locations of thresholds in plot """
+    """Update the locations of thresholds in plot."""
 
     tmin, tmax = slider["new"]  # threshold values from slider
 
@@ -410,6 +636,7 @@ def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
     # sctoolbox.utilities.save_figure(save)
 
 
+@deco.log_anndata
 def quality_violin(adata, columns,
                    which="obs",
                    groupby=None,
@@ -420,16 +647,16 @@ def quality_violin(adata, columns,
                    thresholds=None,
                    global_threshold=True,
                    interactive=True,
-                   save=None):
+                   save=None) -> Tuple[Union["matplotlib.figure", ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
     """
-    A function to plot quality measurements for cells in an anndata object.
+    Plot quality measurements for cells/features in an anndata object.
 
-    Note
-    ------
+    Notes
+    -----
     Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
 
     Parameters
-    -------------
+    ----------
     adata : anndata.AnnData
         Anndata object containing quality measures in .obs/.var
     columns : list
@@ -456,9 +683,15 @@ def quality_violin(adata, columns,
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
 
     Returns
-    -----------
-    tuple of box, dict
-        box contains the sliders and figure to show in notebook, and the dictionary contains the sliders determined by sliders
+    -------
+    Tuple[Union[matplotlib.figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+        First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
+
+    Raises
+    ------
+    ValueError
+        If 'which' is not 'obs' or 'var' or if columns are not in table.
+
     """
 
     is_interactive = utils._is_interactive()
@@ -476,9 +709,14 @@ def quality_violin(adata, columns,
     else:
         raise ValueError("'which' must be either 'obs' or 'var'.")
 
+    # Check that columns are in table
+    invalid_columns = set(columns) - set(table.columns)
+    if invalid_columns:
+        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
+
     # Order of categories on x axis
     if groupby is not None:
-        groups = table[groupby].cat.categories
+        groups = list(table[groupby].astype('category').cat.categories)
         n_colors = len(groups)
     else:
         groups = None
@@ -488,7 +726,7 @@ def quality_violin(adata, columns,
     if color_list is None:
         color_list = sns.color_palette("Set1", n_colors)
     else:
-        if int(n_colors) <= int(len(color_list)):
+        if int(n_colors) > int(len(color_list)):
             raise ValueError("Increase the color_list variable to at least {} colors.".format(n_colors))
         else:
             color_list = color_list[:n_colors]
@@ -505,11 +743,6 @@ def quality_violin(adata, columns,
     if thresholds is None:
         thresholds = {col: {} for col in columns}
 
-    # Check that columns are in table
-    invalid_columns = set(columns) - set(table.columns)
-    if invalid_columns:
-        raise ValueError(f"The following columns from 'columns' were not found in '{which}' table: {invalid_columns}")
-
     # ---------------- Setup figure --------------#
 
     # Setting up output figure
@@ -521,7 +754,7 @@ def quality_violin(adata, columns,
         figsize = (ncols * 4, nrows * 4)  # static plot can be larger
 
     fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
-    axes_list = [axarr] if type(axarr).__name__ == "AxesSubplot" else axarr.flatten()
+    axes_list = [axarr] if type(axarr).__name__.startswith("Axes") else axarr.flatten()
 
     # Remove empty axes
     for ax in axes_list[len(columns):]:
@@ -672,8 +905,8 @@ def quality_violin(adata, columns,
     return figure, slider_dict
 
 
-def get_slider_thresholds(slider_dict):
-    """ Get thresholds from sliders.
+def get_slider_thresholds(slider_dict) -> dict:
+    """Get thresholds from sliders.
 
     Parameters
     ----------
@@ -682,8 +915,9 @@ def get_slider_thresholds(slider_dict):
 
     Returns
     -------
-    dict in the format threshold_dict[column][group] = {"min": <min_threshold>, "max": <max_threshold>} or
-    threshold_dict[column] = {"min": <min_threshold>, "max": <max_threshold>} if no grouping
+    dict
+        dict in the format threshold_dict[column][group] = {"min": <min_threshold>, "max": <max_threshold>} or
+        threshold_dict[column] = {"min": <min_threshold>, "max": <max_threshold>} if no grouping
 
     """
 

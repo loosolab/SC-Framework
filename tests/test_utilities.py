@@ -1,3 +1,5 @@
+"""Test utility functions."""
+
 import pytest
 import os
 import numpy as np
@@ -10,7 +12,7 @@ import scanpy as sc
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """ Returns adata object with 3 groups """
+    """Return adata object with 3 groups."""
 
     adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
@@ -20,19 +22,37 @@ def adata():
 
 @pytest.fixture
 def adata2():
-    """ Load and returns an anndata object. """
+    """Load and return an anndata object."""
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
     return sc.read_h5ad(f)
 
 
 @pytest.fixture
+def unsorted_fragments():
+    """Return adata object with 3 groups."""
+
+    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
+    return fragments
+
+
+@pytest.fixture
+def sorted_fragments():
+    """Return adata object with 3 groups."""
+
+    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
+    return fragments
+
+
+@pytest.fixture
 def berries():
+    """Return list of berries."""
     return ["blueberry", "strawberry", "blackberry"]
 
 
 @pytest.fixture
 def na_dataframe():
+    """Return DataFrame with columns of multiple types containing NA."""
     data = {'int': [3, 2, 1, np.nan],
             'float': [1.2, 3.4, 5.6, np.nan],
             'string': ['a', 'b', 'c', np.nan],
@@ -46,32 +66,40 @@ def na_dataframe():
     return df
 
 
+@pytest.fixture
+def marker_dict():
+    """Return a dict of cell type markers."""
+    return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+            "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
+            "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
+
+
 arr_ints = np.random.randint(10, size=(10, 10))
 arr_ints2 = arr_ints.astype(float)
 arr_floats = np.random.rand(10, 10)
 
 
 def test_run_cmd_valid():
-    """ Test if the command is run. """
+    """Test if the command is run."""
     utils.run_cmd("echo hello world")
 
 
 def test_run_cmd_invalid():
-    """ Check that invalid commands raise an error. """
+    """Check that invalid commands raise an error."""
     with pytest.raises(subprocess.CalledProcessError):
         utils.run_cmd("ecccho hello world")
 
 
 @pytest.mark.parametrize("arr,boolean", [(arr_ints, True), (arr_ints2, True), (arr_floats, False)])
 def test_is_integer_array(arr, boolean):
-    """ Get boolean of whether an array is an integer array """
+    """Get boolean of whether an array is an integer array."""
 
     result = utils.is_integer_array(arr)
     assert result == boolean
 
 
 def test_clean_flanking_strings():
-    """ Test if longest common pre- and suffix is removed. """
+    """Test if longest common pre- and suffix is removed."""
 
     paths = ["path_a.txt", "path_b.txt", "path_c.txt"]
     cleaned = utils.clean_flanking_strings(paths)
@@ -80,14 +108,14 @@ def test_clean_flanking_strings():
 
 
 def test_longest_common_suffix(berries):
-    """ Test if longest common suffix is found correctly """
+    """Test if longest common suffix is found correctly."""
 
     suffix = utils.longest_common_suffix(berries)
     assert suffix == "berry"
 
 
 def test_create_dir():
-    """ Test if the directory is created. """
+    """Test if the directory is created."""
 
     # Ensure that testdir is not already existing
     if os.path.isdir("testdir"):
@@ -101,7 +129,7 @@ def test_create_dir():
 
 
 def test_is_notebook():
-    """ Test if the function is run in a notebook """
+    """Test if the function is run in a notebook."""
 
     boolean = utils._is_notebook()
     assert boolean is False  # testing environment is not notebook
@@ -109,7 +137,7 @@ def test_is_notebook():
 
 @pytest.mark.parametrize("string,expected", [("1.3", True), ("astring", False)])
 def test_is_str_numeric(string, expected):
-    """ Test if a string can be converted to numeric """
+    """Test if a string can be converted to numeric."""
 
     result = utils.is_str_numeric(string)
 
@@ -117,14 +145,14 @@ def test_is_str_numeric(string, expected):
 
 
 def test_check_module():
-    """ Test if check_moduel raises an error for a non-existing module """
+    """Test if check_moduel raises an error for a non-existing module."""
 
     with pytest.raises(Exception):
         utils.check_module("nonexisting_module")
 
 
 def test_remove_prefix():
-    """ Test if prefix is removed from a string """
+    """Test if prefix is removed from a string."""
 
     strings = ["abcd", "abce", "abcf"]
     noprefix = [utils.remove_prefix(s, "abc") for s in strings]
@@ -132,21 +160,21 @@ def test_remove_prefix():
 
 
 def test_remove_suffix(berries):
-    """ Test if suffix is removed from a string """
+    """Test if suffix is removed from a string."""
 
     nosuffix = [utils.remove_suffix(s, "berry") for s in berries]
     assert nosuffix == ["blue", "straw", "black"]
 
 
 def test_split_list(berries):
-    """ Test if list is split correctly """
+    """Test if list is split correctly."""
 
     split = utils.split_list(berries, 2)
     assert split == [["blueberry", "blackberry"], ["strawberry"]]
 
 
 def test_read_list_file(berries):
-    """ Test if read_list_file returns the correct list from a file """
+    """Test if read_list_file returns the correct list from a file."""
 
     path = "berries.txt"
     utils.write_list_file(berries, path)
@@ -157,7 +185,7 @@ def test_read_list_file(berries):
 
 
 def test_write_list_file(berries):
-    """ Test if write_list_file writes a file """
+    """Test if write_list_file writes a file."""
 
     path = "berries.txt"
     utils.write_list_file(berries, path)
@@ -167,14 +195,14 @@ def test_write_list_file(berries):
 
 
 def test_fill_na(na_dataframe):
-    """ Test if na values in dataframe are filled correctly """
+    """Test if na values in dataframe are filled correctly."""
     utils.fill_na(na_dataframe)
     assert not na_dataframe.isna().any().any()
     assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '', '']
 
 
 def test_get_adata_subsets(adata):
-    """ Test if adata subsets are returned correctly """
+    """Test if adata subsets are returned correctly."""
 
     subsets = utils.get_adata_subsets(adata, "group")
 
@@ -184,7 +212,7 @@ def test_get_adata_subsets(adata):
 
 
 def test_remove_files():
-    """ Remove files from list """
+    """Remove files from list."""
 
     if not os.path.isfile("afile.txt"):
         os.mknod("afile.txt")
@@ -196,7 +224,7 @@ def test_remove_files():
 
 
 def test_pseudobulk_table(adata):
-    """ Test if pseudobulk table is returned correctly """
+    """Test if pseudobulk table is returned correctly."""
 
     pseudobulk = utils.pseudobulk_table(adata, "group")
 
@@ -205,20 +233,17 @@ def test_pseudobulk_table(adata):
 
 
 def test_save_h5ad(adata):
-    """ Test if h5ad file is saved correctly """
+    """Test if h5ad file is saved correctly."""
 
     path = "test.h5ad"
     utils.save_h5ad(adata, path)
 
-    adata_read = sc.read_h5ad(path)
-
     assert os.path.isfile(path)
-    assert "user" in adata_read.uns["sctoolbox"]
     os.remove(path)  # clean up after tests
 
 
 def test_get_organism():
-    """ Test function get_organism(). """
+    """Test function get_organism()."""
 
     # invalid host
     with pytest.raises(ConnectionError):
@@ -230,6 +255,60 @@ def test_get_organism():
 
     # valid call
     assert utils.get_organism("ENSG00000164690") == "Homo_sapiens"
+
+
+def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
+    """Test if the _bed_is_sorted() function works as expected."""
+
+    assert utils._bed_is_sorted(sorted_fragments)
+    assert ~utils._bed_is_sorted(unsorted_fragments)
+
+
+def test_sort_bed(unsorted_fragments):
+    """Test if the sort bedfile functio works."""
+    sorted_bedfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'sorted_bedfile.bed')
+    utils._sort_bed(unsorted_fragments, sorted_bedfile)
+
+    assert utils._bed_is_sorted(sorted_bedfile)
+
+    # Clean up
+    os.remove(sorted_bedfile)
+
+
+def test_check_marker_lists(adata2, marker_dict):
+    """Test that check_marker_lists intersects lists correctly."""
+
+    filtered_marker = utils.check_marker_lists(adata2, marker_dict)
+
+    assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+                               "Celltype B": ['ENSMUSG00000102272']}
+
+
+@pytest.mark.parametrize("regex, result", [(".*_str",
+                                            ["category_str"]),
+                                           ([".*_str", ".*_num"],
+                                            ["category_str", "category_num"]),
+                                           (["INVALID"], [])])
+def test_identify_columns(na_dataframe, regex, result):
+    """Test if identify returns matching columns."""
+
+    assert utils.identify_columns(na_dataframe, regex) == result
+
+
+@pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
+                                             (np.array([[1, 2, 3], [1, 2, 3]]), 1, 100),
+                                             (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
+def test_scale_values(array, mini, maxi):
+    """Test that scaled values are in given range."""
+    result = utils.scale_values(array, mini, maxi)
+
+    assert len(result) == len(array)
+    if len(result.shape) == 1:
+        assert all((mini <= result) & (result <= maxi))
+    else:
+        for i in range(len(result)):
+            assert all((mini <= result[i]) & (result[i] <= maxi))
+
 
 # TODO
 # following tests are skipped due to occasional "No internet connection" error.

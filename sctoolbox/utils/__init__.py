@@ -1,3 +1,5 @@
+"""Provides a range of different utilitis."""
+
 from importlib import import_module
 from sctoolbox._modules import import_submodules
 function_dict = import_submodules(globals())

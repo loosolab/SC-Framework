@@ -1,33 +1,40 @@
-""" Functionality to split bam files into smaller bam files based on clustering in adata.obs """
-
+"""Functionality to split bam files into smaller bam files based on clustering in adata.obs."""
 import re
 import os
 import pandas as pd
 import multiprocessing
-import warnings
+from typing import TYPE_CHECKING
+
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
+
+if TYPE_CHECKING:
+    import pysam
 
 
-def bam_adata_ov(adata, bamfile, cb_col):
+def bam_adata_ov(adata, bamfile, cb_col) -> float:
     """
-    Check if adata.obs barcodes existing in a column of a bamfile
+    Check if adata.obs barcodes existing in a column of a bamfile.
 
     Parameters
     ----------
-    adata: anndata.AnnData
+    adata : anndata.AnnData
         adata object where adata.obs is stored
-    bamfile: str
+    bamfile : str
         path of the bamfile to investigate
-    cb_col: str
+    cb_col : str
         bamfile column to extract the barcodes from
 
     Returns
-    --------
+    -------
     float
         hitrate of the barcodes in the bamfile
-
     """
+
+    logger.info("calculating barcode overlap between bamfile and adata.obs")
     bam_obj = open_bam(bamfile, "rb")
 
     sample = []
@@ -48,40 +55,43 @@ def bam_adata_ov(adata, bamfile, cb_col):
     return hitrate
 
 
-def check_barcode_tag(adata, bamfile, cb_col):
+@deco.log_anndata
+def check_barcode_tag(adata, bamfile, cb_col) -> None:
     """
     Check for the possibilty that the wrong barcode is used.
 
     Parameters
     ----------
-    adata: anndata.AnnData
+    adata : anndata.AnnData
         adata object where adata.obs is stored
-    bamfile: str
+    bamfile : str
         path of the bamfile to investigate
-    cb_col: str
+    cb_col : str
         bamfile column to extract the barcodes from
 
-    Returns
-    -------
-
+    Raises
+    ------
+    ValueError
+        If barcode hit rate could not be identified
     """
+
     hitrate = bam_adata_ov(adata, bamfile, cb_col)
 
     if hitrate == 0:
-        warnings.warn('None of the barcodes from the bamfile found in the .obs table.\n'
-                      'Consider if you are using the wrong column cb-tag or bamfile.')
+        logger.warning('None of the barcodes from the bamfile found in the .obs table.\n'
+                       'Consider if you are using the wrong column cb-tag or bamfile.')
     elif hitrate <= 0.05:
-        warnings.warn('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
-                      'Consider if you are using the wrong column for cb-tag or bamfile.')
+        logger.warning('Only 5% or less of the barcodes from the bamfile found in the .obs table.\n'
+                       'Consider if you are using the wrong column for cb-tag or bamfile.')
     elif hitrate > 0.05:
-        print('Barcode tag: OK')
+        logger.info('Barcode tag: OK')
     else:
         raise ValueError("Could not identify barcode hit rate.")
 
 #####################################################################
 
 
-def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False):
+def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False) -> None:
     """
     Subset a bam file based on a list of barcodes.
 
@@ -100,6 +110,7 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     overwrite : bool, default False
         Overwrite output file if it exists.
     """
+
     # check then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
@@ -112,7 +123,7 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     utils.create_dir(bam_out)
 
     if os.path.exists(bam_out) and overwrite is False:
-        warnings.warn(f"Output file {bam_out} exists. Skipping.")
+        logger.warning(f"Output file {bam_out} exists. Skipping.")
         return
 
     # Open files
@@ -162,9 +173,10 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
     # Close bamfiles
     bam_in_obj.close()
     bam_out_obj.close()
-    print(f"Wrote {written} reads to output bam")
+    logger.info(f"Wrote {written} reads to output bam")
 
 
+@deco.log_anndata
 def split_bam_clusters(adata,
                        bams,
                        groupby,
@@ -179,7 +191,7 @@ def split_bam_clusters(adata,
                        max_queue_size=1000,
                        individual_pbars=False,
                        sort_bams=False,
-                       index_bams=False):
+                       index_bams=False) -> None:
     """
     Split BAM files into clusters based on 'groupby' from the anndata.obs table.
 
@@ -199,10 +211,12 @@ def split_bam_clusters(adata,
         Prefix to use for the output files.
     reader_threads : int, default 1
         Number of threads to use for reading.
-    writer_threads : int, default 1,
+    writer_threads : int, default 1
         Number of threads to use for writing.
     parallel : boolean, default False
         Whether to enable parallel processsing.
+    pysam_threads : int, default 4
+        Number of threads for pysam.
     buffer_size : int, default 10000
         The size of the buffer between readers and writers.
     max_queue_size : int, default 1000
@@ -213,8 +227,16 @@ def split_bam_clusters(adata,
         Sort reads in each output bam
     index_bams : boolean, default False
         Create an index file for each output bam. Will throw an error if `sort_bams` is False.
+
+    Raises
+    ------
+    ValueError:
+        1. If groupby column is not in adata.obs
+        2. If barcode column is not in adata.obs
+        3. If index_bams is set and sort_bams is False
     """
-    # check then load modules
+
+    # then load modules
     utils.check_module("tqdm")
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
@@ -242,10 +264,10 @@ def split_bam_clusters(adata,
 
     # Establish clusters from obs
     clusters = list(set(adata.obs[groupby]))
-    print(f"Found {len(clusters)} groups in .obs.{groupby}: {clusters}")
+    logger.info(f"Found {len(clusters)} groups in .obs.{groupby}: {clusters}")
 
     if writer_threads > len(clusters):
-        print(f"The number of writers ({writer_threads}) is larger than the number of output clusters ({len(clusters)}). Limiting writer_threads to the number of clusters.")
+        logger.info(f"The number of writers ({writer_threads}) is larger than the number of output clusters ({len(clusters)}). Limiting writer_threads to the number of clusters.")
         writer_threads = len(clusters)
 
     # setup barcode <-> cluster dict
@@ -258,7 +280,7 @@ def split_bam_clusters(adata,
     template = open_bam(bams[0], "rb", verbosity=0)
 
     # Get number in reads in input bam(s)
-    print("Reading total number of reads from bams...")
+    logger.info("Reading total number of reads from bams...")
     n_reads = {}
     for path in bams:
         handle = open_bam(path, "rb", verbosity=0)
@@ -266,7 +288,7 @@ def split_bam_clusters(adata,
         handle.close()
 
     # --------- Start splitting --------- #
-    print("Starting splitting of bams...")
+    logger.info("Starting splitting of bams...")
     if parallel:
         # ---------- parallel splitting ---------- #
 
@@ -335,7 +357,7 @@ def split_bam_clusters(adata,
 
         # Loop over bamfile(s)
         for i, bam in enumerate(bams):
-            print(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
+            logger.info(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
 
             bam_obj = open_bam(bam, "rb", verbosity=0)
 
@@ -366,7 +388,7 @@ def split_bam_clusters(adata,
             # close progressbar
             pbar.close()
 
-            print(f"Wrote {written} reads to cluster files")
+            logger.info(f"Wrote {written} reads to cluster files")
 
         # Close all files
         for handle in handles.values():
@@ -375,7 +397,7 @@ def split_bam_clusters(adata,
     # ---------- post split functionality ---------- #
     # sort reads
     if sort_bams:
-        print("Sorting output bams...")
+        logger.info("Sorting output bams...")
         for file in tqdm(output_files, desc="Sorting reads", unit="files"):
             temp_file = file + ".tmp"  # temporary sort file
             pysam.sort("-o", temp_file, file)
@@ -383,18 +405,18 @@ def split_bam_clusters(adata,
 
     # index files
     if index_bams:
-        print("Indexing output bams...")
+        logger.info("Indexing output bams...")
         for file in tqdm(output_files, desc="Indexing", unit="files"):
             pysam.index(file, "-@", str(pysam_threads))
 
-    print("Finished splitting bams!")
+    logger.info("Finished splitting bams!")
 
 
 # ------------------------------------------------------------------ #
 # ---------------------- bam helper functions ---------------------- #
 # ------------------------------------------------------------------ #
 
-def open_bam(file, mode, verbosity=3, **kwargs):
+def open_bam(file, mode, verbosity=3, **kwargs) -> "pysam.AlignmentFile":
     """
     Open bam file with pysam.AlignmentFile. On a specific verbosity level.
 
@@ -411,9 +433,10 @@ def open_bam(file, mode, verbosity=3, **kwargs):
 
     Returns
     -------
-    pysam.AlignmentFile :
+    pysam.AlignmentFile
         Object to work on SAM/BAM files.
     """
+
     # check then load modules
     utils.check_module("pysam")
     import pysam
@@ -431,9 +454,9 @@ def open_bam(file, mode, verbosity=3, **kwargs):
     return handle
 
 
-def get_bam_reads(bam_obj):
+def get_bam_reads(bam_obj) -> int:
     """
-    Get the number of reads from an open pysam.AlignmentFile
+    Get the number of reads from an open pysam.AlignmentFile.
 
     Parameters
     ----------
@@ -442,9 +465,10 @@ def get_bam_reads(bam_obj):
 
     Returns
     -------
-    int :
+    int
         number of reads in the bam file
     """
+
     # check then load modules
     utils.check_module("pysam")
     import pysam
@@ -468,9 +492,9 @@ def _monitor_progress(progress_queue,
                       reader_jobs,
                       writer_jobs,
                       total_reads,
-                      individual_pbars=False):
+                      individual_pbars=False) -> int:
     """
-    Function for monitoring read/write progress of split_bam_clusters.
+    Monitor read/write progress of split_bam_clusters.
 
     Parameters
     ----------
@@ -489,9 +513,10 @@ def _monitor_progress(progress_queue,
 
     Returns
     -------
-    int :
+    int
         Returns 0 on success.
     """
+
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
@@ -571,7 +596,7 @@ def _monitor_progress(progress_queue,
     return 0  # success
 
 
-def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_size=10000):
+def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_size=10000) -> int:
     """
     Open bam file and add reads to respective output queue.
 
@@ -579,10 +604,8 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     ----------
     path : str
         Path to bam file.
-    read_num : int
-        Number of reads per chunk.
-    out_queue : dict
-        Dict of multiprocesssing.Queues with cluster as key
+    out_queues : dict
+        Dict of multiprocesssing.Queues with cluster as key.
     bc2cluster : dict
         Dict of clusters with barcode as key.
     tag : str
@@ -594,9 +617,15 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
 
     Returns
     -------
-    int :
+    int
         Returns 0 on success.
+
+    Raises
+    ------
+    Exception
+        If buffered reader failes.
     """
+
     try:
         # open bam
         bam = open_bam(path, "rb", verbosity=0)
@@ -648,7 +677,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
         raise e
 
 
-def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
+def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) -> int:
     """
     Write reads to given file.
 
@@ -667,9 +696,15 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4):
 
     Returns
     -------
-    int :
+    int
         Returns 0 on success.
+
+    Raises
+    ------
+    Exception
+        If buffered reader failes.
     """
+
     try:
         import pysam  # install of pysam was checked in parent function
 
@@ -724,7 +759,7 @@ def bam_to_bigwig(bam,
                   tempdir=".",
                   remove_temp=True,
                   bedtools_path=None,
-                  bgtobw_path=None):
+                  bgtobw_path=None) -> str:
     """
     Convert reads in a bam-file to bigwig format.
 
@@ -749,7 +784,8 @@ def bam_to_bigwig(bam,
 
     Returns
     -------
-    str : Path to output file.
+    str
+        Path to output file.
     """
 
     # Set output name and check if bigwig already exists
@@ -757,7 +793,7 @@ def bam_to_bigwig(bam,
         output = bam.replace(".bam", ".bw")
 
     if os.path.exists(output) and overwrite is False:
-        warnings.warn("Output file already exists. Set overwrite=True to overwrite.")
+        logger.warning("Output file already exists. Set overwrite=True to overwrite.")
         return output
 
     # Check required modules
@@ -780,7 +816,7 @@ def bam_to_bigwig(bam,
             f.write(f"{chrom}\t{size}\n")
 
     # Get number of mapped reads in file for normalization
-    print("Getting scaling factor")
+    logger.info("Getting scaling factor")
     scaling_factor = 0
     if scale:
         n_reads = get_bam_reads(bamobj)
@@ -791,24 +827,24 @@ def bam_to_bigwig(bam,
     # Convert bam to bedgraph
     bedgraph_out = utils.get_temporary_filename(tempdir)
     cmd = f"{bedtools_path} genomecov -bg -ibam {bam} > {bedgraph_out}"
-    print("Running: " + cmd)
+    logger.info("Running: " + cmd)
     utils.run_cmd(cmd)
 
     # Sort and scale input
     bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
     cmd = f"sort -k1,1 -k2,2n -T {tempdir} {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
-    print("Running: " + cmd)
+    logger.info("Running: " + cmd)
     utils.run_cmd(cmd)
 
     # Convert bedgraph to bigwig
     cmd = f"{bgtobw_path} {bedgraph_out_sorted} {chromsizes_file} {output}"
-    print("Running: " + cmd)
+    logger.info("Running: " + cmd)
     utils.run_cmd(cmd)
 
     # Remove all temp files
     if remove_temp is True:
         utils.remove_files([chromsizes_file, bedgraph_out, bedgraph_out_sorted])
 
-    print(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
+    logger.info(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
 
     return output

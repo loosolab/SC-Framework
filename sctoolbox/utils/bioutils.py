@@ -1,3 +1,5 @@
+"""Bio related utility functions."""
+
 import numpy as np
 import pandas as pd
 import re
@@ -6,12 +8,19 @@ import apybiomart
 from scipy.sparse import issparse
 import gzip
 import argparse
+import os
+import sys
+import scanpy
+
+from typing import Optional
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
 
 
+@deco.log_anndata
 def pseudobulk_table(adata, groupby, how="mean", layer=None,
-                     percentile_range=(0, 100), chunk_size=1000):
+                     percentile_range=(0, 100), chunk_size=1000) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -21,18 +30,25 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
         Anndata object with counts in .X.
     groupby : str
         Column name in adata.obs from which the pseudobulks are created.
-    how : str, default "mean"
-        How to calculate the value per group (psuedobulk). Can be one of "mean" or "sum".
-    percentile_range : tuple of 2 values, default (0,100)
+    how : {'mean', 'sum'}
+        How to calculate the value per group (psuedobulk).
+    layer : str, default None
+        Name of an anndata layer to use instead of `adata.X`.
+    percentile_range : tuple of 2 values, default (0, 100)
         The percentile of cells used to calculate the mean/sum for each feature.
-        Is used to limit the effect of individual cell outliers, e.g. by setting (0,95) to exclude high values in the calculation.
+        Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.
     chunk_size : int, default 1000
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
+
+    Raises
+    ------
+    TypeError
+        If `percentile_range` is not of type `tuple`.
     """
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
@@ -92,102 +108,26 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 #                        Format adata indexes                       #
 #####################################################################
 
-def format_index(adata, from_column=None):
+@deco.log_anndata
+def barcode_index(adata) -> None:
     """
-    This formats the index of adata.var by the pattern ["chr", "start", "stop"]
+    Check if the barcode is the index.
+
+    Will replace the index with `adata.obs["barcode"]` if index does not contain barcodes.
+
+    TODO refactor
+    - name could be more descriptive
+    - return adata
+    - inplace parameter
+    - use logger
+    ...
+
     Parameters
     ----------
-    adata: anndata.AnnData
-    from_column: None or column name (str) in adata.var to be set as index
-
-    Returns
-    -------
-
-    """
-    if from_column is None:
-        entry = adata.var.index[0]
-        index_type = get_index_type(entry)
-
-        if index_type == 'snapatac':
-            adata.var['name'] = adata.var['name'].str.replace("b'", "")
-            adata.var['name'] = adata.var['name'].str.replace("'", "")
-
-            # split the peak column into chromosome start and end
-            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
-            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
-            # set types
-            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
-            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
-            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
-            # remove start_end column
-            adata.var.drop('start_end', axis=1, inplace=True)
-
-            adata.var = adata.var.set_index('name')
-
-        elif index_type == "start_name":
-            coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
-            new_index = []
-            for line in adata.var.index:
-                new_index.append(re.search(coordinate_pattern, line).group(0))
-            adata.var['new_index'] = new_index
-            adata.var.set_index('new_index', inplace=True)
-
-    else:
-        entry = list(adata.var[from_column])[0]
-        index_type = get_index_type(entry)
-
-        if index_type == 'snapatac':
-            adata.var['name'] = adata.var['name'].str.replace("b'", "")
-            adata.var['name'] = adata.var['name'].str.replace("'", "")
-
-            # split the peak column into chromosome start and end
-            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
-            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
-            # set types
-            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
-            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
-            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
-            # remove start_end column
-            adata.var.drop('start_end', axis=1, inplace=True)
-
-            adata.var = adata.var.set_index('name')
-
-        elif index_type == "start_name":
-            coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
-            new_index = []
-            for line in adata.var[from_column]:
-                new_index.append(re.search(coordinate_pattern, line).group(0))
-            adata.var['new_index'] = new_index
-            adata.var.set_index('new_index', inplace=True)
-
-
-def get_index_type(entry):
-    """
-    Check the format of the index by regex
-    Parameters
-    ----------
-    entry
-
-    Returns
-    -------
-
+    adata : anndata.AnnData
+        Anndata to perform check on.
     """
 
-    regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
-    regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
-
-    if re.match(regex_snapatac, entry):
-        return 'snapatac'
-    if re.match(regex_start_name, entry):
-        return 'start_name'
-
-
-def barcode_index(adata):
-    """
-    check if the barcode is the index
-    :param adata:
-    :return:
-    """
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
@@ -214,22 +154,30 @@ def barcode_index(adata):
 #                  Converting between gene id and name              #
 #####################################################################
 
-def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
+def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
     """
     Get the organism name to the given Ensembl ID.
 
     Parameters
     ----------
     ensembl_id : str
-    Any Ensembl ID. E.g. ENSG00000164690
+        Any Ensembl ID. E.g. ENSG00000164690
     host : str
-    Ensembl server address.
+        Ensembl server address.
 
     Returns
     -------
-    str :
+    str
         Organism assigned to the Ensembl ID
+
+    Raises
+    ------
+    ConnectionError
+        If there is an unexpected (or no) response from the server.
+    ValueError
+        If the returned organism is ambiguous.
     """
+
     # this will redirect
     url = f"{host}{ensembl_id}"
     response = requests.get(url)
@@ -249,7 +197,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/"):
     return species
 
 
-def gene_id_to_name(ids, species):
+def gene_id_to_name(ids, species) -> pd.DataFrame:
     """
     Get Ensembl gene names to Ensembl gene id.
 
@@ -262,9 +210,15 @@ def gene_id_to_name(ids, species):
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame
         DataFrame with gene ids and matching gene names.
+
+    Raises
+    ------
+    ValueError
+        If provided Ensembl IDs or organism is invalid.
     """
+
     if not all(id.startswith("ENS") for id in ids):
         raise ValueError("Invalid Ensembl IDs detected. A valid ID starts with 'ENS'.")
 
@@ -286,7 +240,8 @@ def gene_id_to_name(ids, species):
     return id_name_mapping
 
 
-def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True):
+@deco.log_anndata
+def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Add gene names to adata.var.
 
@@ -307,9 +262,15 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData]
         AnnData object with gene names.
+
+    Raises
+    ------
+    ValueError
+        If invalid parameter choice or column name not found in adata.var.
     """
+
     if not id_col_name and not index:
         raise ValueError("Either set parameter id_col_name or index.")
     elif not index and id_col_name not in adata.var.columns:
@@ -358,28 +319,35 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
         return adata
 
 
-def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True):
+@deco.log_anndata
+def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
     """
     Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
 
     Parameters
     ----------
-    adata: scanpy.AnnData
+    adata : scanpy.AnnData
         AnnData object
-    column: str
+    column : str
         Column name in adata.var
-    unified_names: str, default "unified_names"
+    unified_column : str, default "unified_names"
         Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
     species : str, default "auto"
         Species of the dataset. On default, species is inferred based on gene ids.
-    inplace: boolean, default True
+    inplace : boolean, default True
         Whether to modify adata or return a copy.
 
     Returns
     -------
-    scanpy.AnnData or None :
+    Optional[scanpy.AnnData]
         AnnData object with modified gene column.
+
+    Raises
+    ------
+    ValueError
+        If column name is not found in `adata.var` or no Ensembl IDs in selected column.
     """
+
     if column not in adata.var.columns:
         raise ValueError(f"Invalid column name. Name has to be a column found in adata.var. Available names are: {adata.var.columns}.")
 
@@ -427,19 +395,33 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 #                   Check integrity of gtf file                     #
 #####################################################################
 
-def _gtf_integrity(gtf):
-    '''
-    Checks the integrity of a gtf file by examining:
+def _gtf_integrity(gtf) -> bool:
+    """
+    Check if the provided file follows the gtf-format.
+
+    TODO rather return False than raise an error.
+
+    Checks the following:
         - file-ending
         - header ##format: gtf
         - number of columns == 9
         - regex pattern of column 9 matches gtf specific format
 
-    :param gtf: str
-        Path to .gtf file containing genomic elements for annotation.
-    :return: boolean
-        True if the file passed all tests
-    '''
+    Parameters
+    ----------
+    gtf : str
+        Path to file.
+
+    Returns
+    -------
+    bool
+        True if the file is a valid gtf-file.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the file is not in gtf-format.
+    """
 
     regex_header = '#+.*'
     regex_format_column = '#+format: gtf.*'  # comment can start with one or more '#'
@@ -487,3 +469,105 @@ def _gtf_integrity(gtf):
         raise argparse.ArgumentTypeError('gtf file is corrupted')
 
     return True  # the function only returns of no error is raised
+
+
+def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
+    """
+    Overlap two bedfiles and writes the overlap to a new bedfile.
+
+    Parameters
+    ----------
+    bed1 : str
+        path to bedfile1
+    bed2 : str
+        path to bedfile2
+    overlap : str
+        path to output bedfile
+
+    Returns
+    -------
+    None
+
+    """
+    # Overlap two bedfiles
+    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
+    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {overlap}'
+    # run command
+    os.system(intersect_cmd)
+
+
+def _read_bedfile(bedfile) -> list:
+    """
+    Read in a bedfile and returns a list of the rows.
+
+    Parameters
+    ----------
+    bedfile : str
+        path to bedfile
+
+    Returns
+    -------
+    list
+        list of bedfile rows
+    """
+    bed_list = []
+    with open(bedfile, 'rb') as file:
+        for row in file:
+            row = row.decode("utf-8")
+            row = row.split('\t')
+            line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
+            bed_list.append(line)
+    file.close()
+    return bed_list
+
+
+def _bed_is_sorted(bedfile) -> bool:
+    """
+    Check if a bedfile is sorted by the start position.
+
+    Parameters
+    ----------
+    bedfile : str
+        path to bedfile
+
+    Returns
+    -------
+    bool
+        True if bedfile is sorted
+    """
+    with open(bedfile) as file:
+        counter = 0
+        previous = 0
+        for row in file:
+            row = row.split('\t')
+            if previous > int(row[1]):
+                file.close()
+                return False
+
+            previous = int(row[1])
+
+            counter += 1
+            if counter > 100:
+                break
+
+    file.close()
+    return True
+
+
+def _sort_bed(bedfile, sorted_bedfile) -> None:
+    """
+    Sort a bedfile by the start position.
+
+    Parameters
+    ----------
+    bedfile : str
+        path to bedfile
+    sorted_bedfile : str
+        path to sorted bedfile
+
+    Returns
+    -------
+    None
+    """
+    sort_cmd = f'sort -k1,1 -k2,2n {bedfile} > {sorted_bedfile}'
+    os.system(sort_cmd)

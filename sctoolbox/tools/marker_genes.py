@@ -1,3 +1,4 @@
+"""Tools for marker gene analyis."""
 import os
 import re
 import glob
@@ -7,31 +8,40 @@ import numpy as np
 import scanpy as sc
 import itertools
 import warnings
-from anndata import ImplicitModificationWarning
+import anndata
 from pathlib import Path
+from typing import Optional
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
-def get_chromosome_genes(gtf, chromosomes):
+def get_chromosome_genes(gtf, chromosomes) -> list[str]:
     """
-    Get a list of all genes in the gtf for certain chromosome(s)
+    Get a list of all genes in the gtf for certain chromosome(s).
 
     Parameters
-    ------------
+    ----------
     gtf : str
         Path to the gtf file.
     chromosomes : str or list
         A chromosome or a list of chromosome names to search for genes in.
 
     Returns
-    ---------
-    list :
+    -------
+    list[str]
         A list of all genes in the gtf for the given chromosome(s).
 
-    Note
-    ------
+    Notes
+    -----
     This function is not directly used by the framework, but is used to create the marker gene lists for 'label_genes'.
+
+    Raises
+    ------
+    ValueError:
+        If not all given chromosomes are found in the GTF-file.
     """
 
     if isinstance(chromosomes, str):
@@ -67,36 +77,35 @@ def get_chromosome_genes(gtf, chromosomes):
     return gene_names
 
 
-def label_genes(adata,
-                gene_column=None,
-                species=None):
+@deco.log_anndata
+def label_genes(adata, species, gene_column=None) -> list[str]:
     """
-    Label genes as ribosomal, mitochrondrial, cell cycle phase and gender genes.
+    Label genes as ribosomal, mitochrondrial and gender genes.
+
+    Gene labels are added inplace.
 
     Parameters
-    ------------
+    ----------
     adata : anndata.Anndata
-        adata object
-    gene_column : str, optional
-        Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.
-    species : str, optional
-        Name of the species. If not provided, the species is inferred adata.uns["infoprocess"]["species"]
+        The anndata object.
+    species : str
+        Name of the species.
+    gene_column : str, default None
+        Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
 
-    Notes
+    Returns
+    -------
+    list[str]
+        List containing the column names added to adata.var.
+
+    See Also
     --------
-    Author: Guilherme Valente & Mette Bentsen
-
+    sctoolbox.tools.qc_filter.predict_cell_cycle : for cell cycle prediction.
     """
 
     # Location of gene lists
     genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
 
-    # Get organism from the adata object
-    if species is None:
-        try:
-            species = adata.uns['infoprocess']['species']
-        except KeyError:
-            raise ValueError("Species not provided and could not be found in adata.uns['infoprocess']['species']")
     species = species.lower()
 
     # Get the full list of genes from adata
@@ -106,68 +115,51 @@ def label_genes(adata,
         adata_genes = adata.var[gene_column]
 
     # ------- Annotate genes in adata ------ #
-    added = []
+    var_cols = []  # store names of new var columns
 
     # Annotate ribosomal genes
     adata.var["is_ribo"] = adata_genes.str.lower().str.startswith(('rps', 'rpl'))
-    added.append("is_ribo")
+    var_cols.append("is_ribo")
 
     # Annotate mitochrondrial genes
     path_mito_genes = genelist_dir + species + "_mito_genes.txt"
     if os.path.exists(path_mito_genes):
         gene_list = utils.read_list_file(path_mito_genes)
         adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
-        added.append("is_mito")
-
     else:
         adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
-
-    # Annotate cell cycle genes
-    path_cellcycle_genes = genelist_dir + species + "_cellcycle_genes.txt"
-    if os.path.exists(path_cellcycle_genes):
-        table = pd.read_csv(path_cellcycle_genes, header=None, sep="\t")
-        cc_dict = dict(zip(table[0], table[1]))
-
-        adata.var["cellcycle"] = [cc_dict.get(gene, "NA") for gene in adata_genes]  # assigns cell cycle phase or "NA"
-
-    else:
-        available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
-        print(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
+    var_cols.append("is_mito")
 
     # Annotate gender genes
     path_gender_genes = genelist_dir + species + "_gender_genes.txt"
     if os.path.exists(path_gender_genes):
         gene_list = utils.read_list_file(path_gender_genes)
         adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
-        added.append("is_gender")
-
+        var_cols.append("is_gender")
     else:
         available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
         available_species = utils.clean_flanking_strings(available_files)
-        print(f"No gender genes available for species '{species}'. Available species are: {available_species}")
+        logger.warning(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
-    # --------- Save information -------- #
-
-    # Add information to adata.uns
-    utils.add_uns_info(adata, "genes_labeled", added)
+    return var_cols
 
 
-def add_gene_expression(adata, gene):
+@deco.log_anndata
+def add_gene_expression(adata, gene) -> None:
     """
     Add values of gene/feature per cell to the adata.obs dataframe.
 
     Parameters
-    ------------
+    ----------
     adata : anndata.AnnData
         Anndata object containing gene expression/counts.
     gene : str
         Name of the gene/feature from the adata.var index to be added to adata.obs.
 
-    Returns
-    -----------
-    None
-        A column named "<gene>_values" is added to adata.obs with the expression/count values from .X
+    Raises
+    ------
+    ValueError:
+        If gene is not in adata.var.index.
     """
 
     # Get expression
@@ -184,29 +176,58 @@ def add_gene_expression(adata, gene):
 #                 Scanpy rank genes groups                 #
 ############################################################
 
+@deco.log_anndata
 def run_rank_genes(adata, groupby,
                    min_in_group_fraction=0.25,
                    min_fold_change=0.5,
                    max_out_group_fraction=0.8,
-                   **kwargs):
-    """ Run scanpy rank_genes_groups and filter_rank_genes_groups. """
+                   **kwargs) -> None:
+    """
+    Run scanpy rank_genes_groups and filter_rank_genes_groups.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object containing gene expression/counts.
+    groupby : str
+        Column by which the cells in adata should be grouped.
+    min_in_group_fraction : float, default 0.25
+        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
+        Parameter forwarded to scanpy.tl.filter_rank_genes_groups.
+    min_fold_change : float, default 0.5
+        Minimum foldchange (+/-) to be considered as a marker gene.
+        Parameter forwarded to scanpy.tl.filter_rank_genes_groups.
+    max_out_group_fraction : float, default 0.8
+        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
+        Parameter forwarded to scanpy.tl.filter_rank_genes_groups.
+    **kwargs : dict
+        Additional arguments forwarded to scanpy.tl.rank_genes_groups.
+
+    Raises
+    ------
+    ValueError:
+        If number of groups defined by the groupby parameter is < 2.
+    """
 
     # Check that adata is an AnnData object
     # if not isinstance(adata, AnnData):
     #     raise ValueError("adata must be an AnnData object.")
 
+    if adata.obs[groupby].dtype.name != "category":
+        adata.obs[groupby] = adata.obs[groupby].astype("category")
+
     if "log1p" in adata.uns:
         adata.uns['log1p']['base'] = None  # hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881
 
     # Check number of groups in groupby
-    if len(adata.obs[groupby].cat.categories) < 2:
+    if adata.obs[groupby].nunique() < 2:
         raise ValueError("groupby must contain at least two groups.")
 
     # Catch ImplicitModificationWarning from scanpy
     params = {'method': 't-test'}  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
     params.update(kwargs)
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=ImplicitModificationWarning, message="Trying to modify attribute.*")
+        warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
         sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
 
     sc.tl.filter_rank_genes_groups(adata,
@@ -219,13 +240,15 @@ def run_rank_genes(adata, groupby,
     adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
 
 
+@deco.log_anndata
 def pairwise_rank_genes(adata, groupby,
                         foldchange_threshold=1,
                         min_in_group_fraction=0.25,
                         max_out_group_fraction=0.5,
                         **kwargs
-                        ):
-    """ Rank genes pairwise between groups in 'groupby'.
+                        ) -> pd.DataFrame:
+    """
+    Rank genes pairwise between groups in 'groupby'.
 
     Parameters
     ----------
@@ -233,14 +256,19 @@ def pairwise_rank_genes(adata, groupby,
         Anndata object containing expression data.
     groupby : str
         Key in adata.obs containing groups to be compared.
-    foldchange_threshold : float, default: 1
+    foldchange_threshold : float, default 1
         Minimum foldchange (+/-) to be considered as a marker gene.
-    min_in_group_fraction : float, default: 0.25
+    min_in_group_fraction : float, default 0.25
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
-    max_out_group_fraction : float, default: 0.5
+    max_out_group_fraction : float, default 0.5
         Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
-    kwargs : dict
+    **kwargs : dict
         Additional arguments to be passed to scanpy.tl.rank_genes_groups.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containinge the pairwise ranked gened between the groups.
     """
 
     groups = adata.obs[groupby].astype("category").cat.categories
@@ -293,24 +321,35 @@ def pairwise_rank_genes(adata, groupby,
     return merged
 
 
-def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False, var_columns=[], save_excel=None):
-    """ Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
+@deco.log_anndata
+def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False,
+                          var_columns=[], save_excel=None) -> dict[str, pd.DataFrame]:
+    """
+    Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing ranked genes.
-    key : str, optional
-        The key in adata.uns to be used for fetching ranked genes. Default: "rank_genes_groups".
-    out_group_fractions : bool, optional
-        If True, the output tables will contain additional columns giving the fraction of genes per group. Default: False.
-    save_excel : str, optional
-        The path to a file for writing the marker gene tables as an excel file (with one sheet per group). Default: None (no file is written).
+    key : str, default "rank_genes_groups"
+        The key in adata.uns to be used for fetching ranked genes.
+    out_group_fractions : bool, default False
+        If True, the output tables will contain additional columns giving the fraction of genes per group.
+    var_columns : list. default []
+        List of adata.var columns, which will be added to pandas.DataFrame.
+    save_excel : str, default None
+        The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
 
     Returns
-    --------
-    dict :
+    -------
+    dict[str, pd.DataFrame]
         A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.
+
+    Raises
+    ------
+    ValueError:
+        1. If var_columns is no list.
+        2. If not all columns given in var_columns are in adata.var.
     """
 
     # Check input type
@@ -392,7 +431,13 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
     # If chosen: Save tables to joined excel
     if save_excel is not None:
-        with pd.ExcelWriter(save_excel) as writer:
+
+        if not isinstance(save_excel, str):
+            raise ValueError("'save_excel' must be a string.")
+
+        filename = settings.full_table_prefix + save_excel
+
+        with pd.ExcelWriter(filename) as writer:
             for group in group_tables:
                 table = group_tables[group].copy()
 
@@ -402,28 +447,37 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
                 table.to_excel(writer, sheet_name=utils._sanitize_sheetname(f'{group}'), index=False)
 
+        logger.info(f"Saved marker gene tables to '{filename}'")
+
     return group_tables
 
 
-def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
+@deco.log_anndata
+def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True) -> Optional[anndata.AnnData]:
     """
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing ranked genes.
     genes : list
         List of genes to be masked.
-    key : str, default: "rank_genes_groups"
+    key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
     inplace : bool, default True
         If True, modifies adata.uns[key]["names"] in place. Otherwise, returns a copy of adata.
 
     Returns
     -------
-    anndata.AnnData or None
-        If inplace = True, modifies adata.uns[key]["names"] in place and returns None. Otherwise, returns a copy of adata.
+    Optional[anndata.AnnData]
+        If inplace = True, modifies adata.uns[key]["names"] in place and returns None.
+        Otherwise, returns a copy of adata.
+
+    Raises
+    ------
+    ValueError:
+        If genes is not of type list.
     """
 
     if not inplace:
@@ -445,36 +499,46 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True):
 #                       DEseq2 on pseudobulks                       #
 #####################################################################
 
-def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)):
+@deco.log_anndata
+def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)) -> pd.DataFrame:
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
-    Note: Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
-
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing raw counts.
     sample_col : str
         Column name in adata.obs containing sample names.
     condition_col : str
         Column name in adata.obs containing condition names to be compared.
-    confounders : list, default: None
+    confounders : list, default None
         List of additional column names in adata.obs containing confounders to be included in the model.
-    layer : str, default: None
+    layer : str, default None
         Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
-    percentile_range : tuple, default: (0, 100)
+    percentile_range : tuple, default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
 
     Returns
-    -----------
-    A dataframe containing the results of the DESeq2 analysis.
-    Also adds the dataframe to adata.uns["deseq_result"]
+    -------
+    pd.DataFrame
+        A dataframe containing the results of the DESeq2 analysis.
+        Also adds the dataframe to adata.uns["deseq_result"]
 
-    See also
-    -----------
+    Raises
+    ------
+    ValueError:
+        1. If any given column name is not found in adata.obs.
+        2. If any given column name contains characters not compatible with R.
+
+    Notes
+    -----
+    Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
+    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
+
+    See Also
+    --------
     sctoolbox.utils.pseudobulk_table
     """
 
@@ -489,8 +553,20 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
     design_formula = "~ " + " + ".join(confounders + [condition_col])
 
-    # Build sample_df
+    # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
+    for col in cols:
+        if col not in adata.obs.columns:
+            raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
+
+        # Check that column is valid for R
+        pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
+        if not re.match(pattern, col):
+            s = f"Column '{col}' is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: "
+            s += "'A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.'"
+            raise ValueError(s)
+
+    # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)
@@ -552,10 +628,13 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
     return deseq_table
 
 
-def score_genes(adata, gene_set, score_name='score', inplace=True):
+@deco.log_anndata
+def score_genes(adata, gene_set, score_name='score', inplace=True) -> Optional[anndata.AnnData]:
     """
     Assign a score to each cell depending on the expression of a set of genes.
 
+    Parameters
+    ----------
     adata : anndata.AnnData
         Anndata object to score.
     gene_set : str or list
@@ -568,8 +647,15 @@ def score_genes(adata, gene_set, score_name='score', inplace=True):
 
     Returns
     -------
-    anndata.Anndata or None :
+    Optional[anndata.AnnData]
         If inplace is False, return a copy of anndata object with the new column in the obs table.
+
+    Raises
+    ------
+    FileNotFoundError:
+        If path given in gene_set does not lead to a file.
+    ValueError:
+        If gene_set is not a string and not a list.
     """
 
     if not inplace:

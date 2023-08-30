@@ -1,19 +1,25 @@
+"""Tools to calculate and annotate highly variable genes."""
 import numpy as np
 from kneed import KneeLocator
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import warnings
 import scanpy as sc
+import anndata
+from typing import Optional
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
+from sctoolbox._settings import settings
+import sctoolbox.utils.decorator as deco
+logger = settings.logger
 
 
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000), step=10, inplace=True, save=None, **kwargs):
+@deco.log_anndata
+def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000),
+              step=10, inplace=True, save=None, **kwargs) -> Optional[anndata.AnnData]:
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
-
-    Note: Logarithmized data is expected.
 
     Parameters
     ----------
@@ -35,14 +41,21 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
     **kwargs :
         Additional arguments forwarded to scanpy.pp.highly_variable_genes().
 
+    Notes
+    -----
+    Logarithmized data is expected.
+
     Returns
     -------
-    anndata.Anndata or None:
+    Optional[anndata.AnnData]
         Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
+        If inplace is False, the function returns None
+        Else returns a chagned copy of the input anndata object.
     """
+
     adata_m = anndata if inplace else anndata.copy()
 
-    print("Annotating highy variable genes (HVG)")
+    logger.info("Annotating highy variable genes (HVG)")
 
     # adjust min_mean to get a HVG count in a certain range
     for i in range(max_iterations + 1):
@@ -64,12 +77,10 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
     if hvg_count < hvg_range[0] or hvg_count > hvg_range[1]:
         warnings.warn(f"Number of HVGs not in range. Range is {hvg_range} but counted {hvg_count}.")
     else:
-        ax = sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
-
-        print(ax)
+        _ = sc.pl.highly_variable_genes(anndata, show=False)  # Plot dispersion of HVG
 
         _save_figure(save)
-        print("Total HVG=" + str(anndata.var["highly_variable"].sum()))
+        logger.info("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
     # Adding info in anndata.uns["infoprocess"]
     # cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)
@@ -78,27 +89,35 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         return adata_m
 
 
-# This is for ATAC-seq data
-def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True):
+@deco.log_anndata
+def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True) -> Optional[anndata.AnnData]:
     """
     Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.var. If show is True, the plot is shown.
 
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         The anndata object containing counts for variables.
-    min_score : float, optional
-        The minimum variability score to set as threshold. Default: None (automatic)
-    show : bool
-        Show plot of variability scores and thresholds. Default: True.
-    inplace : bool
-        If True, the anndata object is modified. Otherwise, a new anndata object is returned. Default: True.
+    max_cells : float, default None
+        The maximum variability score to set as threshold.
+    min_cells : float, default None
+        The minimum variability score to set as threshold.
+    show : bool, default True
+        Show plot of variability scores and thresholds.
+    inplace : bool, default True
+        If True, the anndata object is modified. Otherwise, a new anndata object is returned.
+
+    Notes
+    -----
+    Designed for scATAC-seq data
 
     Returns
-    --------
-    If inplace is False, the function returns None
-    If inplace is True, the function returns an anndata object.
+    -------
+    Optional[anndata.AnnData]
+        If inplace is False, the function returns None
+        If inplace is True, the function returns an anndata object.
     """
+
     utils.check_module("kneed")
     utils.check_module("statsmodels")
 

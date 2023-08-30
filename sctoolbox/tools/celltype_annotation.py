@@ -1,17 +1,25 @@
+"""Module for general celltype annotation."""
 import sys
 import pandas as pd
 import pkg_resources
 import copy
 import subprocess
+from typing import Optional
+import anndata
 
 import sctoolbox.utils as utils
+import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 #####################################################################
 #                 Celltypes loaded from cellxgene                   #
 #####################################################################
 
-def add_cellxgene_annotation(adata, csv):
+
+@deco.log_anndata
+def add_cellxgene_annotation(adata, csv) -> None:
     """
     Add columns from cellxgene annotation to the adata .obs table.
 
@@ -21,11 +29,8 @@ def add_cellxgene_annotation(adata, csv):
         Adata object to add annotations to.
     csv : str
         Path to the annotation file from cellxgene containing cell annotation.
-
-    Returns
-    --------
-    None - the annotation is added to adata in place.
     """
+
     anno_table = pd.read_csv(csv, sep=",", comment='#')
     anno_table.set_index("index", inplace=True)
     anno_name = anno_table.columns[-1]
@@ -36,12 +41,16 @@ def add_cellxgene_annotation(adata, csv):
 #              Predict cell types from marker genes dict            #
 #####################################################################
 
-def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype"):
+
+@deco.log_anndata
+def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype") -> dict[str, str]:
     """
     Get cell type assignment based on marker genes.
 
+    TODO make this more robust
+
     Parameters
-    -----------
+    ----------
     adata : anndata.AnnData
         Anndata object containing raw counts.
     clustering : str
@@ -52,15 +61,14 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
         Name of column to add to adata.obs containing cell type assignment.
 
     Returns
-    -----------
-    Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
-    Also adds the cell type assignment to adata.obs[<column_name>] in place.
+    -------
+    dict[str, str]
+        Returns a dictionary with cluster-to-celltype mapping (key: cluster name, value: cell type)
+        Also adds the cell type assignment to adata.obs[<column_name>] in place.
     """
 
     # if column_name in adata.obs.columns:
-    # raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
-
-    # todo: make this more robust
+    #    raise ValueError("Column name already exists in adata.obs. Please set a different name using 'column_name'.")
 
     marker_genes_list = [[gene] if isinstance(gene, str) else gene for gene in marker_genes_dict.values()]
     marker_genes_list = sum(marker_genes_list, [])
@@ -109,20 +117,26 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
     return cluster2celltype
 
 
-"""
-
-# a subheader
-
-
-"""
-
-
 #####################################################################
 #                  Predict cell types using SCSA                    #
 #####################################################################
 
-def _match_database(marker_db, input_genes):
-    """ Find best matching column in the marker database for the input genes"""
+def _match_database(marker_db, input_genes) -> str:
+    """
+    Find best matching column in the marker database for the input genes.
+
+    Parameters
+    ----------
+    marker_db : str
+        Path to marker database.
+    input_genes : list
+        List of input genes.
+
+    Returns
+    -------
+    str
+        Name of best matching column in database
+    """
 
     user_database = pd.read_csv(marker_db, sep="\t")
 
@@ -140,25 +154,27 @@ def _match_database(marker_db, input_genes):
             best_column = column
 
     if highest_perc == 0:
-        print("No match found in the marker database")
+        logger.info("No match found in the marker database")
         sys.exit()
 
-    print(f"Best match between input genes and database were found in column '{best_column}' with {n_overlap} genes ({highest_perc:.1f}%)")
+    logger.info(f"Best match between input genes and database were found in column '{best_column}' with {n_overlap} genes ({highest_perc:.1f}%)")
 
     return best_column
 
 
-def _get_rank_genes(d):
-    """ Get a list of unique rank genes from the nested adata.uns["rank_genes_groups"] dictionary
+def _get_rank_genes(d) -> list:
+    """
+    Get a list of unique rank genes from the nested adata.uns["rank_genes_groups"] dictionary.
 
     Parameters
-    -----------
+    ----------
     d : dictionary
         The dictionary in adata.uns["rank_genes_groups"]
 
     Returns
-    --------
-    A list of unique gene names from  adata.uns["rank_genes_groups"]['names']
+    -------
+    list
+        A list of unique gene names from  adata.uns["rank_genes_groups"]['names']
     """
 
     names_dict = {}  # collect names in a dict to remove duplicates
@@ -170,6 +186,7 @@ def _get_rank_genes(d):
     return genes
 
 
+@deco.log_anndata
 def run_scsa(adata,
              gene_column=None,
              gene_symbol='auto',
@@ -183,9 +200,9 @@ def run_scsa(adata,
              tissue='All',
              user_db=None,
              celltype_column="cell_name"
-             ):
+             ) -> Optional[anndata.AnnData]:
     """
-    A function to run SCSA cell type annotation and assign cell types to cluster in an adata object.
+    Run SCSA cell type annotation and assign cell types to cluster in an adata object.
 
     This is a wrapper function that extracts ranked genes generated by scanpy.tl.rank_genes_groups
     function and generates input matrix for SCSA, then runs SCSA and assigns cell types to clusters
@@ -197,48 +214,60 @@ def run_scsa(adata,
     - 'stdout': SCSA stdout
     - 'cmd': SCSA command
 
-    Note:
-    ------
+    Notes
+    -----
     SCSA sometimes gives ValueError: MultiIndex (as covered in https://github.com/bioinfo-ibms-pumc/SCSA/issues/19).
     This can be solved by downgrading pandas to 1.2.4.
 
-    Function parameters
-    --------------------
+    Parameters
+    ----------
     adata : anndata.AnnData
         Adata object to be annotated, must contain ranked genes in adata.uns
-    gene_column : str, optional
-        Name of the column in adata.var that contains the gene names. Default: None (takes the index of adata.var)
-    gene_symbol : str, optional
-        The type of gene symbol. One of "auto", "symbol" (gene name) or "id" (ensembl id). Defaults to 'auto'.
+    gene_column : str, default None
+        Name of the column in adata.var that contains the gene names.
+    gene_symbol : str, default 'auto'
+        TODO Implement
+        The type of gene symbol. One of "auto", "symbol" (gene name) or "id" (ensembl id).
     key : str, optional
         The key in adata.uns where ranked genes are stored. Defaults to 'rank_genes_groups'.
-    column_added : str, optional
-        The column name in adata.obs where the cell types will be added. Defaults to 'SCSA_pred_celltype'.
-    inplace : bool, optional
-        If True, cell types will be added to adata.obs. Defaults to True.
-
-    SCSA parameters
-    ----------------
+    column_added : str, default 'SCSA_pred_celltype'
+        The column name in adata.obs where the cell types will be added.
+    inplace : bool, default True
+        If True, cell types will be added to adata.obs.
     python_path : str, optional
-        Path to python. If not given, will be inferred from sys.executable.
+        SCSA parameter: Path to python. If not given, will be inferred from sys.executable.
     species : str, optional
-        Supports only human or mouse. Defaults to 'human'. Set to None to use the user defined database given in user_db.
+        SCSA parameter: Supports only human or mouse. Defaults to 'human'. Set to None to use the user defined database given in user_db.
     fc : float, optional
-        Fold change threshold to filter genes. Defaults to 1.5.
+        SCSA parameter: Fold change threshold to filter genes. Defaults to 1.5.
     pvalue : float, optional
-        P-value threshold to filter genes. Defaults to 0.05.
+        SCSA parameter: P-value threshold to filter genes. Defaults to 0.05.
     tissue : float, optional
-        A specific tissue can be defined. Defaults to 'All'.
+        TODO Implement
+        SCSA parameter: A specific tissue can be defined. Defaults to 'All'.
     user_db : str, optional
-        Path to the user defined marker database.
+        SCSA parameter: Path to the user defined marker database.
         Must contain at least two columns, one named "cell_name" (or set via celltype_column) for the cell type annotation,
         and at least one more column with gene names or ids (selected automatically from best gene overlap).
-    celltype_column : str, optional
-        The column name in the user_db that contains the cell type annotation. Defaults to 'cell_name'.
+    celltype_column : str, default 'cell_name'
+        SCSA parameter: The column name in the user_db that contains the cell type annotation.
 
     Returns
-    --------
-        AnnData: If inplace==False, returns adata with cell types in adata.obs
+    -------
+    Optional[anndata.AnnData]
+        If inplace==False, returns adata with cell types in adata.obs
+        Else return None
+
+    Raises
+    ------
+    KeyError:
+        1. If key is not in adata.uns.
+        2. If 'params' is not in adata.uns[key] or if 'groupby' is not in adata.uns[key]['params'].
+        3. If gene column is not in adata.var
+    ValueError:
+        1. If species parameter is not Human, Mouse or None.
+        2. If no species and no user database is provided.
+        3. If SCSA run failes
     """
 
     if species is not None:
@@ -287,8 +316,8 @@ def run_scsa(adata,
 
     # ---- Find out which gene symbol to use ---- #
     all_genes = _get_rank_genes(result)
-    print("Found {} genes from input ranked genes".format(len(all_genes)))
-    print("Checking if genes are in the database...")
+    logger.info("Found {} genes from input ranked genes".format(len(all_genes)))
+    logger.info("Checking if genes are in the database...")
 
     # Read database and find best matching gene column
     gene_column = _match_database(marker_db, all_genes)
@@ -316,7 +345,7 @@ def run_scsa(adata,
     scsa_cmd += f"--cellcol {celltype_column} --genecol {gene_column}"
 
     # ---- run SCSA command ---- #
-    print('Running SCSA...')
+    logger.info('Running SCSA...')
     p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = p.stderr
     stdout = p.stdout
@@ -335,9 +364,9 @@ def run_scsa(adata,
     df_max = df_max.astype(str)
     dictMax = dict(zip(df_max.Cluster, df_max.Cell_Type))
 
-    print(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
+    logger.info(f"Done. Best scoring celltype was added to '{column_added}' and the full results were added to adata.uns['SCSA']")
     for _, row in df.drop_duplicates(subset='Cluster', keep='first').iterrows():
-        print(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
+        logger.info(f"Cluster {row['Cluster']} was annotated with celltype: {row['Cell Type']}")
 
     # Save results to uns dictionary
     scsa_uns_dict = {"SCSA": {"results": df,

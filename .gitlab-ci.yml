@@ -40,19 +40,27 @@ pass:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
+# lint code and docstrings
 # flake8 ignore rules:
 # E501 = Line too long
 # W503 = Line break occurred before a binary operator
+# D202 = No blank lines allowed after function docstring
+# DOC301 = __init__() should not have a docstring; <- conflicts with "D107 Missing docstring in __init__"
 lint:
-  image: python:3.10  # pybedtools is not compatible with python 3.11
+  image: 
+    name: python:3.10 # pybedtools is not compatible with python 3.11
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
   stage: test
   tags:
     - coverage
   script:
+    - python --version
     - pip install flake8
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503 --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
+    - pip install pydoclint>=0.1.7
+    - pip install flake8-docstrings  # adds pydocstyle to flake
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301 --arg-type-hints-in-signature False --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
@@ -79,7 +87,9 @@ test import:
 # Run test coverage
 test coverage:
   stage: test
-  image: python:3.10
+  image: 
+    name: python:3.10
+    entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ] # Fixes shell not found error (See Issue #129)
   tags:
     - coverage
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
@@ -89,7 +99,7 @@ test coverage:
     - pip install pytest
     - pip install pytest-cov
     - pip install pytest-html
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
     paths:
@@ -113,15 +123,12 @@ test coverage:
 #Changes.rst file must be changed in merge requests
 check_changes:
   image:
-    name: alpine/git:latest
+    name: cicirello/pyaction:latest
     entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
   inherit:
     default: false
   script:
-    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-    - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
-    - cat changed_files.txt
-    - if grep -q "CHANGES.rst" changed_files.txt; then echo "The 'CHANGES.rst' file was changed."; else echo "The 'CHANGES.rst' file must be changed for merge requests!"; exit 1; fi
+    - python scripts/check_changes.py $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
@@ -156,19 +163,21 @@ notebook-output-check:
 
 # Test notebooks when code is pushed to main
 notebooks:
-  image: continuumio/miniconda3:latest
+  image: mambaorg/micromamba:latest
   inherit:
     default: false
   stage: test
   #tags:
   #  - gwdg
   #  - gwdg-shared
+  artifacts:
+    paths:
+      - rna-notebooks/pipeline_output/logs/*.txt
   script:
-    - conda install -c conda-forge mamba
-    - mamba env create -f sctoolbox_env.yml --force #mamba is faster at creating envs than conda
-    - conda init bash
-    - source ~/.bashrc
-    - conda activate sctoolbox
+    - micromamba env create -f sctoolbox_env.yml #mamba is faster at creating envs than conda
+    - eval "$(micromamba shell hook --shell bash)" # initialize micromamba in the current shell
+    - micromamba activate sctoolbox
+    - micromamba install -c conda-forge git # needed for sctoolbox install
     - pip install papermill
     - pip install .[all]
     - python -m ipykernel install --user --name sctoolbox
@@ -179,6 +188,11 @@ notebooks:
     - python -c "import sys; print(sys.path)" # for debug
     - jupyter kernelspec list  # for debug
     - python scripts/run_notebooks.py
+  after_script:
+    - pwd
+    - ls -l rna-notebooks/pipeline_output/logs/
+    - for f in rna-notebooks/pipeline_output/logs/*; do echo $f; cat $f; done
+
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: manual  # manual trigger

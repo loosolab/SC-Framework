@@ -1,12 +1,15 @@
+"""General plotting functions for sctoolbox, e.g. general plots for wrappers, and saving and adding titles to figures."""
+
 import pandas as pd
 import numpy as np
-import scanpy as sc
+import warnings
 
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
+from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
+import scipy.cluster.hierarchy as sciclust
 
 from sctoolbox import settings
 
@@ -16,8 +19,7 @@ from sctoolbox import settings
 ########################################################################################
 
 def _save_figure(path, dpi=600):
-    """
-    Save the current figure to a file.
+    """Save the current figure to a file.
 
     Parameters
     ----------
@@ -37,7 +39,7 @@ def _save_figure(path, dpi=600):
 
 
 def _make_square(ax):
-    """ Utility function to set the aspect ratio of a plot to be a square """
+    """Force a plot to be square using aspect ratio regardless of the x/y ranges."""
 
     xrange = np.diff(ax.get_xlim())[0]
     yrange = np.diff(ax.get_ylim())[0]
@@ -47,25 +49,20 @@ def _make_square(ax):
 
 
 def _add_figure_title(axarr, title, y=1.3, fontsize=16):
-    """
-    Add a figure title to the top of a multi-axes figure.
+    """Add a figure title to the top of a multi-axes figure.
 
     Parameters
     ----------
-    axarr : `list` of `matplotlib.axes.Axes`
+    axarr : list[matplotlib.Axes]
         List of axes to add the title to.
-    title : `str`
+    title : str
         Title to add at the top of plot.
-    y : `float`, optional (default: `1.3`)
+    y : float, default 1.3
         Vertical position of the title in relation to the content. Larger number moves the title further up.
-    fontsize : `int`, optional (default: `16`)
+    fontsize : int, default 16
         Font size of the title.
 
-    Returns
-    -------
-    None - adds a title to the figure directly.
-
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -110,22 +107,28 @@ def _add_figure_title(axarr, title, y=1.3, fontsize=16):
     _ = axarr[0].text(tx, ty, title, va="bottom", ha="center", fontsize=fontsize)
 
 
-def _add_labels(data, x, y, label_col=None, ax=None, **kwargs):
-    """
-    Add labels to a scatter plot.
+def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
+    """Add labels to a scatter plot.
 
     Parameters
     ----------
-    data : pandas.DataFrame
+    data : pd.DataFrame
         Dataframe containing the coordinates of points to label.
     x : str
         Name of the column in data to use for x axis coordinates.
     y : str
         Name of the column in data to use for y axis coordinates.
-    label_col : str, optional (default: `None`)
+    label_col : str, default None
         Name of the column in data to use for labels. If `None`, the index of data is used.
-    kwargs : arguments
+    ax : matplotlib.axes.Axes, default None
+        Axis to plot on. If `None`, the current open figure axis is used.
+    **kwargs : arguments
         Additional arguments to pass to matplotlib.axes.Axes.annotate.
+
+    Returns
+    -------
+    list
+        List of matplotlib.text.Annotation objects.
     """
 
     if ax is None:
@@ -152,194 +155,181 @@ def _add_labels(data, x, y, label_col=None, ax=None, **kwargs):
 #############################################################################
 
 
-def _scale_values(array, mini, maxi):
+def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
+                       fillna=0, title=None, figsize=None,
+                       dend_height=2, dend_width=2, palette="vlag", x_rot=45, show_grid=False,
+                       save=None) -> list:
     """
-    Small utility to scale values in array to a given range.
+    Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
     Parameters
     ----------
-    array : np.ndarray
-        Array to scale.
-    mini : float
-        Minimum value of the scale.
-    maxi : float
-        Maximum value of the scale.
-    """
-    val_range = array.max() - array.min()
-    a = (array - array.min()) / val_range
-    return a * (maxi - mini) + mini
-
-
-def _plot_size_legend(ax, val_min, val_max, radius_min, radius_max, title):
-    """ Fill in an axis with a legend for the dotplot size scale.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Axis to plot the legend on.
-    val_min : float
-        Minimum value of the scale.
-    val_max : float
-        Maximum value of the scale.
-    radius_min : float
-        Minimum radius of the dots.
-    radius_max : float
-        Maximum radius of the dots.
-    """
-
-    # Current issue: The sizes start at 0, which means there are dots for 0 values.
-    # the majority of this code is from the scanpy dotplot function
-
-    n_dots = 4
-    radius_list = np.linspace(radius_min, radius_max, n_dots)
-    value_list = np.linspace(val_min, val_max, n_dots)
-
-    # plot size bar
-    x_list = np.arange(n_dots) + 0.5
-    x_list *= 3  # extend space between points
-
-    circles = [plt.Circle((x, 0.5), radius=r) for x, r in zip(x_list, radius_list)]
-    col = PatchCollection(circles, color="gray", edgecolor='gray')
-    ax.add_collection(col)
-
-    ax.set_xticks(x_list)
-    labels = ["{:.1f}".format(v) for v in value_list]  # todo: make this more flexible with regards to integers
-    ax.set_xticklabels(labels, fontsize=8)
-
-    # remove y ticks and labels
-    ax.tick_params(axis='y', left=False, labelleft=False, labelright=False)
-
-    # remove surrounding lines
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.grid(False)
-
-    pad = 0.15
-    ax.set_ylim(0 - 2 * pad, 1 + pad)
-    x0, x1 = ax.get_xlim()
-    ax.set_xlim(x0 - radius_min - pad, x1 + radius_max + pad)
-    ax.set_xlabel(title, fontsize=8)
-    ax.xaxis.set_label_position('top')
-    ax.set_aspect('equal')
-
-
-def clustermap_dotplot(table, x, y, color, size, save=None, **kwargs):
-    """ Plot a heatmap with dots instead of cells which can contain the dimension of "size".
-
-    Parameters
-    ----------
-    table : pandas.DataFrame
-        Dataframe containing the data to plot.
+    table : pd.DataFrame
+        Table in long-format. Has to have at least four columns as given by x, y, size and hue.
     x : str
         Column in table to plot on the x-axis.
     y : str
         Column in table to plot on the y-axis.
-    color : str
-        Column in table to use for the color of the dots.
     size : str
         Column in table to use for the size of the dots.
+    hue : str
+        Column in table to use for the color of the dots.
+    cluster_on : str, default hue
+        Decide which values to use for creating the dendrograms. Either "hue" or "size".
+    fillna : float, default 0
+        Replace NaN with given value.
+    title : str, default None
+        Title of the dotplot.
+    figsize : float tuple, default None
+        Figure size in inches. Default is estimated from the number of rows/columns (ncols/3, nrows/3).
+    dend_height : float, default 2
+        Height of the x-axis dendrogram in counts of row elements, e.g. 2 represents a height of 2 rows in the dotplot.
+    dend_width : float, default 2
+        Width of the y-axis dendrogram in counts of column elements, e.g. 2 represents a width of 2 columns in the dotplot.
+    palette : str, default vlag
+        Color palette for hue colors.
+    x_rot : int, default 45
+        Rotation of xticklabels in degrees.
+    show_grid : bool, default False
+        Show grid behind dots in plot.
     save : str, default None
-        If given, the figure will be saved to this path.
-    kwargs : arguments
-        Additional arguments to pass to seaborn.clustermap.
+        Save the figure to this path.
+
+    Returns
+    -------
+    list
+        List of matplotlib.axes.Axes objects containing the dotplot and the dendrogram(s).
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.plotting as pl
+        import scanpy as sc
+
+        table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+
+    .. plot::
+        :context: close-figs
+
+        pl.clustermap_dotplot(
+            table=table,
+            x="bulk_labels",
+            y="index",
+            hue="n_genes",
+            size="n_counts",
+            palette="viridis"
+        )
     """
 
-    # This code is very hacky
-    # Major todo is to get better control of location of legends
-    # automatic scaling of figsize
-    # and to make the code more flexible, potentially using a class
+    table = table.copy()
 
-    # Create pivots with colors/size
-    color_pivot = pd.pivot(table, index=y, columns=x, values=color)
-    size_pivot = pd.pivot(table, index=y, columns=x, values=size)
+    # long table to wide format for hue and size
+    wide_hue = pd.pivot(data=table, index=y, columns=x, values=hue).fillna(fillna)
+    wide_size = pd.pivot(data=table, index=y, columns=x, values=size).fillna(fillna)
+    nrows, ncols = wide_hue.shape  # same shape as wide_size
 
-    # Plot clustermap of values
-    g = sns.clustermap(color_pivot, yticklabels=True, cmap="bwr",
-                       # vmin=color_min, vmax=color_max, #should be given as kwargs
-                       figsize=(5, 12),
-                       cbar_kws={'label': color, "orientation": "horizontal"},
-                       **kwargs)
+    # decide what dendrograms are possible
+    x_dend_possible = len((wide_hue if cluster_on == "hue" else wide_size).columns) > 1
+    y_dend_possible = len(wide_hue if cluster_on == "hue" else wide_size) > 1
 
-    g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_yticklabels(), fontsize=7)
-    g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xticklabels(), fontsize=7, rotation=45, ha="right")
+    # Set figsize automatically
+    if figsize is None:
+        figsize = (ncols / 3, nrows / 3)
 
-    # Turn off existing heatmap
-    g.ax_heatmap._children[0]._visible = False
+    # Create figure
+    fig, ax = plt.subplots(1, figsize=figsize)
+    axes = [ax]
 
-    # Add dots on top of cells
-    data_ordered = g.__dict__["data2d"]
-    nrows, ncols = data_ordered.shape
-    x, y = np.meshgrid(np.arange(0.5, ncols + 0.5, 1), np.arange(0.5, nrows + 0.5, 1))
+    # Prepare shape of dotplot
+    ax.set_xlim(-0.5, ncols - 0.5)
+    ax.set_ylim(-0.5, nrows - 0.5)
+    ax.set_xticks(np.arange(ncols))
+    ax.set_aspect(1)
 
-    # todo: get control of the min/max values of the color scale
-    color_mat = data_ordered.values
-    if "vmin" in kwargs:
-        color_min = kwargs["vmin"]
-        color_mat[color_mat < color_min] = color_min
+    # x-axis dendrogram
+    if x_dend_possible:
+        x_link = sciclust.linkage(wide_hue.T if cluster_on == "hue" else wide_size.T)
 
-    if "vmax" in kwargs:
-        color_max = kwargs["vmax"]
-        color_mat[color_mat > color_max] = color_max
+        # Plot dendrogram
+        col_dend_ax = ax.inset_axes([0, 1, 1, dend_height / nrows])  # column dendrogram
+        axes.append(col_dend_ax)
+        x_dend = sciclust.dendrogram(x_link,
+                                     orientation="top",
+                                     labels=wide_hue.columns if cluster_on == "hue" else wide_size.columns,
+                                     no_labels=True,
+                                     link_color_func=lambda x: "black",  # disable cluster colors
+                                     ax=col_dend_ax)
 
-    size_ordered = size_pivot.loc[data_ordered.index, data_ordered.columns]
-    size_mat = size_ordered.values
-    radius_mat = _scale_values(size_mat, 0.05, 0.5)
+        col_dend_ax.axis("off")
 
-    circles = [plt.Circle((j, i), radius=r) for r, j, i in zip(radius_mat.flat, x.flat, y.flat)]
-    col = PatchCollection(circles, array=color_mat.flatten(), cmap="bwr")
-    g.ax_heatmap.add_collection(col)
+        # order after dendrogram
+        # (sharey parameter is bugged)
+        # https://towardsdatascience.com/how-to-do-a-custom-sort-on-pandas-dataframe-ac18e7ea5320
+        x_order = pd.CategoricalDtype(
+            reversed(x_dend["ivl"]),
+            ordered=True
+        )
+        table[x] = table[x].astype(x_order)
 
-    # Adjust size of individual cells and dendrograms
-    g.ax_heatmap.set_aspect('equal')
+    # y-axis dendrogram
+    if y_dend_possible:
+        y_link = sciclust.linkage(wide_hue if cluster_on == "hue" else wide_size)
 
-    f = plt.gcf()
-    f.canvas.draw()
+        # Plot dendrogram
+        row_dend_ax = ax.inset_axes([1, 0, dend_width / ncols, 1])  # row dendrogram
+        axes.append(row_dend_ax)
+        y_dend = sciclust.dendrogram(y_link,
+                                     orientation="right",
+                                     labels=wide_hue.T.columns if cluster_on == "hue" else wide_size.T.columns,
+                                     no_labels=True,
+                                     link_color_func=lambda x: "black",  # disable cluster colors
+                                     ax=row_dend_ax)
 
-    # trans_data = g.ax_heatmap.transData
-    # trans_data_inv = trans_data.inverted()
+        row_dend_ax.axis("off")
 
-    dend_row_pos = g.ax_row_dendrogram.get_position()
-    # dend_col_pos = g.ax_col_dendrogram.get_position()
-    heatmap_pos = g.ax_heatmap.get_position()
+        # order after dendrogram
+        # (sharey parameter is bugged)
+        # https://towardsdatascience.com/how-to-do-a-custom-sort-on-pandas-dataframe-ac18e7ea5320
+        y_order = pd.CategoricalDtype(
+            reversed(y_dend["ivl"]),
+            ordered=True
+        )
+        table[y] = table[y].astype(y_order)
 
-    cell_width = heatmap_pos.height / data_ordered.shape[0]
-    den_size = cell_width * 5
-    pad = cell_width * 0.1
+    # sort matrix according to the dendrogram orders
+    table = table.sort_values([x, y])
 
-    # Resize dendrograms
-    g.ax_row_dendrogram.set_position([heatmap_pos.x0 - den_size - pad, dend_row_pos.y0,
-                                      den_size, dend_row_pos.height])
-    g.ax_col_dendrogram.set_position([heatmap_pos.x0, heatmap_pos.y0 + heatmap_pos.height + pad,
-                                      heatmap_pos.width, den_size])
+    # Fill in axes with dotplot
+    plot = sns.scatterplot(data=table,
+                           y=y,
+                           x=x,
+                           size=size,
+                           sizes=(10, 200),
+                           hue=hue,
+                           palette=palette,
+                           ax=ax,
+                           zorder=100,  # place points above grid
+                           )
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=x_rot, ha="right" if x_rot != 0 else "center")
 
-    # TODO: get right bounds for y-axis labels to correctly place legends
-    # texts = g.ax_heatmap.get_yticklabels()
-    # bboxes = [t.get_window_extent(renderer=f.canvas.renderer) for t in texts]
-    # right_bound = max([bbox.x1 for bbox in bboxes])
+    # Move legend to right side
+    x_anchor = 1 if nrows == 1 else 1 + dend_width / ncols
+    sns.move_legend(plot, loc='upper left', bbox_to_anchor=(x_anchor, 1, 0, 0))
 
-    # Move colorbar
-    max_txt_width = cell_width * 25
-    hm_pos = g.ax_heatmap.get_position()
-    g.ax_cbar.set_position([hm_pos.x1 + max_txt_width, hm_pos.y0, cell_width * 20, cell_width])
-    g.ax_cbar.set_xticklabels(g.ax_cbar.get_xticklabels(), fontsize=7)
+    # Show gridlines
+    if show_grid:
+        ax.grid()
 
-    g.ax_cbar.set_xlabel(g.ax_cbar.get_xlabel(), fontsize=8)
-    g.ax_cbar.xaxis.set_label_position('top')
-
-    # Add size legend manually
-    cbar_pos = g.ax_cbar.get_position()
-    ax_size = f.add_axes([cbar_pos.x0, cbar_pos.y1 + cbar_pos.height * 5, cbar_pos.width, cell_width])
-    _plot_size_legend(ax_size, np.min(size_mat), np.max(size_mat), np.min(radius_mat), np.max(radius_mat), title=size)
-
-    # Add border to heatmap
-    g.ax_heatmap.add_patch(Rectangle((0, 0), ncols, nrows, fill=False, edgecolor='grey', lw=1))
+    # Title above plot
+    title_ax = col_dend_ax if x_dend_possible else ax
+    title_ax.set_title(title)
 
     # Save figure
     _save_figure(save)
 
-    return g
+    return axes
 
 
 ########################################################################################
@@ -350,8 +340,10 @@ def bidirectional_barplot(df,
                           title=None,
                           colors=None,
                           figsize=None,
-                          save=None):
-    """ Plot a bidirectional barplot. The input is a dataframe with the following columns:
+                          save=None) -> matplotlib.axes.Axes:
+    """Plot a bidirectional barplot.
+
+    The input is a dataframe with the following columns:
     - left_label
     - right_label
     - left_value
@@ -359,21 +351,33 @@ def bidirectional_barplot(df,
 
     Parameters
     ----------
-    df : `pandas.DataFrame`
+    df : pd.DataFrame
         Dataframe with the following columns: left_label, right_label, left_value, right_value.
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    colors : `dict`, optional (default: `None`)
+    colors : dict, default None
         Dictionary with label names as keys and colors as values.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : tuple, default None
         Figure size.
+    save : str, default None
+        If given, the figure will be saved to this path.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        Axes containing the plot.
+
+    Raises
+    ------
+    KeyError
+        If df does not contain the required columns.
     """
 
     # Check that df contains columns left/right_label and left/right value
     required_columns = ["left_label", "right_label", "left_value", "right_value"]
     for col in required_columns:
         if col not in df.columns:
-            raise ValueError(f"Column {col} not found in dataframe.")
+            raise KeyError(f"Column {col} not found in dataframe.")
 
     # Example data
     labels_left = df["left_label"].tolist()
@@ -447,39 +451,24 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-def plot_obs_violin(adata, obs_cols):
-    """
-    plot violin plots of the obs columns
-    :param adata:
-    :param obs_cols:
-    :return:
-    """
-
-    for col in obs_cols:
-        sc.pl.violin(adata, col, show=False)
-
-    plt.show()
-
-
-def boxplot(dt, show_median=True, ax=None):
-    """
-    Generate one plot containing one box per column. The median value is shown.
+def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
+    """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
     ----------
-    dt : pandas.DataFrame
+    dt : pd.DataFrame
         pandas datafame containing numerical values in every column.
-    show_median: boolean, default True
+    show_median : boolean, default True
         If True show median value as small box inside the boxplot.
-    ax : matplotlib.axes.Axes, optional
-        Axes object to plot on. If None, a new figure is created. Default: None.
+    ax : matplotlib.axes.Axes, default None
+        Axes object to plot on. If None, a new figure is created.
 
     Returns
     -------
-    AxesSubplot
+    matplotlib.axes.Axes
         containing boxplot for every column.
 
-    Example
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -507,7 +496,13 @@ def boxplot(dt, show_median=True, ax=None):
         # TODO: check if ax is an ax object
         pass
 
-    sns.boxplot(data=dt, ax=ax)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
+
+        dt_melt = dt.melt()
+        ax = sns.boxplot(data=dt_melt, x="variable", y="value", ax=ax)
+        ax.set_xlabel("")
+        ax.set_ylabel("")
 
     if show_median:
         # From:
@@ -524,13 +519,12 @@ def boxplot(dt, show_median=True, ax=None):
     return ax
 
 
-def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True):
-    """
-    Creates a violinplot. With optional horizontal lines for each violin.
+def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True) -> matplotlib.axes.Axes:
+    """Plot a violinplot with optional horizontal lines for each violin.
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Values to create the violins from.
     y : str
         Column name of table. Values that will be shown on y-axis.
@@ -549,10 +543,15 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 
     Returns
     -------
-    matplotlib.axes.Axes :
+    matplotlib.axes.Axes
         Object containing the violinplot.
 
-    Example
+    Raises
+    ------
+    ValueError
+        If y or color_by is not a column name of table. Or if hlines is not a number or list of numbers for color_by=None.
+
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -658,19 +657,29 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 ########################################################################################
 
 def plot_venn(groups_dict, title=None, save=None):
-    """
-    Plots a Venn diagram from a dictionary of groups of lists.
+    """Plot a Venn diagram from a dictionary of 2-3 groups of lists.
 
     Parameters
     ----------
-    groups_dict : `dict`
+    groups_dict : dict
         A dictionary where the keys are group names (strings) and the values
         are lists of items belonging to that group (e.g. {'Group A': ['A', 'B', 'C'], ...}).
-    title : `str`, optional (default: `None`)
+    title : str, default None
         Title of the plot.
-    save : `str`, optional (default: `None`)
+    save : str, default None
         Filename to save the plot to.
+
+    Raises
+    ------
+    ValueError
+        If groups_dict is not a dictionary or number of groups is not 2 or 3.
     """
+    # Check if input is dict
+    if not isinstance(groups_dict, dict):
+        s = "The 'groups_dict' variable must be a dictionary. "
+        s += "Please ensure that you are passing a valid dictionary as input."
+        raise ValueError(s)
+
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
 
@@ -690,3 +699,134 @@ def plot_venn(groups_dict, title=None, save=None):
 
     # Show the plot
     _save_figure(save)
+
+
+########################################################################################
+# -------------------------------- Scatter plots ------------------------------------- #
+########################################################################################
+
+def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
+    """Plot a grid of scatterplot comparing column values pairwise.
+
+    If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
+
+    Parameters
+    ----------
+    table : pd.DataFrame
+        Dataframe containing the data to plot.
+    columns : list[str]
+        List of column names in table to plot.
+    thresholds : dict, default None
+        Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
+    save : str, default None
+        If given, the figure will be saved to this path.
+
+    Returns
+    -------
+    np.ndarray
+        Array of matplotlib.axes.Axes objects.
+
+    Raises
+    ------
+    ValueError
+        If columns is not a list of column names or if columns contains less than two columns.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        columns = ["percent_mito", "n_counts", "S_score"]
+
+        thresholds = {"n_counts": {"min": 2500, "max": 8000},
+                      "percent_mito": {"max": 0.03},
+                      "S_score": {"max": 0.5}}
+
+        pl.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
+    """
+
+    if isinstance(columns, str):
+        raise ValueError("'columns' must be a list of column names.")
+
+    if len(columns) < 2:
+        raise ValueError("'columns' must contain at least two columns to compare.")
+
+    for col in columns:
+        if col not in table.columns:
+            raise ValueError(f"Column '{col}' not found in table.")
+
+    if thresholds is None:
+        thresholds = {}
+
+    # Initialize plot
+    fig, axarr = plt.subplots(nrows=len(columns), ncols=len(columns),
+                              figsize=(len(columns) * 3, len(columns) * 3))
+
+    # Fill in plots
+    excluded_flag = False
+    for i_row in range(len(columns)):  # iterate over rows
+        for i_col in range(len(columns)):   # iterate over columns
+
+            c_col, c_row = columns[i_col], columns[i_row]
+            ax = axarr[i_row, i_col]
+
+            if i_row == i_col:  # plot histogram
+                sns.histplot(table[c_col], ax=ax, color="black")
+                ax.set_xlabel("")  # labels are set afterwards
+                ax.set_ylabel("")  # labels are set afterwards
+            else:
+
+                # Establish coloring using thresholds
+                included = np.ones(len(table), dtype=bool)
+                for col in [c_col, c_row]:
+                    if col in thresholds:
+                        included = included & (table[col] >= thresholds[col].get("min", table[col].min())) & (table[col] <= thresholds[col].get("max", table[col].max()))
+                colors = np.where(included, "black", "red")
+
+                ax.scatter(table[c_col], table[c_row], s=1, c=colors)  # x=columns, y=rows
+
+                excluded_flag = excluded_flag or not np.all(included)  # set flag if any points are excluded
+
+    # Plot threshold lines
+    for i, col in enumerate(columns):
+        if col in thresholds:
+            for key in ["min", "max"]:
+                if key in thresholds[col]:
+
+                    # plot vertical lines in row
+                    for ax in axarr[:, i]:
+                        ax.axvline(thresholds[col][key], color="darkgrey", lw=1, linestyle="--")
+
+                    # plot horizontal lines in scatterplots
+                    scatter_idx = [i_col for i_col in range(len(columns)) if i_col != i]  # all but current column
+                    for ax in axarr[i, scatter_idx]:
+                        ax.axhline(thresholds[col][key], color="darkgrey", lw=1, linestyle="--")
+
+    # Fix y-axis legends for first histogram
+    ax = axarr[0, 0].twinx()  # create new axis for correct y-values
+    ax.set_ylim(axarr[0, 1].get_ylim())
+    ax.yaxis.set_label_position('left')
+    ax.yaxis.set_ticks_position('left')
+    axarr[0, 0].set_yticks([])  # remove original axis
+    axarr[0, 0] = ax
+
+    # Set labels
+    for i, col in enumerate(columns):
+        axarr[i, 0].set_ylabel(col)     # left column contains y labels
+        axarr[-1, i].set_xlabel(col)    # bottom row contains x labels
+
+    # Remove ticklabels from middle plots
+    _ = [ax.axes.yaxis.set_ticklabels([]) for ax in axarr[:, 1:].flatten()]  # remove y ticklabels from all but first column
+    _ = [ax.axes.xaxis.set_ticklabels([]) for ax in axarr[:-1, :].flatten()]  # remove x ticklabels from all but last row
+
+    # Add legend if any points are excluded
+    if excluded_flag:
+        point = Line2D([0], [0], marker='o', markersize=np.sqrt(20), color='r', linestyle='None')
+        axarr[0, -1].legend([point], ["Excluded"], loc="center left", bbox_to_anchor=(1, 0.5), frameon=False)
+
+    plt.subplots_adjust(wspace=0.08, hspace=0.08)
+
+    # Save plot
+    _save_figure(save)
+
+    return axarr

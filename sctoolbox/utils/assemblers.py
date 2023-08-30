@@ -1,6 +1,5 @@
-"""
-Module to assembling anndata objects
-"""
+"""Module to assemble anndata objects."""
+
 import scanpy as sc
 import pandas as pd
 import os
@@ -9,7 +8,11 @@ from scipy import sparse
 from scipy.io import mmread
 import anndata as ad
 
+from typing import Optional
+
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 #####################################################################
@@ -17,34 +20,33 @@ import sctoolbox.utils as utils
 #####################################################################
 
 def assemble_from_h5ad(h5ad_files,
-                       qc_columns,
                        merge_column='sample',
                        coordinate_cols=None,
                        set_index=True,
-                       index_from=None):
-    '''
-    Function to assemble multiple adata files into a single adata object with a sample column in the
-    adata.obs table. This concatenates adata.obs and merges adata.uns.
+                       index_from=None) -> sc.AnnData:
+    """
+    Assembles multiple adata files into a single adata object.
+
+    This concatenates adata.obs and merges adata.uns.
 
     Parameters
     ----------
-    h5ad_files: list of str
+    h5ad_files : list of str
         list of h5ad_files
-    qc_columns: dictionary
-        dictionary of existing adata.obs column to add to infoprocess legend
-    merge_column: str
+    merge_column : str
         column name to store sample identifier
-    coordinate_cols: list of str
+    coordinate_cols : list of str
         location information of the peaks
-    set_index: boolean
+    set_index : boolean
         True: index will be formatted and can be set by a given column
-    index_from: str
+    index_from : str
         column to build the index from
 
     Returns
     -------
-
-    '''
+    sc.AnnData
+        The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
+    """
 
     adata_dict = {}
     counter = 0
@@ -55,6 +57,7 @@ def assemble_from_h5ad(h5ad_files,
 
         adata = sc.read_h5ad(h5ad_path)
         if set_index:
+            logger.info("formatting index")
             utils.format_index(adata, index_from)
 
         # Establish columns for coordinates
@@ -64,21 +67,9 @@ def assemble_from_h5ad(h5ad_files,
             utils.check_columns(adata.var, coordinate_cols,
                                 "coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
+        # Format coordinate columns
+        logger.info("formatting coordinate columns")
         utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
-
-        # Add information to the infoprocess
-        # cr.build_infor(adata, "Input_for_assembling", h5ad_path)
-        # cr.build_infor(adata, "Strategy", "Read from h5ad")
-
-        print('add existing adata.obs columns to infoprocess:')
-        print()
-        for key, value in qc_columns.items():
-            if value is not None:
-                print(key + ':' + value)
-                if value in adata.obs.columns:
-                    utils.build_legend(adata, key, value)
-                else:
-                    print('column:  ' + value + ' is not in adata.obs')
 
         # check if the barcode is the index otherwise set it
         utils.barcode_index(adata)
@@ -105,20 +96,31 @@ def assemble_from_h5ad(h5ad_files,
 #          ASSEMBLING ANNDATA FROM STARSOLO OUTPUT FOLDERS          #
 #####################################################################
 
-def from_single_starsolo(path, dtype="filtered", header='infer'):
-    '''
-    This will assemble an anndata object from the starsolo folder.
+def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
+    """
+    Assembles an anndata object from the starsolo folder.
 
     Parameters
     ----------
     path : str
         Path to the "solo" folder from starsolo.
-    dtype : str, optional
-        The type of solo data to choose. Must be one of ["raw", "filtered"]. Default: "filtered".
-    header : int, list of int, None
-        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
-    '''
-    # Author : Guilherme Valente & Mette Bentsen
+    dtype : {'filtered', 'raw'}, default "filtered"
+        The type of solo data to choose.
+    header : int or list of int or None, default "infer"
+        Set header parameter for reading metadata tables using pandas.read_csv.
+
+    Returns
+    -------
+    sc.AnnData
+        An anndata object based on the provided starsolo folder.
+
+    Raises
+    ------
+    ValueError
+        If dtype is not set to 'raw' or 'filtered'
+    FileNotFoundError
+        If path does not exist or files are missing.
+    """
 
     # dtype must be either raw or filtered
     if dtype not in ["raw", "filtered"]:
@@ -145,12 +147,12 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
             raise FileNotFoundError(f"File '{f}' was not found. Please check that path contains the full output of starsolo.")
 
     # Setup main adata object from matrix/barcodes/genes
-    print("Setting up adata from solo files")
+    logger.info("Setting up adata from solo files")
     adata = from_single_mtx(matrix_f, barcodes_f, genes_f, header=header)
     adata.var.columns = ["gene", "type"]  # specific to the starsolo format
 
     # Add in velocity information
-    print("Adding velocity information from spliced/unspliced/ambiguous")
+    logger.info("Adding velocity information from spliced/unspliced/ambiguous")
     spliced = sparse.csr_matrix(mmread(spliced_f).transpose())
     unspliced = sparse.csr_matrix(mmread(unspliced_f).transpose())
     ambiguous = sparse.csr_matrix(mmread(ambiguous_f).transpose())
@@ -162,12 +164,12 @@ def from_single_starsolo(path, dtype="filtered", header='infer'):
     return adata
 
 
-def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
-    '''
+def from_quant(path, configuration=[], use_samples=None, dtype="filtered") -> sc.AnnData:
+    """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
     Parameters
-    -----------
+    ----------
     path : str
         The directory where the quant folder from snakemake preprocessing is located.
     configuration : list
@@ -176,8 +178,17 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         List of samples to use. If None, all samples will be used.
     dtype : str, optional
         The type of Solo data to choose. The options are 'raw' or 'filtered'. Default: filtered.
-    '''
-    # Author : Guilherme Valente
+
+    Returns
+    -------
+    sc.AnnData
+        The assembled anndata object.
+
+    Raises
+    ------
+    ValueError
+        If `use_samples` contains not existing names.
+    """
 
     # TODO: test that quant folder is existing
 
@@ -194,7 +205,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     # Establishing which samples to use for assembly
     sample_dirs = glob.glob(os.path.join(path, "*"))
     sample_names = [os.path.basename(x) for x in sample_dirs]
-    print(f"Found samples: {sample_names}")
+    logger.info(f"Found samples: {sample_names}")
 
     # Subset to use_samples if they are provided
     if use_samples is not None:
@@ -202,7 +213,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         sample_names = [sample_names[i] for i in idx]
         sample_dirs = [sample_dirs[i] for i in idx]
 
-        print(f"Using samples: {sample_names}")
+        logger.info(f"Using samples: {sample_names}")
         if len(sample_names) == 0:
             raise ValueError("None of the given 'use_samples' match the samples found in the directory.")
 
@@ -210,7 +221,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
     adata_list = []
     for sample_name, sample_dir in zip(sample_names, sample_dirs):
 
-        print(f"Assembling sample '{sample_name}'")
+        logger.info(f"Assembling sample '{sample_name}'")
         solo_dir = os.path.join(sample_dir, "solo")
         adata = from_single_starsolo(solo_dir, dtype=dtype)
 
@@ -227,7 +238,7 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
         adata_list.append(adata)
 
     # Concatenating the adata objects
-    print("Concatenating anndata objects")
+    logger.info("Concatenating anndata objects")
     adata = adata_list[0].concatenate(adata_list[1:], join="outer")
 
     # Add information to uns
@@ -240,8 +251,9 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered"):
 #          CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT            #
 #####################################################################
 
-def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs):
-    ''' Building adata object from single mtx and two tsv/csv files
+def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs) -> sc.AnnData:
+    r"""
+    Build an adata object from single mtx and two tsv/csv files.
 
     Parameters
     ----------
@@ -266,8 +278,15 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
 
     Returns
     -------
-    anndata object containing the mtx matrix, gene and cell labels
-    '''
+    sc.AnnData
+        Anndata object containing the mtx matrix, gene and cell labels
+
+    Raises
+    ------
+    ValueError
+        If barcode or gene files contain duplicates.
+    """
+
     # Read mtx file
     adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
 
@@ -300,13 +319,13 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     return adata
 
 
-def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs):
-    '''
-    Building adata object from list of mtx, barcodes and genes files
+def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs) -> sc.AnnData:
+    """
+    Build an adata object from list of mtx, barcodes and genes files.
 
     Parameters
     ----------
-    path: string
+    path : string
         Path to data files
     mtx : string, optional
         String for glob to find matrix files. Default: '*_matrix.mtx*'
@@ -314,23 +333,19 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
         String for glob to find barcode files. Default: '*_barcodes.tsv*'
     genes : string, optional
         String for glob to find gene label files. Default: '*_genes.tsv*'
-    barcode_index : int
-        Column which contains the cell barcodes. Default: 0 -> Takes first column
-    transpose : boolean
-        Set True to transpose mtx matrix
-    barcode_index : int
-        Column which contains the cell barcodes (Default: 0 -> Takes first column)
-    genes_index : int
-        Column h contains the gene IDs (Default: 0 -> Takes first column)
-    delimiter : string
-        delimiter of genes and barcodes table
-    **kwargs : additional arguments
+    **kwargs : dict
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
-    --------
-    merged anndata object containing the mtx matrix, gene and cell labels
-    '''
+    -------
+    sc.AnnData
+        Merged anndata object containing the mtx matrix, gene and cell labels
+
+    Raises
+    ------
+    ValueError
+        If files are not found.
+    """
 
     mtx = glob.glob(os.path.join(path, mtx))
     barcodes = glob.glob(os.path.join(path, barcodes))
@@ -359,9 +374,9 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     return adata
 
 
-def convertToAdata(file, output=None, r_home=None, layer=None):
+def convertToAdata(file, output=None, r_home=None, layer=None) -> Optional[sc.AnnData]:
     """
-    Converts .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
@@ -380,9 +395,10 @@ def convertToAdata(file, output=None, r_home=None, layer=None):
 
     Returns
     -------
-    anndata.AnnData or None:
+    Optional[sc.AnnData]
         Returns converted anndata object if output is None.
     """
+
     # Setup R
     utils.setup_R(r_home)
 
