@@ -6,6 +6,7 @@ import copy
 import numpy as np
 import ipywidgets
 import functools  # for partial functions
+import glob
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -19,6 +20,210 @@ import sctoolbox.utils.decorator as deco
 from typing import Tuple, Union, List, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     import matplotlib
+
+
+########################################################################################
+# ------------------------------ QC plots for starsolo ------------------------------- #
+########################################################################################
+
+def _read_starsolo_summary(folder) -> pd.DataFrame:
+    """Get summary table from an output folder containing multiple starsolo runs.
+
+    Parameters
+    ----------
+    folder : str
+        Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
+
+    Raises
+    ------
+    ValueError
+        If no summary files are found in the folder.
+
+    Returns
+    -------
+    summary_table : pd.DataFrame
+        Table with summary statistics from all runs.
+    """
+
+    summary_files = glob.glob(folder + "/**/solo/Gene/Summary.csv")
+    if len(summary_files) == 0:
+        raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
+
+    # Read statistics from summary files
+    names = utils.clean_flanking_strings(summary_files)
+    summary_tables = []
+    for name, f in zip(names, summary_files):
+        star_table = pd.read_csv(f, index_col=0, header=None, names=[name])
+        summary_tables.append(star_table)
+    summary_table = pd.concat(summary_tables, axis=1)
+
+    return summary_table
+
+
+def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to Genome: Unique",
+                                            "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells",
+                                            "Median Reads per Cell", "Median Gene per Cell"],
+                          ncol=3,
+                          order=None,
+                          save=None) -> np.ndarray:
+    """Plot quality measures from starsolo as barplots per condition.
+
+    Parameters
+    ----------
+    folder : str
+        Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
+    measures : list of str, default ["Number of Reads", "Reads Mapped to Genome: Unique", "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells", "Median Reads per Cell", "Median Gene per Cell"]
+        List of measures to plot. Must be available in the solo summary table.
+    ncol : int, default 3
+        Number of columns in the plot.
+    order : list of str, default None
+        Order of conditions in the plot. If None, the order is alphabetical.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
+
+    Returns
+    -------
+    axes : np.ndarray
+        Array of axes objects containing the plot(s).
+
+    Raises
+    ------
+    KeyError
+        If a measure is not available in the solo summary table.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_starsolo_quality("data/quant/")
+    """
+
+    # Prepare functions for converting labels
+    def format_million(label):
+        return '{:,.0f} M'.format(int(label) / 10**6)
+
+    def format_thousand(label):
+        return '{:,.0f} K'.format(int(label) / 10**3)
+
+    def format_percent(label):
+        return '{:,.0f}%'.format(float(label) * 100)
+
+    # Get summary table
+    summary_table = _read_starsolo_summary(folder)
+    available_measures = summary_table.index.tolist()
+
+    if order is None:
+        order = sorted(summary_table.columns.tolist())
+        summary_table = summary_table[order]
+    else:
+        summary_table = summary_table[order]
+
+    # Setup plot
+    ncol = min(ncol, len(measures))
+    row = int(np.ceil(len(measures) / ncol))
+    fig, axes = plt.subplots(row, ncol, figsize=(ncol * 4, row * 4))
+    axes = axes.flatten() if len(measures) > 1 else np.array([axes])  # axes is a list of axes objects
+    _ = [ax.axis('off') for ax in axes[len(measures):]]  # hide additional plots
+
+    # Fill in plot per measure
+    for i, measure in enumerate(measures):
+        if measure not in available_measures:
+            raise KeyError(f"Measure '{measure}' not found in summary table. Available measures: {available_measures}")
+
+        # Plot data to barplot
+        ax = axes[i]
+        data = summary_table.loc[measure].astype(float)
+        sns.barplot(x=data.index, y=data.values, ax=ax, edgecolor="black")
+        ax.set_title(measure)
+
+        # Format yticklabels
+        if data.max() < 1:  # convert to %
+            ax.set_ylim(0, 1)
+            ax.set_yticks(ax.get_yticks(), [format_percent(value) for value in ax.get_yticks()])
+        elif data.max() < 10000:
+            pass  # no format; show raw values
+        elif data.max() < 10**6:  # convert to thousands
+            ax.set_yticks(ax.get_yticks(), [format_thousand(value) for value in ax.get_yticks()])
+        else:  # convert to millions
+            ax.set_yticks(ax.get_yticks(), [format_million(value) for value in ax.get_yticks()])
+
+        ax.set_xticks(ax.get_xticks())  # prevent locator error
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+    fig.tight_layout()
+    _save_figure(save)
+
+    return axes
+
+
+def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
+    """Plot UMI distribution for each condition in a folder.
+
+    Parameters
+    ----------
+    folder : str
+        Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
+    ncol : int, default 3
+        Number of columns in the plot.
+    save : str, default None
+        Path to save the plot. If None, the plot is not saved.
+
+    Returns
+    -------
+    axes : np.ndarray
+        Array of axes objects containing the plot(s).
+
+    Raises
+    ------
+    ValueError
+        If no UMI files ('UMIperCellSorted.txt') are found in the folder.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_starsolo_UMI("data/quant/", ncol=2)
+    """
+
+    summary_table = _read_starsolo_summary(folder)
+    umi_files = glob.glob(folder + "/**/solo/Gene/UMIperCellSorted.txt")
+
+    if len(umi_files) == 0:
+        raise ValueError("No UMI files found in folder. Please check the path and try again.")
+
+    names = utils.clean_flanking_strings(umi_files)
+
+    # Setup plot
+    ncol = min(len(names), ncol)
+    nrow = int(np.ceil(len(names) / ncol))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 4, nrow * 4))
+    axes = axes.flatten() if len(names) > 1 else np.array([axes])  # axes is a list of axes objects
+    _ = [ax.axis('off') for ax in axes[len(names):]]  # hide additional plots
+
+    for i, f in enumerate(umi_files):
+
+        ax = axes[i]
+        name = names[i]
+
+        df_knee = pd.read_table(f, header=None, names=[name])
+        cut = int(summary_table.loc["Estimated Number of Cells", name])
+
+        df_knee.plot.line(logx=True, logy=True, legend=False, ax=ax)
+        df_knee[:cut].plot.line(logx=True, legend=False, ax=ax, color='red')
+        ax.axvline(x=cut, color='grey', linestyle='-')
+
+        vmax = df_knee.iloc[0, 0]
+        ax.text(cut * 1.2, vmax, str(cut) + ' cells', verticalalignment='center')
+        ax.set_title(name)
+        ax.set_xlabel('Barcodes')
+        ax.set_ylabel('UMI count')
+
+    fig.tight_layout()
+    _save_figure(save)
+
+    return axes
 
 
 ########################################################################################
