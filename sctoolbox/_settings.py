@@ -13,13 +13,15 @@ class SctoolboxConfig(object):
 
     def __init__(self,
                  figure_dir: str = "",           # Directory to write figures to
-                 figure_prefix: str = "",        # Prefix for all figures to write (within figure_path)
+                 figure_prefix: str = "",        # Prefix for all figures to write (within figure_dir)
+                 table_dir: str = "",            # Directory to write tables to
+                 table_prefix: str = "",         # Prefix for all tables to write (within table_dir)
                  adata_input_dir: str = "",      # Directory to read adata objects from
-                 adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_path)
+                 adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_dir)
                  adata_output_dir: str = "",     # Directory to write adata objects to
-                 adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_path)
-                 threads: int = 4,  # default number of threads to use when multiprocessing is available
-                 create_dirs: bool = True,  # create output directories if they do not exist
+                 adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_dir)
+                 threads: int = 4,               # default number of threads to use when multiprocessing is available
+                 create_dirs: bool = True,       # create output directories if they do not exist
                  verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
@@ -55,7 +57,7 @@ class SctoolboxConfig(object):
         elif key == "_logger":
             pass  # allow logger to be set without checking
 
-        elif key in ["figure_dir", "adata_input_dir", "adata_output_dir"]:
+        elif key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._validate_string(value)
             self._create_dir(value)
@@ -113,6 +115,15 @@ class SctoolboxConfig(object):
     @full_figure_prefix.setter
     def full_figure_prefix(self, value):
         raise ValueError("'full_figure_prefix' cannot be set directly. Adjust 'figure_dir' & 'figure_prefix' instead.")
+
+    @property
+    def full_table_prefix(self):
+        """Combine table_dir and table_prefix on the fly to get the full table prefix."""
+        return self.table_dir + self.table_prefix
+
+    @full_table_prefix.setter
+    def full_table_prefix(self, value):
+        raise ValueError("'full_table_prefix' cannot be set directly. Adjust 'table_dir' & 'table_prefix' instead.")
 
     @property
     def full_adata_input_prefix(self):

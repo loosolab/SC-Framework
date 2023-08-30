@@ -618,29 +618,17 @@ def test_add_labels(df, label):
     assert type(texts[0]).__name__ == "Annotation"
 
 
-@pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
-                                             (np.array([[1, 2, 3], [1, 2, 3]]), 1, 100),
-                                             (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
-def test_scale_values(array, mini, maxi):
-    """Test that scaled values are in given range."""
-    result = pl._scale_values(array, mini, maxi)
-
-    assert len(result) == len(array)
-    if len(result.shape) == 1:
-        assert all((mini <= result) & (result <= maxi))
-    else:
-        for i in range(len(result)):
-            assert all((mini <= result[i]) & (result[i] <= maxi))
-
-
 def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
-    pl.clustermap_dotplot(table=table, x="bulk_labels",
-                          y="index", color="n_genes",
-                          size="n_counts", cmap="viridis",
-                          vmin=0, vmax=10)
-    assert True
+    axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
+                                 y="index", hue="n_genes",
+                                 size="n_counts", palette="viridis",
+                                 title="Title", show_grid=True)
+
+    assert isinstance(axes, list)
+    ax_type = type(axes[0]).__name__
+    assert ax_type.startswith("Axes")
 
 
 def test_bidirectional_barplot(df_bidir_bar):

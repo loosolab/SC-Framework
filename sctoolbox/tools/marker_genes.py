@@ -431,7 +431,13 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
     # If chosen: Save tables to joined excel
     if save_excel is not None:
-        with pd.ExcelWriter(save_excel) as writer:
+
+        if not isinstance(save_excel, str):
+            raise ValueError("'save_excel' must be a string.")
+
+        filename = settings.full_table_prefix + save_excel
+
+        with pd.ExcelWriter(filename) as writer:
             for group in group_tables:
                 table = group_tables[group].copy()
 
@@ -440,6 +446,8 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
                 table["logfoldchanges"] = table["logfoldchanges"].round(3)
 
                 table.to_excel(writer, sheet_name=utils._sanitize_sheetname(f'{group}'), index=False)
+
+        logger.info(f"Saved marker gene tables to '{filename}'")
 
     return group_tables
 
