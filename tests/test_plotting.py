@@ -22,6 +22,7 @@ plt.switch_backend("Agg")
 
 quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
 
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
@@ -38,6 +39,9 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
+
+    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
+    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
     sc.pp.normalize_total(adata, target_sum=None)
     sc.pp.log1p(adata)
@@ -900,6 +904,23 @@ def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
                                     '2': {'min': 1, 'max': 5}},
                               'B': {'1': {'min': 5, 'max': 7},
                                     '2': {'min': 3, 'max': 4}}}
+
+
+@pytest.mark.parametrize("columns", ["invalid", ["invalid"], ["not", "present"]])
+def test_pairwise_scatter_invalid(adata, columns):
+    """Test that invalid columns raise error."""
+    with pytest.raises(ValueError):
+        pl.pairwise_scatter(adata.obs, columns=columns)
+
+
+@pytest.mark.parametrize("thresholds", [None,
+                                        {"qcvar1": {"min": 0.1}, "qcvar2": {"min": 0.4}}])
+def test_pairwise_scatter(adata, thresholds):
+    """Test pairwise scatterplot with different input."""
+    axarr = pl.pairwise_scatter(adata.obs, columns=["qcvar1", "qcvar2"], thresholds=thresholds)
+
+    assert axarr.shape == (2, 2)
+    assert type(axarr[0, 0]).__name__.startswith("Axes")
 
 
 @pytest.mark.parametrize("order", [None, ["KO-2", "KO-1", "Ctrl-2", "Ctrl-1"]])

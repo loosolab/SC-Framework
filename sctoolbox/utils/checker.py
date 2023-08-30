@@ -49,7 +49,7 @@ def _is_interactive() -> bool:
 
     Returns
     -------
-    bool :
+    bool
         True if interactive, False otherwise.
     """
 
@@ -347,7 +347,7 @@ def in_range(value, limits, include_limits=True) -> bool:
 
     Returns
     -------
-    bool :
+    bool
         Returns whether the value is between the set limits.
     """
 
@@ -368,7 +368,7 @@ def is_integer_array(arr) -> bool:
 
     Returns
     -------
-    bool :
+    bool
         True if all values are integers, False otherwise.
     """
 
@@ -470,7 +470,7 @@ def is_regex(regex) -> bool:
 
     Returns
     -------
-    bool :
+    bool
         True if string is a valid regex, False otherwise.
     """
 
@@ -496,7 +496,7 @@ def check_marker_lists(adata, marker_dict) -> dict[str, list[str]]:
 
     Returns
     -------
-    dict[str, list[str]] :
+    dict[str, list[str]]
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
     """
 

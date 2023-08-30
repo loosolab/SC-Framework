@@ -694,9 +694,8 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
     list[matplotlib.axes.Axes]
         List containing all axis objects.
 
-    EXAMPLE
-    -------
-
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
