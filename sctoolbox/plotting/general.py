@@ -7,6 +7,7 @@ import warnings
 import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sciclust
 
@@ -542,7 +543,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 
     Returns
     -------
-    matplotlib.axes.Axes :
+    matplotlib.axes.Axes
         Object containing the violinplot.
 
     Raises
@@ -698,3 +699,134 @@ def plot_venn(groups_dict, title=None, save=None):
 
     # Show the plot
     _save_figure(save)
+
+
+########################################################################################
+# -------------------------------- Scatter plots ------------------------------------- #
+########################################################################################
+
+def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
+    """Plot a grid of scatterplot comparing column values pairwise.
+
+    If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
+
+    Parameters
+    ----------
+    table : pd.DataFrame
+        Dataframe containing the data to plot.
+    columns : list[str]
+        List of column names in table to plot.
+    thresholds : dict, default None
+        Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
+    save : str, default None
+        If given, the figure will be saved to this path.
+
+    Returns
+    -------
+    np.ndarray
+        Array of matplotlib.axes.Axes objects.
+
+    Raises
+    ------
+    ValueError
+        If columns is not a list of column names or if columns contains less than two columns.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        columns = ["percent_mito", "n_counts", "S_score"]
+
+        thresholds = {"n_counts": {"min": 2500, "max": 8000},
+                      "percent_mito": {"max": 0.03},
+                      "S_score": {"max": 0.5}}
+
+        pl.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
+    """
+
+    if isinstance(columns, str):
+        raise ValueError("'columns' must be a list of column names.")
+
+    if len(columns) < 2:
+        raise ValueError("'columns' must contain at least two columns to compare.")
+
+    for col in columns:
+        if col not in table.columns:
+            raise ValueError(f"Column '{col}' not found in table.")
+
+    if thresholds is None:
+        thresholds = {}
+
+    # Initialize plot
+    fig, axarr = plt.subplots(nrows=len(columns), ncols=len(columns),
+                              figsize=(len(columns) * 3, len(columns) * 3))
+
+    # Fill in plots
+    excluded_flag = False
+    for i_row in range(len(columns)):  # iterate over rows
+        for i_col in range(len(columns)):   # iterate over columns
+
+            c_col, c_row = columns[i_col], columns[i_row]
+            ax = axarr[i_row, i_col]
+
+            if i_row == i_col:  # plot histogram
+                sns.histplot(table[c_col], ax=ax, color="black")
+                ax.set_xlabel("")  # labels are set afterwards
+                ax.set_ylabel("")  # labels are set afterwards
+            else:
+
+                # Establish coloring using thresholds
+                included = np.ones(len(table), dtype=bool)
+                for col in [c_col, c_row]:
+                    if col in thresholds:
+                        included = included & (table[col] >= thresholds[col].get("min", table[col].min())) & (table[col] <= thresholds[col].get("max", table[col].max()))
+                colors = np.where(included, "black", "red")
+
+                ax.scatter(table[c_col], table[c_row], s=1, c=colors)  # x=columns, y=rows
+
+                excluded_flag = excluded_flag or not np.all(included)  # set flag if any points are excluded
+
+    # Plot threshold lines
+    for i, col in enumerate(columns):
+        if col in thresholds:
+            for key in ["min", "max"]:
+                if key in thresholds[col]:
+
+                    # plot vertical lines in row
+                    for ax in axarr[:, i]:
+                        ax.axvline(thresholds[col][key], color="darkgrey", lw=1, linestyle="--")
+
+                    # plot horizontal lines in scatterplots
+                    scatter_idx = [i_col for i_col in range(len(columns)) if i_col != i]  # all but current column
+                    for ax in axarr[i, scatter_idx]:
+                        ax.axhline(thresholds[col][key], color="darkgrey", lw=1, linestyle="--")
+
+    # Fix y-axis legends for first histogram
+    ax = axarr[0, 0].twinx()  # create new axis for correct y-values
+    ax.set_ylim(axarr[0, 1].get_ylim())
+    ax.yaxis.set_label_position('left')
+    ax.yaxis.set_ticks_position('left')
+    axarr[0, 0].set_yticks([])  # remove original axis
+    axarr[0, 0] = ax
+
+    # Set labels
+    for i, col in enumerate(columns):
+        axarr[i, 0].set_ylabel(col)     # left column contains y labels
+        axarr[-1, i].set_xlabel(col)    # bottom row contains x labels
+
+    # Remove ticklabels from middle plots
+    _ = [ax.axes.yaxis.set_ticklabels([]) for ax in axarr[:, 1:].flatten()]  # remove y ticklabels from all but first column
+    _ = [ax.axes.xaxis.set_ticklabels([]) for ax in axarr[:-1, :].flatten()]  # remove x ticklabels from all but last row
+
+    # Add legend if any points are excluded
+    if excluded_flag:
+        point = Line2D([0], [0], marker='o', markersize=np.sqrt(20), color='r', linestyle='None')
+        axarr[0, -1].legend([point], ["Excluded"], loc="center left", bbox_to_anchor=(1, 0.5), frameon=False)
+
+    plt.subplots_adjust(wspace=0.08, hspace=0.08)
+
+    # Save plot
+    _save_figure(save)
+
+    return axarr

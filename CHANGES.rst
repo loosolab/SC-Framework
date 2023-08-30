@@ -22,6 +22,7 @@
 - Add Check to _filter_object() if column contains only boolean (#110)
 - Add support of matrx and numpy.ndarray type of adata.X for predict_sex (#111)
 - Add method to get pd.DataFrame columns with list of regex (#90)
+- Added 'pairwise_scatter' method for plotting QC metrics (#54)
 - Add ATAC quality metrics TSSe (ENCODE), FRiP
 - Revised FLD density plotting
 - Adjusted style of default values in docs (#33)

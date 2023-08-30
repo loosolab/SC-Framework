@@ -819,6 +819,27 @@ def get_keys(adata, manual_thresholds) -> dict[str, dict[str, Union[float, dict[
     return m_thresholds
 
 
+def get_mean_thresholds(thresholds):
+    """Convert grouped thresholds to global thresholds by taking the mean across groups."""
+
+    global_thresholds = {}
+    for key, adict in thresholds.items():
+        global_thresholds[key] = {}
+
+        if "min" in adict or "max" in adict:  # already global threshold
+            global_thresholds[key] = adict
+        else:
+            min_values = [v.get("min", None) for v in adict.values() if "min" in v]
+            if len(min_values) > 0:
+                global_thresholds[key]["min"] = np.mean(min_values)
+
+            max_values = [v.get("max", None) for v in adict.values() if "max" in v]
+            if len(max_values) > 0:
+                global_thresholds[key]["max"] = np.mean(max_values)
+
+    return global_thresholds
+
+
 ###############################################################################
 #                           STEP 3: APPLYING CUTOFFS                          #
 ###############################################################################
