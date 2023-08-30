@@ -21,7 +21,7 @@ def log_anndata(func) -> Callable:
 
     Returns
     -------
-    Callable :
+    Callable
         Decorated function
     """
 

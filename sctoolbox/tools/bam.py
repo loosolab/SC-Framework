@@ -465,7 +465,7 @@ def get_bam_reads(bam_obj) -> int:
 
     Returns
     -------
-    int :
+    int
         number of reads in the bam file
     """
 
@@ -513,7 +513,7 @@ def _monitor_progress(progress_queue,
 
     Returns
     -------
-    int :
+    int
         Returns 0 on success.
     """
 
@@ -617,7 +617,7 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
 
     Returns
     -------
-    int :
+    int
         Returns 0 on success.
 
     Raises
@@ -696,7 +696,7 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) 
 
     Returns
     -------
-    int :
+    int
         Returns 0 on success.
 
     Raises

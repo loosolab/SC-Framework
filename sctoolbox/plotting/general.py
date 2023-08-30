@@ -8,8 +8,6 @@ import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sciclust
 
@@ -545,7 +543,7 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 
     Returns
     -------
-    matplotlib.axes.Axes :
+    matplotlib.axes.Axes
         Object containing the violinplot.
 
     Raises
