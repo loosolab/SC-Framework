@@ -351,7 +351,7 @@ def score_mask(peaks, convolved_data, plot=False, save=False):
 
 def build_score_mask(plot=True,
                      save=False,
-                     mu_list=[42, 200, 360, 550],
+                     mu_list=[50, 200, 350, 550],
                      sigma_list=[25, 35, 45, 25]) -> np.array:
     """
     Build a score mask for the score by custom continuous wavelet transformation.
@@ -391,9 +391,9 @@ def build_score_mask(plot=True,
         ax.plot(gaussians[1])
         ax.plot(gaussians[2])
         ax.plot(gaussians[3])
-        ax.set_title('score-mask')
-        ax.set_xlabel('position')
-        ax.set_ylabel('scoring')
+        ax.set_title('Score-Mask')
+        ax.set_xlabel('Position')
+        ax.set_ylabel('Scoring')
 
         if save:
             plotting._save_figure('score_mask')
@@ -619,7 +619,7 @@ def cos_wavelet(wavelength=100,
         ax.set_ylabel('Amplitude')
 
         if save:
-            plotting._save_fig(figure_name)
+            plotting._save_figure(figure_name)
 
         # Optionally, to show the figure
         plt.show()
@@ -810,7 +810,7 @@ def score_by_conv(data,
     scores = score_mask(peaks, convolved_data, plot=plot_mask)
 
     if plot_ov:
-        plot_custom_conv(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample, save=save, figure_name='momentum_overview')
+        plot_custom_conv(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample, save=save, figure_name='convolution_overview')
 
     return scores
 
@@ -904,7 +904,7 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
     # Set labels and title
     ax.set_title('Fragment Length Density Plot')
     ax.set_xlabel('Fragment Length', color='blue')
-    ax.set_ylabel('Abundance', color='blue')
+    ax.set_ylabel('Number of Fragments', color='blue')
 
     # Adjust y-ticks to show original scale
     ax.set_yticks(np.linspace(0, target_height - 1, 6))
@@ -1114,7 +1114,7 @@ def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0, save=False
     ax1.scatter(points_x, points_y, color='red', zorder=2)
 
     ax2.set_title('Fragment Length Distribution')
-    ax2.set_ylabel('Abundance')
+    ax2.set_ylabel('Number of Fragments')
     ax2.set_xlabel('Fragment Length', color='blue')
     ax2.plot(single_d)
     ax2.scatter(points_x, points_y_data, color='red', zorder=2)
