@@ -1,6 +1,8 @@
 import os
 import tempfile
 import subprocess
+import matplotlib.pyplot as plt
+
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -13,44 +15,48 @@ class GenomeTracks():
     --------
     .. plot::
         :context: close-figs
+        :nofigs:
 
-        G = GenomeTracks()
+        import sctoolbox.plotting as pl
+
+        G = pl.GenomeTracks()
 
         #Add bigwig tracks
         G.add_track("data/tracks/bigwig1.bw", color="red")
         G.add_track("data/tracks/bigwig2.bw", color="blue", orientation="inverted")
 
         #Add hlines to previous bigwig track
-        tracks.add_hlines([200, 210], color="red")
-        tracks.add_hlines([250], color="blue", line_style="dashed")
-        G.add_track("data/tracks/)
-        G.add_track("data/tracks/genes.gtf")
+        G.add_hlines([100, 200], color="red")
+        G.add_hlines([250], color="blue", line_style="dashed")
 
         #Add links
-        tracks.add_track("data/tracks/links.arcs", orientation="inverted", height=2)
+        G.add_track("data/tracks/links.arcs", orientation="inverted", height=2)
 
         #Add one line between tracks
-        tracks.add_hline()
+        G.add_hline()
 
         #Add .bed-file regions
-        tracks.add_track("tad_classification.bed", title="bed")
-        tracks.add_track("tad_classification.bed", color="Reds", title="colored bed")  # colored by score column
+        G.add_track("data/tracks/tad_classification.bed", title="bed")
+        G.add_track("data/tracks/tad_classification.bed", color="Reds", title="bed colored by score column")
 
         #Add vlines and highlight
-        tracks.add_track("data/tracks/vlines.bed", file_type="vlines")
-        tracks.add_track("data/tracks/vhighlight.bed", file_type="vhighlight")
+        G.add_track("data/tracks/vlines.bed", file_type="vlines")
+        G.add_track("data/tracks/vhighlight.bed", file_type="vhighlight")
 
         #Add a spacer
-        tracks.add_spacer()
+        G.add_spacer()
 
         #Add genes
-        tracks.add_track("data/tracks/genes.gtf", gene_rows=5)
+        G.add_track("data/tracks/genes.gtf", gene_rows=5)
 
         #Add x-axis
-        tracks.add_spacer()
-        tracks.add_xaxis()
+        G.add_spacer()
+        G.add_xaxis()
 
-        tracks.plot(region="X:3000000-3500000", output="test.png", trackLabelFraction=0.2)
+        # Plot
+        G.plot(region="X:3000000-3500000", output="genometrack_X.png", trackLabelFraction=0.2)
+
+    .. image:: genometrack_X.png
     """
 
     def __init__(self):
@@ -82,7 +88,8 @@ class GenomeTracks():
         file_type = bed
         ```
 
-        Additional parameters are decided by <obj>.global_defaults and <obj>.type_defaults, or can be given by kwargs.
+        Additional parameters are decided by <obj>.global_defaults and <obj>.type_defaults, or can be given by kwargs. All options and parameters are available at:
+        https://pygenometracks.readthedocs.io/en/latest/content/all_tracks.html
 
         Parameters
         ----------
@@ -94,9 +101,6 @@ class GenomeTracks():
             Name of the track. If None, the name will be estimated from the file_type e.g. 'bigwig 1'. or 'bed 2'. If the file_type is not available, the name will be the file path.
         **kwargs : arguments
             Additional arguments to be passed to pyGenomeTracks track configuration, for example `height=5` or `title="My track"`.
-
-        Please find additional information at:
-        https://pygenometracks.readthedocs.io/en/latest/content/all_tracks.html
         """
 
         # Setup
@@ -239,6 +243,12 @@ class GenomeTracks():
         elif file.endswith(".bw"):
             return "bigwig"
 
+        elif file.endswith(".gtf"):
+            return "gtf"
+
+        else:
+            logger.warning(f"Could not predict file type for '{file}'. pyGenometracks will try to predict the file type. For more control, please specify 'file_type' manually in '.add_track'.")
+
     def _create_config_str(self) -> str:
         """Create configuration string based on tracks list.
 
@@ -285,7 +295,7 @@ class GenomeTracks():
         return config_file
 
     def show_plot(self):
-        """Display the plot if run in a Jupyter notebook."""
+        """Display the plot. """
 
         if self.output is None:
             raise ValueError("No output file was created. Run GenomeTracks.plot() first.")
@@ -298,7 +308,15 @@ class GenomeTracks():
             elif self.output.endswith(".pdf"):
                 display(IFrame(self.output))
         else:
-            raise ValueError("GenomeTracks.show_plot() can only be used in a Jupyter notebook.")
+            import matplotlib.image as mpimg
+
+            if self.output.endswith(".png"):
+                img = mpimg.imread(self.output)
+                plt.imshow(img)
+                plt.axis('off')
+                plt.show()
+            else:
+                logger.warning("Only .png files can be shown in the console.")
 
     def show_config(self):
         """Show the current configuration file as a string."""

@@ -84,9 +84,11 @@ nbsphinx_execute = 'never'
 # -- Options for automatic plots in docs -------------------------------------
 
 # Copy data from test data folder to docs folder
-#os.makedirs("source/API", exist_ok=True)
+# os.makedirs("source/API", exist_ok=True)
 
 # copy folder
+if os.path.exists("API/data"):
+    shutil.rmtree("API/data")
 shutil.copytree("../../tests/data", "API/data")
 
 plot_include_source = True

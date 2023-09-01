@@ -1,5 +1,10 @@
-0.2 (in progress)
-=================
+0.3 (in progress)
+-----------------
+- Added GenomeTracks plotting
+
+
+0.2 (30-08-2023)
+-----------------
 - implemented prepare_for_cellxgene
 - fix error in prepare_for_cellxgene caused by .uns[_color] not matching .obs column. (#176)
 - implemented prepare_for_cellxgene (#147)
@@ -34,11 +39,10 @@
 - Fixed issues with clustered dotplot with new code (#122)
 
 Changes to notebooks
---------------------
+^^^^^^^^^^^^^^^^^^^^
 - Added display of 3D UMAP html in notebook 04 (#119)
 
-ATAC notebooks
-^^^^^^^^^^^^^^
+ATAC notebooks:
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation
@@ -46,7 +50,7 @@ ATAC notebooks
 - Revised nucleosomal score scoring
 
 0.1.1 (24-05-2023)
-==================
+------------------
 - Fixed import issue
 - Make version accessible
 - Added check for CHANGES.rst in gitlab-ci
@@ -55,5 +59,5 @@ ATAC notebooks
 - Added check for sctoolbox/_version.py file in gitlab-ci
 
 0.1 (22-05-2023)
-================
+----------------
 - First version
