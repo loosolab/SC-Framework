@@ -1,3 +1,5 @@
+"""Class to create a genome track plot via pyGenomeTracks."""
+
 import os
 import tempfile
 import subprocess
@@ -75,6 +77,7 @@ class GenomeTracks():
         self.output = None  # path to the output file if written
 
     def __repr__(self):
+        """Return a string representation of the GenomeTracks object."""
         n_tracks = len(self.tracks)
         return f"GenomeTracks object with {n_tracks} track(s). See <obj>.tracks for details."
 
@@ -101,6 +104,11 @@ class GenomeTracks():
             Name of the track. If None, the name will be estimated from the file_type e.g. 'bigwig 1'. or 'bed 2'. If the file_type is not available, the name will be the file path.
         **kwargs : arguments
             Additional arguments to be passed to pyGenomeTracks track configuration, for example `height=5` or `title="My track"`.
+
+        Raises
+        ------
+        ValueError
+            If the file_type is not valid.
         """
 
         # Setup
@@ -163,6 +171,8 @@ class GenomeTracks():
             List of y values to plot horizontal lines at.
         overlay_previous : str, default "share-y"
             Whether to plot the lines on the same y-axis as the previous plot ("share-y") or on a new y-axis ("no").
+        **kwargs : arguments
+            Additional arguments to be passed to pyGenomeTracks track configuration, for example `title="My lines"`.
         """
 
         if not isinstance(y_values, list):
@@ -217,7 +227,8 @@ class GenomeTracks():
         height : int, default 1
             Height of the x-axis track.
         **kwargs : arguments
-            Additional arguments to be passed to pyGenomeTracks track configuration."""
+            Additional arguments to be passed to pyGenomeTracks track configuration.
+        """
 
         d = {"height": height}
         d.update(kwargs)
@@ -295,7 +306,7 @@ class GenomeTracks():
         return config_file
 
     def show_plot(self):
-        """Display the plot. """
+        """Display the plot."""
 
         if self.output is None:
             raise ValueError("No output file was created. Run GenomeTracks.plot() first.")
@@ -346,6 +357,11 @@ class GenomeTracks():
             DPI of the plot.
         **kwargs : arguments
             Additional arguments to be passed to pyGenomeTracks, for example `trackLabelFraction=0.2`.
+
+        Raises
+        ------
+        ValueError
+            If the pyGenomeTracks command fails.
         """
 
         kwargs["title"] = f"'{title}'" if title is not None else None
@@ -369,7 +385,7 @@ class GenomeTracks():
             subprocess.run(cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             self.output = None  # reset output in case it was previously plotted
-            raise ValueError(f"Error while running pyGenomeTracks: {e}")
+            raise ValueError(f"Error while running pyGenomeTracks: {e.output}")
 
         # Remove config file
         if config_file is None:  # config_file was created by _write_config
