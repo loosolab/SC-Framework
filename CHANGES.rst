@@ -42,7 +42,8 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Added display of 3D UMAP html in notebook 04 (#119)
 
-ATAC notebooks:
+*ATAC notebooks:*
+
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation
