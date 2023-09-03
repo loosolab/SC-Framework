@@ -534,7 +534,9 @@ def score_by_momentum(data,
                                 shift_r=shift_r,
                                 sample_n=sample_to_inspect,
                                 shift=shift,
-                                remove=remove)
+                                remove=remove,
+                                save=True,
+                                figure_name='mom_ov.png')
 
     logger.info('calc scores...')
 
@@ -817,7 +819,7 @@ def score_by_conv(data,
 
 # //////////////////////////////// plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(count_table, max_abundance=600, target_height=1000, save=False, figure_name='density_plot', colormap='jet') -> matplotlib.axes.Axes:
+def density_plot(count_table, max_abundance=600, target_height=1000, save=False, figure_name='density_plot', colormap='jet', ax=None, fig=None) -> matplotlib.axes.Axes:
     """
     Plot the density of the fragment length distribution over all cells.
 
@@ -837,6 +839,8 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
         Name of the figure to save.
     colormap : str, default 'jet'
         Color map of the plot.
+    ax : matplotlib.axes.Axes, default None
+        Axes to plot on.
 
     Returns
     -------
@@ -893,7 +897,11 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
     mean_interpolated = mean * scaling_factor
 
     # Initialize subplots
-    fig, ax = plt.subplots()
+    if ax is None:
+        main_plot = True
+        fig, ax = plt.subplots()
+    else:
+        main_plot = False
 
     # Display the image
     im = ax.imshow(densities_interpolated, aspect='auto', origin="lower", cmap=colormap)
@@ -911,14 +919,16 @@ def density_plot(count_table, max_abundance=600, target_height=1000, save=False,
     ax.set_yticklabels(np.linspace(0, num_rows - 1, 6).astype(int))
 
     # Add colorbar to the plot
-    fig.colorbar(im, ax=ax, label='Density (log scale)')
+    if fig is not None:
+        fig.colorbar(im, ax=ax, label='Density (log scale)')
 
-    if save:
-        plotting._save_figure(figure_name)
+    if main_plot:
+        if save:
+            plotting._save_figure(figure_name)
 
-    plt.show()
+        plt.show()
 
-    return ax
+    return ax, fig
 
 
 def plot_wavelet_transformation(convolution,
@@ -1107,7 +1117,7 @@ def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0, save=False
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
 
-    ax1.set_title("Convolution: " + str(sample_n) + " - Sample")
+    ax1.set_title("Convolution: ")
     ax1.set_ylabel('Convolution Fit')
     ax1.set_xlabel('Fragment Length', color='blue')
     ax1.plot(single_m)
@@ -1121,7 +1131,7 @@ def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0, save=False
 
     ax3.set_title('Scores')
     ax3.set_ylabel('Number of Cells')
-    ax3.set_xlabel('Fragment Length', color='blue')
+    ax3.set_xlabel('Score', color='blue')
     ax3.hist(scores, bins=100, log=True)
 
     plt.tight_layout()
