@@ -119,7 +119,7 @@ def annotate_adata(adata,
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
-        utils.check_columns(adata.var, coordinate_cols, "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+        utils.check_columns(adata.var, coordinate_cols, name="coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
     utils.format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
