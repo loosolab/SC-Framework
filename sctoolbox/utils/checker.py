@@ -6,15 +6,19 @@ import matplotlib
 import numpy as np
 import gzip
 import shutil
+import scanpy as sc
 
-from typing import Optional
+from typing import Optional, Tuple, Any
+from beartype import beartype
+from nptyping import NDArray, DataFrame, Structure as S
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def check_module(module) -> None:
+@beartype
+def check_module(module: str) -> None:
     """
     Check if <module> can be imported without error.
 
@@ -65,7 +69,8 @@ def _is_interactive() -> bool:
 # ------------------------- Type checking ------------------------ #
 #####################################################################
 
-def _is_gz_file(filepath) -> bool:
+@beartype
+def _is_gz_file(filepath: str) -> bool:
     """
     Check wheather file is a compressed .gz file.
 
@@ -84,7 +89,8 @@ def _is_gz_file(filepath) -> bool:
         return test_f.read(2) == b'\x1f\x8b'
 
 
-def gunzip_file(f_in, f_out) -> None:
+@beartype
+def gunzip_file(f_in: str, f_out: str) -> None:
     """
     Decompress file.
 
@@ -101,7 +107,8 @@ def gunzip_file(f_in, f_out) -> None:
             shutil.copyfileobj(h_in, h_out)
 
 
-def is_str_numeric(ans) -> bool:
+@beartype
+def is_str_numeric(ans: str) -> bool:
     """
     Check if string can be converted to number.
 
@@ -123,7 +130,9 @@ def is_str_numeric(ans) -> bool:
         return False
 
 
-def format_index(adata, from_column=None) -> None:
+@beartype
+def format_index(adata: sc.AnnData,
+                 from_column: Optional[str] = None) -> None:
     """
     Format adata.var index.
 
@@ -132,9 +141,9 @@ def format_index(adata, from_column=None) -> None:
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object to reformat.
-    from_column : str, default None
+    from_column : Optional[str], default None
         Column name in adata.var to be set as index.
     """
 
@@ -195,7 +204,8 @@ def format_index(adata, from_column=None) -> None:
             adata.var.set_index('new_index', inplace=True)
 
 
-def get_index_type(entry) -> Optional[str]:
+@beartype
+def get_index_type(entry: str) -> Optional[str]:
     """
     Check the format of the index by regex.
 
@@ -219,7 +229,9 @@ def get_index_type(entry) -> Optional[str]:
         return 'start_name'
 
 
-def validate_regions(adata, coordinate_columns) -> None:
+@beartype
+def validate_regions(adata: sc.AnnData,
+                     coordinate_columns: list[str]) -> None:
     """
     Check if the regions in adata.var are valid.
 
@@ -227,7 +239,7 @@ def validate_regions(adata, coordinate_columns) -> None:
     ----------
     adata : anndata.AnnData
         AnnData object containing the regions to be checked.
-    coordinate_columns : list of str
+    coordinate_columns : list[str]
         List of length 3 for column names in adata.var containing chr, start, end coordinates.
 
     Raises
@@ -254,9 +266,10 @@ def validate_regions(adata, coordinate_columns) -> None:
             raise ValueError("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
 
 
-def format_adata_var(adata,
-                     coordinate_columns=None,
-                     columns_added=["chr", "start", "end"]) -> None:
+@beartype
+def format_adata_var(adata: sc.AnnData,
+                     coordinate_columns: Optional[list[str]] = None,
+                     columns_added: list[str] = ["chr", "start", "end"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
@@ -273,7 +286,7 @@ def format_adata_var(adata,
     ----------
     adata : anndata.AnnData
         The anndata object containing features to annotate.
-    coordinate_columns : list[str] | None, default None
+    coordinate_columns : Optional[list[str]], default None
         List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
         If None, the index will be formatted.
     columns_added : list[str], default ['chr', 'start', 'end']
@@ -332,7 +345,9 @@ def format_adata_var(adata,
         validate_regions(adata, columns_added)
 
 
-def in_range(value, limits, include_limits=True) -> bool:
+@beartype
+def in_range(value: int, limits: Tuple[int, int],
+             include_limits: bool = True) -> bool:
     """
     Check if a value is in a given range.
 
@@ -340,7 +355,7 @@ def in_range(value, limits, include_limits=True) -> bool:
     ----------
     value : int
         Number to check if in range.
-    limits : int tuple
+    limits : Tuple[int, int]
         Lower and upper limits. E.g. (0, 10)
     include_limits : bool, default True
         If True includes limits in accepted range.
@@ -357,13 +372,14 @@ def in_range(value, limits, include_limits=True) -> bool:
         return value > limits[0] and value < limits[1]
 
 
-def is_integer_array(arr) -> bool:
+@beartype
+def is_integer_array(arr: NDArray[Any, Any]) -> bool:
     """
     Check if all values of arr are integers.
 
     Parameters
     ----------
-    arr : numpy.array
+    arr : NDArray[Any, Any]
         Array of values to be checked.
 
     Returns
@@ -378,7 +394,11 @@ def is_integer_array(arr) -> bool:
     return np.all(boolean)
 
 
-def check_columns(df, columns, error=True, name="dataframe") -> Optional[bool]:
+@beartype
+def check_columns(df: DataFrame[S["anyType: *"]],
+                  columns: list,
+                  error: bool = True,
+                  name: str = "dataframe") -> Optional[bool]:
     """
     Check whether columns are found within a pandas dataframe.
 
@@ -427,7 +447,9 @@ def check_columns(df, columns, error=True, name="dataframe") -> Optional[bool]:
             return True
 
 
-def check_file_ending(file, pattern="gtf") -> None:
+@beartype
+def check_file_ending(file: str,
+                      pattern: str = "gtf") -> None:
     """
     Check if a file has a certain file ending.
 
@@ -437,8 +459,9 @@ def check_file_ending(file, pattern="gtf") -> None:
     ----------
     file : str
         Path to the file.
-    pattern : str or regex
-        File ending to be checked for. If regex, the regex must match the entire string.
+    pattern : str, default 'gtf'
+        File ending to be checked for.
+        If regex, the regex must match the entire string.
 
     Raises
     ------
@@ -459,7 +482,8 @@ def check_file_ending(file, pattern="gtf") -> None:
         raise ValueError(f"File '{file}' does not have the expected file ending '{pattern}'")
 
 
-def is_regex(regex) -> bool:
+@beartype
+def is_regex(regex: str) -> bool:
     """
     Check if a string is a valid regex.
 
@@ -482,15 +506,17 @@ def is_regex(regex) -> bool:
         return False
 
 
-def check_marker_lists(adata, marker_dict) -> dict[str, list[str]]:
+@beartype
+def check_marker_lists(adata: sc.AnnData,
+                       marker_dict: dict[str, list[str]]) -> dict[str, list[str]]:
     """
     Remove genes in custom marker genes lists which are not present in dataset.
 
     Parameters
     ----------
-    adata : AnnData object
+    adata : sc.AnnData
         The anndata object containing features to annotate.
-    marker_dict : dict
+    marker_dict : dict[str, list[str]]
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
         The marker genes given in the lists need to match the index of adata.var.
 
