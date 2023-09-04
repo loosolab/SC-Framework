@@ -8,7 +8,7 @@ import gzip
 import shutil
 import scanpy as sc
 
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, Iterable
 from beartype import beartype
 from sctoolbox._custom_types import _pandas_dataframe
 import numpy.typing as npt
@@ -271,7 +271,7 @@ def validate_regions(adata: sc.AnnData,
 @beartype
 def format_adata_var(adata: sc.AnnData,
                      coordinate_columns: Optional[list[str]] = None,
-                     columns_added: list[str] = ["chr", "start", "end"]) -> None:
+                     columns_added: Iterable[str] = ["chr", "start", "end"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
@@ -289,9 +289,10 @@ def format_adata_var(adata: sc.AnnData,
     adata : anndata.AnnData
         The anndata object containing features to annotate.
     coordinate_columns : Optional[list[str]], default None
+    TODO Replace with Iterable
         List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
         If None, the index will be formatted.
-    columns_added : list[str], default ['chr', 'start', 'end']
+    columns_added : Iterable[str], default ['chr', 'start', 'end']
         List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
 
     Raises
