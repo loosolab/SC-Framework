@@ -51,3 +51,6 @@ def test_genometracks():
     G.plot(region="X:3000000-3500000", output="genometrack_X.png", trackLabelFraction=0.2)
 
     assert os.path.isfile("genometrack_X.png")
+
+    # Remove file
+    os.remove("genometrack_X.png")
