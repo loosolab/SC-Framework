@@ -143,7 +143,7 @@ def write_excel(table_dict: dict[str, Any],
 
 
 @beartype
-def table_zscore(table: pa.typing.DataFrame[utils._pandas_dataframe], 
+def table_zscore(table: pa.typing.DataFrame[utils._pandas_dataframe],
                  how: Literal["row", "col"] = "row") -> pd.DataFrame:
     """
     Z-score a table.

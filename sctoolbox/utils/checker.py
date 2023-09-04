@@ -11,6 +11,8 @@ import scanpy as sc
 from typing import Optional, Tuple, Any
 from beartype import beartype
 from nptyping import NDArray, DataFrame, Structure as S
+import numpy.typing as npt
+import pandera as pa
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
@@ -373,13 +375,13 @@ def in_range(value: int, limits: Tuple[int, int],
 
 
 @beartype
-def is_integer_array(arr: NDArray[Any, Any]) -> bool:
+def is_integer_array(arr: npt.ArrayLike) -> bool:
     """
     Check if all values of arr are integers.
 
     Parameters
     ----------
-    arr : NDArray[Any, Any]
+    arr : npt.ArrayLike
         Array of values to be checked.
 
     Returns
@@ -395,7 +397,7 @@ def is_integer_array(arr: NDArray[Any, Any]) -> bool:
 
 
 @beartype
-def check_columns(df: DataFrame[S["anyType: *"]],
+def check_columns(df: pa.typing.DataFrame[utils._pandas_dataframe],
                   columns: list,
                   error: bool = True,
                   name: str = "dataframe") -> Optional[bool]:
@@ -539,3 +541,8 @@ def check_marker_lists(adata: sc.AnnData,
             marker_dict[key] = found_in_var
             logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
     return marker_dict
+
+
+class _pandas_dataframe(pa.DataFrameModel):
+    """Util class for dataframe typecheck"""
+    pass

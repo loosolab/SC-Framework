@@ -180,7 +180,10 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
 
 
 @beartype
-def add_uns_info(adata: sc.AnnData, key: str | list, value: Any, how: str = "overwrite") -> None:
+def add_uns_info(adata: sc.AnnData,
+                 key: str | list,
+                 value: Any,
+                 how: str = "overwrite") -> None:
     """
     Add information to adata.uns['sctoolbox'].
 

@@ -10,11 +10,13 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 import numpy as np
+import sctoolbox.utils as utils
 
 # type hint imports
 from typing import Any, TYPE_CHECKING, Optional, Union
 from beartype import beartype
-from nptyping import NDArray, DataFrame, Structure as S
+import numpy.typing as npt
+import panderas as pa
 
 if TYPE_CHECKING:
     import rpy2.rinterface_lib.sexp
@@ -427,13 +429,14 @@ def sanitize_string(s: str, char_list: list[str], replace: str = "_") -> str:
 
 
 @beartype
-def identify_columns(df: DataFrame[S["anyType: *"]], regex: Union(list[str], str)) -> list[str]:
+def identify_columns(df: pa.typing.DataFrame[utils._pandas_dataframe],
+                     regex: Union(list[str], str)) -> list[str]:
     """
     Get columns from pd.DataFrame that match the given regex.
 
     Parameters
     ----------
-    df : DataFrame[S["anyType: *"]]
+    df : pandas.Dataframe
         Pandas dataframe to be checked.
     regex : Union(list[str], str)
         List of multiple regex or one regex as string.
@@ -451,12 +454,12 @@ def identify_columns(df: DataFrame[S["anyType: *"]], regex: Union(list[str], str
 
 
 @beartype
-def scale_values(array: NDArray[Any, Any], mini: float, maxi: float) -> np.ndarray:
+def scale_values(array: npt.ArrayLike, mini: float, maxi: float) -> np.ndarray:
     """Small utility to scale values in array to a given range.
 
     Parameters
     ----------
-    array : NDArray[Any, Any]
+    array : ArrayLike
         Array to scale.
     mini : float
         Minimum value of the scale.
