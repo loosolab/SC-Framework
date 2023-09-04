@@ -7,7 +7,7 @@ from collections import OrderedDict
 import scipy
 import matplotlib.pyplot as plt
 
-from typing import Optional, Union, Any
+from typing import Optional, Any
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
