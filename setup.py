@@ -92,7 +92,7 @@ setup(
         'psutil',
         'pyyaml',
         'beartype',
-        'nptyping'
+        'pandera'
     ],
     include_package_data=True,
     extras_require=extras_require

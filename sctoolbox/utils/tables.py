@@ -10,7 +10,7 @@ from typing import Optional, Any, Literal
 from beartype import beartype
 from pandera.typing import Series
 import pandera as pa
-
+from sctoolbox._custom_types import _pandas_dataframe
 
 @beartype
 def rename_categories(series: Series) -> pd.Series:
@@ -38,7 +38,8 @@ def rename_categories(series: Series) -> pd.Series:
 
 
 @beartype
-def fill_na(df: pa.typing.DataFrame[utils._pandas_dataframe],
+@pa.check_types
+def fill_na(df: pa.typing.DataFrame[_pandas_dataframe],
             inplace: bool = True,
             replace: dict[str, Any] = {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
     """
@@ -143,7 +144,8 @@ def write_excel(table_dict: dict[str, Any],
 
 
 @beartype
-def table_zscore(table: pa.typing.DataFrame[utils._pandas_dataframe],
+@pa.check_types
+def table_zscore(table: pa.typing.DataFrame[_pandas_dataframe],
                  how: Literal["row", "col"] = "row") -> pd.DataFrame:
     """
     Z-score a table.

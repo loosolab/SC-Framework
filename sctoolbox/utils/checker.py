@@ -10,7 +10,7 @@ import scanpy as sc
 
 from typing import Optional, Tuple, Any
 from beartype import beartype
-from nptyping import NDArray, DataFrame, Structure as S
+from sctoolbox._custom_types import _pandas_dataframe
 import numpy.typing as npt
 import pandera as pa
 
@@ -393,11 +393,12 @@ def is_integer_array(arr: npt.ArrayLike) -> bool:
     # https://stackoverflow.com/a/7236784
     boolean = np.equal(np.mod(arr, 1), 0)
 
-    return np.all(boolean)
+    return bool(np.all(boolean))
 
 
 @beartype
-def check_columns(df: pa.typing.DataFrame[utils._pandas_dataframe],
+@pa.check_types
+def check_columns(df: pa.typing.DataFrame[_pandas_dataframe],
                   columns: list,
                   error: bool = True,
                   name: str = "dataframe") -> Optional[bool]:
@@ -541,8 +542,3 @@ def check_marker_lists(adata: sc.AnnData,
             marker_dict[key] = found_in_var
             logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
     return marker_dict
-
-
-class _pandas_dataframe(pa.DataFrameModel):
-    """Util class for dataframe typecheck"""
-    pass

@@ -10,13 +10,13 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 import numpy as np
-import sctoolbox.utils as utils
+from sctoolbox._custom_types import _pandas_dataframe
 
 # type hint imports
 from typing import Any, TYPE_CHECKING, Optional, Union
 from beartype import beartype
 import numpy.typing as npt
-import panderas as pa
+import pandera as pa
 
 if TYPE_CHECKING:
     import rpy2.rinterface_lib.sexp
@@ -429,8 +429,9 @@ def sanitize_string(s: str, char_list: list[str], replace: str = "_") -> str:
 
 
 @beartype
-def identify_columns(df: pa.typing.DataFrame[utils._pandas_dataframe],
-                     regex: Union(list[str], str)) -> list[str]:
+@pa.check_types
+def identify_columns(df: pa.typing.DataFrame[_pandas_dataframe],
+                     regex: Union[list[str], str]) -> list[str]:
     """
     Get columns from pd.DataFrame that match the given regex.
 
@@ -454,16 +455,16 @@ def identify_columns(df: pa.typing.DataFrame[utils._pandas_dataframe],
 
 
 @beartype
-def scale_values(array: npt.ArrayLike, mini: float, maxi: float) -> np.ndarray:
+def scale_values(array: npt.ArrayLike, mini: int | float, maxi: int | float) -> np.ndarray:
     """Small utility to scale values in array to a given range.
 
     Parameters
     ----------
     array : ArrayLike
         Array to scale.
-    mini : float
+    mini : int | float
         Minimum value of the scale.
-    maxi : float
+    maxi : int | float
         Maximum value of the scale.
 
     Returns
