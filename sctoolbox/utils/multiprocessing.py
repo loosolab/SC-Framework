@@ -4,13 +4,15 @@ import time
 import sctoolbox.utils as utils
 
 # type hint imports
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from beartype import beartype
 
 if TYPE_CHECKING:
     import tqdm
 
 
-def get_pbar(total, description) -> "tqdm.tqdm":
+@beartype
+def get_pbar(total: int, description: str) -> "tqdm.tqdm":
     """
     Get a progress bar depending on whether the user is using a notebook or not.
 
@@ -36,13 +38,14 @@ def get_pbar(total, description) -> "tqdm.tqdm":
     return pbar
 
 
-def monitor_jobs(jobs, description="Progress") -> None:
+@beartype
+def monitor_jobs(jobs: list[Any], description: str = "Progress") -> None:
     """
     Monitor the status of jobs submitted to a pool.
 
     Parameters
     ----------
-    jobs : list of job objects
+    jobs : list[Any]
         List of job objects, e.g. as returned by pool.map_async().
     description : str, default "Progress"
         Description to be shown in the progress bar.
