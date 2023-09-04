@@ -6,17 +6,19 @@ import pandas as pd
 import matplotlib
 
 from typing import Callable
+from beartype import beartype
 
 import sctoolbox.utils.general as utils
 
 
-def log_anndata(func) -> Callable:
+@beartype
+def log_anndata(func: Callable) -> Callable:
     """
     Decorate function to log adata inside function call.
 
     Parameters
     ----------
-    func : function
+    func : Callable
         Function to decorate.
 
     Returns
@@ -75,7 +77,8 @@ def log_anndata(func) -> Callable:
     return wrapper
 
 
-def get_parameter_table(adata) -> pd.DataFrame:
+@beartype
+def get_parameter_table(adata: anndata.AnnData) -> pd.DataFrame:
     """
     Get a table of all function calls with their parameters from the adata.uns["sctoolbox"] dictionary.
 
@@ -118,7 +121,8 @@ def get_parameter_table(adata) -> pd.DataFrame:
     return complete_table
 
 
-def debug_func_log(func) -> None:
+@beartype
+def debug_func_log(func: Callable) -> None:
     """
     Decorate function to print function call with arguments and keyword arguments.
 
@@ -126,7 +130,7 @@ def debug_func_log(func) -> None:
 
     Parameters
     ----------
-    func : function
+    func : Callable
         Function to decorate.
     """
 
