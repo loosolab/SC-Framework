@@ -91,6 +91,8 @@ setup(
         'python-gitlab',
         'psutil',
         'pyyaml',
+        'beartype',
+        'nptyping'
     ],
     include_package_data=True,
     extras_require=extras_require
