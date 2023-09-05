@@ -8,18 +8,16 @@ import sctoolbox.utils as utils
 # type hint imports
 from typing import Optional, Any, Literal
 from beartype import beartype
-from pandera.typing import Series
-import pandera as pa
-from sctoolbox._custom_types import _pandas_dataframe
+
 
 @beartype
-def rename_categories(series: Series) -> pd.Series:
+def rename_categories(series: pd.Series) -> pd.Series:
     """
     Rename categories in a pandas series to numbers between 1-(number of categories).
 
     Parameters
     ----------
-    series : Series
+    series : pd.Series
         Pandas Series to rename categories in.
 
     Returns
@@ -38,8 +36,7 @@ def rename_categories(series: Series) -> pd.Series:
 
 
 @beartype
-@pa.check_types
-def fill_na(df: pa.typing.DataFrame[_pandas_dataframe],
+def fill_na(df: pd.DataFrame,
             inplace: bool = True,
             replace: dict[str, Any] = {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
     """
@@ -47,7 +44,7 @@ def fill_na(df: pa.typing.DataFrame[_pandas_dataframe],
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : pd.DataFrame
         DataFrame object with NA values over multiple columns
     inplace : boolean, default True
         Whether the DataFrame object is modified inplace.
@@ -144,8 +141,7 @@ def write_excel(table_dict: dict[str, Any],
 
 
 @beartype
-@pa.check_types
-def table_zscore(table: pa.typing.DataFrame[_pandas_dataframe],
+def table_zscore(table: pd.DataFrame,
                  how: Literal["row", "col"] = "row") -> pd.DataFrame:
     """
     Z-score a table.

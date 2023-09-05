@@ -10,13 +10,12 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 import numpy as np
-from sctoolbox._custom_types import _pandas_dataframe
+import pandas as pd
 
 # type hint imports
 from typing import Any, TYPE_CHECKING, Optional, Union
 from beartype import beartype
 import numpy.typing as npt
-import pandera as pa
 
 if TYPE_CHECKING:
     import rpy2.rinterface_lib.sexp
@@ -429,15 +428,14 @@ def sanitize_string(s: str, char_list: list[str], replace: str = "_") -> str:
 
 
 @beartype
-@pa.check_types
-def identify_columns(df: pa.typing.DataFrame[_pandas_dataframe],
+def identify_columns(df: pd.DataFrame,
                      regex: Union[list[str], str]) -> list[str]:
     """
     Get columns from pd.DataFrame that match the given regex.
 
     Parameters
     ----------
-    df : pandas.Dataframe
+    df : pd.Dataframe
         Pandas dataframe to be checked.
     regex : Union(list[str], str)
         List of multiple regex or one regex as string.

@@ -197,6 +197,7 @@ def test_write_list_file(berries):
 def test_fill_na(na_dataframe):
     """Test if na values in dataframe are filled correctly."""
     utils.fill_na(na_dataframe)
+    print(na_dataframe)
     assert not na_dataframe.isna().any().any()
     assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '', '']
 

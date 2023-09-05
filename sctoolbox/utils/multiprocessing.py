@@ -4,7 +4,7 @@ import time
 import sctoolbox.utils as utils
 
 # type hint imports
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Tuple
 from beartype import beartype
 
 if TYPE_CHECKING:
@@ -39,13 +39,13 @@ def get_pbar(total: int, description: str) -> "tqdm.tqdm":
 
 
 @beartype
-def monitor_jobs(jobs: dict[Any, Any], description: str = "Progress") -> None:
+def monitor_jobs(jobs: dict[Tuple[int,int], Any] | list[Any], description: str = "Progress") -> None:
     """
     Monitor the status of jobs submitted to a pool.
 
     Parameters
     ----------
-    jobs : dict[Any, Any]
+    jobs : list[Any]
         List of job objects, e.g. as returned by pool.map_async().
     description : str, default "Progress"
         Description to be shown in the progress bar.
