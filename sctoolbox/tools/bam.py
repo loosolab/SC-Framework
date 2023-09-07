@@ -3,8 +3,11 @@ import re
 import os
 import pandas as pd
 import multiprocessing
-from typing import TYPE_CHECKING
+from multiprocessing.managers import BaseProxy
+import anndata
 
+from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any
+from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -15,7 +18,10 @@ if TYPE_CHECKING:
     import pysam
 
 
-def bam_adata_ov(adata, bamfile, cb_col) -> float:
+@beartype
+def bam_adata_ov(adata: anndata.AnnData,
+                 bamfile: str,
+                 cb_col: str) -> float:
     """
     Check if adata.obs barcodes existing in a column of a bamfile.
 
@@ -56,7 +62,9 @@ def bam_adata_ov(adata, bamfile, cb_col) -> float:
 
 
 @deco.log_anndata
-def check_barcode_tag(adata, bamfile, cb_col) -> None:
+@beartype
+def check_barcode_tag(adata: anndata.AnnData,
+                      bamfile: str, cb_col: str) -> None:
     """
     Check for the possibilty that the wrong barcode is used.
 
@@ -91,7 +99,13 @@ def check_barcode_tag(adata, bamfile, cb_col) -> None:
 #####################################################################
 
 
-def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwrite=False) -> None:
+@beartype
+def subset_bam(bam_in: str,
+               bam_out: str,
+               barcodes: Iterable[str],
+               read_tag: str = "CB",
+               pysam_threads: int = 4,
+               overwrite: bool = False) -> None:
     """
     Subset a bam file based on a list of barcodes.
 
@@ -101,7 +115,7 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
         Path to input bam file.
     bam_out : str
         Path to output bam file.
-    barcodes : list of str
+    barcodes : Iterable[str]
         List of barcodes to keep.
     read_tag : str, default "CB"
         Tag in bam file to use for barcode.
@@ -177,21 +191,22 @@ def subset_bam(bam_in, bam_out, barcodes, read_tag="CB", pysam_threads=4, overwr
 
 
 @deco.log_anndata
-def split_bam_clusters(adata,
-                       bams,
-                       groupby,
-                       barcode_col=None,
-                       read_tag="CB",
-                       output_prefix="split_",
-                       reader_threads=1,
-                       writer_threads=1,
-                       parallel=False,
-                       pysam_threads=4,
-                       buffer_size=10000,
-                       max_queue_size=1000,
-                       individual_pbars=False,
-                       sort_bams=False,
-                       index_bams=False) -> None:
+@beartype
+def split_bam_clusters(adata: anndata.AnnData,
+                       bams: str | Iterable[str],
+                       groupby: str,
+                       barcode_col: Optional[str] = None,
+                       read_tag: str = "CB",
+                       output_prefix: str = "split_",
+                       reader_threads: int = 1,
+                       writer_threads: int = 1,
+                       parallel: bool = False,
+                       pysam_threads: int = 4,
+                       buffer_size: int = 10000,
+                       max_queue_size: int = 1000,
+                       individual_pbars: bool = False,
+                       sort_bams: bool = False,
+                       index_bams: bool = False) -> None:
     """
     Split BAM files into clusters based on 'groupby' from the anndata.obs table.
 
@@ -199,7 +214,7 @@ def split_bam_clusters(adata,
     ----------
     adata : anndata.Anndata
         Annotated data matrix containing clustered cells in .obs.
-    bams : str or list of str
+    bams : str | Iterable[str]
         One or more BAM files to split into clusters
     groupby : str
         Name of a column in adata.obs to cluster the pseudobulks by.
@@ -213,7 +228,7 @@ def split_bam_clusters(adata,
         Number of threads to use for reading.
     writer_threads : int, default 1
         Number of threads to use for writing.
-    parallel : boolean, default False
+    parallel : bool, default False
         Whether to enable parallel processsing.
     pysam_threads : int, default 4
         Number of threads for pysam.
@@ -223,9 +238,9 @@ def split_bam_clusters(adata,
         The maximum size of the queue between readers and writers.
     individual_pbars : boolean, default False
         Whether to show a progress bar for each individual BAM file and output clusters. Default: False (overall progress bars).
-    sort_bams : boolean, default False
+    sort_bams : bool, default False
         Sort reads in each output bam
-    index_bams : boolean, default False
+    index_bams : bool, default False
         Create an index file for each output bam. Will throw an error if `sort_bams` is False.
 
     Raises
@@ -416,7 +431,10 @@ def split_bam_clusters(adata,
 # ---------------------- bam helper functions ---------------------- #
 # ------------------------------------------------------------------ #
 
-def open_bam(file, mode, verbosity=3, **kwargs) -> "pysam.AlignmentFile":
+@beartype
+def open_bam(file: str,
+             mode: str,
+             verbosity: Literal[0, 1, 2, 3] = 3, **kwargs) -> "pysam.AlignmentFile":
     """
     Open bam file with pysam.AlignmentFile. On a specific verbosity level.
 
@@ -426,7 +444,7 @@ def open_bam(file, mode, verbosity=3, **kwargs) -> "pysam.AlignmentFile":
         Path to bam file.
     mode : str
         Mode to open the file in. See pysam.AlignmentFile
-    verbosity : int, default 3
+    verbosity : Literal[0, 1, 2, 3], default 3
         Set verbosity level. Verbosity level 0 for no messages.
     **kwargs :
         Forwarded to pysam.AlignmentFile
@@ -454,7 +472,8 @@ def open_bam(file, mode, verbosity=3, **kwargs) -> "pysam.AlignmentFile":
     return handle
 
 
-def get_bam_reads(bam_obj) -> int:
+@beartype
+def get_bam_reads(bam_obj: "pysam.AlignmentFile") -> int:
     """
     Get the number of reads from an open pysam.AlignmentFile.
 
@@ -487,26 +506,28 @@ def get_bam_reads(bam_obj) -> int:
 # -------------------- multiprocessing functions ------------------- #
 # ------------------------------------------------------------------ #
 
-def _monitor_progress(progress_queue,
-                      cluster_queues,
-                      reader_jobs,
-                      writer_jobs,
-                      total_reads,
-                      individual_pbars=False) -> int:
+
+@beartype
+def _monitor_progress(progress_queue: Any,
+                      cluster_queues: Any,
+                      reader_jobs: Any,
+                      writer_jobs: Any,
+                      total_reads: dict[str, int],
+                      individual_pbars: bool = False) -> int:
     """
     Monitor read/write progress of split_bam_clusters.
 
     Parameters
     ----------
-    progress_queue : multiprocessing.Queue
+    progress_queue : multiprocessing.queues.Queue
         Queue to send progress updates to.
-    cluster_queues : dict of multiprocessing.Queue
+    cluster_queues : dict[str, multiprocessing.queues.Queue]
         Dictionary of queues which reads were sent to.
-    reader_jobs : list of multiprocessing.pool.AsyncResult
+    reader_jobs : list[multiprocessing.pool.AsyncResult]
         List of reader jobs.
-    writer_jobs : list of multiprocessing.pool.AsyncResult
+    writer_jobs : list[multiprocessing.pool.AsyncResult]
         List of writer jobs.
-    total_reads : dict
+    total_reads : dict[str, int]
         Dictionary containing total reads for each input .bam-file. Keys are filenames and values are total reads.
     individual_pbars : bool, default False
         If True, show progress bar for each cluster. If False, show one progress bar for all clusters.
@@ -516,6 +537,15 @@ def _monitor_progress(progress_queue,
     int
         Returns 0 on success.
     """
+
+    # Check parameter that beatype cannot cover
+    #utils.check_type(progress_queue, "progress_queue", BaseProxy)
+    #for value in cluster_queues.values():
+    #    utils.check_type(value, "cluster_queues value", BaseProxy)
+    #for jobs in reader_jobs:
+    #    utils.check_type(value, "cluster_queues value", BaseProxy)
+    #for jobs in writer_jobs:
+    #    utils.check_type(value, "cluster_queues value", BaseProxy)
 
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
@@ -596,7 +626,13 @@ def _monitor_progress(progress_queue,
     return 0  # success
 
 
-def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_size=10000) -> int:
+@beartype
+def _buffered_reader(path: str,
+                     out_queues: dict[str | int, Any],
+                     bc2cluster: dict[str | int, str | int],
+                     tag: str,
+                     progress_queue: Any,
+                     buffer_size: str = 10000) -> int:
     """
     Open bam file and add reads to respective output queue.
 
@@ -604,13 +640,13 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     ----------
     path : str
         Path to bam file.
-    out_queues : dict
+    out_queues : dict[str | int, multiprocessing.queues.Queue]
         Dict of multiprocesssing.Queues with cluster as key.
-    bc2cluster : dict
+    bc2cluster : dict[str | int, str | int]
         Dict of clusters with barcode as key.
     tag : str
         Read tag that should be used for queue assignment.
-    progress_queue : multiprocessing.Queue
+    progress_queue : multiprocessing.queues.Queue
         Queue to send progress updates to.
     buffer_size : int, default 10000
         Size of buffer (number of reads) for each queue to collect before writing.
@@ -625,6 +661,11 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
     Exception
         If buffered reader failes.
     """
+
+    # Test parameter types not covered by beartype
+    #for value in out_queues.values():
+    #    utils.check_type(value, "out_queues.values", BaseProxy)
+    #utils.check_type(progress_queue, "progress_queue", BaseProxy)
 
     try:
         # open bam
@@ -677,19 +718,24 @@ def _buffered_reader(path, out_queues, bc2cluster, tag, progress_queue, buffer_s
         raise e
 
 
-def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) -> int:
+@beartype
+def _writer(read_queue: Any,
+            out_paths: dict[str | int, str],
+            bam_header: str,
+            progress_queue: Any,
+            pysam_threads: int = 4) -> int:
     """
     Write reads to given file.
 
     Parameters
     ----------
-    read_queue : multiprocessing.Queue
+    read_queue : multiprocessing.queues.Queue
         Queue of reads to be written into file.
     out_paths : dict
         Path to output files for this writer. In the format {cluster1: <path>, cluster2: <path>}
-    bam_header : str(pysam.AlignmentHeader)
-        Used as template for output bam.
-    progress_queue : multiprocessing.Queue
+    bam_header : str
+        pysam.AlignmentHeader used as template for output bam.
+    progress_queue : multiprocessing.queues.Queue
         Queue to send progress updates to.
     pysam_threads : int, default 4
         Number of threads for pysam to use for writing. This is different from the threads used for the individual writers.
@@ -704,6 +750,10 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) 
     Exception
         If buffered reader failes.
     """
+
+    # Check parameter that are not covered by beartype
+    #utils.check_type(read_queue, "read_queue", BaseProxy)
+    #utils.check_type(progress_queue, "progress_queue", BaseProxy)
 
     try:
         import pysam  # install of pysam was checked in parent function
@@ -752,14 +802,15 @@ def _writer(read_queue, out_paths, bam_header, progress_queue, pysam_threads=4) 
         raise e
 
 
-def bam_to_bigwig(bam,
-                  output=None,
-                  scale=True,
-                  overwrite=True,
-                  tempdir=".",
-                  remove_temp=True,
-                  bedtools_path=None,
-                  bgtobw_path=None) -> str:
+@beartype
+def bam_to_bigwig(bam: str,
+                  output: Optional[str] = None,
+                  scale: bool = True,
+                  overwrite: bool = True,
+                  tempdir: str = ".",
+                  remove_temp: bool = True,
+                  bedtools_path: Optional[str] = None,
+                  bgtobw_path: Optional[str] = None) -> str:
     """
     Convert reads in a bam-file to bigwig format.
 
@@ -767,7 +818,7 @@ def bam_to_bigwig(bam,
     ----------
     bam : str
         Path to bam file.
-    output : str, default None
+    output : Optional[str], default None
         Path to output file. If None, output is written to same directory as bam file with same name and .bw extension.
     scale : bool, default True
         Scale output depth to reads per million mapped reads.
@@ -777,9 +828,9 @@ def bam_to_bigwig(bam,
         Path to directory where temporary files are written.
     remove_temp : bool, default True
         Remove temporary files after conversion.
-    bedtools_path : str, default None
+    bedtools_path : Optional[str], default None
         Path to bedtools binary. If None, the function will search for the binary in the path.
-    bgtobw_path : str, default None
+    bgtobw_path : Optional[str], default None
         Path to bedGraphToBigWig binary. If None, the function will search for the binary in the path.
 
     Returns
