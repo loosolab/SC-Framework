@@ -20,11 +20,6 @@ import scanpy as sc
 from beartype import beartype
 from typing import Optional, Tuple, Union, Literal, Any
 
-if sys.version_info[0] == 3 and sys.version_info[1] < 11:
-    from typing_extensions import Self
-else:
-    from typing import Self
-
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
