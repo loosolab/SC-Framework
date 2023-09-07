@@ -1,3 +1,4 @@
+"""Test genometracks plotting."""
 import os
 import matplotlib.pyplot as plt
 import sctoolbox.plotting as pl
