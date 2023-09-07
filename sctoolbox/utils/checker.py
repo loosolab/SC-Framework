@@ -540,3 +540,10 @@ def check_marker_lists(adata: sc.AnnData,
             marker_dict[key] = found_in_var
             logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
     return marker_dict
+
+
+def check_type(obj: Any, obj_name: str, test_type: Any):
+    """Check type of given object."""
+    if not isinstance(obj, test_type):
+        raise ValueError(f"Paramter {obj_name} is required to be of type: "
+                         + f"{test_type}, but is type: {type(obj)}")
