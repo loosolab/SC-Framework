@@ -18,6 +18,7 @@ class _SpaceDumper(yaml.SafeDumper):
             super().write_line_break()
 
 
+@beartype
 def write_TOBIAS_config(out_path: str,
                         bams: list[str] = [],
                         names: Optional[list[str]] = None,
