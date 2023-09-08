@@ -22,6 +22,7 @@ logger = settings.logger
 #################################################################################
 
 @deco.log_anndata
+@beartype
 def annotate_adata(adata: sc.AnnData,
                    gtf: str,
                    config: Optional[dict[str, Any]] = None,
@@ -192,6 +193,7 @@ def annotate_adata(adata: sc.AnnData,
         return adata  # else returns None
 
 
+@beartype
 def annotate_narrowPeak(filepath: str,
                         gtf: str,
                         config: Optional[dict[str, Any]] = None,
@@ -272,6 +274,7 @@ def annotate_narrowPeak(filepath: str,
     return annotation_table
 
 
+@beartype
 def _load_narrowPeak(filepath: str) -> list[dict[str, Union[str, int]]]:
     """
     Load narrowPeak file to annotate.
@@ -302,6 +305,7 @@ def _load_narrowPeak(filepath: str) -> list[dict[str, Union[str, int]]]:
     return region_dicts
 
 
+@beartype
 def _prepare_gtf(gtf: str,
                  temp_dir: str) -> Tuple[str, list[str]]:
     """
@@ -409,6 +413,7 @@ def _prepare_gtf(gtf: str,
     return gtf, tempfiles
 
 
+@beartype
 def _annotate_features(region_dicts: dict,
                        threads: int,
                        gtf: str,
@@ -517,6 +522,7 @@ def _annotate_features(region_dicts: dict,
     return annotations_table
 
 
+@beartype
 def _annotate_peaks_chunk(region_dicts: dict,
                           gtf: str,
                           cfg_dict: dict) -> list[str]:
