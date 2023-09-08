@@ -7,16 +7,21 @@ import pywt
 import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
-from typing import Tuple
-import anndata
+import scanpy as sc
 import sctoolbox.tools as tools
+
+from typing import Tuple, Literal
+from beartype import beartype
+import numpy.typing as npt
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def moving_average(series, n=10) -> np.array:
+@beartype
+def moving_average(series: npt.ArrayLike,
+                   n: int = 10) -> npt.ArrayLike:
     """
     Move average filter to smooth out data.
 
@@ -25,14 +30,14 @@ def moving_average(series, n=10) -> np.array:
 
     Parameters
     ----------
-    series : array
+    series : npt.ArrayLike
         Array of data to be smoothed.
     n : int, default 10
         Number of steps to the left and right of the current step to be averaged.
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Smoothed array
     """
 
@@ -54,13 +59,17 @@ def moving_average(series, n=10) -> np.array:
     return smoothed
 
 
-def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
+@beartype
+def multi_ma(series: npt.ArrayLike,
+             n: int = 2,
+             window_size: int = 10,
+             n_threads: int = 8) -> npt.ArrayLike:
     """
     Multiprocessing wrapper for moving average filter.
 
     Parameters
     ----------
-    series : np.ndarray
+    series : npt.ArrayLike
         Array of data to be smoothed.
     n : int, default 2
         Number of times to apply the filter
@@ -71,7 +80,7 @@ def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         array of smoothed array
     """
 
@@ -98,18 +107,19 @@ def multi_ma(series, n=2, window_size=10, n_threads=8) -> np.ndarray:
     return series
 
 
-def unscale(scaled_data) -> np.ndarray:
+@beartype
+def unscale(scaled_data: npt.ArrayLike) -> npt.ArrayLike:
     """
     Unscales a series array to a range of 0 to 1. If the array is 2D, the scaling is done on axis=1.
 
     Parameters
     ----------
-    scaled_data : np.ndarray
+    scaled_data : npt.ArrayLike
         Array of data to be unscaled 1D or 2D
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Unscaled array
     """
 
@@ -132,13 +142,14 @@ def unscale(scaled_data) -> np.ndarray:
     return unscaled
 
 
-def scale(series_arr) -> np.ndarray:
+@beartype
+def scale(series_arr: npt.ArrayLike) -> npt.ArrayLike:
     """
     Scale a series array to a range of 0 to 1.
 
     Parameters
     ----------
-    series_arr : np.ndarray
+    series_arr : npt.ArrayLike
         Array of data to be scaled 1D or 2D
 
     Notes
@@ -147,7 +158,7 @@ def scale(series_arr) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Scaled array
     """
 
@@ -165,7 +176,11 @@ def scale(series_arr) -> np.ndarray:
         return scaled_arr
 
 
-def call_peaks(data, n_threads=4, distance=50, width=10) -> np.ndarray:
+@beartype
+def call_peaks(data: npt.ArrayLike,
+               n_threads: int = 4,
+               distance: int = 50,
+               width: int = 10) -> npt.ArrayLike:
     """
     Find peaks for multiple arrays at once.
 
@@ -186,7 +201,7 @@ def call_peaks(data, n_threads=4, distance=50, width=10) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of peaks (index of data)
     """
 
@@ -210,13 +225,16 @@ def call_peaks(data, n_threads=4, distance=50, width=10) -> np.ndarray:
     return peaks
 
 
-def call_peaks_worker(array, distance=50, width=10) -> np.ndarray:
+@beartype
+def call_peaks_worker(array: npt.ArrayLike,
+                      distance: int = 50,
+                      width: int = 10) -> npt.ArrayLike:
     """
     Worker function for multiprocessing of scipy.signal.find_peaks.
 
     Parameters
     ----------
-    array : np.ndarray
+    array : npt.ArrayLike
         Array of data to find peaks in.
     distance : int, default 50
         Minimum distance between peaks.
@@ -225,7 +243,7 @@ def call_peaks_worker(array, distance=50, width=10) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of peaks (index of data)
     """
 
@@ -234,15 +252,19 @@ def call_peaks_worker(array, distance=50, width=10) -> np.ndarray:
     return peaks
 
 
-def filter_peaks(peaks, reference, peaks_thr, operator='bigger') -> np.ndarray:
+@beartype
+def filter_peaks(peaks: npt.ArrayLike,
+                 reference: npt.ArrayLike,
+                 peaks_thr: float,
+                 operator: Literal['bigger', 'smaller'] = 'bigger') -> npt.ArrayLike:
     """
     Filter peaks based on a reference array and a threshold.
 
     Parameters
     ----------
-    peaks : np.ndarray
+    peaks : npt.ArrayLike
         Array of peaks to be filtered.
-    reference : np.ndarray
+    reference : npt.ArrayLike
         Array of reference values (e.g. data were peaks were found).
     peaks_thr : float
         Threshold for filtering.
@@ -251,7 +273,7 @@ def filter_peaks(peaks, reference, peaks_thr, operator='bigger') -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Filtered array of peaks
     """
 
@@ -276,13 +298,17 @@ def filter_peaks(peaks, reference, peaks_thr, operator='bigger') -> np.ndarray:
 
 # ////////////////////////// Momentum \\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def momentum_diff(data, remove=150, shift=80, smooth=True) -> Tuple[np.array, np.array, np.array]:
+@beartype
+def momentum_diff(data: npt.ArrayLike,
+                  remove: int = 150,
+                  shift: int = 80,
+                  smooth: bool = True) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
     """
     Calculate the momentum of a series by subtracting the original series with a shifted version of itself.
 
     Parameters
     ----------
-    data : np.ndarray
+    data : npt.ArrayLike
         Array of data to calculate the momentum for.
     remove : int, default 150
         Number of samples to remove from the beginning of the series.
@@ -293,7 +319,7 @@ def momentum_diff(data, remove=150, shift=80, smooth=True) -> Tuple[np.array, np
 
     Returns
     -------
-    Tuple[np.array, np.array, np.array]
+    Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]
         Index 1: np.array containg the momentum
         Index 2: np.array containg the shifted data a (data[:-shift])
         Index 3: np.array containg the shifted data b (data[shift:])
@@ -316,20 +342,21 @@ def momentum_diff(data, remove=150, shift=80, smooth=True) -> Tuple[np.array, np
     return momentum, a, b
 
 
-def score_by_momentum(data,
-                      shift=80,
-                      remove=100,
-                      sample_to_inspect=0,
-                      peaks_thr=0.03,
-                      period=160,
-                      penalty_scale=100,
-                      plotting=True) -> np.ndarray:
+@beartype
+def score_by_momentum(data: npt.ArrayLike,
+                      shift: int = 80,
+                      remove: int = 100,
+                      sample_to_inspect: int = 0,
+                      peaks_thr: float = 0.03,
+                      period: int = 160,
+                      penalty_scale: int = 100,
+                      plotting: bool = True) -> npt.ArrayLike:
     """
     Calculate momentum and score cells based on the number of peaks and the distance between them.
 
     Parameters
     ----------
-    data : np.ndarray
+    data : npt.ArrayLike
         Array of data to calculate the momentum for.
     shift : int, default 80
         Number of samples to shift the series.
@@ -348,7 +375,7 @@ def score_by_momentum(data,
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of scores
     """
 
@@ -413,13 +440,17 @@ def score_by_momentum(data,
 
 # //////////////////////////// CWT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def add_adapters(features, shift=250, smooth=False, window_size=30) -> np.ndarray:
+@beartype
+def add_adapters(features: npt.ArrayLike,
+                 shift: int = 250,
+                 smooth: bool = False,
+                 window_size: int = 30) -> npt.ArrayLike:
     """
     Add adapters to the beginning of the features array for transient oscillations.
 
     Parameters
     ----------
-    features : np.ndarray
+    features : npt.ArrayLike
         Array of features.
     shift : int, default 250
         Length of the adapter.
@@ -430,7 +461,7 @@ def add_adapters(features, shift=250, smooth=False, window_size=30) -> np.ndarra
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of features with adapters
     """
 
@@ -444,22 +475,25 @@ def add_adapters(features, shift=250, smooth=False, window_size=30) -> np.ndarra
     return features
 
 
-def cross_point_shift(peaks, reference, convergence=0.01) -> np.ndarray:
+@beartype
+def cross_point_shift(peaks: npt.ArrayLike,
+                      reference: npt.ArrayLike,
+                      convergence: float = 0.01) -> npt.ArrayLike:
     """
     Cross point shift peaks to the left to the first point where the reference is below the convergence threshold.
 
     Parameters
     ----------
-    peaks : np.ndarray
+    peaks : npt.ArrayLike
         Array of peaks.
-    reference : np.ndarray
+    reference : npt.ArrayLike
         Array of reference.
     convergence : float, default 0.01
         Convergence threshold.
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of corrected peaks
     """
 
@@ -480,20 +514,22 @@ def cross_point_shift(peaks, reference, convergence=0.01) -> np.ndarray:
     return corrected_peaks
 
 
-def half_wave_shift(peaks, scale) -> np.ndarray:
+@beartype
+def half_wave_shift(peaks: npt.ArrayLike,
+                    scale: int) -> npt.ArrayLike:
     """
     Shift the peaks to the left by half a wavelength.
 
     Parameters
     ----------
-    peaks : np.ndarray
+    peaks : npt.ArrayLike
         Array of peaks.
     scale : int
         Scale of the wavelet.
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of corrected peaks.
     """
 
@@ -504,20 +540,21 @@ def half_wave_shift(peaks, scale) -> np.ndarray:
     return peaks
 
 
-def single_cwt_ov(features,
-                  shift=250,
-                  sample=0,
-                  freq=4,
-                  peaks_thr=0.5,
-                  perform_cross_point_shift=True,
-                  convergence=0.1,
-                  plotting=True) -> np.ndarray:
+@beartype
+def single_cwt_ov(features: npt.ArrayLike,
+                  shift: int = 250,
+                  sample: int = 0,
+                  freq: int = 4,
+                  peaks_thr: float = 0.5,
+                  perform_cross_point_shift: bool = True,
+                  convergence: float = 0.1,
+                  plotting: bool = True) -> npt.ArrayLike:
     """
     Apply Continues Wavelet Transformation (CWT) to a single sample and plot the results.
 
     Parameters
     ----------
-    features : np.ndarray
+    features : npt.ArrayLike
         Array of arrays of the fragment length distribution.
     shift : int, default 250
         Number of samples to shift the series (length of the adapter).
@@ -536,7 +573,7 @@ def single_cwt_ov(features,
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of coefficients
     """
 
@@ -565,24 +602,28 @@ def single_cwt_ov(features,
     return coef, filtered_peaks
 
 
-def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8) -> np.ndarray:
+@beartype
+def mp_cwt(features: npt.ArrayLike,
+           wavelet: str = 'gaus1',
+           scales: int | npt.ArrayLike = 16,
+           n_threads: int = 8) -> npt.ArrayLike:
     """
     Multiprocess Continues Wavelet Transformation (CWT).
 
     Parameters
     ----------
-    features : np.ndarray
+    features : npt.ArrayLike
         Array of arrays of the fragment length distribution.
     wavelet : str, default 'gaus1'
         Wavelet to use.
-    scales : int / or array of ints, default 16
+    scales : int | npt.ArrayLike, default 16
         Scales for the CWT.
     n_threads : int, default 8
         Number of threads to use.
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         Array of coefficients
     """
 
@@ -606,17 +647,20 @@ def mp_cwt(features, wavelet='gaus1', scales=16, n_threads=8) -> np.ndarray:
     return coef_arr
 
 
-def cwt_worker(feature, wavelet="gaus1", scales=16) -> np.array:
+@beartype
+def cwt_worker(feature: npt.ArrayLike,
+               wavelet: str = "gaus1",
+               scales: int | npt.ArrayLike = 16) -> npt.ArrayLike:
     """
     Perform the CWT on a single feature.
 
     Parameters
     ----------
-    feature : np.array
+    feature : npt.ArrayLike
         Array of the fragment length distribution.
     wavelet : str, default 'gaus1'
         Wavelet to use.
-    scales : int / or array of ints, default 16
+    scales : int | npt.ArrayLike, default 16
         Scales for the CWT.
 
     Notes
@@ -625,7 +669,7 @@ def cwt_worker(feature, wavelet="gaus1", scales=16) -> np.array:
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Array of coefficients
     """
 
@@ -634,13 +678,14 @@ def cwt_worker(feature, wavelet="gaus1", scales=16) -> np.array:
     return coef
 
 
-def wrap_cwt(data,
-             adapter=250,
-             wavelet='gaus1',
-             scales=16,
-             n_threads=8,
-             peaks_thr=0.1,
-             convergence=0.01) -> Tuple[np.array, np.array, np.array]:
+@beartype
+def wrap_cwt(data: npt.ArrayLike,
+             adapter: int = 250,
+             wavelet: str = 'gaus1',
+             scales: int = 16,
+             n_threads: int = 8,
+             peaks_thr: float = 0.1,
+             convergence: float = 0.01) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
     """
     Find peaks in multiple fragment length distributions.
 
@@ -650,7 +695,7 @@ def wrap_cwt(data,
 
     Parameters
     ----------
-    data : np.array
+    data : npt.ArrayLike
         Array of arrays of the fragment length distributions.
     adapter : int, default 250
         Number of zeros to attach to the left of the series (length of the adapter).
@@ -667,7 +712,7 @@ def wrap_cwt(data,
 
     Returns
     -------
-    Tuple[np.array, np.array, np.array]
+    Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]
         Index 1: peaks
         Index 2: wav features
         Index 3: coeficients
@@ -698,16 +743,17 @@ def wrap_cwt(data,
     return nn_peaks, wav_features, coefs
 
 
-def score_by_cwt(data,
-                 plot_sample=0,
-                 plotting=True,
-                 adapter=250,
-                 wavelet='gaus1',
-                 scales=35,
-                 peaks_thr=0.05,
-                 penalty_scale=100,
-                 period=160,
-                 n_threads=8) -> np.array:
+@beartype
+def score_by_cwt(data: npt.ArrayLike,
+                 plot_sample: int = 0,
+                 plotting: bool = True,
+                 adapter: int = 250,
+                 wavelet: str = 'gaus1',
+                 scales: int = 35,
+                 peaks_thr: float = 0.05,
+                 penalty_scale: float | int = 100,
+                 period: int = 160,
+                 n_threads: int = 8) -> npt.ArrayLike:
     """
     Calculate scores for each cell using CWT.
 
@@ -716,7 +762,7 @@ def score_by_cwt(data,
 
     Parameters
     ----------
-    data : np.array
+    data : npt.ArrayLike
         Array of arrays of the fragment length distributions.
     plot_sample : int, default 0
         Index of the sample to plot.
@@ -730,7 +776,7 @@ def score_by_cwt(data,
         Scale for the CWT.
     peaks_thr : float, default 0.05
         Threshold for filtering peaks.
-    penalty_scale : float, default 100
+    penalty_scale : float | int, default 100
         Scaling factor for the penalty.
     period : int, default 160
         Period of the peaks.
@@ -739,7 +785,7 @@ def score_by_cwt(data,
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Array of scores
     """
 
@@ -804,7 +850,10 @@ def score_by_cwt(data,
 
 # ///////////////////////// Plotting \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotlib.axes.Axes:
+@beartype
+def density_plot(count_table: npt.ArrayLike,
+                 max_abundance: int = 600,
+                 target_height: int = 1000) -> matplotlib.axes.Axes:
     """
     Plot the density of the fragment length distribution over all cells.
 
@@ -812,7 +861,7 @@ def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotl
 
     Parameters
     ----------
-    count_table : np.ndarray
+    count_table : npt.ArrayLike
         Array of arrays of the fragment length distributions
     max_abundance : int, default 600
         Maximal abundance of a fragment length of a cell (for better visability)
@@ -898,28 +947,29 @@ def density_plot(count_table, max_abundance=600, target_height=1000) -> matplotl
     return ax
 
 
-def plot_single_momentum_ov(peaks,
-                            momentum,
-                            data,
-                            shift_l,
-                            shift_r,
-                            sample_n=0,
-                            shift=80,
-                            remove=150) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
+@beartype
+def plot_single_momentum_ov(peaks: npt.ArrayLike,
+                            momentum: npt.ArrayLike,
+                            data: npt.ArrayLike,
+                            shift_l: npt.ArrayLike,
+                            shift_r: npt.ArrayLike,
+                            sample_n: int = 0,
+                            shift: int = 80,
+                            remove: int = 150) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
     """
     Plot the momentum of a single sample with found peaks and the original data.
 
     Parameters
     ----------
-    peaks : np.array
+    peaks : npt.ArrayLike
         Array of arrays of the found peaks.
-    momentum : np.array
+    momentum : npt.ArrayLike
         Array of arrays of the momentum.
-    data : np.array
+    data : npt.ArrayLike
         Array of arrays of the fragment length distributions.
-    shift_l : np.array
+    shift_l : npt.ArrayLike
         Array of arrays of the left shifts.
-    shift_r : np.array
+    shift_r : npt.ArrayLike
         Array of arrays of the right shifts.
     sample_n : int, default 0
         Index of the sample to plot.
@@ -969,25 +1019,26 @@ def plot_single_momentum_ov(peaks,
     return fig, [ax1, ax2, ax3]
 
 
-def plot_wavl_ov(feature,
-                 peaks,
-                 coef,
-                 freq=6,
-                 plot_peaks=True,
-                 perform_cross_point_shift=True,
-                 perform_half_wave_shift=True,
-                 scale=35,
-                 convergence=0.1) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
+@beartype
+def plot_wavl_ov(feature: npt.ArrayLike,
+                 peaks: npt.ArrayLike,
+                 coef: npt.ArrayLike,
+                 freq: int = 6,
+                 plot_peaks: bool = True,
+                 perform_cross_point_shift: bool =True,
+                 perform_half_wave_shift: bool = True,
+                 scale: int = 35,
+                 convergence: float = 0.1) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
     """
     Plot the original data, the wavelet transformation and the found peaks as an overview.
 
     Parameters
     ----------
-    feature : np.array
+    feature : npt.ArrayLike
         Array of arrays of the fragment length distributions.
-    peaks : np.array
+    peaks : npt.ArrayLike
         Array of arrays of the found peaks.
-    coef : np.array
+    coef : npt.ArrayLike
         Array of coefficients of the wavelet transformation.
     freq : int, default 6
         Index of the frequency to plot.
@@ -1056,12 +1107,13 @@ def plot_wavl_ov(feature,
     return fig, [ax1, ax2, ax3]
 
 
-def custome_wavelet(amplitude=1.0,
-                    frequency=3.0,
-                    phase_shift=np.pi / 0.65,
-                    mu=0.0,
-                    sigma=150.0,
-                    plotting=True) -> np.array:
+@beartype
+def custome_wavelet(amplitude: float | int = 1.0,
+                    frequency: float | int = 3.0,
+                    phase_shift: float | int = np.pi / 0.65,
+                    mu: float | int = 0.0,
+                    sigma: float | int = 150.0,
+                    plotting: bool = True) -> npt.ArrayLike:
     """
     Implement a custom wavelet.
 
@@ -1069,22 +1121,22 @@ def custome_wavelet(amplitude=1.0,
 
     Parameters
     ----------
-    amplitude : float, default 1.0
+    amplitude : float | int, default 1.0
         Amplitude of the sine curve.
-    frequency : float, default 3
+    frequency : float | int, default 3
         Frequency of the sine curve.
-    phase_shift : float, default np.pi / 0.65
+    phase_shift : float | int, default np.pi / 0.65
         Phase shift of the sine curve.
-    mu : float, default 0.0
+    mu : float | int, default 0.0
         Mean of the Gaussian.
-    sigma : float, default 150.0
+    sigma : float | int, default 150.0
         Standard deviation of the Gaussian.
     plotting : bool, default True
         If true, the wavelet is plotted.
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Array of the wavelet
     """
 
@@ -1111,22 +1163,25 @@ def custome_wavelet(amplitude=1.0,
     return wavelet
 
 
-def custome_cwt(data, mode='convolve', plot_wavl=False) -> np.array:
+@beartype
+def custome_cwt(data: npt.ArrayLike,
+                mode: Literal['convolve', 'fftconvolve'] = 'convolve',
+                plot_wavl: bool = False) -> npt.ArrayLike:
     """
     Get custom implementation of the continuous wavelet transformation.
 
     Parameters
     ----------
-    data : np.array
+    data : npt.ArrayLike
         Array of arrays of the fragment length distributions.
-    mode : str, default 'concolve'
+    mode : Literal['convolve', 'fftconvolve'], default 'concolve'
         Mode of the convolution. Either 'convolve' or 'fftconvolve'.
     plot_wavl : bool, default False
         If true, the wavelet is plotted.
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Array of convolved data.
     """
 
@@ -1144,20 +1199,21 @@ def custome_cwt(data, mode='convolve', plot_wavl=False) -> np.array:
     return np.array(convolved_data)
 
 
-def score_by_ct_cwt(data,
-                    plot_wavl=False,
-                    n_threads=12,
-                    peaks_thr=0.01,
-                    operator='bigger',
-                    plotting_mask=False,
-                    plotting_ov=True,
-                    sample=0) -> np.array:
+@beartype
+def score_by_ct_cwt(data: npt.ArrayLike,
+                    plot_wavl: bool = False,
+                    n_threads: int = 12,
+                    peaks_thr: float = 0.01,
+                    operator: Literal['bigger', 'smaller'] = 'bigger',
+                    plotting_mask: bool = False,
+                    plotting_ov: bool = True,
+                    sample: int = 0) -> npt.ArrayLike:
     """
     Get score by custom continuous wavelet transformation and score mask.
 
     Parameters
     ----------
-    data : np.array
+    data : npt.ArrayLike
         Array of arrays of the fragment length distributions.
     plot_wavl : bool, default False
         If true, the wavelet is plotted.
@@ -1165,7 +1221,7 @@ def score_by_ct_cwt(data,
         Number of threads to use for the peak calling.
     peaks_thr : float, default 0.01
         Threshold for the peak calling.
-    operator : str, default 'bigger'
+    operator : Literal['bigger', 'smaller'], default 'bigger'
         Operator to use for the peak calling. Either 'bigger' or 'smaller'.
     plotting_mask : bool, default False
         If true, the score mask is plotted.
@@ -1176,7 +1232,7 @@ def score_by_ct_cwt(data,
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Array of scores for each sample
     """
 
@@ -1212,9 +1268,10 @@ def score_by_ct_cwt(data,
     return scores
 
 
-def build_score_mask(plotting=True,
-                     mu_list=[42, 200, 360, 550],
-                     sigma_list=[25, 35, 45, 25]) -> np.array:
+@beartype
+def build_score_mask(plotting: bool = True,
+                     mu_list: list[int] = [42, 200, 360, 550],
+                     sigma_list: list[int] = [25, 35, 45, 25]) -> npt.ArrayLike:
     """
     Build a score mask for the score by custom continuous wavelet transformation.
 
@@ -1225,14 +1282,14 @@ def build_score_mask(plotting=True,
     ----------
     plotting : bool, default True
         If true, the score mask is plotted.
-    mu_list : list, default [42, 200, 360, 550]
+    mu_list : list[int], default [42, 200, 360, 550]
         List of mu values for the Gaussian curves.
-    sigma_list : list, default [25, 35, 45, 25]
+    sigma_list : list[int], default [25, 35, 45, 25]
         List of sigma values for the Gaussian curves.
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Array of the score mask
     """
 
@@ -1258,13 +1315,16 @@ def build_score_mask(plotting=True,
     return gaussians
 
 
-def gauss(x, mu, sigma) -> float:
+@beartype
+def gauss(x: npt.ArrayLike,
+          mu: float,
+          sigma: float) -> float:
     """
     Calculate the values of the Gaussian function for a given x, mu and sigma.
 
     Parameters
     ----------
-    x : array
+    x : npt.ArrayLike
         x values
     mu : float
         mu value
@@ -1282,19 +1342,24 @@ def gauss(x, mu, sigma) -> float:
     return gaussian
 
 
-def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0) -> None:
+@beartype
+def plot_custom_cwt(convolved_data: npt.ArrayLike,
+                    data: npt.ArrayLike,
+                    peaks: npt.ArrayLike,
+                    scores: npt.ArrayLike,
+                    sample_n: int = 0) -> None:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
 
     Parameters
     ----------
-    convolved_data : np.array
+    convolved_data : npt.ArrayLike
         Array of the convolved data.
-    data : np.array
+    data : npt.ArrayLike
         Array of the original data.
-    peaks : np.array
+    peaks : npt.ArrayLike
         Array of the peaks.
-    scores : np.array
+    scores : npt.ArrayLike
         Array of the scores.
     sample_n : int, defualt 0
         Index of the sample to plot.
@@ -1327,22 +1392,23 @@ def plot_custom_cwt(convolved_data, data, peaks, scores, sample_n=0) -> None:
 
 
 @deco.log_anndata
-def add_fld_metrics(adata,
-                    bam=None,
-                    fragments=None,
-                    barcode_col=None,
-                    barcode_tag="CB",
-                    regions=None,
-                    use_momentum=True,
-                    use_cwt=True,
-                    use_ct_cwt=True,
-                    peaks_thr_mom=0.03,
-                    peaks_thr_cwt=0.05,
-                    peaks_thr_ct_cwt=0.01,
-                    wavl_scale=35,
-                    plotting=True,
-                    plot_sample=0,
-                    n_threads=12) -> anndata.AnnData:
+@beartype
+def add_fld_metrics(adata: sc.AnnData,
+                    bam: Optional[str] = None,
+                    fragments: Optional[str] = None,
+                    barcode_col: Optional[str] = None,
+                    barcode_tag: str = "CB",
+                    regions: Optional[str] = None,
+                    use_momentum: bool = True,
+                    use_cwt: bool = True,
+                    use_ct_cwt: bool = True,
+                    peaks_thr_mom: float = 0.03,
+                    peaks_thr_cwt: float = 0.05,
+                    peaks_thr_ct_cwt: float = 0.01,
+                    wavl_scale: int | float = 35,
+                    plotting: bool = True,
+                    plot_sample: int = 0,
+                    n_threads: int = 12) -> sc.AnnData:
     """
     Add insert size metrics to an AnnData object.
 
@@ -1353,7 +1419,7 @@ def add_fld_metrics(adata,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object to add the insert size metrics to.
     bam : str, default None
         Path to bam file.
@@ -1377,7 +1443,7 @@ def add_fld_metrics(adata,
         Threshold for the CWT method.
     peaks_thr_ct_cwt : float, default 0.01
         Threshold for the custom CWT method.
-    wavl_scale : float, default 35
+    wavl_scale : int | float, default 35
         Scale of the wavelet
     plotting : bool, default True
         If true, plots are generated.
@@ -1388,7 +1454,7 @@ def add_fld_metrics(adata,
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         AnnData object with the insert size metrics added to the adata.obs dataframe.
 
     Raises
