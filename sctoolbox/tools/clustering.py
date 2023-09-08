@@ -5,17 +5,25 @@ import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
+from typing import Union, Literal, Optional
+
 
 @deco.log_anndata
-def recluster(adata, column, clusters,
-              task="join", method="leiden", resolution=1, key_added=None,
-              plot=True, embedding="X_umap") -> None:
+def recluster(adata: sc.AnnData,
+              column: str,
+              clusters: str | list[str],
+              task: Literal["join", "split"] = "join",
+              method: Literal["leiden", "louvain"] = "leiden",
+              resolution: float | int = 1,
+              key_added: Optional[str] = None,
+              plot: bool = True,
+              embedding: str = "X_umap") -> None:
     """
     Recluster an anndata object based on an existing clustering column in .obs.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
     column : str
         Column in adata.obs to use for re-clustering.
