@@ -6,8 +6,10 @@ import os
 import multiprocessing as mp
 import psutil
 import subprocess
-import anndata
-from typing import Optional, Union, Tuple
+import scnapy as sc
+
+from typing import Optional, Union, Tuple, Any
+from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -20,15 +22,15 @@ logger = settings.logger
 #################################################################################
 
 @deco.log_anndata
-def annotate_adata(adata,
-                   gtf,
-                   config=None,
-                   best=True,
-                   threads=1,
-                   coordinate_cols=None,
-                   temp_dir="",
-                   remove_temp=True,
-                   inplace=True) -> Optional[anndata.AnnData]:
+def annotate_adata(adata: sc.AnnData,
+                   gtf: str,
+                   config: Optional[dict[str, Any]] = None,
+                   best: bool = True,
+                   threads: int = 1,
+                   coordinate_cols: Optional[list[str]] = None,
+                   temp_dir: str = "",
+                   remove_temp: bool = True,
+                   inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Annotate adata .var features with genes from .gtf using UROPA [1]_.
 
@@ -38,11 +40,11 @@ def annotate_adata(adata,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containing features to annotate.
     gtf : str
         Path to .gtf file containing genomic elements for annotation.
-    config : dict, default None
+    config : Optional[dict[str, Any]], default None
         A dictionary indicating how regions should be annotated.
         Default (None) is to annotate feature 'gene' within -10000;1000bp of the gene start.
         See 'Examples' of how to set up a custom configuration dictionary.
@@ -50,7 +52,7 @@ def annotate_adata(adata,
         Whether to return the best annotation or all valid annotations.
     threads : int, default 1
         Number of threads to use for multiprocessing.
-    coordinate_cols : list of str, default None
+    coordinate_cols : Optional[list[str]]v, default None
         A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates.
         If None the first three columns are taken.
     temp_dir : str, default ''
@@ -62,7 +64,7 @@ def annotate_adata(adata,
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If inplace == True, the annotation is added to adata.var in place.
         Else, a copy of the adata object is returned with the annotations added.
 
@@ -190,13 +192,13 @@ def annotate_adata(adata,
         return adata  # else returns None
 
 
-def annotate_narrowPeak(filepath,
-                        gtf,
-                        config=None,
-                        best=True,
-                        threads=1,
-                        temp_dir="",
-                        remove_temp=True) -> pd.DataFrame:
+def annotate_narrowPeak(filepath: str,
+                        gtf: str,
+                        config: Optional[dict[str, Any]] = None,
+                        best: bool = True,
+                        threads: int = 1,
+                        temp_dir: str = "",
+                        remove_temp: str = True) -> pd.DataFrame:
     """
     Annotate narrowPeak files with genes from .gtf using UROPA.
 
@@ -270,7 +272,7 @@ def annotate_narrowPeak(filepath,
     return annotation_table
 
 
-def _load_narrowPeak(filepath) -> list[dict[str, Union[str, int]]]:
+def _load_narrowPeak(filepath: str) -> list[dict[str, Union[str, int]]]:
     """
     Load narrowPeak file to annotate.
 
@@ -300,7 +302,8 @@ def _load_narrowPeak(filepath) -> list[dict[str, Union[str, int]]]:
     return region_dicts
 
 
-def _prepare_gtf(gtf, temp_dir) -> Tuple[str, list[str]]:
+def _prepare_gtf(gtf: str,
+                 temp_dir: str) -> Tuple[str, list[str]]:
     """
     Prepare the .gtf file to use it in the annotation process.
 
@@ -406,11 +409,11 @@ def _prepare_gtf(gtf, temp_dir) -> Tuple[str, list[str]]:
     return gtf, tempfiles
 
 
-def _annotate_features(region_dicts,
-                       threads,
-                       gtf,
-                       cfg_dict,
-                       best) -> pd.DataFrame:
+def _annotate_features(region_dicts: dict,
+                       threads: int,
+                       gtf: str,
+                       cfg_dict: dict,
+                       best: bool) -> pd.DataFrame:
     """
     Annotate features.
 
@@ -514,7 +517,9 @@ def _annotate_features(region_dicts,
     return annotations_table
 
 
-def _annotate_peaks_chunk(region_dicts, gtf, cfg_dict) -> list[str]:
+def _annotate_peaks_chunk(region_dicts: dict,
+                          gtf: str,
+                          cfg_dict: dict) -> list[str]:
     """
     Multiprocessing safe function to annotate a chunk of regions.
 
