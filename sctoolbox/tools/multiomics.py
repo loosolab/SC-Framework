@@ -4,16 +4,20 @@ import pandas as pd
 from functools import reduce
 import warnings
 
+from beartype import beartype
+from typing import Literal
+
 import sctoolbox.utils as utils
 
 
-def merge_anndata(anndata_dict, join="inner") -> anndata.AnnData:
+def merge_anndata(anndata_dict: dict[str, anndata.AnnData],
+                  join: Literal["inner", "outer"] = "inner") -> anndata.AnnData:
     """
     Merge two h5ad files for dual cellxgene deplyoment.
 
     Parameters
     ----------
-    anndata_dict : dict
+    anndata_dict : dict[str, anndata.AnnData]
         Dictionary with labels as keys and anndata objects as values.
     join : str, default 'inner'
         Set how to join cells of the adata objects: ['inner', 'outer'].
