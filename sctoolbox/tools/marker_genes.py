@@ -10,7 +10,9 @@ import itertools
 import warnings
 import anndata
 from pathlib import Path
-from typing import Optional
+
+from typing import Optional, Union, Tuple
+from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -18,7 +20,9 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def get_chromosome_genes(gtf, chromosomes) -> list[str]:
+@beartype
+def get_chromosome_genes(gtf: str,
+                         chromosomes: str | list[str]) -> list[str]:
     """
     Get a list of all genes in the gtf for certain chromosome(s).
 
@@ -26,7 +30,7 @@ def get_chromosome_genes(gtf, chromosomes) -> list[str]:
     ----------
     gtf : str
         Path to the gtf file.
-    chromosomes : str or list
+    chromosomes : str | list[str]
         A chromosome or a list of chromosome names to search for genes in.
 
     Returns
@@ -78,7 +82,10 @@ def get_chromosome_genes(gtf, chromosomes) -> list[str]:
 
 
 @deco.log_anndata
-def label_genes(adata, species, gene_column=None) -> list[str]:
+@beartype
+def label_genes(adata: sc.AnnData,
+                species: str,
+                gene_column: Optional[str] = None) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
 
@@ -86,7 +93,7 @@ def label_genes(adata, species, gene_column=None) -> list[str]:
 
     Parameters
     ----------
-    adata : anndata.Anndata
+    adata : sc.AnnData
         The anndata object.
     species : str
         Name of the species.
@@ -145,13 +152,15 @@ def label_genes(adata, species, gene_column=None) -> list[str]:
 
 
 @deco.log_anndata
-def add_gene_expression(adata, gene) -> None:
+@beartype
+def add_gene_expression(adata: sc.AnnData,
+                        gene: str) -> None:
     """
     Add values of gene/feature per cell to the adata.obs dataframe.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing gene expression/counts.
     gene : str
         Name of the gene/feature from the adata.var index to be added to adata.obs.
@@ -177,17 +186,19 @@ def add_gene_expression(adata, gene) -> None:
 ############################################################
 
 @deco.log_anndata
-def run_rank_genes(adata, groupby,
-                   min_in_group_fraction=0.25,
-                   min_fold_change=0.5,
-                   max_out_group_fraction=0.8,
-                   **kwargs) -> None:
+@beartype
+def run_rank_genes(adata: sc.AnnData,
+                   groupby: str,
+                   min_in_group_fraction: float = 0.25,
+                   min_fold_change: float = 0.5,
+                   max_out_group_fraction: float = 0.8,
+                   **kwargs: dict) -> None:
     """
     Run scanpy rank_genes_groups and filter_rank_genes_groups.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing gene expression/counts.
     groupby : str
         Column by which the cells in adata should be grouped.
@@ -241,18 +252,20 @@ def run_rank_genes(adata, groupby,
 
 
 @deco.log_anndata
-def pairwise_rank_genes(adata, groupby,
-                        foldchange_threshold=1,
-                        min_in_group_fraction=0.25,
-                        max_out_group_fraction=0.5,
-                        **kwargs
+@beartype
+def pairwise_rank_genes(adata: sc.AnnData,
+                        groupby: str,
+                        foldchange_threshold: float = 1,
+                        min_in_group_fraction: float = 0.25,
+                        max_out_group_fraction: float = 0.5,
+                        **kwargs: dict
                         ) -> pd.DataFrame:
     """
     Rank genes pairwise between groups in 'groupby'.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing expression data.
     groupby : str
         Key in adata.obs containing groups to be compared.
@@ -322,22 +335,26 @@ def pairwise_rank_genes(adata, groupby,
 
 
 @deco.log_anndata
-def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False,
-                          var_columns=[], save_excel=None) -> dict[str, pd.DataFrame]:
+@beartype
+def get_rank_genes_tables(adata: sc.AnnData,
+                          key: str = "rank_genes_groups",
+                          out_group_fractions: bool = False,
+                          var_columns: list[str] = [],
+                          save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing ranked genes.
     key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
     out_group_fractions : bool, default False
         If True, the output tables will contain additional columns giving the fraction of genes per group.
-    var_columns : list. default []
+    var_columns : list[str], default []
         List of adata.var columns, which will be added to pandas.DataFrame.
-    save_excel : str, default None
+    save_excel : Optional[str], default None
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
 
     Returns
@@ -453,15 +470,19 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
 
 
 @deco.log_anndata
-def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True) -> Optional[anndata.AnnData]:
+@beartype
+def mask_rank_genes(adata: sc.AnnData,
+                    genes: list[str],
+                    key: str = "rank_genes_groups",
+                    inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Mask names with "nan" in .uns[key]["names"] if they are found in given 'genes'.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing ranked genes.
-    genes : list
+    genes : list[str]
         List of genes to be masked.
     key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
@@ -470,7 +491,7 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True) -> Opti
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If inplace = True, modifies adata.uns[key]["names"] in place and returns None.
         Otherwise, returns a copy of adata.
 
@@ -500,23 +521,29 @@ def mask_rank_genes(adata, genes, key="rank_genes_groups", inplace=True) -> Opti
 #####################################################################
 
 @deco.log_anndata
-def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, percentile_range=(0, 100)) -> pd.DataFrame:
+@beartype
+def run_deseq2(adata: sc.AnnData,
+               sample_col: str,
+               condition_col: str,
+               confounders: Optional[list[str]] = None,
+               layer: Optional[str] = None,
+               percentile_range: Tuple[int, int] = (0, 100)) -> pd.DataFrame:
     """
     Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing raw counts.
     sample_col : str
         Column name in adata.obs containing sample names.
     condition_col : str
         Column name in adata.obs containing condition names to be compared.
-    confounders : list, default None
+    confounders : Optional[list[str]], default None
         List of additional column names in adata.obs containing confounders to be included in the model.
-    layer : str, default None
+    layer : Optional[str], default None
         Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
-    percentile_range : tuple, default (0, 100)
+    percentile_range : Tuple[int, int], default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
 
@@ -629,15 +656,19 @@ def run_deseq2(adata, sample_col, condition_col, confounders=None, layer=None, p
 
 
 @deco.log_anndata
-def score_genes(adata, gene_set, score_name='score', inplace=True) -> Optional[anndata.AnnData]:
+@beartype
+def score_genes(adata: sc.AnnData,
+                gene_set: str | list[str],
+                score_name: str = 'score',
+                inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Assign a score to each cell depending on the expression of a set of genes.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object to score.
-    gene_set : str or list
+    gene_set : str | list[str]
         A list of genes or path to a file containing a list of genes.
         The txt file should have one gene per row.
     score_name : str, default "score"
@@ -647,7 +678,7 @@ def score_genes(adata, gene_set, score_name='score', inplace=True) -> Optional[a
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If inplace is False, return a copy of anndata object with the new column in the obs table.
 
     Raises
