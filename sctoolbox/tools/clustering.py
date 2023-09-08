@@ -6,9 +6,11 @@ import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
 from typing import Union, Literal, Optional
+from beartype import beartype
 
 
 @deco.log_anndata
+@beartype
 def recluster(adata: sc.AnnData,
               column: str,
               clusters: str | list[str],
