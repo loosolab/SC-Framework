@@ -3,6 +3,9 @@ import yaml
 import os
 import sctoolbox.utils as utils
 
+from beartype import beartype
+from typing import Optional, Literal
+
 
 # from: https://github.com/yaml/pyyaml/issues/127#issuecomment-525800484
 class _SpaceDumper(yaml.SafeDumper):
@@ -15,20 +18,20 @@ class _SpaceDumper(yaml.SafeDumper):
             super().write_line_break()
 
 
-def write_TOBIAS_config(out_path,
-                        bams=[],
-                        names=None,
-                        fasta=None,
-                        blacklist=None,
-                        gtf=None,
-                        motifs=None,
-                        organism="human",
-                        output="TOBIAS_output",
-                        plot_comparison=True,
-                        plot_correction=True,
-                        plot_venn=True,
-                        coverage=True,
-                        wilson=True) -> None:
+def write_TOBIAS_config(out_path: str,
+                        bams: list[str] = [],
+                        names: Optional[list[str]] = None,
+                        fasta: Optional[str] = None,
+                        blacklist: Optional[str] = None,
+                        gtf: Optional[str] = None,
+                        motifs: Optional[str] = None,
+                        organism: Literal["human", "mouse", "zebrafish"] = "human",
+                        output: str = "TOBIAS_output",
+                        plot_comparison: bool = True,
+                        plot_correction: bool = True,
+                        plot_venn: bool = True,
+                        coverage: bool = True,
+                        wilson: bool = True) -> None:
     """
     Write a TOBIAS config file from input bams/fasta/blacklist etc.
 
@@ -36,19 +39,19 @@ def write_TOBIAS_config(out_path,
     ----------
     out_path : str
         Path to output yaml file.
-    bams : list of strs, default []
+    bams : list[str], default []
         List of paths to bam files.
-    names : list of str, default None
+    names : Optional[list[str]], default None
         List of names for the bams. If None, the names are set to the bam file names with common prefix and suffix removed.
-    fasta : str, default None
+    fasta : Optional[str], default None
         Path to fasta file.
-    blacklist : str, default None
+    blacklist : Optional[str], default None
         Path to blacklist file.
-    gtf : str, default None
+    gtf : Optional[str], default None
         Path to gtf file.
-    motifs : str, default None
+    motifs : Optional[str], default None
         Path to motif file.
-    organism : str, default 'human'
+    organism : Literal["human", "mouse", "zebrafish"], default 'human'
         Organism name. TOBIAS supports 'human', 'mouse' or 'zebrafish'.
     output : str, default 'Tobias_output'
         Output directory of the TOBIAS run.
