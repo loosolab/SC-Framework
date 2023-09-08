@@ -1,5 +1,5 @@
 """Module to calculate TSS enrichment scores."""
-import anndata
+import scanpy as sc
 import pysam
 import os
 import sys
@@ -12,11 +12,19 @@ import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
-from typing import Tuple
+from typing import Tuple, Optional
+from beartype import beartype
+import numpy.typing as npt
+
 logger = settings.logger
 
 
-def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_dir=None) -> Tuple[list, list]:
+@beartype
+def write_TSS_bed(gtf: str,
+                  custom_TSS: str,
+                  negativ_shift: int = 2000,
+                  positiv_shift: int = 2000,
+                  temp_dir: Optional[str] = None) -> Tuple[list, list]:
     """
     Write a custom TSS file from a gene gtf file.
 
@@ -36,7 +44,7 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_
         number of bases to shift upstream
     positiv_shift : int, default 2000
         number of bases to shift downstream
-    temp_dir : str, default None
+    temp_dir : Optional[str], default None
         path to temporary directory
 
     Returns
@@ -64,7 +72,13 @@ def write_TSS_bed(gtf, custom_TSS, negativ_shift=2000, positiv_shift=2000, temp_
     return tss_list, tempfiles
 
 
-def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shift=2000, positiv_shift=2000) -> dict:
+@beartype
+def overlap_and_aggregate(fragments: str,
+                          custom_TSS: str,
+                          overlap: str,
+                          tss_list: list[list[str | int]],
+                          negativ_shift: int = 2000,
+                          positiv_shift: int = 2000) -> dict:
     """
     Overlap the fragments with the custom TSS file and aggregates the fragments in a dictionary.
 
@@ -81,7 +95,7 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
         path to custom TSS file
     overlap : str
         path to output file
-    tss_list : list
+    tss_list : list[list[str | int]]
         list of lists with the following columns:
         1: chr, 2: start, 3:stop
     negativ_shift : int, default 2000
@@ -169,7 +183,10 @@ def overlap_and_aggregate(fragments, custom_TSS, overlap, tss_list, negativ_shif
     return tSSe_cells, tempfiles
 
 
-def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100) -> np.ndarray:
+@beartype
+def calc_per_base_tsse(tSSe_df: pd.DataFrame,
+                       min_bias: float = 0.01,
+                       edge_size: int = 100) -> npt.ArrayLike:
     """
     Calculate per base tSSe by dividing the tSSe by the bias. The bias is calculated by averaging the edges of the tSSe.
 
@@ -187,7 +204,7 @@ def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         numpy array with the per base tSSe
     """
     # make np.array for calculation
@@ -212,13 +229,16 @@ def calc_per_base_tsse(tSSe_df, min_bias=0.01, edge_size=100) -> np.ndarray:
     return per_base_tsse
 
 
-def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50) -> np.ndarray:
+@beartype
+def global_tsse_score(per_base_tsse: npt.ArrayLike,
+                      negativ_shift: int,
+                      edge_size: int = 50) -> npt.ArrayLike:
     """
     Calculate the global tSSe score by averaging the per base tSSe around the TSS.
 
     Parameters
     ----------
-    per_base_tsse : np.ndarray
+    per_base_tsse : npt.ArrayLike
         numpy array with the per base tSSe
     negativ_shift : int
         number of bases to shift upstream
@@ -227,7 +247,7 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    npt.ArrayLike
         numpy array with the global tSSe score
     """
     # calculate global tSSe score
@@ -238,15 +258,16 @@ def global_tsse_score(per_base_tsse, negativ_shift, edge_size=50) -> np.ndarray:
     return global_tsse_score
 
 
-def tsse_scoring(fragments,
-                 gtf,
-                 negativ_shift=2000,
-                 positiv_shift=2000,
-                 edge_size_total=100,
-                 edge_size_per_base=50,
-                 min_bias=0.01,
-                 keep_tmp=False,
-                 temp_dir="") -> pd.DataFrame:
+@beartype
+def tsse_scoring(fragments: str,
+                 gtf: str,
+                 negativ_shift: int = 2000,
+                 positiv_shift: int = 2000,
+                 edge_size_total: int = 100,
+                 edge_size_per_base: int = 50,
+                 min_bias: float = 0.01,
+                 keep_tmp: bool = False,
+                 temp_dir: str = "") -> pd.DataFrame:
     """
     Calculate the tSSe score for each cell.
 
@@ -316,16 +337,17 @@ def tsse_scoring(fragments,
 
 
 @deco.log_anndata
-def add_tsse_score(adata,
-                   fragments,
-                   gtf,
-                   negativ_shift=2000,
-                   positiv_shift=2000,
-                   edge_size_total=100,
-                   edge_size_per_base=50,
-                   min_bias=0.01,
-                   keep_tmp=False,
-                   temp_dir="") -> anndata.AnnData:
+@beartype
+def add_tsse_score(adata: sc.AnnData,
+                   fragments: str,
+                   gtf: str,
+                   negativ_shift: int = 2000,
+                   positiv_shift: int = 2000,
+                   edge_size_total: int = 100,
+                   edge_size_per_base: int = 50,
+                   min_bias: float = 0.01,
+                   keep_tmp: bool = False,
+                   temp_dir: str = "") -> sc.AnnData:
     """
     Add the tSSe score to the adata object.
 
@@ -333,7 +355,7 @@ def add_tsse_score(adata,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object
     fragments : str
         path to fragments.bed
@@ -356,7 +378,7 @@ def add_tsse_score(adata,
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         AnnData object with added tSSe score
     """
 
