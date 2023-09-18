@@ -10,7 +10,7 @@ from scipy.signal import fftconvolve
 import scanpy as sc
 import sctoolbox.tools as tools
 
-from typing import Tuple, Literal
+from typing import Tuple, Literal, Optional
 from beartype import beartype
 import numpy.typing as npt
 
@@ -478,7 +478,7 @@ def add_adapters(features: npt.ArrayLike,
 @beartype
 def cross_point_shift(peaks: npt.ArrayLike,
                       reference: npt.ArrayLike,
-                      convergence: float = 0.01) -> npt.ArrayLike:
+                      convergence: float | int = 0.01) -> npt.ArrayLike:
     """
     Cross point shift peaks to the left to the first point where the reference is below the convergence threshold.
 
@@ -488,7 +488,7 @@ def cross_point_shift(peaks: npt.ArrayLike,
         Array of peaks.
     reference : npt.ArrayLike
         Array of reference.
-    convergence : float, default 0.01
+    convergence : float | int, default 0.01
         Convergence threshold.
 
     Returns
@@ -548,7 +548,7 @@ def single_cwt_ov(features: npt.ArrayLike,
                   peaks_thr: float = 0.5,
                   perform_cross_point_shift: bool = True,
                   convergence: float = 0.1,
-                  plotting: bool = True) -> npt.ArrayLike:
+                  plotting: bool = True) -> Tuple[npt.ArrayLike, npt.ArrayLike]:
     """
     Apply Continues Wavelet Transformation (CWT) to a single sample and plot the results.
 
@@ -955,7 +955,7 @@ def plot_single_momentum_ov(peaks: npt.ArrayLike,
                             shift_r: npt.ArrayLike,
                             sample_n: int = 0,
                             shift: int = 80,
-                            remove: int = 150) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
+                            remove: int = 150) -> Tuple[matplotlib.figure.Figure, list[matplotlib.axes.Axes]]:
     """
     Plot the momentum of a single sample with found peaks and the original data.
 
@@ -980,7 +980,7 @@ def plot_single_momentum_ov(peaks: npt.ArrayLike,
 
     Returns
     -------
-    Tuple[plt.figure, list[matplotlib.axes.Axes]]
+    Tuple[matplotlib.figure.Figure, list[matplotlib.axes.Axes]]
         Tuple at index 1: matplotlib figure
         Tuple at index 2: list (legnth 3) of matplotlib.axes.Axes objects
     """
@@ -1028,7 +1028,7 @@ def plot_wavl_ov(feature: npt.ArrayLike,
                  perform_cross_point_shift: bool =True,
                  perform_half_wave_shift: bool = True,
                  scale: int = 35,
-                 convergence: float = 0.1) -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
+                 convergence: float | int = 0.1) -> Tuple[matplotlib.figure.Figure, list[matplotlib.axes.Axes]]:
     """
     Plot the original data, the wavelet transformation and the found peaks as an overview.
 
@@ -1050,12 +1050,12 @@ def plot_wavl_ov(feature: npt.ArrayLike,
         If true, the found peaks are shifted to the left by half a wavelength.
     scale : int, default 35
         Scale of the wavelet. Required by half_wave_shift.
-    convergence : float, default 0.1
+    convergence : float | int, default 0.1
         Convergence value for the cross point shift.
 
     Returns
     -------
-    Tuple[plt.figure, list[matplotlib.axes.Axes]]
+    Tuple[matplotlib.figure.Figure, list[matplotlib.axes.Axes]]
         Index 1: matplotlib figure
         Index 2: list (legnth 3) of matplotlib.axes.Axes objects
     """

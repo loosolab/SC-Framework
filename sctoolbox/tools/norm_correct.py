@@ -1,4 +1,4 @@
-"""Normalization and correction tools."""beartype
+"""Normalization and correction tools."""
 import numpy as np
 from scipy import sparse
 import io

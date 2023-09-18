@@ -6,7 +6,7 @@ import os
 import multiprocessing as mp
 import psutil
 import subprocess
-import scnapy as sc
+import scanpy as sc
 
 from typing import Optional, Union, Tuple, Any
 from beartype import beartype

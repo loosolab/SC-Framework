@@ -22,7 +22,7 @@ logger = settings.logger
 # --------------------------------------------------------------------- #
 
 @beartype
-def _check_in_list(element: Any, alist: list[Any]) -> bool:
+def _check_in_list(element: Any, alist: list[Any] | set[Any]) -> bool:
     """
     Check if element is in list.
 
@@ -32,8 +32,8 @@ def _check_in_list(element: Any, alist: list[Any]) -> bool:
     ----------
     element : Any
         Element that is checked for.
-    alist : list[Any]
-        List in which the element is searched for.
+    alist : list[Any] | set[Any]
+        List or set in which the element is searched for.
 
     Returns
     -------
@@ -133,7 +133,7 @@ def add_insertsize(adata: sc.AnnData,
 def _insertsize_from_bam(bam: str,
                          barcode_tag: str = "CB",
                          barcodes: Optional[list[str]] = None,
-                         regions: str | list[str] = 'chr1:1-2000000',
+                         regions: Optional[str | list[str]] = 'chr1:1-2000000',
                          chunk_size: int = 100000) -> pd.DataFrame:
     """
     Get insertsize distributions per barcode from bam file.
@@ -146,7 +146,7 @@ def _insertsize_from_bam(bam: str,
         The read tag representing the barcode.
     barcodes : Optional[list[str]], default None
         List of barcodes to include in the analysis. If None, all barcodes are included.
-    regions : str | list[str], default 'chr1:1-2000000'
+    regions : Optional[str | list[str]], default 'chr1:1-2000000'
         Regions to include in the analysis. If None, all reads are included.
     chunk_size : int, default 500000
         Size of bp chunks to read from bam file.
