@@ -18,6 +18,11 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+batch_methods = Literal["bbknn",
+                        "combat",
+                        "mnn",
+                        "harmony",
+                        "scanorama"]
 
 #####################################################################
 # --------------------- Normalization methods --------------------- #
@@ -240,11 +245,9 @@ def tfidf_normalization(matrix: sparse.spmatrix,
 @beartype
 def wrap_corrections(adata: anndata.AnnData,
                      batch_key: str,
-                     methods: list[Literal["bbknn",
-                                           "combat",
-                                           "mnn",
-                                           "harmony",
-                                           "scanorama"]] | Callable = ["bbknn", "mnn"],
+                     methods: Union[batch_methods,
+                                    list[batch_methods],
+                                    Callable] = ["bbknn", "mnn"],
                      method_kwargs: dict = {}) -> dict[str, anndata.AnnData]:
     """
     Calculate multiple batch corrections for adata using the 'batch_correction' function.
@@ -255,7 +258,7 @@ def wrap_corrections(adata: anndata.AnnData,
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
-    methods : list[str] | Callable, default ["bbknn", "mnn"]
+    methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
         The method(s) to use for batch correction. Options are:
         - bbknn
         - mnn
@@ -308,11 +311,9 @@ def wrap_corrections(adata: anndata.AnnData,
 @beartype
 def batch_correction(adata: anndata.AnnData,
                      batch_key: str,
-                     method: list[Literal["bbknn",
-                                           "combat",
-                                           "mnn",
-                                           "harmony",
-                                           "scanorama"]] | Callable,
+                     method: Union[batch_methods,
+                                   list[batch_methods],
+                                   Callable] = ["bbknn", "mnn"],
                      highly_variable: bool = True,
                      **kwargs: Any) -> anndata.AnnData:
     """
