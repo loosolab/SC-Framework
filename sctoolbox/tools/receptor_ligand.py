@@ -283,7 +283,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def interaction_violin_plot(adata: sc.AnnData,
-                            min_perc: float,
+                            min_perc: int,
                             output: Optional[str] = None,
                             figsize: Tuple[int, int] = (5, 20),
                             dpi: int = 100) -> npt.ArrayLike:
@@ -294,7 +294,7 @@ def interaction_violin_plot(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object
-    min_perc : float
+    min_perc : int
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     output : str, default None
         Path to output file.
@@ -346,11 +346,11 @@ def interaction_violin_plot(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def hairball(adata: sc.AnnData,
-             min_perc: float,
+             min_perc: int,
              interaction_score: float | int = 0,
-             interaction_perc: Optional[float | int] = None,
+             interaction_perc: Optional[int] = None,
              output: Optional[str] = None,
-             title: str = "Network",
+             title: Optional[str] = "Network",
              color_min: float | int = 0,
              color_max: Optional[float | int] = None,
              cbar_label: str = "Interaction count",
@@ -365,11 +365,11 @@ def hairball(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object
-    min_perc : float
+    min_perc : int
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     interaction_score : float | int, default 0
         Interaction score must be above this threshold for the interaction to be counted in the graph.
-    interaction_perc : Optional[float | int], default None
+    interaction_perc : Optional[int], default None
         Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
     output : str, default None
         Path to output file.
