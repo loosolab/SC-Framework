@@ -83,9 +83,9 @@ def calculate_qc_metrics(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def predict_cell_cycle(adata: sc.AnnData,
-                       species: str,
+                       species: Optional[str],
                        s_genes: Optional[str | list[str]] = None,
-                       g2m_genes: str | list[str] = None,
+                       g2m_genes: Optional[str | list[str]] = None,
                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -94,7 +94,7 @@ def predict_cell_cycle(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to predict cell cycle on.
-    species : str
+    species : Optional[str]
         The species of data. Available species are: human, mouse, rat and zebrafish.
         If both s_genes and g2m_genes are given, set species=None,
         otherwise species is ignored.
@@ -103,7 +103,7 @@ def predict_cell_cycle(adata: sc.AnnData,
         a list of genes for the S-phase or a txt file containing one gene in each row.
         If only s_genes is provided and species is a supported input, the default
         g2m_genes list will be used, otherwise the function will not run.
-    g2m_genes :  str | list[str], default None
+    g2m_genes :  Optional[str | list[str]], default None
         If no species is given or desired species is not supported, you can provide
         a list of genes for the G2M-phase or a txt file containing one gene per row.
         If only g2m_genes is provided and species is a supported input, the default
