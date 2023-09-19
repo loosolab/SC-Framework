@@ -414,7 +414,7 @@ def _prepare_gtf(gtf: str,
 
 
 @beartype
-def _annotate_features(region_dicts: dict,
+def _annotate_features(region_dicts: list[dict],
                        threads: int,
                        gtf: str,
                        cfg_dict: dict,
@@ -424,8 +424,8 @@ def _annotate_features(region_dicts: dict,
 
     Parameters
     ----------
-    region_dicts : dict
-        Dictionary with peak information.
+    region_dicts : list[dict]
+        List of dictionary with peak information.
     threads : int
         Number of threads to perform the annotation.
     gtf : str
@@ -523,16 +523,16 @@ def _annotate_features(region_dicts: dict,
 
 
 @beartype
-def _annotate_peaks_chunk(region_dicts: dict,
+def _annotate_peaks_chunk(region_dicts: list[dict],
                           gtf: str,
-                          cfg_dict: dict) -> list[str]:
+                          cfg_dict: dict) -> list[dict[str, Union[str, int]]]:
     """
     Multiprocessing safe function to annotate a chunk of regions.
 
     Parameters
     ----------
-    region_dicts : dict
-        Dictionary with peak information.
+    region_dicts : list[dict]
+        List of dictionaryies with peak information.
     gtf : str
         Path to the .gtf file
     cfg_dict : dict
@@ -540,7 +540,7 @@ def _annotate_peaks_chunk(region_dicts: dict,
 
     Returns
     -------
-    list[str]
+    list[dict[str, Union[str, int]]]
         List of all valid annotations.
     """
 
