@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import multiprocessing
 from multiprocessing.managers import BaseProxy
+from multiprocessing.pool import ApplyResult
 import anndata
 
 from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any
@@ -538,14 +539,14 @@ def _monitor_progress(progress_queue: Any,
         Returns 0 on success.
     """
 
-    # Check parameter that beatype cannot cover
-    #utils.check_type(progress_queue, "progress_queue", BaseProxy)
-    #for value in cluster_queues.values():
-    #    utils.check_type(value, "cluster_queues value", BaseProxy)
-    #for jobs in reader_jobs:
-    #    utils.check_type(value, "cluster_queues value", BaseProxy)
-    #for jobs in writer_jobs:
-    #    utils.check_type(value, "cluster_queues value", BaseProxy)
+    # Check parameter that beartype cannot cover
+    utils.check_type(progress_queue, "progress_queue", BaseProxy)
+    for value in cluster_queues.values():
+        utils.check_type(value, "cluster_queues value", BaseProxy)
+    for jobs in reader_jobs:
+        utils.check_type(jobs, "reader_jobs", ApplyResult)
+    for jobs in writer_jobs:
+        utils.check_type(jobs, "writer_jobs", ApplyResult)
 
     if utils._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
@@ -626,7 +627,7 @@ def _monitor_progress(progress_queue: Any,
     return 0  # success
 
 
-@beartype
+# @beartype beartype seems to not work with this function
 def _buffered_reader(path: str,
                      out_queues: dict[str | int, Any],
                      bc2cluster: dict[str | int, str | int],
