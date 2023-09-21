@@ -14,6 +14,8 @@ import functools
 import matplotlib.pyplot as plt
 import glob
 
+from beartype.roar import BeartypeCallHintParamViolation
+
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
@@ -298,15 +300,24 @@ def test_wrong_embeding_search_clustering_parameters(adata):
         pl.search_clustering_parameters(adata, embedding="Invalid")
 
 
-@pytest.mark.parametrize("method,resrange", [("leiden", (0.1, 0.2, 0.1, 0.1)),
-                                             ("leiden", (0.1, 0.2, 0.3)),
-                                             ("unknown", (0.1, 0.3, 0.1))])
-def test_search_clustering_parameters_errors(adata, method, resrange):
+def test_search_clustering_parameters_errors(adata):
     """Test if search_clustering_parameters raises error."""
 
     with pytest.raises(ValueError):
-        pl.search_clustering_parameters(adata, resolution_range=resrange,
-                                        method=method)
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
+                                        method="leiden")
+
+
+def test_search_clustering_parameters_beartype(adata):
+    """Test if beartype checks for tuple length"""
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
+                                        method="leiden")
+        
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
+                                        method="unknown")
 
 
 def test_anndata_overview(adata, tmp_file):
