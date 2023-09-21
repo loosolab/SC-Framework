@@ -5,6 +5,9 @@ import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
 
+from beartype import beartype
+from typing import Literal, Tuple, Optional
+
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
@@ -13,23 +16,24 @@ logger = settings.logger
 
 
 @deco.log_anndata
-def search_clustering_parameters(adata,
-                                 method="leiden",
-                                 resolution_range=(0.1, 1, 0.1),
-                                 embedding="X_umap",
-                                 ncols=3,
-                                 verbose=True,
-                                 save=None) -> np.ndarray:
+@beartype
+def search_clustering_parameters(adata: sc.AnnData,
+                                 method: Literal["leiden", "louvain"] = "leiden",
+                                 resolution_range: Tuple[float | int, float | int, float | int] = (0.1, 1, 0.1),
+                                 embedding: str = "X_umap",
+                                 ncols: int = 3,
+                                 verbose: bool = True,
+                                 save: Optional[str] = None) -> np.ndarray:
     """
     Plot a grid of different resolution parameters for clustering.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     method : str, default: "leiden"
         Clustering method to use. Can be one of 'leiden' or 'louvain'.
-    resolution_range : tuple, default: (0.1, 1, 0.1)
+    resolution_range : Tuple[float | int, float | int, float | int], default: (0.1, 1, 0.1)
         Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
     embedding : str, default: "X_umap".
         Embedding method to use. Must be a key in adata.obsm. If not, will try to use f"X_{embedding}".
@@ -37,7 +41,7 @@ def search_clustering_parameters(adata,
         Number of columns in the grid.
     verbose : bool, default: True
         Print progress to console.
-    save : str, default None
+    save : Optional[str], default None
         Path to save figure.
 
     Returns
@@ -128,22 +132,28 @@ def search_clustering_parameters(adata,
 
 
 @deco.log_anndata
-def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None) -> list:
+@beartype
+def marker_gene_clustering(adata: sc.AnnData,
+                           groupby: str,
+                           marker_genes_dict: dict[str, list[str]],
+                           show_umap: bool = True,
+                           save: Optional[str] = None,
+                           figsize: Optional[Tuple[float | int, float | int]] = None) -> list:
     """Plot an overview of marker genes and clustering.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
-    groupby : `str`
+    groupby : str
         Key in `adata.obs` for which to plot the clustering.
-    marker_genes_dict : `dict`
+    marker_genes_dict : dict[str, list[str]]
         Dictionary of marker genes to plot. Keys are the names of the groups and values are lists of marker genes.
-    show_umap : `bool`, optional (default: `True`)
+    show_umap : bool, default: True
         Whether to show a UMAP plot on the left.
-    save : `str`, optional (default: `None`)
+    save : Optional[str], default: None
         If given, save the figure to this path.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : Tuple[float | int, float | int], default: None
         Size of the figure. If `None`, use default size.
 
     Returns
