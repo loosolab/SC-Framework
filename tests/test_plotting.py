@@ -172,7 +172,7 @@ def test_plot_pca_variance_fail(adata):
     with pytest.raises(KeyError, match="The given method"):
         pl.plot_pca_variance(adata, method="invalid")
 
-    with pytest.raises(ValueError, match="'ax' parameter needs to be an Axes object."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.plot_pca_variance(adata, ax="invalid")
 
 
@@ -193,7 +193,7 @@ def test_plot_pca_correlation(adata, which, method):
 def test_plot_pca_correlation_fail(adata, kwargs):
     """Test that an exception is raised upon error."""
 
-    with pytest.raises((ValueError, KeyError)):
+    with pytest.raises((BeartypeCallHintParamViolation, KeyError)):
         pl.plot_pca_correlation(adata, **kwargs)
 
 
@@ -219,7 +219,7 @@ def test_search_tsne_parameters(adata):
 
 def test_invalid_method_search_dim_red_parameter(adata):
     """Test if error is raised for invalid method."""
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl._search_dim_red_parameters(adata, color="condition",
                                       method="invalid")
 
@@ -228,13 +228,13 @@ def test_invalid_method_search_dim_red_parameter(adata):
 def test_search_dim_red_parameters_ranges(adata, range):
     """Test that invalid ranges raise ValueError."""
 
-    with pytest.raises(ValueError):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
                                       min_dist_range=range,
                                       spread_range=(2.0, 3.0, 0.5))
 
-    with pytest.raises(ValueError):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
                                       spread_range=range,
@@ -309,12 +309,12 @@ def test_search_clustering_parameters_errors(adata):
 
 
 def test_search_clustering_parameters_beartype(adata):
-    """Test if beartype checks for tuple length"""
+    """Test if beartype checks for tuple length."""
 
     with pytest.raises(BeartypeCallHintParamViolation):
         pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
                                         method="leiden")
-        
+
     with pytest.raises(BeartypeCallHintParamViolation):
         pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
                                         method="unknown")
@@ -355,7 +355,7 @@ def test_anndata_overview_fail_color_by(adata):
 
     # invalid color_by
     # no input
-    with pytest.raises(ValueError, match="Couldn't find column"):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=None,
@@ -413,7 +413,7 @@ def test_anndata_overview_fail_plots(adata):
 
     # invalid plots
     # no input
-    with pytest.raises(ValueError, match="Invalid plot specified:"):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -424,7 +424,7 @@ def test_anndata_overview_fail_plots(adata):
         )
 
     # wrong input
-    with pytest.raises(ValueError, match="Invalid plot specified:"):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -555,7 +555,7 @@ def test_flip_embedding(adata, how):
 
 def test_invalid_flip_embedding(adata):
     """Test flip_embedding failure."""
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.flip_embedding(adata, how="invalid")
 
     with pytest.raises(KeyError):

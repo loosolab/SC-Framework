@@ -20,6 +20,10 @@ import plotly.graph_objects as go
 
 from numba import errors as numba_errors
 
+from beartype import beartype
+from typing import Literal, Tuple, Optional, Union
+import numpy.typing as npt
+
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 import sctoolbox.utils.decorator as deco
@@ -31,6 +35,7 @@ logger = settings.logger
 #                                  Utilities                                #
 #############################################################################
 
+@beartype
 def sc_colormap() -> matplotlib.colors.ListedColormap:
     """Get a colormap with 0-count cells colored grey (to use for embeddings).
 
@@ -50,16 +55,17 @@ def sc_colormap() -> matplotlib.colors.ListedColormap:
 
 
 @deco.log_anndata
-def flip_embedding(adata, key="X_umap", how="vertical"):
+@beartype
+def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertical", "horizontal"] = "vertical"):
     """Flip the embedding in adata.obsm[key] along the given axis.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     key : str, default "X_umap"
         Key in adata.obsm to flip.
-    how : str, default "vertical"
+    how : Literal["vertical", "horizontal"], default "vertical"
         Axis to flip along. Can be "vertical" (flips up/down) or "horizontal" (flips left/right).
 
     Raises
@@ -86,27 +92,32 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
 #####################################################################
 
 @deco.log_anndata
-def search_umap_parameters(adata,
-                           min_dist_range=(0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
-                           spread_range=(0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
-                           color=None, n_components=2, threads=4, save=None, **kwargs) -> np.ndarray:
+@beartype
+def search_umap_parameters(adata: sc.AnnData,
+                           min_dist_range: Tuple[float | int, float | int, float | int] = (0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
+                           spread_range: Tuple[float | int, float | int, float | int] = (0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
+                           color: Optional[str] = None,
+                           n_components: int = 2,
+                           threads: int = 4,
+                           save: Optional[str] = None,
+                           **kwargs) -> np.ndarray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     min_dist_range : tuple, default: (0.2, 0.9, 0.2)
         Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
     spread_range : tuple, default (0.5, 2.0, 0.5)
         Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
-    color : str, default None
+    color : Optional[str], default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     n_components : int, default 2
         Number of components in UMAP calculation.
     threads : int, default 4
         Number of threads to use for UMAP calculation.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`scanpy.tl.umap`.
@@ -134,25 +145,30 @@ def search_umap_parameters(adata,
 
 
 @deco.log_anndata
-def search_tsne_parameters(adata,
-                           perplexity_range=(30, 60, 10), learning_rate_range=(600, 1000, 200),
-                           color=None, threads=4, save=None, **kwargs) -> np.ndarray:
+@beartype
+def search_tsne_parameters(adata: sc.AnnData,
+                           perplexity_range: Tuple[int, int, int] = (30, 60, 10),
+                           learning_rate_range: Tuple[int, int, int] = (600, 1000, 200),
+                           color: Optional[str] = None,
+                           threads: int = 4,
+                           save: Optional[str] = None,
+                           **kwargs) -> np.ndarray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
-    perplexity_range : tuple, default (30, 60, 10)
+    perplexity_range : Tuple[int, int, int], default (30, 60, 10)
         tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
-    learning_rate_range : tuple, default (600, 1000, 200)
+    learning_rate_range : Tuple[int, int, int], default (600, 1000, 200)
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
-    color : str, default None
+    color : Optional[str], default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     threads : int, default 1
         The threads paramerter is currently not supported. Please leave at 1.
         This may be fixed in the future.
-    save : str, default None (not saved)
+    save : Optional[str], default None (not saved)
         Path to save the figure to.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`scanpy.tl.tsne`.
@@ -179,32 +195,39 @@ def search_tsne_parameters(adata,
     return _search_dim_red_parameters(**args, **kwargs)
 
 
-def _search_dim_red_parameters(adata, method,
-                               min_dist_range=None, spread_range=None,  # for UMAP
-                               perplexity_range=None, learning_rate_range=None,  # for tSNE
-                               color=None, threads=4, save=None, **kwargs) -> np.ndarray:
+@beartype
+def _search_dim_red_parameters(adata: sc.AnnData,
+                               method: Literal["umap", "tsne"],
+                               min_dist_range: Optional[Tuple[int | float, int | float, int | float]] = None, # for UMAP
+                               spread_range: Optional[Tuple[int | float, int | float, int | float]] = None,  # for UMAP
+                               perplexity_range: Optional[Tuple[int, int, int]] = None, # for tSNE
+                               learning_rate_range: Optional[Tuple[int, int, int]] = None,  # for tSNE
+                               color: Optional[str] = None,
+                               threads: int = 4,
+                               save: Optional[str] = None,
+                               **kwargs) -> np.ndarray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
-    method : str
+    method : Literal["umap", "tsne"]
         Dimensionality reduction method to use. Must be either 'umap' or 'tsne'.
-    min_dist_range : tuple, default None
+    min_dist_range : Optional[Tuple[int | float, int | float, int | float]], default None
         UMAP parameter: Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
-    spread_range : tuple, default None
+    spread_range : Optional[Tuple[int | float, int | float, int | float]], default None
         UMAP parameter: Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
-    perplexity_range : tuple, default None
+    perplexity_range : Optional[Tuple[int, int, int]], default None
         tSNE parameter: Range of 'perplexity' parameter values to test. Must be a tuple in the form (min, max, step).
-    learning_rate_range : tuple, default None
+    learning_rate_range : Optional[Tuple[int, int, int]], default None
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
-    color : str, default None
+    color : Optional[str], default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     threads : int, default 4
         Number of threads to use for calculating embeddings. In case of UMAP, the embeddings will be calculated in parallel with each job using 1 thread.
         For tSNE, the embeddings are calculated serially, but each calculation uses 'threads' as 'n_jobs' within sc.tl.tsne.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the figure to.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`scanpy.tl.umap` or :func:`scanpy.tl.tsne`.
@@ -336,21 +359,26 @@ def _search_dim_red_parameters(adata, method,
 #######################################################################################
 
 @deco.log_anndata
-def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None) -> np.ndarray:
+@beartype
+def plot_group_embeddings(adata: sc.AnnData,
+                          groupby: str,
+                          embedding: Literal["umap", "tsne", "pca"] = "umap",
+                          ncols: int = 4,
+                          save: Optional[str] = None) -> np.ndarray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.
-    embedding : str, default "umap"
+    embedding : Literal["umap", "tsne", "pca"], default "umap"
         Embedding to plot. Must be one of "umap", "tsne", "pca".
     ncols : int, default 4
         Number of columns in the figure.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the figure.
 
     Returns
@@ -413,7 +441,12 @@ def plot_group_embeddings(adata, groupby, embedding="umap", ncols=4, save=None) 
     return axarr
 
 
-def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None, **kwargs) -> np.ndarray:
+@beartype
+def compare_embeddings(adata_list: list[sc.AnnData],
+                       var_list: list[str] | str,
+                       embedding: Literal["umap", "tsne", "pca"] = "umap",
+                       adata_names: Optional[list[str]] = None,
+                       **kwargs) -> np.ndarray:
     """Compare embeddings across different adata objects.
 
     Plots a grid of embeddings with the different adatas on the x-axis, and colored variables on the y-axis.
@@ -422,11 +455,11 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
     ----------
     adata_list : list[sc.AnnData]
         List of AnnData objects to compare.
-    var_list : list of str
+    var_list : list[str] | str
         List of variables to color in plot.
-    embedding : str, default "umap"
+    embedding : Literal["umap", "tsne", "pca"], default "umap"
         Embedding to plot. Must be one of "umap", "tsne" or "pca".
-    adata_names : list of str, default None (adatas will be named adata_1, adata_2, etc.)
+    adata_names : Optional[list[str]], default None (adatas will be named adata_1, adata_2, etc.)
         List of names for the adata objects. Must be the same length as adata_list or None
     **kwargs : arguments
         Additional arguments to pass to sc.pl.umap/sc.pl.tsne/sc.pl.pca.
@@ -544,7 +577,8 @@ def compare_embeddings(adata_list, var_list, embedding="umap", adata_names=None,
 # ---------------------------------- 3D UMAP -----------------------------------------#
 #######################################################################################
 
-def _get_3d_dotsize(n):
+@beartype
+def _get_3d_dotsize(n: int) -> int:
     """Get the optimal plotting dotsize for a given number of points."""
     if n < 1000:
         return 12
@@ -555,7 +589,10 @@ def _get_3d_dotsize(n):
 
 
 @deco.log_anndata
-def plot_3D_UMAP(adata, color, save):
+@beartype
+def plot_3D_UMAP(adata: sc.AnnData,
+                 color: str,
+                 save: str) -> None:
     """Save 3D UMAP plot to a html file.
 
     Parameters
@@ -683,11 +720,38 @@ def plot_3D_UMAP(adata, color, save):
 
 
 @deco.log_anndata
-def umap_marker_overview(adata, markers, ncols=3, figsize=None,
-                         save=None,
-                         cbar_label="Relative expr.",
-                         **kwargs):
-    """Plot a pretty grid of UMAPs with marker gene expression."""
+@beartype
+def umap_marker_overview(adata: sc.AnnData,
+                         markers: list[str] | str,
+                         ncols: int = 3,
+                         figsize: Optional[Tuple[int, int]] = None,
+                         save: Optional[str] = None,
+                         cbar_label: str = "Relative expr.",
+                         **kwargs) -> list:
+    """Plot a pretty grid of UMAPs with marker gene expression.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix.
+    markers : list[str] | str
+        List of markers or singel marker
+    ncols : int, default 3
+        Number of columns in grid.
+    figsize : Optional[Tuple[int, int]], default None
+        Tuple of figure size.
+    save : Optional[str], default None
+        If not None save plot under given name.
+    cbar_label : str, default "Relative expr."
+        Colorbar label
+    **kwargs : arguments
+        Additional parameter for scanpy.pl.umap()
+
+    Returns
+    -------
+    list
+        List of axis objects
+    """
 
     if isinstance(markers, str):
         markers = [markers]
@@ -749,18 +813,23 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
 
 
 @deco.log_anndata
-def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
+@beartype
+def umap_pub(adata: sc.AnnData,
+             color: Optional[str | list[str]] = None,
+             title: Optional[str | list[str]] = None,
+             save: Optional[str] = None,
+             **kwargs) -> list:
     """Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
-    color : str or lst of str, default None
+    color : Optional[str | list[str]], default None
         Key for annotation of observations/cells or variables/genes.
-    title : str, default None
+    title : Optional[str | list[str]], default None
         Title of the plot. Default is no title.
-    save : str, default None
+    save : Optional[str], default None
         Filename to save the figure.
     **kwargs : dict
         Additional arguments passed to `sc.pl.umap`.
@@ -855,13 +924,15 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
     return axarr
 
 
-def anndata_overview(adatas,
-                     color_by,
-                     plots=["PCA", "PCA-var", "UMAP", "LISI"],
-                     figsize=None,
-                     max_clusters=20,
-                     output=None,
-                     dpi=300) -> list:
+@beartype
+def anndata_overview(adatas: dict[str, sc.AnnData],
+                     color_by: str | list[str],
+                     plots: Union[list[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]],
+                                  Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]] = ["PCA", "PCA-var", "UMAP", "LISI"],
+                     figsize: Optional[Tuple[int, int]] = None,
+                     max_clusters: int = 20,
+                     output: Optional[str] = None,
+                     dpi: int = 300) -> npt.ArrayLike:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -869,9 +940,10 @@ def anndata_overview(adatas,
     adatas : dict[str, sc.AnnData]
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
-    color_by : str or list of str
+    color_by : str | list[str]
         Name of the .obs column to use for coloring in applicable plots (e.g. for UMAP or PCA).
-    plots : str or list of str, default ["PCA", "PCA-var", "UMAP", "LISI"]
+    plots : Union[list[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]],
+            Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], default ["PCA", "PCA-var", "UMAP", "LISI"]
         Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
         Note: List order is forwarded to plot.
         - UMAP: Plots the UMAP embedding of the data.
@@ -879,19 +951,19 @@ def anndata_overview(adatas,
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
         - LISI: Plots the distribution of any "LISI_score*" scores available in adata.obs
-    figsize : number tuple, default None (automatic based on number of columns/rows)
+    figsize : Optional[Tuple[int, int]], default None (automatic based on number of columns/rows)
         Size of the plot in inch.
     max_clusters : int, default 20
         Maximum number of clusters to show in legend.
-    output : str, default None (not saved)
+    output : Optional[str], default None (not saved)
         Path to plot output file.
-    dpi : number, default 300
+    dpi : int, default 300
         Dots per inch for output
 
     Returns
     -------
-    axes : list
-        List of matplotlib.axes.Axes objects created by matplotlib.
+    axes : npt.ArrayLike
+        Array of matplotlib.axes.Axes objects created by matplotlib.
 
     Raises
     ------
@@ -1086,29 +1158,31 @@ def anndata_overview(adatas,
 
 
 @deco.log_anndata
-def plot_pca_variance(adata, method="pca",
-                      n_pcs=20,
-                      n_selected=None,
-                      show_cumulative=True,
-                      ax=None,
-                      save=None) -> matplotlib.axes.Axes:
+@beartype
+def plot_pca_variance(adata: sc.AnnData,
+                      method: str = "pca",
+                      n_pcs: int = 20,
+                      n_selected: Optional[int] = None,
+                      show_cumulative: bool = True,
+                      ax: Optional[matplotlib.axes.Axes] = None,
+                      save: Optional[str] = None) -> matplotlib.axes.Axes:
     """Plot the pca variance explained by each component as a barplot.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     method : str, default "pca"
         Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>].
     n_pcs : int, default 20
         Number of components to plot.
-    n_selected : int, default None
+    n_selected : Optional[int], default None
         Number of components to highlight in the plot with a red line.
     show_cumulative : bool, default True
         Whether to show the cumulative variance explained in a second y-axis.
-    ax : matplotlib.axes.Axes, default None
+    ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
-    save : str, default None (not saved)
+    save : Optional[str], default None (not saved)
         Filename to save the figure. If None, the figure is not saved.
 
     Returns
@@ -1194,14 +1268,16 @@ def plot_pca_variance(adata, method="pca",
 
 
 @deco.log_anndata
-def plot_pca_correlation(adata, which="obs",
-                         n_pcs=10,
-                         columns=None,
-                         pvalue_threshold=0.01,
-                         method="spearmanr",
-                         figsize=None,
-                         title=None,
-                         save=None) -> matplotlib.axes.Axes:
+@beartype
+def plot_pca_correlation(adata: sc.AnnData,
+                         which: Literal["obs", "var"] = "obs",
+                         n_pcs: int = 10,
+                         columns: Optional[list[str]] = None,
+                         pvalue_threshold: float = 0.01,
+                         method: Literal["spearmanr", "pearsonr"] = "spearmanr",
+                         figsize: Optional[Tuple[int, int]] = None,
+                         title: Optional[str] = None,
+                         save: Optional[str] = None) -> matplotlib.axes.Axes:
     """
     Plot a heatmap of the correlation between the first n_pcs and the given columns.
 
@@ -1209,21 +1285,21 @@ def plot_pca_correlation(adata, which="obs",
     ----------
     adata : anndata.AnnData
         Annotated data matrix object.
-    which : str, default "obs"
+    which : Literal["obs", "var"], default "obs"
         Whether to use the observations ("obs") or variables ("var") for the correlation.
     n_pcs : int, default 10
         Number of principal components to use for the correlation.
-    columns : list of str, default None
+    columns : Optional[list[str]], default None
         List of columns to use for the correlation. If None, all numeric columns are used.
     pvalue_threshold : float, default 0.01
         Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
-    method : str, default "spearmanr"
+    method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
-    figsize : tuple of int, default None
+    figsize : Optional[Tuple[int, int]], default None
         Size of the figure in inches. If None, the size is automatically determined.
-    title : str, default None
+    title : Optional[str], default None
         Title of the plot. If None, no title is added.
-    save : str, default None
+    save : Optional[str], default None
         Filename to save the figure.
 
     Returns
