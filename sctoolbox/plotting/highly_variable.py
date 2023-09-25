@@ -3,16 +3,20 @@
 import matplotlib.pyplot as plt
 import sctoolbox.utils.decorator as deco
 import sctoolbox.utils as utils
+import scanpy as sc
+
+from beartype import beartype
 
 
 @deco.log_anndata
-def violin_HVF_distribution(adata):
+@beartype
+def violin_HVF_distribution(adata: sc.AnnData):
     """
     Plot the distribution of the HVF as violinplot.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         AnnData object containing columns ['highly_variable', 'n_cells_by_counts'] column.
     """
     utils.check_columns(adata.var, ['highly_variable', 'n_cells_by_counts'])
@@ -30,13 +34,14 @@ def violin_HVF_distribution(adata):
 
 
 @deco.log_anndata
-def scatter_HVF_distribution(adata):
+@beartype
+def scatter_HVF_distribution(adata: sc.AnnData):
     """
     Plot the distribution of the HVF as scatterplot.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         AnnData object containing columns ['variability_score', 'n_cells'] column.
     """
     utils.check_columns(adata.var, ['variability_score', 'n_cells'])
