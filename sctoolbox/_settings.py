@@ -6,6 +6,7 @@ import sys
 import logging
 
 from beartype import beartype
+from typing import Optional
 
 
 class SctoolboxConfig(object):
@@ -216,7 +217,7 @@ class SctoolboxConfig(object):
 
 
 @beartype
-def settings_from_config(config_file: str, key: str = None):
+def settings_from_config(config_file: str, key: Optional[str] = None):
     """
     Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 
@@ -224,7 +225,7 @@ def settings_from_config(config_file: str, key: str = None):
     ----------
     config_file : str
         Path to the config file.
-    key : str, optional
+    key : Optional[str], default None
         If given, get settings for a specific key.
 
     Raises
