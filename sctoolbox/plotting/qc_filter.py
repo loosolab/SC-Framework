@@ -530,7 +530,7 @@ def qc_violins(anndata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def plot_insertsize(adata: sc.AnnData,
-                    barcodes: Optional[list[str]] = None) -> "matplotlib.Axes":
+                    barcodes: Optional[list[str]] = None) -> matplotlib.axes.Axes:
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
