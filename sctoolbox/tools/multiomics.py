@@ -10,6 +10,7 @@ from typing import Literal
 import sctoolbox.utils as utils
 
 
+@beartype
 def merge_anndata(anndata_dict: dict[str, anndata.AnnData],
                   join: Literal["inner", "outer"] = "inner") -> anndata.AnnData:
     """

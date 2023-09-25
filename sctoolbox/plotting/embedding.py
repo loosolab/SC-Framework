@@ -198,9 +198,9 @@ def search_tsne_parameters(adata: sc.AnnData,
 @beartype
 def _search_dim_red_parameters(adata: sc.AnnData,
                                method: Literal["umap", "tsne"],
-                               min_dist_range: Optional[Tuple[int | float, int | float, int | float]] = None, # for UMAP
+                               min_dist_range: Optional[Tuple[int | float, int | float, int | float]] = None,  # for UMAP
                                spread_range: Optional[Tuple[int | float, int | float, int | float]] = None,  # for UMAP
-                               perplexity_range: Optional[Tuple[int, int, int]] = None, # for tSNE
+                               perplexity_range: Optional[Tuple[int, int, int]] = None,  # for tSNE
                                learning_rate_range: Optional[Tuple[int, int, int]] = None,  # for tSNE
                                color: Optional[str] = None,
                                threads: int = 4,

@@ -6,6 +6,8 @@ import re
 import os
 import glob
 
+from beartype import beartype
+
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['episcanpy', 'pyyaml', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
@@ -20,7 +22,8 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
 
-def find_version(f) -> str:
+@beartype
+def find_version(f: str) -> str:
     """
     Get package version from file.
 

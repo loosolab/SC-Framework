@@ -420,7 +420,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
                             show_col_dendrogram: bool = False,
                             figsize: Optional[Tuple[int | float, int | float]] = None,
                             save: Optional[str] = None,
-                            **kwargs) -> Any: # Any since beartype cannot handle sns datatypes
+                            **kwargs) -> Any:  # Any since beartype cannot handle sns datatypes
     """Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
@@ -454,8 +454,9 @@ def gene_expression_heatmap(adata: sc.AnnData,
 
     Returns
     -------
-    g : sns.matrix.ClusterGrid
-        The seaborn ClusterGrid object containing the heatmap.
+    g : Any
+        sns.matrix.ClusterGrid: The seaborn ClusterGrid object containing the heatmap.
+        Note: Any since sns.matrix.ClusterGrid cannot be checked by beartype.
 
     Raises
     ------
@@ -616,8 +617,8 @@ def group_heatmap(adata: sc.AnnData,
 
     Returns
     -------
-    g : sns.clustermap
-        The seaborn clustermap object
+    g : Any
+        sns.clustermap: The seaborn clustermap object
     """
     _, ax = plt.subplots(figsize=figsize)
 
@@ -719,7 +720,7 @@ def plot_gene_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    list[matplotlib.axes.Axes]
+    Iterable[matplotlib.axes.Axes]
         List containing all axis objects.
 
     Examples

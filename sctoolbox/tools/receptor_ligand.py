@@ -646,7 +646,7 @@ def connectionPlot(adata: sc.AnnData,
                    output: Optional[str] = None,
                    title: Optional[str] = None,
                    # receptor params
-                   receptor_cluster_col: str="receptor_cluster",
+                   receptor_cluster_col: str = "receptor_cluster",
                    receptor_col: str = "receptor_gene",
                    receptor_hue: str = "receptor_score",
                    receptor_size: str = "receptor_percent",
@@ -705,7 +705,7 @@ def connectionPlot(adata: sc.AnnData,
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises

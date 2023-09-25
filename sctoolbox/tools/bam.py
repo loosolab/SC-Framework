@@ -664,9 +664,9 @@ def _buffered_reader(path: str,
     """
 
     # Test parameter types not covered by beartype
-    #for value in out_queues.values():
-    #    utils.check_type(value, "out_queues.values", BaseProxy)
-    #utils.check_type(progress_queue, "progress_queue", BaseProxy)
+    for value in out_queues.values():
+        utils.check_type(value, "out_queues.values", BaseProxy)
+    utils.check_type(progress_queue, "progress_queue", BaseProxy)
 
     try:
         # open bam
@@ -752,9 +752,9 @@ def _writer(read_queue: Any,
         If buffered reader failes.
     """
 
-    # Check parameter that are not covered by beartype
-    #utils.check_type(read_queue, "read_queue", BaseProxy)
-    #utils.check_type(progress_queue, "progress_queue", BaseProxy)
+    Check parameter that are not covered by beartype
+    utils.check_type(read_queue, "read_queue", BaseProxy)
+    utils.check_type(progress_queue, "progress_queue", BaseProxy)
 
     try:
         import pysam  # install of pysam was checked in parent function

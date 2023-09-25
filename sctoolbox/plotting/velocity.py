@@ -57,7 +57,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.Axes
+    ax : matplotlib.axes.Axes
         Axes object containing the plot.
     """
 

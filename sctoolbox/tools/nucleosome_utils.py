@@ -573,7 +573,7 @@ def single_cwt_ov(features: npt.ArrayLike,
 
     Returns
     -------
-    npt.ArrayLike
+    Tuple[npt.ArrayLike, npt.ArrayLike]
         Array of coefficients
     """
 
@@ -1025,7 +1025,7 @@ def plot_wavl_ov(feature: npt.ArrayLike,
                  coef: npt.ArrayLike,
                  freq: int = 6,
                  plot_peaks: bool = True,
-                 perform_cross_point_shift: bool =True,
+                 perform_cross_point_shift: bool = True,
                  perform_half_wave_shift: bool = True,
                  scale: int = 35,
                  convergence: float | int = 0.1) -> Tuple[matplotlib.figure.Figure, list[matplotlib.axes.Axes]]:

@@ -5,6 +5,8 @@ import yaml
 import sys
 import logging
 
+from beartype import beartype
+
 
 class SctoolboxConfig(object):
     """Config manager for sctoolbox."""
@@ -213,7 +215,8 @@ class SctoolboxConfig(object):
         return self._logger
 
 
-def settings_from_config(config_file, key=None):
+@beartype
+def settings_from_config(config_file: str, key: str = None):
     """
     Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 

@@ -241,7 +241,7 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
                                                          'canis_lupus_familiaris', 'danio_rerio',
                                                          'drosophila_melanogaster', 'gallus_gallus',
                                                          'homo_sapiens', 'mus_musculus', 'oryzias_latipes',
-                                                         'rattus_norvegicus', 'sus_scrofa', 'xenopus_tropicalis']] = None, 
+                                                         'rattus_norvegicus', 'sus_scrofa', 'xenopus_tropicalis']] = None,
                                nproc: int = 1,
                                sort_bam: bool = False) -> None:
     """

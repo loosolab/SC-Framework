@@ -58,7 +58,7 @@ def compute_PCA(anndata: sc.AnnData,
 
 # wrapper no longer used
 # @beartype
-#def norm_log_PCA(anndata: sc.AnnData,
+# def norm_log_PCA(anndata: sc.AnnData,
 #                 exclude_HEG: bool = True,
 #                 use_HVG_PCA: bool = True,
 #                 inplace: bool = False):

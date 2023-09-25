@@ -7,7 +7,7 @@ import subprocess
 import scanpy as sc
 
 from beartype import beartype
-from typing import Optional, Any, Literal, Union
+from typing import Optional, Any, Literal
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco

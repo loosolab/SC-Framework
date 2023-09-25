@@ -543,7 +543,7 @@ def plot_insertsize(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.Axes
+    ax : matplotlib.axes.Axes
         Axes object containing the plot.
 
     Raises
@@ -591,7 +591,7 @@ def _link_sliders(sliders: list[ipywidgets.widgets.IntRangeSlider]) -> list[ipyw
 
     Returns
     -------
-    list[ipywidgets.widgets.link]
+    list[ipywidgets.link]
         List of links between sliders.
     """
 
