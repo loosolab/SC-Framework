@@ -23,6 +23,7 @@ import sctoolbox.utils.decorator as deco
 
 
 @deco.log_anndata
+@beartype
 def rank_genes_plot(adata: sc.AnnData,
                     genes: Optional[list[str] | dict[str, list[str]]] = None,
                     key: Optional[str] = None,
@@ -174,6 +175,7 @@ def rank_genes_plot(adata: sc.AnnData,
 #####################################################################
 
 @deco.log_anndata
+@beartype
 def grouped_violin(adata: sc.AnnData,
                    x: str | list[str],
                    y: Optional[str] = None,
@@ -331,6 +333,7 @@ def grouped_violin(adata: sc.AnnData,
 
 
 @deco.log_anndata
+@beartype
 def group_expression_boxplot(adata: sc.AnnData,
                              gene_list: list[str],
                              groupby: str,
@@ -404,6 +407,7 @@ def group_expression_boxplot(adata: sc.AnnData,
 
 
 @deco.log_anndata
+@beartype
 def gene_expression_heatmap(adata: sc.AnnData,
                             genes: list[str],
                             cluster_column: str,
@@ -584,6 +588,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
 
 
 @deco.log_anndata
+@beartype
 def group_heatmap(adata: sc.AnnData,
                   groupby: str,
                   gene_list: Optional[list[str]] = None,
@@ -636,6 +641,7 @@ def group_heatmap(adata: sc.AnnData,
     return g
 
 
+@beartype
 def plot_differential_genes(rank_table: pd.DataFrame,
                             title: str = "Differentially expressed genes",
                             save: Optional[str] = None,
@@ -686,6 +692,7 @@ def plot_differential_genes(rank_table: pd.DataFrame,
     return ax
 
 
+@beartype
 def plot_gene_correlation(adata: sc.AnnData,
                           ref_gene: str,
                           gene_list: list[str],
