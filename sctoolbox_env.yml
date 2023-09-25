@@ -13,6 +13,5 @@ dependencies:
   - bioconductor-deseq2
   - rpy2
   - pybedtools
-  - beartype
   - ipykernel # needed to register environment as jupyter kernel
   - pip  # for installing additional packages
