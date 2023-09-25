@@ -7,8 +7,10 @@ import numpy as np
 import ipywidgets
 import functools  # for partial functions
 import glob
+import scanpy as sc
 
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
@@ -17,16 +19,16 @@ from sctoolbox.plotting.general import violinplot, _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from typing import Tuple, Union, List, Dict, TYPE_CHECKING
-if TYPE_CHECKING:
-    import matplotlib
+from typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable
+from beartype import beartype
 
 
 ########################################################################################
 # ------------------------------ QC plots for starsolo ------------------------------- #
 ########################################################################################
 
-def _read_starsolo_summary(folder) -> pd.DataFrame:
+@beartype
+def _read_starsolo_summary(folder: str) -> pd.DataFrame:
     """Get summary table from an output folder containing multiple starsolo runs.
 
     Parameters
@@ -60,25 +62,27 @@ def _read_starsolo_summary(folder) -> pd.DataFrame:
     return summary_table
 
 
-def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to Genome: Unique",
-                                            "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells",
-                                            "Median Reads per Cell", "Median Gene per Cell"],
-                          ncol=3,
-                          order=None,
-                          save=None) -> np.ndarray:
+@beartype
+def plot_starsolo_quality(folder: str,
+                          measures: list[str] = ["Number of Reads", "Reads Mapped to Genome: Unique",
+                                                 "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells",
+                                                 "Median Reads per Cell", "Median Gene per Cell"],
+                          ncol: int = 3,
+                          order: Optional[list[str]] = None,
+                          save: Optional[str] = None) -> np.ndarray:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
     ----------
     folder : str
         Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
-    measures : list of str, default ["Number of Reads", "Reads Mapped to Genome: Unique", "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells", "Median Reads per Cell", "Median Gene per Cell"]
+    measures : list[str], default ["Number of Reads", "Reads Mapped to Genome: Unique", "Reads Mapped to Gene: Unique Gene", "Fraction of Unique Reads in Cells", "Median Reads per Cell", "Median Gene per Cell"]
         List of measures to plot. Must be available in the solo summary table.
     ncol : int, default 3
         Number of columns in the plot.
-    order : list of str, default None
+    order : Optional[list[str]], default None
         Order of conditions in the plot. If None, the order is alphabetical.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
 
     Returns
@@ -157,7 +161,9 @@ def plot_starsolo_quality(folder, measures=["Number of Reads", "Reads Mapped to 
     return axes
 
 
-def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
+@beartype
+def plot_starsolo_UMI(folder: str, ncol: int = 3,
+                      save: Optional[str] = None) -> np.ndarray:
     """Plot UMI distribution for each condition in a folder.
 
     Parameters
@@ -166,7 +172,7 @@ def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
         Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
     ncol : int, default 3
         Number of columns in the plot.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
 
     Returns
@@ -231,8 +237,10 @@ def plot_starsolo_UMI(folder, ncol=3, save=None) -> np.ndarray:
 ########################################################################################
 
 @deco.log_anndata
-def _n_cells_pieplot(adata, groupby,
-                     figsize=None):
+@beartype
+def _n_cells_pieplot(adata: sc.AnnData,
+                     groupby: str,
+                     figsize: Optional[Tuple[int | float, int | float]] = None):
     """
     Plot number of cells per group in a pieplot.
 
@@ -253,25 +261,31 @@ def _n_cells_pieplot(adata, groupby,
 
 
 @deco.log_anndata
-def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=None,
-                    add_labels=False,
-                    **kwargs) -> np.ndarray:
+@beartype
+def n_cells_barplot(adata: sc.AnnData,
+                    x: str,
+                    groupby: Optional[str] = None,
+                    stacked: bool = True,
+                    save: Optional[str] = None,
+                    figsize: Optional[Tuple[int | float, int | float]] = None,
+                    add_labels: bool = False,
+                    **kwargs) -> Iterable[matplotlib.axes.Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     x : str
         Name of the column in adata.obs to group by on the x axis.
-    groupby : str, default None
+    groupby : Optional[str], default None
         Name of the column in adata.obs to created stacked bars on the y axis. If None, the bars are not split.
     stacked : bool, default True
         Whether to stack the bars or not.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
-    figsize : tuple, default None
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
@@ -280,7 +294,7 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
 
     Returns
     -------
-    axarr : np.ndarray
+    axarr : Iterable[matplotlib.axes.Axes]
         Array of axes objects containing the plot(s).
 
     Examples
@@ -367,20 +381,24 @@ def n_cells_barplot(adata, x, groupby=None, stacked=True, save=None, figsize=Non
 
 
 @deco.log_anndata
-def group_correlation(adata, groupby, method="spearman", save=None) -> sns.matrix.ClusterGrid:
+@beartype
+def group_correlation(adata: sc.AnnData,
+                      groupby: str,
+                      method: Literal["spearman", "pearson", "kendall"] | Callable = "spearman",
+                      save: Optional[str] = None) -> sns.matrix.ClusterGrid:
     """Plot correlation matrix between groups in `groupby`.
 
     The function expects the count data in .X to be normalized across cells.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group cells by.
-    method : str, default "spearman"
+    method : Literal["spearman", "pearson", "kendall"] | Callable, default "spearman"
         Correlation method to use. See pandas.DataFrame.corr for options.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
 
     Returns
@@ -435,15 +453,22 @@ def group_correlation(adata, groupby, method="spearman", save=None) -> sns.matri
 
 
 @deco.log_anndata
-def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=None, dpi=300):
+@beartype
+def qc_violins(anndata: sc.AnnData,
+               thresholds: pd.DataFrame,
+               colors: Optional[list[str]] = None,
+               save: Optional[str] = None,
+               ncols: int = 3,
+               figsize: Optional[Tuple[int | float, int | float]] = None,
+               dpi: int = 300):
     """
     Grid of violinplots with optional cutoffs.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object providing violin data.
-    thresholds : pandas.DataFrame
+    thresholds : pd.DataFrame
         Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
         Note: Row order defines plot order.
         Structure:
@@ -453,13 +478,14 @@ def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=Non
                 - Name of origin. Either "obs" or "var".
             - 1st column: Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
             - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
-    colors : list of str, default None
+    colors : Optional[list[str]], default None
         List of colors for the violins.
+               save: Optional[str] = None,
     save : str, default None
         Path and name of file to be saved.
     ncols : int, default 3
         Number of violins per row.
-    figsize : int tuple, default None
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Size of figure in inches.
     dpi : int, default 300
         Dots per inch.
@@ -502,7 +528,9 @@ def qc_violins(anndata, thresholds, colors=None, save=None, ncols=3, figsize=Non
 #####################################################################
 
 @deco.log_anndata
-def plot_insertsize(adata, barcodes=None) -> "matplotlib.Axes":
+@beartype
+def plot_insertsize(adata: sc.AnnData,
+                    barcodes: Optional[list[str]] = None) -> "matplotlib.Axes":
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
@@ -510,7 +538,7 @@ def plot_insertsize(adata, barcodes=None) -> "matplotlib.Axes":
     ----------
     adata : AnnData
         AnnData object containing insertsize distribution in adata.uns["insertsize_distribution"].
-    barcodes : list of str, default None
+    barcodes : Optional[list[str]], default None
         Subset of barcodes to plot information for. If None, all barcodes are used.
 
     Returns
@@ -552,12 +580,13 @@ def plot_insertsize(adata, barcodes=None) -> "matplotlib.Axes":
 ###########################################################################
 
 
-def _link_sliders(sliders) -> "list[ipywidgets.widgets.link]":
+@beartype
+def _link_sliders(sliders: list[ipywidgets.widgets.IntRangeSlider]) -> list[ipywidgets.link]:
     """Link the values between interactive sliders.
 
     Parameters
     ----------
-    sliders : list[ipywidgets.widgets.Slider]
+    sliders : list[ipywidgets.widgets.IntRangeSlider]
         List of sliders to link.
 
     Returns
@@ -576,7 +605,11 @@ def _link_sliders(sliders) -> "list[ipywidgets.widgets.link]":
     return linkage_list
 
 
-def _toggle_linkage(checkbox, linkage_dict, slider_list, key):
+@beartype
+def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox,
+                    linkage_dict: dict,
+                    slider_list: list,
+                    key: str):
     """
     Either link or unlink sliders depending on the new value of the checkbox.
 
@@ -637,17 +670,22 @@ def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
 
 
 @deco.log_anndata
-def quality_violin(adata, columns,
-                   which="obs",
-                   groupby=None,
-                   ncols=2,
-                   header=None,
-                   color_list=None,
-                   title=None,
-                   thresholds=None,
-                   global_threshold=True,
-                   interactive=True,
-                   save=None) -> Tuple[Union["matplotlib.figure", ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
+@beartype
+def quality_violin(adata: sc.AnnData,
+                   columns: list[str],
+                   which: Literal["obs", "var"] = "obs",
+                   groupby: Optional[str] = None,
+                   ncols: int = 2,
+                   header: Optional[list[str]] = None,
+                   color_list: Optional[list[str | Tuple[float | int, float | int, float | int]]] = None,
+                   title: Optional[str] = None,
+                   thresholds: Optional[dict[Literal["min", "max"], int | float]] = None,
+                   global_threshold: bool = True,
+                   interactive: bool = True,
+                   save: Optional[str] = None
+                   ) -> Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox],
+                              Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe],
+                                              Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
     """
     Plot quality measurements for cells/features in an anndata object.
 
@@ -659,32 +697,32 @@ def quality_violin(adata, columns,
     ----------
     adata : anndata.AnnData
         Anndata object containing quality measures in .obs/.var
-    columns : list
+    columns : list[str]
         A list of columns in .obs/.var to show measures for.
-    which : str, optional
-        Which table to show quality for. Either "obs" / "var". Default: "obs".
-    groupby : str, optional
-        A column in table to values on the x-axis, e.g. 'condition'.
-    ncols : int
-        Number of columns in the plot. Default: 2.
-    header : list, optional
-        A list of custom headers for each measure given in columns. Default: None (headers are the column names)
-    color_list : list, optional
-        A list of colors to use for violins. Default: None (colors are chosen automatically)
-    title : str, optional
-        The title of the full plot. Default: None (no title).
-    thresholds : dict, optional
+    which : Literal["obs", "var"], default "obs"
+        Which table to show quality for. Either "obs" / "var".
+    groupby :  Optional[str], default "condition"
+        A column in table to values on the x-axis.
+    ncols : int, default 2
+        Number of columns in the plot.
+    header : Optional[list[str]], defaul None
+        A list of custom headers for each measure given in columns.
+    color_list : Optional[list[str]], default None
+        A list of colors to use for violins. If None, colors are chosen automatically.
+    title : Optional[str], default None
+        The title of the full plot.
+    thresholds : Optional[dict[Literal["min", "max"], int | float]], default None
         Dictionary containing initial min/max thresholds to show in plot.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
     interactive : bool, Default True
         Whether to show interactive sliders. If False, the static matplotlib plot is shown.
-    save : str, optional
+    save : Optional[str], optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
 
     Returns
     -------
-    Tuple[Union[matplotlib.figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+    Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
         First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
 
     Raises
@@ -905,7 +943,8 @@ def quality_violin(adata, columns,
     return figure, slider_dict
 
 
-def get_slider_thresholds(slider_dict) -> dict:
+@beartype
+def get_slider_thresholds(slider_dict: dict) -> dict:
     """Get thresholds from sliders.
 
     Parameters

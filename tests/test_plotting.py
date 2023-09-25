@@ -522,7 +522,7 @@ def test_grouped_violin_fail(adata):
         pl.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
     with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
         pl.grouped_violin(adata, x="clustering", y=None, groupby="condition")
-    with pytest.raises(ValueError, match="Style 'Invalid' is not valid for this function."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
 
 
@@ -753,7 +753,7 @@ def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
 
 def test_rank_genes_plot_fail(adata):
     """Test rank_genes_plot for invalid input."""
-    with pytest.raises(ValueError, match='style must be one of'):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
                            style="Invalid")
@@ -879,7 +879,7 @@ def test_quality_violin(adata, groupby, columns, which, title, color_list):
 
 def test_quality_violin_fail(adata):
     """Test quality_violin failure."""
-    with pytest.raises(ValueError, match="'which' must be either 'obs' or 'var'."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.quality_violin(adata, columns=["qc_float"], which="Invalid")
     with pytest.raises(ValueError, match="Increase the color_list variable"):
         pl.quality_violin(adata, groupby="condition", columns=["qc_float"],

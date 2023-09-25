@@ -13,7 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from typing import Optional, Tuple, Literal
+from typing import Optional, Tuple, Literal, Iterable, Any
 from beartype import beartype
 
 # sctoolbox functions
@@ -420,7 +420,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
                             show_col_dendrogram: bool = False,
                             figsize: Optional[Tuple[int | float, int | float]] = None,
                             save: Optional[str] = None,
-                            **kwargs) -> "sns.matrix.ClusterGrid":
+                            **kwargs) -> Any: # Any since beartype cannot handle sns datatypes
     """Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
@@ -593,7 +593,7 @@ def group_heatmap(adata: sc.AnnData,
                   groupby: str,
                   gene_list: Optional[list[str]] = None,
                   save: Optional[str] = None,
-                  figsize: Optional[Tuple[int | float, int | float]] = None) -> "sns.clustermap":
+                  figsize: Optional[Tuple[int | float, int | float]] = None) -> Any:
     """Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
     NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
@@ -695,10 +695,10 @@ def plot_differential_genes(rank_table: pd.DataFrame,
 @beartype
 def plot_gene_correlation(adata: sc.AnnData,
                           ref_gene: str,
-                          gene_list: list[str],
+                          gene_list: list[str] | str,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
-                          save: Optional[str] = None) -> list[matplotlib.axes.Axes]:
+                          save: Optional[str] = None) -> Iterable[matplotlib.axes.Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
@@ -708,7 +708,7 @@ def plot_gene_correlation(adata: sc.AnnData,
         An annotated data matrix object containing counts in .X.
     ref_gene : str
         Reference gene to which other genes are comapred to.
-    gene_list : list[str]
+    gene_list : list[str] | str
         A list of genes to show expression for.
     ncols : int, default 3
         Number of columns in plot grid.
