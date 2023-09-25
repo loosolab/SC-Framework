@@ -10,7 +10,6 @@ as first columns.
 
 from collections import Counter
 import os
-import sys
 import pkg_resources
 import pandas as pd
 from pathlib import Path

@@ -752,7 +752,7 @@ def _writer(read_queue: Any,
         If buffered reader failes.
     """
 
-    Check parameter that are not covered by beartype
+    # Check parameter that are not covered by beartype
     utils.check_type(read_queue, "read_queue", BaseProxy)
     utils.check_type(progress_queue, "progress_queue", BaseProxy)
 
