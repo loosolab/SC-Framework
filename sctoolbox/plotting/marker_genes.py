@@ -13,7 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from typing import Optional, Union, Any, Tuple, Literal
+from typing import Optional, Tuple, Literal
 from beartype import beartype
 
 # sctoolbox functions
