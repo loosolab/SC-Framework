@@ -94,7 +94,7 @@ def _sanitize_sheetname(s, replace="_") -> str:
 
     Returns
     -------
-    str :
+    str
         Valid excel sheetname
     """
 
@@ -144,7 +144,7 @@ def table_zscore(table, how="row") -> pd.DataFrame:
 
     Returns
     -------
-    pd.DataFrame :
+    pd.DataFrame
         Z-scored table.
 
     Raises

@@ -12,12 +12,17 @@ import seaborn as sns
 import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
+import glob
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
 
 # ------------------------------ FIXTURES --------------------------------- #
+
+quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
@@ -34,6 +39,9 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
+
+    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
+    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
     sc.pp.normalize_total(adata, target_sum=None)
     sc.pp.log1p(adata)
@@ -615,29 +623,17 @@ def test_add_labels(df, label):
     assert type(texts[0]).__name__ == "Annotation"
 
 
-@pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
-                                             (np.array([[1, 2, 3], [1, 2, 3]]), 1, 100),
-                                             (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
-def test_scale_values(array, mini, maxi):
-    """Test that scaled values are in given range."""
-    result = pl._scale_values(array, mini, maxi)
-
-    assert len(result) == len(array)
-    if len(result.shape) == 1:
-        assert all((mini <= result) & (result <= maxi))
-    else:
-        for i in range(len(result)):
-            assert all((mini <= result[i]) & (result[i] <= maxi))
-
-
 def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
-    pl.clustermap_dotplot(table=table, x="bulk_labels",
-                          y="index", color="n_genes",
-                          size="n_counts", cmap="viridis",
-                          vmin=0, vmax=10)
-    assert True
+    axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
+                                 y="index", hue="n_genes",
+                                 size="n_counts", palette="viridis",
+                                 title="Title", show_grid=True)
+
+    assert isinstance(axes, list)
+    ax_type = type(axes[0]).__name__
+    assert ax_type.startswith("Axes")
 
 
 def test_bidirectional_barplot(df_bidir_bar):
@@ -908,3 +904,62 @@ def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
                                     '2': {'min': 1, 'max': 5}},
                               'B': {'1': {'min': 5, 'max': 7},
                                     '2': {'min': 3, 'max': 4}}}
+
+
+@pytest.mark.parametrize("columns", ["invalid", ["invalid"], ["not", "present"]])
+def test_pairwise_scatter_invalid(adata, columns):
+    """Test that invalid columns raise error."""
+    with pytest.raises(ValueError):
+        pl.pairwise_scatter(adata.obs, columns=columns)
+
+
+@pytest.mark.parametrize("thresholds", [None,
+                                        {"qcvar1": {"min": 0.1}, "qcvar2": {"min": 0.4}}])
+def test_pairwise_scatter(adata, thresholds):
+    """Test pairwise scatterplot with different input."""
+    axarr = pl.pairwise_scatter(adata.obs, columns=["qcvar1", "qcvar2"], thresholds=thresholds)
+
+    assert axarr.shape == (2, 2)
+    assert type(axarr[0, 0]).__name__.startswith("Axes")
+
+
+@pytest.mark.parametrize("order", [None, ["KO-2", "KO-1", "Ctrl-2", "Ctrl-1"]])
+def test_plot_starsolo_quality(order):
+    """Test plot_starsolo_quality success."""
+    res = pl.plot_starsolo_quality(quant_folder, order=order)
+
+    assert isinstance(res, np.ndarray)
+
+
+def test_plot_starsolo_quality_failure():
+    """Test plot_starsolo_quality failure with invalid input."""
+
+    with pytest.raises(ValueError, match="No STARsolo summary files found in folder*"):
+        pl.plot_starsolo_quality("invalid")
+
+    with pytest.raises(KeyError, match="Measure .* not found in summary table"):
+        pl.plot_starsolo_quality(quant_folder, measures=["invalid"])
+
+
+def test_plot_starsolo_UMI():
+    """Test plot_starsolo_UMI success."""
+    res = pl.plot_starsolo_UMI(quant_folder)
+
+    assert isinstance(res, np.ndarray)
+
+
+def test_plot_starsolo_UMI_failure():
+    """Test plot_starsolo_UMI failure with invalid input."""
+
+    # Create a quant folder without UMI files
+    shutil.copytree(quant_folder, "quant_without_UMI", dirs_exist_ok=True)
+    UMI_files = glob.glob("quant_without_UMI/*/solo/Gene/UMI*")
+    for file in UMI_files:
+        os.remove(file)
+
+    # Test that valueerror is raised
+    with pytest.raises(ValueError, match="No UMI files found in folder*"):
+        pl.plot_starsolo_UMI("quant_without_UMI")
+
+    # remove folder
+    shutil.rmtree("quant_without_UMI")

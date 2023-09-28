@@ -12,7 +12,7 @@ def _is_notebook() -> bool:
 
     Returns
     -------
-    bool :
+    bool
         True if running from a notebook, False otherwise.
     """
 

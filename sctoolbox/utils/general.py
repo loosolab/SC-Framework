@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 import getpass
 from datetime import datetime
+import numpy as np
 
 # type hint imports
 from typing import Any, TYPE_CHECKING
@@ -61,7 +62,7 @@ def get_package_versions() -> dict[str, str]:
 
     Returns
     -------
-    dict[str, str] :
+    dict[str, str]
         A dict in the form:
         `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
     """
@@ -98,7 +99,7 @@ def get_binary_path(tool) -> str:
 
     Returns
     -------
-    str :
+    str
         Full path to the tool.
 
     Raises
@@ -224,7 +225,7 @@ def split_list(lst, n) -> list[list[Any]]:
 
     Returns
     -------
-    list[list[Any]] :
+    list[list[Any]]
         List of lists (chunks).
     """
 
@@ -248,7 +249,7 @@ def split_list_size(lst, max_size) -> list[list[Any]]:
 
     Returns
     -------
-    list[list[Any]] :
+    list[list[Any]]
         List of lists (chunks).
     """
 
@@ -289,7 +290,7 @@ def read_list_file(path) -> list[str]:
 
     Returns
     -------
-    list[str] :
+    list[str]
         List of strings read from file.
     """
 
@@ -339,7 +340,7 @@ def longest_common_suffix(list_of_strings) -> str:
 
     Returns
     -------
-    str :
+    str
         Longest common suffix of the list of strings.
     """
 
@@ -363,7 +364,7 @@ def remove_prefix(s, prefix) -> str:
 
     Returns
     -------
-    str :
+    str
         String without prefix.
     """
 
@@ -383,7 +384,7 @@ def remove_suffix(s, suffix) -> str:
 
     Returns
     -------
-    str :
+    str
         String without suffix.
     """
 
@@ -405,7 +406,7 @@ def sanitize_string(s, char_list, replace="_") -> str:
 
     Returns
     -------
-    str :
+    str
         Sanitized string.
     """
 
@@ -436,3 +437,25 @@ def identify_columns(df, regex) -> list[str]:
         regex = "(" + ")|(".join(regex) + ")"
 
     return df.filter(regex=(regex)).columns.to_list()
+
+
+def scale_values(array, mini, maxi) -> np.ndarray:
+    """Small utility to scale values in array to a given range.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to scale.
+    mini : float
+        Minimum value of the scale.
+    maxi : float
+        Maximum value of the scale.
+
+    Returns
+    -------
+    np.ndarray
+        Scaled array values.
+    """
+    val_range = array.max() - array.min()
+    a = (array - array.min()) / val_range
+    return a * (maxi - mini) + mini

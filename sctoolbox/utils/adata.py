@@ -140,7 +140,7 @@ def load_h5ad(path) -> sc.AnnData:
 
     Returns
     -------
-    sc.AnnData :
+    sc.AnnData
         Loaded anndata object.
     """
 
@@ -277,7 +277,7 @@ def prepare_for_cellxgene(adata,
 
     Returns
     -------
-    Optional[sc.AnnData] :
+    Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
 

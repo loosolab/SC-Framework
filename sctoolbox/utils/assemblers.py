@@ -395,7 +395,7 @@ def convertToAdata(file, output=None, r_home=None, layer=None) -> Optional[sc.An
 
     Returns
     -------
-    Optional[sc.AnnData] :
+    Optional[sc.AnnData]
         Returns converted anndata object if output is None.
     """
 
