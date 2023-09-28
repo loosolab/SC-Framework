@@ -607,11 +607,11 @@ def cos_wavelet(wavelength=100,
     x = np.linspace(-wavl_scale, wavl_scale, wavl_scale * 2)
 
     # Compute the centered sine curve values for each x
-    sine_curve = amplitude * np.cos(2 * np.pi * frequency * x + phase_shift)
+    cosine_curve = amplitude * np.cos(2 * np.pi * frequency * x + phase_shift)
 
     # Compute the Gaussian values for each x
     gaussian = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-    wavelet = sine_curve * gaussian
+    wavelet = cosine_curve * gaussian
 
     if plot:
         fig, ax = plt.subplots()
