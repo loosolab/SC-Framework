@@ -1,5 +1,6 @@
 """Module for cell clustering."""
 import scanpy as sc
+import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
@@ -101,3 +102,114 @@ def recluster(adata, column, clusters,
 
             sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
             ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
+
+def gini(x) -> float:
+    """
+    Calculate the Gini coefficient of a numpy array.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array to calculate Gini coefficient for.
+
+    Returns
+    -------
+    float
+        Gini coefficient.
+    """
+    total = 0
+    for i, xi in enumerate(x[:-1], 1):
+        total += np.sum(np.abs(xi - x[i:]))
+
+    return total / (len(x)**2 * np.mean(x))
+
+
+@deco.log_anndata
+def calc_ragi(adata, condition_column='clustering', binary_layer=None) -> (sc.AnnData, np.float64):
+    """
+    Calculate the RAGI score over all clusters in adata. The RAGI score is a measure of how well a cluster is defined
+    by a set of genes. The score is the mean of the Gini coefficients of the gene enrichments across the clusters.
+    The functions uses binary sparse matrices ONLY. If the data is not binary, use `sctoolbox.utils.binarize`.
+    Binary layers can be selected using the `binary_layer` parameter.
+    The adata.var table also needs the total counts for each gene.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    condition_column : str
+        Column in `adata.obs` to use for clustering.
+    binary_layer : str, default None
+        Layer in `adata.layers` to use for calculating gene enrichment. If None, the raw layer is used.
+
+    Returns
+    -------
+    sc.AnnData
+        Annotated data matrix with the Gini coefficients score in `adata.var`.
+    np.float64
+        RAGI score.
+    """
+
+    # copy adata
+    adata_copy = adata.copy()
+
+    # check if total_counts is in adata.var
+    if 'total_counts' not in adata_copy.var:
+        adata_copy.var["total_counts"] = adata_copy.X.sum(axis=1)
+
+    # get conditions
+    conditions = adata_copy.obs[condition_column].unique()
+    enrichment_columns = []
+
+    # loop over conditions
+    for cond in conditions:
+
+        # slice by condition
+        adata_slice = adata_copy.obs_names[adata_copy.obs[condition_column] == cond]  # Check if string works
+        subdata = adata_copy[adata_slice, :].copy()
+        # select all peaks available in the cluster
+        # check if binary layer is set
+        if binary_layer:
+            # check if binary layer is available
+            if binary_layer in subdata.layers.keys():
+                # count gene occurence
+                genes = subdata.var[subdata.layers[binary_layer].sum(axis=0).A1 > 1].copy()
+
+                # count total genes
+                gene_counts = subdata.layers[binary_layer].sum(axis=0).A1[
+                    subdata.layers[binary_layer].sum(axis=0).A1 > 1].copy()
+            else:
+                print('binary layer not available!')
+        else:
+            # count gene occurence
+            genes = subdata.var[subdata.X.sum(axis=0).A1 > 1].copy()
+            # count total genes
+            gene_counts = subdata.X.sum(axis=0).A1[subdata.X.sum(axis=0).A1 > 1].copy()
+
+        # add counts/cluster to genes
+        genes.loc[:, 'cluster_counts_' + str(cond)] = gene_counts
+        # calc enrichment
+        genes.loc[:, 'enrichment_' + str(cond)] = genes['cluster_counts_' + str(cond)] / genes['total_counts']
+
+        # remove old tables
+        # join results
+        adata_copy.var = adata_copy.var.join(genes['cluster_counts_' + str(cond)])
+        adata_copy.var = adata_copy.var.join(genes['enrichment_' + str(cond)])
+        # add column names to list
+        enrichment_columns.append('enrichment_' + str(cond))
+
+    # get enrichment values
+    enrichments = adata_copy.var[enrichment_columns].values
+    enrichments[np.isnan(enrichments)] = 0
+
+    # calculate gini coefficients
+    gini_coefficients = []
+    for enrichment in enrichments:
+        gini_coefficients.append(gini(enrichment))
+
+    adata_copy.var[condition_column + '_' + 'gini'] = gini_coefficients
+
+    # calculate ragi score
+    ragi_score = np.mean(gini_coefficients)
+
+    return adata_copy, ragi_score
