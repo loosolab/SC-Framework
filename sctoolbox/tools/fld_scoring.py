@@ -9,8 +9,8 @@ from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
 from typing import Tuple
 import anndata
-import sctoolbox.tools as tools
-import sctoolbox.plotting as plotting
+import sctoolbox.tools as tools # add_insertsize()
+import sctoolbox.plotting as plotting # save_figure()
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -933,7 +933,6 @@ def add_fld_metrics(adata,
                     barcode_col=None,
                     barcode_tag="CB",
                     regions=None,
-                    peaks_thr_mom=3,
                     peaks_thr_conv=1,
                     wavelength=150,
                     sigma=0.4,
@@ -1035,11 +1034,11 @@ def add_fld_metrics(adata,
     # create a dataframe with the scores and match the barcodes
     inserts_df = pd.DataFrame(index=barcodes)
 
-    inserts_df['fld_score_conv'] = conv_scores
+    inserts_df['fld_score'] = conv_scores
 
     adata.obs = adata.obs.join(inserts_df)
 
-    adata.obs['fld_score_conv'] = adata.obs['fld_score_conv'].fillna(0)
+    adata.obs['fld_score'] = adata.obs['fld_score'].fillna(0)
 
     # adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
