@@ -424,141 +424,6 @@ def gauss(x, mu, sigma) -> float:
 
     return gaussian
 
-
-# //////////////////////////// Differential Quotient (Momentum) \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-def momentum_diff(data, remove=150, shift=80, smooth=True) -> Tuple[np.array, np.array, np.array]:
-    """
-    Calculate the momentum of a series by subtracting the original series with a shifted version of itself.
-
-    Parameters
-    ----------
-    data : np.ndarray
-        Array of data to calculate the momentum for.
-    remove : int, default 150
-        Number of samples to remove from the beginning of the series.
-    shift : int, default 80
-        Number of samples to shift the series.
-    smooth : bool, default True
-        Smooth the momentum series.
-
-    Returns
-    -------
-    Tuple[np.array, np.array, np.array]
-        Index 1: np.array containg the momentum
-        Index 2: np.array containg the shifted data a (data[:-shift])
-        Index 3: np.array containg the shifted data b (data[shift:])
-    """
-
-    if len(data.shape) == 1:
-        shifted_data = data[remove:]
-        a = shifted_data[:-shift]
-        b = shifted_data[shift:]
-        momentum = a - b
-    if len(data.shape) == 2:
-        shifted_data = data[:, remove:]
-        a = shifted_data[:, :-shift]
-        b = shifted_data[:, shift:]
-        momentum = a - b
-
-    if smooth:
-        momentum = multi_ma(momentum, n=1, window_size=10, n_threads=8)
-
-    return momentum, a, b
-
-
-def score_by_momentum(data,
-                      shift=80,
-                      remove=100,
-                      sample_to_inspect=0,
-                      peaks_thr=0.03,
-                      period=160,
-                      penalty_scale=100,
-                      plot=True,
-                      score_by_distances=True,
-                      score_by_mask=False,
-                      save=False,
-                      figure_name='MOM_Scores') -> np.ndarray:
-    """
-    Calculate momentum and score cells based on the number of peaks and the distance between them.
-
-    Parameters
-    ----------
-    data : np.ndarray
-        Array of data to calculate the momentum for.
-    shift : int, default 80
-        Number of samples to shift the series.
-    remove : int, default 100
-        Number of samples to remove from the beginning of the series.
-    sample_to_inspect : int, default 0
-        Index of sample to inspect as reference.
-    peaks_thr : float, default 0.03
-        Threshold for filtering peaks.
-    period : int, default 160
-        expected peak period.
-    penalty_scale : int, default 100
-        penalty factor for each peak that is not in the expected period.
-    plot : bool, default True
-        Plot the momentum and the peaks of the reference sample.
-    score_by_distances : bool, default True
-        Score cells based on the distance between peaks.
-    score_by_mask : bool, default False
-        Score cells based on a mask.
-    save : bool, default False
-        Save the figure.
-    figure_name : str, default 'MOM_Scores'
-        Name of the figure to save.
-
-    Returns
-    -------
-    np.ndarray
-        Array of scores
-    """
-
-    logger.info('calculate momentum...')
-    momentum, shift_l, shift_r = momentum_diff(data=data, remove=remove, shift=shift)
-    logger.info('find peaks...')
-    peaks = call_peaks(momentum, n_threads=8)
-    logger.info('filter peaks...')
-    peaks = filter_peaks(peaks,
-                         reference=momentum,
-                         peaks_thr=peaks_thr,
-                         operator='bigger')
-
-    if plot:
-        logger.info('plot single cell...')
-        plot_single_momentum_ov(peaks=peaks,
-                                momentum=momentum,
-                                data=data,
-                                shift_l=shift_l,
-                                shift_r=shift_r,
-                                sample_n=sample_to_inspect,
-                                shift=shift,
-                                remove=remove,
-                                save=True,
-                                figure_name='mom_ov.png')
-
-    logger.info('calc scores...')
-
-    if score_by_distances:
-        scores = distances_score(peaks, momentum, period, penalty_scale)
-    if score_by_mask:
-        scores = score_mask(peaks, momentum, plot=plot, save=save)
-
-    scores = np.array(scores)
-
-    if plot:
-        fig, ax = plt.subplots()
-        ax.hist(np.sort(scores), bins=100, log=True)
-        ax.set_title('Scores')
-        ax.set_xlabel('Score')
-        ax.set_ylabel('Number of cells')
-
-        if save:
-            plotting._save_figure(figure_name)
-
-    return scores
-
 # //////////////////////////// wavelet transformation \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
@@ -1000,90 +865,6 @@ def plot_wavelet_transformation(convolution,
     plt.show()
 
 
-def plot_single_momentum_ov(peaks,
-                            momentum,
-                            data,
-                            shift_l,
-                            shift_r,
-                            sample_n=0,
-                            shift=80,
-                            remove=150,
-                            save=False,
-                            figure_name='momentum_overview') -> Tuple[plt.figure, list[matplotlib.axes.Axes]]:
-    """
-    Plot the momentum of a single sample with found peaks and the original data.
-
-    Parameters
-    ----------
-    peaks : np.array
-        Array of arrays of the found peaks.
-    momentum : np.array
-        Array of arrays of the momentum.
-    data : np.array
-        Array of arrays of the fragment length distributions.
-    shift_l : np.array
-        Array of arrays of the left shifts.
-    shift_r : np.array
-        Array of arrays of the right shifts.
-    sample_n : int, default 0
-        Index of the sample to plot.
-    shift : int, default 80
-        Shift to apply to the peaks to plot with the original data.
-    remove : int, default 150
-        Number of bases removed from the left of the fragment length distribution.
-    save : bool, default False
-        If true, the plot is saved.
-    figure_name : str, default 'momentum_overview'
-        Name of the figure to save.
-
-    Returns
-    -------
-    Tuple[plt.figure, list[matplotlib.axes.Axes]]
-        Tuple at index 1: matplotlib figure
-        Tuple at index 2: list (legnth 3) of matplotlib.axes.Axes objects
-    """
-    single_m = momentum[sample_n]
-    single_d = data[sample_n]
-    sample_peaks = peaks[sample_n]
-
-    a = shift_l[sample_n]
-    b = shift_r[sample_n]
-
-    points_x = sample_peaks
-    points_y = single_m[sample_peaks]
-
-    points_ori_x = points_x + remove
-    points_ori_y = single_d[points_ori_x]
-
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
-    ax1.set_title('Shifted Distributions a and b')
-    ax1.set_ylabel('Number of Fragments')
-    ax1.set_xlabel('Fragment Length - ' + str(remove) + 'bp-shift', color='blue')
-    ax1.plot(a)
-    ax1.plot(b)
-
-    ax2.set_title('Momentum')
-    ax2.set_ylabel('Momentum')
-    ax2.set_xlabel('Fragment Length - ' + str(remove) + 'bp-shift', color='blue')
-    ax2.plot(single_m)
-    ax2.scatter(points_x, points_y, color='red', zorder=2)
-
-    ax3.set_title('FLD with Peaks')
-    ax3.set_ylabel('Number of Fragments')
-    ax3.set_xlabel('Fragment Length', color='blue')
-    ax3.plot(single_d)
-    ax3.scatter(points_ori_x, points_ori_y, color='red', zorder=2)
-
-    plt.tight_layout()
-
-    if save:
-        plotting._save_figure(figure_name)
-
-    plt.show()
-
-    return fig, [ax1, ax2, ax3]
-
-
 def plot_custom_conv(convolved_data, data, peaks, scores, sample_n=0, save=False, figure_name='momentum_overview') -> list[matplotlib.axes.Axes]:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
@@ -1152,8 +933,6 @@ def add_fld_metrics(adata,
                     barcode_col=None,
                     barcode_tag="CB",
                     regions=None,
-                    use_momentum=True,
-                    use_conv=True,
                     peaks_thr_mom=3,
                     peaks_thr_conv=1,
                     wavelength=150,
@@ -1240,54 +1019,27 @@ def add_fld_metrics(adata,
         logger.info("plotting density...")
         density_plot(dists_arr, max_abundance=600, save=save_plots)
 
-    if use_momentum:
-        # prepare the data to be used for the momentum method
-        # smooth the data
-        logger.info("smoothing data...")
-        smooth = multi_ma(dists_arr, n=2, window_size=10)
-
-        # calculate scores using the momentum method
-        logger.info("calculating scores using the momentum method...")
-        momentum_scores = score_by_momentum(data=smooth,
-                                            shift=80,
-                                            remove=0,
-                                            sample_to_inspect=plot_sample,
-                                            peaks_thr=peaks_thr_mom,
-                                            period=160,
-                                            penalty_scale=100,
-                                            plot=plot,
-                                            save=save_plots)
-
-    if use_conv:
-        logger.info("calculating scores using the custom continues wavelet transformation...")
-        conv_scores = score_by_conv(data=dists_arr,
-                                    wavelength=wavelength,
-                                    sigma=sigma,
-                                    plot_wavl=plot,
-                                    n_threads=n_threads,
-                                    peaks_thr=peaks_thr_conv,
-                                    operator='bigger',
-                                    plot_mask=plot,
-                                    plot_ov=plot,
-                                    save=save_plots,
-                                    sample=plot_sample)
+    logger.info("calculating scores using the custom continues wavelet transformation...")
+    conv_scores = score_by_conv(data=dists_arr,
+                                wavelength=wavelength,
+                                sigma=sigma,
+                                plot_wavl=plot,
+                                n_threads=n_threads,
+                                peaks_thr=peaks_thr_conv,
+                                operator='bigger',
+                                plot_mask=plot,
+                                plot_ov=plot,
+                                save=save_plots,
+                                sample=plot_sample)
 
     # create a dataframe with the scores and match the barcodes
     inserts_df = pd.DataFrame(index=barcodes)
 
-    if use_momentum:
-        inserts_df['fld_score_momentum'] = momentum_scores
-
-    if use_conv:
-        inserts_df['fld_score_conv'] = conv_scores
+    inserts_df['fld_score_conv'] = conv_scores
 
     adata.obs = adata.obs.join(inserts_df)
 
-    if use_momentum:
-        adata.obs['fld_score_momentum'] = adata.obs['fld_score_momentum'].fillna(0)
-
-    if use_conv:
-        adata.obs['fld_score_conv'] = adata.obs['fld_score_conv'].fillna(0)
+    adata.obs['fld_score_conv'] = adata.obs['fld_score_conv'].fillna(0)
 
     # adata.obs.rename(columns={'insertsize_count': 'genome_counts'}, inplace=True)
 
