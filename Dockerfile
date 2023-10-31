@@ -12,6 +12,10 @@ RUN chmod +x scripts/bedGraphToBigWig
 RUN mamba update -n base mamba && \
     mamba --version
 
+# install Fortran compiler 
+RUN apt-get update --assume-yes && \
+    apt-get install --assume-yes gfortran 
+
 # install enviroment
 RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
 
