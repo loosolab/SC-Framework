@@ -28,7 +28,7 @@ build-job:       # This job runs in the build stage, which runs first.
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
       - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" . # build the image from Dockerfile in the repository
+      - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
       - docker push "$CI_REGISTRY_IMAGE:$BUILD_VERSION" # push image to registry
   rules:
     - if:
