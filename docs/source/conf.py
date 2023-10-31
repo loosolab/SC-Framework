@@ -15,6 +15,7 @@ import os
 import sys
 import glob
 import json
+import shutil
 
 sys.path.insert(0, os.path.abspath('.'))
 import build_api
@@ -81,6 +82,12 @@ for f in notebooks:
 nbsphinx_execute = 'never'
 
 # -- Options for automatic plots in docs -------------------------------------
+
+# Copy data from test data folder to docs folder
+#os.makedirs("source/API", exist_ok=True)
+
+# copy folder
+shutil.copytree("../../tests/data", "API/data")
 
 plot_include_source = True
 plot_html_show_source_link = False

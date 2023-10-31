@@ -42,7 +42,7 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 
     Returns
     -------
-    pd.DataFrame :
+    pd.DataFrame
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
 
     Raises
@@ -167,7 +167,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
 
     Returns
     -------
-    str :
+    str
         Organism assigned to the Ensembl ID
 
     Raises
@@ -210,7 +210,7 @@ def gene_id_to_name(ids, species) -> pd.DataFrame:
 
     Returns
     -------
-    pd.DataFrame :
+    pd.DataFrame
         DataFrame with gene ids and matching gene names.
 
     Raises
@@ -262,7 +262,7 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
     Returns
     -------
-    Optional[scanpy.AnnData] :
+    Optional[scanpy.AnnData]
         AnnData object with gene names.
 
     Raises
@@ -339,7 +339,7 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 
     Returns
     -------
-    Optional[scanpy.AnnData] :
+    Optional[scanpy.AnnData]
         AnnData object with modified gene column.
 
     Raises
