@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-import pywt
 import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
