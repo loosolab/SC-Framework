@@ -1,6 +1,7 @@
 """Test bam related functions."""
 
 import os
+import shutil
 import pytest
 import sctoolbox.bam
 import glob
@@ -66,3 +67,44 @@ def test_bam_to_bigwig():
     assert os.path.exists(bigwig_f)
 
     os.remove(bigwig_out)
+
+
+@pytest.mark.parametrize("bam_name, outdir, barcode_regex",
+                         [('mm10_atac', None, None),
+                          ('homo_sapiens_liver', 'fragment_file_output', "[^.]*"),
+                          ('homo_sapiens_liver_sorted', None, "[^.]*")])
+def test_create_fragment_file(bam_name, outdir, barcode_regex):
+    """Test create_fragment_file success."""
+
+    barcode_tag = "CB"
+    if barcode_regex:
+        barcode_tag = None
+
+    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', bam_name + ".bam")
+    fragments_f = sctoolbox.bam.create_fragment_file(bam=bam_f, nproc=1, outdir=outdir,
+                                                     barcode_tag=barcode_tag, barcode_regex=barcode_regex)  # homo_sapiens_liver has the barcode in the read name
+
+    outdir_fmt = os.path.dirname(bam_f) if outdir is None else outdir
+    expected = os.path.join(outdir_fmt, bam_name + "_fragments.tsv")
+
+    assert fragments_f == expected and os.path.isfile(fragments_f) and os.stat(fragments_f).st_size > 0
+
+    # Clean up framgnets and output folder (if created)
+    os.remove(fragments_f)
+    if outdir is not None:
+        shutil.rmtree(outdir)
+
+
+def test_create_fragment_file_multiprocessing():
+    """Assert that the result is the same regardless of number of cores used"""
+
+    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
+
+    n_fragments = []
+    for nproc in [1, 4]:
+        fragments_f = sctoolbox.bam.create_fragment_file(bam=bam_f, nproc=nproc, barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
+        n_fragments.append(len(open(fragments_f).readlines()))
+
+    assert len(set(n_fragments)) == 1
+
+    os.remove(fragments_f)

@@ -67,22 +67,6 @@ def tmp_dir():
 
 
 @pytest.mark.parametrize("out", [None, 'tests/data/tmp'])
-def test_create_fragment_file(test_bam, out):
-    """Test create_fragment_file success."""
-    if out:
-        tmp_dir()
-    fragments, temp = overlap.create_fragment_file(bam=test_bam, nproc=1, out=out, sort_bam=True)
-
-    name = os.path.splitext(test_bam)[0] + "_fragments_sorted.bed"
-    if out:
-        expected = os.path.join(out, os.path.basename(name))
-    else:
-        expected = name
-
-    assert fragments == expected and os.path.isfile(fragments)
-
-
-@pytest.mark.parametrize("out", [None, 'tests/data/tmp'])
 def test_convert_gtf_to_bed(test_gtf, out):
     """Test _convert_gtf_to_bed success."""
     if out:
