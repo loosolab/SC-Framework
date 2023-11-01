@@ -237,7 +237,7 @@ def split_bam_clusters(adata: anndata.AnnData,
         The size of the buffer between readers and writers.
     max_queue_size : int, default 1000
         The maximum size of the queue between readers and writers.
-    individual_pbars : boolean, default False
+    individual_pbars : bool, default False
         Whether to show a progress bar for each individual BAM file and output clusters. Default: False (overall progress bars).
     sort_bams : bool, default False
         Sort reads in each output bam

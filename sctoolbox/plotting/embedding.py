@@ -107,9 +107,9 @@ def search_umap_parameters(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix object.
-    min_dist_range : tuple, default: (0.2, 0.9, 0.2)
+    min_dist_range : Tuple[float | int, float | int, float | int], default: (0.2, 0.9, 0.2)
         Range of 'min_dist' parameter values to test. Must be a tuple in the form (min, max, step).
-    spread_range : tuple, default (0.5, 2.0, 0.5)
+    spread_range : Tuple[float | int, float | int, float | int], default (0.5, 2.0, 0.5)
         Range of 'spread' parameter values to test. Must be a tuple in the form (min, max, step).
     color : Optional[str], default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.

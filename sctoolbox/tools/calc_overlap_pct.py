@@ -175,7 +175,8 @@ def _convert_gtf_to_bed(gtf: str,
 
 
 @beartype
-def _overlap_two_beds(bed1: str, bed2: str,
+def _overlap_two_beds(bed1: str, 
+                      bed2: str,
                       out: Optional[str] = None,
                       temp_files: list[str] = []) -> Union[bool, Tuple[str, str]]:
     """
@@ -465,7 +466,10 @@ class MPOverlapPct():
 
         return adata
 
-    def get_barcodes_sum(self, df: pd.DataFrame, barcodes: list[str], col_name: str) -> dict:
+    def get_barcodes_sum(self, 
+                         df: pd.DataFrame, 
+                         barcodes: list[str], 
+                         col_name: str) -> dict:
         """Get the sum of reads counts in each cell barcode."""
 
         # drop columns we dont need

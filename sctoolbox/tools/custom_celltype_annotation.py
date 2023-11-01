@@ -164,7 +164,7 @@ def modify_ct(adata: Optional[sc.AnnData] = None,
         The path where the annotation files are being stored (should be the same path as the output_path parameter of the annot_ct function).
     clustering_column : str, default "leiden"
         The obs column containing the clustering information.
-    cell_type_column : str, defaul "cell_types"
+    cell_type_column : str, default "cell_types"
         The obs column containing the cell type annotation.
     inplace : bool, default True
         Whether to add the new cell type assignments to the adata object in place.
