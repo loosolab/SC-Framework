@@ -322,7 +322,7 @@ def pairwise_rank_genes(adata, groupby,
 
 
 @deco.log_anndata
-def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=False,
+def get_rank_genes_tables(adata, key="rank_genes_groups", top_genes=200, out_group_fractions=False,
                           var_columns=[], save_excel=None) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
@@ -333,6 +333,8 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
         Anndata object containing ranked genes.
     key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
+    top_genes : int, default 200
+        Number of genes to be included in the tables. If None, all genes are included.
     out_group_fractions : bool, default False
         If True, the output tables will contain additional columns giving the fraction of genes per group.
     var_columns : list. default []
@@ -374,8 +376,13 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
         data = {}
         for col in tables:
             data[col] = tables[col][group].values
+        table = pd.DataFrame(data)
 
-        group_tables[group] = pd.DataFrame(data)
+        # Subset to n_genes if chosen
+        if top_genes is not None:
+            table = table.iloc[:top_genes, :]
+
+        group_tables[group] = table
 
     # Remove any NaN genes (genes are set to NaN if 'filter_rank_genes_groups' was used)
     for group in group_tables:
