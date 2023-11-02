@@ -65,11 +65,11 @@ setup(
     python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
         'pysam',
-        'matplotlib==3.6.2',
+        'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
-        'numba==0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
+        'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
         'kneed',
         'qnorm',
