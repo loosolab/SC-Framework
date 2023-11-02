@@ -32,6 +32,7 @@
 - Disabled threads parameter for tSNE (#130)
 - Added 'plot_starsolo_quality' and 'plot_starsolo_UMI' to plotting module (#78)
 - Fixed issues with clustered dotplot with new code (#122)
+- Fixed example for gene_expression_heatmap and smaller bugfixes related to marker genes (#124)
 
 Changes to notebooks
 --------------------
