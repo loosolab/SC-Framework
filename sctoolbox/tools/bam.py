@@ -865,7 +865,7 @@ def create_fragment_file(bam, barcode_tag='CB',
                          include_clipped=True,
                          shift_plus=5,
                          shift_minus=-4,
-                         keep_temp=False) -> tuple[str, str]:
+                         keep_temp=False) -> str:
     """
     Create fragments file out of a BAM file. This is an alternative to using the sinto package, which is slow and has issues with large bam-files.
 
@@ -898,7 +898,15 @@ def create_fragment_file(bam, barcode_tag='CB',
 
     Returns
     -------
-    Path to fragments file
+    str
+        Path to fragments file.
+
+    Raises
+    ------
+    ValueError
+        If both barcode_tag and barcode_regex (or neither) are set.
+    FileNotFoundError
+        If the input bam file does not exist.
     """
 
     utils.check_module("pysam")
@@ -919,8 +927,7 @@ def create_fragment_file(bam, barcode_tag='CB',
 
     # Check if bam file exists
     if not os.path.exists(bam):
-        logger.error(f"{bam} does not exist!")
-        return None
+        raise FileNotFoundError(f"{bam} does not exist!")
 
     # Ensure that bam-file is indexed
     if not os.path.exists(bam + ".bai"):
@@ -1026,8 +1033,8 @@ def create_fragment_file(bam, barcode_tag='CB',
     return outfile
 
 
-def _get_barcode_from_readname(read, regex):
-    """ Extract barcode from read name.
+def _get_barcode_from_readname(read, regex) -> str:
+    """Extract barcode from read name.
 
     Parameters
     ----------
@@ -1035,6 +1042,11 @@ def _get_barcode_from_readname(read, regex):
         Read from BAM file.
     regex : str
         Regex to extract barcode from read name.
+
+    Returns
+    -------
+    str
+        Barcode.
     """
 
     match = re.search(regex, read.query_name)
@@ -1044,8 +1056,8 @@ def _get_barcode_from_readname(read, regex):
         return None
 
 
-def _get_barcode_from_tag(read, tag):
-    """ Extract barcode from read tag.
+def _get_barcode_from_tag(read, tag) -> str:
+    """Extract barcode from read tag.
 
     Parameters
     ----------
@@ -1066,8 +1078,9 @@ def _get_barcode_from_tag(read, tag):
         return None
 
 
-def _write_fragments(bam, chromosomes, outfile, barcode_tag="CB", barcode_regex=None, min_dist=10, max_dist=5000, include_clipped=True, shift_plus=5, shift_minus=-4):
-    """ Internal function to write fragments from a bam-file to a file.
+def _write_fragments(bam, chromosomes, outfile, barcode_tag="CB", barcode_regex=None,
+                     min_dist=10, max_dist=5000, include_clipped=True, shift_plus=5, shift_minus=-4) -> int:
+    """Write fragments from a bam-file within a list of chromosomes to a text file.
 
     Parameters
     ----------
@@ -1096,6 +1109,11 @@ def _write_fragments(bam, chromosomes, outfile, barcode_tag="CB", barcode_regex=
     -------
     int
         Number of fragments written to file.
+
+    Raises
+    ------
+    ValueError
+        If None of barcode_tag and barcode_regex are set.
     """
 
     utils.check_module("pysam")

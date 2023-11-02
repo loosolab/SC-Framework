@@ -96,7 +96,7 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
 
 
 def test_create_fragment_file_multiprocessing():
-    """Assert that the result is the same regardless of number of cores used"""
+    """Assert that the result is the same regardless of number of cores used."""
 
     bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
 
