@@ -417,7 +417,7 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     cluster_column : str
         Key in `adata.obs` for which to cluster the x-axis.
     gene_name_column : str, default None
-        Column in `adata.var` for which to use for gene row names. Default is to use the index.
+        Column in `adata.var` for which to use for gene row names. Default is to use the .var index.
     title : str, default None
         Title of the plot.
     groupby : str, default None
@@ -458,7 +458,6 @@ def gene_expression_heatmap(adata, genes, cluster_column,
         genes = adata.var.index[:15]
         pl.gene_expression_heatmap(adata, genes, cluster_column="samples",
                                    groupby="condition",
-                                   gene_name_column="gene",
                                    title="Gene expression",
                                    col_cluster=True,
                                    show_col_dendrogram=True,
@@ -572,55 +571,6 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     return g
 
 
-@deco.log_anndata
-def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None) -> "sns.clustermap":
-    """Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
-
-    NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        An annotated data matrix object containing counts in .X.
-    groupby : str
-        A column in .obs for grouping cells into groups on the x-axis
-    gene_list : list, default None
-        A list of genes to show expression for.
-        If None, all genes are selected.
-    save : str, default None
-        Save the figure to a file.
-        If None, figure is not saved.
-    figsize : tuple, default None
-        Control the size of the output figure, e.g. (6,10).
-        If None, takes the matplotlib default.
-
-    Returns
-    -------
-    g : sns.clustermap
-        The seaborn clustermap object
-    """
-    _, ax = plt.subplots(figsize=figsize)
-
-    # Obtain pseudobulk
-    gene_table = utils.pseudobulk_table(adata, groupby)
-
-    # Subset to input gene list
-    if gene_list is not None:
-        gene_table = gene_table.loc[gene_list, :]
-
-    # Z-score
-    gene_table = utils.table_zscore(gene_table)
-
-    # Plot heatmap
-    g = sns.heatmap(gene_table, xticklabels=True,
-                    yticklabels=True, cmap="RdBu_r",
-                    center=0, ax=ax)  # center=0, vmin=-2, vmax=2)
-
-    _save_figure(save)
-
-    return g
-
-
 def plot_differential_genes(rank_table, title="Differentially expressed genes",
                             save=None,
                             **kwargs) -> matplotlib.axes.Axes:
@@ -648,6 +598,16 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     -------
     matplotlib.axes.Axes
         Axes object.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        adata.obs["groups"] = np.random.choice(["G1", "G2", "G3"], size=adata.shape[0])
+        pairwise_table = sctoolbox.tools.marker_genes.pairwise_rank_genes(adata, foldchange_threshold=0.5, groupby="groups")
+
+        pl.plot_differential_genes(pairwise_table)
     """
     group_columns = [col for col in rank_table.columns if "_group" in col]
 
@@ -699,13 +659,8 @@ def plot_gene_correlation(adata, ref_gene, gene_list, ncols=3, figsize=None, sav
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
         gene_list=("HES4", "PRMT2", "ITGB2")
-        pl.plot_gene_correlation(adata, "Xkr4", gene_list)
+        pl.plot_gene_correlation(adata, "SUMO3", gene_list)
     """
 
     if isinstance(gene_list, str):

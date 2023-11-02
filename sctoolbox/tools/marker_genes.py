@@ -274,6 +274,12 @@ def pairwise_rank_genes(adata, groupby,
     groups = adata.obs[groupby].astype("category").cat.categories
     contrasts = list(itertools.combinations(groups, 2))
 
+    # Check that fractions are available
+    use_fractions = True
+    if adata.X.min() < 0:
+        logger.warning("adata.X contains negative values (potentially transformed counts), meaning that 'min_in_group_fraction' and 'max_out_group_fraction' cannot be used for filtering. These parameters wille be ignored. Consider using raw/normalized data instead.")
+        use_fractions = False
+
     # Calculate marker genes for each contrast
     tables = []
     for contrast in contrasts:
@@ -292,14 +298,21 @@ def pairwise_rank_genes(adata, groupby,
 
         # Reorder columns
         table.set_index("names", inplace=True)
-        table = table[["scores", "logfoldchanges", "pvals", "pvals_adj", c1 + "_fraction", c2 + "_fraction"]]  # reorder columns
+        columns = ["scores", "logfoldchanges", "pvals", "pvals_adj"]
+        if use_fractions:
+            columns += [c1 + "_fraction", c2 + "_fraction"]
+        table = table[columns]  # reorder columns
         table = table.copy(deep=True)  # prevent SettingWithCopyWarning
 
         # Calculate up/down genes
         c1, c2 = contrast
         groups = ["C1", "C2"]
-        conditions = [(table["logfoldchanges"] >= foldchange_threshold) & (table[c1 + "_fraction"] >= min_in_group_fraction) & (table[c2 + "_fraction"] <= max_out_group_fraction),  # up
-                      (table["logfoldchanges"] <= -foldchange_threshold) & (table[c1 + "_fraction"] <= max_out_group_fraction) & (table[c2 + "_fraction"] >= min_in_group_fraction)]  # down
+        if use_fractions:
+            conditions = [(table["logfoldchanges"] >= foldchange_threshold) & (table[c1 + "_fraction"] >= min_in_group_fraction) & (table[c2 + "_fraction"] <= max_out_group_fraction),  # up
+                          (table["logfoldchanges"] <= -foldchange_threshold) & (table[c1 + "_fraction"] <= max_out_group_fraction) & (table[c2 + "_fraction"] >= min_in_group_fraction)]  # down
+        else:
+            conditions = [table["logfoldchanges"] >= foldchange_threshold,  # up
+                          table["logfoldchanges"] <= -foldchange_threshold]  # down
         table["group"] = np.select(conditions, groups, "NS")
 
         # Rename columns
@@ -314,7 +327,7 @@ def pairwise_rank_genes(adata, groupby,
 
     # Move fraction columns to the back
     merged = merged.loc[:, ~merged.columns.duplicated()]
-    fraction_columns = [col for col in merged.columns if col.endswith("_fraction")]
+    fraction_columns = [col for col in merged.columns if col.endswith("_fraction")]  # might be empty if use_fractions = False
     first_columns = [col for col in merged.columns if col not in fraction_columns]
     merged = merged[first_columns + fraction_columns]
 
@@ -361,6 +374,10 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", out_group_fractions=Fa
         for col in var_columns:
             if col not in adata.var.columns:
                 raise ValueError(f"Column '{col}' not found in adata.var.columns.")
+
+    # Check that key is in adata.uns
+    if key not in adata.uns:
+        raise ValueError(f"Key '{key}' not found in adata.uns. Please use 'run_rank_genes' first.")
 
     # Read structure in .uns to pandas dataframes
     tables = {}
