@@ -54,7 +54,7 @@ lint:
     default: false # do not inherit before_script
   stage: test
   tags:
-    - coverage
+    - sctoolbox
   script:
     - python --version
     - pip install flake8
@@ -91,7 +91,7 @@ test coverage:
     name: python:3.10
     entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ] # Fixes shell not found error (See Issue #129)
   tags:
-    - coverage
+    - sctoolbox
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - apt-get install bedtools  #needed for some tests
