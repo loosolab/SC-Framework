@@ -91,7 +91,7 @@ lint:
       changes:
       - setup.py
       - tests/*.py
-      - sctoolbox/**.py
+      - sctoolbox/**/*.py
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
@@ -106,7 +106,7 @@ test import:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - setup.py
-        - sctoolbox/**.py
+        - sctoolbox/**/*.py
 
 # Run test coverage
 test coverage:
@@ -131,11 +131,11 @@ test coverage:
     - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
       changes:
       - tests/*.py
-      - sctoolbox/**.py
+      - sctoolbox/**/*.py
     - if: $CI_COMMIT_BRANCH != "dev" && $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
       changes:
       - tests/*.py
-      - sctoolbox/**.py
+      - sctoolbox/**/*.py
     - when: manual
       allow_failure: True
 
