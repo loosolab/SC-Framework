@@ -49,6 +49,21 @@ def sc_colormap() -> matplotlib.colors.ListedColormap:
     return sc_cmap
 
 
+def grey_colormap() -> matplotlib.colors.ListedColormap:
+    """Get a colormap with grey-scale colors, but without white to still show cells.
+
+    Returns
+    -------
+    cmap : matplotlib.colors.ListedColormap
+        Grey-scale colormap.
+    """
+    color_cmap = cm.get_cmap('Greys', 200)
+    newcolors = color_cmap(np.linspace(0.2, 1, 200))
+    cmap = ListedColormap(newcolors)
+
+    return cmap
+
+
 @deco.log_anndata
 def flip_embedding(adata, key="X_umap", how="vertical"):
     """Flip the embedding in adata.obsm[key] along the given axis.
@@ -84,6 +99,310 @@ def flip_embedding(adata, key="X_umap", how="vertical"):
 #####################################################################
 # -------------------- UMAP / tSNE embeddings ----------------------#
 #####################################################################
+
+def _add_contour(x, y, ax):
+    """Add contour plot to a scatter plot.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        x-coordinates of the scatter plot.
+    y : np.ndarray
+        y-coordinates of the scatter plot.
+    ax : matplotlib.axes.Axes
+        Axis object to add the contour plot to.
+    """
+
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+
+    # Peform the kernel density estimate
+    X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+    positions = np.vstack([X.ravel(), Y.ravel()])
+    values = np.vstack([x, y])
+    kernel = scipy.stats.gaussian_kde(values)
+    f = np.reshape(kernel(positions).T, X.shape)
+
+    # Contour plot
+    ax.contour(X, Y, f, colors="black", linewidths=0.5)
+
+
+def embedding(adata,
+              method="umap",
+              color=None,
+              style="dots",
+              show_borders=False,
+              show_contour=False,
+              show_count=True,
+              hexbin_gridsize=30,
+              shrink_colorbar=0.5,
+              square=True,
+              save=None,
+              **kwargs) -> np.ndarray:
+    """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str, default "umap"
+        Dimensionality reduction method to use. Must be a key in adata.obsm, or a method available as "X_<method>" such as "umap", "tsne" or "pca".
+    color : str or lst of str, default None
+        Key for annotation of observations/cells or variables/genes.
+    style : str, default "dots"
+        Style of the plot. Must be one of "dots" or "hexbin".
+    show_borders : bool, default False
+        Whether to show borders around embedding plot. If False, the borders are removed and a small legend is added to the plot.
+    show_contour : bool, default False
+        Whether to show a contour plot on top of the plot.
+    show_count : bool, default True
+        Whether to show the number of cells in the plot.
+    show_titles : bool, default False
+        Whether to show the titles of the plots. If False, the titles are removed and the names are added to the colorbar/legend instead.
+    hexbin_gridsize : int, default 30
+        Number of hexbins across plot - higher values give smaller bins. Only used if style="hexbin".
+    shrink_colorbar : float, default 0.5
+        Shrink the height of the colorbar by this factor.
+    square : bool, default True
+        Whether to make the plot square.
+    save : str, default None
+        Filename to save the figure.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.pl.embedding`.
+
+    Returns
+    -------
+    np.ndarray
+        2D numpy array of axis objects
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.embedding(adata, method="umap", color="louvain", title="Louvain clusters")
+    """
+
+    # Check that method is in adata.obsm
+    basis = "X_" + method
+    if method in adata.obsm:  # method is directly available in obsm
+        basis = method
+    else:
+        if basis not in adata.obsm:
+            raise KeyError(f"The given method '{method}' cannot be found in adata.obsm. The available keys are: {adata.obsm.keys()}.")
+
+    # ---- Plot embedding for chosen colors ---- #
+
+    kwargs["color_map"] = kwargs.get("color_map", sc_colormap())  # set cmap to sc_colormap if not given
+    parameters = {"color": color,
+                  "basis": basis,
+                  "show": False}
+    if style == "hexbin":
+        parameters["alpha"] = 0  # make dots transparent
+    kwargs.update(parameters)
+
+    axarr = sc.pl.embedding(adata, **kwargs)
+
+    # if only one axis is returned, convert to list
+    if not isinstance(axarr, list):
+        axarr = [axarr]
+    if not isinstance(color, list):
+        color = [color]
+
+    # ---- Adjust style of individual plots ---- #
+    colorbar_count = 0
+    for i, ax in enumerate(axarr):
+
+        coordinates = adata.obsm[basis][:, :2]
+
+        # Adjust axis labels (sc.pl.embedding writes "X_umap1" instead of "UMAP1")
+        ax.set_xlabel(f"{method.upper()}1")
+        ax.set_ylabel(f"{method.upper()}2")
+
+        # Set legend
+        legend = ax.get_legend()
+        has_colorbar = False
+        if legend is not None:  # legend of categorical variables
+            legend.set_title(color[i])
+        else:                   # legend of continuous variables
+            colorbar_idx = i + colorbar_count + 1
+            local_axes = ax.figure._localaxes
+            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
+                local_axes[colorbar_idx].set_title(color[i])
+                colorbar_count += 1
+                has_colorbar = True
+
+            # Shrink colorbar
+            # todo
+
+        # Plot hexbin style if chosen
+        if style == "hexbin":
+
+            # Ensure that color is continuous
+            if color[i] is not None and has_colorbar is False:
+                raise ValueError(f"Hexbin style is only supported for continuous variables, and is not possible for the values found in '{color[i]}'. Please set 'style' to 'dots' or use a continuous variable.")
+
+            # Determine color values
+            if color[i] is None:
+                color_values = None
+            elif color[i] in adata.obs:
+                color_values = adata.obs[color[i]]
+            elif color[i] in adata.var.index:
+                color_idx = list(adata.var.index).index(color[i])
+                color_values = adata.X[:, color_idx]
+                color_values = color_values.todense().A1 if issparse(color_values) else color_values
+
+            # Determine colors to use
+            cmap = kwargs["color_map"]
+            cmap = mpl.rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
+            if color_values is None:
+                cmap = "Greys"  # if no color values are given, use greyscale to show density
+
+            # Plot hexbin
+            xlim, ylim = ax.get_xlim(), ax.get_ylim()
+            hb = ax.hexbin(coordinates[:, 0], y=coordinates[:, 1], C=color_values,
+                           mincnt=1, gridsize=hexbin_gridsize, cmap=cmap)
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+
+            # Set colorbar for number of cells if color is None
+            if color_values is None:
+                ax.figure.colorbar(hb, ax=ax, label="Number of cells")
+
+            # Replace colorbar with hexbin values
+            if has_colorbar:
+                ax.figure.colorbar(hb, ax=ax, cax=local_axes[colorbar_idx])
+
+        # Add contour to plot
+        if show_contour:
+            _add_contour(coordinates[:, 0], coordinates[:, 1], ax)
+
+        # Remove borders and add small UMAP1/UMAP2 legend
+        if show_borders is False:
+
+            # Remove all spines (axes lines)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+            # Move x and y-labels to the start of axes
+            label = ax.xaxis.get_label()
+            label.set_horizontalalignment('left')
+            x_lab_pos, y_lab_pos = label.get_position()
+            label.set_position([0, y_lab_pos])
+
+            label = ax.yaxis.get_label()
+            label.set_horizontalalignment('left')
+            x_lab_pos, y_lab_pos = label.get_position()
+            label.set_position([x_lab_pos, 0])
+
+            # Draw UMAP coordinate arrows
+            ymin, ymax = ax.get_ylim()
+            xmin, xmax = ax.get_xlim()
+            yrange = ymax - ymin
+            xrange = xmax - xmin
+            arrow_len_y = yrange * 0.2
+            arrow_len_x = xrange * 0.2
+
+            ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
+            ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
+
+        # Add number of cells to plot
+        if show_count:
+            ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
+                    transform=ax.transAxes,
+                    horizontalalignment='left',
+                    verticalalignment='bottom')
+
+        # Adjust aspect ratio
+        if square:
+            _make_square(ax)
+
+    # Save figure
+    _save_figure(save)
+
+    return axarr
+
+
+@deco.log_anndata
+def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
+    """Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    color : str or lst of str, default None
+        Key for annotation of observations/cells or variables/genes.
+    title : str, default None
+        Title of the plot. Default is no title.
+    save : str, default None
+        Filename to save the figure.
+    **kwargs : dict
+        Additional arguments passed to `sc.pl.umap`.
+
+    Returns
+    -------
+    axarr : list
+        list of matplotlib axis objects
+
+    Raises
+    ------
+    ValueError
+        If color and title have different lengths.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.umap_pub(adata, color="louvain", title="Louvain clusters")
+    """
+
+    axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
+
+    if title is not None and not isinstance(title, list):
+        title = [title]
+
+    if not isinstance(axarr, list):
+        axarr = [axarr]
+        color = [color]
+
+    if title and len(title) != len(color):
+        raise ValueError("Color and Title must have the same length.")
+
+    colorbar_count = 0
+    for i, ax in enumerate(axarr):
+
+        # Set legend
+        legend = ax.get_legend()
+        if legend is not None:  # legend of categorical variables
+            legend.set_title(color[i])
+        else:                   # legend of continuous variables
+            colorbar_idx = i + colorbar_count + 1
+            local_axes = ax.figure._localaxes
+            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
+                local_axes[colorbar_idx].set_title(color[i])
+                colorbar_count += 1
+
+        # Remove automatic title
+        ax.set_title("")
+        if title is not None:
+            ax.set_title(title[i])
+
+        # Add number of cells to plot
+        ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
+                transform=ax.transAxes,
+                horizontalalignment='left',
+                verticalalignment='bottom')
+
+        # Adjust aspect ratio
+        _make_square(ax)
+
+    # Save figure
+    _save_figure(save)
+
+    return axarr
+
 
 @deco.log_anndata
 def search_umap_parameters(adata,
@@ -746,113 +1065,6 @@ def umap_marker_overview(adata, markers, ncols=3, figsize=None,
     _save_figure(save)
 
     return list(axes_list)
-
-
-@deco.log_anndata
-def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
-    """Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
-
-    Parameters
-    ----------
-    adata : anndata.AnnData
-        Annotated data matrix.
-    color : str or lst of str, default None
-        Key for annotation of observations/cells or variables/genes.
-    title : str, default None
-        Title of the plot. Default is no title.
-    save : str, default None
-        Filename to save the figure.
-    **kwargs : dict
-        Additional arguments passed to `sc.pl.umap`.
-
-    Returns
-    -------
-    axarr : list
-        list of matplotlib axis objects
-
-    Raises
-    ------
-    ValueError
-        If color and title have different lengths.
-
-    Examples
-    --------
-    .. plot::
-        :context: close-figs
-
-        pl.umap_pub(adata, color="louvain", title="Louvain clusters")
-    """
-
-    axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
-
-    if title is not None and not isinstance(title, list):
-        title = [title]
-
-    if not isinstance(axarr, list):
-        axarr = [axarr]
-        color = [color]
-
-    if title and len(title) != len(color):
-        raise ValueError("Color and Title must have the same length.")
-
-    colorbar_count = 0
-    for i, ax in enumerate(axarr):
-
-        # Set legend
-        legend = ax.get_legend()
-        if legend is not None:  # legend of categorical variables
-            legend.set_title(color[i])
-        else:                   # legend of continuous variables
-            colorbar_idx = i + colorbar_count + 1
-            local_axes = ax.figure._localaxes
-            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
-                local_axes[colorbar_idx].set_title(color[i])
-                colorbar_count += 1
-
-        # Remove automatic title
-        ax.set_title("")
-        if title is not None:
-            ax.set_title(title[i])
-
-        # Remove all spines (axes lines)
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-
-        # Move x and y-labels to the start of axes
-        label = ax.xaxis.get_label()
-        label.set_horizontalalignment('left')
-        x_lab_pos, y_lab_pos = label.get_position()
-        label.set_position([0, y_lab_pos])
-
-        label = ax.yaxis.get_label()
-        label.set_horizontalalignment('left')
-        x_lab_pos, y_lab_pos = label.get_position()
-        label.set_position([x_lab_pos, 0])
-
-        # Draw UMAP coordinate arrows
-        ymin, ymax = ax.get_ylim()
-        xmin, xmax = ax.get_xlim()
-        yrange = ymax - ymin
-        xrange = xmax - xmin
-        arrow_len_y = yrange * 0.2
-        arrow_len_x = xrange * 0.2
-
-        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
-        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
-
-        # Add number of cells to plot
-        ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
-                transform=ax.transAxes,
-                horizontalalignment='left',
-                verticalalignment='bottom')
-
-        # Adjust aspect ratio
-        _make_square(ax)
-
-    # Save figure
-    _save_figure(save)
-
-    return axarr
 
 
 def anndata_overview(adatas,
