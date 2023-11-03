@@ -162,7 +162,7 @@ def plot_starsolo_quality(folder: str,
 
 
 @beartype
-def plot_starsolo_UMI(folder: str, 
+def plot_starsolo_UMI(folder: str,
                       ncol: int = 3,
                       save: Optional[str] = None) -> np.ndarray:
     """Plot UMI distribution for each condition in a folder.
