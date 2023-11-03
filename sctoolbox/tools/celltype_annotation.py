@@ -294,9 +294,7 @@ def run_scsa(adata: sc.AnnData,
     except Exception:
         raise KeyError(f"Could not find 'params' within adata.uns[{key}]. Please ensure that this key contains results of rank_genes_groups.")
 
-    # Check species and user.db
-    if species not in ['Human', 'Mouse', None]:
-        raise ValueError('Supported species are only: human or mouse! To annotate other species, set species=None and provide a user_db')
+    # Check user.db
     if not user_db and not species:
         raise ValueError('If no species is provided, user_db must be given! Supported species are: human or mouse! If you want to annotate other species, please provide a marker genes list using the parameter: user_db')
 
