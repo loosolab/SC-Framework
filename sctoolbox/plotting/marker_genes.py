@@ -21,8 +21,8 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 def rank_genes_plot(adata,
+                    key="rank_genes_groups",
                     genes=None,
-                    key=None,
                     n_genes=15,
                     dendrogram=False,
                     groupby=None,
@@ -38,10 +38,10 @@ def rank_genes_plot(adata,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
+    key : str, default "rank_genes_groups"
+        Key from `adata.uns` to plot. For example, `rank_genes_groups` or `rank_genes_groups_filtered`.
     genes : list or dict, default None
-        List of genes to plot. If a dict is passed, the keys are the group names and the values are lists of genes.
-    key : str, default None
-        Key from `adata.uns` to plot. If specified, `genes` must be `None`.
+        List of genes to plot across groups in 'groupby'. If a dict is passed, the keys are the group names and the values are lists of genes. Setting 'genes' overrides the 'key' parameter.
     n_genes : int, default 15
         Number of genes to plot if `key` is specified.
     dendrogram : bool, default False
@@ -62,20 +62,33 @@ def rank_genes_plot(adata,
     Raises
     ------
     ValueError
-        If `style` is not one of `dots` or `heatmap`, if both `genes` and `key` are specified, or if `groupby` is not specified when `genes` is specified.
+        If `style` is not one of `dots` or `heatmap`, or if `groupby` is not specified when `genes` is specified.
 
     Returns
     -------
     g : dict
         Dictionary containing the matplotlib axes objects for the plot.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.rank_genes_plot(adata, n_genes=5)
+
+    .. plot::
+        :context: close-figs
+
+        pl.rank_genes_plot(adata, genes={"group1": adata.var.index[:10], "group2": adata.var.index[10:20]}, groupby="bulk_labels")
     """
 
     available_styles = ["dots", "heatmap"]
     if style not in available_styles:
         raise ValueError(f"style must be one of {available_styles}.")
 
-    if genes is not None and key is not None:
-        raise ValueError("Only one of genes or key can be specified.")
+    # Key is not needed if genes are specified
+    if genes is not None:
+        key = None
 
     # Plot genes from rank_genes_groups or from gene list
     parameters = {"swap_axes": False}  # default parameters
