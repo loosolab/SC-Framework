@@ -260,6 +260,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         range_1 = ["perplexity_range"] + list(perplexity_range)
         range_2 = ["learning_rate_range"] + list(learning_rate_range)
     else:
+        # Will not be called due to beartype checks
         raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
 
     # Get tool and plotting function
@@ -1336,6 +1337,7 @@ def plot_pca_correlation(adata: sc.AnnData,
         table = adata.var.copy()
         mat = adata.varm["PCs"]
     else:
+        # Will not be called due to beartype checks
         raise ValueError(f"'which' must be either 'var'/'obs', but '{which}' was given.")
 
     # Check that method is available

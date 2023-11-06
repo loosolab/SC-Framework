@@ -67,10 +67,6 @@ def search_clustering_parameters(adata: sc.AnnData,
         pl.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
     """
 
-    # Check input
-    if len(resolution_range) != 3:
-        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
-
     # Check validity of parameters
     res_min, res_max, res_step = resolution_range
     if res_step > res_max - res_min:
@@ -88,6 +84,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     elif method == "louvain":
         cl_function = sc.tl.louvain
     else:
+        # Will not be called due to beartype checks
         raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
     # Setup parameters to loop over

@@ -791,9 +791,6 @@ def pairwise_scatter(table: pd.DataFrame,
         pl.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
     """
 
-    if isinstance(columns, str):
-        raise ValueError("'columns' must be a list of column names.")
-
     if len(columns) < 2:
         raise ValueError("'columns' must contain at least two columns to compare.")
 
