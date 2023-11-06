@@ -169,6 +169,7 @@ def table_zscore(table: pd.DataFrame,
     elif how == "col":
         counts_z = table.apply(zscore)
     else:
+        # Will not be called due to beartype checking for input
         raise Exception(f"'{how}' is invalid for 'how' - it must be 'row' or 'col'.")
 
     return counts_z

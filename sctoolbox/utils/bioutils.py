@@ -50,17 +50,9 @@ def pseudobulk_table(adata: sc.AnnData,
     -------
     pd.DataFrame
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
-
-    Raises
-    ------
-    TypeError
-        If `percentile_range` is not of type `tuple`.
     """
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
-
-    if isinstance(percentile_range, tuple) is False:
-        raise TypeError("percentile_range has to be a tuple of two values.")
 
     if layer is not None:
         mat = adata.layers[layer]
