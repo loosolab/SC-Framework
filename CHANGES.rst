@@ -34,6 +34,7 @@
 - Added 'plot_starsolo_quality' and 'plot_starsolo_UMI' to plotting module (#78)
 - Fixed issues with clustered dotplot with new code (#122)
 - Add parameter type hinting including runtime type checking
+- Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 
 Changes to notebooks
 --------------------
