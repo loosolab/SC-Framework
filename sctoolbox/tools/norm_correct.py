@@ -135,10 +135,7 @@ def tfidf(data: sc.AnnData,
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
     """
 
-    if isinstance(data, anndata.AnnData):
-        adata = data
-    else:
-        raise TypeError("Expected AnnData object!")
+    adata = data
 
     if log_tfidf and (log_tf or log_idf):
         raise AttributeError(

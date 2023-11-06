@@ -1107,7 +1107,7 @@ def filter_cells(adata: sc.AnnData,
 
     ret = _filter_object(adata, cells, which="obs", remove_bool=remove_bool, inplace=inplace)
 
-    return ret  # adata objec or None
+    return ret
 
 
 @deco.log_anndata
@@ -1138,4 +1138,4 @@ def filter_genes(adata: sc.AnnData,
 
     ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
 
-    return ret  # adata objec or None
+    return ret

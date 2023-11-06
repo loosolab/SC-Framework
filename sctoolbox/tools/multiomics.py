@@ -50,9 +50,6 @@ def merge_anndata(anndata_dict: dict[str, anndata.AnnData],
         warnings.warn("'outer' join is currently not supported. Proceeding with 'inner' ...")
         join = "inner"
 
-    if join not in ["inner", "outer"]:
-        raise ValueError(f"Invalid join value: {join}. Set to 'inner' or 'outer'")
-
     # Generate minimal anndata objects
     minimal_adata_dict = dict()
     for label, adata in anndata_dict.items():

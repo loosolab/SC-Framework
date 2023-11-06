@@ -369,10 +369,6 @@ def get_rank_genes_tables(adata: sc.AnnData,
         2. If not all columns given in var_columns are in adata.var.
     """
 
-    # Check input type
-    if not isinstance(var_columns, list):
-        raise ValueError("var_columns must be a list of strings.")
-
     # Check that all given columns are valid
     if len(var_columns) > 0:
         for col in var_columns:
@@ -699,10 +695,6 @@ def score_genes(adata: sc.AnnData,
             gene_set = [x.strip() for x in open(gene_set)]
         else:
             raise FileNotFoundError('The list was not found!')
-
-    # check if gene set is a list
-    elif not isinstance(gene_set, list):
-        raise ValueError('Please provide genes either as a list or txt file!')
 
     # scale data
     sdata = sc.pp.scale(adata, copy=True)

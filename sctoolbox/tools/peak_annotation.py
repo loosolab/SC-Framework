@@ -236,11 +236,6 @@ def annotate_narrowPeak(filepath: str,
     utils.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
 
-    # TODO: Check input types
-    # check_type(gtf, str, "gtf")
-    # check_type(config, [type(None), dict], "config")
-    # check_value(threads, vmin=1, name="threads")
-
     # Establish configuration dict
     logger.info("Setting up annotation configuration...")
     if config is None:

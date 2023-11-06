@@ -122,10 +122,7 @@ def lsi(data: sc.AnnData,
         data must be anndata object.
     """
 
-    if isinstance(data, sc.AnnData):
-        adata = data
-    else:
-        raise TypeError("Expected AnnData object!")
+    adata = data
 
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
     n_comps = min(n_comps, adata.X.shape[1])
