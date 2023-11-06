@@ -118,6 +118,7 @@ test coverage:
   script:
     - echo $BUILD_VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
+    - pip install .[all]  # make sure dependencies of current branch version are installed
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
