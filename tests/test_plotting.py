@@ -746,10 +746,10 @@ def test_rank_genes_plot_fail(adata):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
                            style="Invalid")
-    with pytest.raises(ValueError, match='Only one of genes or key can be specified.'):
+    with pytest.raises(KeyError, match='Could not find keys.*'):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
-                           genes=["A", "B", "C"])
+                           genes=["A", "B", "C"])  #invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
@@ -760,21 +760,14 @@ def test_rank_genes_plot_fail(adata):
                           ("condition", None)])
 def test_gene_expression_heatmap(adata, title, groupby):
     """Test gene_expression_heatmap success."""
+
+    genes = adata.var_names.tolist()[:10]
     g = pl.gene_expression_heatmap(adata,
-                                   genes=['ENSMUSG00000102851',
-                                          'ENSMUSG00000102272'],
+                                   genes=genes,
                                    groupby=groupby, title=title,
+                                   col_cluster=True,  # ensure title is tested
                                    cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
-
-
-@pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
-                                              'ENSMUSG00000102272']])
-@pytest.mark.parametrize("figsize", [None, (10, 10)])
-def test_group_heatmap(adata, gene_list, figsize):
-    """Test group heatmap success."""
-    pl.group_heatmap(adata, "clustering", gene_list=gene_list,
-                     figsize=figsize)
 
 
 def test_plot_differential_genes(pairwise_ranked_genes):
