@@ -333,7 +333,7 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", n_genes=200, out_group
         Anndata object containing ranked genes.
     key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
-    top_genes : int, default 200
+    n_genes : int, default 200
         Number of genes to be included in the tables. If None, all genes are included.
     out_group_fractions : bool, default False
         If True, the output tables will contain additional columns giving the fraction of genes per group.
