@@ -76,6 +76,7 @@ def recluster(adata: sc.AnnData,
     elif method == "louvain":
         cl_function = sc.tl.louvain
     else:
+        # Will not be called due to beartype checks
         raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
     # TODO: Check if clusters are found in column
@@ -89,6 +90,7 @@ def recluster(adata: sc.AnnData,
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
 
     else:
+        # Will not be called due to beartype checks
         raise ValueError(f"Task '{task}' is not valid. Task must be one of: 'join', 'split'")
 
     adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
