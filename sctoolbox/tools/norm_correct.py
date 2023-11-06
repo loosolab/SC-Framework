@@ -129,8 +129,6 @@ def tfidf(data: sc.AnnData,
 
     Raises
     ------
-    TypeError:
-        Data must be anndata object.
     AttributeError:
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
     """

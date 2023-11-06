@@ -775,7 +775,8 @@ def pairwise_scatter(table: pd.DataFrame,
     Raises
     ------
     ValueError
-        If columns is not a list of column names or if columns contains less than two columns.
+        1. If columns contains less than two columns.
+        2. If one of the given columns is not a table column
 
     Examples
     --------

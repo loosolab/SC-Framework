@@ -1317,7 +1317,7 @@ def plot_pca_correlation(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If "which" is not "obs" or "var", or if "method" is not "pearsonr" or "spearmanr".
+        If "method" is not "pearsonr" or "spearmanr".
     KeyError
         If any of the given columns is not found in the respective table.
 

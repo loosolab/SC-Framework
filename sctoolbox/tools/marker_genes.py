@@ -368,8 +368,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
     Raises
     ------
     ValueError:
-        1. If var_columns is no list.
-        2. If not all columns given in var_columns are in adata.var.
+        If not all columns given in var_columns are in adata.var.
     """
 
     # Check that all given columns are valid
@@ -689,8 +688,6 @@ def score_genes(adata: sc.AnnData,
     ------
     FileNotFoundError:
         If path given in gene_set does not lead to a file.
-    ValueError:
-        If gene_set is not a string and not a list.
     """
 
     if not inplace:

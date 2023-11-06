@@ -115,11 +115,6 @@ def lsi(data: sc.AnnData,
     Notes
     -----
     Function is taken from muon package.
-
-    Raises
-    ------
-    TypeError
-        data must be anndata object.
     """
 
     adata = data

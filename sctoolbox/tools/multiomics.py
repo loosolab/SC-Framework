@@ -42,8 +42,7 @@ def merge_anndata(anndata_dict: dict[str, anndata.AnnData],
     Raises
     ------
     ValueError:
-        1. If join is not either 'inner' or 'outer'
-        2. If no indices of both adata.obs tables are overlapping.
+        If no indices of both adata.obs tables are overlapping.
     """
 
     if join == "outer":

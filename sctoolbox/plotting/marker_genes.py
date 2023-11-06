@@ -66,7 +66,8 @@ def rank_genes_plot(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If `style` is not one of `dots` or `heatmap`, if both `genes` and `key` are specified, or if `groupby` is not specified when `genes` is specified.
+        1. If both `genes` and `key` are specified
+        2. If `groupby` is not specified when `genes` is specified.
 
     Returns
     -------

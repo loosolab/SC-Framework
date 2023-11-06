@@ -66,11 +66,6 @@ def write_TOBIAS_config(out_path: str,
         Flag for coverage step of the TOBIAS run.
     wilson : bool, default True
         Flag for wilson step of the TOBIAS run.
-
-    Raises
-    ------
-    ValueError:
-        If organism is not valid.
     """
 
     # Remove any common prefix and suffix from names

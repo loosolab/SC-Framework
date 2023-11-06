@@ -49,11 +49,6 @@ def search_clustering_parameters(adata: sc.AnnData,
     axarr : np.ndarray
         Array of axes objects containing the plot(s).
 
-    Raises
-    ------
-    ValueError
-        If the length of 'resolution_range' is not 3, if 'step' is larger than 'max' - 'min' or if 'method' is not valid.
-
     Examples
     --------
     .. plot::
