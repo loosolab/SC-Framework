@@ -74,10 +74,6 @@ def rank_genes_plot(adata: sc.AnnData,
         Dictionary containing the matplotlib axes objects for the plot.
     """
 
-    available_styles = ["dots", "heatmap"]
-    if style not in available_styles:
-        raise ValueError(f"style must be one of {available_styles}.")
-
     if genes is not None and key is not None:
         raise ValueError("Only one of genes or key can be specified.")
 

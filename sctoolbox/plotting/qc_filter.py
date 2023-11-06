@@ -746,6 +746,7 @@ def quality_violin(adata: sc.AnnData,
     elif which == "var":
         table = adata.var
     else:
+        # Will not be called due to beartype checks
         raise ValueError("'which' must be either 'obs' or 'var'.")
 
     # Check that columns are in table
