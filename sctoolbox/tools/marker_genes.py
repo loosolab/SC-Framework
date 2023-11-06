@@ -322,7 +322,7 @@ def pairwise_rank_genes(adata, groupby,
 
 
 @deco.log_anndata
-def get_rank_genes_tables(adata, key="rank_genes_groups", top_genes=200, out_group_fractions=False,
+def get_rank_genes_tables(adata, key="rank_genes_groups", n_genes=200, out_group_fractions=False,
                           var_columns=[], save_excel=None) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
