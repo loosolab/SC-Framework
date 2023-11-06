@@ -34,6 +34,7 @@
 - Added 'plot_pca_correlation' for plotting PCA correlation with obs/var columns (#118)
 - Removed outdated normalization methods.
 - Changed all line endings to LF (#138)
+- Add CI/CD container build pipeline for testing (#135)
 - Disabled threads parameter for tSNE (#130)
 - Added 'plot_starsolo_quality' and 'plot_starsolo_UMI' to plotting module (#78)
 - Fixed issues with clustered dotplot with new code (#122)
