@@ -73,12 +73,6 @@ def write_TOBIAS_config(out_path: str,
         If organism is not valid.
     """
 
-    # Check organism input
-    organism = organism.lower()
-    valid_organisms = ["human", "mouse", "zebrafish"]
-    if organism not in valid_organisms:
-        raise ValueError(f"'{organism}' is not a valid organism. Valid organisms are: " + ", ".join(valid_organisms))
-
     # Remove any common prefix and suffix from names
     if names is None:
         prefix = os.path.commonprefix(bams)
@@ -89,7 +83,7 @@ def write_TOBIAS_config(out_path: str,
     # Start building yaml
     data = {}
     data["data"] = {names[i]: bams[i] for i in range(len(bams))}
-    data["run_info"] = {"organism": organism,
+    data["run_info"] = {"organism": organism.lower(),
                         "blacklist": blacklist,
                         "fasta": fasta,
                         "gtf": gtf,
