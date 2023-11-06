@@ -749,7 +749,7 @@ def test_rank_genes_plot_fail(adata):
     with pytest.raises(KeyError, match='Could not find keys.*'):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
-                           genes=["A", "B", "C"])  #invalid genes given
+                           genes=["A", "B", "C"])  # invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
@@ -765,9 +765,20 @@ def test_gene_expression_heatmap(adata, title, groupby):
     g = pl.gene_expression_heatmap(adata,
                                    genes=genes,
                                    groupby=groupby, title=title,
-                                   col_cluster=True,  # ensure title is tested
+                                   col_cluster=True,            # ensure title is tested
+                                   show_col_dendrogram=True,    # ensure title is tested
                                    cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
+
+
+@pytest.mark.parametrize("kwargs, exception",
+                         [({"gene_name_column": "invalid"}, KeyError)])
+def test_gene_expression_heatmap_error(adata, kwargs, exception):
+    """Test gene_expression_heatmap failure."""
+
+    genes = adata.var_names.tolist()[:10]
+    with pytest.raises(exception):
+        pl.gene_expression_heatmap(adata, genes=genes, cluster_column="clustering", **kwargs)
 
 
 def test_plot_differential_genes(pairwise_ranked_genes):
@@ -794,6 +805,9 @@ def test_plot_gene_correlation(adata, gene_list, save, figsize):
                                     save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
     assert type(axes[0]).__name__.startswith("Axes")
+
+    if save:
+        os.remove(save)
 
 
 def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
