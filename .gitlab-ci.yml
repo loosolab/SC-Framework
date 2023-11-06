@@ -78,7 +78,7 @@ lint:
     default: false # do not inherit before_script
   stage: test
   tags:
-    - coverage
+    - sctoolbox
   script:
     - python --version
     - pip install flake8
@@ -113,7 +113,7 @@ test coverage:
   stage: test
   image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
   tags:
-    - coverage
+    - sctoolbox
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - echo $BUILD_VERSION
@@ -194,6 +194,7 @@ notebooks:
       - rna-notebooks/pipeline_output/logs/*.txt
   script:
     - pip install papermill
+    - pip install .[all]   # reinstall to make sure the current branch version is used
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
