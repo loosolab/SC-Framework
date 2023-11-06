@@ -194,6 +194,7 @@ notebooks:
       - rna-notebooks/pipeline_output/logs/*.txt
   script:
     - pip install papermill
+    - pip install .[all]   # reinstall to make sure the current branch version is used
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
