@@ -914,7 +914,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    sc.AnnData
+    Optional[sc.AnnData]
         Anndata object with QC thresholds applied.
 
     Raises
