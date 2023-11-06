@@ -379,8 +379,8 @@ def get_rank_genes_tables(adata, key="rank_genes_groups", n_genes=200, out_group
         table = pd.DataFrame(data)
 
         # Subset to n_genes if chosen
-        if top_genes is not None:
-            table = table.iloc[:top_genes, :]
+        if n_genes is not None:
+            table = table.iloc[:n_genes, :]
 
         group_tables[group] = table
 
