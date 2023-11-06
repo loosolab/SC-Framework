@@ -895,7 +895,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
                         thresholds: dict[str, Any],
                         which: Literal["obs", "var"] = "obs",
                         groupby: Optional[str] = None,
-                        inplace: bool = True) -> sc.AnnData:
+                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Apply QC thresholds to anndata object.
 
