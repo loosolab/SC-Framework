@@ -35,6 +35,7 @@
 - Fixed issues with clustered dotplot with new code (#122)
 - Fixed example for gene_expression_heatmap and smaller bugfixes related to marker genes (#124)
 - Removed pl.group_heatmap as it is fully covered by pl.gene_expression_heatmap
+- Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 
 Changes to notebooks
 --------------------
