@@ -229,6 +229,7 @@ build-pages:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
+    - pip install matplotlib  # needed for plot examples
     - cd docs
     - make html
   artifacts:
