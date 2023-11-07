@@ -220,7 +220,7 @@ notebooks:
 
 # Build documentation
 build-pages:
-  image: python:3.10
+  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"  # ensure that all dependencies are available
   stage: deploy
   script:
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
