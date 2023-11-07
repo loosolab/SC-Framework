@@ -293,7 +293,7 @@ def pairwise_rank_genes(adata, groupby,
 
         # Get table
         c1, c2 = contrast
-        table_dict = get_rank_genes_tables(adata_sub, out_group_fractions=True)  # returns dict with each group
+        table_dict = get_rank_genes_tables(adata_sub, n_genes=None, out_group_fractions=True)  # returns dict with each group
         table = table_dict[c1]
 
         # Reorder columns

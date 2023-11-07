@@ -6,6 +6,7 @@ import qnorm
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import zscore
+import re
 
 # for plotting
 import seaborn as sns
@@ -364,11 +365,6 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None) -> matplot
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
         gene_list=("HES4", "PRMT2", "ITGB2")
         pl.group_expression_boxplot(adata, gene_list, groupby="bulk_labels")
     """
@@ -617,8 +613,9 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     .. plot::
         :context: close-figs
 
+        import sctoolbox.tools as tl
         adata.obs["groups"] = np.random.choice(["G1", "G2", "G3"], size=adata.shape[0])
-        pairwise_table = sctoolbox.tools.marker_genes.pairwise_rank_genes(adata, foldchange_threshold=0.5, groupby="groups")
+        pairwise_table = tl.marker_genes.pairwise_rank_genes(adata, foldchange_threshold=0.2, groupby="groups")
 
         pl.plot_differential_genes(pairwise_table)
     """
@@ -626,7 +623,9 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
 
     info = {}
     for col in group_columns:
-        contrast = tuple(col.split("_")[0].split("/"))
+        m = re.match("(.+)/(.+)_group", col)  # tuple(col.split("_")[0].split("/"))
+        contrast = tuple([m.group(1), m.group(2)])
+
         counts = rank_table[col].value_counts()
         if all(x in list(counts.index) for x in ['C1', 'C2']):
             info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}

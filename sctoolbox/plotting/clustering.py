@@ -52,10 +52,6 @@ def search_clustering_parameters(adata,
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
-
-        import sctoolbox.plotting as pl
 
     .. plot::
         :context: close-figs
@@ -156,17 +152,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
-        adata = sc.datasets.pbmc68k_reduced()
         marker_genes_dict = {"S": ["PCNA"], "G2M": ["HMGB2"]}
-
-    .. plot::
-        :context: close-figs
 
         pl.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
     """
