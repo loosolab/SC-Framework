@@ -8,7 +8,7 @@ from multiprocessing.pool import ApplyResult
 import anndata
 from functools import partial
 
-from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any
+from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any, Sequence
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -909,7 +909,7 @@ def bam_to_bigwig(bam: str,
 
 @beartype
 def create_fragment_file(bam: str,
-                         barcode_tag: str = 'CB',
+                         barcode_tag: Optional[str] = 'CB',
                          barcode_regex: Optional[str] = None,
                          outdir: Optional[str] = None,
                          nproc: int = 1,
@@ -929,7 +929,7 @@ def create_fragment_file(bam: str,
     ----------
     bam : str
         Path to .bam file.
-    barcode_tag : str, default 'CB'
+    barcode_tag : Optional[str], default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
     barcode_regex : Optional[str], default None
         Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.
@@ -1090,7 +1090,7 @@ def create_fragment_file(bam: str,
 
 
 @beartype
-def _get_barcode_from_readname(read: pysam.AlignedSegment, regex: str) -> str:
+def _get_barcode_from_readname(read: "pysam.AlignedSegment", regex: str) -> str:
     """Extract barcode from read name.
 
     Parameters
@@ -1114,7 +1114,7 @@ def _get_barcode_from_readname(read: pysam.AlignedSegment, regex: str) -> str:
 
 
 @beartype
-def _get_barcode_from_tag(read: pysam.AlignedSegment, tag: str) -> str:
+def _get_barcode_from_tag(read: "pysam.AlignedSegment", tag: str) -> str:
     """Extract barcode from read tag.
 
     Parameters
@@ -1138,9 +1138,9 @@ def _get_barcode_from_tag(read: pysam.AlignedSegment, tag: str) -> str:
 
 @beartype
 def _write_fragments(bam: str,
-                     chromosomes: list[str],
+                     chromosomes: Sequence[str],
                      outfile: str,
-                     barcode_tag: str = "CB",
+                     barcode_tag: Optional[str] = "CB",
                      barcode_regex: Optional[str] = None,
                      min_dist: int = 10,
                      max_dist: int = 5000,
@@ -1153,11 +1153,11 @@ def _write_fragments(bam: str,
     ----------
     bam : str
         Path to .bam file.
-    chromosomes : list[str]
+    chromosomes : Sequence[str]
         List of chromosomes to fetch from bam file.
     outfile : str
         Path to output file.
-    barcode_tag : str, default 'CB'
+    barcode_tag : Optional[str], default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
     barcode_regex : Optional[str], default None
         Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.

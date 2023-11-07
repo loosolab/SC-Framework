@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 # type hint imports
-from typing import Any, TYPE_CHECKING, Optional, Union
+from typing import Any, TYPE_CHECKING, Optional, Union, Sequence
 from beartype import beartype
 import numpy.typing as npt
 
@@ -218,21 +218,21 @@ def _none2null(none_obj: None) -> "rpy2.rinterface_lib.sexp.NULLType":
 # ----------------- List functions ---------------- #
 
 @beartype
-def split_list(lst: list[Any], n: int) -> list[list[Any]]:
+def split_list(lst: Sequence[Any], n: int) -> list[Sequence[Any]]:
     """
     Split list into n chunks.
 
     Parameters
     ----------
-    lst : list[Any]
-        List to be chunked
+    lst : Sequence[Any]
+        Sequence to be chunked
     n : int
         Number of chunks.
 
     Returns
     -------
-    list[list[Any]]
-        List of lists (chunks).
+    list[Sequence[Any]]
+        List of Sequences (chunks).
     """
 
     chunks = []
