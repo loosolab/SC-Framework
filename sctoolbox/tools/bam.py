@@ -907,19 +907,23 @@ def bam_to_bigwig(bam: str,
 # ------------------------------ Bam to fragments file ----------------------------- #
 # ---------------------------------------------------------------------------------- #
 
-def create_fragment_file(bam, barcode_tag='CB',
-                         barcode_regex=None,
-                         outdir=None,
-                         nproc=1,
-                         index=False,
-                         min_dist=10,
-                         max_dist=5000,
-                         include_clipped=True,
-                         shift_plus=5,
-                         shift_minus=-4,
-                         keep_temp=False) -> str:
+@beartype
+def create_fragment_file(bam: str,
+                         barcode_tag: str = 'CB',
+                         barcode_regex: Optional[str] = None,
+                         outdir: Optional[str] = None,
+                         nproc: int = 1,
+                         index: bool = False,
+                         min_dist: int = 10,
+                         max_dist: int = 5000,
+                         include_clipped: bool = True,
+                         shift_plus: int = 5,
+                         shift_minus: int = -4,
+                         keep_temp: bool = False) -> str:
     """
-    Create fragments file out of a BAM file. This is an alternative to using the sinto package, which is slow and has issues with large bam-files.
+    Create fragments file out of a BAM file.
+    This is an alternative to using the sinto package,
+    which is slow and has issues with large bam-files.
 
     Parameters
     ----------
@@ -927,25 +931,25 @@ def create_fragment_file(bam, barcode_tag='CB',
         Path to .bam file.
     barcode_tag : str, default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    barcode_regex : str, default None
+    barcode_regex : Optional[str], default None
         Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.
-    outdir : str, default None
+    outdir : Optional[str], default None
         Path to save fragments file. If None, the file will be saved in the same folder as the .bam file. Temporary intermediate files are also written to this directory.
     nproc : int, default 1
         Number of threads for parallelization.
-    index : boolean, default False
+    index : bool, default False
         If True, index fragments file. Requires bgzip and tabix.
     min_dist : int, default 10
         Minimum fragment length to consider.
     max_dist : int, default 5000
         Maximum fragment length to consider.
-    include_clipped : boolean, default True
+    include_clipped : bool, default True
         Whether to include soft-clipped bases in the fragment length. If True, the full length between reads is used. If False, the fragment length will be calculated from the aligned parts of the reads.
     shift_plus : int, default 5
         Shift the start position of the forward read by this value (standard for ATAC).
     shift_minus : int, default -4
         Shift the end position of the reverse read by this value (standard for ATAC).
-    keep_temp : boolean, default False
+    keep_temp : bool, default False
         If True, keep temporary files.
 
     Returns
@@ -1085,7 +1089,8 @@ def create_fragment_file(bam, barcode_tag='CB',
     return outfile
 
 
-def _get_barcode_from_readname(read, regex) -> str:
+@beartype
+def _get_barcode_from_readname(read: pysam.AlignedSegment, regex: str) -> str:
     """Extract barcode from read name.
 
     Parameters
@@ -1108,7 +1113,8 @@ def _get_barcode_from_readname(read, regex) -> str:
         return None
 
 
-def _get_barcode_from_tag(read, tag) -> str:
+@beartype
+def _get_barcode_from_tag(read: pysam.AlignedSegment, tag: str) -> str:
     """Extract barcode from read tag.
 
     Parameters
@@ -1130,21 +1136,30 @@ def _get_barcode_from_tag(read, tag) -> str:
         return None
 
 
-def _write_fragments(bam, chromosomes, outfile, barcode_tag="CB", barcode_regex=None,
-                     min_dist=10, max_dist=5000, include_clipped=True, shift_plus=5, shift_minus=-4) -> int:
+@beartype
+def _write_fragments(bam: str,
+                     chromosomes: list[str],
+                     outfile: str,
+                     barcode_tag: str = "CB",
+                     barcode_regex: Optional[str] = None,
+                     min_dist: int = 10,
+                     max_dist: int = 5000,
+                     include_clipped: bool = True,
+                     shift_plus: int = 5,
+                     shift_minus: int = -4) -> int:
     """Write fragments from a bam-file within a list of chromosomes to a text file.
 
     Parameters
     ----------
     bam : str
         Path to .bam file.
-    chromosomes : list
+    chromosomes : list[str]
         List of chromosomes to fetch from bam file.
     outfile : str
         Path to output file.
     barcode_tag : str, default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    barcode_regex : str, default None
+    barcode_regex : Optional[str], default None
         Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.
     min_dist : int, default 10
         Minimum fragment length to consider.
