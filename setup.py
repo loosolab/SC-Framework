@@ -8,7 +8,7 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'pybedtools'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
@@ -91,8 +91,7 @@ setup(
         'python-gitlab',
         'psutil',
         'pyyaml',
-        'beartype',
-        'plotannot'
+        'beartype'
     ],
     include_package_data=True,
     extras_require=extras_require
