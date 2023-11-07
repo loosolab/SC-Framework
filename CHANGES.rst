@@ -35,6 +35,8 @@
 - Fixed issues with clustered dotplot with new code (#122)
 - Fixed example for gene_expression_heatmap and smaller bugfixes related to marker genes (#124)
 - Removed pl.group_heatmap as it is fully covered by pl.gene_expression_heatmap
+- Removed 'sinto' as dependency and added code in 'create_fragment_file' to create fragment file internally (solves #147)
+- The function 'create_fragment_file' was moved to bam tools.
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 
 Changes to notebooks
