@@ -52,7 +52,6 @@ def search_clustering_parameters(adata,
 
     Examples
     --------
-
     .. plot::
         :context: close-figs
 
