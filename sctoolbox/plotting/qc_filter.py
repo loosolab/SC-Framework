@@ -290,7 +290,7 @@ def n_cells_barplot(adata: sc.AnnData,
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
-    **kwargs : arguments
+    kwargs :
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
     Returns
@@ -537,7 +537,7 @@ def plot_insertsize(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         AnnData object containing insertsize distribution in adata.uns["insertsize_distribution"].
     barcodes : Optional[list[str]], default None
         Subset of barcodes to plot information for. If None, all barcodes are used.
@@ -696,7 +696,7 @@ def quality_violin(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing quality measures in .obs/.var
     columns : list[str]
         A list of columns in .obs/.var to show measures for.
@@ -716,7 +716,7 @@ def quality_violin(adata: sc.AnnData,
         Dictionary containing initial min/max thresholds to show in plot.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
-    interactive : bool, Default True
+    interactive : bool, default True
         Whether to show interactive sliders. If False, the static matplotlib plot is shown.
     save : Optional[str], optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
@@ -745,9 +745,6 @@ def quality_violin(adata: sc.AnnData,
         table = adata.obs
     elif which == "var":
         table = adata.var
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError("'which' must be either 'obs' or 'var'.")
 
     # Check that columns are in table
     invalid_columns = set(columns) - set(table.columns)

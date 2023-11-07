@@ -373,16 +373,16 @@ def bidirectional_barplot(df: pd.DataFrame,
                           save: Optional[str] = None) -> matplotlib.axes.Axes:
     """Plot a bidirectional barplot.
 
-    The input is a dataframe with the following columns:
-    - left_label
-    - right_label
-    - left_value
-    - right_value
+    A vertical barplot where each position has one bar going left and one going right (bidirectional).
 
     Parameters
     ----------
     df : pd.DataFrame
-        Dataframe with the following columns: left_label, right_label, left_value, right_value.
+        Dataframe with the following mandatory column names:
+            - left_label
+            - right_label
+            - left_value
+            - right_value
     title : Optional[str], default None
         Title of the plot.
     colors : Optional[dict[str, str]], default None
@@ -582,7 +582,7 @@ def violinplot(table: pd.DataFrame,
         Axes object to draw the plot on. Otherwise use current axes.
     title : Optional[str], default None
         Title of the plot.
-    ylabel : bool or str, default True
+    ylabel : bool | str, default True
         Boolean if ylabel should be shown. Or str for custom ylabel.
 
     Returns

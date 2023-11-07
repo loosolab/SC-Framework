@@ -78,9 +78,6 @@ def search_clustering_parameters(adata: sc.AnnData,
         cl_function = sc.tl.leiden
     elif method == "louvain":
         cl_function = sc.tl.louvain
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
     # Setup parameters to loop over
     res_min, res_max, res_step = resolution_range
@@ -131,7 +128,8 @@ def marker_gene_clustering(adata: sc.AnnData,
                            show_umap: bool = True,
                            save: Optional[str] = None,
                            figsize: Optional[Tuple[float | int, float | int]] = None) -> list:
-    """Plot an overview of marker genes and clustering.
+    """
+    Plot an overview of marker genes and clustering.
 
     Parameters
     ----------

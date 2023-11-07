@@ -52,7 +52,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
         Set title for plot.
     save : Optional[str], default None
         Path and name of file to be saved.
-    **kwargs : arguments
+    kwargs :
         Additional arguments passed to seaborn.heatmap.
 
     Returns

@@ -259,9 +259,6 @@ def _search_dim_red_parameters(adata: sc.AnnData,
     elif method == "tsne":
         range_1 = ["perplexity_range"] + list(perplexity_range)
         range_2 = ["learning_rate_range"] + list(learning_rate_range)
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError("Invalid method. Please choose from ['tsne', 'umap']")
 
     # Get tool and plotting function
     tool_func = getattr(sc.tl, method)
@@ -598,7 +595,7 @@ def plot_3D_UMAP(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
     color : str
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
@@ -745,7 +742,7 @@ def umap_marker_overview(adata: sc.AnnData,
         If not None save plot under given name.
     cbar_label : str, default "Relative expr."
         Colorbar label
-    **kwargs : arguments
+    kwargs :
         Additional parameter for scanpy.pl.umap()
 
     Returns
@@ -832,7 +829,7 @@ def umap_pub(adata: sc.AnnData,
         Title of the plot. Default is no title.
     save : Optional[str], default None
         Filename to save the figure.
-    **kwargs : dict
+    kwargs :
         Additional arguments passed to `sc.pl.umap`.
 
     Returns
@@ -945,18 +942,18 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         Name of the .obs column to use for coloring in applicable plots (e.g. for UMAP or PCA).
     plots : Union[list[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]],
             Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], default ["PCA", "PCA-var", "UMAP", "LISI"]
-        Decide what plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
+        Decide which plots should be created. Options are ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
         Note: List order is forwarded to plot.
         - UMAP: Plots the UMAP embedding of the data.
         - tSNE: Plots the tSNE embedding of the data.
         - PCA: Plots the PCA embedding of the data.
         - PCA-var: Plots the variance explained by each PCA component.
         - LISI: Plots the distribution of any "LISI_score*" scores available in adata.obs
-    figsize : Optional[Tuple[int, int]], default None (automatic based on number of columns/rows)
-        Size of the plot in inch.
+    figsize : Optional[Tuple[int, int]], default None
+        Size of the plot in inch. Defaults to automatic size based on number of columns/rows.
     max_clusters : int, default 20
         Maximum number of clusters to show in legend.
-    output : Optional[str], default None (not saved)
+    output : Optional[str], default None
         Path to plot output file.
     dpi : int, default 300
         Dots per inch for output
@@ -1290,7 +1287,7 @@ def plot_pca_correlation(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     which : Literal["obs", "var"], default "obs"
         Whether to use the observations ("obs") or variables ("var") for the correlation.
@@ -1336,9 +1333,6 @@ def plot_pca_correlation(adata: sc.AnnData,
     elif which == "var":
         table = adata.var.copy()
         mat = adata.varm["PCs"]
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError(f"'which' must be either 'var'/'obs', but '{which}' was given.")
 
     # Check that method is available
     try:
