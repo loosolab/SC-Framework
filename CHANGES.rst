@@ -1,3 +1,11 @@
+0.3 (in progress)
+=================
+
+Changes to notebooks:
+
+- Added plot of highly expressed genes to RNA notebook 03 (#43)
+
+
 0.2 (in progress)
 =================
 - implemented prepare_for_cellxgene
