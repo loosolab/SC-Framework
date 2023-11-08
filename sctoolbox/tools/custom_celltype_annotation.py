@@ -478,7 +478,7 @@ def perform_cell_type_annotation(output: str,
         If tissue is not "all", only marker genes found in the entered tissue will be taken into account.
     db : str, default "panglao"
         The name of the cell type marker gene database which will be used.
-    species : str, default "hs"
+    species : str, default "Hs"
         The species of the data.
     """
 
