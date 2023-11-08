@@ -247,7 +247,7 @@ def _n_cells_pieplot(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.

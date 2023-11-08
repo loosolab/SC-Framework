@@ -1,6 +1,6 @@
 """Decorators and related functions."""
 
-import anndata
+import scanpy as sc
 import functools
 import pandas as pd
 import matplotlib
@@ -35,7 +35,7 @@ def log_anndata(func: Callable) -> Callable:
         # find anndata object within parameters (if there are more use the first one)
         adata = None
         for param in list(args) + list(kwargs.values()):
-            if isinstance(param, anndata.AnnData):
+            if isinstance(param, sc.AnnData):
                 adata = param
                 break
 
@@ -56,7 +56,7 @@ def log_anndata(func: Callable) -> Callable:
         # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
         args_repr = {f"arg{i+1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
         kwargs_repr = kwargs
-        convert = {anndata.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
+        convert = {sc.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
         for typ, convfunc in convert.items():
             args_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in args_repr.items()}
             kwargs_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in kwargs_repr.items()}
@@ -78,13 +78,13 @@ def log_anndata(func: Callable) -> Callable:
 
 
 @beartype
-def get_parameter_table(adata: anndata.AnnData) -> pd.DataFrame:
+def get_parameter_table(adata: sc.AnnData) -> pd.DataFrame:
     """
     Get a table of all function calls with their parameters from the adata.uns["sctoolbox"] dictionary.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix with logged function calls.
 
     Returns

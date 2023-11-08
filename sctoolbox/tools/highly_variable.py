@@ -90,9 +90,6 @@ def annot_HVG(anndata: sc.AnnData,
         _save_figure(save)
         logger.info("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
-    # Adding info in anndata.uns["infoprocess"]
-    # cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)
-
     if not inplace:
         return adata_m
 

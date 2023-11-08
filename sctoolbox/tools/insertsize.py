@@ -66,7 +66,7 @@ def add_insertsize(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object to add insertsize information to.
     bam : Optional[str], default None
         Path to bam file containing paired-end reads. If None, the fragments file is used instead.

@@ -5,7 +5,7 @@ import pandas as pd
 import multiprocessing as mp
 from multiprocessing.managers import BaseProxy
 from multiprocessing.pool import ApplyResult
-import anndata
+import scanpy as sc
 from functools import partial
 
 from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any, Sequence
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 @beartype
-def bam_adata_ov(adata: anndata.AnnData,
+def bam_adata_ov(adata: sc.AnnData,
                  bamfile: str,
                  cb_col: str) -> float:
     """
@@ -29,7 +29,7 @@ def bam_adata_ov(adata: anndata.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         adata object where adata.obs is stored
     bamfile : str
         path of the bamfile to investigate
@@ -65,14 +65,14 @@ def bam_adata_ov(adata: anndata.AnnData,
 
 @deco.log_anndata
 @beartype
-def check_barcode_tag(adata: anndata.AnnData,
+def check_barcode_tag(adata: sc.AnnData,
                       bamfile: str, cb_col: str) -> None:
     """
     Check for the possibilty that the wrong barcode is used.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         adata object where adata.obs is stored
     bamfile : str
         path of the bamfile to investigate
@@ -194,7 +194,7 @@ def subset_bam(bam_in: str,
 
 @deco.log_anndata
 @beartype
-def split_bam_clusters(adata: anndata.AnnData,
+def split_bam_clusters(adata: sc.AnnData,
                        bams: str | Iterable[str],
                        groupby: str,
                        barcode_col: Optional[str] = None,
@@ -214,7 +214,7 @@ def split_bam_clusters(adata: anndata.AnnData,
 
     Parameters
     ----------
-    adata : anndata.Anndata
+    adata : sc.Anndata
         Annotated data matrix containing clustered cells in .obs.
     bams : str | Iterable[str]
         One or more BAM files to split into clusters

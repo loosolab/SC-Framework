@@ -5,7 +5,6 @@ import io
 from contextlib import redirect_stderr
 import copy
 import multiprocessing as mp
-import anndata
 import scanpy as sc
 import scanpy.external as sce
 
@@ -386,7 +385,7 @@ def batch_correction(adata: sc.AnnData,
 
         # Join corrected adatas
         corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
-        adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
+        adata = sc.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example

@@ -238,7 +238,7 @@ def validate_regions(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object containing the regions to be checked.
     coordinate_columns : Iterable[str]
         List of length 3 for column names in adata.var containing chr, start, end coordinates.
@@ -285,7 +285,7 @@ def format_adata_var(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containing features to annotate.
     coordinate_columns : Optional[Iterable[str]], default None
         List of length 3 for column names in adata.var containing chr, start, end coordinates to check.

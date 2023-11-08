@@ -163,7 +163,7 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containig cell barcodes in adata.obs.
     gtf_file : str, default None
         Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.
@@ -226,7 +226,7 @@ def pct_fragments_overlap(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containig cell barcodes in adata.obs.
     regions_file : str
         Path to BED or GTF file containing regions of interest.
@@ -335,9 +335,9 @@ class MPOverlapPct():
                  overlap_file: str,
                  fragments_file: str,
                  barcodes: list[str],
-                 adata: anndata.AnnData,
+                 adata: sc.AnnData,
                  regions_name: str = 'list',
-                 n_threads: int = 8) -> anndata.AnnData:
+                 n_threads: int = 8) -> sc.AnnData:
         """Calculate percentage of fragments overlapping with regions of interest."""
 
         # check if there was an overlap
