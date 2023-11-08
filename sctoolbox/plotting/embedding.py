@@ -1295,7 +1295,7 @@ def plot_pca_correlation(adata, which="obs",
     for row, col in combinations:
         # remove NaN values and the corresponding values from both lists
         x = np.vstack([comp_table[row], comp_table[col]])  # stack values of row and column
-        x = x[:,~np.any(np.isnan(x), axis=0)]  # remove columns with NaN values
+        x = x[:, ~np.any(np.isnan(x), axis=0)]  # remove columns with NaN values
 
         res = corr_method(x[0], x[1])
 
