@@ -1293,10 +1293,11 @@ def plot_pca_correlation(adata, which="obs",
     corr_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
     corr_table_annot = corr_table.copy()
     for row, col in combinations:
-        if corr_method == "spearmanr":
-            res = corr_method(comp_table[row], comp_table[col], nan_policy='omit')
-        else:
-            res = corr_method(comp_table[row], comp_table[col])
+        # remove NaN values and the corresponding values from both lists
+        x = np.vstack([comp_table[row], comp_table[col]])  # stack values of row and column
+        x = x[:,~np.any(np.isnan(x), axis=0)]  # remove columns with NaN values
+
+        res = corr_method(x[0], x[1])
 
         corr_table.loc[row, col] = res.statistic
 
