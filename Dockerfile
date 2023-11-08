@@ -8,13 +8,16 @@ COPY scripts /scripts/
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
+# install Fortran compiler 
+RUN apt-get update --assume-yes && \
+    apt-get install --assume-yes gfortran && \
+    # Install missing libraries
+    apt-get install bedtools && \
+    apt-get install -y libcurl4
+
 # update mamba
 RUN mamba update -n base mamba && \
     mamba --version
-
-# install Fortran compiler 
-RUN apt-get update --assume-yes && \
-    apt-get install --assume-yes gfortran 
 
 # install enviroment
 RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
@@ -27,11 +30,6 @@ RUN pip install "/tmp/[all]" && \
 
 # clear tmp
 RUN rm -r /tmp/*
-
-# Install missing libraries
-RUN apt-get update && \
-    apt-get install bedtools && \
-    apt-get install -y libcurl4
 
 # Set the time zone
 RUN echo 'Europe/Berlin' > apt-get install -y tzdata

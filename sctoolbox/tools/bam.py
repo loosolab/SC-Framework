@@ -2,8 +2,9 @@
 import re
 import os
 import pandas as pd
-import multiprocessing
+import multiprocessing as mp
 from typing import TYPE_CHECKING
+from functools import partial
 
 
 import sctoolbox.utils as utils
@@ -260,7 +261,7 @@ def split_bam_clusters(adata,
         bams = [bams]
 
     # create output folder if needed
-    utils.create_dir(output_prefix)
+    utils.create_dir(os.path.dirname(output_prefix))  # upper directory of prefix
 
     # Establish clusters from obs
     clusters = list(set(adata.obs[groupby]))
@@ -303,11 +304,11 @@ def split_bam_clusters(adata,
 
         # ---- Setup pools and queues ---- #
         # setup pools
-        reader_pool = multiprocessing.Pool(reader_threads)
-        writer_pool = multiprocessing.Pool(writer_threads)
+        reader_pool = mp.Pool(reader_threads)
+        writer_pool = mp.Pool(writer_threads)
 
         # setup queues to forward data between processes
-        manager = multiprocessing.Manager()
+        manager = mp.Manager()
 
         # Make chunks of writer_threads
         cluster_chunks = utils.split_list(clusters, writer_threads)
@@ -848,3 +849,323 @@ def bam_to_bigwig(bam,
     logger.info(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
 
     return output
+
+
+# ---------------------------------------------------------------------------------- #
+# ------------------------------ Bam to fragments file ----------------------------- #
+# ---------------------------------------------------------------------------------- #
+
+def create_fragment_file(bam, barcode_tag='CB',
+                         barcode_regex=None,
+                         outdir=None,
+                         nproc=1,
+                         index=False,
+                         min_dist=10,
+                         max_dist=5000,
+                         include_clipped=True,
+                         shift_plus=5,
+                         shift_minus=-4,
+                         keep_temp=False) -> str:
+    """
+    Create fragments file out of a BAM file. This is an alternative to using the sinto package, which is slow and has issues with large bam-files.
+
+    Parameters
+    ----------
+    bam : str
+        Path to .bam file.
+    barcode_tag : str, default 'CB'
+        The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
+    barcode_regex : str, default None
+        Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.
+    outdir : str, default None
+        Path to save fragments file. If None, the file will be saved in the same folder as the .bam file. Temporary intermediate files are also written to this directory.
+    nproc : int, default 1
+        Number of threads for parallelization.
+    index : boolean, default False
+        If True, index fragments file. Requires bgzip and tabix.
+    min_dist : int, default 10
+        Minimum fragment length to consider.
+    max_dist : int, default 5000
+        Maximum fragment length to consider.
+    include_clipped : boolean, default True
+        Whether to include soft-clipped bases in the fragment length. If True, the full length between reads is used. If False, the fragment length will be calculated from the aligned parts of the reads.
+    shift_plus : int, default 5
+        Shift the start position of the forward read by this value (standard for ATAC).
+    shift_minus : int, default -4
+        Shift the end position of the reverse read by this value (standard for ATAC).
+    keep_temp : boolean, default False
+        If True, keep temporary files.
+
+    Returns
+    -------
+    str
+        Path to fragments file.
+
+    Raises
+    ------
+    ValueError
+        If both barcode_tag and barcode_regex (or neither) are set.
+    FileNotFoundError
+        If the input bam file does not exist.
+    """
+
+    utils.check_module("pysam")
+    import pysam
+
+    # Establish output filename
+    if not outdir:
+        outdir = os.path.dirname(bam)
+    os.makedirs(outdir, exist_ok=True)  # create output directory if it does not exist
+    out_prefix = os.path.join(outdir, os.path.basename(bam).split('.')[0])
+    outfile = out_prefix + '_fragments.tsv'  # final output file
+
+    # Check input tag/regex
+    if barcode_tag and barcode_regex:
+        raise ValueError("Only one of 'barcode_tag' and 'barcode_regex' can be provided! Please set one of the parameters to None.")
+    elif not barcode_tag and not barcode_regex:
+        raise ValueError("Either 'barcode_tag' or 'barcode_regex' must be provided!")
+
+    # Check if bam file exists
+    if not os.path.exists(bam):
+        raise FileNotFoundError(f"{bam} does not exist!")
+
+    # Ensure that bam-file is indexed
+    if not os.path.exists(bam + ".bai"):
+
+        index_success = False
+        sort_success = False
+        while not index_success:
+            if not sort_success:
+                logger.warning(".bam-file has no index - trying to index .bam-file with pysam...")
+
+            try:
+                pysam.index(bam)
+                index_success = True
+
+            except Exception as e:  # try to sort the bam file before indexing again
+
+                if sort_success:  # if we already sorted the file
+                    logger.error("Unknown error when indexing bam file after sort - please see the error message.")
+                    raise e
+
+                try:
+                    logger.warning(".bam-file could not be indexed with pysam - bam might be unsorted. Trying to sort .bam-file using pysam...")
+                    bam_sorted = os.path.join(outdir, os.path.basename(bam).split(".")[0] + "_sorted.bam")
+                    pysam.sort("-o", bam_sorted, bam)
+                    bam = bam_sorted   # try to index again with this bam
+                    sort_success = True
+                except Exception as e:
+                    logger.error("Unknown error when sorting .bam-file - please see the error message.")
+                    raise e
+
+        logger.info(".bam-file was successfully indexed.")
+
+    # Chunk chromosomes
+    bamfile = pysam.AlignmentFile(bam)
+    chromosomes = bamfile.references
+    bamfile.close()
+    chromosome_chunks = utils.split_list(chromosomes, nproc)
+
+    # Create fragments from bam
+    logger.info("Creating fragments from chromosomes...")
+    temp_files = []
+    if nproc == 1:
+        chunk = chromosome_chunks[0]   # only one chunk
+        temp_file = out_prefix + f"_fragments_{chunk[0]}_{chunk[-1]}.tmp"
+        temp_files = [temp_file]
+        n_written = _write_fragments(bam, chromosomes, temp_file, barcode_tag=barcode_tag, barcode_regex=barcode_regex,
+                                     min_dist=min_dist, max_dist=max_dist, include_clipped=include_clipped, shift_plus=shift_plus, shift_minus=shift_minus)
+
+    else:
+
+        pool = mp.Pool(nproc)
+        jobs = []
+        for chunk in chromosome_chunks:
+            logger.debug("Starting job for chromosomes: " + ", ".join(chunk))
+            temp_file = out_prefix + f"_fragments_{chunk[0]}_{chunk[-1]}.tmp"
+            temp_files.append(temp_file)
+            job = pool.apply_async(_write_fragments, args=(bam, chunk, temp_file, barcode_tag, barcode_regex, min_dist, max_dist, include_clipped, shift_plus, shift_minus))
+            jobs.append(job)
+
+        pool.close()
+
+        # monitor progress
+        utils.monitor_jobs(jobs, description="Progress")  # waits for all jobs to finish
+        pool.join()
+
+        # get number of written fragments
+        n_written = sum([job.get() for job in jobs])
+
+    # check if any fragments were written
+    if n_written == 0:
+        logger.warning("No fragments were written to file - please check your input files and parameters.")
+    else:
+        logger.info(f"Found a total of {n_written} valid fragments in the .bam file.")
+
+    # Merge temp files
+    logger.info("Merging identical fragments...")
+    tempdir = f"{outdir}"
+    os.makedirs(tempdir, exist_ok=True)  # create temp directory if it does not exist
+    cmd = f"cat {' '.join(temp_files)} | sort -T {tempdir} -k1,1 -k2,2n -k3,3n -k4 "
+    cmd += "| uniq -c | awk -v OFS='\\t' '{$(NF+1)=$1;$1=\"\"}1' "  # count number of fragments at position, move count to last column
+    cmd += "| awk '{gsub(/^[ \\t]+/, \"\");}1' "  # remove leading whitespace
+    cmd += f"> {outfile}"
+
+    logger.debug(f"Running command: \"{cmd}\"")
+    os.system(cmd)
+    logger.info(f"Successfully created fragments file: {outfile}")
+
+    # Remove temp files
+    if not keep_temp:
+        utils.remove_files(temp_files)
+
+    # Index fragments file
+    if index:
+        cmd = f"bgzip --stdout {outfile} > {outfile}.gz"
+        logger.info(f"Running command: \"{cmd}\"")
+        os.system(cmd)
+
+        cmd = f"tabix -p bed {outfile}.gz"
+        logger.info(f"Running command: \"{cmd}\"")
+        os.system(cmd)
+
+    # return path to sorted fragments file
+    return outfile
+
+
+def _get_barcode_from_readname(read, regex) -> str:
+    """Extract barcode from read name.
+
+    Parameters
+    ----------
+    read : pysam.AlignedSegment
+        Read from BAM file.
+    regex : str
+        Regex to extract barcode from read name.
+
+    Returns
+    -------
+    str
+        Barcode.
+    """
+
+    match = re.search(regex, read.query_name)
+    if match:
+        return match.group(0)
+    else:
+        return None
+
+
+def _get_barcode_from_tag(read, tag) -> str:
+    """Extract barcode from read tag.
+
+    Parameters
+    ----------
+    read : pysam.AlignedSegment
+        Read from BAM file.
+    tag : str
+        Tag where barcode is stored.
+
+    Returns
+    -------
+    str
+        Barcode.
+    """
+
+    if read.has_tag(tag):
+        return read.get_tag(tag)
+    else:
+        return None
+
+
+def _write_fragments(bam, chromosomes, outfile, barcode_tag="CB", barcode_regex=None,
+                     min_dist=10, max_dist=5000, include_clipped=True, shift_plus=5, shift_minus=-4) -> int:
+    """Write fragments from a bam-file within a list of chromosomes to a text file.
+
+    Parameters
+    ----------
+    bam : str
+        Path to .bam file.
+    chromosomes : list
+        List of chromosomes to fetch from bam file.
+    outfile : str
+        Path to output file.
+    barcode_tag : str, default 'CB'
+        The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
+    barcode_regex : str, default None
+        Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.
+    min_dist : int, default 10
+        Minimum fragment length to consider.
+    max_dist : int, default 5000
+        Maximum fragment length to consider.
+    include_clipped : boolean, default True
+        Whether to include soft-clipped bases in the fragment length. If True, the full length between reads is used. If False, the fragment length will be calculated from the aligned parts of the reads.
+    shift_plus : int, default 5
+        Shift the start position of the forward read by this value (standard for ATAC).
+    shift_minus : int, default -4
+        Shift the end position of the reverse read by this value (standard for ATAC).
+
+    Returns
+    -------
+    int
+        Number of fragments written to file.
+
+    Raises
+    ------
+    ValueError
+        If None of barcode_tag and barcode_regex are set.
+    """
+
+    utils.check_module("pysam")
+    import pysam
+
+    # Establish function to use for getting barcode
+    if barcode_tag:
+        get_barcode = partial(_get_barcode_from_tag, tag=barcode_tag)
+    elif barcode_regex:
+        get_barcode = partial(_get_barcode_from_readname, regex=barcode_regex)
+    else:
+        raise ValueError("Either barcode_tag or barcode_regex must be provided!")
+
+    fragments = {}
+    n_written = 0
+    with open(outfile, "w") as out_txt:
+        with pysam.AlignmentFile(bam, "rb") as bamfile:
+            for chromosome in chromosomes:
+                for read in bamfile.fetch(chromosome):  # fetch all reads on this chromosome
+
+                    fragment_name = read.query_name
+                    if read.is_mapped and read.is_paired:  # reads must be mapped and paired
+                        if fragment_name not in fragments:
+                            fragments[fragment_name] = read   # first mate found; store it in the dictionary
+
+                        else:  # The mate was already found, so we can write the fragment
+
+                            # Estimate fragment length
+                            reads = [fragments[fragment_name], read] if read.is_reverse else [read, fragments[fragment_name]]  # put forward read first
+                            n_reverse = sum([read.is_reverse for read in reads])  # one of the reads must be reverse for it to be a proper forward-reverse pair
+                            fragment_start = reads[0].reference_start + shift_plus  # forward read; count whole read without soft-clipping
+                            fragment_end = reads[1].reference_end + shift_minus  # reverse read; count whole read without soft-clipping; shift_minus is negative
+
+                            if include_clipped is True:
+                                fragment_start -= reads[0].query_alignment_start
+                                fragment_end += reads[1].query_length - reads[1].query_alignment_end  # the difference between length and end position gives the number of clipped bases for reverse read
+                            fragment_length = fragment_end - fragment_start
+
+                            # If the fragment is valid; we can save it
+                            if n_reverse == 1 and fragment_length >= min_dist and fragment_length <= max_dist:
+
+                                # Get barcode
+                                barcode = get_barcode(read)
+
+                                if barcode:
+                                    # Write fragment to file
+                                    out_txt.write(f"{read.reference_name}\t{fragment_start}\t{fragment_end}\t{barcode}\n")
+                                    n_written += 1
+
+                            fragments.pop(fragment_name)  # Remove the written fragment from the dictionary
+
+                # Remove all remaining fragments from the dictionary; new chromosome or end of file
+                fragments = {}
+
+    return n_written
