@@ -297,7 +297,7 @@ def get_panglao(path: str,
 
 @beartype
 def calc_ranks(cm_dict: dict[str, list[str]],
-               annotated_clusters: dict[str, dict[int | float]]) -> dict[str, dict[str, list[int]]]:
+               annotated_clusters: dict[str, dict[str, int | float]]) -> dict[str, dict[str, list[int]]]:
     """
     Identify cell types of each cluster.
 
@@ -308,7 +308,7 @@ def calc_ranks(cm_dict: dict[str, list[str]],
     ----------
     cm_dict : dict[str, list[str]]
         Dictionary which contains the cell marker database.
-    annotated_clusters : dict[str, dict[int | float]]
+    annotated_clusters : dict[str, dict[str, int | float]]
         Dictionary which contains the summed up ranked scores per gene for each cluster.
 
     Returns
