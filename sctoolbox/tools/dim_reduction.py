@@ -24,7 +24,7 @@ def compute_PCA(anndata: sc.AnnData,
                 inplace: bool = False,
                 **kwargs: dict) -> Optional[sc.AnnData]:
     """
-    Compute PCA and add information to adata.uns['infoprocess'].
+    Compute a principal component analysis.
 
     Parameters
     ----------
@@ -71,14 +71,14 @@ def compute_PCA(anndata: sc.AnnData,
 #        Anndata object to work on.
 #    exclude_HEG : boolean, default True
 #        If True, highly expressed genes (HEG) will be not considered in the normalization.
-#    use_HVG_PCA : boolean, default True
+#    use_HVG_PCA : bool, default True
 #        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-#    inplace : boolean, default False
+#    inplace : bool, default False
 #        Whether to work inplace on the anndata object.
 #
 #    Returns
 #    -------
-#    sc.AnnData or None:
+#    Optional[sc.AnnData]:
 #        Anndata with expression values normalized and log converted and PCA computed.
 #    """
 #    adata_m = anndata if inplace else anndata.copy()
@@ -107,7 +107,7 @@ def lsi(data: sc.AnnData,
     ----------
     data : sc.AnnData
         AnnData object with peak counts.
-    scale_embeddings : boolean, default True
+    scale_embeddings : bool, default True
         Scale embeddings to zero mean and unit variance.
     n_comps : int, default 50
         Number of components to calculate with SVD.

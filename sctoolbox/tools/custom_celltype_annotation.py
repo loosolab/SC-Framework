@@ -58,7 +58,7 @@ def annot_ct(adata: Optional[sc.AnnData] = None,
         If tissue is not "all", only marker genes found in the entered tissue will be taken into account.
     db : str, default "panglao"
         The name of the cell type marker gene database which will be used.
-    species : Literal['Hs', 'Mm'], default "hs"
+    species : Literal['Hs', 'Mm'], default "Hs"
         The species of the data. (Hs or Mm supported)
     inplace : bool, default True
         Whether to add the annotations to the adata object in place.
@@ -145,7 +145,7 @@ def annot_ct(adata: Optional[sc.AnnData] = None,
 
 
 @beartype
-def modify_ct(adata: Optional[sc.AnnData] = None,
+def modify_ct(adata: sc.AnnData,
               annotation_dir: Optional[str] = None,
               clustering_column: str = "leiden_0.1",
               cell_type_column: str = "cell_types_leiden_0.1",
@@ -158,7 +158,7 @@ def modify_ct(adata: Optional[sc.AnnData] = None,
 
     Parameters
     ----------
-    adata : Optional[sc.AnnData], default None
+    adata : sc.AnnData
         The anndata object containing cell type assignments from the annot_ct() function.
     annotation_dir : Optional[str], default None
         The path where the annotation files are being stored (should be the same path as the output_path parameter of the annot_ct function).
@@ -201,7 +201,7 @@ def modify_ct(adata: Optional[sc.AnnData] = None,
 
 
 @beartype
-def show_tables(annotation_dir: Optional[str] = None,
+def show_tables(annotation_dir: str,
                 n: int = 5,
                 clustering_column: str = "leiden_0.1") -> None:
     """
@@ -209,7 +209,7 @@ def show_tables(annotation_dir: Optional[str] = None,
 
     Parameters
     ----------
-    annotation_dir : str, default None
+    annotation_dir : str
         The path where the annotation files are being stored (should be the same path as the output_path parameter of the annot_ct function).
     n : int, default 5
         The maximum number of rows to show

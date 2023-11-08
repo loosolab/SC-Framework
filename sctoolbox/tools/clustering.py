@@ -27,19 +27,19 @@ def recluster(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
-    column : str
+    column : str | list[str]
         Column in adata.obs to use for re-clustering.
-    clusters : str or list of str
+    clusters : str | list[str]
         Clusters in `column` to re-cluster.
-    task : str, default "join"
+    task : Literal["join", "split"], default "join"
         Task to perform. Options are:
         - "join": Join clusters in `clusters` into one cluster.
         - "split": Split clusters in `clusters` are merged and then reclustered using `method` and `resolution`.
-    method : str, default "leiden"
+    method : Literal["leiden", "louvain"], default "leiden"
         Clustering method to use. Must be one of "leiden" or "louvain".
     resolution : float, default 1
         Resolution parameter for clustering.
-    key_added : str, default None
+    key_added : Optional[str], default None
         Name of the new column in adata.obs. If None, the column name is set to `<column>_recluster`.
     plot : bool, default True
         If a plot should be generated of the re-clustering.

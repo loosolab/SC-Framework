@@ -20,7 +20,7 @@ def merge_anndata(anndata_dict: dict[str, anndata.AnnData],
     ----------
     anndata_dict : dict[str, anndata.AnnData]
         Dictionary with labels as keys and anndata objects as values.
-    join : str, default 'inner'
+    join : Literal['inner', 'outer'], default 'inner'
         Set how to join cells of the adata objects: ['inner', 'outer'].
         This only affects the cells since the var/gene section is simply added.
 

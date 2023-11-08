@@ -273,7 +273,7 @@ def _insertsize_from_fragments(fragments: str,
     ----------
     fragments : str
         Path to fragments.bed(.gz) file.
-    barcodes : list of str, default None
+    barcodes : Optional[list[str]], default None
         Only collect fragment sizes for the barcodes in barcodes
 
     Returns

@@ -97,7 +97,7 @@ def label_genes(adata: sc.AnnData,
         The anndata object.
     species : str
         Name of the species.
-    gene_column : str, default None
+    gene_column : Optional[str], default None
         Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
 
     Returns
@@ -219,10 +219,6 @@ def run_rank_genes(adata: sc.AnnData,
     ValueError:
         If number of groups defined by the groupby parameter is < 2.
     """
-
-    # Check that adata is an AnnData object
-    # if not isinstance(adata, AnnData):
-    #     raise ValueError("adata must be an AnnData object.")
 
     if adata.obs[groupby].dtype.name != "category":
         adata.obs[groupby] = adata.obs[groupby].astype("category")

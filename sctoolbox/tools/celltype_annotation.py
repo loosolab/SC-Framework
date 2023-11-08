@@ -200,12 +200,12 @@ def _get_rank_genes(d: dict[str, Any]) -> list[str]:
 @beartype
 def run_scsa(adata: sc.AnnData,
              gene_column: Optional[str] = None,
-             gene_symbol: str = 'auto',
+             gene_symbol: Literal['auto', 'symbol', 'id'] = 'auto',
              key: str = 'rank_genes_groups',
              column_added: str = 'SCSA_pred_celltype',
              inplace: bool = True,
              python_path: Optional[str] = None,
-             species: Optional[Literal['Human', 'Mouse']] = 'human',
+             species: Optional[Literal['Human', 'Mouse']] = 'Human',
              fc: float | int = 1.5,
              pvalue: float = 0.05,
              tissue: str = 'All',
@@ -253,7 +253,7 @@ def run_scsa(adata: sc.AnnData,
         SCSA parameter: Fold change threshold to filter genes.
     pvalue : float, default 0.05
         SCSA parameter: P-value threshold to filter genes.
-    tissue : float, default 'All'
+    tissue : str, default 'All'
         TODO Implement
         SCSA parameter: A specific tissue can be defined.
     user_db : str, default None

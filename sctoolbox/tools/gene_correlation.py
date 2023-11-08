@@ -29,7 +29,7 @@ def correlate_conditions(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated adata object.
     gene : str
         Gene of interest.
@@ -82,7 +82,7 @@ def correlate_ref_vs_all(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
     ref_gene : str
         Reference gene.
