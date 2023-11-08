@@ -779,9 +779,9 @@ def test_gene_expression_heatmap(adata, title, groupby):
 def test_group_heatmap(adata, gene_list, figsize):
     """Test group heatmap success."""
     ax = pl.group_heatmap(adata, "clustering", gene_list=gene_list,
-                         figsize=figsize)
+                          figsize=figsize)
 
-    assert type(ax).__name__ == "AxesSubplot"
+    assert type(ax).__name__.startswith("Axes")
 
 
 @pytest.mark.parametrize("kwargs, exception",
