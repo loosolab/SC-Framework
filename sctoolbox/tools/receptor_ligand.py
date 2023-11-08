@@ -346,9 +346,9 @@ def interaction_violin_plot(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def hairball(adata: sc.AnnData,
-             min_perc: int,
+             min_perc: int | float,
              interaction_score: float | int = 0,
-             interaction_perc: Optional[int] = None,
+             interaction_perc: Optional[int | float] = None,
              output: Optional[str] = None,
              title: Optional[str] = "Network",
              color_min: float | int = 0,
@@ -365,11 +365,11 @@ def hairball(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object
-    min_perc : int
+    min_perc : int | float
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     interaction_score : float | int, default 0
         Interaction score must be above this threshold for the interaction to be counted in the graph.
-    interaction_perc : Optional[int], default None
+    interaction_perc : Optional[int | float], default None
         Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
     output : str, default None
         Path to output file.
@@ -385,9 +385,9 @@ def hairball(adata: sc.AnnData,
         Show the interaction count in the hairball.
     restrict_to : Optional[list[str]], default None
         Only show given clusters provided in list.
-    additional_nodes : list, default None
+    additional_nodes : Optional[list[str]], default None
         List of additional node names displayed in the hairball.
-    hide_edges : list of tuples, default None
+    hide_edges : Optional[list[Tuple[str, str]]], default None
         List of tuples with node names that should not have an edge shown. Order doesn't matter. E.g. `[("a", "b")]` to omit the edge between node a and b.
 
     Returns
@@ -493,7 +493,7 @@ def progress_violins(datalist: list[pd.DataFrame],
                      cluster_b: str,
                      min_perc: float | int,
                      output: str,
-                     figsize: Tuple[int, int] = (12, 6)) -> str:
+                     figsize: Tuple[int | float, int | float] = (12, 6)) -> str:
     """
     Show cluster interactions over timepoints.
 
@@ -552,7 +552,7 @@ def interaction_progress(datalist: list[sc.AnnData],
                          ligand: str,
                          receptor_cluster: str,
                          ligand_cluster: str,
-                         figsize: Tuple[int, int] = (4, 4),
+                         figsize: Tuple[int | float, int | float] = (4, 4),
                          dpi: int = 100,
                          output: Optional[str] = None) -> matplotlib.axes.Axes:
     """
@@ -574,7 +574,7 @@ def interaction_progress(datalist: list[sc.AnnData],
         Name of the receptor cluster.
     ligand_cluster : str
         Name of the ligand cluster.
-    figsize : Tuple[int, int], default (4, 4)
+    figsize : Tuple[int | float, int | float], default (4, 4)
         Figure size in inch.
     dpi : int, default 100
         Dots per inch.
@@ -639,8 +639,8 @@ def interaction_progress(datalist: list[sc.AnnData],
 @deco.log_anndata
 @beartype
 def connectionPlot(adata: sc.AnnData,
-                   restrict_to: Optional[str] = None,
-                   figsize: Tuple[int, int] = (10, 15),
+                   restrict_to: Optional[list[str]] = None,
+                   figsize: Tuple[int | float, int | float] = (10, 15),
                    dpi: int = 100,
                    connection_alpha: Optional[str] = "interaction_score",
                    output: Optional[str] = None,
@@ -656,7 +656,7 @@ def connectionPlot(adata: sc.AnnData,
                    ligand_hue: str = "ligand_score",
                    ligand_size: str = "ligand_percent",
                    filter: Optional[str] = None,
-                   lw_multiplier: int = 2,
+                   lw_multiplier: int | float = 2,
                    wspace: float = 0.4,
                    line_colors: Optional[str] = "rainbow") -> npt.ArrayLike:
     """
@@ -668,7 +668,7 @@ def connectionPlot(adata: sc.AnnData,
         AnnData object
     restrict_to : Optional[list[str]], default None
         Restrict plot to given cluster names.
-    figsize : Tuple[int, int], default (10, 15)
+    figsize : Tuple[int | float, int | float], default (10, 15)
         Figure size
     dpi : float, default 100
         The resolution of the figure in dots-per-inch.
