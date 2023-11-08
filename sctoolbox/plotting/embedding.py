@@ -1283,7 +1283,7 @@ def plot_pca_correlation(adata, which="obs",
 
     # Get table of pcs and columns
     n_components = min(n_components, mat.shape[1])  # make sure we don't exceed the number of pcs available
-    comp_columns = [f"PC{i+1}" if components=='pca' else f"UMAP{i+1}" for i in range(n_components)]
+    comp_columns = [f"PC{i+1}" if components == 'pca' else f"UMAP{i+1}" for i in range(n_components)]
     comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
     comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
 
