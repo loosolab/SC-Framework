@@ -6,6 +6,7 @@
 - Removed 'sinto' as dependency and added code in 'create_fragment_file' to create fragment file internally (solves #147)
 - The function 'create_fragment_file' was moved to bam tools.
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
+- Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
 
 0.2 (30-08-2023)
 -----------------
@@ -41,6 +42,7 @@
 - Disabled threads parameter for tSNE (#130)
 - Added 'plot_starsolo_quality' and 'plot_starsolo_UMI' to plotting module (#78)
 - Fixed issues with clustered dotplot with new code (#122)
+
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
