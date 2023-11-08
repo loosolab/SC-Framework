@@ -696,7 +696,7 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing ligand expression percentage. Shown as point size.
     filter : Optional[str], default None
         Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
-    lw_multiplier : int, default 2
+    lw_multiplier : int | float, default 2
         Linewidth multiplier.
     wspace : float, default 0.4
         Width between plots. Fraction of total width.

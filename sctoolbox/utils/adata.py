@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 from typing import Optional, Any
 from beartype import beartype
+import scanpy as sc
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -181,7 +182,7 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
 
 @beartype
 def add_uns_info(adata: sc.AnnData,
-                 key: str | list,
+                 key: str | list[str],
                  value: Any,
                  how: str = "overwrite") -> None:
     """
@@ -193,7 +194,7 @@ def add_uns_info(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         An AnnData object.
-    key : str | list
+    key : str | list[str]
         The key to add to adata.uns['sctoolbox']. If the key is a list, it represents a path within a nested dictionary.
     value : Any
         The value to add to adata.uns['sctoolbox'].
@@ -254,10 +255,10 @@ def add_uns_info(adata: sc.AnnData,
 
 @beartype
 def prepare_for_cellxgene(adata: sc.AnnData,
-                          keep_obs: Optional[list] = None,
-                          keep_var: Optional[list] = None,
-                          rename_obs: Optional[dict] = None,
-                          rename_var: Optional[dict] = None,
+                          keep_obs: Optional[list[str]] = None,
+                          keep_var: Optional[list[str]] = None,
+                          rename_obs: Optional[dict[str, str]] = None,
+                          rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
                           cmap: Optional[str] = "viridis",
                           inplace: bool = False) -> Optional[sc.AnnData]:
@@ -266,7 +267,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
     Parameters
     ----------
-    adata : scanpy.Anndata
+    adata : sc.Anndata
         Anndata object.
     keep_obs : Optional[list], default None
         adata.obs columns that should be kept. None to keep all.
