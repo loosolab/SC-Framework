@@ -13,6 +13,7 @@ import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 import glob
+import deprecation
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -769,6 +770,18 @@ def test_gene_expression_heatmap(adata, title, groupby):
                                    show_col_dendrogram=True,    # ensure title is tested
                                    cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
+
+
+@deprecation.fail_if_not_removed
+@pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
+                                              'ENSMUSG00000102272']])
+@pytest.mark.parametrize("figsize", [None, (10, 10)])
+def test_group_heatmap(adata, gene_list, figsize):
+    """Test group heatmap success."""
+    ax = pl.group_heatmap(adata, "clustering", gene_list=gene_list,
+                         figsize=figsize)
+
+    assert type(ax).__name__ == "AxesSubplot"
 
 
 @pytest.mark.parametrize("kwargs, exception",
