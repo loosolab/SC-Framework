@@ -1268,6 +1268,8 @@ def plot_pca_correlation(adata, which="obs",
     except AttributeError:
         s = f"'{method}' is not a valid method within scipy.stats. Please choose one of pearsonr/spearmanr."
         raise ValueError(s)
+    # for spearman, ignore NaN values
+    nan_policy = 'omit'
 
     # Get columns
     if columns is None:
@@ -1289,7 +1291,7 @@ def plot_pca_correlation(adata, which="obs",
     corr_table_annot = corr_table.copy()
     for row, col in combinations:
 
-        res = corr_method(pc_table[row], pc_table[col])
+        res = corr_method(pc_table[row], pc_table[col], nan_policy=nan_policy)
         corr_table.loc[row, col] = res.statistic
 
         corr_table_annot.loc[row, col] = str(np.round(res.statistic, 2))
