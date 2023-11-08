@@ -1201,7 +1201,7 @@ def plot_pca_variance(adata, method="pca",
 
 @deco.log_anndata
 def plot_pca_correlation(adata, which="obs",
-                         components='pca',
+                         components="pca",
                          n_components=10,
                          columns=None,
                          pvalue_threshold=0.01,
@@ -1218,8 +1218,10 @@ def plot_pca_correlation(adata, which="obs",
         Annotated data matrix object.
     which : str, default "obs"
         Whether to use the observations ("obs") or variables ("var") for the correlation.
-    n_pcs : int, default 10
-        Number of principal components to use for the correlation.
+    components: str. default "pca"
+        The components to calculate correlation with. Must be either "pca" or "umap".
+    n_components : int, default 10
+        Number of pca or umap components to use for the correlation.
     columns : list of str, default None
         List of columns to use for the correlation. If None, all numeric columns are used.
     pvalue_threshold : float, default 0.01
