@@ -6,6 +6,11 @@
 - Removed 'sinto' as dependency and added code in 'create_fragment_file' to create fragment file internally (solves #147)
 - The function 'create_fragment_file' was moved to bam tools.
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
+- Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
+
+Changes to notebooks:
+^^^^^^^^^^^^^^^^^^^^
+- Added plot of highly expressed genes to RNA notebook 03 (#43)
 
 0.2 (30-08-2023)
 -----------------
