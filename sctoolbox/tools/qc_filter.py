@@ -788,7 +788,7 @@ def get_thresholds_wrapper(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to find QC thresholds for.
-    manual_thresholds : dict
+    manual_thresholds : dict[str, dict[str, Union[float, dict[str, float]]]]
         Dictionary containing manually set thresholds
     only_automatic_thresholds : bool, default True
         If True, only set automatic thresholds.
@@ -842,7 +842,7 @@ def get_keys(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object
-    manual_thresholds : dict
+    manual_thresholds : dict[str, Any]
         Dictionary with adata.obs colums as keys.
 
     Returns
@@ -863,7 +863,7 @@ def get_keys(adata: sc.AnnData,
 
 
 @beartype
-def get_mean_thresholds(thresholds: dict[str, Any]):
+def get_mean_thresholds(thresholds: dict[str, Any]) -> dict[str, Any]:
     """Convert grouped thresholds to global thresholds by taking the mean across groups."""
 
     global_thresholds = {}
@@ -907,7 +907,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
         Dictionary of thresholds to apply.
     which : Literal["obs", "var"], default 'obs'
        Which table to filter on. Must be one of "obs" / "var".
-    groupby : str, default None
+    groupby : Optional[str], default None
         Column in table to group by.
     inplace : bool, default True
         Change adata inplace or return a changed copy.
@@ -1024,7 +1024,7 @@ def _filter_object(adata: sc.AnnData,
                    filter: str | list[str],
                    which: Literal["obs", "var"] = "obs",
                    remove_bool: bool = True,
-                   inplace: bool = True):
+                   inplace: bool = True) -> Optional[sc.AnnData]:
     """Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes."""
 
     # Decide which element type (genes/cells) we are dealing with

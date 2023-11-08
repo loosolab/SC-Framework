@@ -56,9 +56,9 @@ def download_db(adata: sc.AnnData,
         Use 'receptor_gene_symbol' for the urls provided above.
     sep : str, default '\t'
         Separator of database table.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
-    overwrite : boolean, default False
+    overwrite : bool, default False
         If True will overwrite existing database.
 
     Notes
@@ -126,15 +126,15 @@ def calculate_interaction_table(adata: sc.AnnData,
         AnnData object that holds the expression values and clustering
     cluster_column : str
         Name of the cluster column in adata.obs.
-    gene_index : str, default None
+    gene_index : Optional[str], default None
         Column in adata.var that holds gene symbols/ ids.
         Corresponds to `download_db(ligand_column, receptor_column)`.
         Uses index when None.
     normalize : int, default 1000
         Correct clusters to given size.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
-    overwrite : boolean, default False
+    overwrite : bool, default False
         If True will overwrite existing interaction table.
 
     Returns
@@ -283,7 +283,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def interaction_violin_plot(adata: sc.AnnData,
-                            min_perc: int,
+                            min_perc: int | float,
                             output: Optional[str] = None,
                             figsize: Tuple[int, int] = (5, 20),
                             dpi: int = 100) -> npt.ArrayLike:
@@ -294,7 +294,7 @@ def interaction_violin_plot(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object
-    min_perc : int
+    min_perc : int | float
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     output : str, default None
         Path to output file.
