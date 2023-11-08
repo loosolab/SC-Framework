@@ -412,7 +412,7 @@ def _prepare_gtf(gtf: str,
 def _annotate_features(region_dicts: list[dict],
                        threads: int,
                        gtf: str,
-                       cfg_dict: dict,
+                       cfg_dict: Optional[dict],
                        best: bool) -> pd.DataFrame:
     """
     Annotate features.
@@ -425,7 +425,7 @@ def _annotate_features(region_dicts: list[dict],
         Number of threads to perform the annotation.
     gtf : str
         Path to the .gtf file
-    cfg_dict : dict
+    cfg_dict : Optional[dict]
         A dictionary indicating how regions should be annotated.
         Set to None to annotate feature 'gene' within -10000;1000bp of the gene start.
     best : bool
