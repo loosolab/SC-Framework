@@ -8,6 +8,10 @@
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 - Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
 
+Changes to notebooks:
+^^^^^^^^^^^^^^^^^^^^
+- Added plot of highly expressed genes to RNA notebook 03 (#43)
+
 0.2 (30-08-2023)
 -----------------
 - implemented prepare_for_cellxgene
@@ -42,7 +46,6 @@
 - Disabled threads parameter for tSNE (#130)
 - Added 'plot_starsolo_quality' and 'plot_starsolo_UMI' to plotting module (#78)
 - Fixed issues with clustered dotplot with new code (#122)
-
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
