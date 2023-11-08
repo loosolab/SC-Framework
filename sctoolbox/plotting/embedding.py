@@ -1201,7 +1201,8 @@ def plot_pca_variance(adata, method="pca",
 
 @deco.log_anndata
 def plot_pca_correlation(adata, which="obs",
-                         n_pcs=10,
+                         components='pca',
+                         n_components=10,
                          columns=None,
                          pvalue_threshold=0.01,
                          method="spearmanr",
@@ -1240,7 +1241,7 @@ def plot_pca_correlation(adata, which="obs",
     Raises
     ------
     ValueError
-        If "which" is not "obs" or "var", or if "method" is not "pearsonr" or "spearmanr".
+        If "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "components" is "umap".
     KeyError
         If any of the given columns is not found in the respective table.
 
@@ -1255,8 +1256,10 @@ def plot_pca_correlation(adata, which="obs",
     # Establish which table to use
     if which == "obs":
         table = adata.obs.copy()
-        mat = adata.obsm["X_pca"]
+        mat = adata.obsm[f"X_{components}"]
     elif which == "var":
+        if components == "umap":
+            raise ValueError("Correlation with 'var' can only be calculated with PCA components!")
         table = adata.var.copy()
         mat = adata.varm["PCs"]
     else:
@@ -1279,26 +1282,26 @@ def plot_pca_correlation(adata, which="obs",
         utils.check_columns(table, columns)
 
     # Get table of pcs and columns
-    n_pcs = min(n_pcs, mat.shape[1])  # make sure we don't exceed the number of pcs available
-    pc_columns = [f"PC{i+1}" for i in range(n_pcs)]
-    pc_table = pd.DataFrame(mat[:, :n_pcs], columns=pc_columns)
-    pc_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
+    n_components = min(n_components, mat.shape[1])  # make sure we don't exceed the number of pcs available
+    comp_columns = [f"PC{i+1}" if components=='pca' else f"UMAP{i+1}" for i in range(n_components)]
+    comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
+    comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
 
     # Calculate correlation of columns
-    combinations = list(itertools.product(numeric_columns, pc_columns))
+    combinations = list(itertools.product(numeric_columns, comp_columns))
 
-    corr_table = pd.DataFrame(index=numeric_columns, columns=pc_columns, dtype=float)
+    corr_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
     corr_table_annot = corr_table.copy()
     for row, col in combinations:
 
-        res = corr_method(pc_table[row], pc_table[col], nan_policy=nan_policy)
+        res = corr_method(comp_table[row], comp_table[col], nan_policy=nan_policy)
         corr_table.loc[row, col] = res.statistic
 
         corr_table_annot.loc[row, col] = str(np.round(res.statistic, 2))
         corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
 
     # Plot heatmap
-    figsize = figsize if figsize is not None else (len(pc_columns) / 1.5, len(numeric_columns) / 1.5)
+    figsize = figsize if figsize is not None else (len(comp_columns) / 1.5, len(numeric_columns) / 1.5)
     fig, ax = plt.subplots(figsize=figsize)
 
     ax = sns.heatmap(corr_table,
