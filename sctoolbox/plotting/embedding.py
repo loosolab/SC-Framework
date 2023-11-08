@@ -1069,8 +1069,14 @@ def anndata_overview(adatas,
 
     # Set common y-axis limit for LISI plots
     if len(LISI_axes) > 0:
-        LISI_axes[0].get_shared_y_axes().join(LISI_axes[0], *LISI_axes[1:])
-        LISI_axes[0].autoscale()  # scale all plots to same y-limits
+        min_y, max_y = np.inf, -np.inf
+        for ax in LISI_axes:
+            ylim = ax.get_ylim()
+            min_y = min(min_y, ylim[0])
+            max_y = max(max_y, ylim[1])
+
+        for ax in LISI_axes:
+            ax.set_ylim(min_y, max_y)  # scale all plots to same y-limits
 
         LISI_axes[0].set_ylabel("Unique batch labels in cell neighborhood")
 

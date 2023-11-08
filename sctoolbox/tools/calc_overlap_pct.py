@@ -3,7 +3,7 @@ Module to calculate percentage of reads from a BAM or fragments file that overla
 
 Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
 in a GTF file using 'pct_reads_in_promoters' function.
-The function 'pct_reads_overlap' calculates percentage of
+pct_reads_overlap() calculates percentage of
 reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
 as first columns.
 """
@@ -16,94 +16,10 @@ from pathlib import Path
 import multiprocessing as mp
 from typing import Tuple, Union
 import sctoolbox.utils as utils
+from sctoolbox.tools.bam import create_fragment_file
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
-
-
-def create_fragment_file(bam, cb_tag='CB', out=None, nproc=1, sort_bam=False, keep_temp=False, temp_files=[]) -> Tuple[str, str]:
-    """
-    Create fragments file out of a BAM file using the package sinto.
-
-    Parameters
-    ----------
-    bam : str
-        Path to .bam file.
-    cb_tag : str, default 'CB'
-        The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    out : str, default None
-        Path to save fragments file. If none, the file will be saved in the same folder as tha BAM file.
-    nproc : int, default 1
-        Number of threads for parallelization.
-    sort_bam : boolean, default False
-        Set to True if the provided BAM file is not sorted.
-    keep_temp : boolean, default False
-        If true keep temporary files.
-    temp_files : list, default []
-        List of temporary files.
-
-    Returns
-    -------
-    Tuple[str, str]
-        Path to fragments and temp files.
-    """
-
-    utils.check_module("pysam")
-    utils.check_module("sinto")
-    import pysam
-    from sinto.fragments import fragments
-
-    # extract bam file name and path
-
-    if not out:
-        path = os.path.splitext(bam)
-        out_unsorted = f"{path[0]}_fragments.bed"
-        out_sorted = f"{path[0]}_fragments_sorted.bed"
-        if sort_bam:
-            bam_sorted = f"{path[0]}_sorted.bam"
-            temp_files.append(bam_sorted)
-    else:
-        name = os.path.basename(bam).split('.')[0]
-        out_unsorted = os.path.join(out, f"{name}_fragments.bed")
-        out_sorted = os.path.join(out, f"{name}_fragments_sorted.bed")
-        if sort_bam:
-            bam_sorted = os.path.join(out, f"{name}_sorted.bam")
-            temp_files.append(bam_sorted)
-
-    if not keep_temp:
-        temp_files.append(out_sorted)
-    # sort bam if not sorted
-    if sort_bam:
-        logger.info("Sorting BAM file...")
-        pysam.sort("-o", bam_sorted, bam)
-        bam = bam_sorted
-        pysam.index(bam)
-
-    # check for bam index file
-    if not os.path.exists(bam + ".bai"):
-        logger.info("Bamfile has no index - trying to index with pysam...")
-        pysam.index(bam)
-
-    # sinto = os.path.join('/'.join(sys.executable.split('/')[:-1]),'sinto')
-    # create_cmd = f'''{sinto} fragments -b {bam} -p {nproc} -f {out} --barcode_regex "[^:]*"'''
-    # execute command
-    # os.system(create_cmd)
-
-    # use tag 'CB' if barcodes are stored in a tag, otherwise extract barcodes from read names
-    readname_bc = None if cb_tag else "[^:]*"
-    # run sinto
-    fragments(bam, out_unsorted, nproc=nproc, cellbarcode=cb_tag, readname_barcode=readname_bc)
-    logger.info('Finished creating fragments file. Now sorting...')
-
-    # sort
-    utils._sort_bed(out_unsorted, out_sorted)
-    logger.info('Finished sorting fragments')
-
-    # remove unsorted
-    os.remove(out_unsorted)
-
-    # return path to sorted fragments file
-    return out_sorted, temp_files
 
 
 def _convert_gtf_to_bed(gtf, out=None, temp_files=[]) -> Tuple[str, str]:
@@ -118,7 +34,7 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]) -> Tuple[str, str]:
     gtf : str
         Path to .gtf file.
     out : str, default None
-        Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
+        Path to save new BED file. If none, the file will be saved in the same folder as the BAM file.
     temp_files : list, default []
         List of temporary files.
 
@@ -173,7 +89,7 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]) -> Union[bool, Tuple[
     bed2 : str
         Path to second BED file.
     out : str, default None
-        Path to save overlapped file. If none, the file will be saved in the same folder as tha BAM file.
+        Path to save overlapped file. If none, the file will be saved in the same folder as the BAM file.
     temp_files : list, default []
         List of temporary files.
 
