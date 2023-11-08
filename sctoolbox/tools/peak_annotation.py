@@ -220,7 +220,7 @@ def annotate_narrowPeak(filepath: str,
         Number of threads to perform the annotation.
     temp_dir : str, default ''
         Path to the directory where the temporary files should be written.
-    remove_temp : boolean, default True
+    remove_temp : bool, default True
         If True remove temporary directory after execution.
 
     Returns

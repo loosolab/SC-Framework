@@ -713,7 +713,7 @@ def _validate_minmax(d: dict) -> None:
 
 @beartype
 def validate_threshold_dict(table: pd.DataFrame,
-                            thresholds: dict,
+                            thresholds: dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]],
                             groupby: Optional[str] = None) -> None:
     """
     Validate threshold dictionary.
@@ -725,7 +725,7 @@ def validate_threshold_dict(table: pd.DataFrame,
         thresholds = {"chrM_percent": {"min": 0, "max": 10},
                       "total_reads": {"min": 1000}}
 
-    Or per group in 'groupy':
+    Or per group in 'groupby':
 
     .. code-block:: python
 
@@ -737,11 +737,11 @@ def validate_threshold_dict(table: pd.DataFrame,
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Table to validate thresholds for.
-    thresholds : dict
+    thresholds : dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]]
         Dictionary of thresholds to validate.
-    groupby : str, deafult None
+    groupby : Optional[str], default None
         Column for grouping thresholds.
 
     Raises
@@ -792,7 +792,7 @@ def get_thresholds_wrapper(adata: sc.AnnData,
         Dictionary containing manually set thresholds
     only_automatic_thresholds : bool, default True
         If True, only set automatic thresholds.
-    groupby : str, default None
+    groupby : Optional[str], default None
         Group cells by column in adata.obs.
 
     Returns
