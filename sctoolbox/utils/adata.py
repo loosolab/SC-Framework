@@ -269,13 +269,13 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     ----------
     adata : sc.Anndata
         Anndata object.
-    keep_obs : Optional[list], default None
+    keep_obs : Optional[list[str]], default None
         adata.obs columns that should be kept. None to keep all.
-    keep_var : Optional[list], default None
+    keep_var : Optional[list[str]], default None
         adata.var columns that should be kept. None to keep all.
-    rename_obs : Optional[dict], default None
+    rename_obs : Optional[dict[str, str]], default None
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
-    rename_var : Optional[list], default None
+    rename_var : Optional[dict[str, str]], default None
         Dictionary of .var columns to rename. Key is the old name, value the new one.
     embedding_names : Optional[list[str]], default ["pca", "umap", "tsne"]
         List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.

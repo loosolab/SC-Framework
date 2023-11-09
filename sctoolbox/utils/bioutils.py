@@ -257,7 +257,7 @@ def convert_id(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData with gene ids.
-    id_col_name : str, default None
+    id_col_name : Optional[str], default None
         Name of the column in `adata.var` that stores the gene ids.
     index : boolean, default False
         Use index of `adata.var` instead of column name speciefied in `id_col_name`.

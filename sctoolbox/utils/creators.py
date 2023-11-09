@@ -55,7 +55,7 @@ def gitlab_download(internal_path: str,
         Overwrite file if it exsits in the directory
     max_calls : int, default 5
         limit file download rate per period
-    period : int, deafult 60
+    period : int, default 60
         period length in seconds
 
     Raises
@@ -162,7 +162,7 @@ def add_analysis(dest: str,
         Path to experiment.
     analysis_name : str
         Name of the new analysis run.
-    method : Literal["rna", "atac"]
+    method : Literal["rna", "atac"], default "rna"
         Type of notebooks to download.
     dirs : list[str], default ['figures', 'data', 'logs']
         Internal folders to create besides 'notebooks' directory.

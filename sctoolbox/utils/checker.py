@@ -347,16 +347,16 @@ def format_adata_var(adata: sc.AnnData,
 
 
 @beartype
-def in_range(value: int, limits: Tuple[int, int],
+def in_range(value: int | float, limits: Tuple[int | float, int | float],
              include_limits: bool = True) -> bool:
     """
     Check if a value is in a given range.
 
     Parameters
     ----------
-    value : int
+    value : int | float
         Number to check if in range.
-    limits : Tuple[int, int]
+    limits : Tuple[int | float, int | float]
         Lower and upper limits. E.g. (0, 10)
     include_limits : bool, default True
         If True includes limits in accepted range.
@@ -411,7 +411,7 @@ def check_columns(df: pd.DataFrame,
         A pandas dataframe to check.
     columns : list
         A list of column names to check for within `df`.
-    error : boolean, default True
+    error : bool, default True
         If True raise errror if not all columns are found.
         If False return true or false
     name : str, default dataframe

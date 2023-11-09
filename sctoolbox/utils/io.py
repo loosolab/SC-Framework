@@ -41,6 +41,7 @@ def get_temporary_filename(tempdir: str = ".") -> str:
     Parameters
     ----------
     tempdir : str, default "."
+        The path where the temp file will be created.
 
     Returns
     -------
@@ -87,7 +88,7 @@ def rm_tmp(temp_dir: str, tempfiles: Optional[list[str]] = None) -> None:
     ----------
     temp_dir : str
         Path to the temporary directory.
-    tempfiles : list[str], default None
+    tempfiles : Optional[list[str]], default None
         Paths to files to be deleted before removing the temp directory.
     """
 
