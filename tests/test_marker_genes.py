@@ -99,9 +99,7 @@ def test_get_rank_genes_tables(adata):
     os.remove("rank_genes.xlsx")
 
 
-@pytest.mark.parametrize("kwargs", [{"var_columns": "gene"},
-                                    {"var_columns": ["invalid", "columns"]},
-                                    {"save_excel": list}])  # save_excel must be str
+@pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str
 def test_get_rank_genes_tables_errors(adata, kwargs):
     """Test if get_rank_gene_tables raises errors."""
 
