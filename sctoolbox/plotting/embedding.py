@@ -108,7 +108,10 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 # -------------------- UMAP / tSNE embeddings ----------------------#
 #####################################################################
 
-def _add_contour(x, y, ax):
+@beartype
+def _add_contour(x : np.ndarray, 
+                 y : np.ndarray,
+                 ax : matplotlib.axes.Axes):
     """Add contour plot to a scatter plot.
 
     Parameters
@@ -135,19 +138,21 @@ def _add_contour(x, y, ax):
     ax.contour(X, Y, f, colors="black", linewidths=0.5)
 
 
-def embedding(adata,
-              method="umap",
-              color=None,
-              style="dots",
-              show_borders=False,
-              show_contour=False,
-              show_count=True,
-              show_title=True,
-              hexbin_gridsize=30,
-              shrink_colorbar=0.3,
-              square=True,
-              save=None,
-              **kwargs) -> np.ndarray:
+@deco.log_anndata
+@beartype
+def embedding(adata: sc.AnnData,
+              method: str = "umap",
+              color: Optional[list[str | None] | str] = None,
+              style: Literal["dots", "hexbin", "density"] = "dots",
+              show_borders: bool = False,
+              show_contour: bool = False,
+              show_count: bool = True,
+              show_title: bool = True,
+              hexbin_gridsize: int = 30,
+              shrink_colorbar: float | int = 0.3,
+              square: bool = True,
+              save: Optional[str] = None,
+              **kwargs) -> npt.ArrayLike:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -156,9 +161,9 @@ def embedding(adata,
         Annotated data matrix object.
     method : str, default "umap"
         Dimensionality reduction method to use. Must be a key in adata.obsm, or a method available as "X_<method>" such as "umap", "tsne" or "pca".
-    color : str or lst of str, default None
+    color : Optional[str | list[str]], default None
         Key for annotation of observations/cells or variables/genes.
-    style : str, default "dots"
+    style : Literal["dots", "hexbin", "density".], default "dots"
         Style of the plot. Must be one of "dots", "hexbin" or "density".
     show_borders : bool, default False
         Whether to show borders around embedding plot. If False, the borders are removed and a small legend is added to the plot.
@@ -170,19 +175,19 @@ def embedding(adata,
         Whether to show the titles of the plots. If False, the titles are removed and the names are added to the colorbar/legend instead.
     hexbin_gridsize : int, default 30
         Number of hexbins across plot - higher values give smaller bins. Only used if style="hexbin".
-    shrink_colorbar : float, default 0.3
+    shrink_colorbar : float | int, default 0.3
         Shrink the height of the colorbar by this factor.
     square : bool, default True
         Whether to make the plot square.
-    save : str, default None
+    save : Optional[str], default None
         Filename to save the figure.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`scanpy.pl.embedding`.
 
     Returns
     -------
-    np.ndarray
-        2D numpy array of axis objects
+    axes : npt.ArrayLike
+        Array of axis objects
 
     Raises
     ------

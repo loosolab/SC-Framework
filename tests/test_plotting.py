@@ -596,7 +596,7 @@ def test_embedding(adata, style, kwargs):
 
     axes_list = pl.embedding(adata, color=colors, style=style, **kwargs)
 
-    assert type(axes_list).__name__ == "list"
+    assert len(axes_list) == len(colors)
     ax_type = type(axes_list[0]).__name__
     assert ax_type.startswith("Axes")
 

@@ -277,7 +277,7 @@ def get_cell_values(adata: sc.AnnData,
     """
 
     if element in adata.obs:
-        values = adata.obs[element]
+        values = np.array(adata.obs[element].values)
     elif element in adata.var.index:
         idx = list(adata.var.index).index(element)
         values = adata.X[:, idx]
