@@ -3,7 +3,7 @@ Module to calculate percentage of reads from a BAM or fragments file that overla
 
 Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
 in a GTF file using 'pct_reads_in_promoters' function.
-The function 'pct_reads_overlap' calculates percentage of
+pct_reads_overlap() calculates percentage of
 reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
 as first columns.
 """
