@@ -11,7 +11,7 @@ import warnings
 import anndata
 from pathlib import Path
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -192,7 +192,7 @@ def run_rank_genes(adata: sc.AnnData,
                    min_in_group_fraction: float = 0.25,
                    min_fold_change: float = 0.5,
                    max_out_group_fraction: float = 0.8,
-                   **kwargs: dict) -> None:
+                   **kwargs: Any) -> None:
     """
     Run scanpy rank_genes_groups and filter_rank_genes_groups.
 
@@ -211,7 +211,7 @@ def run_rank_genes(adata: sc.AnnData,
     max_out_group_fraction : float, default 0.8
         Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
         Parameter forwarded to scanpy.tl.filter_rank_genes_groups.
-    **kwargs : dict
+    **kwargs : Any
         Additional arguments forwarded to scanpy.tl.rank_genes_groups.
 
     Raises
@@ -254,7 +254,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
                         foldchange_threshold: float = 1,
                         min_in_group_fraction: float = 0.25,
                         max_out_group_fraction: float = 0.5,
-                        **kwargs: dict
+                        **kwargs: Any
                         ) -> pd.DataFrame:
     """
     Rank genes pairwise between groups in 'groupby'.
@@ -271,7 +271,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
     max_out_group_fraction : float, default 0.5
         Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.
-    **kwargs : dict
+    **kwargs : Any
         Additional arguments to be passed to scanpy.tl.rank_genes_groups.
 
     Returns

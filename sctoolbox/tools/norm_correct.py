@@ -331,7 +331,7 @@ def batch_correction(adata: sc.AnnData,
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
-    **kwargs :
+    **kwargs : Any
         Additional arguments will be forwarded to the method function.
 
     Returns

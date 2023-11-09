@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 import scanpy as sc
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -25,7 +25,7 @@ def annot_HVG(anndata: sc.AnnData,
               step: int | float = 10,
               inplace: bool = True,
               save: Optional[bool] = None,
-              **kwargs: dict) -> Optional[sc.AnnData]:
+              **kwargs: Any) -> Optional[sc.AnnData]:
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
 
@@ -46,7 +46,7 @@ def annot_HVG(anndata: sc.AnnData,
         Whether the anndata object is modified inplace.
     save : Optional[str], default None
         Path to save the plot to. If None, the plot is not saved.
-    **kwargs : dict
+    **kwargs : Any
         Additional arguments forwarded to scanpy.pp.highly_variable_genes().
 
     Notes

@@ -448,7 +448,7 @@ def open_bam(file: str,
         Mode to open the file in. See pysam.AlignmentFile
     verbosity : Literal[0, 1, 2, 3], default 3
         Set verbosity level. Verbosity level 0 for no messages.
-    **kwargs :
+    **kwargs : Any
         Forwarded to pysam.AlignmentFile
 
     Returns

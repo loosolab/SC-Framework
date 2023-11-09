@@ -239,7 +239,7 @@ def estimate_doublets(adata: sc.AnnData,
         If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
         a doublet score. Keep in mind that this does not mean that it is no doublet.
         By setting this parameter true it is assmuned that it is no doublet.
-    **kwargs :
+    **kwargs : Any
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
     Notes

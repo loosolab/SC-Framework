@@ -149,7 +149,7 @@ def add_analysis(dest: str,
                  method: Literal["rna", "atac"] = "rna",
                  dirs: list[str] = ['figures', 'data', 'logs'],
                  starts_with: int = 1,
-                 **kwargs: dict[Any]) -> None:
+                 **kwargs: Any) -> None:
     """
     Create and add a new analysis/run.
 
@@ -168,7 +168,7 @@ def add_analysis(dest: str,
         Internal folders to create besides 'notebooks' directory.
     starts_with : int, default 1
         Notebook the analysis will start with.
-    **kwargs : dict[Any]
+    **kwargs : Any
         Forwarded to `gitlab_download`.
 
     Raises

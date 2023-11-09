@@ -290,7 +290,7 @@ def n_cells_barplot(adata: sc.AnnData,
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
-    **kwargs :
+    **kwargs : Any
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
     Returns

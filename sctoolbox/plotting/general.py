@@ -124,7 +124,7 @@ def _add_labels(data: pd.DataFrame,
                 y: str,
                 label_col: Optional[str] = None,
                 ax: Optional[matplotlib.axes.Axes] = None,
-                **kwargs) -> list:
+                **kwargs: Any) -> list:
     """Add labels to a scatter plot.
 
     Parameters
@@ -139,7 +139,7 @@ def _add_labels(data: pd.DataFrame,
         Name of the column in data to use for labels. If `None`, the index of data is used.
     ax : matplotlib.axes.Axes, default None
         Axis to plot on. If `None`, the current open figure axis is used.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to matplotlib.axes.Axes.annotate.
 
     Returns

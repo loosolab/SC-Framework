@@ -119,7 +119,7 @@ def search_umap_parameters(adata: sc.AnnData,
         Number of threads to use for UMAP calculation.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
-    **kwargs : arguments
+    **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.tl.umap`.
 
     Returns
@@ -170,7 +170,7 @@ def search_tsne_parameters(adata: sc.AnnData,
         This may be fixed in the future.
     save : Optional[str], default None (not saved)
         Path to save the figure to.
-    **kwargs : arguments
+    **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.tl.tsne`.
 
     Returns
@@ -229,7 +229,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         For tSNE, the embeddings are calculated serially, but each calculation uses 'threads' as 'n_jobs' within sc.tl.tsne.
     save : Optional[str], default None
         Path to save the figure to.
-    **kwargs : arguments
+    **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.tl.umap` or :func:`scanpy.tl.tsne`.
 
     Returns
@@ -459,7 +459,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
         Embedding to plot. Must be one of "umap", "tsne" or "pca".
     adata_names : Optional[list[str]], default None (adatas will be named adata_1, adata_2, etc.)
         List of names for the adata objects. Must be the same length as adata_list or None
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to sc.pl.umap/sc.pl.tsne/sc.pl.pca.
 
     Returns
@@ -742,7 +742,7 @@ def umap_marker_overview(adata: sc.AnnData,
         If not None save plot under given name.
     cbar_label : str, default "Relative expr."
         Colorbar label
-    **kwargs :
+    **kwargs : Any
         Additional parameter for scanpy.pl.umap()
 
     Returns
@@ -829,7 +829,7 @@ def umap_pub(adata: sc.AnnData,
         Title of the plot. Default is no title.
     save : Optional[str], default None
         Filename to save the figure.
-    **kwargs :
+    **kwargs : Any
         Additional arguments passed to `sc.pl.umap`.
 
     Returns

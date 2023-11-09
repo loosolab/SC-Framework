@@ -7,7 +7,7 @@ import glob
 from scipy import sparse
 from scipy.io import mmread
 
-from typing import Optional, Union, Literal
+from typing import Optional, Union, Literal, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -264,7 +264,7 @@ def from_single_mtx(mtx: str,
                     barcode_index: int = 0,
                     genes_index: int = 0,
                     delimiter: str = "\t",
-                    **kwargs: dict) -> sc.AnnData:
+                    **kwargs: Any) -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -286,7 +286,7 @@ def from_single_mtx(mtx: str,
         Column which contains the gene IDs.
     delimiter : str, default '\t'
         delimiter of genes and barcodes table.
-    **kwargs : dict
+    **kwargs : Any
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
@@ -337,7 +337,7 @@ def from_mtx(path: str,
              mtx: str = "*_matrix.mtx*",
              barcodes: str = "*_barcodes.tsv*",
              genes: str = "*_genes.tsv*",
-             **kwargs: dict) -> sc.AnnData:
+             **kwargs: Any) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and genes files.
 
@@ -351,7 +351,7 @@ def from_mtx(path: str,
         String for glob to find barcode files.
     genes : str, default '*_genes.tsv*'
         String for glob to find gene label files.
-    **kwargs : dict
+    **kwargs : Any
         Contains additional arguments for scanpy.read_mtx method
 
     Returns

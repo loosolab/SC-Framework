@@ -60,7 +60,7 @@ def rank_genes_plot(adata: sc.AnnData,
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
     save : Optional[str], default None
         If given, save the figure to this path.
-    **kwargs :
+    **kwargs : Any
         Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
 
     Raises
@@ -213,7 +213,7 @@ def grouped_violin(adata: sc.AnnData,
         A matplotlib axes object to plot violinplots in. If None, a new figure and axes is created.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
-    **kwargs :
+    **kwargs : Any
         Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
 
     Returns
@@ -447,7 +447,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
         Size of the figure. If `None`, use default size.
     save : Optional[str], default None
         If given, save the figure to this path.
-    **kwargs :
+    **kwargs : Any
         Additional arguments passed to `seaborn.clustermap`.
 
     Returns
@@ -657,7 +657,7 @@ def plot_differential_genes(rank_table: pd.DataFrame,
         Title of the plot.
     save : Optional[str], default None
         If given, save the figure to this path.
-    **kwargs :
+    **kwargs : Any
         Keyword arguments passed to pl.bidirectional_barplot.
 
     Raises

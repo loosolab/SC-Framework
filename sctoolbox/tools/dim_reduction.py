@@ -5,7 +5,7 @@ import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 
-from typing import Optional
+from typing import Optional, Any
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
@@ -22,7 +22,7 @@ logger = settings.logger
 def compute_PCA(anndata: sc.AnnData,
                 use_highly_variable: bool = True,
                 inplace: bool = False,
-                **kwargs: dict) -> Optional[sc.AnnData]:
+                **kwargs: Any) -> Optional[sc.AnnData]:
     """
     Compute a principal component analysis.
 
@@ -34,7 +34,7 @@ def compute_PCA(anndata: sc.AnnData,
         If true, use highly variable genes to compute PCA.
     inplace : bool, default False
         Whether the anndata object is modified inplace.
-    **kwargs : dict
+    **kwargs : Any
         Additional parameters forwarded to scanpy.pp.pca().
 
     Returns
