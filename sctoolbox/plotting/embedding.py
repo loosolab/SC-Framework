@@ -109,9 +109,9 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 #####################################################################
 
 @beartype
-def _add_contour(x : np.ndarray, 
-                 y : np.ndarray,
-                 ax : matplotlib.axes.Axes):
+def _add_contour(x: np.ndarray,
+                 y: np.ndarray,
+                 ax: matplotlib.axes.Axes):
     """Add contour plot to a scatter plot.
 
     Parameters
