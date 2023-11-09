@@ -178,6 +178,13 @@ def embedding(adata,
     np.ndarray
         2D numpy array of axis objects
 
+    Raises
+    ------
+    KeyError
+        If the given method is not found in adata.obsm.
+    ValueError
+        If the given style is not supported.
+
     Examples
     --------
     .. plot::

@@ -242,7 +242,7 @@ def add_uns_info(adata, key, value, how="overwrite") -> None:
                 d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
 
 
-def get_cell_values(adata, element):
+def get_cell_values(adata, element) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
 
     Parameters
@@ -250,12 +250,17 @@ def get_cell_values(adata, element):
     adata : anndata.AnnData
         Anndata object.
     element : str
-        The element to extract from adata.obs or adata.var.
+        The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
 
     Returns
     -------
     np.ndarray
         Array of values per cell in adata.
+
+    Raises
+    ------
+    ValueError
+        If element is not found in adata.obs or adata.var.
     """
 
     if element in adata.obs:
