@@ -226,7 +226,7 @@ build-pages:
   image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"  # ensure that all dependencies are available
   stage: deploy
   script:
-    - sudo apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
+    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
