@@ -6,7 +6,6 @@ import os
 import glob
 from scipy import sparse
 from scipy.io import mmread
-import anndata as ad
 
 from typing import Optional, Union, Literal
 from beartype import beartype
@@ -82,8 +81,8 @@ def assemble_from_h5ad(h5ad_files: list[str],
 
         adata_dict[sample] = adata
 
-    adata = ad.concat(adata_dict, label=merge_column)
-    adata.uns = ad.concat(adata_dict, uns_merge='same').uns
+    adata = sc.concat(adata_dict, label=merge_column)
+    adata.uns = sc.concat(adata_dict, uns_merge='same').uns
     for value in adata_dict.values():
         adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
 
