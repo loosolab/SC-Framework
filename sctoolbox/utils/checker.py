@@ -9,7 +9,7 @@ import shutil
 import scanpy as sc
 import pandas as pd
 
-from typing import Optional, Tuple, Any, Sequence
+from typing import Optional, Tuple, Any, Iterable
 from beartype import beartype
 import numpy.typing as npt
 
@@ -232,7 +232,7 @@ def get_index_type(entry: str) -> Optional[str]:
 
 @beartype
 def validate_regions(adata: sc.AnnData,
-                     coordinate_columns: Sequence[str]) -> None:
+                     coordinate_columns: Iterable[str]) -> None:
     """
     Check if the regions in adata.var are valid.
 
@@ -240,7 +240,7 @@ def validate_regions(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object containing the regions to be checked.
-    coordinate_columns : Sequence[str]
+    coordinate_columns : Iterable[str]
         List of length 3 for column names in adata.var containing chr, start, end coordinates.
 
     Raises
@@ -269,8 +269,8 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def format_adata_var(adata: sc.AnnData,
-                     coordinate_columns: Optional[Sequence[str]] = None,
-                     columns_added: Sequence[str] = ["chr", "start", "end"]) -> None:
+                     coordinate_columns: Optional[Iterable[str]] = None,
+                     columns_added: Iterable[str] = ["chr", "start", "end"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
@@ -287,10 +287,10 @@ def format_adata_var(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object containing features to annotate.
-    coordinate_columns : Optional[Sequence[str]], default None
+    coordinate_columns : Optional[Iterable[str][str]], default None
         List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
         If None, the index will be formatted.
-    columns_added : Sequence[str], default ['chr', 'start', 'end']
+    columns_added : Iterable[str], default ['chr', 'start', 'end']
         List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
 
     Raises
@@ -397,7 +397,7 @@ def is_integer_array(arr: npt.ArrayLike) -> bool:
 
 @beartype
 def check_columns(df: pd.DataFrame,
-                  columns: Sequence[str],
+                  columns: Iterable[str],
                   error: bool = True,
                   name: str = "dataframe") -> Optional[bool]:
     """
@@ -409,7 +409,7 @@ def check_columns(df: pd.DataFrame,
     ----------
     df : pd.DataFrame
         A pandas dataframe to check.
-    columns : Sequence[str]
+    columns : Iterable[str]
         A list of column names to check for within `df`.
     error : bool, default True
         If True raise errror if not all columns are found.
