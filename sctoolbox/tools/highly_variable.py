@@ -24,7 +24,7 @@ def annot_HVG(anndata: sc.AnnData,
               hvg_range: Tuple[int, int] = (1000, 5000),
               step: int | float = 10,
               inplace: bool = True,
-              save: Optional[bool] = None,
+              save: Optional[str] = None,
               **kwargs: Any) -> Optional[sc.AnnData]:
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
