@@ -458,7 +458,7 @@ def scale_values(array: npt.ArrayLike, mini: int | float, maxi: int | float) -> 
 
     Parameters
     ----------
-    array : ArrayLike
+    array : npt.ArrayLike
         Array to scale.
     mini : int | float
         Minimum value of the scale.
