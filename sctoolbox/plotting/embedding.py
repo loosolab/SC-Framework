@@ -14,7 +14,7 @@ import matplotlib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 import plotly as po
 import plotly.graph_objects as go
 
@@ -134,8 +134,9 @@ def embedding(adata,
               show_borders=False,
               show_contour=False,
               show_count=True,
+              show_title=True,
               hexbin_gridsize=30,
-              shrink_colorbar=0.5,
+              shrink_colorbar=0.3,
               square=True,
               save=None,
               **kwargs) -> np.ndarray:
@@ -150,18 +151,18 @@ def embedding(adata,
     color : str or lst of str, default None
         Key for annotation of observations/cells or variables/genes.
     style : str, default "dots"
-        Style of the plot. Must be one of "dots" or "hexbin".
+        Style of the plot. Must be one of "dots", "hexbin" or "density".
     show_borders : bool, default False
         Whether to show borders around embedding plot. If False, the borders are removed and a small legend is added to the plot.
     show_contour : bool, default False
         Whether to show a contour plot on top of the plot.
     show_count : bool, default True
         Whether to show the number of cells in the plot.
-    show_titles : bool, default False
+    show_title : bool, default True
         Whether to show the titles of the plots. If False, the titles are removed and the names are added to the colorbar/legend instead.
     hexbin_gridsize : int, default 30
         Number of hexbins across plot - higher values give smaller bins. Only used if style="hexbin".
-    shrink_colorbar : float, default 0.5
+    shrink_colorbar : float, default 0.3
         Shrink the height of the colorbar by this factor.
     square : bool, default True
         Whether to make the plot square.
@@ -180,7 +181,22 @@ def embedding(adata,
     .. plot::
         :context: close-figs
 
-        pl.embedding(adata, method="umap", color="louvain", title="Louvain clusters")
+        pl.embedding(adata, color="louvain", legend_loc="on data")
+
+    .. plot::
+        :context: close-figs
+
+        _ = pl.embedding(adata, method="pca", color="n_genes", show_contour=True, show_title=False)
+
+    .. plot::
+        :context: close-figs
+
+        _ = pl.embedding(adata, color=['n_genes', 'HES4'], style="hexbin")
+
+    .. plot::
+        :context: close-figs
+
+        ax = pl.embedding(adata, color=['n_genes', 'louvain'], style="density")
     """
 
     # Check that method is in adata.obsm
@@ -191,13 +207,17 @@ def embedding(adata,
         if basis not in adata.obsm:
             raise KeyError(f"The given method '{method}' cannot be found in adata.obsm. The available keys are: {adata.obsm.keys()}.")
 
+    # Check that style is valid
+    if style not in ["dots", "hexbin", "density"]:
+        raise ValueError(f"Invalid style '{style}'. Please choose from ['dots', 'hexbin', 'density'].")
+
     # ---- Plot embedding for chosen colors ---- #
 
     kwargs["color_map"] = kwargs.get("color_map", sc_colormap())  # set cmap to sc_colormap if not given
     parameters = {"color": color,
                   "basis": basis,
                   "show": False}
-    if style == "hexbin":
+    if style != "dots":
         parameters["alpha"] = 0  # make dots transparent
     kwargs.update(parameters)
 
@@ -210,7 +230,6 @@ def embedding(adata,
         color = [color]
 
     # ---- Adjust style of individual plots ---- #
-    colorbar_count = 0
     for i, ax in enumerate(axarr):
 
         coordinates = adata.obsm[basis][:, :2]
@@ -219,59 +238,106 @@ def embedding(adata,
         ax.set_xlabel(f"{method.upper()}1")
         ax.set_ylabel(f"{method.upper()}2")
 
-        # Set legend
+        # Remove title
+        if not show_title:
+            ax.set_title("")
+
+        # Set titles of legend / colorbar / plot
         legend = ax.get_legend()
+        local_axes = ax.figure._localaxes  # list of all plot and colorbar axes in figure
         has_colorbar = False
         if legend is not None:  # legend of categorical variables
-            legend.set_title(color[i])
+            if not show_title:
+                legend.set_title(color[i])
         else:                   # legend of continuous variables
-            colorbar_idx = i + colorbar_count + 1
-            local_axes = ax.figure._localaxes
-            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
-                local_axes[colorbar_idx].set_title(color[i])
-                colorbar_count += 1
-                has_colorbar = True
+            cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
+            cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
+            cbar_ax = local_axes[cbar_ax_idx]
+            if cbar_ax._label == "<colorbar>":
+                has_colorbar = True  # this ax has colorbar
 
-            # Shrink colorbar
-            # todo
+                if not show_title:
+                    cbar_ax.set_title(color[i])
 
-        # Plot hexbin style if chosen
-        if style == "hexbin":
+        # Add additional style to plots
+        if style != "dots":
 
-            # Ensure that color is continuous
-            if color[i] is not None and has_colorbar is False:
-                raise ValueError(f"Hexbin style is only supported for continuous variables, and is not possible for the values found in '{color[i]}'. Please set 'style' to 'dots' or use a continuous variable.")
-
-            # Determine color values
+            # Prepare color values
             if color[i] is None:
                 color_values = None
-            elif color[i] in adata.obs:
-                color_values = adata.obs[color[i]]
-            elif color[i] in adata.var.index:
-                color_idx = list(adata.var.index).index(color[i])
-                color_values = adata.X[:, color_idx]
-                color_values = color_values.todense().A1 if issparse(color_values) else color_values
+            else:
+                color_values = utils.adata.get_cell_values(adata, color[i])
 
             # Determine colors to use
             cmap = kwargs["color_map"]
             cmap = mpl.rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
             if color_values is None:
-                cmap = "Greys"  # if no color values are given, use greyscale to show density
+                cmap = grey_colormap()  # if no color values are given, use greyscale to show density
 
-            # Plot hexbin
-            xlim, ylim = ax.get_xlim(), ax.get_ylim()
-            hb = ax.hexbin(coordinates[:, 0], y=coordinates[:, 1], C=color_values,
-                           mincnt=1, gridsize=hexbin_gridsize, cmap=cmap)
-            ax.set_xlim(xlim)
-            ax.set_ylim(ylim)
+            # Plot hexbin/density style if chosen
+            if style == "hexbin":
 
-            # Set colorbar for number of cells if color is None
-            if color_values is None:
-                ax.figure.colorbar(hb, ax=ax, label="Number of cells")
+                # Ensure that color is continuous
+                if color[i] is not None and has_colorbar is False:
+                    raise ValueError(f"Hexbin style is only supported for continuous variables, and is not possible for the values found in '{color[i]}'. Please set 'style' to 'dots', 'density' or use a continuous variable.")
 
-            # Replace colorbar with hexbin values
-            if has_colorbar:
-                ax.figure.colorbar(hb, ax=ax, cax=local_axes[colorbar_idx])
+                # Plot hexbin
+                xlim, ylim = ax.get_xlim(), ax.get_ylim()
+                hb = ax.hexbin(coordinates[:, 0], y=coordinates[:, 1], C=color_values,
+                               mincnt=1, gridsize=hexbin_gridsize, cmap=cmap)
+                ax.set_xlim(xlim)
+                ax.set_ylim(ylim)
+
+                # Replace colorbar with hexbin values
+                if has_colorbar:
+                    ax.figure.colorbar(hb, ax=ax, cax=cbar_ax)
+
+                # Set colorbar for number of cells if color is None
+                if color_values is None:
+                    ax.figure.colorbar(hb, ax=ax, label="Number of cells")
+                    cbar_ax = ax.figure.axes[-1]
+                    has_colorbar = True
+
+                    # Move colorbar to the correct position in _localaxes
+                    index = local_axes.index(ax)
+                    local_axes.insert(index + 1, local_axes.pop())  # insert colorbar after plot
+
+            elif style == "density":
+
+                if color[i] is None:
+                    has_colorbar = True  # even non-colored plots have colorbar with density of cells
+
+                # Values are continous
+                if has_colorbar:
+                    if color_values is None:
+                        sns.kdeplot(x=coordinates[:, 0], y=coordinates[:, 1], fill=True, ax=ax, cmap=cmap, thresh=0.01, cbar=True,
+                                    cbar_kws={"label": "Cell density"})
+                        cbar_ax = ax.figure.axes[-1]  # colorbar was added to last axis
+
+                    else:
+                        color_values_scaled = (color_values - color_values.min()) / (color_values.max() - color_values.min())  # scale to 0-1
+                        sns.kdeplot(x=coordinates[:, 0], y=coordinates[:, 1], fill=True, weights=color_values_scaled,
+                                    ax=ax, cmap=cmap, thresh=0.01, cbar=True, cbar_ax=cbar_ax, cbar_kws={"label": f"Cell density\n(weighted by {color[i]})"})
+
+                else:  # values are categorical
+                    cat2color = dict(zip(adata.obs[color[i]].cat.categories, adata.uns[color[i] + "_colors"]))
+
+                    adata_subsets = utils.get_adata_subsets(adata, groupby=color[i])
+                    for group, adata_sub in adata_subsets.items():
+                        coordinates_sub = adata_sub.obsm[basis][:, :2]
+
+                        # Plot kde in color from original plot
+                        kde_color = cat2color[group]
+                        collection_len_before = len(ax.collections)
+                        custom_cmap = LinearSegmentedColormap.from_list(f'{group}_cmap', ['lightgrey', kde_color], N=256)
+                        sns.kdeplot(x=coordinates_sub[:, 0], y=coordinates_sub[:, 1], fill=True, ax=ax, cmap=custom_cmap, thresh=0.01)
+
+                        # Set alpha for each level (enables seeing overlapping groups; lowest level are most see-through)
+                        n_obj_added = len(ax.collections) - collection_len_before
+                        objects = ax.collections[-n_obj_added:]
+                        alpha_list = np.linspace(0.2, 1, len(objects))
+                        for i, obj in enumerate(objects):
+                            obj.set_alpha(alpha_list[i])
 
         # Add contour to plot
         if show_contour:
@@ -316,6 +382,29 @@ def embedding(adata,
         # Adjust aspect ratio
         if square:
             _make_square(ax)
+
+        # Final formatting of colorbar incl. shrink
+        if has_colorbar:
+
+            cbar = cbar_ax._colorbar
+            plt.colorbar(cbar.mappable, ax=ax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+            new_cbar_ax = ax.figure.axes[-1]
+
+            # Carry over title and ylabel
+            new_cbar_ax.set_title(cbar_ax.get_title(), fontsize=10)
+            new_cbar_ax.set_ylabel(cbar_ax.get_ylabel(), fontsize=10)
+
+            # Set specific cbar style for density plots
+            if style == "density":
+
+                # Adjust colorbar to remove density values
+                yticks = new_cbar_ax.get_yticks()
+                new_cbar_ax.set_yticks([yticks[0], yticks[-1]])
+                new_cbar_ax.set_yticklabels(["low", "high"])
+
+            # Move colorbar to the correct position in _localaxes
+            cbar_idx = local_axes.index(cbar_ax)
+            local_axes[cbar_idx] = new_cbar_ax
 
     # Save figure
     _save_figure(save)
