@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sciclust
+import seaborn
+
+from beartype import beartype
+from typing import Iterable, Optional, Literal, Tuple, Union, Any
 
 from sctoolbox import settings
 
@@ -18,12 +22,14 @@ from sctoolbox import settings
 # -------------------- General helper functions for plotting ------------------------- #
 ########################################################################################
 
-def _save_figure(path, dpi=600):
+@beartype
+def _save_figure(path: Optional[str],
+                 dpi: int = 600) -> None:
     """Save the current figure to a file.
 
     Parameters
     ----------
-    path : str
+    path : Optional[str]
         Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_dir' + 'sctoolbox.settings.figure_prefix' as prefix.
         Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff.
         The lack of extension indicates the figure will be saved as .png.
@@ -38,7 +44,8 @@ def _save_figure(path, dpi=600):
         plt.savefig(output_path, dpi=dpi, bbox_inches="tight", facecolor="white")
 
 
-def _make_square(ax):
+@beartype
+def _make_square(ax: matplotlib.axes.Axes) -> None:
     """Force a plot to be square using aspect ratio regardless of the x/y ranges."""
 
     xrange = np.diff(ax.get_xlim())[0]
@@ -48,16 +55,20 @@ def _make_square(ax):
     ax.set_aspect(aspect)
 
 
-def _add_figure_title(axarr, title, y=1.3, fontsize=16):
+@beartype
+def _add_figure_title(axarr: Iterable[matplotlib.axes.Axes] | matplotlib.axes.Axes | seaborn.matrix.ClusterGrid,
+                      title: str,
+                      y: float | int = 1.3,
+                      fontsize: int = 16) -> None:
     """Add a figure title to the top of a multi-axes figure.
 
     Parameters
     ----------
-    axarr : list[matplotlib.Axes]
+    axarr : Iterable[matplotlib.axes.Axes] | matplotlib.axes.Axes
         List of axes to add the title to.
     title : str
         Title to add at the top of plot.
-    y : float, default 1.3
+    y : float | int, default 1.3
         Vertical position of the title in relation to the content. Larger number moves the title further up.
     fontsize : int, default 16
         Font size of the title.
@@ -107,7 +118,13 @@ def _add_figure_title(axarr, title, y=1.3, fontsize=16):
     _ = axarr[0].text(tx, ty, title, va="bottom", ha="center", fontsize=fontsize)
 
 
-def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
+@beartype
+def _add_labels(data: pd.DataFrame,
+                x: str,
+                y: str,
+                label_col: Optional[str] = None,
+                ax: Optional[matplotlib.axes.Axes] = None,
+                **kwargs: Any) -> list:
     """Add labels to a scatter plot.
 
     Parameters
@@ -122,7 +139,7 @@ def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
         Name of the column in data to use for labels. If `None`, the index of data is used.
     ax : matplotlib.axes.Axes, default None
         Axis to plot on. If `None`, the current open figure axis is used.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to matplotlib.axes.Axes.annotate.
 
     Returns
@@ -155,10 +172,22 @@ def _add_labels(data, x, y, label_col=None, ax=None, **kwargs) -> list:
 #############################################################################
 
 
-def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
-                       fillna=0, title=None, figsize=None,
-                       dend_height=2, dend_width=2, palette="vlag", x_rot=45, show_grid=False,
-                       save=None) -> list:
+@beartype
+def clustermap_dotplot(table: pd.DataFrame,
+                       x: str,
+                       y: str,
+                       size: str,
+                       hue: str,
+                       cluster_on: Literal["hue", "size"] = "hue",
+                       fillna: float | int = 0,
+                       title: Optional[str] = None,
+                       figsize: Optional[Tuple[int | float, int | float]] = None,
+                       dend_height: float | int = 2,
+                       dend_width: float | int = 2,
+                       palette: str = "vlag",
+                       x_rot: int = 45,
+                       show_grid: bool = False,
+                       save: Optional[str] = None) -> list:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -174,17 +203,17 @@ def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
         Column in table to use for the size of the dots.
     hue : str
         Column in table to use for the color of the dots.
-    cluster_on : str, default hue
+    cluster_on : Literal["hue", "size"], default hue
         Decide which values to use for creating the dendrograms. Either "hue" or "size".
-    fillna : float, default 0
+    fillna : float | int, default 0
         Replace NaN with given value.
-    title : str, default None
+    title : Optional[str], default None
         Title of the dotplot.
-    figsize : float tuple, default None
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Figure size in inches. Default is estimated from the number of rows/columns (ncols/3, nrows/3).
-    dend_height : float, default 2
+    dend_height : float | int, default 2
         Height of the x-axis dendrogram in counts of row elements, e.g. 2 represents a height of 2 rows in the dotplot.
-    dend_width : float, default 2
+    dend_width : float | int, default 2
         Width of the y-axis dendrogram in counts of column elements, e.g. 2 represents a width of 2 columns in the dotplot.
     palette : str, default vlag
         Color palette for hue colors.
@@ -192,7 +221,7 @@ def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
         Rotation of xticklabels in degrees.
     show_grid : bool, default False
         Show grid behind dots in plot.
-    save : str, default None
+    save : Optional[str], default None
         Save the figure to this path.
 
     Returns
@@ -336,30 +365,31 @@ def clustermap_dotplot(table, x, y, size, hue, cluster_on="hue",
 #                                       Barplot                                        #
 ########################################################################################
 
-def bidirectional_barplot(df,
-                          title=None,
-                          colors=None,
-                          figsize=None,
-                          save=None) -> matplotlib.axes.Axes:
+@beartype
+def bidirectional_barplot(df: pd.DataFrame,
+                          title: Optional[str] = None,
+                          colors: Optional[dict[str, str]] = None,
+                          figsize: Optional[Tuple[int | float, int | float]] = None,
+                          save: Optional[str] = None) -> matplotlib.axes.Axes:
     """Plot a bidirectional barplot.
 
-    The input is a dataframe with the following columns:
-    - left_label
-    - right_label
-    - left_value
-    - right_value
+    A vertical barplot where each position has one bar going left and one going right (bidirectional).
 
     Parameters
     ----------
     df : pd.DataFrame
-        Dataframe with the following columns: left_label, right_label, left_value, right_value.
-    title : str, default None
+        Dataframe with the following mandatory column names:
+            - left_label
+            - right_label
+            - left_value
+            - right_value
+    title : Optional[str], default None
         Title of the plot.
-    colors : dict, default None
+    colors : Optional[dict[str, str]], default None
         Dictionary with label names as keys and colors as values.
-    figsize : tuple, default None
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Figure size.
-    save : str, default None
+    save : Optional[str], default None
         If given, the figure will be saved to this path.
 
     Returns
@@ -451,7 +481,10 @@ def bidirectional_barplot(df,
 # -----------------------------  Boxplot / violinplot -------------------------------- #
 ########################################################################################
 
-def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
+@beartype
+def boxplot(dt: pd.DataFrame,
+            show_median: bool = True,
+            ax: Optional[matplotlib.axes.Axes] = None) -> matplotlib.axes.Axes:
     """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
@@ -460,7 +493,7 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
         pandas datafame containing numerical values in every column.
     show_median : boolean, default True
         If True show median value as small box inside the boxplot.
-    ax : matplotlib.axes.Axes, default None
+    ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
 
     Returns
@@ -519,7 +552,17 @@ def boxplot(dt, show_median=True, ax=None) -> matplotlib.axes.Axes:
     return ax
 
 
-def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title=None, ylabel=True) -> matplotlib.axes.Axes:
+@beartype
+def violinplot(table: pd.DataFrame,
+               y: str,
+               color_by: Optional[str] = None,
+               hlines: Optional[Union[float | int,
+                                      list[float | int],
+                                      dict[str, Union[float | int, list[float | int]]]]] = None,
+               colors: Optional[list[str]] = None,
+               ax: Optional[matplotlib.axes.Axes] = None,
+               title: Optional[str] = None,
+               ylabel: bool = True) -> matplotlib.axes.Axes:
     """Plot a violinplot with optional horizontal lines for each violin.
 
     Parameters
@@ -528,17 +571,18 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
         Values to create the violins from.
     y : str
         Column name of table. Values that will be shown on y-axis.
-    color_by : str, default None
+    color_by : Optional[str], default None
         Column name of table. Used to color group violins.
-    hlines : float/ list or dict of float/ list with color_by categories as keys, default None
+    hlines : Optional[Union[float | int, list[float | int],
+                            dict[str, Union[float | int, list[float | int]]]]], default None
         Define horizontal lines for each violin.
-    colors : list of str, default None
+    colors : Optional[list[str]], default None
         List of colors to use for violins.
-    ax : matplotlib.axes.Axes, default None
+    ax : Optional[matplotlib.axes.Axes], default None
         Axes object to draw the plot on. Otherwise use current axes.
-    title : str, default None
+    title : Optional[str], default None
         Title of the plot.
-    ylabel : bool or str, default True
+    ylabel : bool | str, default True
         Boolean if ylabel should be shown. Or str for custom ylabel.
 
     Returns
@@ -656,29 +700,27 @@ def violinplot(table, y, color_by=None, hlines=None, colors=None, ax=None, title
 # --------------------------------  Venn diagrams ------------------------------------ #
 ########################################################################################
 
-def plot_venn(groups_dict, title=None, save=None):
+@beartype
+def plot_venn(groups_dict: dict[str, list[Any]],
+              title: Optional[str] = None,
+              save: Optional[str] = None):
     """Plot a Venn diagram from a dictionary of 2-3 groups of lists.
 
     Parameters
     ----------
-    groups_dict : dict
+    groups_dict : dict[str, list[Any]]
         A dictionary where the keys are group names (strings) and the values
         are lists of items belonging to that group (e.g. {'Group A': ['A', 'B', 'C'], ...}).
-    title : str, default None
+    title : Optional[str], default None
         Title of the plot.
-    save : str, default None
+    save : Optional[str], default None
         Filename to save the plot to.
 
     Raises
     ------
     ValueError
-        If groups_dict is not a dictionary or number of groups is not 2 or 3.
+        If number of groups in groups_dict is not 2 or 3.
     """
-    # Check if input is dict
-    if not isinstance(groups_dict, dict):
-        s = "The 'groups_dict' variable must be a dictionary. "
-        s += "Please ensure that you are passing a valid dictionary as input."
-        raise ValueError(s)
 
     # Extract the lists of items from the dictionary and convert them to sets
     group_sets = [set(groups_dict[group]) for group in groups_dict]
@@ -705,7 +747,11 @@ def plot_venn(groups_dict, title=None, save=None):
 # -------------------------------- Scatter plots ------------------------------------- #
 ########################################################################################
 
-def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
+@beartype
+def pairwise_scatter(table: pd.DataFrame,
+                     columns: list[str],
+                     thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
+                     save: Optional[str] = None) -> np.ndarray:
     """Plot a grid of scatterplot comparing column values pairwise.
 
     If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
@@ -716,9 +762,9 @@ def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
         Dataframe containing the data to plot.
     columns : list[str]
         List of column names in table to plot.
-    thresholds : dict, default None
+    thresholds : Optional[dict[str, dict[Literal["min", "max"], int | float]]], default None
         Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
-    save : str, default None
+    save : Optional[str], default None
         If given, the figure will be saved to this path.
 
     Returns
@@ -729,7 +775,8 @@ def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
     Raises
     ------
     ValueError
-        If columns is not a list of column names or if columns contains less than two columns.
+        1. If columns contains less than two columns.
+        2. If one of the given columns is not a table column
 
     Examples
     --------
@@ -744,9 +791,6 @@ def pairwise_scatter(table, columns, thresholds=None, save=None) -> np.ndarray:
 
         pl.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
     """
-
-    if isinstance(columns, str):
-        raise ValueError("'columns' must be a list of column names.")
 
     if len(columns) < 2:
         raise ValueError("'columns' must contain at least two columns to compare.")

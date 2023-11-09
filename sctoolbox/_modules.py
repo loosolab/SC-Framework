@@ -3,7 +3,7 @@ import glob
 import os
 
 
-def import_submodules(globals):
+def import_submodules(globals: dict) -> None:
     """Import all functions from submodules into the upper module namespace.
 
     This enables usage with `sctoolbox.plotting.plot_umap()` as well as `sctoolbox.plotting.embedding.plot_umap()`.
