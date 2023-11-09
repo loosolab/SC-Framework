@@ -65,7 +65,7 @@ setup(
     python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
     install_requires=[
         'pysam',
-        'matplotlib==3.6.2',
+        'matplotlib', # ==3.6.2',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
