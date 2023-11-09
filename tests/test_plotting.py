@@ -13,6 +13,7 @@ import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 import glob
+import deprecation
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -569,6 +570,27 @@ def test_umap_marker_overview(adata, marker):
     assert ax_type.startswith("Axes")
 
 
+@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True},
+                                    {"show_title": False, "show_contour": False}])
+@pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
+def test_embedding(adata, style, kwargs):
+    """Assert embedding works and returns Axes object."""
+
+    # Collect test colors
+    colors = ["qcvar1"]   # continous obs variable
+    colors.append(adata.var.index[0])  # continous gene variable
+    colors.append(None)          # no color / density plot
+    if style != "hexbin":
+        colors.append("clustering")  # categorical obs variable; only available for dots/density
+
+    axes_list = pl.embedding(adata, color=colors, style=style, **kwargs)
+
+    assert type(axes_list).__name__ == "list"
+    ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", "Condition"),
                                          (["condition", "clustering"], None),
                                          (["condition", "clustering"], ["Condition", "Clustering"])])
@@ -581,6 +603,7 @@ def test_umap_pub(adata, color, title):
     assert ax_type.startswith("Axes")
 
 
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", ["Title 1", "Title 2"]),
                                          (["condition", "clustering"], "Title 1")])
 def test_invalid_parameter_len_umap_pub(adata, color, title):

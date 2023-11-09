@@ -20,6 +20,8 @@ import plotly.graph_objects as go
 
 from numba import errors as numba_errors
 
+import deprecation
+from sctoolbox import __version__
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 import sctoolbox.utils.decorator as deco
@@ -404,7 +406,9 @@ def embedding(adata,
 
             # Move colorbar to the correct position in _localaxes
             cbar_idx = local_axes.index(cbar_ax)
+            new_cbar_idx = local_axes.index(new_cbar_ax)
             local_axes[cbar_idx] = new_cbar_ax
+            local_axes.pop(new_cbar_idx)  # remove original idx of new_cbar_ax
 
     # Save figure
     _save_figure(save)
@@ -412,6 +416,9 @@ def embedding(adata,
     return axarr
 
 
+@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
+                        current_version=__version__,
+                        details="Use the 'sctoolbox.pl.embedding' function instead.")
 @deco.log_anndata
 def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
     """Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
@@ -477,6 +484,32 @@ def umap_pub(adata, color=None, title=None, save=None, **kwargs) -> list:
         ax.set_title("")
         if title is not None:
             ax.set_title(title[i])
+
+        # Remove all spines (axes lines)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        # Move x and y-labels to the start of axes
+        label = ax.xaxis.get_label()
+        label.set_horizontalalignment('left')
+        x_lab_pos, y_lab_pos = label.get_position()
+        label.set_position([0, y_lab_pos])
+
+        label = ax.yaxis.get_label()
+        label.set_horizontalalignment('left')
+        x_lab_pos, y_lab_pos = label.get_position()
+        label.set_position([x_lab_pos, 0])
+
+        # Draw UMAP coordinate arrows
+        ymin, ymax = ax.get_ylim()
+        xmin, xmax = ax.get_xlim()
+        yrange = ymax - ymin
+        xrange = xmax - xmin
+        arrow_len_y = yrange * 0.2
+        arrow_len_x = xrange * 0.2
+
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
+        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
 
         # Add number of cells to plot
         ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
