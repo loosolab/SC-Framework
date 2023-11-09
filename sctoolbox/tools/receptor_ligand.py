@@ -16,8 +16,11 @@ from matplotlib.patches import ConnectionPatch
 import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
 import warnings
-from typing import Optional
-import anndata
+import scanpy as sc
+
+from typing import Optional, Tuple
+import numpy.typing as npt
+from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
 
@@ -26,13 +29,20 @@ import sctoolbox.utils.decorator as deco
 
 
 @deco.log_anndata
-def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplace=False, overwrite=False) -> Optional[anndata.AnnData]:
+@beartype
+def download_db(adata: sc.AnnData,
+                db_path: str,
+                ligand_column: str,
+                receptor_column: str,
+                sep: str = "\t",
+                inplace: bool = False,
+                overwrite: bool = False) -> Optional[sc.AnnData]:
     r"""
     Download table of receptor-ligand interactions and store in adata.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Analysis object the database will be added to.
     db_path : str
         Path to database table. A valid database needs a column with receptor gene ids/symbols and ligand gene ids/symbols.
@@ -46,9 +56,9 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
         Use 'receptor_gene_symbol' for the urls provided above.
     sep : str, default '\t'
         Separator of database table.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
-    overwrite : boolean, default False
+    overwrite : bool, default False
         If True will overwrite existing database.
 
     Notes
@@ -57,7 +67,7 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If not inplace, return copy of adata with added database path and
         database table to adata.uns['receptor-ligand']
 
@@ -100,31 +110,36 @@ def download_db(adata, db_path, ligand_column, receptor_column, sep="\t", inplac
 
 
 @deco.log_anndata
-def calculate_interaction_table(adata, cluster_column, gene_index=None,
-                                normalize=1000, inplace=False, overwrite=False) -> Optional[anndata.AnnData]:
+@beartype
+def calculate_interaction_table(adata: sc.AnnData,
+                                cluster_column: str,
+                                gene_index: Optional[str] = None,
+                                normalize: int = 1000,
+                                inplace: bool = False,
+                                overwrite: bool = False) -> Optional[sc.AnnData]:
     """
     Calculate an interaction table of the clusters defined in adata.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object that holds the expression values and clustering
     cluster_column : str
         Name of the cluster column in adata.obs.
-    gene_index : str, default None
+    gene_index : Optional[str], default None
         Column in adata.var that holds gene symbols/ ids.
         Corresponds to `download_db(ligand_column, receptor_column)`.
         Uses index when None.
     normalize : int, default 1000
         Correct clusters to given size.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
-    overwrite : boolean, default False
+    overwrite : bool, default False
         If True will overwrite existing interaction table.
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If not inpalce, return copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
 
     Raises
@@ -266,15 +281,20 @@ def calculate_interaction_table(adata, cluster_column, gene_index=None,
 
 
 @deco.log_anndata
-def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=100) -> np.array:
+@beartype
+def interaction_violin_plot(adata: sc.AnnData,
+                            min_perc: int | float,
+                            output: Optional[str] = None,
+                            figsize: Tuple[int, int] = (5, 20),
+                            dpi: int = 100) -> npt.ArrayLike:
     """
     Generate violin plot of pairwise cluster interactions.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object
-    min_perc : float
+    min_perc : int | float
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     output : str, default None
         Path to output file.
@@ -285,7 +305,7 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
 
@@ -324,31 +344,32 @@ def interaction_violin_plot(adata, min_perc, output=None, figsize=(5, 20), dpi=1
 
 
 @deco.log_anndata
-def hairball(adata,
-             min_perc,
-             interaction_score=0,
-             interaction_perc=None,
-             output=None,
-             title="Network",
-             color_min=0,
-             color_max=None,
-             cbar_label="Interaction count",
-             show_count=False,
-             restrict_to=None,
-             additional_nodes=None,
-             hide_edges=None) -> np.array:
+@beartype
+def hairball(adata: sc.AnnData,
+             min_perc: int | float,
+             interaction_score: float | int = 0,
+             interaction_perc: Optional[int | float] = None,
+             output: Optional[str] = None,
+             title: Optional[str] = "Network",
+             color_min: float | int = 0,
+             color_max: Optional[float | int] = None,
+             cbar_label: str = "Interaction count",
+             show_count: bool = False,
+             restrict_to: Optional[list[str]] = None,
+             additional_nodes: Optional[list[str]] = None,
+             hide_edges: list[Tuple[str, str]] = None) -> npt.ArrayLike:
     """
     Generate network graph of interactions between clusters.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object
-    min_perc : float
+    min_perc : int | float
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
-    interaction_score : float, default 0
+    interaction_score : float | int, default 0
         Interaction score must be above this threshold for the interaction to be counted in the graph.
-    interaction_perc : float, default None
+    interaction_perc : Optional[int | float], default None
         Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
     output : str, default None
         Path to output file.
@@ -356,22 +377,22 @@ def hairball(adata,
         The plots title.
     color_min : float, default 0
         Min value for color range.
-    color_max : float, default max
+    color_max : Optional[float | int], default None
         Max value for color range.
     cbar_label : str, default 'Interaction count'
         Label above the colorbar.
     show_count : bool, default False
         Show the interaction count in the hairball.
-    restrict_to : list of str, default None
+    restrict_to : Optional[list[str]], default None
         Only show given clusters provided in list.
-    additional_nodes : list, default None
+    additional_nodes : Optional[list[str]], default None
         List of additional node names displayed in the hairball.
-    hide_edges : list of tuples, default None
+    hide_edges : Optional[list[Tuple[str, str]]], default None
         List of tuples with node names that should not have an edge shown. Order doesn't matter. E.g. `[("a", "b")]` to omit the edge between node a and b.
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises
@@ -465,7 +486,14 @@ def hairball(adata,
     return axes
 
 
-def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output, figsize=(12, 6)) -> str:
+@beartype
+def progress_violins(datalist: list[pd.DataFrame],
+                     datalabel: list[str],
+                     cluster_a: str,
+                     cluster_b: str,
+                     min_perc: float | int,
+                     output: str,
+                     figsize: Tuple[int | float, int | float] = (12, 6)) -> str:
     """
     Show cluster interactions over timepoints.
 
@@ -475,19 +503,19 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
 
     Parameters
     ----------
-    datalist : list
+    datalist : list[pd.DataFrame]
         List of interaction DataFrames. Each DataFrame represents a timepoint.
-    datalabel : list
+    datalabel : list[str]
         List of strings. Used to label the violins.
     cluster_a : str
         Name of the first interacting cluster.
     cluster_b : str
         Name of the second interacting cluster.
-    min_perc : float
+    min_perc : float | int
         Minimum percentage of cells in a cluster each gene must be expressed in.
     output : str
         Path to output file.
-    figsize : int tuple, default (12, 6)
+    figsize : Tuple[int, int], default (12, 6)
         Tuple of plot (width, height).
 
     Returns
@@ -517,8 +545,16 @@ def progress_violins(datalist, datalabel, cluster_a, cluster_b, min_perc, output
         fig.savefig(output)
 
 
-def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster,
-                         ligand_cluster, figsize=(4, 4), dpi=100, output=None) -> matplotlib.axes.Axes:
+@beartype
+def interaction_progress(datalist: list[sc.AnnData],
+                         datalabel: list[str],
+                         receptor: str,
+                         ligand: str,
+                         receptor_cluster: str,
+                         ligand_cluster: str,
+                         figsize: Tuple[int | float, int | float] = (4, 4),
+                         dpi: int = 100,
+                         output: Optional[str] = None) -> matplotlib.axes.Axes:
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
 
@@ -526,9 +562,9 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
 
     Parameters
     ----------
-    datalist : list of Anndata
+    datalist : list[sc.AnnData]
         List of anndata objects.
-    datalabel : list of str
+    datalabel : list[str]
         List of labels for the given datalist.
     receptor : str
         Name of the receptor gene.
@@ -538,11 +574,11 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
         Name of the receptor cluster.
     ligand_cluster : str
         Name of the ligand cluster.
-    figsize : int tuple, default (4, 4)
+    figsize : Tuple[int | float, int | float], default (4, 4)
         Figure size in inch.
     dpi : int, default 100
         Dots per inch.
-    output : str, default None
+    output : Optional[str], default None
         Path to output file.
 
     Returns
@@ -601,45 +637,46 @@ def interaction_progress(datalist, datalabel, receptor, ligand, receptor_cluster
 
 
 @deco.log_anndata
-def connectionPlot(adata,
-                   restrict_to=None,
-                   figsize=(10, 15),
-                   dpi=100,
-                   connection_alpha="interaction_score",
-                   output=None,
-                   title=None,
+@beartype
+def connectionPlot(adata: sc.AnnData,
+                   restrict_to: Optional[list[str]] = None,
+                   figsize: Tuple[int | float, int | float] = (10, 15),
+                   dpi: int = 100,
+                   connection_alpha: Optional[str] = "interaction_score",
+                   output: Optional[str] = None,
+                   title: Optional[str] = None,
                    # receptor params
-                   receptor_cluster_col="receptor_cluster",
-                   receptor_col="receptor_gene",
-                   receptor_hue="receptor_score",
-                   receptor_size="receptor_percent",
+                   receptor_cluster_col: str = "receptor_cluster",
+                   receptor_col: str = "receptor_gene",
+                   receptor_hue: str = "receptor_score",
+                   receptor_size: str = "receptor_percent",
                    # ligand params
-                   ligand_cluster_col="ligand_cluster",
-                   ligand_col="ligand_gene",
-                   ligand_hue="ligand_score",
-                   ligand_size="ligand_percent",
-                   filter=None,
-                   lw_multiplier=2,
-                   wspace=0.4,
-                   line_colors="rainbow") -> np.array:
+                   ligand_cluster_col: str = "ligand_cluster",
+                   ligand_col: str = "ligand_gene",
+                   ligand_hue: str = "ligand_score",
+                   ligand_size: str = "ligand_percent",
+                   filter: Optional[str] = None,
+                   lw_multiplier: int | float = 2,
+                   wspace: float = 0.4,
+                   line_colors: Optional[str] = "rainbow") -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object
-    restrict_to : str list, default None
+    restrict_to : Optional[list[str]], default None
         Restrict plot to given cluster names.
-    figsize : int tuple, default (10, 15)
+    figsize : Tuple[int | float, int | float], default (10, 15)
         Figure size
     dpi : float, default 100
         The resolution of the figure in dots-per-inch.
     connection_alpha : str, default 'interaction_score'
         Name of column that sets alpha value of lines between plots. None to disable.
-    output : str, default None
+    output : Optional[str], default None
         Path to output file.
-    title : str, default None
+    title : Optional[str], default None
         Title of the plot
     receptor_cluster_col : str, default 'receptor_cluster'
         Name of column containing cluster names of receptors. Shown on x-axis.
@@ -657,18 +694,18 @@ def connectionPlot(adata,
         Name of column containing ligand scores. Shown as point color.
     ligand_size : str, default 'ligand_percent'
         Name of column containing ligand expression percentage. Shown as point size.
-    filter : str, default None
+    filter : Optional[str], default None
         Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
-    lw_multiplier : int, default 2
+    lw_multiplier : int | float, default 2
         Linewidth multiplier.
     wspace : float, default 0.4
         Width between plots. Fraction of total width.
-    line_colors : str, default 'rainbow'
+    line_colors : Optional[str], default 'rainbow'
         Name of colormap used to color lines. All lines are black if None.
 
     Returns
     -------
-    np.array
+    npt.ArrayLike
         Object containing all plots. As returned by matplotlib.pyplot.subplots
 
     Raises
@@ -815,23 +852,29 @@ def connectionPlot(adata,
 
 
 @deco.log_anndata
-def get_interactions(anndata, min_perc=None, interaction_score=None, interaction_perc=None, group_a=None, group_b=None) -> pd.DataFrame:
+@beartype
+def get_interactions(anndata: sc.AnnData,
+                     min_perc: Optional[float | int] = None,
+                     interaction_score: Optional[float | int] = None,
+                     interaction_perc: Optional[float | int] = None,
+                     group_a: Optional[list[str]] = None,
+                     group_b: Optional[list[str]] = None) -> pd.DataFrame:
     """
     Get interaction table from anndata and apply filters.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object to pull interaction table from.
-    min_perc : float, default None
+    min_perc : Optional[float | int], default None
         Minimum percent of cells in a cluster that express the ligand/ receptor gene. Value from 0-100.
-    interaction_score : float, default None
+    interaction_score : Optional[float | int], default None
         Filter receptor-ligand interactions below given score. Ignored if `interaction_perc` is set.
-    interaction_perc : float, default None
+    interaction_perc : Optional[float | int], default None
         Filter receptor-ligand interactions below the given percentile. Overwrite `interaction_score`. Value from 0-100.
-    group_a : list, default None
+    group_a : Optional[list[str]], default None
         List of cluster names that must be present in any given receptor-ligand interaction.
-    group_b : list, default None
+    group_b : Optional[list[str]], default None
         List of cluster names that must be present in any given receptor-ligand interaction.
 
     Returns
@@ -882,7 +925,8 @@ def get_interactions(anndata, min_perc=None, interaction_score=None, interaction
     return subset
 
 
-def _check_interactions(anndata):
+@beartype
+def _check_interactions(anndata: sc.AnnData):
     """Return error message if anndata object doesn't contain interaction data."""
 
     # is interaction table available?

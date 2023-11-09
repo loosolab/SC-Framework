@@ -6,9 +6,9 @@ import os
 import glob
 from scipy import sparse
 from scipy.io import mmread
-import anndata as ad
 
-from typing import Optional
+from typing import Optional, Union, Literal, Any
+from beartype import beartype
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
@@ -19,11 +19,12 @@ logger = settings.logger
 #                   Assemble from multiple h5ad files               #
 #####################################################################
 
-def assemble_from_h5ad(h5ad_files,
-                       merge_column='sample',
-                       coordinate_cols=None,
-                       set_index=True,
-                       index_from=None) -> sc.AnnData:
+@beartype
+def assemble_from_h5ad(h5ad_files: list[str],
+                       merge_column: str = 'sample',
+                       coordinate_cols: Optional[list[str]] = None,
+                       set_index: bool = True,
+                       index_from: Optional[str] = None) -> sc.AnnData:
     """
     Assembles multiple adata files into a single adata object.
 
@@ -31,16 +32,16 @@ def assemble_from_h5ad(h5ad_files,
 
     Parameters
     ----------
-    h5ad_files : list of str
-        list of h5ad_files
-    merge_column : str
-        column name to store sample identifier
-    coordinate_cols : list of str
-        location information of the peaks
-    set_index : boolean
-        True: index will be formatted and can be set by a given column
-    index_from : str
-        column to build the index from
+    h5ad_files : list[str]
+        List of h5ad_files.
+    merge_column : str, default 'sample'
+        Column name to store sample identifier.
+    coordinate_cols : Optional[list[str]], default None
+        Location information of the peaks.
+    set_index : bool
+        If True, index will be formatted and can be set by a given column.
+    index_from : Optional[str], default None
+        Column to build the index from.
 
     Returns
     -------
@@ -80,8 +81,8 @@ def assemble_from_h5ad(h5ad_files,
 
         adata_dict[sample] = adata
 
-    adata = ad.concat(adata_dict, label=merge_column)
-    adata.uns = ad.concat(adata_dict, uns_merge='same').uns
+    adata = sc.concat(adata_dict, label=merge_column)
+    adata.uns = sc.concat(adata_dict, uns_merge='same').uns
     for value in adata_dict.values():
         adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
 
@@ -96,7 +97,10 @@ def assemble_from_h5ad(h5ad_files,
 #          ASSEMBLING ANNDATA FROM STARSOLO OUTPUT FOLDERS          #
 #####################################################################
 
-def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
+@beartype
+def from_single_starsolo(path: str,
+                         dtype: Literal['filtered', 'raw'] = "filtered",
+                         header: Union[int, list[int], Literal['infer'], None] = 'infer') -> sc.AnnData:
     """
     Assembles an anndata object from the starsolo folder.
 
@@ -104,9 +108,9 @@ def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
     ----------
     path : str
         Path to the "solo" folder from starsolo.
-    dtype : {'filtered', 'raw'}, default "filtered"
+    dtype : Literal['filtered', 'raw'], default "filtered"
         The type of solo data to choose.
-    header : int or list of int or None, default "infer"
+    header : Union[int, list[int], Literal['infer'], None], default "infer"
         Set header parameter for reading metadata tables using pandas.read_csv.
 
     Returns
@@ -116,15 +120,9 @@ def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
 
     Raises
     ------
-    ValueError
-        If dtype is not set to 'raw' or 'filtered'
     FileNotFoundError
         If path does not exist or files are missing.
     """
-
-    # dtype must be either raw or filtered
-    if dtype not in ["raw", "filtered"]:
-        raise ValueError("dtype must be either 'raw' or 'filtered'")
 
     # Establish which directory to look for data in
     genedir = os.path.join(path, "Gene", dtype)
@@ -164,7 +162,11 @@ def from_single_starsolo(path, dtype="filtered", header='infer') -> sc.AnnData:
     return adata
 
 
-def from_quant(path, configuration=[], use_samples=None, dtype="filtered") -> sc.AnnData:
+@beartype
+def from_quant(path: str,
+               configuration: list = [],
+               use_samples: Optional[list] = None,
+               dtype: Literal["raw", "filtered"] = "filtered") -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
@@ -173,11 +175,13 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered") -> sc
     path : str
         The directory where the quant folder from snakemake preprocessing is located.
     configuration : list
-        Configurations to setup the samples for anndata assembling. It must containg the sample, the word used in snakemake to assign the condition, and the condition, e.g., sample1:condition:room_air
-    use_samples : list or None
+        Configurations to setup the samples for anndata assembling.
+        It must containg the sample, the word used in snakemake to assign the condition,
+        and the condition, e.g., sample1:condition:room_air
+    use_samples : Optional[list], default None
         List of samples to use. If None, all samples will be used.
-    dtype : str, optional
-        The type of Solo data to choose. The options are 'raw' or 'filtered'. Default: filtered.
+    dtype : Literal["raw", "filtered"], default 'filtered'
+        The type of Solo data to choose.
 
     Returns
     -------
@@ -251,29 +255,38 @@ def from_quant(path, configuration=[], use_samples=None, dtype="filtered") -> sc
 #          CONVERTING FROM MTX+TSV/CSV TO ANNDATA OBJECT            #
 #####################################################################
 
-def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcode_index=0, genes_index=0, delimiter="\t", **kwargs) -> sc.AnnData:
+@beartype
+def from_single_mtx(mtx: str,
+                    barcodes: str,
+                    genes: str,
+                    transpose: bool = True,
+                    header: Union[int, list[int], Literal['infer'], None] = 'infer',
+                    barcode_index: int = 0,
+                    genes_index: int = 0,
+                    delimiter: str = "\t",
+                    **kwargs: Any) -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
     Parameters
     ----------
-    mtx : string
+    mtx : str
         Path to the mtx file (.mtx)
-    barcodes : string
+    barcodes : str
         Path to cell label file (.obs)
-    genes : string
+    genes : str
         Path to gene label file (.var)
-    transpose : boolean
-        Set True to transpose mtx matrix. Default: True
-    header : int, list of int, None
-        Set header parameter for reading metadata tables using pandas.read_csv. Default: 'infer'
-    barcode_index : int
-        Column which contains the cell barcodes. Default: 0 -> Takes first column
-    genes_index : int
-        Column h contains the gene IDs. Default: 0 -> Takes first column
-    delimiter : string
-        delimiter of genes and barcodes table. Default: '\t'
-    **kwargs : additional arguments
+    transpose : bool, default True
+        Set True to transpose mtx matrix.
+    header : Union[int, list[int], Literal['infer'], None], default 'infer'
+        Set header parameter for reading metadata tables using pandas.read_csv.
+    barcode_index : int, default 0
+        Column which contains the cell barcodes.
+    genes_index : int, default 0
+        Column which contains the gene IDs.
+    delimiter : str, default '\t'
+        delimiter of genes and barcodes table.
+    **kwargs : Any
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
@@ -319,21 +332,26 @@ def from_single_mtx(mtx, barcodes, genes, transpose=True, header='infer', barcod
     return adata
 
 
-def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_genes.tsv*", **kwargs) -> sc.AnnData:
+@beartype
+def from_mtx(path: str,
+             mtx: str = "*_matrix.mtx*",
+             barcodes: str = "*_barcodes.tsv*",
+             genes: str = "*_genes.tsv*",
+             **kwargs: Any) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and genes files.
 
     Parameters
     ----------
-    path : string
+    path : str
         Path to data files
-    mtx : string, optional
-        String for glob to find matrix files. Default: '*_matrix.mtx*'
-    barcodes : string, optional
-        String for glob to find barcode files. Default: '*_barcodes.tsv*'
-    genes : string, optional
-        String for glob to find gene label files. Default: '*_genes.tsv*'
-    **kwargs : dict
+    mtx : str, default '*_matrix.mtx*'
+        String for glob to find matrix files.
+    barcodes : str, default '*_barcodes.tsv*'
+        String for glob to find barcode files.
+    genes : str, default '*_genes.tsv*'
+        String for glob to find gene label files.
+    **kwargs : Any
         Contains additional arguments for scanpy.read_mtx method
 
     Returns
@@ -374,7 +392,11 @@ def from_mtx(path, mtx="*_matrix.mtx*", barcodes="*_barcodes.tsv*", genes="*_gen
     return adata
 
 
-def convertToAdata(file, output=None, r_home=None, layer=None) -> Optional[sc.AnnData]:
+@beartype
+def convertToAdata(file: str,
+                   output: Optional[str] = None,
+                   r_home: Optional[str] = None,
+                   layer: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -384,12 +406,12 @@ def convertToAdata(file, output=None, r_home=None, layer=None) -> Optional[sc.An
     ----------
     file : str
         Path to the .rds or .robj file.
-    output : str, default None
+    output : Optional[str], default None
         Path to output .h5ad file. Won't save if None.
-    r_home : str, default None
+    r_home : Optional[str], default None
         Path to the R home directory. If None will construct path based on location of python executable.
         E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
-    layer : str, default None
+    layer : Optional[str], default None
         Provide name of layer to be stored in anndata. By default the main layer is stored.
         In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
 

@@ -1,11 +1,15 @@
 """Tools for gene-gene correlation."""
 import pandas as pd
 import numpy as np
+import scanpy as sc
 from scipy.stats import spearmanr
 from scipy.stats import norm
 import statsmodels.api
 from joblib import Parallel, delayed
 from tqdm import tqdm
+
+from beartype import beartype
+from typing import Optional
 
 from sctoolbox.utils.checker import check_columns
 from sctoolbox.utils.adata import get_adata_subsets
@@ -14,13 +18,18 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -> pd.DataFrame:
+@beartype
+def correlate_conditions(adata: sc.AnnData,
+                         gene: str,
+                         condition_col: str,
+                         condition_A: str,
+                         condition_B: str) -> pd.DataFrame:
     """
     Calculate the correlation of a gene expression over two conditions and compares the two conditions.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated adata object.
     gene : str
         Gene of interest.
@@ -61,7 +70,11 @@ def correlate_conditions(adata, gene, condition_col, condition_A, condition_B) -
     return comparison
 
 
-def correlate_ref_vs_all(adata, ref_gene, correlation_threshold=0.4, save=None) -> pd.DataFrame:
+@beartype
+def correlate_ref_vs_all(adata: sc.AnnData,
+                         ref_gene: str,
+                         correlation_threshold: float = 0.4,
+                         save: Optional[str] = None) -> pd.DataFrame:
     """
     Calculate the correlation of the reference gene vs all other genes.
 
@@ -69,7 +82,7 @@ def correlate_ref_vs_all(adata, ref_gene, correlation_threshold=0.4, save=None) 
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
     ref_gene : str
         Reference gene.
@@ -131,15 +144,19 @@ def correlate_ref_vs_all(adata, ref_gene, correlation_threshold=0.4, save=None) 
     return corr_df
 
 
-def compare_two_conditons(df_cond_A, df_cond_B, n_cells_A, n_cells_B) -> pd.DataFrame:
+@beartype
+def compare_two_conditons(df_cond_A: pd.DataFrame,
+                          df_cond_B: pd.DataFrame,
+                          n_cells_A: int,
+                          n_cells_B: int) -> pd.DataFrame:
     """
     Compare two conditions.
 
     Parameters
     ----------
-    df_cond_A : pandas.DataFrame
+    df_cond_A : pd.DataFrame
         Dataframe containing correlation analysis from correlate_ref_vs_all
-    df_cond_B : pandas.DataFrame
+    df_cond_B : pd.DataFrame
         Dataframe containing correlation analysis from correlate_ref_vs_all
     n_cells_A : int
         Number of cells within condition A

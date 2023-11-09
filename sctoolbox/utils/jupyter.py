@@ -5,6 +5,8 @@ from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 import sctoolbox.utils as utils
 
+from typing import Optional
+
 
 def _is_notebook() -> bool:
     """
@@ -25,7 +27,7 @@ def _is_notebook() -> bool:
 
 if _is_notebook():
     @register_line_magic
-    def bgcolor(color, cell=None) -> None:
+    def bgcolor(color: str, cell: Optional[str] = None) -> None:
         """
         Set background color of current jupyter cell.
 
@@ -45,7 +47,7 @@ if _is_notebook():
                 - rgb(255,0,0)
                 - #FF0000
             See https://www.rapidtables.com/web/css/css-color.html
-        cell : str, default None
+        cell : Optional[str], default None
             Code of the cell that will be evaluated.
         """
 
