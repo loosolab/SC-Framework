@@ -20,15 +20,12 @@ import plotly.graph_objects as go
 
 from numba import errors as numba_errors
 
-<<<<<<< HEAD
 import deprecation
 from sctoolbox import __version__
-=======
 from beartype import beartype
 from typing import Literal, Tuple, Optional, Union, Any
 import numpy.typing as npt
 
->>>>>>> dev
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 import sctoolbox.utils.decorator as deco

@@ -254,7 +254,7 @@ def add_uns_info(adata: sc.AnnData,
 
 
 @beartype
-def get_cell_values(adata: sc.AnnData, 
+def get_cell_values(adata: sc.AnnData,
                     element: str) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
 
@@ -297,8 +297,6 @@ def prepare_for_cellxgene(adata: sc.AnnData,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
                           cmap: Optional[str] = "viridis",
                           inplace: bool = False) -> Optional[sc.AnnData]:
-
-
     """
     Prepare the given adata for cellxgene deployment.
 
