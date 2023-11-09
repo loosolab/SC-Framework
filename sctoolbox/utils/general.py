@@ -435,7 +435,7 @@ def identify_columns(df: pd.DataFrame,
 
     Parameters
     ----------
-    df : pd.Dataframe
+    df : pd.DataFrame
         Pandas dataframe to be checked.
     regex : Union(list[str], str)
         List of multiple regex or one regex as string.

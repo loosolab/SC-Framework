@@ -116,7 +116,7 @@ def write_excel(table_dict: dict[str, Any],
 
     Parameters
     ----------
-    table_dict : dict
+    table_dict : dict[str, Any]
         Dictionary of tables in the format {<sheet_name1>: table, <sheet_name2>: table, (...)}.
     filename : str
         Path to output file.
@@ -148,7 +148,7 @@ def table_zscore(table: pd.DataFrame,
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Table to z-score.
     how : {'row', 'col'}
         Whether to z-score rows or columns.
