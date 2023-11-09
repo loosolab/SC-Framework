@@ -8,7 +8,7 @@ import psutil
 import subprocess
 import scanpy as sc
 
-from typing import Optional, Union, Tuple, Any
+from typing import Optional, Union, Tuple, Any, Literal
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -409,23 +409,23 @@ def _prepare_gtf(gtf: str,
 
 
 @beartype
-def _annotate_features(region_dicts: list[dict],
+def _annotate_features(region_dicts: list[dict[Literal["peak_chr", "peak_start", "peak_end", "peak_id"], str | int]],
                        threads: int,
                        gtf: str,
-                       cfg_dict: Optional[dict],
+                       cfg_dict: Optional[dict[str, Union[list, bool, str, int, float]]],
                        best: bool) -> pd.DataFrame:
     """
     Annotate features.
 
     Parameters
     ----------
-    region_dicts : list[dict]
+    region_dicts : list[dict[Literal["peak_chr", "peak_start", "peak_end", "peak_id"], str | int]]
         List of dictionary with peak information.
     threads : int
         Number of threads to perform the annotation.
     gtf : str
         Path to the .gtf file
-    cfg_dict : Optional[dict]
+    cfg_dict : Optional[dict[str, Union[list, bool, str, int, float]]]
         A dictionary indicating how regions should be annotated.
         Set to None to annotate feature 'gene' within -10000;1000bp of the gene start.
     best : bool
@@ -527,19 +527,19 @@ def _annotate_features(region_dicts: list[dict],
 
 
 @beartype
-def _annotate_peaks_chunk(region_dicts: list[dict],
+def _annotate_peaks_chunk(region_dicts: list[dict[Literal["peak_chr", "peak_start", "peak_end", "peak_id"], str | int]],
                           gtf: str,
-                          cfg_dict: dict) -> list[dict[str, Union[str, int]]]:
+                          cfg_dict: Optional[dict[str, Union[list, bool, str, int, float]]]) -> list[dict[str, Union[str, int]]]:
     """
     Multiprocessing safe function to annotate a chunk of regions.
 
     Parameters
     ----------
-    region_dicts : list[dict]
+    region_dicts : list[dict[Literal["peak_chr", "peak_start", "peak_end", "peak_id"], str | int]]
         List of dictionaryies with peak information.
     gtf : str
         Path to the .gtf file
-    cfg_dict : dict
+    cfg_dict : Optional[dict[str, Union[list, bool, str, int, float]]]
         A dictionary indicating how regions should be annotated.
 
     Returns
