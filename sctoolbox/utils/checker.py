@@ -543,7 +543,28 @@ def check_marker_lists(adata: sc.AnnData,
 
 
 def check_type(obj: Any, obj_name: str, test_type: Any):
-    """Check type of given object."""
+    """
+    Check type of given object.
+
+    Parameters
+    ----------
+    obj : Any
+        Object for which the type should be checked
+    obj_name : str
+        Object name that would be shown in the error message.
+    test_type : Any
+        Type that obj is tested for.
+
+    Raises
+    ------
+    TypeError
+        If object type does not match test type.
+
+    Notes
+    -----
+    This function is mostly replaced by beartype.
+    Only used for types not supported by beartype.
+    """
     if not isinstance(obj, test_type):
-        raise ValueError(f"Paramter {obj_name} is required to be of type: "
-                         + f"{test_type}, but is type: {type(obj)}")
+        raise TypeError(f"Paramter {obj_name} is required to be of type: "
+                        + f"{test_type}, but is type: {type(obj)}")
