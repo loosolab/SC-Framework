@@ -4,8 +4,10 @@ import pandas as pd
 import pkg_resources
 import copy
 import subprocess
-from typing import Optional
-import anndata
+import scanpy as sc
+
+from beartype import beartype
+from typing import Optional, Any, Literal
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -19,13 +21,14 @@ logger = settings.logger
 
 
 @deco.log_anndata
-def add_cellxgene_annotation(adata, csv) -> None:
+@beartype
+def add_cellxgene_annotation(adata: sc.AnnData, csv: str) -> None:
     """
     Add columns from cellxgene annotation to the adata .obs table.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Adata object to add annotations to.
     csv : str
         Path to the annotation file from cellxgene containing cell annotation.
@@ -43,7 +46,11 @@ def add_cellxgene_annotation(adata, csv) -> None:
 
 
 @deco.log_anndata
-def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="celltype") -> dict[str, str]:
+@beartype
+def get_celltype_assignment(adata: sc.AnnData,
+                            clustering: str,
+                            marker_genes_dict: dict[str, list[str]],
+                            column_name: str = "celltype") -> dict[str, str]:
     """
     Get cell type assignment based on marker genes.
 
@@ -51,11 +58,11 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing raw counts.
     clustering : str
         Name of clustering column to use for cell type assignment.
-    marker_genes_dict : dict
+    marker_genes_dict : dict[str, list[str]]
         Dictionary containing cell type names as keys and lists of marker genes as values.
     column_name : str, default: "celltype"
         Name of column to add to adata.obs containing cell type assignment.
@@ -121,7 +128,9 @@ def get_celltype_assignment(adata, clustering, marker_genes_dict, column_name="c
 #                  Predict cell types using SCSA                    #
 #####################################################################
 
-def _match_database(marker_db, input_genes) -> str:
+@beartype
+def _match_database(marker_db: str,
+                    input_genes: list[str]) -> str:
     """
     Find best matching column in the marker database for the input genes.
 
@@ -129,7 +138,7 @@ def _match_database(marker_db, input_genes) -> str:
     ----------
     marker_db : str
         Path to marker database.
-    input_genes : list
+    input_genes : list[str]
         List of input genes.
 
     Returns
@@ -162,18 +171,19 @@ def _match_database(marker_db, input_genes) -> str:
     return best_column
 
 
-def _get_rank_genes(d) -> list:
+@beartype
+def _get_rank_genes(d: dict[str, Any]) -> list[str]:
     """
     Get a list of unique rank genes from the nested adata.uns["rank_genes_groups"] dictionary.
 
     Parameters
     ----------
-    d : dictionary
+    d : dict[str, Any]
         The dictionary in adata.uns["rank_genes_groups"]
 
     Returns
     -------
-    list
+    list[str]
         A list of unique gene names from  adata.uns["rank_genes_groups"]['names']
     """
 
@@ -187,20 +197,21 @@ def _get_rank_genes(d) -> list:
 
 
 @deco.log_anndata
-def run_scsa(adata,
-             gene_column=None,
-             gene_symbol='auto',
-             key='rank_genes_groups',
-             column_added='SCSA_pred_celltype',
-             inplace=True,
-             python_path=None,
-             species='human',
-             fc=1.5,
-             pvalue=0.05,
-             tissue='All',
-             user_db=None,
-             celltype_column="cell_name"
-             ) -> Optional[anndata.AnnData]:
+@beartype
+def run_scsa(adata: sc.AnnData,
+             gene_column: Optional[str] = None,
+             gene_symbol: Literal['auto', 'symbol', 'id'] = 'auto',
+             key: str = 'rank_genes_groups',
+             column_added: str = 'SCSA_pred_celltype',
+             inplace: bool = True,
+             python_path: Optional[str] = None,
+             species: Optional[Literal['Human', 'Mouse']] = 'Human',
+             fc: float | int = 1.5,
+             pvalue: float = 0.05,
+             tissue: str = 'All',
+             user_db: Optional[str] = None,
+             celltype_column: str = "cell_name"
+             ) -> Optional[sc.AnnData]:
     """
     Run SCSA cell type annotation and assign cell types to cluster in an adata object.
 
@@ -221,31 +232,31 @@ def run_scsa(adata,
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Adata object to be annotated, must contain ranked genes in adata.uns
     gene_column : str, default None
         Name of the column in adata.var that contains the gene names.
     gene_symbol : str, default 'auto'
         TODO Implement
         The type of gene symbol. One of "auto", "symbol" (gene name) or "id" (ensembl id).
-    key : str, optional
-        The key in adata.uns where ranked genes are stored. Defaults to 'rank_genes_groups'.
+    key : str, default 'rank_genes_groups'
+        The key in adata.uns where ranked genes are stored.
     column_added : str, default 'SCSA_pred_celltype'
         The column name in adata.obs where the cell types will be added.
     inplace : bool, default True
         If True, cell types will be added to adata.obs.
-    python_path : str, optional
+    python_path : str, default None
         SCSA parameter: Path to python. If not given, will be inferred from sys.executable.
-    species : str, optional
-        SCSA parameter: Supports only human or mouse. Defaults to 'human'. Set to None to use the user defined database given in user_db.
-    fc : float, optional
-        SCSA parameter: Fold change threshold to filter genes. Defaults to 1.5.
-    pvalue : float, optional
-        SCSA parameter: P-value threshold to filter genes. Defaults to 0.05.
-    tissue : float, optional
+    species : Optional[Literal['Human', 'Mouse']], default 'Human'
+        SCSA parameter: Supports only Human or Mouse. Set to None to use the user defined database given in user_db.
+    fc : float, default 1.5
+        SCSA parameter: Fold change threshold to filter genes.
+    pvalue : float, default 0.05
+        SCSA parameter: P-value threshold to filter genes.
+    tissue : str, default 'All'
         TODO Implement
-        SCSA parameter: A specific tissue can be defined. Defaults to 'All'.
-    user_db : str, optional
+        SCSA parameter: A specific tissue can be defined.
+    user_db : str, default None
         SCSA parameter: Path to the user defined marker database.
         Must contain at least two columns, one named "cell_name" (or set via celltype_column) for the cell type annotation,
         and at least one more column with gene names or ids (selected automatically from best gene overlap).
@@ -254,7 +265,7 @@ def run_scsa(adata,
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If inplace==False, returns adata with cell types in adata.obs
         Else return None
 
@@ -283,9 +294,7 @@ def run_scsa(adata,
     except Exception:
         raise KeyError(f"Could not find 'params' within adata.uns[{key}]. Please ensure that this key contains results of rank_genes_groups.")
 
-    # Check species and user.db
-    if species not in ['Human', 'Mouse', None]:
-        raise ValueError('Supported species are only: human or mouse! To annotate other species, set species=None and provide a user_db')
+    # Check user.db
     if not user_db and not species:
         raise ValueError('If no species is provided, user_db must be given! Supported species are: human or mouse! If you want to annotate other species, please provide a marker genes list using the parameter: user_db')
 

@@ -5,8 +5,9 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import warnings
 import scanpy as sc
-import anndata
-from typing import Optional
+
+from typing import Optional, Tuple, Any
+from beartype import beartype
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -16,29 +17,36 @@ logger = settings.logger
 
 
 @deco.log_anndata
-def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000),
-              step=10, inplace=True, save=None, **kwargs) -> Optional[anndata.AnnData]:
+@beartype
+def annot_HVG(anndata: sc.AnnData,
+              min_mean: float = 0.0125,
+              max_iterations: int = 10,
+              hvg_range: Tuple[int, int] = (1000, 5000),
+              step: int | float = 10,
+              inplace: bool = True,
+              save: Optional[str] = None,
+              **kwargs: Any) -> Optional[sc.AnnData]:
     """
     Annotate highly variable genes (HVG). Tries to annotate in given range of HVGs, by gradually in-/ decreasing min_mean of scanpy.pp.highly_variable_genes.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object to annotate.
     min_mean : float, default 0.0125
         Starting min_mean parameter for finding HVGs.
     max_iterations : int, default 10
         Maximum number of min_mean adjustments.
-    hvg_range : int tuple, default (1000, 5000)
+    hvg_range : Tuple[int, int], default (1000, 5000)
         Number of HVGs should be in the given range. Will issue a warning if result is not in range.
         Default limits are chosen as proposed by https://doi.org/10.15252/msb.20188746.
-    step : float, default 10
+    step : int | float, default 10
         Value min_mean is adjusted by in each iteration. Will divide min_value (below range) or multiply (above range) by this value.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether the anndata object is modified inplace.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the plot to. If None, the plot is not saved.
-    **kwargs :
+    **kwargs : Any
         Additional arguments forwarded to scanpy.pp.highly_variable_genes().
 
     Notes
@@ -47,7 +55,7 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
         If inplace is False, the function returns None
         Else returns a chagned copy of the input anndata object.
@@ -82,25 +90,27 @@ def annot_HVG(anndata, min_mean=0.0125, max_iterations=10, hvg_range=(1000, 5000
         _save_figure(save)
         logger.info("Total HVG=" + str(anndata.var["highly_variable"].sum()))
 
-    # Adding info in anndata.uns["infoprocess"]
-    # cr.build_infor(anndata, "Scanpy annotate HVG", "min_mean= " + str(min_mean) + "; Total HVG= " + str(hvg_count), inplace=True)
-
     if not inplace:
         return adata_m
 
 
 @deco.log_anndata
-def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inplace=True) -> Optional[anndata.AnnData]:
+@beartype
+def get_variable_features(adata: sc.AnnData,
+                          max_cells: Optional[float | int] = None,
+                          min_cells: Optional[float | int] = None,
+                          show: bool = True,
+                          inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.var. If show is True, the plot is shown.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containing counts for variables.
-    max_cells : float, default None
+    max_cells : Optional[float | int], default None
         The maximum variability score to set as threshold.
-    min_cells : float, default None
+    min_cells : Optional[float | int], default None
         The minimum variability score to set as threshold.
     show : bool, default True
         Show plot of variability scores and thresholds.
@@ -113,7 +123,7 @@ def get_variable_features(adata, max_cells=None, min_cells=None, show=True, inpl
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         If inplace is False, the function returns None
         If inplace is True, the function returns an anndata object.
     """

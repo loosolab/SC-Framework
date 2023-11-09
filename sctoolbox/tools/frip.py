@@ -2,17 +2,22 @@
 from tqdm import tqdm
 import os
 import pandas as pd
+import scanpy as sc
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
+from beartype import beartype
+
 from typing import Tuple
-import anndata
 logger = settings.logger
 
 
-def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n') -> pd.DataFrame:
+@beartype
+def _count_fragments(df: pd.DataFrame,
+                     barcodes_col: str = 'barcode',
+                     n_fragments_col: str = 'n') -> pd.DataFrame:
     """
     Count the number of fragments per barcode.
 
@@ -38,13 +43,16 @@ def _count_fragments(df, barcodes_col='barcode', n_fragments_col='n') -> pd.Data
 
 
 @deco.log_anndata
-def calc_frip_scores(adata, fragments, temp_dir='') -> Tuple[anndata.AnnData, float]:
+@beartype
+def calc_frip_scores(adata: sc.AnnData,
+                     fragments: str,
+                     temp_dir: str = '') -> Tuple[sc.AnnData, float]:
     """
     Calculate the FRiP score for each barcode and adds it to adata.obs.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object containing the fragments
     fragments : str
         path to fragments bedfile
@@ -53,7 +61,7 @@ def calc_frip_scores(adata, fragments, temp_dir='') -> Tuple[anndata.AnnData, fl
 
     Returns
     -------
-    Tuple[anndata.AnnData, float]
+    Tuple[sc.AnnData, float]
         AnnData object containing the fragments
         total FRiP score
     """

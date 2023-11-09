@@ -4,8 +4,9 @@ import scanpy as sc
 import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
-import anndata
-from typing import Optional
+
+from typing import Optional, Any
+from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -17,24 +18,28 @@ logger = settings.logger
 ############################################################################
 
 @deco.log_anndata
-def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs) -> Optional[anndata.AnnData]:
+@beartype
+def compute_PCA(anndata: sc.AnnData,
+                use_highly_variable: bool = True,
+                inplace: bool = False,
+                **kwargs: Any) -> Optional[sc.AnnData]:
     """
-    Compute PCA and add information to adata.uns['infoprocess'].
+    Compute a principal component analysis.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object to add the PCA to.
-    use_highly_variable : boolean, default True
+    use_highly_variable : bool, default True
         If true, use highly variable genes to compute PCA.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether the anndata object is modified inplace.
-    **kwargs :
+    **kwargs : Any
         Additional parameters forwarded to scanpy.pp.pca().
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         Returns anndata object with PCA components. Or None if inplace = True.
     """
 
@@ -52,24 +57,28 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs) -> O
 
 
 # wrapper no longer used
-# def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
+# @beartype
+# def norm_log_PCA(anndata: sc.AnnData,
+#                 exclude_HEG: bool = True,
+#                 use_HVG_PCA: bool = True,
+#                 inplace: bool = False):
 #    """
 #    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
 #
 #    Parameters
 #    ----------
-#    anndata : anndata.AnnData
+#    anndata : sc.AnnData
 #        Anndata object to work on.
 #    exclude_HEG : boolean, default True
 #        If True, highly expressed genes (HEG) will be not considered in the normalization.
-#    use_HVG_PCA : boolean, default True
+#    use_HVG_PCA : bool, default True
 #        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-#    inplace : boolean, default False
+#    inplace : bool, default False
 #        Whether to work inplace on the anndata object.
 #
 #    Returns
 #    -------
-#    anndata.Anndata or None:
+#    Optional[sc.AnnData]:
 #        Anndata with expression values normalized and log converted and PCA computed.
 #    """
 #    adata_m = anndata if inplace else anndata.copy()
@@ -87,15 +96,18 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs) -> O
 #        return adata_m
 
 
-def lsi(data, scale_embeddings=True, n_comps=50) -> None:
+@beartype
+def lsi(data: sc.AnnData,
+        scale_embeddings: bool = True,
+        n_comps: int = 50) -> None:
     """
     Run Latent Semantic Indexing.
 
     Parameters
     ----------
-    data : anndata.AnnData
+    data : sc.AnnData
         AnnData object with peak counts.
-    scale_embeddings : boolean, default True
+    scale_embeddings : bool, default True
         Scale embeddings to zero mean and unit variance.
     n_comps : int, default 50
         Number of components to calculate with SVD.
@@ -103,17 +115,9 @@ def lsi(data, scale_embeddings=True, n_comps=50) -> None:
     Notes
     -----
     Function is taken from muon package.
-
-    Raises
-    ------
-    TypeError
-        data must be anndata object.
     """
 
-    if isinstance(data, anndata.AnnData):
-        adata = data
-    else:
-        raise TypeError("Expected AnnData object!")
+    adata = data
 
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
     n_comps = min(n_comps, adata.X.shape[1])
@@ -146,20 +150,22 @@ def lsi(data, scale_embeddings=True, n_comps=50) -> None:
     adata.uns["pca"] = adata.uns["lsi"]
 
 
-def apply_svd(adata, layer=None) -> anndata.AnnData:
+@beartype
+def apply_svd(adata: sc.AnnData,
+              layer: str = None) -> sc.AnnData:
     """
     Singular value decomposition of anndata object.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object to be decomposed.
     layer : str, default None
         The layer to be decomposed. If None, the layer is set to "X".
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
     """
 
@@ -196,7 +202,8 @@ def apply_svd(adata, layer=None) -> anndata.AnnData:
 #                         Subset number of PCs                             #
 ############################################################################
 
-def define_PC(anndata) -> int:
+@beartype
+def define_PC(anndata: sc.AnnData) -> int:
     """
     Define threshold for most variable PCA components.
 
@@ -204,7 +211,7 @@ def define_PC(anndata) -> int:
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object with PCA to get significant PCs threshold from.
 
     Returns
@@ -237,7 +244,11 @@ def define_PC(anndata) -> int:
 
 
 @deco.log_anndata
-def subset_PCA(adata, n_pcs, start=0, inplace=True) -> Optional[anndata.AnnData]:
+@beartype
+def subset_PCA(adata: sc.AnnData,
+               n_pcs: int,
+               start: int = 0,
+               inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
 
@@ -245,7 +256,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True) -> Optional[anndata.AnnData]
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object containing the PCA coordinates.
     n_pcs : int
         Number of PCs to keep.
@@ -256,7 +267,7 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True) -> Optional[anndata.AnnData]
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
     """
 

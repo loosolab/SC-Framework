@@ -7,6 +7,7 @@
 - The function 'create_fragment_file' was moved to bam tools.
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 - Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
+- Add parameter type hinting including runtime type checking (#46)
 
 Changes to notebooks:
 ^^^^^^^^^^^^^^^^^^^^
