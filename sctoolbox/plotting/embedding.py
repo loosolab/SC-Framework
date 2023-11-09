@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from typing import Literal, Tuple, Optional, Union
+from typing import Literal, Tuple, Optional, Union, Any
 import numpy.typing as npt
 
 import sctoolbox.utils as utils
@@ -100,7 +100,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            n_components: int = 2,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs) -> np.ndarray:
+                           **kwargs: Any) -> np.ndarray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
@@ -152,7 +152,7 @@ def search_tsne_parameters(adata: sc.AnnData,
                            color: Optional[str] = None,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs) -> np.ndarray:
+                           **kwargs: Any) -> np.ndarray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -205,7 +205,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
                                color: Optional[str] = None,
                                threads: int = 4,
                                save: Optional[str] = None,
-                               **kwargs) -> np.ndarray:
+                               **kwargs: Any) -> np.ndarray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
@@ -444,7 +444,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
                        var_list: list[str] | str,
                        embedding: Literal["umap", "tsne", "pca"] = "umap",
                        adata_names: Optional[list[str]] = None,
-                       **kwargs) -> np.ndarray:
+                       **kwargs: Any) -> np.ndarray:
     """Compare embeddings across different adata objects.
 
     Plots a grid of embeddings with the different adatas on the x-axis, and colored variables on the y-axis.
@@ -725,7 +725,7 @@ def umap_marker_overview(adata: sc.AnnData,
                          figsize: Optional[Tuple[int, int]] = None,
                          save: Optional[str] = None,
                          cbar_label: str = "Relative expr.",
-                         **kwargs) -> list:
+                         **kwargs: Any) -> list:
     """Plot a pretty grid of UMAPs with marker gene expression.
 
     Parameters
@@ -742,7 +742,7 @@ def umap_marker_overview(adata: sc.AnnData,
         If not None save plot under given name.
     cbar_label : str, default "Relative expr."
         Colorbar label
-    kwargs :
+    **kwargs :
         Additional parameter for scanpy.pl.umap()
 
     Returns
@@ -816,7 +816,7 @@ def umap_pub(adata: sc.AnnData,
              color: Optional[str | list[str]] = None,
              title: Optional[str | list[str]] = None,
              save: Optional[str] = None,
-             **kwargs) -> list:
+             **kwargs: Any) -> list:
     """Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
 
     Parameters
@@ -829,7 +829,7 @@ def umap_pub(adata: sc.AnnData,
         Title of the plot. Default is no title.
     save : Optional[str], default None
         Filename to save the figure.
-    kwargs :
+    **kwargs :
         Additional arguments passed to `sc.pl.umap`.
 
     Returns

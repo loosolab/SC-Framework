@@ -27,7 +27,7 @@ def _is_notebook() -> bool:
 
 if _is_notebook():
     @register_line_magic
-    def bgcolor(color: str, cell: Optinal[str] = None) -> None:
+    def bgcolor(color: str, cell: Optional[str] = None) -> None:
         """
         Set background color of current jupyter cell.
 

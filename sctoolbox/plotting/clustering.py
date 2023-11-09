@@ -49,6 +49,13 @@ def search_clustering_parameters(adata: sc.AnnData,
     axarr : np.ndarray
         Array of axes objects containing the plot(s).
 
+    Raises
+    ------
+    ValueError
+        If step is lager than max - min
+    KeyError
+        If embedding is not found in adata.obsm.
+
     Examples
     --------
     .. plot::

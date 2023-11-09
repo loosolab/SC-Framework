@@ -34,7 +34,7 @@ def rank_genes_plot(adata: sc.AnnData,
                     style: Literal["dots", "heatmap"] = "dots",
                     measure: str = "expression",
                     save: Optional[str] = None,
-                    **kwargs) -> dict:
+                    **kwargs: Any) -> dict:
     """
     Plot expression of genes from rank_genes_groups or from a gene list/dict.
 
@@ -60,7 +60,7 @@ def rank_genes_plot(adata: sc.AnnData,
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
     save : Optional[str], default None
         If given, save the figure to this path.
-    kwargs :
+    **kwargs :
         Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
 
     Raises
@@ -183,7 +183,7 @@ def grouped_violin(adata: sc.AnnData,
                    normalize: bool = False,
                    ax: Optional[matplotlib.axes.Axes] = None,
                    save: Optional[str] = None,
-                   **kwargs) -> matplotlib.axes.Axes:
+                   **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
 
@@ -213,7 +213,7 @@ def grouped_violin(adata: sc.AnnData,
         A matplotlib axes object to plot violinplots in. If None, a new figure and axes is created.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
-    kwargs :
+    **kwargs :
         Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
 
     Returns
@@ -417,8 +417,9 @@ def gene_expression_heatmap(adata: sc.AnnData,
                             show_col_dendrogram: bool = False,
                             figsize: Optional[Tuple[int | float, int | float]] = None,
                             save: Optional[str] = None,
-                            **kwargs) -> Any:  # Any since beartype cannot handle sns datatypes
-    """Plot a heatmap of z-score normalized gene expression across clusters/groups.
+                            **kwargs: Any) -> Any:  # Any since beartype cannot handle sns datatypes
+    """
+    Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
     ----------
@@ -446,7 +447,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
         Size of the figure. If `None`, use default size.
     save : Optional[str], default None
         If given, save the figure to this path.
-    kwargs :
+    **kwargs :
         Additional arguments passed to `seaborn.clustermap`.
 
     Returns
@@ -592,7 +593,8 @@ def group_heatmap(adata: sc.AnnData,
                   gene_list: Optional[list[str]] = None,
                   save: Optional[str] = None,
                   figsize: Optional[Tuple[int | float, int | float]] = None) -> Any:
-    """Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
+    """
+    Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
     NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
 
@@ -643,9 +645,9 @@ def group_heatmap(adata: sc.AnnData,
 def plot_differential_genes(rank_table: pd.DataFrame,
                             title: str = "Differentially expressed genes",
                             save: Optional[str] = None,
-                            **kwargs) -> matplotlib.axes.Axes:
-    """Plot number of differentially expressed genes per contrast in a barplot.
-
+                            **kwargs: Any) -> matplotlib.axes.Axes:
+    """
+    Plot number of differentially expressed genes per contrast in a barplot.
 
     Parameters
     ----------
@@ -655,7 +657,7 @@ def plot_differential_genes(rank_table: pd.DataFrame,
         Title of the plot.
     save : Optional[str], default None
         If given, save the figure to this path.
-    kwargs :
+    **kwargs :
         Keyword arguments passed to pl.bidirectional_barplot.
 
     Raises

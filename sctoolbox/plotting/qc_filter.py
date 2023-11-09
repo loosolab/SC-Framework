@@ -19,7 +19,7 @@ from sctoolbox.plotting.general import violinplot, _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable
+from typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
 from beartype import beartype
 
 
@@ -270,7 +270,7 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
-                    **kwargs) -> Iterable[matplotlib.axes.Axes]:
+                    **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -290,7 +290,7 @@ def n_cells_barplot(adata: sc.AnnData,
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
-    kwargs :
+    **kwargs :
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
     Returns

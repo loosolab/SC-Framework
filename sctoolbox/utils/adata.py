@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 
 from typing import Optional, Any
 from beartype import beartype
-import scanpy as sc
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings

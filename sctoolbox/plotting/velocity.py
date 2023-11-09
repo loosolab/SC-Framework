@@ -11,7 +11,7 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import _save_figure
 
 # type hint imports
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 from beartype import beartype
 import matplotlib
 
@@ -30,7 +30,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
                        shrink_cbar: int | float = 0.5,
                        title: Optional[str] = None,
                        save: Optional[str] = None,
-                       **kwargs) -> matplotlib.axes.Axes:
+                       **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 
@@ -52,7 +52,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
         Set title for plot.
     save : Optional[str], default None
         Path and name of file to be saved.
-    kwargs :
+    **kwargs :
         Additional arguments passed to seaborn.heatmap.
 
     Returns

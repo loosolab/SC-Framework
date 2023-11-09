@@ -436,7 +436,7 @@ def split_bam_clusters(adata: sc.AnnData,
 @beartype
 def open_bam(file: str,
              mode: str,
-             verbosity: Literal[0, 1, 2, 3] = 3, **kwargs) -> "pysam.AlignmentFile":
+             verbosity: Literal[0, 1, 2, 3] = 3, **kwargs: Any) -> "pysam.AlignmentFile":
     """
     Open bam file with pysam.AlignmentFile. On a specific verbosity level.
 
@@ -922,6 +922,7 @@ def create_fragment_file(bam: str,
                          keep_temp: bool = False) -> str:
     """
     Create fragments file out of a BAM file.
+
     This is an alternative to using the sinto package,
     which is slow and has issues with large bam-files.
 
