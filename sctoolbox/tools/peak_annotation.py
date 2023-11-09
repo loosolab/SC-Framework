@@ -435,6 +435,15 @@ def _annotate_features(region_dicts: list[dict],
     -------
     pd.DataFrame
         Dataframe with the annotation
+
+    Examples
+    --------
+    >>> region_dicts = [{"peak_chr": chr1, "peak_start": 100, "peak_end": 200, "peak_id": "peak1"},
+                        {"peak_chr": chr1, "peak_start": 600, "peak_end": 800, "peak_id": "peak2"}]
+
+    >>> cfg_dict = {"queries": [{"distance": [10000, 1000], "feature_anchor": "start", "feature": "gene"}],
+                                 "priority": True,
+                                 "show_attributes": "all"}
     """
 
     # split input regions into cores
