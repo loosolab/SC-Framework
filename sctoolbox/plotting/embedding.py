@@ -8,6 +8,7 @@ import pandas as pd
 import scipy.stats
 from scipy.sparse import issparse
 import itertools
+import re
 
 import seaborn as sns
 import matplotlib
@@ -1201,7 +1202,7 @@ def plot_pca_variance(adata, method="pca",
 
 @deco.log_anndata
 def plot_pca_correlation(adata, which="obs",
-                         components="pca",
+                         basis="pca",
                          n_components=10,
                          columns=None,
                          pvalue_threshold=0.01,
@@ -1210,7 +1211,7 @@ def plot_pca_correlation(adata, which="obs",
                          title=None,
                          save=None) -> matplotlib.axes.Axes:
     """
-    Plot a heatmap of the correlation between the first n_pcs and the given columns.
+    Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
 
     Parameters
     ----------
@@ -1218,10 +1219,10 @@ def plot_pca_correlation(adata, which="obs",
         Annotated data matrix object.
     which : str, default "obs"
         Whether to use the observations ("obs") or variables ("var") for the correlation.
-    components: str. default "pca"
-        The components to calculate correlation with. Must be either "pca" or "umap".
+    basis : str, default "umap"
+        Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
     n_components : int, default 10
-        Number of pca or umap components to use for the correlation.
+        Number of components to use for the correlation.
     columns : list of str, default None
         List of columns to use for the correlation. If None, all numeric columns are used.
     pvalue_threshold : float, default 0.01
@@ -1243,7 +1244,7 @@ def plot_pca_correlation(adata, which="obs",
     Raises
     ------
     ValueError
-        If "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "components" is "umap".
+        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
     KeyError
         If any of the given columns is not found in the respective table.
 
@@ -1253,14 +1254,25 @@ def plot_pca_correlation(adata, which="obs",
         :context: close-figs
 
         pl.plot_pca_correlation(adata, which="obs")
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_correlation(adata, basis="umap")
     """
+
+    # Check that basis is in adata.obsm
+    if basis not in adata.obsm:
+        basis = "X_" + basis if not basis.startswith("X_") else basis  # check if basis is available as "X_<basis>"
+        if basis not in adata.obsm:
+            raise KeyError(f"The given basis '{basis}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
 
     # Establish which table to use
     if which == "obs":
         table = adata.obs.copy()
-        mat = adata.obsm[f"X_{components}"]
+        mat = adata.obsm[basis]
     elif which == "var":
-        if components == "umap":
+        if "pca" not in basis.lower():
             raise ValueError("Correlation with 'var' can only be calculated with PCA components!")
         table = adata.var.copy()
         mat = adata.varm["PCs"]
@@ -1283,7 +1295,10 @@ def plot_pca_correlation(adata, which="obs",
 
     # Get table of pcs and columns
     n_components = min(n_components, mat.shape[1])  # make sure we don't exceed the number of pcs available
-    comp_columns = [f"PC{i+1}" if components == 'pca' else f"UMAP{i+1}" for i in range(n_components)]
+    if "pca" in basis.lower():
+        comp_columns = [f"PC{i+1}" for i in range(n_components)]  # e.g. PC1, PC2, ...
+    else:
+        comp_columns = [f"{re.sub('^X_', '', basis.upper())}{i+1}" for i in range(n_components)]  # e.g. UMAP1, UMAP2, ...
     comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
     comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
 

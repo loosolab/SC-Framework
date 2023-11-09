@@ -179,13 +179,15 @@ def test_plot_pca_variance_fail(adata):
 def test_plot_pca_correlation(adata, which, method):
     """Test if Axes object is returned without error."""
 
-    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax = pl.plot_pca_correlation(adata, which=which, method=method, title="Title")
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
 
 
-@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+@pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
+                                    {"basis": "invalid"},
+                                    {"method": "invalid"},
                                     {"which": "invalid"},
                                     {"columns": ["invalid", "columns"]}])
 def test_plot_pca_correlation_fail(adata, kwargs):
