@@ -508,7 +508,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
                           obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
                           threads: int = 1,
                           max_dims: int = 5,
-                          inplace: bool = False) -> dict[str, sc.AnnData]:
+                          inplace: bool = False) -> Optional[dict[str, sc.AnnData]]:
     """
     Evaluate batch correction methods for a dict of anndata objects (using LISI score calculation).
 
@@ -530,7 +530,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
 
     Returns
     -------
-    dict[str, sc.AnnData]
+    Optional[dict[str, sc.AnnData]]
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
 
