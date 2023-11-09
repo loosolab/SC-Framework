@@ -14,7 +14,11 @@ import pkg_resources
 import pandas as pd
 from pathlib import Path
 import multiprocessing as mp
-from typing import Tuple, Union
+import scanpy as sc
+
+from beartype import beartype
+from typing import Optional, Tuple, Union, Literal, Any
+
 import sctoolbox.utils as utils
 from sctoolbox.tools.bam import create_fragment_file
 import sctoolbox.utils.decorator as deco
@@ -22,7 +26,10 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def _convert_gtf_to_bed(gtf, out=None, temp_files=[]) -> Tuple[str, str]:
+@beartype
+def _convert_gtf_to_bed(gtf: str,
+                        out: Optional[str] = None,
+                        temp_files: list[str] = []) -> Tuple[str, list[str]]:
     """
     Convert GTF-file to BED file.
 
@@ -33,14 +40,14 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]) -> Tuple[str, str]:
     ----------
     gtf : str
         Path to .gtf file.
-    out : str, default None
-        Path to save new BED file. If none, the file will be saved in the same folder as the BAM file.
-    temp_files : list, default []
+    out : Optional[str], default None
+        Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
+    temp_files : list[str], default []
         List of temporary files.
 
     Returns
     -------
-    Tuple[str, str]
+    Tuple[str, list[str]]
         Path to fragments and temp files.
     """
 
@@ -76,7 +83,11 @@ def _convert_gtf_to_bed(gtf, out=None, temp_files=[]) -> Tuple[str, str]:
     return out_sorted, temp_files
 
 
-def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]) -> Union[bool, Tuple[str, str]]:
+@beartype
+def _overlap_two_beds(bed1: str,
+                      bed2: str,
+                      out: Optional[str] = None,
+                      temp_files: list[str] = []) -> Union[bool, Tuple[str, str]]:
     """
     Overlap two BED files using Bedtools Intersect.
 
@@ -88,9 +99,9 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]) -> Union[bool, Tuple[
         Path to first BED file.
     bed2 : str
         Path to second BED file.
-    out : str, default None
-        Path to save overlapped file. If none, the file will be saved in the same folder as the BAM file.
-    temp_files : list, default []
+    out : Optional[str], default None
+        Path to save overlapped file. If none, the file will be saved in the same folder as tha BAM file.
+    temp_files : list[str], default []
         List of temporary files.
 
     Returns
@@ -128,8 +139,20 @@ def _overlap_two_beds(bed1, bed2, out=None, temp_files=[]) -> Union[bool, Tuple[
 
 
 @deco.log_anndata
-def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_file=None,
-                               cb_col=None, cb_tag='CB', species=None, nproc=1, sort_bam=False) -> None:
+@beartype
+def pct_fragments_in_promoters(adata: sc.AnnData,
+                               gtf_file: Optional[str] = None,
+                               bam_file: Optional[str] = None,
+                               fragments_file: Optional[str] = None,
+                               cb_col: Optional[str] = None,
+                               cb_tag: str = 'CB',
+                               species: Optional[Literal['bos_taurus', 'caenorhabditis_elegans',
+                                                         'canis_lupus_familiaris', 'danio_rerio',
+                                                         'drosophila_melanogaster', 'gallus_gallus',
+                                                         'homo_sapiens', 'mus_musculus', 'oryzias_latipes',
+                                                         'rattus_norvegicus', 'sus_scrofa', 'xenopus_tropicalis']] = None,
+                               nproc: int = 1,
+                               sort_bam: bool = False) -> None:
     """
     Calculate the percentage of fragments in promoters.
 
@@ -140,7 +163,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containig cell barcodes in adata.obs.
     gtf_file : str, default None
         Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.
@@ -159,7 +182,7 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
         gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
     nproc : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    sort_bam : boolean, default False
+    sort_bam : bool, default False
         Set to True if the provided BAM file is not sorted.
 
     Raises
@@ -182,9 +205,18 @@ def pct_fragments_in_promoters(adata, gtf_file=None, bam_file=None, fragments_fi
 
 
 @deco.log_anndata
-def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=None,
-                          cb_col=None, cb_tag='CB', regions_name='list', nproc=1,
-                          sort_bam=False, sort_regions=False, keep_fragments=False) -> None:
+@beartype
+def pct_fragments_overlap(adata: sc.AnnData,
+                          regions_file: str,
+                          bam_file: Optional[str] = None,
+                          fragments_file: Optional[str] = None,
+                          cb_col: Optional[str] = None,
+                          cb_tag: str = 'CB',
+                          regions_name: str = 'list',
+                          nproc: int = 1,
+                          sort_bam: bool = False,
+                          sort_regions: bool = False,
+                          keep_fragments: bool = False) -> None:
     """
     Calculate the percentage of fragments.
 
@@ -194,16 +226,16 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         The anndata object containig cell barcodes in adata.obs.
     regions_file : str
         Path to BED or GTF file containing regions of interest.
-    bam_file : str, default None
+    bam_file : Optional[str], default None
         Path to BAM file. If None, a fragments file must be provided in the parameter 'fragments_file'.
-    fragments_file : str, default None
+    fragments_file : Optional[str], default None
         Path to fragments file. If None, a BAM file must be provided in the parameter 'bam_file'. The
         BAM file will be converted into fragments file.
-    cb_col : str, default None
+    cb_col : Optional[str], default None
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
     cb_tag : str, default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
@@ -212,11 +244,11 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
         to be added to the anndata object (e.g. pct_fragments_in_{regions_name}).
     nproc : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    sort_bam : boolean, default False
+    sort_bam : bool, default False
         Set to True if the provided BAM file is not sorted.
-    sort_regions : boolean, default False
+    sort_regions : bool, default False
         If True sort bed file on regions.
-    keep_fragments : boolean, default False
+    keep_fragments : bool, default False
         If True keep fragment files.
 
     Returns
@@ -283,6 +315,7 @@ def pct_fragments_overlap(adata, regions_file, bam_file=None, fragments_file=Non
     logger.info('Done')
 
 
+@beartype
 class MPOverlapPct():
     """
     Class to calculate percentage of fragments overlapping with regions of interest.
@@ -299,12 +332,12 @@ class MPOverlapPct():
         self.merged_dict = None
 
     def calc_pct(self,
-                 overlap_file,
-                 fragments_file,
-                 barcodes,
-                 adata,
-                 regions_name='list',
-                 n_threads=8):
+                 overlap_file: str,
+                 fragments_file: str,
+                 barcodes: list[str],
+                 adata: sc.AnnData,
+                 regions_name: str = 'list',
+                 n_threads: int = 8) -> sc.AnnData:
         """Calculate percentage of fragments overlapping with regions of interest."""
 
         # check if there was an overlap
@@ -342,7 +375,10 @@ class MPOverlapPct():
 
         return adata
 
-    def get_barcodes_sum(self, df, barcodes, col_name) -> dict:
+    def get_barcodes_sum(self,
+                         df: pd.DataFrame,
+                         barcodes: list[str],
+                         col_name: str) -> dict:
         """Get the sum of reads counts in each cell barcode."""
 
         # drop columns we dont need
@@ -359,7 +395,7 @@ class MPOverlapPct():
 
         return count_dict
 
-    def log_result(self, result) -> None:
+    def log_result(self, result: Any) -> None:
         """Log results from mp_counter."""
 
         if self.merged_dict:
@@ -368,7 +404,7 @@ class MPOverlapPct():
         else:
             self.merged_dict = result
 
-    def mp_counter(self, fragments, barcodes, column, n_threads=8):
+    def mp_counter(self, fragments: list[str], barcodes: list[str], column: str, n_threads: int = 8):
         """Count reads for each cell barcode in parallel."""
 
         pool = mp.Pool(n_threads, maxtasksperchild=48)
