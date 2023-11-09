@@ -1293,7 +1293,7 @@ def plot_pca_correlation(adata: sc.AnnData,
         Annotated data matrix object.
     which : Literal["obs", "var"], default "obs"
         Whether to use the observations ("obs") or variables ("var") for the correlation.
-    basis : str, default "umap"
+    basis : str, default "pca"
         Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
     n_components : int, default 10
         Number of components to use for the correlation.
