@@ -32,7 +32,7 @@ build-job:       # This job runs in the build stage, which runs first.
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
       - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev":  # only for commits to dev
+    - if: $CI_COMMIT_BRANCH == "dev"  # only for commits to dev
       changes:  # if any of the files were changed
         - setup.py
         - sctoolbox_env.yml
