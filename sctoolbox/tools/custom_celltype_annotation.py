@@ -396,13 +396,17 @@ def get_cell_types(cluster_path: str,
     dict[str, dict[str, list[int]]]
         The dictionary which contains the scores, the quantity of hits, the overall marker genes and
         the ubiquitousness index per cell type for each cluster.
+
+    Raises
+    ------
+    ValueError
+        If given database (db) is not supported.
     """
 
     if db == "panglao":
         db_dict = get_panglao(db_path, tissue=tissue, species=species)
     else:
-        logger.info("DB " + db + " not supported.")
-        exit(1)
+        raise ValueError(f"Given Database {db} is not supported")
 
     annotated_clusters = get_annotated_clusters(cluster_path=cluster_path)
 
