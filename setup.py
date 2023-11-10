@@ -8,11 +8,7 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-<<<<<<< HEAD
-                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'sinto', 'pybedtools', 'pygenometracks'],
-=======
-                  "atac": ['pyyaml', 'uropa', 'ipywidgets', 'pybedtools', 'episcanpy'],
->>>>>>> dev
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'pybedtools', 'pygenometracks'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2

@@ -5,11 +5,15 @@ import tempfile
 import subprocess
 import matplotlib.pyplot as plt
 
+from beartype import beartype
+from beartype.typing import Optional, Any, Literal
+
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
+@beartype
 class GenomeTracks():
     """Class for creating a genome track plot via pyGenomeTracks by collecting different tracks and writing the .ini file.
 
@@ -81,7 +85,11 @@ class GenomeTracks():
         n_tracks = len(self.tracks)
         return f"GenomeTracks object with {n_tracks} track(s). See <obj>.tracks for details."
 
-    def add_track(self, file, file_type=None, name=None, **kwargs):
+    def add_track(self,
+                  file: str,
+                  file_type: Optional[str] = None,
+                  name: Optional[str] = None,
+                  **kwargs: Any):
         """Add a track to the GenomeTracks object.
 
         The track will be added to the configuration file as one element, e.g. .add_track("file1.bed", file_type="bed", name="my_bed") will add the following to the configuration file:
@@ -162,7 +170,10 @@ class GenomeTracks():
 
         self.tracks.append({name: track_dict})
 
-    def add_hlines(self, y_values, overlay_previous="share-y", **kwargs):
+    def add_hlines(self,
+                   y_values: list,
+                   overlay_previous: Literal["share-y", "no"] = "share-y",
+                   **kwargs: Any):
         """Add horizontal lines to the previous plot.
 
         Parameters
@@ -185,7 +196,10 @@ class GenomeTracks():
 
         self.tracks.append(d)
 
-    def add_hline(self, height=1, line_width=2, **kwargs):
+    def add_hline(self,
+                  height: [int, float] = 1,
+                  line_width: [int, float] = 2,
+                  **kwargs: Any):
         """Add a horizontal line between tracks, not within a track.
 
         Can be used to visually separate tracks.
@@ -208,7 +222,8 @@ class GenomeTracks():
 
         self.add_hlines(1, min_value=0, max_value=2, **d)
 
-    def add_spacer(self, height=1):
+    def add_spacer(self,
+                   height: [int, float] = 1):
         """Add a spacer between tracks.
 
         Parameters
@@ -219,7 +234,9 @@ class GenomeTracks():
         d = {"spacer": {"height": height}}
         self.tracks.append(d)
 
-    def add_xaxis(self, height=1, **kwargs):
+    def add_xaxis(self,
+                  height: [int, float],
+                  **kwargs: Any):
         """Add the x-axis to the plot.
 
         Parameters
@@ -234,7 +251,7 @@ class GenomeTracks():
         d.update(kwargs)
         self.tracks.append({"x-axis": d})
 
-    def _predict_type(self, file) -> str:
+    def _predict_type(self, file: str) -> str:
         """Predict the file type from the file ending or the contents of the file.
 
         Parameters
@@ -281,7 +298,7 @@ class GenomeTracks():
 
         return config_str
 
-    def _write_config(self, config_file=None) -> str:
+    def _write_config(self, config_file: Optional[None] = None) -> str:
         """Write the configuration file to disk.
 
         Parameters
@@ -335,7 +352,14 @@ class GenomeTracks():
         config_str = self._create_config_str()
         print(config_str)
 
-    def plot(self, region, output="genometracks.png", config_file=None, title=None, show=True, dpi=300, **kwargs):
+    def plot(self,
+             region: str,
+             output: Optional[str] = "genometracks.png",
+             config_file: Optional[str] = None,
+             title: Optional[str] = None,
+             show: bool = True,
+             dpi: int = 300,
+             **kwargs: Any):
         """
         Plot the final GenomeTracks plot based on the collected tracks.
 
