@@ -2,6 +2,7 @@
 import os
 import matplotlib.pyplot as plt
 import sctoolbox.plotting as pl
+import pytest
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -55,3 +56,11 @@ def test_genometracks():
 
     # Remove file
     os.remove("genometrack_X.png")
+
+
+@pytest.mark.parametrize("file_type", ["spacer", "x-axis", "hlines", "invalid"])
+def test_genometracks_errors(file_type):
+    """Test that errors are raised when adding invalid tracks."""
+    G = pl.GenomeTracks()
+    with pytest.raises(ValueError):
+        G.add_track("file", file_type=file_type)

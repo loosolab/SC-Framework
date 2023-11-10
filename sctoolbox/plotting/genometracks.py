@@ -6,7 +6,7 @@ import subprocess
 import matplotlib.pyplot as plt
 
 from beartype import beartype
-from beartype.typing import Optional, Any, Literal
+from beartype.typing import Optional, Any, Literal, Iterable
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
@@ -171,7 +171,7 @@ class GenomeTracks():
         self.tracks.append({name: track_dict})
 
     def add_hlines(self,
-                   y_values: list,
+                   y_values: Iterable[int | float],
                    overlay_previous: Literal["share-y", "no"] = "share-y",
                    **kwargs: Any):
         """Add horizontal lines to the previous plot.
@@ -186,8 +186,6 @@ class GenomeTracks():
             Additional arguments to be passed to pyGenomeTracks track configuration, for example `title="My lines"`.
         """
 
-        if not isinstance(y_values, list):
-            y_values = [y_values]
         y_values = [str(y) for y in y_values]
 
         d = {"hlines": {"y_values": ", ".join(y_values), "overlay_previous": overlay_previous, "title": ""}}
@@ -220,7 +218,7 @@ class GenomeTracks():
         d["show_data_range"] = kwargs.get("show_data_range", False)  # default is False
         d["overlay_previous"] = "no"
 
-        self.add_hlines(1, min_value=0, max_value=2, **d)
+        self.add_hlines([1], min_value=0, max_value=2, **d)  # line is in the middle of the track
 
     def add_spacer(self,
                    height: int | float = 1):
@@ -235,7 +233,7 @@ class GenomeTracks():
         self.tracks.append(d)
 
     def add_xaxis(self,
-                  height: int | float,
+                  height: int | float = 1,
                   **kwargs: Any):
         """Add the x-axis to the plot.
 
@@ -251,7 +249,7 @@ class GenomeTracks():
         d.update(kwargs)
         self.tracks.append({"x-axis": d})
 
-    def _predict_type(self, file: str) -> str:
+    def _predict_type(self, file: str) -> str | None:
         """Predict the file type from the file ending or the contents of the file.
 
         Parameters
@@ -263,6 +261,8 @@ class GenomeTracks():
         -------
         str
             Predicted file type.
+        None
+            If the file type could not be predicted.
         """
 
         if file.endswith(".bed"):
