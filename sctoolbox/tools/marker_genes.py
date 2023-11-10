@@ -11,8 +11,8 @@ import warnings
 import anndata
 from pathlib import Path
 
-from typing import Optional, Tuple, Any
 from beartype import beartype
+from beartype.typing import Optional, Tuple, Any
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -521,30 +521,37 @@ def mask_rank_genes(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def run_deseq2(adata: sc.AnnData,
-               sample_col: str,
-               condition_col: str,
-               confounders: Optional[list[str]] = None,
+def run_deseq2(adata, sample_col, condition_col,
+               confounders: Optional[str | list[str]] = None,
                layer: Optional[str] = None,
-               percentile_range: Tuple[int, int] = (0, 100)) -> pd.DataFrame:
+               contrasts: Optional[list[Tuple]] = None,
+               percentile_range: Tuple = (0, 100),
+               min_counts: int = 5,
+               threads: int = 1) -> pd.DataFrame:
     """
-    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
+    Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Parameters
     ----------
-    adata : sc.AnnData
+    adata : anndata.AnnData
         Anndata object containing raw counts.
     sample_col : str
         Column name in adata.obs containing sample names.
     condition_col : str
-        Column name in adata.obs containing condition names to be compared.
-    confounders : Optional[list[str]], default None
+        Column name in adata.obs containing conditions to be compared in contrasts, e.g. condition A vs. condition B.
+    confounders : list, default None
         List of additional column names in adata.obs containing confounders to be included in the model.
-    layer : Optional[str], default None
-        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
-    percentile_range : Tuple[int, int], default (0, 100)
+    layer : str, default None
+        Name of layer containing raw counts to be used for pyDESeq2. Default is None (use .X for counts)
+    contrasts : list of tuples, default None
+        List of tuples containing the conditions to be compared in contrasts, e.g. [(A, B), (A, C)].
+    percentile_range : tuple, default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
+    min_counts : int, default 5
+        Minimum number of counts per gene to be included in the analysis.
+    threads : int, default 1
+        Number of threads to be used for pyDESeq2.
 
     Returns
     -------
@@ -558,18 +565,14 @@ def run_deseq2(adata: sc.AnnData,
         1. If any given column name is not found in adata.obs.
         2. If any given column name contains characters not compatible with R.
 
-    Notes
-    -----
-    Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
-
     See Also
     --------
     sctoolbox.utils.pseudobulk_table
     """
 
-    utils.setup_R()
-    from diffexpr.py_deseq import py_DESeq2
+    utils.check_module("pydeseq2")
+    from pydeseq2.dds import DeseqDataSet
+    from pydeseq2.ds import DeseqStats
 
     # Setup the design formula
     if confounders is None:
@@ -577,79 +580,97 @@ def run_deseq2(adata: sc.AnnData,
     elif not isinstance(confounders, list):
         confounders = [confounders]
 
-    design_formula = "~ " + " + ".join(confounders + [condition_col])
-
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
-    for col in cols:
-        if col not in adata.obs.columns:
-            raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
+    utils.check_columns(adata.obs, cols)
 
-        # Check that column is valid for R
-        pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
-        if not re.match(pattern, col):
-            s = f"Column '{col}' is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: "
-            s += "'A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.'"
-            raise ValueError(s)
-
-    # Build sample_df
-    sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
+    # Build sample_df (metadata)
+    sample_df = adata.obs[cols].reset_index(drop=True)
+    sample_df[sample_col] = sample_df[sample_col].astype(str) + "_" + sample_df[condition_col].astype(str)  # add condition to sample name to ensure unique samples
+    sample_df = sample_df.drop_duplicates()  # Reduce to unique samples
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)
+
+    print("sample_df", sample_df)
 
     conditions = sample_df[condition_col].unique()
     samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
 
+    # Establish contrasts
+    all_contrasts = list(itertools.combinations(conditions, 2))
+    if contrasts is None:
+        contrasts = all_contrasts
+    else:
+        # Check that all contrasts are valid
+        all_contrasts_inv = [(C2, C1) for C1, C2 in all_contrasts]  # Check both directions
+        for contrast in contrasts:
+            if contrast not in all_contrasts + all_contrasts_inv:
+                raise ValueError(f"Contrast {contrast} is not valid. Valid contrasts are: {all_contrasts}")
+
+        # Remove cells not in contrasts
+        contrast_conditions = set(itertools.chain.from_iterable(contrasts))
+        print(contrast_conditions)
+        adata = adata[adata.obs[condition_col].isin(contrast_conditions)]
+
     # Build count matrix
-    print("Building count matrix")
-    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                         percentile_range=percentile_range)
-    count_table = count_table.astype(int)  # DESeq2 requires integer counts
-    count_table.index.name = "gene"
-    count_table.reset_index(inplace=True)
+    logger.debug("Building count matrix")
+    counts_df = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
+                                       percentile_range=percentile_range)
+    counts_df = counts_df.astype(int)  # pyDESeq2 requires integer counts
+    counts_df = counts_df.T            # pyDESeq2 requires genes as columns
+    if counts_df.min().min() < 0:
+        raise ValueError("Negative counts found. Please make sure that the counts are not normalized, for example by setting 'layer' to choose different counts.")
+
+    # Filter genes using min_counts
+    genes_to_keep = counts_df.columns[counts_df.sum(axis=0) >= min_counts]
+    counts_df = counts_df[genes_to_keep]
 
     # Run DEseq2
-    print("Running DESeq2")
-    dds = py_DESeq2(count_matrix=count_table,
-                    design_matrix=sample_df,
-                    design_formula=design_formula,
-                    gene_column='gene')
-    dds.run_deseq()
+    logger.debug("Running pyDESeq2")
+    design_factors = confounders + [condition_col]
+    dds = DeseqDataSet(counts=counts_df,
+                       metadata=sample_df,
+                       design_factors=design_factors,
+                       refit_cooks=True,
+                       n_cpus=threads)
+    dds.deseq2()
+    adata.uns["pyDESeq2"] = dds
 
-    # Normalizing counts
-    dds.normalized_count()
-    dds.normalized_count_df.drop(columns="gene", inplace=True)
-    dds.normalized_count_df.columns = dds.samplenames
-
-    # Create result table with mean values per condition
-    deseq_table = pd.DataFrame(index=dds.normalized_count_df.index)
-
-    for i, condition in enumerate(conditions):
+    # Get normalized counts per sample and condition
+    norm_counts = pd.DataFrame(adata.uns["pyDESeq2"].layers["normed_counts"].T, index=dds.var.index, columns=dds.obs.index)
+    for i, condition in enumerate(conditions):  # mean counts per condition
         samples = samples_per_cond[condition]
-        mean_values = dds.normalized_count_df[samples].mean(axis=1)
-        deseq_table.insert(i, condition + "_mean", mean_values)
+        mean_values = norm_counts[samples].mean(axis=1)
+        norm_counts[condition + "_mean"] = mean_values
 
     # Get results per contrast
-    contrasts = list(itertools.combinations(conditions, 2))
+    contrast_tables = []
     for C1, C2 in contrasts:
+        logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
 
-        dds.get_deseq_result(contrast=[condition_col, C2, C1])
-        dds.deseq_result.drop(columns="gene", inplace=True)
+        stat_res = DeseqStats(dds, contrast=[condition_col, C1, C2], n_cpus=threads)
+        stat_res.summary()
+        results_df = stat_res.results_df
 
-        # Rename and add to deseq_table
-        dds.deseq_result.drop(columns=["lfcSE", "stat"], inplace=True)
-        dds.deseq_result.columns = [C2 + "/" + C1 + "_" + col for col in dds.deseq_result.columns]
-        deseq_table = deseq_table.merge(dds.deseq_result, left_index=True, right_index=True)
+        # Drop columns not needed
+        results_df.drop(columns=["lfcSE", "stat"], inplace=True)
 
-    # Add normalized individual sample counts to the back of table
-    deseq_table = deseq_table.merge(dds.normalized_count_df, left_index=True, right_index=True)
+        # Insert counts per condition
+        results_df = results_df.reindex(norm_counts.index)  # Make sure rows have same order as norm_counts before adding mean counts
+        results_df.insert(1, C1 + "_mean", norm_counts[C1 + "_mean"])  # inserts inplace
+        results_df.insert(2, C2 + "_mean", norm_counts[C2 + "_mean"])
+
+        # Format names of columns
+        results_df.columns = [C2 + "/" + C1 + ":" + col for col in results_df.columns]
+        contrast_tables.append(results_df)
+
+    # Merge results
+    print("contrast_tables", contrast_tables)
+    deseq_table = pd.concat(contrast_tables + [norm_counts], axis=1)
 
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
     deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
-
-    # Add to adata uns
-    utils.add_uns_info(adata, "deseq_result", deseq_table)
 
     return deseq_table
 
