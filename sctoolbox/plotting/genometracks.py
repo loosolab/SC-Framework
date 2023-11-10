@@ -36,7 +36,7 @@ class GenomeTracks():
         G.add_hlines([250], color="blue", line_style="dashed")
 
         #Add links
-        G.add_track("data/tracks/links.arcs", orientation="inverted", height=2)
+        G.add_track("data/tracks/links.arcs", orientation="inverted")
 
         #Add one line between tracks
         G.add_hline()
@@ -70,7 +70,7 @@ class GenomeTracks():
 
         self.tracks = []  # dictionary of tracks
         self.type_count = {}
-        self.global_defaults = {"height": 3}  # dictionary of default values
+        self.global_defaults = {"height": 2}  # dictionary of default values
         self.type_defaults = {"gtf": {"merge_transcripts": True, "fontsize": 12},
                               "hlines": {"overlay_previous": "share-y"}}
 
@@ -197,8 +197,8 @@ class GenomeTracks():
         self.tracks.append(d)
 
     def add_hline(self,
-                  height: [int, float] = 1,
-                  line_width: [int, float] = 2,
+                  height: int | float = 1,
+                  line_width: int | float = 2,
                   **kwargs: Any):
         """Add a horizontal line between tracks, not within a track.
 
@@ -223,7 +223,7 @@ class GenomeTracks():
         self.add_hlines(1, min_value=0, max_value=2, **d)
 
     def add_spacer(self,
-                   height: [int, float] = 1):
+                   height: int | float = 1):
         """Add a spacer between tracks.
 
         Parameters
@@ -235,7 +235,7 @@ class GenomeTracks():
         self.tracks.append(d)
 
     def add_xaxis(self,
-                  height: [int, float],
+                  height: int | float,
                   **kwargs: Any):
         """Add the x-axis to the plot.
 
