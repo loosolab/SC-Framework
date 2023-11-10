@@ -8,7 +8,11 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
+<<<<<<< HEAD
                   "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'sinto', 'pybedtools', 'pygenometracks'],
+=======
+                  "atac": ['pyyaml', 'uropa', 'ipywidgets', 'pybedtools', 'episcanpy'],
+>>>>>>> dev
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
@@ -20,7 +24,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
 
-def find_version(f) -> str:
+def find_version(f: str) -> str:
     """
     Get package version from file.
 
@@ -91,6 +95,7 @@ setup(
         'python-gitlab',
         'psutil',
         'pyyaml',
+        'beartype',
     ],
     include_package_data=True,
     extras_require=extras_require

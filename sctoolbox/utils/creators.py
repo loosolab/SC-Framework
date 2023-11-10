@@ -8,13 +8,24 @@ import re
 from ratelimiter import RateLimiter
 import time
 
+from beartype import beartype
+from typing import Optional, Any, Literal
 
-def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
-                    repo="sc_framework", branch="main",
-                    commit=None, out_path="./", private=False,
-                    load_token=pathlib.Path.home() / ".gitlab_token",
-                    save_token=pathlib.Path.home() / ".gitlab_token",
-                    overwrite=False, max_calls=5, period=60) -> None:
+
+@beartype
+def gitlab_download(internal_path: str,
+                    file_regex: str,
+                    host: str = "https://gitlab.gwdg.de/",
+                    repo: str = "sc_framework",
+                    branch: str = "main",
+                    commit: Optional[str] = None,
+                    out_path: str = "./",
+                    private: bool = False,
+                    load_token: str = pathlib.Path.home() / ".gitlab_token",
+                    save_token: str = pathlib.Path.home() / ".gitlab_token",
+                    overwrite: bool = False,
+                    max_calls: int = 5,
+                    period: int = 60) -> None:
     """
     Download file(s) from gitlab.
 
@@ -30,21 +41,21 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
         Name of the repository
     branch :  str, default 'main'
         What branch to use
-    commit : str, default None
+    commit : Optional[str], default None
         What commit to use, overwrites branch
     out_path : str, default './'
         Where the fike/dir should be downloaded to
-    private :  boolean, default False
+    private :  bool, default False
         Set true if repo is private
     load_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
         Load token from file. Set to None for new token
     save_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
         Save token to file
-    overwrite : boolean, default False
+    overwrite : bool, default False
         Overwrite file if it exsits in the directory
     max_calls : int, default 5
         limit file download rate per period
-    period : int, deafult 60
+    period : int, default 60
         period length in seconds
 
     Raises
@@ -102,7 +113,9 @@ def gitlab_download(internal_path, file_regex, host="https://gitlab.gwdg.de/",
         print("Error:", e)
 
 
-def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]) -> None:
+@beartype
+def setup_experiment(dest: str,
+                     dirs: list[str] = ["raw", "preprocessing", "Analysis"]) -> None:
     """
     Create initial folder structure.
 
@@ -110,7 +123,7 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]) -> None:
     ----------
     dest : str
         Path to new experiment
-    dirs : list, default ['raw', 'preprocessing', 'Analysis']
+    dirs : list[str], default ['raw', 'preprocessing', 'Analysis']
         Internal folders to create
 
     Raises
@@ -131,9 +144,12 @@ def setup_experiment(dest, dirs=["raw", "preprocessing", "Analysis"]) -> None:
         print(f"Build: {path_to_build}")
 
 
-def add_analysis(dest, analysis_name, method="rna",
-                 dirs=['figures', 'data', 'logs'],
-                 starts_with=1, **kwargs) -> None:
+def add_analysis(dest: str,
+                 analysis_name: str,
+                 method: Literal["rna", "atac"] = "rna",
+                 dirs: list[str] = ['figures', 'data', 'logs'],
+                 starts_with: int = 1,
+                 **kwargs: Any) -> None:
     """
     Create and add a new analysis/run.
 
@@ -146,13 +162,13 @@ def add_analysis(dest, analysis_name, method="rna",
         Path to experiment.
     analysis_name : str
         Name of the new analysis run.
-    method : {'rna', 'atac'}
+    method : Literal["rna", "atac"], default "rna"
         Type of notebooks to download.
     dirs : list[str], default ['figures', 'data', 'logs']
         Internal folders to create besides 'notebooks' directory.
     starts_with : int, default 1
         Notebook the analysis will start with.
-    **kwargs : dict
+    **kwargs : Any
         Forwarded to `gitlab_download`.
 
     Raises
@@ -184,7 +200,8 @@ def add_analysis(dest, analysis_name, method="rna",
     gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
 
 
-def build_notebooks_regex(starts_with) -> str:
+@beartype
+def build_notebooks_regex(starts_with: int) -> str:
     """
     Build regex for notebooks starting with given number.
 

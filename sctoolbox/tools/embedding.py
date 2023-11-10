@@ -2,18 +2,20 @@
 import scanpy as sc
 import multiprocessing as mp
 
+from typing import Iterable
+from beartype import beartype
+
 import sctoolbox.utils as utils
 
 
-def wrap_umap(adatas, threads=4) -> None:
+@beartype
+def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4) -> None:
     """
     Compute umap for a list of adatas in parallel.
 
-    TODO Check that adatas is a list of anndata objects
-
     Parameters
     ----------
-    adatas : list of anndata.AnnData
+    adatas : Iterable[sc.AnnData]
         List of anndata objects to compute umap on.
     threads : int, default 4
         Number of threads to use.

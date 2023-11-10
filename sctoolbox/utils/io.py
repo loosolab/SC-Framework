@@ -5,8 +5,12 @@ import tempfile
 import warnings
 import glob
 
+from beartype import beartype
+from typing import Optional
 
-def create_dir(path) -> None:
+
+@beartype
+def create_dir(path: str) -> None:
     """
     Create a directory if it is not existing yet.
 
@@ -29,13 +33,15 @@ def create_dir(path) -> None:
             os.makedirs(path, exist_ok=True)
 
 
-def get_temporary_filename(tempdir=".") -> str:
+@beartype
+def get_temporary_filename(tempdir: str = ".") -> str:
     """
     Get a writeable temporary filename by creating a temporary file and closing it again.
 
     Parameters
     ----------
     tempdir : str, default "."
+        The path where the temp file will be created.
 
     Returns
     -------
@@ -50,7 +56,8 @@ def get_temporary_filename(tempdir=".") -> str:
     return filename
 
 
-def remove_files(file_list) -> None:
+@beartype
+def remove_files(file_list: list[str]) -> None:
     """
     Delete all files in a file list. Prints a warning if deletion was not possible.
 
@@ -67,7 +74,8 @@ def remove_files(file_list) -> None:
             warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
 
-def rm_tmp(temp_dir, tempfiles=None) -> None:
+@beartype
+def rm_tmp(temp_dir: str, tempfiles: Optional[list[str]] = None) -> None:
     """
     Delete given directory.
 
@@ -80,7 +88,7 @@ def rm_tmp(temp_dir, tempfiles=None) -> None:
     ----------
     temp_dir : str
         Path to the temporary directory.
-    tempfiles : list[str], default None
+    tempfiles : Optional[list[str]], default None
         Paths to files to be deleted before removing the temp directory.
     """
 
