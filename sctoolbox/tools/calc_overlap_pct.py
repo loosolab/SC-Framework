@@ -17,7 +17,7 @@ import multiprocessing as mp
 import scanpy as sc
 
 from beartype import beartype
-from typing import Optional, Tuple, Union, Literal, Any
+from beartype.typing import Optional, Tuple, Union, Literal, Any
 
 import sctoolbox.utils as utils
 from sctoolbox.tools.bam import create_fragment_file

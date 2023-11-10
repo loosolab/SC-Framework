@@ -11,7 +11,7 @@ import warnings
 import anndata
 from pathlib import Path
 
-from typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils

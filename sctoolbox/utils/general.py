@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 # type hint imports
-from typing import Any, TYPE_CHECKING, Optional, Union, Sequence
+from beartype.typing import Any, TYPE_CHECKING, Optional, Union, Sequence
 from beartype import beartype
 import numpy.typing as npt
 

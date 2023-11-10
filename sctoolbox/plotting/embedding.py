@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from typing import Literal, Tuple, Optional, Union, Any
+from beartype.typing import Literal, Tuple, Optional, Union, Any
 import numpy.typing as npt
 
 import sctoolbox.utils as utils

@@ -12,7 +12,7 @@ import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
-from typing import Tuple, Optional
+from beartype.typing import Tuple, Optional
 from beartype import beartype
 import numpy.typing as npt
 

@@ -5,7 +5,7 @@ from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 import sctoolbox.utils as utils
 
-from typing import Optional
+from beartype.typing import Optional
 
 
 def _is_notebook() -> bool:
