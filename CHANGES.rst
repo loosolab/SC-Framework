@@ -8,6 +8,8 @@ Changes to notebooks:
 
 0.2 (in progress)
 =================
+- Add paramter to plot_pca_correlation to plot correlation with UMAP components (#157)
+- Handle NaN values for plot_pca_correlation (#156)
 - implemented prepare_for_cellxgene
 - fix error in prepare_for_cellxgene caused by .uns[_color] not matching .obs column. (#176)
 - implemented prepare_for_cellxgene (#147)
