@@ -325,9 +325,10 @@ def embedding(adata: sc.AnnData,
             elif style == "density":
 
                 # remove NaN values
-                is_nan = np.isnan(color_values)
-                color_values = color_values[~is_nan]
-                coordinates = coordinates[~is_nan]
+                if color_values is not None:
+                    is_nan = np.isnan(color_values)
+                    color_values = color_values[~is_nan]
+                    coordinates = coordinates[~is_nan]
 
                 if color[i] is None:
                     has_colorbar = True  # even non-colored plots have colorbar with density of cells
