@@ -326,7 +326,7 @@ def embedding(adata: sc.AnnData,
 
                 # remove NaN values
                 if color_values is not None:
-                    is_nan = np.isnan(color_values)
+                    is_nan = pd.isna(color_values)  # numpy's isnan throws error for string array
                     color_values = color_values[~is_nan]
                     coordinates = coordinates[~is_nan]
 
