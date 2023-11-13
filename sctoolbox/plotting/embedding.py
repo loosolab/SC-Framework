@@ -1281,6 +1281,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                          columns: Optional[list[str]] = None,
                          pvalue_threshold: float = 0.01,
                          method: Literal["spearmanr", "pearsonr"] = "spearmanr",
+                         plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
                          figsize: Optional[Tuple[int, int]] = None,
                          title: Optional[str] = None,
                          save: Optional[str] = None) -> matplotlib.axes.Axes:
@@ -1386,9 +1387,19 @@ def plot_pca_correlation(adata: sc.AnnData,
 
         res = corr_method(x[0], x[1])
 
-        corr_table.loc[row, col] = res.statistic
+        if plot_values == "corrcoefs":
+            value = res.statistic
+            # center of cbar is 0
+            vmin = -1
+            vmax = 1
+        elif plot_values == "pvalues":
+            value = np.sign(res.statistic) * np.log10(res.pvalue)
+            # infer min and max for cbar from data
+            vmin = None
+            vmax = None
 
-        corr_table_annot.loc[row, col] = str(np.round(res.statistic, 2))
+        corr_table.loc[row, col] = value
+        corr_table_annot.loc[row, col] = str(np.round(value, 2))
         corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
 
     # Plot heatmap
@@ -1399,9 +1410,9 @@ def plot_pca_correlation(adata: sc.AnnData,
                      annot=corr_table_annot,
                      fmt='',
                      annot_kws={"fontsize": 9},
-                     cbar_kws={"label": method},
+                     cbar_kws={"label": f"{method} ({plot_values})"},
                      cmap="seismic",
-                     vmin=-1, vmax=1,  # center is 0
+                     vmin=vmin, vmax=vmax,
                      ax=ax)
     ax.set_aspect(0.8)
 
