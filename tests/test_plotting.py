@@ -177,7 +177,8 @@ def test_plot_pca_variance_fail(adata):
 
 
 @pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
-                                    {"basis": "umap", "method": "pearsonr"}])
+                                    {"basis": "umap", "method": "pearsonr"},
+                                    {"basis": "umap", "plot_values": "pvalues"}])
 def test_plot_pca_correlation(adata, kwargs):
     """Test if Axes object is returned without error."""
 
