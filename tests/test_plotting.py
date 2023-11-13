@@ -176,24 +176,27 @@ def test_plot_pca_variance_fail(adata):
         pl.plot_pca_variance(adata, ax="invalid")
 
 
-@pytest.mark.parametrize("which", ["obs", "var"])
-@pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
-def test_plot_pca_correlation(adata, which, method):
+@pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
+                                    {"basis": "umap", "method": "pearsonr"},
+                                    {"basis": "umap", "plot_values": "pvalues"}])
+def test_plot_pca_correlation(adata, kwargs):
     """Test if Axes object is returned without error."""
 
-    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax = pl.plot_pca_correlation(adata, title="Title", **kwargs)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
 
 
-@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+@pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
+                                    {"basis": "invalid"},
+                                    {"method": "invalid"},
                                     {"which": "invalid"},
                                     {"columns": ["invalid", "columns"]}])
 def test_plot_pca_correlation_fail(adata, kwargs):
     """Test that an exception is raised upon error."""
 
-    with pytest.raises((BeartypeCallHintParamViolation, KeyError)):
+    with pytest.raises((BeartypeCallHintParamViolation, KeyError, ValueError)):
         pl.plot_pca_correlation(adata, **kwargs)
 
 

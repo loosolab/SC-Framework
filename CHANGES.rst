@@ -5,11 +5,15 @@
 - The function 'create_fragment_file' was moved to bam tools.
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 - Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
+- Add paramter to plot_pca_correlation to plot correlation with UMAP components (#157)
+- Handle NaN values for plot_pca_correlation (#156)
+- implemented prepare_for_cellxgene
 - Added GenomeTracks plotting
 
 Changes to notebooks:
 
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
+
 
 0.2 (30-08-2023)
 ----------------
