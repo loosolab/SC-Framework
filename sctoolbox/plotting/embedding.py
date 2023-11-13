@@ -1304,6 +1304,8 @@ def plot_pca_correlation(adata: sc.AnnData,
         Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
     method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
+    plot_values: Literal["corrcoefs", "pvalues"], default "corrcoefs"
+        Values which will be used to plot the heatmap, either "corrcoefs" (correlation coefficients) or "pvalues".
     figsize : Optional[Tuple[int, int]], default None
         Size of the figure in inches. If None, the size is automatically determined.
     title : Optional[str], default None
