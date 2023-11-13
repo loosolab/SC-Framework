@@ -259,7 +259,7 @@ class GenomeTracks():
 
         Returns
         -------
-        str or None
+        str | None
             String of predicted file type or None if the file type could not be predicted.
         """
 
