@@ -259,10 +259,8 @@ class GenomeTracks():
 
         Returns
         -------
-        str
-            Predicted file type.
-        None
-            If the file type could not be predicted.
+        str or None
+            String of predicted file type or None if the file type could not be predicted.
         """
 
         if file.endswith(".bed"):

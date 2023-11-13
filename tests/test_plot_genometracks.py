@@ -47,6 +47,9 @@ def test_genometracks():
     G.add_spacer()
     G.add_xaxis()
 
+    print(G)  # triggers __repr__
+    G.show_config()     # triggers print of config
+
     assert len(G.tracks) == 14
 
     # Plot
