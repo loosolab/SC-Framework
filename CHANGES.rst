@@ -9,6 +9,8 @@
 - Handle NaN values for plot_pca_correlation (#156)
 - implemented prepare_for_cellxgene
 - Added GenomeTracks plotting
+- Added pl.embedding.embedding() function to plot embeddings with different styles, e.g. hexbin and density (#149)
+- Deprecated pl.umap_pub as this is now covered by pl.embedding
 
 Changes to notebooks:
 

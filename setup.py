@@ -91,6 +91,7 @@ setup(
         'python-gitlab',
         'psutil',
         'pyyaml',
+        'deprecation',
         'beartype',
     ],
     include_package_data=True,

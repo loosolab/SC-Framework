@@ -6,6 +6,7 @@ from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
 import scipy
 import matplotlib.pyplot as plt
+from scipy.sparse import issparse
 
 from beartype.typing import Optional, Any
 from beartype import beartype
@@ -250,6 +251,41 @@ def add_uns_info(adata: sc.AnnData,
             # If list; remove duplicates and keep the last occurrence
             if isinstance(d[last_key], Sequence):
                 d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
+
+
+@beartype
+def get_cell_values(adata: sc.AnnData,
+                    element: str) -> np.ndarray:
+    """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object.
+    element : str
+        The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+
+    Returns
+    -------
+    np.ndarray
+        Array of values per cell in adata.
+
+    Raises
+    ------
+    ValueError
+        If element is not found in adata.obs or adata.var.
+    """
+
+    if element in adata.obs:
+        values = np.array(adata.obs[element].values)
+    elif element in adata.var.index:
+        idx = list(adata.var.index).index(element)
+        values = adata.X[:, idx]
+        values = values.todense().A1 if issparse(values) else values
+    else:
+        raise ValueError(f"Element '{element}' not found in adata.obs or adata.var.")
+
+    return values
 
 
 @beartype
