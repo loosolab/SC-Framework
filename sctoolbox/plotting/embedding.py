@@ -234,6 +234,21 @@ def embedding(adata: sc.AnnData,
 
     # ---- Plot embedding for chosen colors ---- #
 
+    # get embedding dimensions if passed as a kwarg
+    # otherwise use defalut dimensions 1 and 2
+    args = locals()  # get all arguments passed to function
+    kwargs = args.pop("kwargs")  # split args from kwargs dict
+    try:
+        dims = kwargs['components']
+        if type(dims) is str:
+            dims = [dims]
+    except:
+        dims = ["1, 2"]
+        kwargs['components'] = dims
+    # components are in form e.g. ["1, 2"]
+    dim1 = int(dims[0].split(',')[0].strip())
+    dim2 = int(dims[0].split(',')[-1].strip())
+
     kwargs["color_map"] = kwargs.get("color_map", sc_colormap())  # set cmap to sc_colormap if not given
     parameters = {"color": color,
                   "basis": basis,
@@ -253,11 +268,11 @@ def embedding(adata: sc.AnnData,
     # ---- Adjust style of individual plots ---- #
     for i, ax in enumerate(axarr):
 
-        coordinates = adata.obsm[basis][:, :2]
+        coordinates = adata.obsm[basis][:, [dim1-1, dim2-1]]
 
         # Adjust axis labels (sc.pl.embedding writes "X_umap1" instead of "UMAP1")
-        ax.set_xlabel(f"{method.upper()}1")
-        ax.set_ylabel(f"{method.upper()}2")
+        ax.set_xlabel(f"{method.upper()}{dim1}")
+        ax.set_ylabel(f"{method.upper()}{dim2}")
 
         # Remove title
         if not show_title:
@@ -351,7 +366,7 @@ def embedding(adata: sc.AnnData,
 
                     adata_subsets = utils.get_adata_subsets(adata, groupby=color[i])
                     for group, adata_sub in adata_subsets.items():
-                        coordinates_sub = adata_sub.obsm[basis][:, :2]
+                        coordinates_sub = adata_sub.obsm[basis][:, [dim1-1, dim2-1]]
 
                         # Plot kde in color from original plot
                         kde_color = cat2color[group]
