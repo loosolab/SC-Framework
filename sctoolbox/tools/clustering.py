@@ -6,31 +6,41 @@ import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
+from typing import Literal, Optional
+from beartype import beartype
+
 
 @deco.log_anndata
-def recluster(adata, column, clusters,
-              task="join", method="leiden", resolution=1, key_added=None,
-              plot=True, embedding="X_umap") -> None:
+@beartype
+def recluster(adata: sc.AnnData,
+              column: str,
+              clusters: str | list[str],
+              task: Literal["join", "split"] = "join",
+              method: Literal["leiden", "louvain"] = "leiden",
+              resolution: float | int = 1,
+              key_added: Optional[str] = None,
+              plot: bool = True,
+              embedding: str = "X_umap") -> None:
     """
     Recluster an anndata object based on an existing clustering column in .obs.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
-    column : str
+    column : str | list[str]
         Column in adata.obs to use for re-clustering.
-    clusters : str or list of str
+    clusters : str | list[str]
         Clusters in `column` to re-cluster.
-    task : str, default "join"
+    task : Literal["join", "split"], default "join"
         Task to perform. Options are:
         - "join": Join clusters in `clusters` into one cluster.
         - "split": Split clusters in `clusters` are merged and then reclustered using `method` and `resolution`.
-    method : str, default "leiden"
+    method : Literal["leiden", "louvain"], default "leiden"
         Clustering method to use. Must be one of "leiden" or "louvain".
     resolution : float, default 1
         Resolution parameter for clustering.
-    key_added : str, default None
+    key_added : Optional[str], default None
         Name of the new column in adata.obs. If None, the column name is set to `<column>_recluster`.
     plot : bool, default True
         If a plot should be generated of the re-clustering.
@@ -67,6 +77,7 @@ def recluster(adata, column, clusters,
     elif method == "louvain":
         cl_function = sc.tl.louvain
     else:
+        # Will not be called due to beartype checks
         raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
     # TODO: Check if clusters are found in column
@@ -80,6 +91,7 @@ def recluster(adata, column, clusters,
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
 
     else:
+        # Will not be called due to beartype checks
         raise ValueError(f"Task '{task}' is not valid. Task must be one of: 'join', 'split'")
 
     adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1

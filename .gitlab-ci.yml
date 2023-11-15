@@ -4,6 +4,7 @@ extract-version:
   image: python:3.10
   script:
     - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
+    - echo "BUILD_VERSION=$VERSION"
     - echo "BUILD_VERSION=$VERSION" >> build.env
   artifacts:
     reports:
@@ -11,7 +12,7 @@ extract-version:
   rules:
     - when: always
 
-# The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml)has changed.
+# The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
@@ -31,13 +32,13 @@ build-job:       # This job runs in the build stage, which runs first.
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
       - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
   rules:
-    - if:
-      changes:
+    - if: $CI_COMMIT_BRANCH == "dev"  # only for commits to dev
+      changes:  # if any of the files were changed
         - setup.py
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
-    - when: manual
+    - when: manual    # or manually
       allow_failure: true
 
 # Change pip's cache directory to be inside the project directory since we can
@@ -78,20 +79,20 @@ lint:
     default: false # do not inherit before_script
   stage: test
   tags:
-    - coverage
+    - sctoolbox
   script:
     - python --version
     - pip install flake8
     - pip install pydoclint>=0.1.7
     - pip install flake8-docstrings  # adds pydocstyle to flake
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301 --arg-type-hints-in-signature False --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301,DOC105 --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
       - setup.py
       - tests/*.py
-      - sctoolbox/*.py
+      - sctoolbox/**/*.py
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
@@ -106,18 +107,19 @@ test import:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - setup.py
-        - sctoolbox/*.py
+        - sctoolbox/**/*.py
 
 # Run test coverage
 test coverage:
   stage: test
   image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
   tags:
-    - coverage
+    - sctoolbox
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - echo $BUILD_VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
+    - pip install .[all]  # make sure dependencies of current branch version are installed
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
@@ -131,11 +133,11 @@ test coverage:
     - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
       changes:
       - tests/*.py
-      - sctoolbox/*.py
+      - sctoolbox/**/*.py
     - if: $CI_COMMIT_BRANCH != "dev" && $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
       changes:
       - tests/*.py
-      - sctoolbox/*.py    
+      - sctoolbox/**/*.py
     - when: manual
       allow_failure: True
 
@@ -194,6 +196,7 @@ notebooks:
       - rna-notebooks/pipeline_output/logs/*.txt
   script:
     - pip install papermill
+    - pip install .[all]   # reinstall to make sure the current branch version is used
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
@@ -220,13 +223,15 @@ notebooks:
 
 # Build documentation
 build-pages:
-  image: python:3.10
+  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"  # ensure that all dependencies are available
   stage: deploy
   script:
+    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
+    - pip install .  # ensure that the current branch version is used for building pages
     - cd docs
     - make html
   artifacts:

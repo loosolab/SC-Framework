@@ -1,5 +1,18 @@
+0.3 (in progress)
+=================
+
+- Added pl.embedding.embedding() function to plot embeddings with different styles, e.g. hexbin and density
+- Deprecated pl.umap_pub as this is now covered by pl.embedding
+
+Changes to notebooks:
+
+- Added plot of highly expressed genes to RNA notebook 03 (#43)
+
+
 0.2 (in progress)
 =================
+- Add paramter to plot_pca_correlation to plot correlation with UMAP components (#157)
+- Handle NaN values for plot_pca_correlation (#156)
 - implemented prepare_for_cellxgene
 - fix error in prepare_for_cellxgene caused by .uns[_color] not matching .obs column. (#176)
 - implemented prepare_for_cellxgene (#147)
@@ -33,6 +46,11 @@
 - Disabled threads parameter for tSNE (#130)
 - Added 'plot_starsolo_quality' and 'plot_starsolo_UMI' to plotting module (#78)
 - Fixed issues with clustered dotplot with new code (#122)
+- Add parameter type hinting including runtime type checking (#46)
+- Removed 'sinto' as dependency and added code in 'create_fragment_file' to create fragment file internally (solves #147)
+- The function 'create_fragment_file' was moved to bam tools.
+- Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
+- Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
 
 Changes to notebooks
 --------------------
