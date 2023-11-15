@@ -1762,7 +1762,7 @@ def plot_pca_correlation(adata: sc.AnnData,
             vmin = -1
             vmax = 1
         elif plot_values == "pvalues":
-            value = np.sign(res.statistic) * np.log10(res.pvalue)
+            value = -np.sign(res.statistic) * np.log10(res.pvalue)
             # infer min and max for cbar from data
             vmin = None
             vmax = None
