@@ -1,6 +1,7 @@
 0.3 (in progress)
 =================
 
+- Modified pl.embedding.embedding() to plot different embedding dimensions
 - Added pl.embedding.embedding() function to plot embeddings with different styles, e.g. hexbin and density
 - Deprecated pl.umap_pub as this is now covered by pl.embedding
 

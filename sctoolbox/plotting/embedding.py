@@ -242,7 +242,7 @@ def embedding(adata: sc.AnnData,
         dims = kwargs['components']
         if type(dims) is str:
             dims = [dims]
-    except:
+    except KeyError:
         dims = ["1, 2"]
         kwargs['components'] = dims
     # components are in form e.g. ["1, 2"]
@@ -268,7 +268,7 @@ def embedding(adata: sc.AnnData,
     # ---- Adjust style of individual plots ---- #
     for i, ax in enumerate(axarr):
 
-        coordinates = adata.obsm[basis][:, [dim1-1, dim2-1]]
+        coordinates = adata.obsm[basis][:, [dim1 - 1, dim2 - 1]]
 
         # Adjust axis labels (sc.pl.embedding writes "X_umap1" instead of "UMAP1")
         ax.set_xlabel(f"{method.upper()}{dim1}")
@@ -366,7 +366,7 @@ def embedding(adata: sc.AnnData,
 
                     adata_subsets = utils.get_adata_subsets(adata, groupby=color[i])
                     for group, adata_sub in adata_subsets.items():
-                        coordinates_sub = adata_sub.obsm[basis][:, [dim1-1, dim2-1]]
+                        coordinates_sub = adata_sub.obsm[basis][:, [dim1 - 1, dim2 - 1]]
 
                         # Plot kde in color from original plot
                         kde_color = cat2color[group]
