@@ -7,8 +7,11 @@ import tqdm
 import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
-from typing import Tuple
-import anndata
+
+from typing import Tuple, Optional
+from beartype import beartype
+import numpy.typing as npt
+
 import sctoolbox.tools as tools # add_insertsize()
 import sctoolbox.plotting as plotting # save_figure()
 
