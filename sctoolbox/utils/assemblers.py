@@ -92,6 +92,59 @@ def assemble_from_h5ad(h5ad_files: list[str],
 
     return adata
 
+@beartype
+def prepare_atac_anndata(adata: sc.AnnData,
+                         set_index: bool = True,
+                         index_from: Optional[str] = None,
+                         coordinate_cols: Optional[list[str]] = None,
+                         h5ad_path: Optional[str] = None) -> sc.AnnData:
+    """
+    Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
+    This includes formatting the index, formatting the coordinate columns, and setting the barcode as the index.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object to be prepared.
+    set_index : bool, default True
+        If True, index will be formatted and can be set by a given column.
+    index_from : Optional[str], default None
+        Column to build the index from.
+    coordinate_cols : Optional[list[str]], default None
+        Location information of the peaks.
+    h5ad_path : Optional[str], default None
+        Path to the h5ad file.
+
+    Returns
+    -------
+    sc.AnnData
+        The prepared AnnData object.
+
+    """
+
+    if set_index:
+        logger.info("formatting index")
+        utils.format_index(adata, index_from)
+
+    # Establish columns for coordinates
+    if coordinate_cols is None:
+        coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
+    else:
+        utils.check_columns(adata.var, coordinate_cols,
+                            "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+
+    # Format coordinate columns
+    logger.info("formatting coordinate columns")
+    utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
+
+    # check if the barcode is the index otherwise set it
+    utils.barcode_index(adata)
+
+    if h5ad_path is not None:
+        adata.obs = adata.obs.assign(file=h5ad_path)
+
+    return adata
+
 
 #####################################################################
 #          ASSEMBLING ANNDATA FROM STARSOLO OUTPUT FOLDERS          #

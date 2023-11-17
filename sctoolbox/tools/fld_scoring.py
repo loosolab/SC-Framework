@@ -1,6 +1,7 @@
 """Tools for scATAC nucleosome analysis."""
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import matplotlib.pyplot as plt
 import matplotlib
 import tqdm
@@ -8,7 +9,7 @@ import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Literal
 from beartype import beartype
 import numpy.typing as npt
 
