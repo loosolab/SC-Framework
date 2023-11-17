@@ -286,16 +286,16 @@ def pairwise_rank_genes(adata: sc.AnnData,
     # Check that fractions are available
     use_fractions = True
     if adata.X.min() < 0:
-        logger.warning("adata.X contains negative values (potentially transformed counts), " \
-                       "meaning that 'min_in_group_fraction' and 'max_out_group_fraction' " \
-                       "cannot be used for filtering. These parameters will be ignored. " \
+        logger.warning("adata.X contains negative values (potentially transformed counts), "
+                       "meaning that 'min_in_group_fraction' and 'max_out_group_fraction' "
+                       "cannot be used for filtering. These parameters will be ignored. "
                        "Consider using raw/normalized data instead.")
         use_fractions = False
 
     # Calculate marker genes for each contrast
     tables = []
     for contrast in contrasts:
-        print(f"Calculating rank genes for contrast: {contrast}")
+        logger.info(f"Calculating rank genes for contrast: {contrast}")
 
         # Get adata for contrast
         adata_sub = adata[adata.obs[groupby].isin(contrast)]   # subset to contrast
