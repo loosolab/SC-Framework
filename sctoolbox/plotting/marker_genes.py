@@ -90,10 +90,6 @@ def rank_genes_plot(adata: sc.AnnData,
         pl.rank_genes_plot(adata, genes={"group1": adata.var.index[:10], "group2": adata.var.index[10:20]}, groupby="bulk_labels")
     """
 
-    available_styles = ["dots", "heatmap"]
-    if style not in available_styles:
-        raise ValueError(f"style must be one of {available_styles}.")
-
     # Key is not needed if genes are specified
     if genes is not None:
         key = None
