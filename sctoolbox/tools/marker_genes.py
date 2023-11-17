@@ -380,7 +380,8 @@ def get_rank_genes_tables(adata: sc.AnnData,
     Raises
     ------
     ValueError:
-        If not all columns given in var_columns are in adata.var.
+        1. If not all columns given in var_columns are in adata.var.
+        2. If key cannot be found in adata.uns.
     """
 
     # Check that all given columns are valid
