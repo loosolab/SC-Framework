@@ -217,16 +217,21 @@ def plot_embedding(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
+        _ = pl.plot_embedding(adata, color=['n_genes', 'HES4'], style="hexbin", components=["1,2", "2,3"], ncol=2)
+
+    .. plot::
+        :context: close-figs
+
         ax = pl.plot_embedding(adata, color=['n_genes', 'louvain'], style="density")
     """
 
-    # Check that method is in adata.obsm
-    basis = "X_" + method
+    # Get key in obsm from method
     if method in adata.obsm:  # method is directly available in obsm
-        basis = method
+        obsm_key = method
+    elif "X_" + method in adata.obsm:  # method is available as "X_<method>"
+        obsm_key = "X_" + method
     else:
-        if basis not in adata.obsm:
-            raise KeyError(f"The given method '{method}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
+        raise KeyError(f"The given method '{method}' or 'X_{method}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
 
     # ---- Plot embedding for chosen colors ---- #
 
@@ -234,21 +239,21 @@ def plot_embedding(adata: sc.AnnData,
     # otherwise use defalut dimensions 1 and 2
     args = locals()  # get all arguments passed to function
     kwargs = args.pop("kwargs")  # split args from kwargs dict
-    try:
-        dims = kwargs['components']
+    if "components" in kwargs:
+        dims = kwargs["components"]
         if type(dims) is str:
-            dims = [dims]
-    except KeyError:
-        dims = ["1, 2"]
-        kwargs['components'] = dims
-
-    # components are in form e.g. ["1, 2"]
-    dim1 = int(dims[0].split(',')[0].strip())
-    dim2 = int(dims[0].split(',')[-1].strip())
+            if dims == "all":
+                n_components = adata.obsm[obsm_key].shape[1]
+                dims = ["{0},{1}".format(c[0], c[1]) for c in itertools.combinations(range(1, n_components + 1), 2)]  # "1,2", "1,3", "2,3" etc.
+            else:
+                dims = [dims]
+    else:
+        dims = ["1,2"]
+    kwargs["components"] = dims  # overwrite components kwarg
 
     kwargs["color_map"] = kwargs.get("color_map", sc_colormap())  # set cmap to sc_colormap if not given
     parameters = {"color": color,
-                  "basis": basis,
+                  "basis": method,  # sc.pl.embedding can take either "umap" or "X_umap"
                   "show": False}
     if style != "dots":
         parameters["alpha"] = 0  # make dots transparent
@@ -262,14 +267,21 @@ def plot_embedding(adata: sc.AnnData,
     if not isinstance(color, list):
         color = [color]
 
+    # Duplicate colors/dimensions if needed
+    if len(kwargs["components"]) > 1 or len(color) > 1:
+        color_list = [color[i // len(kwargs["components"])] for i in range(len(axarr))]  # color1, color1, color2, color2, etc.
+        components_list = kwargs["components"] * len(color)
+    else:
+        color_list = color
+        components_list = kwargs["components"]
+
     # ---- Adjust style of individual plots ---- #
     for i, ax in enumerate(axarr):
 
-        coordinates = adata.obsm[basis][:, [dim1 - 1, dim2 - 1]]
-
-        # Adjust axis labels (sc.pl.embedding writes "X_umap1" instead of "UMAP1")
-        ax.set_xlabel(f"{method.upper()}{dim1}")
-        ax.set_ylabel(f"{method.upper()}{dim2}")
+        # Establish which color/dimensions are used for current plot
+        ax_color = color_list[i]
+        dim1, dim2 = [int(dim.strip()) for dim in components_list[i].split(",")]  # (1, 2)
+        coordinates = adata.obsm[obsm_key][:, [dim1 - 1, dim2 - 1]]
 
         # Remove title
         if not show_title:
@@ -281,7 +293,7 @@ def plot_embedding(adata: sc.AnnData,
         has_colorbar = False
         if legend is not None:  # legend of categorical variables
             if not show_title:
-                legend.set_title(color[i])
+                legend.set_title(ax_color)
         else:                   # legend of continuous variables
             cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
             cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
@@ -290,16 +302,16 @@ def plot_embedding(adata: sc.AnnData,
                 has_colorbar = True  # this ax has colorbar
 
                 if not show_title:
-                    cbar_ax.set_title(color[i])
+                    cbar_ax.set_title(ax_color)
 
         # Add additional style to plots
         if style != "dots":
 
             # Prepare color values
-            if color[i] is None:
+            if ax_color is None:
                 color_values = None
             else:
-                color_values = utils.adata.get_cell_values(adata, color[i])
+                color_values = utils.adata.get_cell_values(adata, ax_color)
 
             # Determine colors to use
             cmap = kwargs["color_map"]
@@ -311,8 +323,8 @@ def plot_embedding(adata: sc.AnnData,
             if style == "hexbin":
 
                 # Ensure that color is continuous
-                if color[i] is not None and has_colorbar is False:
-                    raise ValueError(f"Hexbin style is only supported for continuous variables, and is not possible for the values found in '{color[i]}'. Please set 'style' to 'dots', 'density' or use a continuous variable.")
+                if ax_color is not None and has_colorbar is False:
+                    raise ValueError(f"Hexbin style is only supported for continuous variables, and is not possible for the values found in '{ax_color}'. Please set 'style' to 'dots', 'density' or use a continuous variable.")
 
                 # Plot hexbin
                 xlim, ylim = ax.get_xlim(), ax.get_ylim()
@@ -343,7 +355,7 @@ def plot_embedding(adata: sc.AnnData,
                     color_values = color_values[~is_nan]
                     coordinates = coordinates[~is_nan]
 
-                if color[i] is None:
+                if ax_color is None:
                     has_colorbar = True  # even non-colored plots have colorbar with density of cells
 
                 # Values are continous
@@ -356,14 +368,14 @@ def plot_embedding(adata: sc.AnnData,
                     else:
                         color_values_scaled = (color_values - color_values.min()) / (color_values.max() - color_values.min())  # scale to 0-1
                         sns.kdeplot(x=coordinates[:, 0], y=coordinates[:, 1], fill=True, weights=color_values_scaled,
-                                    ax=ax, cmap=cmap, thresh=0.01, cbar=True, cbar_ax=cbar_ax, cbar_kws={"label": f"Cell density\n(weighted by {color[i]})"})
+                                    ax=ax, cmap=cmap, thresh=0.01, cbar=True, cbar_ax=cbar_ax, cbar_kws={"label": f"Cell density\n(weighted by {ax_color})"})
 
                 else:  # values are categorical
-                    cat2color = dict(zip(adata.obs[color[i]].cat.categories, adata.uns[color[i] + "_colors"]))
+                    cat2color = dict(zip(adata.obs[ax_color].cat.categories, adata.uns[ax_color + "_colors"]))
 
-                    adata_subsets = utils.get_adata_subsets(adata, groupby=color[i])
+                    adata_subsets = utils.get_adata_subsets(adata, groupby=ax_color)
                     for group, adata_sub in adata_subsets.items():
-                        coordinates_sub = adata_sub.obsm[basis][:, [dim1 - 1, dim2 - 1]]
+                        coordinates_sub = adata_sub.obsm[obsm_key][:, [dim1 - 1, dim2 - 1]]
 
                         # Plot kde in color from original plot
                         kde_color = cat2color[group]
