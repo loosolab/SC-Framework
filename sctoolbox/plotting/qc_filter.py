@@ -19,7 +19,7 @@ from sctoolbox.plotting.general import violinplot, _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
+from beartype.typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
 from beartype import beartype
 
 

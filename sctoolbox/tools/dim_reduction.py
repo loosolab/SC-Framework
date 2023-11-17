@@ -5,7 +5,7 @@ import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 
-from typing import Optional, Any
+from beartype.typing import Optional, Any
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco

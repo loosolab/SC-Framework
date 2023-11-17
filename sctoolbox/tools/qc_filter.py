@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from beartype import beartype
 import numpy.typing as npt
-from typing import Optional, Tuple, Union, Any, Literal
+from beartype.typing import Optional, Tuple, Union, Any, Literal
 # import scrublet as scr
 
 # toolbox functions

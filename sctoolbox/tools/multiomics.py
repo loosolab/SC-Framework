@@ -5,7 +5,7 @@ from functools import reduce
 import warnings
 
 from beartype import beartype
-from typing import Literal
+from beartype.typing import Literal
 
 import sctoolbox.utils as utils
 

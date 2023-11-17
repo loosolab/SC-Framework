@@ -8,7 +8,7 @@ import multiprocessing as mp
 import scanpy as sc
 import scanpy.external as sce
 
-from typing import Optional, Any, Union, Literal, Callable
+from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype
 
 import sctoolbox.utils as utils
