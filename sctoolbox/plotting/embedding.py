@@ -217,7 +217,7 @@ def plot_embedding(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        _ = pl.plot_embedding(adata, color=['n_genes', 'HES4'], style="hexbin", components=["1,2", "2,3"], ncols=2)
+        _ = pl.plot_embedding(adata, method="pca", color=['n_genes', 'HES4'], style="hexbin", components=["1,2", "2,3"], ncols=2)
 
     .. plot::
         :context: close-figs
