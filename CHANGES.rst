@@ -3,6 +3,7 @@
 
 - Added pl.embedding.embedding() function to plot embeddings with different styles, e.g. hexbin and density
 - Deprecated pl.umap_pub as this is now covered by pl.embedding
+- changed typing to beartype.typing
 
 Changes to notebooks:
 
