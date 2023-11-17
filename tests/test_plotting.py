@@ -177,24 +177,27 @@ def test_plot_pca_variance_fail(adata):
         pl.plot_pca_variance(adata, ax="invalid")
 
 
-@pytest.mark.parametrize("which", ["obs", "var"])
-@pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
-def test_plot_pca_correlation(adata, which, method):
+@pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
+                                    {"basis": "umap", "method": "pearsonr"},
+                                    {"basis": "umap", "plot_values": "pvalues"}])
+def test_plot_pca_correlation(adata, kwargs):
     """Test if Axes object is returned without error."""
 
-    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax = pl.plot_pca_correlation(adata, title="Title", **kwargs)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
 
 
-@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+@pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
+                                    {"basis": "invalid"},
+                                    {"method": "invalid"},
                                     {"which": "invalid"},
                                     {"columns": ["invalid", "columns"]}])
 def test_plot_pca_correlation_fail(adata, kwargs):
     """Test that an exception is raised upon error."""
 
-    with pytest.raises((BeartypeCallHintParamViolation, KeyError)):
+    with pytest.raises((BeartypeCallHintParamViolation, KeyError, ValueError)):
         pl.plot_pca_correlation(adata, **kwargs)
 
 
@@ -581,6 +584,27 @@ def test_umap_marker_overview(adata, marker):
     assert ax_type.startswith("Axes")
 
 
+@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True},
+                                    {"show_title": False, "show_contour": False}])
+@pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
+def test_embedding(adata, style, kwargs):
+    """Assert embedding works and returns Axes object."""
+
+    # Collect test colors
+    colors = ["qcvar1"]   # continous obs variable
+    colors.append(adata.var.index[0])  # continous gene variable
+    colors.append(None)          # no color / density plot
+    if style != "hexbin":
+        colors.append("clustering")  # categorical obs variable; only available for dots/density
+
+    axes_list = pl.embedding(adata, color=colors, style=style, **kwargs)
+
+    assert len(axes_list) == len(colors)
+    ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", "Condition"),
                                          (["condition", "clustering"], None),
                                          (["condition", "clustering"], ["Condition", "Clustering"])])
@@ -593,6 +617,7 @@ def test_umap_pub(adata, color, title):
     assert ax_type.startswith("Axes")
 
 
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", ["Title 1", "Title 2"]),
                                          (["condition", "clustering"], "Title 1")])
 def test_invalid_parameter_len_umap_pub(adata, color, title):

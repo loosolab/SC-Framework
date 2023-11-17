@@ -8,18 +8,21 @@ import pandas as pd
 import scipy.stats
 from scipy.sparse import issparse
 import itertools
+import re
 
 import seaborn as sns
 import matplotlib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 import plotly as po
 import plotly.graph_objects as go
 
 from numba import errors as numba_errors
 
+import deprecation
+from sctoolbox import __version__
 from beartype import beartype
 from typing import Literal, Tuple, Optional, Union, Any
 import numpy.typing as npt
@@ -52,6 +55,21 @@ def sc_colormap() -> matplotlib.colors.ListedColormap:
     sc_cmap = ListedColormap(newcolors)
 
     return sc_cmap
+
+
+def grey_colormap() -> matplotlib.colors.ListedColormap:
+    """Get a colormap with grey-scale colors, but without white to still show cells.
+
+    Returns
+    -------
+    cmap : matplotlib.colors.ListedColormap
+        Grey-scale colormap.
+    """
+    color_cmap = cm.get_cmap('Greys', 200)
+    newcolors = color_cmap(np.linspace(0.2, 1, 200))
+    cmap = ListedColormap(newcolors)
+
+    return cmap
 
 
 @deco.log_anndata
@@ -90,6 +108,338 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 #####################################################################
 # -------------------- UMAP / tSNE embeddings ----------------------#
 #####################################################################
+
+@beartype
+def _add_contour(x: np.ndarray,
+                 y: np.ndarray,
+                 ax: matplotlib.axes.Axes):
+    """Add contour plot to a scatter plot.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        x-coordinates of the scatter plot.
+    y : np.ndarray
+        y-coordinates of the scatter plot.
+    ax : matplotlib.axes.Axes
+        Axis object to add the contour plot to.
+    """
+
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+
+    # Peform the kernel density estimate
+    X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+    positions = np.vstack([X.ravel(), Y.ravel()])
+    values = np.vstack([x, y])
+    kernel = scipy.stats.gaussian_kde(values)
+    f = np.reshape(kernel(positions).T, X.shape)
+
+    # Contour plot
+    ax.contour(X, Y, f, colors="black", linewidths=0.5)
+
+
+@deco.log_anndata
+@beartype
+def embedding(adata: sc.AnnData,
+              method: str = "umap",
+              color: Optional[list[str | None] | str] = None,
+              style: Literal["dots", "hexbin", "density"] = "dots",
+              show_borders: bool = False,
+              show_contour: bool = False,
+              show_count: bool = True,
+              show_title: bool = True,
+              hexbin_gridsize: int = 30,
+              shrink_colorbar: float | int = 0.3,
+              square: bool = True,
+              save: Optional[str] = None,
+              **kwargs) -> npt.ArrayLike:
+    """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    method : str, default "umap"
+        Dimensionality reduction method to use. Must be a key in adata.obsm, or a method available as "X_<method>" such as "umap", "tsne" or "pca".
+    color : Optional[str | list[str]], default None
+        Key for annotation of observations/cells or variables/genes.
+    style : Literal["dots", "hexbin", "density".], default "dots"
+        Style of the plot. Must be one of "dots", "hexbin" or "density".
+    show_borders : bool, default False
+        Whether to show borders around embedding plot. If False, the borders are removed and a small legend is added to the plot.
+    show_contour : bool, default False
+        Whether to show a contour plot on top of the plot.
+    show_count : bool, default True
+        Whether to show the number of cells in the plot.
+    show_title : bool, default True
+        Whether to show the titles of the plots. If False, the titles are removed and the names are added to the colorbar/legend instead.
+    hexbin_gridsize : int, default 30
+        Number of hexbins across plot - higher values give smaller bins. Only used if style="hexbin".
+    shrink_colorbar : float | int, default 0.3
+        Shrink the height of the colorbar by this factor.
+    square : bool, default True
+        Whether to make the plot square.
+    save : Optional[str], default None
+        Filename to save the figure.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.pl.embedding`.
+
+    Returns
+    -------
+    axes : npt.ArrayLike
+        Array of axis objects
+
+    Raises
+    ------
+    KeyError
+        If the given method is not found in adata.obsm.
+    ValueError
+        If the given style is not supported.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.embedding(adata, color="louvain", legend_loc="on data")
+
+    .. plot::
+        :context: close-figs
+
+        _ = pl.embedding(adata, method="pca", color="n_genes", show_contour=True, show_title=False)
+
+    .. plot::
+        :context: close-figs
+
+        _ = pl.embedding(adata, color=['n_genes', 'HES4'], style="hexbin")
+
+    .. plot::
+        :context: close-figs
+
+        ax = pl.embedding(adata, color=['n_genes', 'louvain'], style="density")
+    """
+
+    # Check that method is in adata.obsm
+    basis = "X_" + method
+    if method in adata.obsm:  # method is directly available in obsm
+        basis = method
+    else:
+        if basis not in adata.obsm:
+            raise KeyError(f"The given method '{method}' cannot be found in adata.obsm. The available keys are: {adata.obsm.keys()}.")
+
+    # Check that style is valid
+    if style not in ["dots", "hexbin", "density"]:
+        raise ValueError(f"Invalid style '{style}'. Please choose from ['dots', 'hexbin', 'density'].")
+
+    # ---- Plot embedding for chosen colors ---- #
+
+    kwargs["color_map"] = kwargs.get("color_map", sc_colormap())  # set cmap to sc_colormap if not given
+    parameters = {"color": color,
+                  "basis": basis,
+                  "show": False}
+    if style != "dots":
+        parameters["alpha"] = 0  # make dots transparent
+    kwargs.update(parameters)
+
+    axarr = sc.pl.embedding(adata, **kwargs)
+
+    # if only one axis is returned, convert to list
+    if not isinstance(axarr, list):
+        axarr = [axarr]
+    if not isinstance(color, list):
+        color = [color]
+
+    # ---- Adjust style of individual plots ---- #
+    for i, ax in enumerate(axarr):
+
+        coordinates = adata.obsm[basis][:, :2]
+
+        # Adjust axis labels (sc.pl.embedding writes "X_umap1" instead of "UMAP1")
+        ax.set_xlabel(f"{method.upper()}1")
+        ax.set_ylabel(f"{method.upper()}2")
+
+        # Remove title
+        if not show_title:
+            ax.set_title("")
+
+        # Set titles of legend / colorbar / plot
+        legend = ax.get_legend()
+        local_axes = ax.figure._localaxes  # list of all plot and colorbar axes in figure
+        has_colorbar = False
+        if legend is not None:  # legend of categorical variables
+            if not show_title:
+                legend.set_title(color[i])
+        else:                   # legend of continuous variables
+            cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
+            cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
+            cbar_ax = local_axes[cbar_ax_idx]
+            if cbar_ax._label == "<colorbar>":
+                has_colorbar = True  # this ax has colorbar
+
+                if not show_title:
+                    cbar_ax.set_title(color[i])
+
+        # Add additional style to plots
+        if style != "dots":
+
+            # Prepare color values
+            if color[i] is None:
+                color_values = None
+            else:
+                color_values = utils.adata.get_cell_values(adata, color[i])
+
+            # Determine colors to use
+            cmap = kwargs["color_map"]
+            cmap = mpl.rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
+            if color_values is None:
+                cmap = grey_colormap()  # if no color values are given, use greyscale to show density
+
+            # Plot hexbin/density style if chosen
+            if style == "hexbin":
+
+                # Ensure that color is continuous
+                if color[i] is not None and has_colorbar is False:
+                    raise ValueError(f"Hexbin style is only supported for continuous variables, and is not possible for the values found in '{color[i]}'. Please set 'style' to 'dots', 'density' or use a continuous variable.")
+
+                # Plot hexbin
+                xlim, ylim = ax.get_xlim(), ax.get_ylim()
+                hb = ax.hexbin(coordinates[:, 0], y=coordinates[:, 1], C=color_values,
+                               mincnt=1, gridsize=hexbin_gridsize, cmap=cmap)
+                ax.set_xlim(xlim)
+                ax.set_ylim(ylim)
+
+                # Replace colorbar with hexbin values
+                if has_colorbar:
+                    ax.figure.colorbar(hb, ax=ax, cax=cbar_ax)
+
+                # Set colorbar for number of cells if color is None
+                if color_values is None:
+                    ax.figure.colorbar(hb, ax=ax, label="Number of cells")
+                    cbar_ax = ax.figure.axes[-1]
+                    has_colorbar = True
+
+                    # Move colorbar to the correct position in _localaxes
+                    index = local_axes.index(ax)
+                    local_axes.insert(index + 1, local_axes.pop())  # insert colorbar after plot
+
+            elif style == "density":
+
+                # remove NaN values
+                if color_values is not None:
+                    is_nan = pd.isna(color_values)  # numpy's isnan throws error for string array
+                    color_values = color_values[~is_nan]
+                    coordinates = coordinates[~is_nan]
+
+                if color[i] is None:
+                    has_colorbar = True  # even non-colored plots have colorbar with density of cells
+
+                # Values are continous
+                if has_colorbar:
+                    if color_values is None:
+                        sns.kdeplot(x=coordinates[:, 0], y=coordinates[:, 1], fill=True, ax=ax, cmap=cmap, thresh=0.01, cbar=True,
+                                    cbar_kws={"label": "Cell density"})
+                        cbar_ax = ax.figure.axes[-1]  # colorbar was added to last axis
+
+                    else:
+                        color_values_scaled = (color_values - color_values.min()) / (color_values.max() - color_values.min())  # scale to 0-1
+                        sns.kdeplot(x=coordinates[:, 0], y=coordinates[:, 1], fill=True, weights=color_values_scaled,
+                                    ax=ax, cmap=cmap, thresh=0.01, cbar=True, cbar_ax=cbar_ax, cbar_kws={"label": f"Cell density\n(weighted by {color[i]})"})
+
+                else:  # values are categorical
+                    cat2color = dict(zip(adata.obs[color[i]].cat.categories, adata.uns[color[i] + "_colors"]))
+
+                    adata_subsets = utils.get_adata_subsets(adata, groupby=color[i])
+                    for group, adata_sub in adata_subsets.items():
+                        coordinates_sub = adata_sub.obsm[basis][:, :2]
+
+                        # Plot kde in color from original plot
+                        kde_color = cat2color[group]
+                        collection_len_before = len(ax.collections)
+                        custom_cmap = LinearSegmentedColormap.from_list(f'{group}_cmap', ['lightgrey', kde_color], N=256)
+                        sns.kdeplot(x=coordinates_sub[:, 0], y=coordinates_sub[:, 1], fill=True, ax=ax, cmap=custom_cmap, thresh=0.01)
+
+                        # Set alpha for each level (enables seeing overlapping groups; lowest level are most see-through)
+                        n_obj_added = len(ax.collections) - collection_len_before
+                        objects = ax.collections[-n_obj_added:]
+                        alpha_list = np.linspace(0.2, 1, len(objects))
+                        for i, obj in enumerate(objects):
+                            obj.set_alpha(alpha_list[i])
+
+        # Add contour to plot
+        if show_contour:
+            _add_contour(coordinates[:, 0], coordinates[:, 1], ax)
+
+        # Remove borders and add small UMAP1/UMAP2 legend
+        if show_borders is False:
+
+            # Remove all spines (axes lines)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+            # Move x and y-labels to the start of axes
+            label = ax.xaxis.get_label()
+            label.set_horizontalalignment('left')
+            x_lab_pos, y_lab_pos = label.get_position()
+            label.set_position([0, y_lab_pos])
+
+            label = ax.yaxis.get_label()
+            label.set_horizontalalignment('left')
+            x_lab_pos, y_lab_pos = label.get_position()
+            label.set_position([x_lab_pos, 0])
+
+            # Draw UMAP coordinate arrows
+            ymin, ymax = ax.get_ylim()
+            xmin, xmax = ax.get_xlim()
+            yrange = ymax - ymin
+            xrange = xmax - xmin
+            arrow_len_y = yrange * 0.2
+            arrow_len_x = xrange * 0.2
+
+            ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
+            ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
+
+        # Add number of cells to plot
+        if show_count:
+            ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
+                    transform=ax.transAxes,
+                    horizontalalignment='left',
+                    verticalalignment='bottom')
+
+        # Adjust aspect ratio
+        if square:
+            _make_square(ax)
+
+        # Final formatting of colorbar incl. shrink
+        if has_colorbar:
+
+            cbar = cbar_ax._colorbar
+            plt.colorbar(cbar.mappable, ax=ax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+            new_cbar_ax = ax.figure.axes[-1]
+
+            # Carry over title and ylabel
+            new_cbar_ax.set_title(cbar_ax.get_title(), fontsize=10)
+            new_cbar_ax.set_ylabel(cbar_ax.get_ylabel(), fontsize=10)
+
+            # Set specific cbar style for density plots
+            if style == "density":
+
+                # Adjust colorbar to remove density values
+                yticks = new_cbar_ax.get_yticks()
+                new_cbar_ax.set_yticks([yticks[0], yticks[-1]])
+                new_cbar_ax.set_yticklabels(["low", "high"])
+
+            # Move colorbar to the correct position in _localaxes
+            cbar_idx = local_axes.index(cbar_ax)
+            new_cbar_idx = local_axes.index(new_cbar_ax)
+            local_axes[cbar_idx] = new_cbar_ax
+            local_axes.pop(new_cbar_idx)  # remove original idx of new_cbar_ax
+
+    # Save figure
+    _save_figure(save)
+
+    return axarr
+
 
 @deco.log_anndata
 @beartype
@@ -808,6 +1158,9 @@ def umap_marker_overview(adata: sc.AnnData,
     return list(axes_list)
 
 
+@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
+                        current_version=__version__,
+                        details="Use the 'sctoolbox.pl.embedding' function instead.")
 @deco.log_anndata
 @beartype
 def umap_pub(adata: sc.AnnData,
@@ -1264,15 +1617,17 @@ def plot_pca_variance(adata: sc.AnnData,
 @beartype
 def plot_pca_correlation(adata: sc.AnnData,
                          which: Literal["obs", "var"] = "obs",
-                         n_pcs: int = 10,
+                         basis: str = "pca",
+                         n_components: int = 10,
                          columns: Optional[list[str]] = None,
                          pvalue_threshold: float = 0.01,
                          method: Literal["spearmanr", "pearsonr"] = "spearmanr",
+                         plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
                          figsize: Optional[Tuple[int, int]] = None,
                          title: Optional[str] = None,
                          save: Optional[str] = None) -> matplotlib.axes.Axes:
     """
-    Plot a heatmap of the correlation between the first n_pcs and the given columns.
+    Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
 
     Parameters
     ----------
@@ -1280,14 +1635,18 @@ def plot_pca_correlation(adata: sc.AnnData,
         Annotated data matrix object.
     which : Literal["obs", "var"], default "obs"
         Whether to use the observations ("obs") or variables ("var") for the correlation.
-    n_pcs : int, default 10
-        Number of principal components to use for the correlation.
+    basis : str, default "pca"
+        Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
+    n_components : int, default 10
+        Number of components to use for the correlation.
     columns : Optional[list[str]], default None
         List of columns to use for the correlation. If None, all numeric columns are used.
     pvalue_threshold : float, default 0.01
         Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
     method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
+    plot_values: Literal["corrcoefs", "pvalues"], default "corrcoefs"
+        Values which will be used to plot the heatmap, either "corrcoefs" (correlation coefficients) or "pvalues".
     figsize : Optional[Tuple[int, int]], default None
         Size of the figure in inches. If None, the size is automatically determined.
     title : Optional[str], default None
@@ -1303,7 +1662,7 @@ def plot_pca_correlation(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If "method" is not "pearsonr" or "spearmanr".
+        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
     KeyError
         If any of the given columns is not found in the respective table.
 
@@ -1313,13 +1672,26 @@ def plot_pca_correlation(adata: sc.AnnData,
         :context: close-figs
 
         pl.plot_pca_correlation(adata, which="obs")
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_correlation(adata, basis="umap")
     """
+
+    # Check that basis is in adata.obsm
+    if basis not in adata.obsm:
+        basis = "X_" + basis if not basis.startswith("X_") else basis  # check if basis is available as "X_<basis>"
+        if basis not in adata.obsm:
+            raise KeyError(f"The given basis '{basis}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
 
     # Establish which table to use
     if which == "obs":
         table = adata.obs.copy()
-        mat = adata.obsm["X_pca"]
+        mat = adata.obsm[basis]
     elif which == "var":
+        if "pca" not in basis.lower():
+            raise ValueError("Correlation with 'var' can only be calculated with PCA components!")
         table = adata.var.copy()
         mat = adata.varm["PCs"]
 
@@ -1338,35 +1710,52 @@ def plot_pca_correlation(adata: sc.AnnData,
         utils.check_columns(table, columns)
 
     # Get table of pcs and columns
-    n_pcs = min(n_pcs, mat.shape[1])  # make sure we don't exceed the number of pcs available
-    pc_columns = [f"PC{i+1}" for i in range(n_pcs)]
-    pc_table = pd.DataFrame(mat[:, :n_pcs], columns=pc_columns)
-    pc_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
+    n_components = min(n_components, mat.shape[1])  # make sure we don't exceed the number of pcs available
+    if "pca" in basis.lower():
+        comp_columns = [f"PC{i+1}" for i in range(n_components)]  # e.g. PC1, PC2, ...
+    else:
+        comp_columns = [f"{re.sub('^X_', '', basis.upper())}{i+1}" for i in range(n_components)]  # e.g. UMAP1, UMAP2, ...
+    comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
+    comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
 
     # Calculate correlation of columns
-    combinations = list(itertools.product(numeric_columns, pc_columns))
+    combinations = list(itertools.product(numeric_columns, comp_columns))
 
-    corr_table = pd.DataFrame(index=numeric_columns, columns=pc_columns, dtype=float)
+    corr_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
     corr_table_annot = corr_table.copy()
     for row, col in combinations:
+        # remove NaN values and the corresponding values from both lists
+        x = np.vstack([comp_table[row], comp_table[col]])  # stack values of row and column
+        x = x[:, ~np.any(np.isnan(x), axis=0)]  # remove columns with NaN values
 
-        res = corr_method(pc_table[row], pc_table[col])
-        corr_table.loc[row, col] = res.statistic
+        res = corr_method(x[0], x[1])
 
-        corr_table_annot.loc[row, col] = str(np.round(res.statistic, 2))
+        if plot_values == "corrcoefs":
+            value = res.statistic
+            # center of cbar is 0
+            vmin = -1
+            vmax = 1
+        elif plot_values == "pvalues":
+            value = np.sign(res.statistic) * np.log10(res.pvalue)
+            # infer min and max for cbar from data
+            vmin = None
+            vmax = None
+
+        corr_table.loc[row, col] = value
+        corr_table_annot.loc[row, col] = str(np.round(value, 2))
         corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
 
     # Plot heatmap
-    figsize = figsize if figsize is not None else (len(pc_columns) / 1.5, len(numeric_columns) / 1.5)
+    figsize = figsize if figsize is not None else (len(comp_columns) / 1.5, len(numeric_columns) / 1.5)
     fig, ax = plt.subplots(figsize=figsize)
 
     ax = sns.heatmap(corr_table,
                      annot=corr_table_annot,
                      fmt='',
                      annot_kws={"fontsize": 9},
-                     cbar_kws={"label": method},
+                     cbar_kws={"label": f"{method} ({plot_values})"},
                      cmap="seismic",
-                     vmin=-1, vmax=1,  # center is 0
+                     vmin=vmin, vmax=vmax,
                      ax=ax)
     ax.set_aspect(0.8)
 
