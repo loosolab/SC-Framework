@@ -195,7 +195,7 @@ def plot_embedding(adata: sc.AnnData,
     KeyError
         If the given method is not found in adata.obsm.
     ValueError
-        If the given style is not supported.
+        If the 'components' given is larger than the number of components in the embedding.
 
     Examples
     --------
@@ -217,7 +217,8 @@ def plot_embedding(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        _ = pl.plot_embedding(adata, method="pca", color=['n_genes', 'HES4'], style="hexbin", components=["1,2", "2,3"], ncols=2)
+        _ = pl.plot_embedding(adata, method="pca", color=['n_genes', 'HES4'],
+                              style="hexbin", components=["1,2", "2,3"], ncols=2)
 
     .. plot::
         :context: close-figs
@@ -237,16 +238,22 @@ def plot_embedding(adata: sc.AnnData,
 
     # get embedding dimensions if passed as a kwarg
     # otherwise use defalut dimensions 1 and 2
+    n_components = adata.obsm[obsm_key].shape[1]
     args = locals()  # get all arguments passed to function
     kwargs = args.pop("kwargs")  # split args from kwargs dict
     if "components" in kwargs:
         dims = kwargs["components"]
         if type(dims) is str:
             if dims == "all":
-                n_components = adata.obsm[obsm_key].shape[1]
                 dims = ["{0},{1}".format(c[0], c[1]) for c in itertools.combinations(range(1, n_components + 1), 2)]  # "1,2", "1,3", "2,3" etc.
             else:
                 dims = [dims]
+
+        # Check that dims are valid
+        for dim in dims:
+            dim1, dim2 = [int(d.strip()) for d in dim.split(",")]
+            if dim1 > n_components or dim2 > n_components:
+                raise ValueError(f"The given component '{dim}' is larger than the number of components in '{obsm_key}' ({n_components}). Please adjust 'components'.")
     else:
         dims = ["1,2"]
     kwargs["components"] = dims  # overwrite components kwarg

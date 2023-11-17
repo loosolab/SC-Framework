@@ -617,6 +617,12 @@ def test_embedding_single(adata):
     assert ax_type.startswith("Axes")
 
 
+def test_embedding_error(adata):
+    """Test that embedding raises error for invalid input."""
+    with pytest.raises(ValueError):
+        pl.plot_embedding(adata, components="3,4")
+
+
 @deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", "Condition"),
                                          (["condition", "clustering"], None),
