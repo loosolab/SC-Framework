@@ -62,7 +62,7 @@ class GenomeTracks():
         # Plot
         G.plot(region="X:3000000-3500000", output="genometrack_X.png", trackLabelFraction=0.2)
 
-    .. image:: ../../source/API/genometrack_X.png
+    .. image:: genometrack_X.png
     """
 
     def __init__(self):
