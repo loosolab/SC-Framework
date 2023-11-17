@@ -231,7 +231,7 @@ build-pages:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
-    - pip install .  # ensure that the current branch version is used for building pages
+    - pip install .[all]  # ensure that the current branch version is used for building pages
     - cd docs
     - make html
   artifacts:
