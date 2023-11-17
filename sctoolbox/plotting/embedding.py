@@ -141,19 +141,19 @@ def _add_contour(x: np.ndarray,
 
 @deco.log_anndata
 @beartype
-def embedding(adata: sc.AnnData,
-              method: str = "umap",
-              color: Optional[list[str | None] | str] = None,
-              style: Literal["dots", "hexbin", "density"] = "dots",
-              show_borders: bool = False,
-              show_contour: bool = False,
-              show_count: bool = True,
-              show_title: bool = True,
-              hexbin_gridsize: int = 30,
-              shrink_colorbar: float | int = 0.3,
-              square: bool = True,
-              save: Optional[str] = None,
-              **kwargs) -> npt.ArrayLike:
+def plot_embedding(adata: sc.AnnData,
+                   method: str = "umap",
+                   color: Optional[list[str | None] | str] = None,
+                   style: Literal["dots", "hexbin", "density"] = "dots",
+                   show_borders: bool = False,
+                   show_contour: bool = False,
+                   show_count: bool = True,
+                   show_title: bool = True,
+                   hexbin_gridsize: int = 30,
+                   shrink_colorbar: float | int = 0.3,
+                   square: bool = True,
+                   save: Optional[str] = None,
+                   **kwargs) -> npt.ArrayLike:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -183,7 +183,7 @@ def embedding(adata: sc.AnnData,
     save : Optional[str], default None
         Filename to save the figure.
     **kwargs : arguments
-        Additional keyword arguments are passed to :func:`scanpy.pl.embedding`.
+        Additional keyword arguments are passed to :func:`scanpy.pl.plot_embedding`.
 
     Returns
     -------
@@ -202,22 +202,22 @@ def embedding(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.embedding(adata, color="louvain", legend_loc="on data")
+        pl.plot_embedding(adata, color="louvain", legend_loc="on data")
 
     .. plot::
         :context: close-figs
 
-        _ = pl.embedding(adata, method="pca", color="n_genes", show_contour=True, show_title=False)
+        _ = pl.plot_embedding(adata, method="pca", color="n_genes", show_contour=True, show_title=False)
 
     .. plot::
         :context: close-figs
 
-        _ = pl.embedding(adata, color=['n_genes', 'HES4'], style="hexbin")
+        _ = pl.plot_embedding(adata, color=['n_genes', 'HES4'], style="hexbin")
 
     .. plot::
         :context: close-figs
 
-        ax = pl.embedding(adata, color=['n_genes', 'louvain'], style="density")
+        ax = pl.plot_embedding(adata, color=['n_genes', 'louvain'], style="density")
     """
 
     # Check that method is in adata.obsm
@@ -226,11 +226,7 @@ def embedding(adata: sc.AnnData,
         basis = method
     else:
         if basis not in adata.obsm:
-            raise KeyError(f"The given method '{method}' cannot be found in adata.obsm. The available keys are: {adata.obsm.keys()}.")
-
-    # Check that style is valid
-    if style not in ["dots", "hexbin", "density"]:
-        raise ValueError(f"Invalid style '{style}'. Please choose from ['dots', 'hexbin', 'density'].")
+            raise KeyError(f"The given method '{method}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
 
     # ---- Plot embedding for chosen colors ---- #
 
@@ -245,6 +241,7 @@ def embedding(adata: sc.AnnData,
     except KeyError:
         dims = ["1, 2"]
         kwargs['components'] = dims
+
     # components are in form e.g. ["1, 2"]
     dim1 = int(dims[0].split(',')[0].strip())
     dim2 = int(dims[0].split(',')[-1].strip())
@@ -1177,7 +1174,7 @@ def umap_marker_overview(adata: sc.AnnData,
 
 @deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
                         current_version=__version__,
-                        details="Use the 'sctoolbox.pl.embedding' function instead.")
+                        details="Use the 'sctoolbox.pl.plot_embedding' function instead.")
 @deco.log_anndata
 @beartype
 def umap_pub(adata: sc.AnnData,

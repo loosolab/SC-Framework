@@ -584,7 +584,7 @@ def test_umap_marker_overview(adata, marker):
     assert ax_type.startswith("Axes")
 
 
-@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True},
+@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "0,1"},
                                     {"show_title": False, "show_contour": False}])
 @pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
 def test_embedding(adata, style, kwargs):
@@ -597,10 +597,18 @@ def test_embedding(adata, style, kwargs):
     if style != "hexbin":
         colors.append("clustering")  # categorical obs variable; only available for dots/density
 
-    axes_list = pl.embedding(adata, color=colors, style=style, **kwargs)
+    axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
 
     assert len(axes_list) == len(colors)
     ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_embedding_single(adata):
+    """Test that embedding works with single color."""
+    ax = pl.plot_embedding(adata, color="qcvar1")
+
+    ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
 
 
