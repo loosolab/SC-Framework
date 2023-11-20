@@ -124,7 +124,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
     if set_index:
         logger.info("formatting index")
-        utils.format_index(adata, index_from)
+        utils.var_index_from(adata, index_from)
 
     # Establish columns for coordinates
     if coordinate_cols is None:
