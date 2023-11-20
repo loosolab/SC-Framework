@@ -13,6 +13,7 @@
 - Deprecated pl.umap_pub as this is now covered by pl.plot_embedding
 - Add parameter to plot_pca_correlation to plot correlation with UMAP components (#157)
 - Handle NaN values for plot_pca_correlation (#156)
+- changed typing to beartype.typing
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^

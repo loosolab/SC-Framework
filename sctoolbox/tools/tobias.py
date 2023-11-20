@@ -4,7 +4,7 @@ import os
 import sctoolbox.utils as utils
 
 from beartype import beartype
-from typing import Optional, Literal
+from beartype.typing import Optional, Literal
 
 
 # from: https://github.com/yaml/pyyaml/issues/127#issuecomment-525800484

@@ -6,7 +6,7 @@ from scipy.stats import zscore
 import sctoolbox.utils as utils
 
 # type hint imports
-from typing import Optional, Any, Literal
+from beartype.typing import Optional, Any, Literal
 from beartype import beartype
 
 

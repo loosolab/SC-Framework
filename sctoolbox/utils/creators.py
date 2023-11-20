@@ -9,7 +9,7 @@ from ratelimiter import RateLimiter
 import time
 
 from beartype import beartype
-from typing import Optional, Any, Literal
+from beartype.typing import Optional, Any, Literal
 
 
 @beartype

@@ -16,7 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from typing import Optional, Tuple, Literal, Iterable, Any
+from beartype.typing import Optional, Tuple, Literal, Iterable, Any
 from beartype import beartype
 
 # sctoolbox functions

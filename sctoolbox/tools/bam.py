@@ -8,7 +8,7 @@ from multiprocessing.pool import ApplyResult
 import scanpy as sc
 from functools import partial
 
-from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any, Sequence
+from beartype.typing import TYPE_CHECKING, Iterable, Optional, Literal, Any, Sequence
 from beartype import beartype
 
 import sctoolbox.utils as utils

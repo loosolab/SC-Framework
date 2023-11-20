@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from beartype import beartype
-from typing import Optional
+from beartype.typing import Optional
 
 from sctoolbox.utils.checker import check_columns
 from sctoolbox.utils.adata import get_adata_subsets
