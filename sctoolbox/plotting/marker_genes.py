@@ -6,6 +6,9 @@ import qnorm
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import zscore
+import re
+import deprecation
+from sctoolbox import __version__
 
 # for plotting
 import seaborn as sns
@@ -25,8 +28,8 @@ import sctoolbox.utils.decorator as deco
 @deco.log_anndata
 @beartype
 def rank_genes_plot(adata: sc.AnnData,
+                    key: Optional[str] = "rank_genes_groups",
                     genes: Optional[list[str] | dict[str, list[str]]] = None,
-                    key: Optional[str] = None,
                     n_genes: int = 15,
                     dendrogram: bool = False,
                     groupby: Optional[str] = None,
@@ -42,10 +45,10 @@ def rank_genes_plot(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
+    key : Optional[str], default "rank_genes_groups"
+        Key from `adata.uns` to plot. For example, `rank_genes_groups` or `rank_genes_groups_filtered`.
     genes : Optional[list[str] | dict[str, list[str]]], default None
-        List of genes to plot. If a dict is passed, the keys are the group names and the values are lists of genes.
-    key : Optional[str], default None
-        Key from `adata.uns` to plot. If specified, `genes` must be `None`.
+        List of genes to plot across groups in 'groupby'. If a dict is passed, the keys are the group names and the values are lists of genes. Setting 'genes' overrides the 'key' parameter.
     n_genes : int, default 15
         Number of genes to plot if `key` is specified.
     dendrogram : bool, default False
@@ -66,17 +69,30 @@ def rank_genes_plot(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        1. If both `genes` and `key` are specified
+        1. If `style` is not one of `dots` or `heatmap`
         2. If `groupby` is not specified when `genes` is specified.
 
     Returns
     -------
     g : dict
         Dictionary containing the matplotlib axes objects for the plot.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.rank_genes_plot(adata, n_genes=5)
+
+    .. plot::
+        :context: close-figs
+
+        pl.rank_genes_plot(adata, genes={"group1": adata.var.index[:10], "group2": adata.var.index[10:20]}, groupby="bulk_labels")
     """
 
-    if genes is not None and key is not None:
-        raise ValueError("Only one of genes or key can be specified.")
+    # Key is not needed if genes are specified
+    if genes is not None:
+        key = None
 
     # Plot genes from rank_genes_groups or from gene list
     parameters = {"swap_axes": False}  # default parameters
@@ -360,11 +376,6 @@ def group_expression_boxplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
         gene_list=("HES4", "PRMT2", "ITGB2")
         pl.group_expression_boxplot(adata, gene_list, groupby="bulk_labels")
     """
@@ -430,7 +441,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
     cluster_column : str
         Key in `adata.obs` for which to cluster the x-axis.
     gene_name_column : Optional[str], default None
-        Column in `adata.var` for which to use for gene row names. Default is to use the index.
+        Column in `adata.var` for which to use for gene row names. Default is to use the .var index.
     title : Optional[str], default None
         Title of the plot.
     groupby : Optional[str], default None
@@ -472,7 +483,6 @@ def gene_expression_heatmap(adata: sc.AnnData,
         genes = adata.var.index[:15]
         pl.gene_expression_heatmap(adata, genes, cluster_column="samples",
                                    groupby="condition",
-                                   gene_name_column="gene",
                                    title="Gene expression",
                                    col_cluster=True,
                                    show_col_dendrogram=True,
@@ -586,17 +596,18 @@ def gene_expression_heatmap(adata: sc.AnnData,
     return g
 
 
+@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
+                        current_version=__version__,
+                        details="Use the gene_expression_heatmap function instead.")
 @deco.log_anndata
 @beartype
 def group_heatmap(adata: sc.AnnData,
                   groupby: str,
                   gene_list: Optional[list[str]] = None,
                   save: Optional[str] = None,
-                  figsize: Optional[Tuple[int | float, int | float]] = None) -> Any:
+                  figsize: Optional[Tuple[int | float, int | float]] = None) -> matplotlib.axes.Axes:
     """
     Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
-
-    NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
 
     Parameters
     ----------
@@ -616,8 +627,7 @@ def group_heatmap(adata: sc.AnnData,
 
     Returns
     -------
-    g : Any
-        sns.clustermap: The seaborn clustermap object
+    matplotlib.axes.Axes
     """
     _, ax = plt.subplots(figsize=figsize)
 
@@ -669,12 +679,25 @@ def plot_differential_genes(rank_table: pd.DataFrame,
     -------
     matplotlib.axes.Axes
         Axes object.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.tools as tl
+        adata.obs["groups"] = np.random.choice(["G1", "G2", "G3"], size=adata.shape[0])
+        pairwise_table = tl.marker_genes.pairwise_rank_genes(adata, foldchange_threshold=0.2, groupby="groups")
+
+        pl.plot_differential_genes(pairwise_table)
     """
     group_columns = [col for col in rank_table.columns if "_group" in col]
 
     info = {}
     for col in group_columns:
-        contrast = tuple(col.split("_")[0].split("/"))
+        m = re.match("(.+)/(.+)_group", col)  # tuple(col.split("_")[0].split("/"))
+        contrast = tuple([m.group(1), m.group(2)])
+
         counts = rank_table[col].value_counts()
         if all(x in list(counts.index) for x in ['C1', 'C2']):
             info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}
@@ -726,13 +749,8 @@ def plot_gene_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
         gene_list=("HES4", "PRMT2", "ITGB2")
-        pl.plot_gene_correlation(adata, "Xkr4", gene_list)
+        pl.plot_gene_correlation(adata, "SUMO3", gene_list)
     """
 
     if isinstance(gene_list, str):
