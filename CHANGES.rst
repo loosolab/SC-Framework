@@ -1,15 +1,17 @@
 0.3 (in progress)
 =================
 
+- Fixed prepare_for_cellxgene color issue (#145, #146)
 - Added pl.embedding.embedding() function to plot embeddings with different styles, e.g. hexbin and density
 - Deprecated pl.umap_pub as this is now covered by pl.embedding
 
 Changes to notebooks:
 
+- Added prepare for cellxgene notebook (#139)
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
 
 
-0.2 (in progress)
+0.2
 =================
 - Add paramter to plot_pca_correlation to plot correlation with UMAP components (#157)
 - Handle NaN values for plot_pca_correlation (#156)
