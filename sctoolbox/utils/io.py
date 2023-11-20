@@ -6,7 +6,7 @@ import warnings
 import glob
 
 from beartype import beartype
-from typing import Optional
+from beartype.typing import Optional
 
 
 @beartype

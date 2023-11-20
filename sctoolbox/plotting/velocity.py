@@ -11,7 +11,7 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import _save_figure
 
 # type hint imports
-from typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any
 from beartype import beartype
 import matplotlib
 

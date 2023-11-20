@@ -5,7 +5,7 @@ import functools
 import pandas as pd
 import matplotlib
 
-from typing import Callable
+from beartype.typing import Callable
 from beartype import beartype
 
 import sctoolbox.utils.general as utils

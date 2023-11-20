@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 from beartype import beartype
-from typing import Literal, Tuple, Optional
+from beartype.typing import Literal, Tuple, Optional
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure

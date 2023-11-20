@@ -9,7 +9,7 @@ import shutil
 import scanpy as sc
 import pandas as pd
 
-from typing import Optional, Tuple, Any, Iterable
+from beartype.typing import Optional, Tuple, Any, Iterable
 from beartype import beartype
 import numpy.typing as npt
 

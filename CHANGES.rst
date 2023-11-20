@@ -8,14 +8,15 @@
 - Added "n_genes" parameter to tools.marker_genes.get_rank_genes_tables, and set the default to 200 (#153)
 - Fixed CI/CD build job rules. Only trigger build job when files changed or triggered manually
 - Add parameter type hinting including runtime type checking (#46)
-- Added pl.embedding.embedding() function to plot embeddings with different styles, e.g. hexbin and density
-- Deprecated pl.umap_pub as this is now covered by pl.embedding
+- Added pl.embedding.plot_embedding() function to plot embeddings with different styles, e.g. hexbin and density
+- Modified pl.embedding.plot_embedding() to plot different embedding dimensions
+- Deprecated pl.umap_pub as this is now covered by pl.plot_embedding
 - Add parameter to plot_pca_correlation to plot correlation with UMAP components (#157)
 - Handle NaN values for plot_pca_correlation (#156)
+- changed typing to beartype.typing
 - Added code examples for tools and utils (#140)
 
-
-Changes to notebooks:
+Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
 
