@@ -28,11 +28,18 @@
   adata_input_dir: "pipeline_output/adatas/"
   adata_output_dir: "pipeline_output/adatas/"
   figure_dir: "pipeline_output/figures/05_markers/"
+  table_dir: "pipeline_output/tables/05_markers/"
   log_file: "pipeline_output/logs/05_log.txt"
+  overwrite_log: True
+
+"13":
+  adata_input_dir: "pipeline_output/adatas/"
+  adata_output_dir: "pipeline_output/adatas/"
+  figure_dir: "pipeline_output/figures/13_prop_analysis/"
+  log_file: "pipeline_output/logs/13_log.txt"
   overwrite_log: True
 
 "99":
   adata_input_dir: "pipeline_output/adatas/"
   adata_output_dir: "pipeline_output/adatas/deployment/"
   log_file: "pipeline_output/logs/99_log.txt"
-  overwrite_log: True

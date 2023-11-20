@@ -10,31 +10,37 @@ import gzip
 import argparse
 import os
 import sys
-import scanpy
+import scanpy as sc
 
-from typing import Optional
+from typing import Optional, Literal, Tuple
+from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
 
 @deco.log_anndata
-def pseudobulk_table(adata, groupby, how="mean", layer=None,
-                     percentile_range=(0, 100), chunk_size=1000) -> pd.DataFrame:
+@beartype
+def pseudobulk_table(adata: sc.AnnData,
+                     groupby: str,
+                     how: Literal['mean', 'sum'] = "mean",
+                     layer: Optional[str] = None,
+                     percentile_range: Tuple[int, int] = (0, 100),
+                     chunk_size: int = 1000) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object with counts in .X.
     groupby : str
         Column name in adata.obs from which the pseudobulks are created.
-    how : {'mean', 'sum'}
+    how : Literal['mean', 'sum'], default 'mean'
         How to calculate the value per group (psuedobulk).
-    layer : str, default None
+    layer : Optional[str], default None
         Name of an anndata layer to use instead of `adata.X`.
-    percentile_range : tuple of 2 values, default (0, 100)
+    percentile_range : Tuple[int, int], default (0, 100)
         The percentile of cells used to calculate the mean/sum for each feature.
         Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.
     chunk_size : int, default 1000
@@ -42,19 +48,11 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 
     Returns
     -------
-    pd.DataFrame :
+    pd.DataFrame
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
-
-    Raises
-    ------
-    TypeError
-        If `percentile_range` is not of type `tuple`.
     """
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
-
-    if isinstance(percentile_range, tuple) is False:
-        raise TypeError("percentile_range has to be a tuple of two values.")
 
     if layer is not None:
         mat = adata.layers[layer]
@@ -109,7 +107,8 @@ def pseudobulk_table(adata, groupby, how="mean", layer=None,
 #####################################################################
 
 @deco.log_anndata
-def barcode_index(adata) -> None:
+@beartype
+def barcode_index(adata: sc.AnnData) -> None:
     """
     Check if the barcode is the index.
 
@@ -124,7 +123,7 @@ def barcode_index(adata) -> None:
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata to perform check on.
     """
 
@@ -154,7 +153,9 @@ def barcode_index(adata) -> None:
 #                  Converting between gene id and name              #
 #####################################################################
 
-def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
+@beartype
+def get_organism(ensembl_id: str,
+                 host: str = "http://www.ensembl.org/id/") -> str:
     """
     Get the organism name to the given Ensembl ID.
 
@@ -167,7 +168,7 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
 
     Returns
     -------
-    str :
+    str
         Organism assigned to the Ensembl ID
 
     Raises
@@ -197,20 +198,21 @@ def get_organism(ensembl_id, host="http://www.ensembl.org/id/") -> str:
     return species
 
 
-def gene_id_to_name(ids, species) -> pd.DataFrame:
+@beartype
+def gene_id_to_name(ids: list[str], species: str) -> pd.DataFrame:
     """
     Get Ensembl gene names to Ensembl gene id.
 
     Parameters
     ----------
-    ids : list of str
+    ids : list[str]
         List of gene ids. Set to `None` to return all ids.
     species : str
         Species matching the gene ids. Set to `None` for list of available species.
 
     Returns
     -------
-    pd.DataFrame :
+    pd.DataFrame
         DataFrame with gene ids and matching gene names.
 
     Raises
@@ -241,15 +243,21 @@ def gene_id_to_name(ids, species) -> pd.DataFrame:
 
 
 @deco.log_anndata
-def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
+@beartype
+def convert_id(adata: sc.AnnData,
+               id_col_name: Optional[str] = None,
+               index: bool = False,
+               name_col: str = "Gene name",
+               species: str = "auto",
+               inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Add gene names to adata.var.
 
     Parameters
     ----------
-    adata : scanpy.AnnData
+    adata : sc.AnnData
         AnnData with gene ids.
-    id_col_name : str, default None
+    id_col_name : Optional[str], default None
         Name of the column in `adata.var` that stores the gene ids.
     index : boolean, default False
         Use index of `adata.var` instead of column name speciefied in `id_col_name`.
@@ -257,12 +265,12 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
         Name of the column added to `adata.var`.
     species : str, default "auto"
         Species of the dataset. On default, species is inferred based on gene ids.
-    inplace : boolean, default True
+    inplace : bool, default True
         Whether to modify adata inplace.
 
     Returns
     -------
-    Optional[scanpy.AnnData] :
+    Optional[sc.AnnData]
         AnnData object with gene names.
 
     Raises
@@ -320,13 +328,18 @@ def convert_id(adata, id_col_name=None, index=False, name_col="Gene name", speci
 
 
 @deco.log_anndata
-def unify_genes_column(adata, column, unified_column="unified_names", species="auto", inplace=True) -> Optional[scanpy.AnnData]:
+@beartype
+def unify_genes_column(adata: sc.AnnData,
+                       column: str,
+                       unified_column: str = "unified_names",
+                       species: str = "auto",
+                       inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.
 
     Parameters
     ----------
-    adata : scanpy.AnnData
+    adata : sc.AnnData
         AnnData object
     column : str
         Column name in adata.var
@@ -334,12 +347,12 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
         Defines the column in which unified gene names are saved. Set same as parameter 'column' to overwrite original column.
     species : str, default "auto"
         Species of the dataset. On default, species is inferred based on gene ids.
-    inplace : boolean, default True
+    inplace : bool, default True
         Whether to modify adata or return a copy.
 
     Returns
     -------
-    Optional[scanpy.AnnData] :
+    Optional[sc.AnnData]
         AnnData object with modified gene column.
 
     Raises
@@ -395,7 +408,8 @@ def unify_genes_column(adata, column, unified_column="unified_names", species="a
 #                   Check integrity of gtf file                     #
 #####################################################################
 
-def _gtf_integrity(gtf) -> bool:
+@beartype
+def _gtf_integrity(gtf: str) -> bool:
     """
     Check if the provided file follows the gtf-format.
 
@@ -471,7 +485,8 @@ def _gtf_integrity(gtf) -> bool:
     return True  # the function only returns of no error is raised
 
 
-def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
+@beartype
+def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str) -> None:
     """
     Overlap two bedfiles and writes the overlap to a new bedfile.
 
@@ -496,7 +511,8 @@ def _overlap_two_bedfiles(bed1, bed2, overlap) -> None:
     os.system(intersect_cmd)
 
 
-def _read_bedfile(bedfile) -> list:
+@beartype
+def _read_bedfile(bedfile: str) -> list:
     """
     Read in a bedfile and returns a list of the rows.
 
@@ -521,7 +537,8 @@ def _read_bedfile(bedfile) -> list:
     return bed_list
 
 
-def _bed_is_sorted(bedfile) -> bool:
+@beartype
+def _bed_is_sorted(bedfile: str) -> bool:
     """
     Check if a bedfile is sorted by the start position.
 
@@ -554,7 +571,8 @@ def _bed_is_sorted(bedfile) -> bool:
     return True
 
 
-def _sort_bed(bedfile, sorted_bedfile) -> None:
+@beartype
+def _sort_bed(bedfile: str, sorted_bedfile: str) -> None:
     """
     Sort a bedfile by the start position.
 

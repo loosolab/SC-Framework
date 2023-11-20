@@ -21,6 +21,9 @@ def adata_icxg():
     # make 8-digit hex colors
     obj.uns["louvain_colors"] = [e + "00" for e in obj.uns["louvain_colors"]]
 
+    # add colors that don't match a .obs column
+    obj.uns["no_match_colors"] = obj.uns["louvain_colors"]
+
     # add Int32 column to .obs and .var
     obj.obs["Int32"] = 1
     obj.obs["Int32"] = obj.obs["Int32"].astype("Int32")
@@ -74,6 +77,9 @@ def test_prepare_for_cellxgene(adata_icxg):
     for key in cxg_adata.uns.keys():
         if key.endswith('colors'):
             assert all(len(c) <= 7 for c in cxg_adata.uns[key])
+
+    # check if redundant colors are deleted
+    assert "no_match_colors" not in cxg_adata.uns.keys()
 
 
 @pytest.mark.parametrize("inplace", [True, False])

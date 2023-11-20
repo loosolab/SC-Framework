@@ -5,10 +5,11 @@ import io
 from contextlib import redirect_stderr
 import copy
 import multiprocessing as mp
-import anndata
 import scanpy as sc
 import scanpy.external as sce
-from typing import Optional
+
+from typing import Optional, Any, Union, Literal, Callable
+from beartype import beartype
 
 import sctoolbox.utils as utils
 from sctoolbox.tools.dim_reduction import lsi
@@ -16,12 +17,18 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+batch_methods = Literal["bbknn",
+                        "combat",
+                        "mnn",
+                        "harmony",
+                        "scanorama"]
 
 #####################################################################
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
-def atac_norm(*args, **kwargs):
+
+def atac_norm(*args: Any, **kwargs: Any):
     """Normalize ATAC data - deprecated functionality. Use normalize_adata instead."""
 
     logger.warning("The function 'atac_norm' is deprecated. Use 'normalize_adata' instead.")
@@ -29,26 +36,30 @@ def atac_norm(*args, **kwargs):
 
 
 @deco.log_anndata
-def normalize_adata(adata, method, exclude_highly_expressed=True, target_sum=None) -> dict[str, anndata.AnnData]:
+@beartype
+def normalize_adata(adata: sc.AnnData,
+                    method: str | list[str],
+                    exclude_highly_expressed: bool = True,
+                    target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
-    method : str or list of str
+    method : str | list[str]
         Normalization method. Either 'total' and/or 'tfidf'.
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
-    exclude_highly_expressed : boolean, default True
+    exclude_highly_expressed : bool, default True
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
-    target_sum : int, default None
+    target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
 
     Returns
     -------
-    dict[str, anndata.AnnData]
+    dict[str, sc.AnnData]
         Dictionary containing method name as key, and anndata as values.
         Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
 
@@ -84,7 +95,12 @@ def normalize_adata(adata, method, exclude_highly_expressed=True, target_sum=Non
     return adatas
 
 
-def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4) -> None:
+@beartype
+def tfidf(data: sc.AnnData,
+          log_tf: bool = True,
+          log_idf: bool = True,
+          log_tfidf: bool = False,
+          scale_factor: int = 1e4) -> None:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
@@ -95,11 +111,11 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4) ->
 
     Parameters
     ----------
-    data : anndata.AnnData
+    data : sc.AnnData
         AnnData object with peak counts.
     log_tf : bool, default True
         Log-transform TF term if True.
-    log_idf : boolbool, default True
+    log_idf : bool, default True
         Log-transform IDF term if True.
     log_tfidf : bool, default Frue
         Log-transform TF*IDF term if True. Can only be used when log_tf and log_idf are False.
@@ -112,16 +128,11 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4) ->
 
     Raises
     ------
-    TypeError:
-        Data must be anndata object.
     AttributeError:
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
     """
 
-    if isinstance(data, anndata.AnnData):
-        adata = data
-    else:
-        raise TypeError("Expected AnnData object!")
+    adata = data
 
     if log_tfidf and (log_tf or log_idf):
         raise AttributeError(
@@ -158,7 +169,10 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4) ->
     adata.X = np.nan_to_num(tf_idf, 0)
 
 
-def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq") -> sparse.csr_matrix:
+@beartype
+def tfidf_normalization(matrix: sparse.spmatrix,
+                        tf_type: Literal["raw", "term_frequency", "log"] = "term_frequency",
+                        idf_type: Literal["unary", "inverse_freq", "inverse_freq_smooth"] = "inverse_freq") -> sparse.csr_matrix:
     """
     Perform TF-IDF normalization on a sparse matrix.
 
@@ -168,9 +182,9 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
     ----------
     matrix : scipy.sparse matrix
         The matrix to be normalized.
-    tf_type : string, default "term_frequency"
+    tf_type : Literal["term_frequency", "log", "raw"], default "term_frequency"
         The type of term frequency to use. Can be either "raw", "term_frequency" or "log".
-    idf_type : string, default "inverse_freq"
+    idf_type : Literal["inverse_freq", "unary", "inverse_freq_smooth"], default "inverse_freq"
         The type of inverse document frequency to use. Can be either "unary", "inverse_freq" or "inverse_freq_smooth".
 
     Returns
@@ -222,20 +236,23 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
 ###################################################################################
 
 
-def wrap_corrections(adata,
-                     batch_key,
-                     methods=["bbknn", "mnn"],
-                     method_kwargs={}) -> dict[str, anndata.AnnData]:
+@beartype
+def wrap_corrections(adata: sc.AnnData,
+                     batch_key: str,
+                     methods: Union[batch_methods,
+                                    list[batch_methods],
+                                    Callable] = ["bbknn", "mnn"],
+                     method_kwargs: dict = {}) -> dict[str, sc.AnnData]:
     """
     Calculate multiple batch corrections for adata using the 'batch_correction' function.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
-    methods : list of str or function, default ["bbknn", "mnn"]
+    methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
         The method(s) to use for batch correction. Options are:
         - bbknn
         - mnn
@@ -248,7 +265,7 @@ def wrap_corrections(adata,
 
     Returns
     -------
-    dict[str, anndata.AnnData]
+    dict[str, sc.AnnData]
         Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.
 
     Raises
@@ -285,13 +302,20 @@ def wrap_corrections(adata,
 
 
 @deco.log_anndata
-def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs) -> anndata.AnnData:
+@beartype
+def batch_correction(adata: sc.AnnData,
+                     batch_key: str,
+                     method: Union[batch_methods,
+                                   list[batch_methods],
+                                   Callable] = ["bbknn", "mnn"],
+                     highly_variable: bool = True,
+                     **kwargs: Any) -> sc.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
@@ -307,12 +331,12 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs) -
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
-    **kwargs :
+    **kwargs : Any
         Additional arguments will be forwarded to the method function.
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         A copy of the anndata with applied batch correction.
 
     Raises
@@ -361,7 +385,7 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs) -
 
         # Join corrected adatas
         corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
-        adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
+        adata = sc.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example
@@ -410,14 +434,19 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs) -
 
 
 @deco.log_anndata
-def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap',
-                          col_name='LISI_score', max_dims=5, inplace=False) -> Optional[anndata.AnnData]:
+@beartype
+def evaluate_batch_effect(adata: sc.AnnData,
+                          batch_key: str,
+                          obsm_key: str = 'X_umap',
+                          col_name: str = 'LISI_score',
+                          max_dims: int = 5,
+                          inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Evaluate batch effect methods using LISI.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object with PCA and umap/tsne for batch evaluation.
     batch_key : str
         The column in adata.obs containing batch information.
@@ -427,12 +456,12 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap',
         Column name for storing the LISI score in .obs.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to work inplace on the anndata object.
 
     Returns
     -------
-    Optional[anndata.AnnData]
+    Optional[sc.AnnData]
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
     Notes
@@ -473,30 +502,35 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap',
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'],
-                          threads=1, max_dims=5, inplace=False) -> dict[str, anndata.AnnData]:
+@beartype
+def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
+                          batch_key: str,
+                          obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
+                          threads: int = 1,
+                          max_dims: int = 5,
+                          inplace: bool = False) -> Optional[dict[str, sc.AnnData]]:
     """
     Evaluate batch correction methods for a dict of anndata objects (using LISI score calculation).
 
     Parameters
     ----------
-    adatas : dict of anndata.AnnData
+    adatas : dict[str, sc.AnnData]
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
     batch_key : str
         The column in adata.obs containing batch information.
-    obsm_keys : str or list of str, default ['X_pca', 'X_umap']
+    obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
     threads : int, default 1
         Number of threads to use for parallelization.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to work inplace on the anndata dict.
 
     Returns
     -------
-    dict[str, anndata.AnnData]
+    Optional[dict[str, sc.AnnData]]
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
 

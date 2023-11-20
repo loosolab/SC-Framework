@@ -9,9 +9,13 @@ import shutil
 from pathlib import Path
 import getpass
 from datetime import datetime
+import numpy as np
+import pandas as pd
 
 # type hint imports
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional, Union, Sequence
+from beartype import beartype
+import numpy.typing as npt
 
 if TYPE_CHECKING:
     import rpy2.rinterface_lib.sexp
@@ -61,7 +65,7 @@ def get_package_versions() -> dict[str, str]:
 
     Returns
     -------
-    dict[str, str] :
+    dict[str, str]
         A dict in the form:
         `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
     """
@@ -85,7 +89,8 @@ def get_package_versions() -> dict[str, str]:
     return package_dict
 
 
-def get_binary_path(tool) -> str:
+@beartype
+def get_binary_path(tool: str) -> str:
     """
     Get path to a binary commandline tool.
 
@@ -98,7 +103,7 @@ def get_binary_path(tool) -> str:
 
     Returns
     -------
-    str :
+    str
         Full path to the tool.
 
     Raises
@@ -128,7 +133,7 @@ def get_binary_path(tool) -> str:
     return tool_path
 
 
-def run_cmd(cmd) -> None:
+def run_cmd(cmd: str) -> None:
     """
     Run a commandline command.
 
@@ -159,13 +164,13 @@ def run_cmd(cmd) -> None:
 #                           R setup                                 #
 #####################################################################
 
-def setup_R(r_home=None) -> None:
+def setup_R(r_home: Optional[str] = None) -> None:
     """
     Add R installation for rpy2 use.
 
     Parameters
     ----------
-    r_home : str, default None
+    r_home : Optional[str], default None
         Path to the R home directory. If None will construct path based on location of python executable.
         E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
 
@@ -186,7 +191,8 @@ def setup_R(r_home=None) -> None:
     os.environ['R_HOME'] = r_home
 
 
-def _none2null(none_obj) -> "rpy2.rinterface_lib.sexp.NULLType":
+@beartype
+def _none2null(none_obj: None) -> "rpy2.rinterface_lib.sexp.NULLType":
     """
     rpy2 converter that translates python 'None' to R 'NULL'.
 
@@ -194,7 +200,7 @@ def _none2null(none_obj) -> "rpy2.rinterface_lib.sexp.NULLType":
 
     Parameters
     ----------
-    none_obj : object
+    none_obj : None
         None object to convert to r"NULL".
 
     Returns
@@ -211,21 +217,22 @@ def _none2null(none_obj) -> "rpy2.rinterface_lib.sexp.NULLType":
 
 # ----------------- List functions ---------------- #
 
-def split_list(lst, n) -> list[list[Any]]:
+@beartype
+def split_list(lst: Sequence[Any], n: int) -> list[Sequence[Any]]:
     """
     Split list into n chunks.
 
     Parameters
     ----------
-    lst : list
-        List to be chunked
+    lst : Sequence[Any]
+        Sequence to be chunked
     n : int
         Number of chunks.
 
     Returns
     -------
-    list[list[Any]] :
-        List of lists (chunks).
+    list[Sequence[Any]]
+        List of Sequences (chunks).
     """
 
     chunks = []
@@ -235,20 +242,21 @@ def split_list(lst, n) -> list[list[Any]]:
     return chunks
 
 
-def split_list_size(lst, max_size) -> list[list[Any]]:
+@beartype
+def split_list_size(lst: list[Any], max_size: int) -> list[list[Any]]:
     """
     Split list into chunks of max_size.
 
     Parameters
     ----------
-    lst : list
+    lst : list[Any]
         List to be chunked
     max_size : int
         Max size of chunks.
 
     Returns
     -------
-    list[list[Any]] :
+    list[list[Any]]
         List of lists (chunks).
     """
 
@@ -259,13 +267,14 @@ def split_list_size(lst, max_size) -> list[list[Any]]:
     return chunks
 
 
-def write_list_file(lst, path) -> None:
+@beartype
+def write_list_file(lst: list[Any], path: str) -> None:
     """
     Write a list to a file with one element per line.
 
     Parameters
     ----------
-    lst : list
+    lst : list[Any]
         A list of values/strings to write to file
     path : str
         Path to output file.
@@ -278,7 +287,7 @@ def write_list_file(lst, path) -> None:
         f.write(s)
 
 
-def read_list_file(path) -> list[str]:
+def read_list_file(path: str) -> list[str]:
     """
     Read a list from a file with one element per line.
 
@@ -289,7 +298,7 @@ def read_list_file(path) -> list[str]:
 
     Returns
     -------
-    list[str] :
+    list[str]
         List of strings read from file.
     """
 
@@ -302,7 +311,8 @@ def read_list_file(path) -> list[str]:
 
 # ----------------- String functions ---------------- #
 
-def clean_flanking_strings(list_of_strings) -> list[str]:
+@beartype
+def clean_flanking_strings(list_of_strings: list[str]) -> list[str]:
     """
     Remove common suffix and prefix from a list of strings.
 
@@ -310,7 +320,7 @@ def clean_flanking_strings(list_of_strings) -> list[str]:
 
     Parameters
     ----------
-    list_of_strings : list of str
+    list_of_strings : list[str]
         List of strings.
 
     Returns
@@ -328,18 +338,19 @@ def clean_flanking_strings(list_of_strings) -> list[str]:
     return list_of_strings_clean
 
 
-def longest_common_suffix(list_of_strings) -> str:
+@beartype
+def longest_common_suffix(list_of_strings: list[str]) -> str:
     """
     Find the longest common suffix of a list of strings.
 
     Parameters
     ----------
-    list_of_strings : list of str
+    list_of_strings : list[str]
         List of strings.
 
     Returns
     -------
-    str :
+    str
         Longest common suffix of the list of strings.
     """
 
@@ -350,7 +361,7 @@ def longest_common_suffix(list_of_strings) -> str:
     return lcs
 
 
-def remove_prefix(s, prefix) -> str:
+def remove_prefix(s: str, prefix: str) -> str:
     """
     Remove prefix from a string.
 
@@ -363,14 +374,14 @@ def remove_prefix(s, prefix) -> str:
 
     Returns
     -------
-    str :
+    str
         String without prefix.
     """
 
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
-def remove_suffix(s, suffix) -> str:
+def remove_suffix(s: str, suffix: str) -> str:
     """
     Remove suffix from a string.
 
@@ -383,14 +394,15 @@ def remove_suffix(s, suffix) -> str:
 
     Returns
     -------
-    str :
+    str
         String without suffix.
     """
 
     return s[:-len(suffix)] if s.endswith(suffix) else s
 
 
-def sanitize_string(s, char_list, replace="_") -> str:
+@beartype
+def sanitize_string(s: str, char_list: list[str], replace: str = "_") -> str:
     """
     Replace every occurrence of given substrings.
 
@@ -398,14 +410,14 @@ def sanitize_string(s, char_list, replace="_") -> str:
     ----------
     s : str
         String to sanitize
-    char_list : list of str
+    char_list : list[str]
         Strings that should be replaced.
     replace : str, default "_"
         Replacement of substrings.
 
     Returns
     -------
-    str :
+    str
         Sanitized string.
     """
 
@@ -415,7 +427,9 @@ def sanitize_string(s, char_list, replace="_") -> str:
     return s
 
 
-def identify_columns(df, regex) -> list[str]:
+@beartype
+def identify_columns(df: pd.DataFrame,
+                     regex: Union[list[str], str]) -> list[str]:
     """
     Get columns from pd.DataFrame that match the given regex.
 
@@ -436,3 +450,26 @@ def identify_columns(df, regex) -> list[str]:
         regex = "(" + ")|(".join(regex) + ")"
 
     return df.filter(regex=(regex)).columns.to_list()
+
+
+@beartype
+def scale_values(array: npt.ArrayLike, mini: int | float, maxi: int | float) -> np.ndarray:
+    """Small utility to scale values in array to a given range.
+
+    Parameters
+    ----------
+    array : npt.ArrayLike
+        Array to scale.
+    mini : int | float
+        Minimum value of the scale.
+    maxi : int | float
+        Maximum value of the scale.
+
+    Returns
+    -------
+    np.ndarray
+        Scaled array values.
+    """
+    val_range = array.max() - array.min()
+    a = (array - array.min()) / val_range
+    return a * (maxi - mini) + mini
