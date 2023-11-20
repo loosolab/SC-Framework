@@ -8,6 +8,16 @@ COPY scripts /scripts/
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
+# install dependencies for pages build
+RUN pip install sphinx-exec-code && \
+    pip install sphinx sphinx-rtd-theme && \
+    pip install nbsphinx && \
+    pip install nbsphinx_link && \
+
+# system install of pandoc is needed
+RUN apt-get update && \
+    apt-get install -qq -y pandoc
+
 # install Fortran compiler 
 RUN apt-get update --assume-yes && \
     apt-get install --assume-yes gfortran && \
