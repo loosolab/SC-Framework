@@ -584,8 +584,8 @@ def test_umap_marker_overview(adata, marker):
     assert ax_type.startswith("Axes")
 
 
-@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True},
-                                    {"show_title": False, "show_contour": False}])
+@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
+                                    {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
 @pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
 def test_embedding(adata, style, kwargs):
     """Assert embedding works and returns Axes object."""
@@ -597,11 +597,30 @@ def test_embedding(adata, style, kwargs):
     if style != "hexbin":
         colors.append("clustering")  # categorical obs variable; only available for dots/density
 
-    axes_list = pl.embedding(adata, color=colors, style=style, **kwargs)
+    axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
 
-    assert len(axes_list) == len(colors)
+    # Assert number of plots
+    components = kwargs.get("components", "1,2")
+    n_components = 1 if isinstance(components, str) else len(components)
+    assert len(axes_list) == len(colors) * n_components
+
+    # Assert type of output
     ax_type = type(axes_list[0]).__name__
     assert ax_type.startswith("Axes")
+
+
+def test_embedding_single(adata):
+    """Test that embedding works with single color."""
+    axarr = pl.plot_embedding(adata, color="qcvar1")
+
+    ax_type = type(axarr[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_embedding_error(adata):
+    """Test that embedding raises error for invalid input."""
+    with pytest.raises(ValueError):
+        pl.plot_embedding(adata, components="3,4")
 
 
 @deprecation.fail_if_not_removed
