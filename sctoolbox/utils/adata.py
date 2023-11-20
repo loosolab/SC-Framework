@@ -344,7 +344,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
             sec_table = obj.var
 
         # drop columns
-        if not keep is None:
+        if keep is not None:
             drop = set(sec_table.columns) - set(keep)
             sec_table.drop(columns=drop, inplace=True)
 
