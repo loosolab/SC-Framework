@@ -9,7 +9,7 @@ import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
 
-from typing import Tuple, Optional, Literal
+from beartype.typing import Tuple, Optional, Literal, SupportsFloat
 from beartype import beartype
 import numpy.typing as npt
 
@@ -227,7 +227,7 @@ def call_peaks_worker(array: npt.ArrayLike,
 @beartype
 def filter_peaks(peaks: npt.ArrayLike,
                  reference: npt.ArrayLike,
-                 peaks_thr: float,
+                 peaks_thr: SupportsFloat,
                  operator: Literal['bigger', 'smaller'] = 'bigger') -> npt.ArrayLike:
     """
     Filter peaks based on a reference array and a threshold.
@@ -679,7 +679,7 @@ def score_by_conv(data: npt.ArrayLike,
                   sigma: float = 0.4,
                   plot_wavl: bool = False,
                   n_threads: int = 12,
-                  peaks_thr: float = 0.01,
+                  peaks_thr: SupportsFloat = 0.01,
                   operator: str = 'bigger',
                   plot_mask: bool = False,
                   plot_ov: bool = True,
@@ -936,7 +936,7 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
                      scores: npt.ArrayLike,
                      sample_n: int = 0,
                      save: bool = False,
-                     figure_name: str = 'overview') -> Tuple[matplotlib.axes.Axes]:
+                     figure_name: str = 'overview') -> Tuple[matplotlib.axes.Axes, matplotlib.axes.Axes, matplotlib.axes.Axes]:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
 
@@ -1010,7 +1010,7 @@ def add_fld_metrics(adata: sc.AnnData,
                     barcode_col: Optional[str] = None,
                     barcode_tag: str = "CB",
                     regions: Optional[str] = None,
-                    peaks_thr_conv: int = 1,
+                    peaks_thr_conv: SupportsFloat = 1,
                     wavelength: int = 150,
                     sigma: float = 0.4,
                     plot: bool = True,

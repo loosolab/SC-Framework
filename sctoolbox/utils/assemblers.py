@@ -57,8 +57,9 @@ def prepare_atac_anndata(adata: sc.AnnData,
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
-        utils.check_columns(adata.var, coordinate_cols,
-                            "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+        utils.check_columns(adata.var,
+                            coordinate_cols,
+                            name="adata.var")  # Check that coordinate_cols are in adata.var)
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")
