@@ -295,7 +295,8 @@ def prepare_for_cellxgene(adata: sc.AnnData,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
-                          cmap: Optional[str] = "viridis",
+                          cmap: Optional[str] = None,
+                          palette: Optional[str | Sequence[str]] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -314,8 +315,14 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Dictionary of .var columns to rename. Key is the old name, value the new one.
     embedding_names : Optional[list[str]], default ["pca", "umap", "tsne"]
         List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.
-    cmap : Optional[str], default viridis
-        Use this replacement color map for broken color maps. If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
+    cmap : Optional[str], default None
+        Color map to use for continous variables.
+        Use this replacement color map for broken color maps.
+        If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
+    palette : Optional[str | Sequence[str]], default None
+        Color map to use for categorical annotation groups.
+        Use this replacement color map for broken color maps.
+        If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
     inplace : bool, default False
 
     Raises
@@ -405,7 +412,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
                 # scanpy replaces broken colormap before plotting
                 basis = list(out.obsm.keys())[0]
-                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=cmap, show=False)
+                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=palette, color_map=cmap, show=False)
                 plt.close()  # prevent that plot is shown
 
     if not inplace:
