@@ -87,9 +87,7 @@ nbsphinx_execute = 'never'
 # os.makedirs("source/API", exist_ok=True)
 
 # copy folder
-if os.path.exists("API/data"):
-    shutil.rmtree("API/data")
-shutil.copytree("../../tests/data", "API/data")
+shutil.copytree("../../tests/data", "API/data", dirs_exist_ok=True)  # dirs_exist_true only important when testing locally
 
 plot_include_source = True
 plot_html_show_source_link = False

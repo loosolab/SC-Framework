@@ -6,7 +6,7 @@ import sys
 import logging
 
 from beartype import beartype
-from typing import Optional
+from beartype.typing import Optional
 
 
 class SctoolboxConfig(object):
