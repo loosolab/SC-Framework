@@ -993,8 +993,6 @@ def plot_3D_UMAP(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        import sctoolbox.plotting
         min_dist = 0.3
         spread = 2.5
         sc.tl.umap(adata, min_dist=min_dist, spread=spread, n_components=3)
@@ -1002,7 +1000,7 @@ def plot_3D_UMAP(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        sctoolbox.plotting.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
+        pl.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
 
     .. plot::
         :context: close-figs
@@ -1585,15 +1583,6 @@ def plot_pca_variance(adata: sc.AnnData,
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
-
-        #init data
-        import sctoolbox.plotting as pl
-        import scanpy as sc
-
-        adata = sc.datasets.pbmc68k_reduced()
-
     .. plot::
         :context: close-figs
 
