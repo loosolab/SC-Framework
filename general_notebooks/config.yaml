@@ -1,0 +1,4 @@
+"99":
+  adata_input_dir: "pipeline_output/adatas/"
+  adata_output_dir: "pipeline_output/adatas/deployment/"
+  log_file: "pipeline_output/logs/99_log.txt"
