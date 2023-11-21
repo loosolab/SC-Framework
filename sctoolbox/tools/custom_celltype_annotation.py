@@ -7,7 +7,7 @@ import pandas as pd
 import scanpy as sc
 from IPython.display import display
 
-from typing import Optional, Literal, Any
+from beartype.typing import Optional, Literal, Any
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco

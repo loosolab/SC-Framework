@@ -12,7 +12,7 @@ import os
 import sys
 import scanpy as sc
 
-from typing import Optional, Literal, Tuple
+from beartype.typing import Optional, Literal, Tuple
 from beartype import beartype
 
 import sctoolbox.utils as utils

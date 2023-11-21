@@ -13,7 +13,7 @@ import scipy.cluster.hierarchy as sciclust
 import seaborn
 
 from beartype import beartype
-from typing import Iterable, Optional, Literal, Tuple, Union, Any
+from beartype.typing import Iterable, Optional, Literal, Tuple, Union, Any
 
 from sctoolbox import settings
 
@@ -234,10 +234,7 @@ def clustermap_dotplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-        import scanpy as sc
-
-        table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+        table = adata.obs.reset_index()[:10]
 
     .. plot::
         :context: close-figs
@@ -506,21 +503,13 @@ def boxplot(dt: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-        import matplotlib.pyplot as plt
         import pandas as pd
-        import numpy as np
-
-    .. plot::
-        :context: close-figs
-
         dt = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
 
     .. plot::
         :context: close-figs
 
         pl.boxplot(dt, show_median=True, ax=None)
-        plt.show()
     """
 
     if ax is None:
@@ -600,20 +589,13 @@ def violinplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        import sctoolbox.plotting as pl
-        import matplotlib.pyplot as plt
         import seaborn as sns
-
-    .. plot::
-        :context: close-figs
-
         table = sns.load_dataset("titanic")
 
     .. plot::
         :context: close-figs
 
         pl.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
-        plt.show()
     """
 
     # check if valid column name

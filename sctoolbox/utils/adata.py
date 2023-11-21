@@ -8,7 +8,7 @@ import scipy
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 
-from typing import Optional, Any
+from beartype.typing import Optional, Any
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
