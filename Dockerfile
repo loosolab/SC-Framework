@@ -12,7 +12,7 @@ RUN chmod +x scripts/bedGraphToBigWig
 RUN pip install sphinx-exec-code && \
     pip install sphinx sphinx-rtd-theme && \
     pip install nbsphinx && \
-    pip install nbsphinx_link && \
+    pip install nbsphinx_link
 
 # system install of pandoc is needed
 RUN apt-get update && \
