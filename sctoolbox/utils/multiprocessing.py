@@ -4,7 +4,7 @@ import time
 import sctoolbox.utils as utils
 
 # type hint imports
-from typing import TYPE_CHECKING, Any, Tuple
+from beartype.typing import TYPE_CHECKING, Any, Tuple
 from beartype import beartype
 
 if TYPE_CHECKING:

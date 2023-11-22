@@ -7,7 +7,7 @@ import glob
 from scipy import sparse
 from scipy.io import mmread
 
-from typing import Optional, Union, Literal, Any
+from beartype.typing import Optional, Union, Literal, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils

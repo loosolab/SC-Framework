@@ -7,7 +7,7 @@ import datetime
 import scanpy as sc
 
 from beartype import beartype
-from typing import Any, Optional
+from beartype.typing import Any, Optional
 
 import sctoolbox.utils as utils
 import sctoolbox.tools.bam

@@ -8,7 +8,7 @@ import psutil
 import subprocess
 import scanpy as sc
 
-from typing import Optional, Union, Tuple, Any, Literal
+from beartype.typing import Optional, Union, Tuple, Any, Literal
 from beartype import beartype
 
 import sctoolbox.utils as utils

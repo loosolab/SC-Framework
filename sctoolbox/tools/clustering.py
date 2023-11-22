@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
-from typing import Literal, Optional
+from beartype.typing import Literal, Optional
 from beartype import beartype
 
 

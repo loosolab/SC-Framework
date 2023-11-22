@@ -18,7 +18,7 @@ from sklearn.preprocessing import minmax_scale
 import warnings
 import scanpy as sc
 
-from typing import Optional, Tuple
+from beartype.typing import Optional, Tuple
 import numpy.typing as npt
 from beartype import beartype
 

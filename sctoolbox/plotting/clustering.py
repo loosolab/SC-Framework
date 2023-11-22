@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 from beartype import beartype
-from typing import Literal, Tuple, Optional
+from beartype.typing import Literal, Tuple, Optional
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -58,11 +58,6 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     Examples
     --------
-    .. plot::
-        :context: close-figs
-
-        import sctoolbox.plotting as pl
-
     .. plot::
         :context: close-figs
 
@@ -163,17 +158,7 @@ def marker_gene_clustering(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
-        adata = sc.datasets.pbmc68k_reduced()
         marker_genes_dict = {"S": ["PCNA"], "G2M": ["HMGB2"]}
-
-    .. plot::
-        :context: close-figs
 
         pl.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
     """

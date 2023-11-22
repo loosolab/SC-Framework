@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 import scanpy as sc
 
-from typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils

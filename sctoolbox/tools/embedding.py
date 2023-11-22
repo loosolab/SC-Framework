@@ -2,7 +2,7 @@
 import scanpy as sc
 import multiprocessing as mp
 
-from typing import Iterable
+from beartype.typing import Iterable
 from beartype import beartype
 
 import sctoolbox.utils as utils
