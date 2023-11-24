@@ -197,6 +197,7 @@ notebooks:
   script:
     - pip install papermill
     - pip install .[all]   # reinstall to make sure the current branch version is used
+    - pip install https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
