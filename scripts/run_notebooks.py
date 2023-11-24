@@ -36,4 +36,4 @@ print(general_notebooks)
 
 for notebook in general_notebooks:
     print(f"Running notebook: {notebook}")
-    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
+    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=script_dir + "/../rna-notebooks/")
