@@ -296,7 +296,7 @@ class GenomeTracks():
 
         return config_str
 
-    def _write_config(self, config_file: Optional[None] = None) -> str:
+    def _write_config(self, config_file: Optional[str] = None) -> str:
         """Write the configuration file to disk.
 
         Parameters
