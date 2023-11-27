@@ -142,6 +142,7 @@ def gini(x: npt.ArrayLike) -> float:
 def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_layer: Optional[str] = None) -> Tuple[sc.AnnData, np.float64]:
     """
     Calculate the RAGI score over all clusters in adata.
+    
     The RAGI score is a measure of how well a cluster is defined by a set of genes.
     The score is the mean of the Gini coefficients of the gene enrichments across the clusters.
     The functions uses binary sparse matrices ONLY. If the data is not binary, use `sctoolbox.utils.binarize`.
