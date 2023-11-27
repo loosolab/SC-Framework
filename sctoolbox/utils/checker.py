@@ -133,7 +133,7 @@ def is_str_numeric(ans: str) -> bool:
 
 @beartype
 def var_index_from(adata: sc.AnnData,
-                 from_column: Optional[str] = None) -> None:
+                   from_column: Optional[str] = None) -> None:
     """
     Format adata.var index from specified column or from the index available.
 

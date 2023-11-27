@@ -38,4 +38,3 @@ def test_barcode_index(snapatac_adata):
 
     # execute barcode_index again to check if it will raise an error
     bioutils.barcode_index(snapatac_adata)
-

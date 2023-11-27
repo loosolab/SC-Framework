@@ -8,6 +8,7 @@ import sctoolbox.utils.decorator as deco
 
 from beartype.typing import Literal, Optional
 from beartype import beartype
+import numpy.typing as npt
 
 
 @deco.log_anndata
@@ -115,13 +116,14 @@ def recluster(adata: sc.AnnData,
             sc.pl.umap(adata, color=key_added, ax=ax[1], show=False, legend_loc="on data")
             ax[1].set_title(f"After re-clustering\n (column name: '{key_added}')")
 
-def gini(x) -> float:
+
+def gini(x: npt.ArrayLike) -> float:
     """
     Calculate the Gini coefficient of a numpy array.
 
     Parameters
     ----------
-    x : np.ndarray
+    x : npt.ArrayLike
         Array to calculate Gini coefficient for.
 
     Returns
@@ -137,21 +139,22 @@ def gini(x) -> float:
 
 
 @deco.log_anndata
-def calc_ragi(adata, condition_column='clustering', binary_layer=None) -> (sc.AnnData, np.float64):
+def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_layer: Optional[str] = None) -> (sc.AnnData, np.float64):
     """
-    Calculate the RAGI score over all clusters in adata. The RAGI score is a measure of how well a cluster is defined
-    by a set of genes. The score is the mean of the Gini coefficients of the gene enrichments across the clusters.
+    Calculate the RAGI score over all clusters in adata.
+    The RAGI score is a measure of how well a cluster is defined by a set of genes.
+    The score is the mean of the Gini coefficients of the gene enrichments across the clusters.
     The functions uses binary sparse matrices ONLY. If the data is not binary, use `sctoolbox.utils.binarize`.
     Binary layers can be selected using the `binary_layer` parameter.
     The adata.var table also needs the total counts for each gene.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         Annotated data matrix.
     condition_column : str
         Column in `adata.obs` to use for clustering.
-    binary_layer : str, default None
+    binary_layer : Optional[str], default None
         Layer in `adata.layers` to use for calculating gene enrichment. If None, the raw layer is used.
 
     Returns

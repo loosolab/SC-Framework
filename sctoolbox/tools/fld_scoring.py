@@ -13,8 +13,8 @@ from beartype.typing import Tuple, Optional, Literal, SupportsFloat
 from beartype import beartype
 import numpy.typing as npt
 
-import sctoolbox.tools as tools # add_insertsize()
-import sctoolbox.plotting as plotting # save_figure()
+import sctoolbox.tools as tools  # add_insertsize()
+import sctoolbox.plotting as plotting  # save_figure()
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -42,7 +42,6 @@ def moving_average(series: npt.ArrayLike,
     npt.ArrayLike
         Smoothed array
     """
-
 
     list(series)
     smoothed = []
@@ -129,7 +128,6 @@ def scale(series_arr: npt.ArrayLike) -> npt.ArrayLike:
     npt.ArrayLike
         Scaled array
     """
-
 
     if len(series_arr.shape) == 1:
         max_v = np.max(series_arr)
@@ -249,7 +247,6 @@ def filter_peaks(peaks: npt.ArrayLike,
         Filtered array of peaks
     """
 
-
     filtered_peaks = []
 
     if operator == "bigger":
@@ -306,23 +303,23 @@ def distances_score(peaks: npt.ArrayLike,
         # calculate score
         if len(peak_list) == 0:
             score = 0
-        elif len(peak_list) == 1: # if only one peak, score is the momentum at that peak divided by 100
+        elif len(peak_list) == 1:  # if only one peak, score is the momentum at that peak divided by 100
             score = single_momentum[peak_list[0]] / 100
-        elif len(peak_list) > 1: # if more than one peak
+        elif len(peak_list) > 1:  # if more than one peak
             corrected_scores = []
-            for j in range(1, len(peak_list)): # loop over all peaks
-                amplitude = single_momentum[peak_list[j - 1]] * 2 # amplitude is the momentum at the previous peak
+            for j in range(1, len(peak_list)):  # loop over all peaks
+                amplitude = single_momentum[peak_list[j - 1]] * 2  # amplitude is the momentum at the previous peak
 
-                diff = peak_list[j] - peak_list[j - 1] # difference between the current and previous peak
-                corrected_score = amplitude - (abs(diff - period) / penalty_scale) # corrected score
+                diff = peak_list[j] - peak_list[j - 1]  # difference between the current and previous peak
+                corrected_score = amplitude - (abs(diff - period) / penalty_scale)  # corrected score
                 if corrected_score < 0:
                     corrected_score = 0
 
-                corrected_scores.append(corrected_score) # append corrected score to list
+                corrected_scores.append(corrected_score)  # append corrected score to list
 
-            score = float(np.sum(np.array(corrected_scores))) + 0 # sum all corrected scores
+            score = float(np.sum(np.array(corrected_scores))) + 0  # sum all corrected scores
 
-        scores.append(score) # append score to list
+        scores.append(score)  # append score to list
 
     return scores
 
@@ -333,7 +330,7 @@ def score_mask(peaks: npt.ArrayLike,
                plot: bool = False,
                save: bool = False) -> npt.ArrayLike:
     """
-    compute a score for each sample based on the convolved data and the peaks multiplied by a score mask.
+    Compute a score for each sample based on the convolved data and the peaks multiplied by a score mask.
 
     Parameters
     ----------
@@ -504,7 +501,7 @@ def cos_wavelet(wavelength: int = 100,
     # Scale the wavelength and sigma with the scale
     wavl_scale = int(wavelength * 1.5)
     sigma = sigma * wavl_scale  # This ensures sigma is scaled with scale
-    frequency = 1.5 / wavl_scale # This ensures the frequency is scaled with scale
+    frequency = 1.5 / wavl_scale  # This ensures the frequency is scaled with scale
 
     # Create an array of x values
     x = np.linspace(-wavl_scale, wavl_scale, wavl_scale * 2)
@@ -607,6 +604,11 @@ def wavelet_transform_fld(dists_arr: npt.ArrayLike,
         List of wavelengths for the wavelets.
     sigma : float, default 0.4
         Standard deviation of the Gaussian curve.
+
+    Returns
+    -------
+    npt.ArrayLike
+        Array of arrays of the wavelet transformations.
     """
 
     # Set default wavelengths
@@ -656,11 +658,11 @@ def custom_conv(data: npt.ArrayLike,
 
     # Get the wavelet
     wavelet = cos_wavelet(wavelength=wavelength,
-                amplitude=1.0,
-                phase_shift=0,
-                mu=0.0,
-                sigma=sigma,
-                plot=plot_wavl)
+                          amplitude=1.0,
+                          phase_shift=0,
+                          mu=0.0,
+                          sigma=sigma,
+                          plot=plot_wavl)
 
     # convolve with the data
     convolved_data = []
@@ -743,7 +745,7 @@ def density_plot(count_table: npt.ArrayLike,
                  figure_name: str = 'density_plot',
                  colormap: str = 'jet',
                  ax: Optional[matplotlib.axes.Axes] = None,
-                 fig: Optional[matplotlib.figure.Figure] = None) -> Tuple[matplotlib.axes.Axes, matplotlib.figure.Figure]:
+                 fig: Optional[matplotlib.figure.Figure] = None) -> npt.ArrayLike:
     """
     Plot the density of the fragment length distribution over all cells.
 
@@ -770,7 +772,7 @@ def density_plot(count_table: npt.ArrayLike,
 
     Returns
     -------
-    Tuple[matplotlib.axes.Axes, matplotlib.figure.Figure]
+    npt.ArrayLike
         Axes and figure of the plot.
     """
     count_table = count_table
@@ -854,7 +856,9 @@ def density_plot(count_table: npt.ArrayLike,
 
         plt.show()
 
-    return ax, fig
+    figure = np.array([ax, fig])
+
+    return figure
 
 
 @beartype
@@ -862,10 +866,11 @@ def plot_wavelet_transformation(convolution: npt.ArrayLike,
                                 wavelengths: npt.ArrayLike,
                                 fld: Optional[npt.ArrayLike] = None,
                                 save: bool = False,
-                                figure_name: str = 'wavelet_transformation') -> Tuple[matplotlib.axes.Axes]:
+                                figure_name: str = 'wavelet_transformation') -> npt.ArrayLike:
     """
     Plot the wavelet transformation of the fragment length distribution.
-    if fld is not None, the fragment length distribution is plotted as well.
+
+    If fld is not None, the fragment length distribution is plotted as well.
 
     Parameters
     ----------
@@ -882,7 +887,7 @@ def plot_wavelet_transformation(convolution: npt.ArrayLike,
 
     Returns
     -------
-    Tuple[matplotlib.axes.Axes]
+    npt.ArrayLike
         Axes of the plot
     """
 
@@ -926,7 +931,9 @@ def plot_wavelet_transformation(convolution: npt.ArrayLike,
 
     plt.show()
 
-    return ax1, ax2
+    axes = np.array([ax1, ax2])
+
+    return axes
 
 
 @beartype
@@ -936,7 +943,7 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
                      scores: npt.ArrayLike,
                      sample_n: int = 0,
                      save: bool = False,
-                     figure_name: str = 'overview') -> Tuple[matplotlib.axes.Axes, matplotlib.axes.Axes, matplotlib.axes.Axes]:
+                     figure_name: str = 'overview') -> npt.ArrayLike:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
 
@@ -959,7 +966,7 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
 
     Returns
     -------
-    Tuple[matplotlib.axes.Axes]
+    npt.ArrayLike
         Axes of the plot
     """
 
@@ -998,7 +1005,10 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
 
     plt.show()
 
-    return ax1, ax2, ax3
+    axes = np.array([ax1, ax2, ax3])
+
+    return axes
+
 
 # ///////////////////////////////////////// final wrapper \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 

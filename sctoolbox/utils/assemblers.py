@@ -27,6 +27,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
                          h5ad_path: Optional[str] = None) -> sc.AnnData:
     """
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
+
     This includes formatting the index, formatting the coordinate columns, and setting the barcode as the index.
 
     Parameters

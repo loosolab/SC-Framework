@@ -15,6 +15,7 @@ plt.switch_backend("Agg")
 fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
 bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
 
+
 @pytest.fixture
 def count_table():
     """Return fragment count table."""
@@ -174,8 +175,9 @@ def test_filter_peaks(disturbed_sine):
 
 def test_density_plot(fragment_distributions):
     """Tests the density_plot function."""
-    ax = tl.density_plot(fragment_distributions)
+    figure = tl.density_plot(fragment_distributions)
 
+    ax = figure[0]
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
