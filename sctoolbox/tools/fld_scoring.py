@@ -862,7 +862,7 @@ def plot_wavelet_transformation(convolution: npt.ArrayLike,
                                 wavelengths: npt.ArrayLike,
                                 fld: Optional[npt.ArrayLike] = None,
                                 save: bool = False,
-                                figure_name: str = 'wavelet_transformation') -> Tuple[matplotlib.axes.Axes]:
+                                figure_name: str = 'wavelet_transformation') -> Tuple[matplotlib.axes.Axes, matplotlib.axes.Axes]:
     """
     Plot the wavelet transformation of the fragment length distribution.
     if fld is not None, the fragment length distribution is plotted as well.
@@ -891,7 +891,7 @@ def plot_wavelet_transformation(convolution: npt.ArrayLike,
     ymin, ymax = wavelengths[0], wavelengths[-1]
 
     if fld is not None:
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
 
         ax1.set_title('Fragment Length Distribution')
         ax1.set_xlabel('Fragment Length (bp)')
