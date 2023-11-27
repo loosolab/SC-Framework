@@ -9,7 +9,7 @@ import multiprocessing as mp
 from scipy.signal import find_peaks
 from scipy.signal import fftconvolve
 
-from beartype.typing import Tuple, Optional, Literal, SupportsFloat
+from beartype.typing import Optional, Literal, SupportsFloat
 from beartype import beartype
 import numpy.typing as npt
 
@@ -782,7 +782,6 @@ def density_plot(count_table: npt.ArrayLike,
             rounded = (np.round(count_table)).astype('int64')
             count_table = rounded
         else:
-            #count_table = unscale(count_table)
             count_table = (count_table * 1000).astype('int64')
     # get the maximal abundance of a fragment length over all cells
     max_value = np.max(np.around(count_table).astype(int))

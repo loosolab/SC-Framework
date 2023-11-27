@@ -1,4 +1,4 @@
-""" Test clustering functions."""
+"""Test clustering functions."""
 
 import pytest
 import numpy as np
@@ -9,7 +9,7 @@ import sctoolbox.tools as tl
 
 
 def build_adata(mtx):
-    """ Build mock anndata object."""
+    """Build mock anndata object."""
 
     # define the number of observations (obs) and var regions
     n_obs = 30
@@ -27,7 +27,7 @@ def build_adata(mtx):
 
 
 def unequal_mtx():
-    """ Build a mock mtx with unequal distribution."""
+    """Build a mock mtx with unequal distribution."""
 
     index = np.arange(0, 31, 3)
     zero_arr = np.zeros((30, 30))
@@ -41,7 +41,7 @@ def unequal_mtx():
 
 
 def equal_mtx():
-    """ Build a mock mtx with equal distribution."""
+    """Build a mock mtx with equal distribution."""
 
     ones_arr = np.ones((30, 30))
     mtx = sparse.csr_matrix(ones_arr)
@@ -51,7 +51,7 @@ def equal_mtx():
 
 @pytest.fixture
 def equal_adata():
-    """ Build a mock anndata object with equally distributed features."""
+    """Build a mock anndata object with equally distributed features."""
 
     mtx = equal_mtx()
     adata = build_adata(mtx)
@@ -61,7 +61,7 @@ def equal_adata():
 
 @pytest.fixture
 def unequal_adata():
-    """ Build a mock anndata object with unequally distributed features."""
+    """Build a mock anndata object with unequally distributed features."""
 
     mtx = unequal_mtx()
     adata = build_adata(mtx)
@@ -70,7 +70,7 @@ def unequal_adata():
 
 
 def test_gini():
-    """ Test gini function."""
+    """Test gini function."""
 
     test_array_equal = np.full(10, 5)
 
@@ -82,10 +82,10 @@ def test_gini():
 
 
 def test_calc_ragi(equal_adata, unequal_adata):
-    """ Test calc_ragi function."""
+    """Test calc_ragi function."""
 
     _, ragi_equal = tl.calc_ragi(equal_adata, "cluster", None)
     _, ragi_unequal = tl.calc_ragi(unequal_adata, "cluster", None)
 
     assert ragi_equal == 0
-    assert round(ragi_unequal, 2) == 0.9#
+    assert round(ragi_unequal, 2) == 0.9

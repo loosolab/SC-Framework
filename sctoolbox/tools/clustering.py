@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
-from beartype.typing import Literal, Optional
+from beartype.typing import Literal, Optional, Tuple
 from beartype import beartype
 import numpy.typing as npt
 
@@ -139,7 +139,7 @@ def gini(x: npt.ArrayLike) -> float:
 
 
 @deco.log_anndata
-def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_layer: Optional[str] = None) -> (sc.AnnData, np.float64):
+def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_layer: Optional[str] = None) -> Tuple[sc.AnnData, np.float64]:
     """
     Calculate the RAGI score over all clusters in adata.
     The RAGI score is a measure of how well a cluster is defined by a set of genes.
@@ -159,10 +159,8 @@ def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_la
 
     Returns
     -------
-    sc.AnnData
-        Annotated data matrix with the Gini coefficients score in `adata.var`.
-    np.float64
-        RAGI score.
+    Tuple[sc.AnnData, np.float64]
+        Annotated data matrix with the Gini coefficients score in `adata.var` and RAGI score.
     """
 
     # copy adata
