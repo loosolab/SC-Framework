@@ -16,6 +16,7 @@
 - Deprecated pl.umap_pub as this is now covered by pl.plot_embedding
 - changed typing to beartype.typing
 - Added GenomeTracks plotting
+- Fix batch evaluation for small datasets (#148)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
