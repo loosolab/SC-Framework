@@ -282,6 +282,10 @@ def pairwise_rank_genes(adata: sc.AnnData,
 
     groups = adata.obs[groupby].astype("category").cat.categories
     contrasts = list(itertools.combinations(groups, 2))
+    logger.debug(f"Contrasts: {contrasts}")
+
+    if len(contrasts) == 0:
+        raise ValueError(f"Number of groups in '{groupby}' must be at least 2. Found: {list(groups)}")
 
     # Check that fractions are available
     use_fractions = True
@@ -350,7 +354,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 @beartype
 def get_rank_genes_tables(adata: sc.AnnData,
                           key: str = "rank_genes_groups",
-                          n_genes: int = 200,
+                          n_genes: int | None = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
                           save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
