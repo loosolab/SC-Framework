@@ -14,6 +14,7 @@
 - Add parameter to plot_pca_correlation to plot correlation with UMAP components (#157)
 - Handle NaN values for plot_pca_correlation (#156)
 - changed typing to beartype.typing
+- Fix batch evaluation for small datasets (#148)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
