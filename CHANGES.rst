@@ -14,7 +14,9 @@
 - Add parameter to plot_pca_correlation to plot correlation with UMAP components (#157)
 - Handle NaN values for plot_pca_correlation (#156)
 - changed typing to beartype.typing
-
+- added RAGI cluster validation to clustering.py (!201)
+- started disintegrating fld scoring (!201)
+- reorganised ATAC-notebooks (!201)
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
