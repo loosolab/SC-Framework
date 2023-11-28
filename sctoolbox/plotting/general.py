@@ -24,7 +24,8 @@ from sctoolbox import settings
 
 @beartype
 def _save_figure(path: Optional[str],
-                 dpi: int = 600) -> None:
+                 dpi: int = 600,
+                 **kwargs) -> None:
     """Save the current figure to a file.
 
     Parameters
@@ -35,13 +36,18 @@ def _save_figure(path: Optional[str],
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
+    **kwargs : arguments
+        Additional arguments to pass to matplotlib.pyplot.savefig.
     """
+
+    savefig_kwargs = {"bbox_inches": "tight", "facecolor": "white"}  # defaults
+    savefig_kwargs.update(kwargs)
 
     # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
     # This moves the checking to the _save_figure function rather than each plotting function.
     if path is not None:
         output_path = settings.full_figure_prefix + path
-        plt.savefig(output_path, dpi=dpi, bbox_inches="tight", facecolor="white")
+        plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
 
 
 @beartype
@@ -187,7 +193,8 @@ def clustermap_dotplot(table: pd.DataFrame,
                        palette: str = "vlag",
                        x_rot: int = 45,
                        show_grid: bool = False,
-                       save: Optional[str] = None) -> list:
+                       save: Optional[str] = None,
+                       **kwargs) -> list:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -223,6 +230,8 @@ def clustermap_dotplot(table: pd.DataFrame,
         Show grid behind dots in plot.
     save : Optional[str], default None
         Save the figure to this path.
+    **kwargs : Any
+        Additional arguments to pass to seaborn.scatterplot.
 
     Returns
     -------
@@ -337,6 +346,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                            palette=palette,
                            ax=ax,
                            zorder=100,  # place points above grid
+                           **kwargs
                            )
     ax.set_xticklabels(ax.get_xticklabels(), rotation=x_rot, ha="right" if x_rot != 0 else "center")
 
@@ -481,7 +491,8 @@ def bidirectional_barplot(df: pd.DataFrame,
 @beartype
 def boxplot(dt: pd.DataFrame,
             show_median: bool = True,
-            ax: Optional[matplotlib.axes.Axes] = None) -> matplotlib.axes.Axes:
+            ax: Optional[matplotlib.axes.Axes] = None,
+            **kwargs) -> matplotlib.axes.Axes:
     """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
@@ -492,6 +503,8 @@ def boxplot(dt: pd.DataFrame,
         If True show median value as small box inside the boxplot.
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
+    **kwargs : arguments
+        Additional arguments to pass to seaborn.boxplot.
 
     Returns
     -------
@@ -522,7 +535,7 @@ def boxplot(dt: pd.DataFrame,
         warnings.filterwarnings("ignore", category=FutureWarning, message="iteritems is deprecated*")
 
         dt_melt = dt.melt()
-        ax = sns.boxplot(data=dt_melt, x="variable", y="value", ax=ax)
+        ax = sns.boxplot(data=dt_melt, x="variable", y="value", ax=ax, **kwargs)
         ax.set_xlabel("")
         ax.set_ylabel("")
 
@@ -551,7 +564,8 @@ def violinplot(table: pd.DataFrame,
                colors: Optional[list[str]] = None,
                ax: Optional[matplotlib.axes.Axes] = None,
                title: Optional[str] = None,
-               ylabel: bool = True) -> matplotlib.axes.Axes:
+               ylabel: bool = True,
+               **kwargs) -> matplotlib.axes.Axes:
     """Plot a violinplot with optional horizontal lines for each violin.
 
     Parameters
@@ -573,6 +587,8 @@ def violinplot(table: pd.DataFrame,
         Title of the plot.
     ylabel : bool | str, default True
         Boolean if ylabel should be shown. Or str for custom ylabel.
+    **kwargs : arguments
+        Additional arguments to pass to seaborn.violinplot.
 
     Returns
     -------
@@ -620,7 +636,7 @@ def violinplot(table: pd.DataFrame,
             raise ValueError(f"Invalid dict keys in hlines parameter. Key(s) have to match table column names. Invalid keys: {invalid_keys}")
 
     # create violinplot
-    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order, color=colors, ax=ax)
+    plot = sns.violinplot(data=table, y=y, x=color_by, order=color_group_order, color=colors, ax=ax, **kwargs)
 
     # add horizontal lines
     if hlines:
@@ -685,7 +701,8 @@ def violinplot(table: pd.DataFrame,
 @beartype
 def plot_venn(groups_dict: dict[str, list[Any]],
               title: Optional[str] = None,
-              save: Optional[str] = None):
+              save: Optional[str] = None,
+              **kwargs) -> None:
     """Plot a Venn diagram from a dictionary of 2-3 groups of lists.
 
     Parameters
@@ -697,6 +714,8 @@ def plot_venn(groups_dict: dict[str, list[Any]],
         Title of the plot.
     save : Optional[str], default None
         Filename to save the plot to.
+    **kwargs : arguments
+        Additional arguments to pass to matplotlib_venn.venn2 or matplotlib_venn.venn3.
 
     Raises
     ------
@@ -711,9 +730,9 @@ def plot_venn(groups_dict: dict[str, list[Any]],
 
     # Plot the Venn diagram using matplotlib_venn
     if len(group_sets) == 2:
-        venn2(group_sets, set_labels=list(groups_dict.keys()))
+        venn2(group_sets, set_labels=list(groups_dict.keys()), **kwargs)
     elif len(group_sets) == 3:
-        venn3(group_sets, set_labels=list(groups_dict.keys()))
+        venn3(group_sets, set_labels=list(groups_dict.keys()), **kwargs)
     else:
         raise ValueError("Only 2 or 3 groups are supported.")
 
@@ -733,7 +752,8 @@ def plot_venn(groups_dict: dict[str, list[Any]],
 def pairwise_scatter(table: pd.DataFrame,
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
-                     save: Optional[str] = None) -> np.ndarray:
+                     save: Optional[str] = None,
+                     **kwargs) -> np.ndarray:
     """Plot a grid of scatterplot comparing column values pairwise.
 
     If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
@@ -748,6 +768,8 @@ def pairwise_scatter(table: pd.DataFrame,
         Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
     save : Optional[str], default None
         If given, the figure will be saved to this path.
+    **kwargs : arguments
+        Additional arguments to pass to matplotlib.axes.Axes.scatter.
 
     Returns
     -------
@@ -809,7 +831,7 @@ def pairwise_scatter(table: pd.DataFrame,
                         included = included & (table[col] >= thresholds[col].get("min", table[col].min())) & (table[col] <= thresholds[col].get("max", table[col].max()))
                 colors = np.where(included, "black", "red")
 
-                ax.scatter(table[c_col], table[c_row], s=1, c=colors)  # x=columns, y=rows
+                ax.scatter(table[c_col], table[c_row], s=1, c=colors, **kwargs)  # x=columns, y=rows
 
                 excluded_flag = excluded_flag or not np.all(included)  # set flag if any points are excluded
 

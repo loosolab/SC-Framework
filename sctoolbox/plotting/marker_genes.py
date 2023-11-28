@@ -350,7 +350,8 @@ def grouped_violin(adata: sc.AnnData,
 def group_expression_boxplot(adata: sc.AnnData,
                              gene_list: list[str],
                              groupby: str,
-                             figsize: Optional[Tuple[int | float, int | float]] = None) -> matplotlib.axes.Axes:
+                             figsize: Optional[Tuple[int | float, int | float]] = None,
+                             **kwargs) -> matplotlib.axes.Axes:
     """
     Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
 
@@ -366,6 +367,8 @@ def group_expression_boxplot(adata: sc.AnnData,
         A column in .obs for grouping cells into groups on the x-axis
     figsize : Optional[Tuple[int | float, int | float]], default None (matplotlib default)
         Control the size of the output figure, e.g. (6,10).
+    **kwargs : Any
+        Additional arguments passed to seaborn.boxplot.
 
     Returns
     -------
@@ -406,7 +409,7 @@ def group_expression_boxplot(adata: sc.AnnData,
 
     # Joined figure with all
     fig, ax = plt.subplots(figsize=figsize)
-    g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey")
+    g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey", **kwargs)
     ax.set_ylabel("Normalized expression")
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
@@ -720,7 +723,8 @@ def plot_gene_correlation(adata: sc.AnnData,
                           gene_list: list[str] | str,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
-                          save: Optional[str] = None) -> Iterable[matplotlib.axes.Axes]:
+                          save: Optional[str] = None,
+                          **kwargs) -> Iterable[matplotlib.axes.Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
@@ -738,6 +742,8 @@ def plot_gene_correlation(adata: sc.AnnData,
         Control the size of the output figure, e.g. (6,10).
     save : Optional[str], default None
         Save the figure to a file.
+    **kwargs : Any
+        Additional arguments passed to seaborn.regplot.
 
     Returns
     -------
@@ -771,7 +777,7 @@ def plot_gene_correlation(adata: sc.AnnData,
     for i, gene in enumerate(gene_list):
         ax = axes_list[i]
         gene_expr = adata[:, gene].to_df()[gene]
-        sns.regplot(x=ref, y=gene_expr, ax=ax)
+        sns.regplot(x=ref, y=gene_expr, ax=ax, **kwargs)
 
     # Hide axes not used
     for ax in axes_list[len(gene_list):]:

@@ -9,7 +9,7 @@ import sctoolbox.utils as utils
 
 
 @beartype
-def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4) -> None:
+def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs) -> None:
     """
     Compute umap for a list of adatas in parallel.
 
@@ -19,14 +19,18 @@ def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4) -> None:
         List of anndata objects to compute umap on.
     threads : int, default 4
         Number of threads to use.
+    **kwargs : Any
+        Additional arguments to be passed to sc.tl.umap.
     """
 
     pool = mp.Pool(threads)
 
+    kwargs["copy"] = True  # always copy
+
     jobs = []
     for i, adata in enumerate(adatas):
         adata_minimal = utils.get_minimal_adata(adata)
-        job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds={"copy": True})
+        job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds=kwargs)
         jobs.append(job)
     pool.close()
 

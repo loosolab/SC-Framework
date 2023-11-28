@@ -56,46 +56,6 @@ def compute_PCA(anndata: sc.AnnData,
         return adata_m
 
 
-# wrapper no longer used
-# @beartype
-# def norm_log_PCA(anndata: sc.AnnData,
-#                 exclude_HEG: bool = True,
-#                 use_HVG_PCA: bool = True,
-#                 inplace: bool = False):
-#    """
-#    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
-#
-#    Parameters
-#    ----------
-#    anndata : sc.AnnData
-#        Anndata object to work on.
-#    exclude_HEG : boolean, default True
-#        If True, highly expressed genes (HEG) will be not considered in the normalization.
-#    use_HVG_PCA : bool, default True
-#        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-#    inplace : bool, default False
-#        Whether to work inplace on the anndata object.
-#
-#    Returns
-#    -------
-#    Optional[sc.AnnData]:
-#        Anndata with expression values normalized and log converted and PCA computed.
-#    """
-#    adata_m = anndata if inplace else anndata.copy()
-#
-#    # Normalization and converting to log
-#    nc.adata_normalize_total(adata_m, exclude_HEG, inplace=True)
-#
-#    # Annotate highly variable genes
-#    hv.annot_HVG(adata_m, inplace=True)
-#
-#    # Compute PCA
-#    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
-#
-#    if not inplace:
-#        return adata_m
-
-
 @beartype
 def lsi(data: sc.AnnData,
         scale_embeddings: bool = True,

@@ -680,9 +680,10 @@ def run_deseq2(adata: sc.AnnData,
 def score_genes(adata: sc.AnnData,
                 gene_set: str | list[str],
                 score_name: str = 'score',
-                inplace: bool = True) -> Optional[sc.AnnData]:
+                inplace: bool = True,
+                **kwargs) -> Optional[sc.AnnData]:
     """
-    Assign a score to each cell depending on the expression of a set of genes.
+    Assign a score to each cell depending on the expression of a set of genes. This is a wrapper for scanpy.tl.score_genes.
 
     Parameters
     ----------
@@ -695,6 +696,8 @@ def score_genes(adata: sc.AnnData,
         Name of the column in obs table where the score will be added.
     inplace : bool, default True
         Adds the new column to the original anndata object.
+    **kwargs : Any
+        Additional arguments to be passed to scanpy.tl.score_genes.
 
     Returns
     -------
@@ -722,7 +725,7 @@ def score_genes(adata: sc.AnnData,
     sdata = sc.pp.scale(adata, copy=True)
 
     # Score the cells
-    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name)
+    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name, **kwargs)
     # add score to adata.obs
     adata.obs[score_name] = sdata.obs[score_name]
 

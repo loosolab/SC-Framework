@@ -10,7 +10,7 @@ from beartype import beartype
 
 @deco.log_anndata
 @beartype
-def violin_HVF_distribution(adata: sc.AnnData):
+def violin_HVF_distribution(adata: sc.AnnData, **kwargs):
     """
     Plot the distribution of the HVF as violinplot.
 
@@ -18,6 +18,8 @@ def violin_HVF_distribution(adata: sc.AnnData):
     ----------
     adata : sc.AnnData
         AnnData object containing columns ['highly_variable', 'n_cells_by_counts'] column.
+    **kwargs : arguments
+        Keyword arguments to be passed to matplotlib.pyplot.violinplot.
     """
     utils.check_columns(adata.var, ['highly_variable', 'n_cells_by_counts'])
     # get the number of cells per highly variable feature
@@ -26,7 +28,7 @@ def violin_HVF_distribution(adata: sc.AnnData):
     n_cells.reset_index(drop=True, inplace=True)
     # violin plot
     fig, ax = plt.subplots()
-    ax.violinplot(n_cells, showmeans=True, showmedians=True)
+    ax.violinplot(n_cells, showmeans=True, showmedians=True, **kwargs)
     ax.set_title('Distribution of the number of cells per highly variable feature')
     ax.set_ylabel('Number of cells')
     ax.set_xlabel('Highly variable features')
@@ -35,7 +37,7 @@ def violin_HVF_distribution(adata: sc.AnnData):
 
 @deco.log_anndata
 @beartype
-def scatter_HVF_distribution(adata: sc.AnnData):
+def scatter_HVF_distribution(adata: sc.AnnData, **kwargs):
     """
     Plot the distribution of the HVF as scatterplot.
 
@@ -43,11 +45,13 @@ def scatter_HVF_distribution(adata: sc.AnnData):
     ----------
     adata : sc.AnnData
         AnnData object containing columns ['variability_score', 'n_cells'] column.
+    **kwargs : arguments
+        Keyword arguments to be passed to matplotlib.pyplot.scatter.
     """
     utils.check_columns(adata.var, ['variability_score', 'n_cells'])
     variabilities = adata.var[['variability_score', 'n_cells']]
     fig, ax = plt.subplots()
-    ax.scatter(variabilities['n_cells'], variabilities['variability_score'])
+    ax.scatter(variabilities['n_cells'], variabilities['variability_score'], **kwargs)
     ax.set_title('Distribution of the number of cells and variability score per feature')
     ax.set_xlabel('Number of cells')
     ax.set_ylabel('variability score')
