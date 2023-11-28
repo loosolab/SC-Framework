@@ -17,13 +17,11 @@ for notebook in rna_notebooks:
     pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
 
 # Run ATAC notebooks
+notebook_dir = script_dir + "/../atac-notebooks/"
+atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
+atac_notebooks = [nb for nb in atac_notebooks if "05" not in nb]  # 05 is not tested yet
+print(atac_notebooks)
 
-if False:  # currently not working due to fld scoring update
-    notebook_dir = script_dir + "/../atac-notebooks/"
-    atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
-    atac_notebooks = [nb for nb in atac_notebooks if "05" not in nb]  # 05 is not tested yet
-    print(atac_notebooks)
-
-    for notebook in atac_notebooks:
-        print(f"Running notebook: {notebook}")
-        pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
+for notebook in atac_notebooks:
+    print(f"Running notebook: {notebook}")
+    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
