@@ -25,3 +25,13 @@ print(atac_notebooks)
 for notebook in atac_notebooks:
     print(f"Running notebook: {notebook}")
     pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
+
+
+# Run general notebooks
+notebook_dir = script_dir + "/../general_notebooks/"
+general_notebooks = glob.glob(notebook_dir + "*.ipynb")
+print(general_notebooks)
+
+for notebook in general_notebooks:
+    print(f"Running notebook: {notebook}")
+    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=script_dir + "/../rna-notebooks/")
