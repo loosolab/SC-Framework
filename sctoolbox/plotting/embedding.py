@@ -1002,10 +1002,7 @@ def plot_3D_UMAP(adata: sc.AnnData,
 
         pl.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
 
-    .. plot::
-        :context: close-figs
-
-        RESULT = "File was written to my3d_umap.html"
+    This will create an .html-file with the interactive 3D UMAP: :download:`my3d_umap.html <my3d_umap.html>`
     """
 
     n_cells = len(adata.obs)
