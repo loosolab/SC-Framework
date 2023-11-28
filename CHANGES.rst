@@ -1,6 +1,7 @@
 0.3 (in progress)
 -----------------
 - Add parameter type hinting including runtime type checking (#46)
+- Fixed prepare_for_cellxgene color issue (#145, #146)
 - Add CI/CD container build pipeline for testing (#135)
 - Fixed example for gene_expression_heatmap and smaller bugfixes related to marker genes (#124)
 - Removed pl.group_heatmap as it is fully covered by pl.gene_expression_heatmap
@@ -20,6 +21,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- Added prepare for cellxgene notebook (#139)
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
 
 
