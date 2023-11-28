@@ -18,6 +18,7 @@
 - changed typing to beartype.typing
 - Added GenomeTracks plotting
 - Fix batch evaluation for small datasets (#148)
+- Added **kwargs to functions which are wrappers for other functions
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
