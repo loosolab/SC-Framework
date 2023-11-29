@@ -9,7 +9,6 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
 from beartype import beartype
-
 from beartype.typing import Tuple
 logger = settings.logger
 
