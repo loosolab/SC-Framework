@@ -1,4 +1,4 @@
-0.3 (in progress)
+0.3 (30-11-2023)
 -----------------
 - Add parameter type hinting including runtime type checking (#46)
 - Fixed prepare_for_cellxgene color issue (#145, #146)
