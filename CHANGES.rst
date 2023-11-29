@@ -18,6 +18,7 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
+- Changed structure of notebooks in directory; added "notebooks" subdirectories for RNA and ATAC
 
 0.2 (30-08-2023)
 -----------------
