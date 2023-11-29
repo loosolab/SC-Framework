@@ -6,11 +6,12 @@ import sctoolbox.utils as utils
 import scanpy as sc
 
 from beartype import beartype
+from beartype.typing import Any
 
 
 @deco.log_anndata
 @beartype
-def violin_HVF_distribution(adata: sc.AnnData, **kwargs):
+def violin_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
     """
     Plot the distribution of the HVF as violinplot.
 
@@ -18,7 +19,7 @@ def violin_HVF_distribution(adata: sc.AnnData, **kwargs):
     ----------
     adata : sc.AnnData
         AnnData object containing columns ['highly_variable', 'n_cells_by_counts'] column.
-    **kwargs : arguments
+    **kwargs : Any
         Keyword arguments to be passed to matplotlib.pyplot.violinplot.
     """
     utils.check_columns(adata.var, ['highly_variable', 'n_cells_by_counts'])
@@ -37,7 +38,7 @@ def violin_HVF_distribution(adata: sc.AnnData, **kwargs):
 
 @deco.log_anndata
 @beartype
-def scatter_HVF_distribution(adata: sc.AnnData, **kwargs):
+def scatter_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
     """
     Plot the distribution of the HVF as scatterplot.
 
@@ -45,7 +46,7 @@ def scatter_HVF_distribution(adata: sc.AnnData, **kwargs):
     ----------
     adata : sc.AnnData
         AnnData object containing columns ['variability_score', 'n_cells'] column.
-    **kwargs : arguments
+    **kwargs : Any
         Keyword arguments to be passed to matplotlib.pyplot.scatter.
     """
     utils.check_columns(adata.var, ['variability_score', 'n_cells'])

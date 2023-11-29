@@ -9,7 +9,7 @@ import sctoolbox.utils as utils
 
 
 @beartype
-def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs) -> None:
+def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> None:
     """
     Compute umap for a list of adatas in parallel.
 

@@ -370,7 +370,7 @@ def predict_sex(adata: sc.AnnData,
                 threshold: float = 0.3,
                 plot: bool = True,
                 save: Optional[str] = None,
-                **kwargs) -> None:
+                **kwargs: Any) -> None:
     """
     Predict sex based on expression of Xist (or another gene).
 

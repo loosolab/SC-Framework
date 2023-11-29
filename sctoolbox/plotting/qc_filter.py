@@ -73,7 +73,7 @@ def plot_starsolo_quality(folder: str,
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
                           save: Optional[str] = None,
-                          **kwargs) -> np.ndarray:
+                          **kwargs: Any) -> np.ndarray:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -393,7 +393,7 @@ def group_correlation(adata: sc.AnnData,
                       groupby: str,
                       method: Literal["spearman", "pearson", "kendall"] | Callable = "spearman",
                       save: Optional[str] = None,
-                      **kwargs) -> sns.matrix.ClusterGrid:
+                      **kwargs: Any) -> sns.matrix.ClusterGrid:
     """Plot correlation matrix between groups in `groupby`.
 
     The function expects the count data in .X to be normalized across cells.
@@ -547,7 +547,7 @@ def qc_violins(anndata: sc.AnnData,
 @beartype
 def plot_insertsize(adata: sc.AnnData,
                     barcodes: Optional[list[str]] = None,
-                    **kwargs) -> matplotlib.axes.Axes:
+                    **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 

@@ -25,7 +25,7 @@ from sctoolbox import settings
 @beartype
 def _save_figure(path: Optional[str],
                  dpi: int = 600,
-                 **kwargs) -> None:
+                 **kwargs: Any) -> None:
     """Save the current figure to a file.
 
     Parameters
@@ -36,7 +36,7 @@ def _save_figure(path: Optional[str],
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to matplotlib.pyplot.savefig.
     """
 
@@ -194,7 +194,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                        x_rot: int = 45,
                        show_grid: bool = False,
                        save: Optional[str] = None,
-                       **kwargs) -> list:
+                       **kwargs: Any) -> list:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -492,7 +492,7 @@ def bidirectional_barplot(df: pd.DataFrame,
 def boxplot(dt: pd.DataFrame,
             show_median: bool = True,
             ax: Optional[matplotlib.axes.Axes] = None,
-            **kwargs) -> matplotlib.axes.Axes:
+            **kwargs: Any) -> matplotlib.axes.Axes:
     """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
@@ -503,7 +503,7 @@ def boxplot(dt: pd.DataFrame,
         If True show median value as small box inside the boxplot.
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to seaborn.boxplot.
 
     Returns
@@ -565,7 +565,7 @@ def violinplot(table: pd.DataFrame,
                ax: Optional[matplotlib.axes.Axes] = None,
                title: Optional[str] = None,
                ylabel: bool = True,
-               **kwargs) -> matplotlib.axes.Axes:
+               **kwargs: Any) -> matplotlib.axes.Axes:
     """Plot a violinplot with optional horizontal lines for each violin.
 
     Parameters
@@ -587,7 +587,7 @@ def violinplot(table: pd.DataFrame,
         Title of the plot.
     ylabel : bool | str, default True
         Boolean if ylabel should be shown. Or str for custom ylabel.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to seaborn.violinplot.
 
     Returns
@@ -702,7 +702,7 @@ def violinplot(table: pd.DataFrame,
 def plot_venn(groups_dict: dict[str, list[Any]],
               title: Optional[str] = None,
               save: Optional[str] = None,
-              **kwargs) -> None:
+              **kwargs: Any) -> None:
     """Plot a Venn diagram from a dictionary of 2-3 groups of lists.
 
     Parameters
@@ -714,7 +714,7 @@ def plot_venn(groups_dict: dict[str, list[Any]],
         Title of the plot.
     save : Optional[str], default None
         Filename to save the plot to.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to matplotlib_venn.venn2 or matplotlib_venn.venn3.
 
     Raises
@@ -753,7 +753,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
-                     **kwargs) -> np.ndarray:
+                     **kwargs: Any) -> np.ndarray:
     """Plot a grid of scatterplot comparing column values pairwise.
 
     If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
@@ -768,7 +768,7 @@ def pairwise_scatter(table: pd.DataFrame,
         Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
     save : Optional[str], default None
         If given, the figure will be saved to this path.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments to pass to matplotlib.axes.Axes.scatter.
 
     Returns

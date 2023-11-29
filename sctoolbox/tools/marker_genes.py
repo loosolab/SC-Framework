@@ -681,7 +681,7 @@ def score_genes(adata: sc.AnnData,
                 gene_set: str | list[str],
                 score_name: str = 'score',
                 inplace: bool = True,
-                **kwargs) -> Optional[sc.AnnData]:
+                **kwargs: Any) -> Optional[sc.AnnData]:
     """
     Assign a score to each cell depending on the expression of a set of genes. This is a wrapper for scanpy.tl.score_genes.
 

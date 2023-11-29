@@ -744,7 +744,7 @@ def plot_group_embeddings(adata: sc.AnnData,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
                           save: Optional[str] = None,
-                          **kwargs) -> np.ndarray:
+                          **kwargs: Any) -> np.ndarray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -975,7 +975,7 @@ def _get_3d_dotsize(n: int) -> int:
 def plot_3D_UMAP(adata: sc.AnnData,
                  color: str,
                  save: str,
-                 **kwargs) -> None:
+                 **kwargs: Any) -> None:
     """Save 3D UMAP plot to a html file.
 
     Parameters
@@ -986,7 +986,7 @@ def plot_3D_UMAP(adata: sc.AnnData,
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
     save : str
         Save prefix. Plot will be saved to <save>.html.
-    **kwargs : arguments
+    **kwargs : Any
         Additional keyword arguments are passed to :func:`plotly.graph_objects.Scatter3d`.
 
     Raises
@@ -1317,7 +1317,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      max_clusters: int = 20,
                      output: Optional[str] = None,
                      dpi: int = 300,
-                     **kwargs) -> npt.ArrayLike:
+                     **kwargs: Any) -> npt.ArrayLike:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -1665,7 +1665,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                          figsize: Optional[Tuple[int, int]] = None,
                          title: Optional[str] = None,
                          save: Optional[str] = None,
-                         **kwargs) -> matplotlib.axes.Axes:
+                         **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
 

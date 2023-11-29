@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @beartype
-def get_pbar(total: int, description: str, **kwargs) -> "tqdm.tqdm":
+def get_pbar(total: int, description: str, **kwargs: Any) -> "tqdm.tqdm":
     """
     Get a progress bar depending on whether the user is using a notebook or not.
 
@@ -22,7 +22,7 @@ def get_pbar(total: int, description: str, **kwargs) -> "tqdm.tqdm":
         Total number elements to be shown in the progress bar.
     description : str
         Description to be shown in the progress bar.
-    **kwargs : arguments
+    **kwargs : Any
         Keyword arguments to be passed to tqdm.
 
     Returns

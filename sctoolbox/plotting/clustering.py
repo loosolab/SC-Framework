@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional
+from beartype.typing import Literal, Tuple, Optional, Any
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -24,7 +24,7 @@ def search_clustering_parameters(adata: sc.AnnData,
                                  ncols: int = 3,
                                  verbose: bool = True,
                                  save: Optional[str] = None,
-                                 **kwargs) -> np.ndarray:
+                                 **kwargs: Any) -> np.ndarray:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -44,7 +44,7 @@ def search_clustering_parameters(adata: sc.AnnData,
         Print progress to console.
     save : Optional[str], default None
         Path to save figure.
-    **kwargs : arguments
+    **kwargs : Any
         Keyword arguments to be passed to sc.pl.embedding.
 
     Returns
@@ -133,7 +133,7 @@ def marker_gene_clustering(adata: sc.AnnData,
                            show_umap: bool = True,
                            save: Optional[str] = None,
                            figsize: Optional[Tuple[float | int, float | int]] = None,
-                           **kwargs) -> list:
+                           **kwargs: Any) -> list:
     """
     Plot an overview of marker genes and clustering.
 
@@ -151,7 +151,7 @@ def marker_gene_clustering(adata: sc.AnnData,
         If given, save the figure to this path.
     figsize : Tuple[float | int, float | int], default: None
         Size of the figure. If `None`, use default size.
-    **kwargs : arguments
+    **kwargs : Any
         Keyword arguments to be passed to sc.pl.dotplot.
 
     Returns

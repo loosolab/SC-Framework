@@ -351,7 +351,7 @@ def group_expression_boxplot(adata: sc.AnnData,
                              gene_list: list[str],
                              groupby: str,
                              figsize: Optional[Tuple[int | float, int | float]] = None,
-                             **kwargs) -> matplotlib.axes.Axes:
+                             **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
 
@@ -724,7 +724,7 @@ def plot_gene_correlation(adata: sc.AnnData,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
                           save: Optional[str] = None,
-                          **kwargs) -> Iterable[matplotlib.axes.Axes]:
+                          **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 

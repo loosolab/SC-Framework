@@ -112,7 +112,7 @@ def _sanitize_sheetname(s: str,
 def write_excel(table_dict: dict[str, Any],
                 filename: str,
                 index: bool = False,
-                **kwargs) -> None:
+                **kwargs: Any) -> None:
     """
     Write a dictionary of tables to a single excel file with one table per sheet.
 
@@ -124,7 +124,7 @@ def write_excel(table_dict: dict[str, Any],
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
-    **kwargs : arguments
+    **kwargs : Any
         Keyword arguments passed to pandas.DataFrame.to_excel.
 
     Raises
