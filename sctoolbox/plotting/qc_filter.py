@@ -5,6 +5,7 @@ import pandas as pd
 import copy
 import numpy as np
 import ipywidgets
+import traitlets
 import functools  # for partial functions
 import glob
 import scanpy as sc
@@ -582,12 +583,12 @@ def plot_insertsize(adata: sc.AnnData,
 
 
 @beartype
-def _link_sliders(sliders: list[ipywidgets.widgets.IntRangeSlider]) -> list[ipywidgets.link]:
+def _link_sliders(sliders: list[ipywidgets.widgets.FloatRangeSlider]) -> list[ipywidgets.link]:
     """Link the values between interactive sliders.
 
     Parameters
     ----------
-    sliders : list[ipywidgets.widgets.IntRangeSlider]
+    sliders : list[ipywidgets.widgets.FloatRangeSlider]
         List of sliders to link.
 
     Returns
@@ -607,7 +608,7 @@ def _link_sliders(sliders: list[ipywidgets.widgets.IntRangeSlider]) -> list[ipyw
 
 
 @beartype
-def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox,
+def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox | traitlets.utils.bunch.Bunch,  # after first check, checkbox is a bunch object
                     linkage_dict: dict,
                     slider_list: list,
                     key: str):

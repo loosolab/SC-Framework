@@ -18,6 +18,9 @@
 - changed typing to beartype.typing
 - Added GenomeTracks plotting
 - Fix batch evaluation for small datasets (#148)
+- added RAGI cluster validation to clustering.py (!201)
+- started disintegrating fld scoring (!201)
+- reorganised ATAC-notebooks (!201)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^

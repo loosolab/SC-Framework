@@ -20,75 +20,57 @@ logger = settings.logger
 #####################################################################
 
 @beartype
-def assemble_from_h5ad(h5ad_files: list[str],
-                       merge_column: str = 'sample',
-                       coordinate_cols: Optional[list[str]] = None,
-                       set_index: bool = True,
-                       index_from: Optional[str] = None) -> sc.AnnData:
+def prepare_atac_anndata(adata: sc.AnnData,
+                         set_index: bool = True,
+                         index_from: Optional[str] = None,
+                         coordinate_cols: Optional[list[str]] = None,
+                         h5ad_path: Optional[str] = None) -> sc.AnnData:
     """
-    Assembles multiple adata files into a single adata object.
+    Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
 
-    This concatenates adata.obs and merges adata.uns.
+    This includes formatting the index, formatting the coordinate columns, and setting the barcode as the index.
 
     Parameters
     ----------
-    h5ad_files : list[str]
-        List of h5ad_files.
-    merge_column : str, default 'sample'
-        Column name to store sample identifier.
-    coordinate_cols : Optional[list[str]], default None
-        Location information of the peaks.
-    set_index : bool
+    adata : sc.AnnData
+        The AnnData object to be prepared.
+    set_index : bool, default True
         If True, index will be formatted and can be set by a given column.
     index_from : Optional[str], default None
         Column to build the index from.
+    coordinate_cols : Optional[list[str]], default None
+        Location information of the peaks.
+    h5ad_path : Optional[str], default None
+        Path to the h5ad file.
 
     Returns
     -------
     sc.AnnData
-        The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
+        The prepared AnnData object.
+
     """
 
-    adata_dict = {}
-    counter = 0
-    for h5ad_path in h5ad_files:
-        counter += 1
+    if set_index:
+        logger.info("formatting index")
+        utils.var_index_from(adata, index_from)
 
-        sample = 'sample' + str(counter)
+    # Establish columns for coordinates
+    if coordinate_cols is None:
+        coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
+    else:
+        utils.check_columns(adata.var,
+                            coordinate_cols,
+                            name="adata.var")  # Check that coordinate_cols are in adata.var)
 
-        adata = sc.read_h5ad(h5ad_path)
-        if set_index:
-            logger.info("formatting index")
-            utils.format_index(adata, index_from)
+    # Format coordinate columns
+    logger.info("formatting coordinate columns")
+    utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
 
-        # Establish columns for coordinates
-        if coordinate_cols is None:
-            coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
-        else:
-            utils.check_columns(adata.var, coordinate_cols,
-                                "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+    # check if the barcode is the index otherwise set it
+    utils.barcode_index(adata)
 
-        # Format coordinate columns
-        logger.info("formatting coordinate columns")
-        utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
-
-        # check if the barcode is the index otherwise set it
-        utils.barcode_index(adata)
-
+    if h5ad_path is not None:
         adata.obs = adata.obs.assign(file=h5ad_path)
-
-        # Add conditions here
-
-        adata_dict[sample] = adata
-
-    adata = sc.concat(adata_dict, label=merge_column)
-    adata.uns = sc.concat(adata_dict, uns_merge='same').uns
-    for value in adata_dict.values():
-        adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
-
-    # Remove name of indexes for cellxgene compatibility
-    adata.obs.index.name = None
-    adata.var.index.name = None
 
     return adata
 
