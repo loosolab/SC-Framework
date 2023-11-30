@@ -114,7 +114,7 @@ def tmp_file():
 @pytest.fixture
 def slider():
     """Create a slider widget."""
-    return widgets.IntRangeSlider(value=[5, 7], min=0, max=10, step=1)
+    return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
 
 
 @pytest.fixture
@@ -144,8 +144,8 @@ def slider_dict_grouped(slider):
 @pytest.fixture
 def slider_dict_grouped_diff(slider):
     """Create a nested dict of slider widgets with different selections."""
-    return {"A": {"1": slider, "2": widgets.IntRangeSlider(value=[1, 5], min=0, max=10, step=1)},
-            "B": {"1": slider, "2": widgets.IntRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
+    return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
+            "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
 # ------------------------------ TESTS --------------------------------- #
