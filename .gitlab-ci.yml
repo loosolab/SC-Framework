@@ -193,7 +193,7 @@ notebooks:
   #  - gwdg-shared
   artifacts:
     paths:
-      - rna-notebooks/../logs/*.txt
+      - rna_analysis/logs/*.txt
   script:
     - pip install papermill
     - pip install .[all]   # reinstall to make sure the current branch version is used
@@ -208,9 +208,8 @@ notebooks:
     - python scripts/run_notebooks.py
   after_script:
     - pwd
-    - ls -l rna-notebooks/../logs/
-    - for f in rna-notebooks/../logs/*; do echo $f; cat $f; done
-
+    - ls -l rna_analysis/logs/
+    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: manual  # manual trigger
