@@ -19,6 +19,9 @@
 - Added GenomeTracks plotting
 - Fix batch evaluation for small datasets (#148)
 - Added **kwargs to functions which are wrappers for other functions
+- added RAGI cluster validation to clustering.py (!201)
+- started disintegrating fld scoring (!201)
+- reorganised ATAC-notebooks (!201)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^

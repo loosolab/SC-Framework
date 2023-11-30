@@ -132,10 +132,10 @@ def is_str_numeric(ans: str) -> bool:
 
 
 @beartype
-def format_index(adata: sc.AnnData,
-                 from_column: Optional[str] = None) -> None:
+def var_index_from(adata: sc.AnnData,
+                   from_column: Optional[str] = None) -> None:
     """
-    Format adata.var index.
+    Format adata.var index from specified column or from the index available.
 
     This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
     The adata is changed inplace.
