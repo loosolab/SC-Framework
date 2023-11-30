@@ -1,4 +1,4 @@
-0.3 (in progress)
+0.3 (30-11-2023)
 -----------------
 - Add parameter type hinting including runtime type checking (#46)
 - Fixed prepare_for_cellxgene color issue (#145, #146)
@@ -27,6 +27,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Added prepare for cellxgene notebook (#139)
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
+- Changed structure of notebooks in directory; added "notebooks" subdirectories for RNA and ATAC
 
 
 0.2 (30-08-2023)
