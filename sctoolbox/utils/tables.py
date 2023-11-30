@@ -6,17 +6,19 @@ from scipy.stats import zscore
 import sctoolbox.utils as utils
 
 # type hint imports
-from typing import Optional
+from beartype.typing import Optional, Any, Literal
+from beartype import beartype
 
 
-def rename_categories(series) -> pd.Series:
+@beartype
+def rename_categories(series: pd.Series) -> pd.Series:
     """
     Rename categories in a pandas series to numbers between 1-(number of categories).
 
     Parameters
     ----------
-    series : pandas.Series
-        Series to rename categories in.
+    series : pd.Series
+        Pandas Series to rename categories in.
 
     Returns
     -------
@@ -33,17 +35,20 @@ def rename_categories(series) -> pd.Series:
     return series_cat
 
 
-def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
+@beartype
+def fill_na(df: pd.DataFrame,
+            inplace: bool = True,
+            replace: dict[str, Any] = {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
     """
     Fill all NA values in a pandas DataFrame depending on the column data type.
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : pd.DataFrame
         DataFrame object with NA values over multiple columns
     inplace : boolean, default True
         Whether the DataFrame object is modified inplace.
-    replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
+    replace :  dict[str, Any], default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
         dict that contains default values to replace nas depedning on data type
 
     Returns
@@ -79,7 +84,9 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         return df
 
 
-def _sanitize_sheetname(s, replace="_") -> str:
+@beartype
+def _sanitize_sheetname(s: str,
+                        replace: str = "_") -> str:
     """
     Alters given string to produce a valid excel sheetname.
 
@@ -101,18 +108,24 @@ def _sanitize_sheetname(s, replace="_") -> str:
     return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
-def write_excel(table_dict, filename, index=False) -> None:
+@beartype
+def write_excel(table_dict: dict[str, Any],
+                filename: str,
+                index: bool = False,
+                **kwargs: Any) -> None:
     """
     Write a dictionary of tables to a single excel file with one table per sheet.
 
     Parameters
     ----------
-    table_dict : dict
+    table_dict : dict[str, Any]
         Dictionary of tables in the format {<sheet_name1>: table, <sheet_name2>: table, (...)}.
     filename : str
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
+    **kwargs : Any
+        Keyword arguments passed to pandas.DataFrame.to_excel.
 
     Raises
     ------
@@ -125,19 +138,25 @@ def write_excel(table_dict, filename, index=False) -> None:
         if not isinstance(table, pd.DataFrame):
             raise Exception(f"Table {name} is not a pandas DataFrame!")
 
+    # Setup kwargs
+    write_kwargs = {"engine": "xlsxwriter"}  # default: faster than openpyxl
+    write_kwargs.update(kwargs)  # overwrite defaults with user input
+
     # Write to excel
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
-            table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
+            table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, **write_kwargs)
 
 
-def table_zscore(table, how="row") -> pd.DataFrame:
+@beartype
+def table_zscore(table: pd.DataFrame,
+                 how: Literal["row", "col"] = "row") -> pd.DataFrame:
     """
     Z-score a table.
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Table to z-score.
     how : {'row', 'col'}
         Whether to z-score rows or columns.
@@ -158,6 +177,7 @@ def table_zscore(table, how="row") -> pd.DataFrame:
     elif how == "col":
         counts_z = table.apply(zscore)
     else:
+        # Will not be called due to beartype checking for input
         raise Exception(f"'{how}' is invalid for 'how' - it must be 'row' or 'col'.")
 
     return counts_z

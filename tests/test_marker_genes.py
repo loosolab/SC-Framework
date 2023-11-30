@@ -96,6 +96,18 @@ def test_get_rank_genes_tables(adata):
     assert len(tables) == 3
     assert os.path.exists("rank_genes.xlsx")
 
+    os.remove("rank_genes.xlsx")
+
+
+@pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str
+def test_get_rank_genes_tables_errors(adata, kwargs):
+    """Test if get_rank_gene_tables raises errors."""
+
+    sc.tl.rank_genes_groups(adata, groupby="condition")
+
+    with pytest.raises(ValueError):
+        mg.get_rank_genes_tables(adata, out_group_fractions=True, **kwargs)
+
 
 def test_mask_rank_genes(adata):
     """Test if genes are masked in adata.uns['rank_genes_groups']."""

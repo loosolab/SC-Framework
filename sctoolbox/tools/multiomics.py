@@ -1,21 +1,26 @@
 """Tools for multiomics analysis."""
-import anndata
+import scanpy as sc
 import pandas as pd
 from functools import reduce
 import warnings
 
+from beartype import beartype
+from beartype.typing import Literal
+
 import sctoolbox.utils as utils
 
 
-def merge_anndata(anndata_dict, join="inner") -> anndata.AnnData:
+@beartype
+def merge_anndata(anndata_dict: dict[str, sc.AnnData],
+                  join: Literal["inner", "outer"] = "inner") -> sc.AnnData:
     """
     Merge two h5ad files for dual cellxgene deplyoment.
 
     Parameters
     ----------
-    anndata_dict : dict
+    anndata_dict : dict[str, sc.AnnData]
         Dictionary with labels as keys and anndata objects as values.
-    join : str, default 'inner'
+    join : Literal['inner', 'outer'], default 'inner'
         Set how to join cells of the adata objects: ['inner', 'outer'].
         This only affects the cells since the var/gene section is simply added.
 
@@ -24,7 +29,7 @@ def merge_anndata(anndata_dict, join="inner") -> anndata.AnnData:
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         Merged anndata object.
 
     Notes
@@ -37,21 +42,17 @@ def merge_anndata(anndata_dict, join="inner") -> anndata.AnnData:
     Raises
     ------
     ValueError:
-        1. If join is not either 'inner' or 'outer'
-        2. If no indices of both adata.obs tables are overlapping.
+        If no indices of both adata.obs tables are overlapping.
     """
 
     if join == "outer":
         warnings.warn("'outer' join is currently not supported. Proceeding with 'inner' ...")
         join = "inner"
 
-    if join not in ["inner", "outer"]:
-        raise ValueError(f"Invalid join value: {join}. Set to 'inner' or 'outer'")
-
     # Generate minimal anndata objects
     minimal_adata_dict = dict()
     for label, adata in anndata_dict.items():
-        minimal_adata_dict[label] = anndata.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
+        minimal_adata_dict[label] = sc.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
         if not adata.obs.index.is_unique:
             warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
             minimal_adata_dict[label].obs_names_make_unique()
@@ -88,7 +89,7 @@ def merge_anndata(anndata_dict, join="inner") -> anndata.AnnData:
         # save obs in list
         obs_list.append(adata.obs)
     # Merge X and var
-    merged_adata = anndata.concat(minimal_adata_dict, join="outer", label="source", axis=1)
+    merged_adata = sc.concat(minimal_adata_dict, join="outer", label="source", axis=1)
 
     # Merge obs
     merged_adata.obs = reduce(lambda left, right: pd.merge(left, right,

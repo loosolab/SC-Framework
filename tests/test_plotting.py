@@ -13,6 +13,9 @@ import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 import glob
+import deprecation
+
+from beartype.roar import BeartypeCallHintParamViolation
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -111,7 +114,7 @@ def tmp_file():
 @pytest.fixture
 def slider():
     """Create a slider widget."""
-    return widgets.IntRangeSlider(value=[5, 7], min=0, max=10, step=1)
+    return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
 
 
 @pytest.fixture
@@ -141,8 +144,8 @@ def slider_dict_grouped(slider):
 @pytest.fixture
 def slider_dict_grouped_diff(slider):
     """Create a nested dict of slider widgets with different selections."""
-    return {"A": {"1": slider, "2": widgets.IntRangeSlider(value=[1, 5], min=0, max=10, step=1)},
-            "B": {"1": slider, "2": widgets.IntRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
+    return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
+            "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
 # ------------------------------ TESTS --------------------------------- #
@@ -170,28 +173,31 @@ def test_plot_pca_variance_fail(adata):
     with pytest.raises(KeyError, match="The given method"):
         pl.plot_pca_variance(adata, method="invalid")
 
-    with pytest.raises(ValueError, match="'ax' parameter needs to be an Axes object."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.plot_pca_variance(adata, ax="invalid")
 
 
-@pytest.mark.parametrize("which", ["obs", "var"])
-@pytest.mark.parametrize("method", ["spearmanr", "pearsonr"])
-def test_plot_pca_correlation(adata, which, method):
+@pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
+                                    {"basis": "umap", "method": "pearsonr"},
+                                    {"basis": "umap", "plot_values": "pvalues"}])
+def test_plot_pca_correlation(adata, kwargs):
     """Test if Axes object is returned without error."""
 
-    ax = pl.plot_pca_correlation(adata, which=which, method=method)
+    ax = pl.plot_pca_correlation(adata, title="Title", **kwargs)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
 
 
-@pytest.mark.parametrize("kwargs", [{"method": "invalid"},
+@pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
+                                    {"basis": "invalid"},
+                                    {"method": "invalid"},
                                     {"which": "invalid"},
                                     {"columns": ["invalid", "columns"]}])
 def test_plot_pca_correlation_fail(adata, kwargs):
     """Test that an exception is raised upon error."""
 
-    with pytest.raises((ValueError, KeyError)):
+    with pytest.raises((BeartypeCallHintParamViolation, KeyError, ValueError)):
         pl.plot_pca_correlation(adata, **kwargs)
 
 
@@ -217,7 +223,7 @@ def test_search_tsne_parameters(adata):
 
 def test_invalid_method_search_dim_red_parameter(adata):
     """Test if error is raised for invalid method."""
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl._search_dim_red_parameters(adata, color="condition",
                                       method="invalid")
 
@@ -226,13 +232,13 @@ def test_invalid_method_search_dim_red_parameter(adata):
 def test_search_dim_red_parameters_ranges(adata, range):
     """Test that invalid ranges raise ValueError."""
 
-    with pytest.raises(ValueError):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
                                       min_dist_range=range,
                                       spread_range=(2.0, 3.0, 0.5))
 
-    with pytest.raises(ValueError):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
                                       spread_range=range,
@@ -298,15 +304,24 @@ def test_wrong_embeding_search_clustering_parameters(adata):
         pl.search_clustering_parameters(adata, embedding="Invalid")
 
 
-@pytest.mark.parametrize("method,resrange", [("leiden", (0.1, 0.2, 0.1, 0.1)),
-                                             ("leiden", (0.1, 0.2, 0.3)),
-                                             ("unknown", (0.1, 0.3, 0.1))])
-def test_search_clustering_parameters_errors(adata, method, resrange):
+def test_search_clustering_parameters_errors(adata):
     """Test if search_clustering_parameters raises error."""
 
     with pytest.raises(ValueError):
-        pl.search_clustering_parameters(adata, resolution_range=resrange,
-                                        method=method)
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
+                                        method="leiden")
+
+
+def test_search_clustering_parameters_beartype(adata):
+    """Test if beartype checks for tuple length."""
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
+                                        method="leiden")
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
+                                        method="unknown")
 
 
 def test_anndata_overview(adata, tmp_file):
@@ -344,7 +359,7 @@ def test_anndata_overview_fail_color_by(adata):
 
     # invalid color_by
     # no input
-    with pytest.raises(ValueError, match="Couldn't find column"):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=None,
@@ -402,7 +417,7 @@ def test_anndata_overview_fail_plots(adata):
 
     # invalid plots
     # no input
-    with pytest.raises(ValueError, match="Invalid plot specified:"):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -413,7 +428,7 @@ def test_anndata_overview_fail_plots(adata):
         )
 
     # wrong input
-    with pytest.raises(ValueError, match="Invalid plot specified:"):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -511,7 +526,7 @@ def test_grouped_violin_fail(adata):
         pl.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
     with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
         pl.grouped_violin(adata, x="clustering", y=None, groupby="condition")
-    with pytest.raises(ValueError, match="Style 'Invalid' is not valid for this function."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
 
 
@@ -544,7 +559,7 @@ def test_flip_embedding(adata, how):
 
 def test_invalid_flip_embedding(adata):
     """Test flip_embedding failure."""
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.flip_embedding(adata, how="invalid")
 
     with pytest.raises(KeyError):
@@ -569,6 +584,46 @@ def test_umap_marker_overview(adata, marker):
     assert ax_type.startswith("Axes")
 
 
+@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
+                                    {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
+@pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
+def test_embedding(adata, style, kwargs):
+    """Assert embedding works and returns Axes object."""
+
+    # Collect test colors
+    colors = ["qcvar1"]   # continous obs variable
+    colors.append(adata.var.index[0])  # continous gene variable
+    colors.append(None)          # no color / density plot
+    if style != "hexbin":
+        colors.append("clustering")  # categorical obs variable; only available for dots/density
+
+    axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
+
+    # Assert number of plots
+    components = kwargs.get("components", "1,2")
+    n_components = 1 if isinstance(components, str) else len(components)
+    assert len(axes_list) == len(colors) * n_components
+
+    # Assert type of output
+    ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_embedding_single(adata):
+    """Test that embedding works with single color."""
+    axarr = pl.plot_embedding(adata, color="qcvar1")
+
+    ax_type = type(axarr[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_embedding_error(adata):
+    """Test that embedding raises error for invalid input."""
+    with pytest.raises(ValueError):
+        pl.plot_embedding(adata, components="3,4")
+
+
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", "Condition"),
                                          (["condition", "clustering"], None),
                                          (["condition", "clustering"], ["Condition", "Clustering"])])
@@ -581,6 +636,7 @@ def test_umap_pub(adata, color, title):
     assert ax_type.startswith("Axes")
 
 
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", ["Title 1", "Title 2"]),
                                          (["condition", "clustering"], "Title 1")])
 def test_invalid_parameter_len_umap_pub(adata, color, title):
@@ -689,7 +745,7 @@ def test_plot_venn_fail(venn_dict):
     with pytest.raises(ValueError):
         pl.plot_venn(venn_dict)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.plot_venn([1, 2, 3, 4, 5])
 
 
@@ -742,14 +798,14 @@ def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
 
 def test_rank_genes_plot_fail(adata):
     """Test rank_genes_plot for invalid input."""
-    with pytest.raises(ValueError, match='style must be one of'):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
                            style="Invalid")
-    with pytest.raises(ValueError, match='Only one of genes or key can be specified.'):
+    with pytest.raises(KeyError, match='Could not find keys.*'):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
-                           genes=["A", "B", "C"])
+                           genes=["A", "B", "C"])  # invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
@@ -760,21 +816,37 @@ def test_rank_genes_plot_fail(adata):
                           ("condition", None)])
 def test_gene_expression_heatmap(adata, title, groupby):
     """Test gene_expression_heatmap success."""
+
+    genes = adata.var_names.tolist()[:10]
     g = pl.gene_expression_heatmap(adata,
-                                   genes=['ENSMUSG00000102851',
-                                          'ENSMUSG00000102272'],
+                                   genes=genes,
                                    groupby=groupby, title=title,
+                                   col_cluster=True,            # ensure title is tested
+                                   show_col_dendrogram=True,    # ensure title is tested
                                    cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
 
 
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
                                               'ENSMUSG00000102272']])
 @pytest.mark.parametrize("figsize", [None, (10, 10)])
 def test_group_heatmap(adata, gene_list, figsize):
     """Test group heatmap success."""
-    pl.group_heatmap(adata, "clustering", gene_list=gene_list,
-                     figsize=figsize)
+    ax = pl.group_heatmap(adata, "clustering", gene_list=gene_list,
+                          figsize=figsize)
+
+    assert type(ax).__name__.startswith("Axes")
+
+
+@pytest.mark.parametrize("kwargs, exception",
+                         [({"gene_name_column": "invalid"}, KeyError)])
+def test_gene_expression_heatmap_error(adata, kwargs, exception):
+    """Test gene_expression_heatmap failure."""
+
+    genes = adata.var_names.tolist()[:10]
+    with pytest.raises(exception):
+        pl.gene_expression_heatmap(adata, genes=genes, cluster_column="clustering", **kwargs)
 
 
 def test_plot_differential_genes(pairwise_ranked_genes):
@@ -801,6 +873,9 @@ def test_plot_gene_correlation(adata, gene_list, save, figsize):
                                     save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
     assert type(axes[0]).__name__.startswith("Axes")
+
+    if save:
+        os.remove(save)
 
 
 def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
@@ -868,7 +943,7 @@ def test_quality_violin(adata, groupby, columns, which, title, color_list):
 
 def test_quality_violin_fail(adata):
     """Test quality_violin failure."""
-    with pytest.raises(ValueError, match="'which' must be either 'obs' or 'var'."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.quality_violin(adata, columns=["qc_float"], which="Invalid")
     with pytest.raises(ValueError, match="Increase the color_list variable"):
         pl.quality_violin(adata, groupby="condition", columns=["qc_float"],
@@ -906,11 +981,14 @@ def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
                                     '2': {'min': 3, 'max': 4}}}
 
 
-@pytest.mark.parametrize("columns", ["invalid", ["invalid"], ["not", "present"]])
+@pytest.mark.parametrize("columns", [["invalid"], ["not", "present"]])
 def test_pairwise_scatter_invalid(adata, columns):
     """Test that invalid columns raise error."""
     with pytest.raises(ValueError):
         pl.pairwise_scatter(adata.obs, columns=columns)
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.pairwise_scatter(adata.obs, columns="invalid")
 
 
 @pytest.mark.parametrize("thresholds", [None,

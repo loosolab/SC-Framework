@@ -4,15 +4,16 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
+import scanpy as sc
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import _save_figure
 
 # type hint imports
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    import matplotlib
+from beartype.typing import Optional, Tuple, Any
+from beartype import beartype
+import matplotlib
 
 
 ####################################################################################################
@@ -20,41 +21,43 @@ if TYPE_CHECKING:
 ####################################################################################################
 
 @deco.log_anndata
-def pseudotime_heatmap(adata, genes,
-                       sortby=None,
-                       layer=None,
-                       figsize=None,
-                       shrink_cbar=0.5,
-                       title=None,
-                       save=None,
-                       **kwargs) -> "matplotlib.Axes":
+@beartype
+def pseudotime_heatmap(adata: sc.AnnData,
+                       genes: list[str],
+                       sortby: Optional[str] = None,
+                       layer: Optional[str] = None,
+                       figsize: Optional[Tuple[int | float, int | float]] = None,
+                       shrink_cbar: int | float = 0.5,
+                       title: Optional[str] = None,
+                       save: Optional[str] = None,
+                       **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object
-    genes : list
+    genes : list[str]
         List of genes for heatmap.
-    sortby : str, default None
+    sortby : Optional[str], default None
         Sort genes by condition
-    layer : str, default None
+    layer : Optional[str], default None
         Use different layer of anndata object.
-    figsize : tuple, default None
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Tuple of integers setting the heatmap figsize.
-    shrink_cbar : float, default 0.5
+    shrink_cbar : int | float, default 0.5
         Shrink color bar by set ratio.
-    title : str, default None
+    title : Optional[str], default None
         Set title for plot.
-    save : str, default None
+    save : Optional[str], default None
         Path and name of file to be saved.
-    **kwargs : arguments
+    **kwargs : Any
         Additional arguments passed to seaborn.heatmap.
 
     Returns
     -------
-    ax : matplotlib.Axes
+    ax : matplotlib.axes.Axes
         Axes object containing the plot.
     """
 

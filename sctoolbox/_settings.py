@@ -5,6 +5,9 @@ import yaml
 import sys
 import logging
 
+from beartype import beartype
+from beartype.typing import Optional
+
 
 class SctoolboxConfig(object):
     """Config manager for sctoolbox."""
@@ -51,16 +54,11 @@ class SctoolboxConfig(object):
             valid_parameters = [key for key in self.__dict__ if not key.startswith("_")]
             raise ValueError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
-        # Validate and set parameter
+        # Validate parameter types
         if "__frozen" in key:  # allow __frozen to be set without checking
             pass
         elif key == "_logger":
             pass  # allow logger to be set without checking
-
-        elif key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir"]:
-            value = os.path.join(value, '')  # add trailing slash if not present
-            self._validate_string(value)
-            self._create_dir(value)
 
         elif key == "log_file":
             if value is not None:
@@ -74,6 +72,16 @@ class SctoolboxConfig(object):
 
         elif self.__init__.__annotations__[key] == str:
             self._validate_string(value)
+
+        # Additionally check specific attributes for validity
+        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir"]:
+            value = os.path.join(value, '')  # add trailing slash if not present
+            self._create_dir(value)
+
+        elif key == "verbosity":
+            self._validate_int(value)
+            if value not in [0, 1, 2]:
+                raise ValueError("Verbosity must be 0, 1 or 2.")
 
         object.__setattr__(self, key, value)
 
@@ -213,7 +221,8 @@ class SctoolboxConfig(object):
         return self._logger
 
 
-def settings_from_config(config_file, key=None):
+@beartype
+def settings_from_config(config_file: str, key: Optional[str] = None):
     """
     Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 
@@ -221,7 +230,7 @@ def settings_from_config(config_file, key=None):
     ----------
     config_file : str
         Path to the config file.
-    key : str, optional
+    key : Optional[str], default None
         If given, get settings for a specific key.
 
     Raises

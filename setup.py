@@ -8,7 +8,7 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['episcanpy', 'pyyaml', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'pybedtools', 'pygenometracks'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
@@ -20,7 +20,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
 
-def find_version(f) -> str:
+def find_version(f: str) -> str:
     """
     Get package version from file.
 
@@ -62,14 +62,14 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
+    python_requires='>=3.9,<3.11',  # dict type hints as we use it require python 3.9; pybedtools is not compatible with python 3.11
     install_requires=[
         'pysam',
         'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
-        'numba==0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
+        'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
         'kneed',
         'qnorm',
@@ -91,6 +91,8 @@ setup(
         'python-gitlab',
         'psutil',
         'pyyaml',
+        'deprecation',
+        'beartype',
     ],
     include_package_data=True,
     extras_require=extras_require
