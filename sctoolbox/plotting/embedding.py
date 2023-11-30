@@ -743,7 +743,8 @@ def plot_group_embeddings(adata: sc.AnnData,
                           groupby: str,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
-                          save: Optional[str] = None) -> np.ndarray:
+                          save: Optional[str] = None,
+                          **kwargs: Any) -> np.ndarray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -759,6 +760,8 @@ def plot_group_embeddings(adata: sc.AnnData,
         Number of columns in the figure.
     save : Optional[str], default None
         Path to save the figure.
+    **kwargs : Any
+        Additional keyword arguments are passed to :func:`scanpy.pl.umap` or :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
     Returns
     -------
@@ -800,11 +803,11 @@ def plot_group_embeddings(adata: sc.AnnData,
 
             # Plot individual embedding
             if embedding == "umap":
-                sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+                sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
             elif embedding == "tsne":
-                sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+                sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
             elif embedding == "pca":
-                sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None)
+                sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
 
         ax.set_title(group)
 
@@ -971,7 +974,8 @@ def _get_3d_dotsize(n: int) -> int:
 @beartype
 def plot_3D_UMAP(adata: sc.AnnData,
                  color: str,
-                 save: str) -> None:
+                 save: str,
+                 **kwargs: Any) -> None:
     """Save 3D UMAP plot to a html file.
 
     Parameters
@@ -982,6 +986,8 @@ def plot_3D_UMAP(adata: sc.AnnData,
         Variable to color in plot. Must be a column in adata.obs or an index in adata.var.
     save : str
         Save prefix. Plot will be saved to <save>.html.
+    **kwargs : Any
+        Additional keyword arguments are passed to :func:`plotly.graph_objects.Scatter3d`.
 
     Raises
     ------
@@ -1038,7 +1044,8 @@ def plot_3D_UMAP(adata: sc.AnnData,
                                    mode='markers',
                                    marker=dict(size=size,
                                                color=[color_list[i] for _ in range(len(df_sub))],
-                                               opacity=0.8))
+                                               opacity=0.8),
+                                   **kwargs)
             fig.add_trace(go_plot)
 
     # Plot a gene expression
@@ -1309,7 +1316,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      figsize: Optional[Tuple[int, int]] = None,
                      max_clusters: int = 20,
                      output: Optional[str] = None,
-                     dpi: int = 300) -> npt.ArrayLike:
+                     dpi: int = 300,
+                     **kwargs: Any) -> npt.ArrayLike:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -1336,6 +1344,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         Path to plot output file.
     dpi : int, default 300
         Dots per inch for output
+    **kwargs : Any
+        Additional keyword arguments are passed to :func:`scanpy.pl.umap`, :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
     Returns
     -------
@@ -1449,6 +1459,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                                     "title": "",
                                     "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
                                     "show": False}
+                embedding_kwargs.update(**kwargs)  # overwrite with kwargs from user
 
                 # Plot depending on type
                 if plot_type == "PCA-var":
@@ -1653,7 +1664,8 @@ def plot_pca_correlation(adata: sc.AnnData,
                          plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
                          figsize: Optional[Tuple[int, int]] = None,
                          title: Optional[str] = None,
-                         save: Optional[str] = None) -> matplotlib.axes.Axes:
+                         save: Optional[str] = None,
+                         **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
 
@@ -1681,6 +1693,8 @@ def plot_pca_correlation(adata: sc.AnnData,
         Title of the plot. If None, no title is added.
     save : Optional[str], default None
         Filename to save the figure.
+    **kwargs : Any
+        Additional keyword arguments are passed to :func:`seaborn.heatmap`.
 
     Returns
     -------
@@ -1784,7 +1798,8 @@ def plot_pca_correlation(adata: sc.AnnData,
                      cbar_kws={"label": f"{method} ({plot_values})"},
                      cmap="seismic",
                      vmin=vmin, vmax=vmax,
-                     ax=ax)
+                     ax=ax,
+                     **kwargs)
     ax.set_aspect(0.8)
 
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)

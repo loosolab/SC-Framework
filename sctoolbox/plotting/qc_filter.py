@@ -23,6 +23,9 @@ import sctoolbox.utils.decorator as deco
 from beartype.typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
 from beartype import beartype
 
+import deprecation
+from sctoolbox import __version__
+
 
 ########################################################################################
 # ------------------------------ QC plots for starsolo ------------------------------- #
@@ -70,7 +73,8 @@ def plot_starsolo_quality(folder: str,
                                                  "Median Reads per Cell", "Median Gene per Cell"],
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
-                          save: Optional[str] = None) -> np.ndarray:
+                          save: Optional[str] = None,
+                          **kwargs: Any) -> np.ndarray:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -85,6 +89,8 @@ def plot_starsolo_quality(folder: str,
         Order of conditions in the plot. If None, the order is alphabetical.
     save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
+    **kwargs : Any
+        Additional arguments passed to seaborn.barplot.
 
     Returns
     -------
@@ -139,7 +145,7 @@ def plot_starsolo_quality(folder: str,
         # Plot data to barplot
         ax = axes[i]
         data = summary_table.loc[measure].astype(float)
-        sns.barplot(x=data.index, y=data.values, ax=ax, edgecolor="black")
+        sns.barplot(x=data.index, y=data.values, ax=ax, edgecolor="black", **kwargs)
         ax.set_title(measure)
 
         # Format yticklabels
@@ -387,7 +393,8 @@ def n_cells_barplot(adata: sc.AnnData,
 def group_correlation(adata: sc.AnnData,
                       groupby: str,
                       method: Literal["spearman", "pearson", "kendall"] | Callable = "spearman",
-                      save: Optional[str] = None) -> sns.matrix.ClusterGrid:
+                      save: Optional[str] = None,
+                      **kwargs: Any) -> sns.matrix.ClusterGrid:
     """Plot correlation matrix between groups in `groupby`.
 
     The function expects the count data in .X to be normalized across cells.
@@ -402,6 +409,8 @@ def group_correlation(adata: sc.AnnData,
         Correlation method to use. See pandas.DataFrame.corr for options.
     save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
+    **kwargs : Any
+        Additional arguments passed to seaborn.clustermap.
 
     Returns
     -------
@@ -430,12 +439,15 @@ def group_correlation(adata: sc.AnnData,
     count_table = utils.pseudobulk_table(adata, groupby=groupby)
     corr = count_table.corr(numeric_only=False, method=method)
 
+    clustermap_kwargs = {"figsize": (4, 4),
+                         "cmap": "Reds",
+                         "xticklabels": True,
+                         "yticklabels": True,
+                         "cbar_kws": {'orientation': 'horizontal', 'label': method}}  # defaults
+    clustermap_kwargs.update(kwargs)    # overwrite defaults with user input
+
     # Plot clustermap
-    g = sns.clustermap(corr, figsize=(4, 4),
-                       xticklabels=True,
-                       yticklabels=True,
-                       cmap="Reds",
-                       cbar_kws={'orientation': 'horizontal', 'label': method})
+    g = sns.clustermap(corr, **clustermap_kwargs)
     g.ax_heatmap.set_facecolor("grey")
 
     # Adjust cbar
@@ -454,6 +466,9 @@ def group_correlation(adata: sc.AnnData,
     return g
 
 
+@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
+                        current_version=__version__,
+                        details="Use the 'sctoolbox.pl.quality_violin' function instead.")
 @deco.log_anndata
 @beartype
 def qc_violins(anndata: sc.AnnData,
@@ -532,7 +547,8 @@ def qc_violins(anndata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def plot_insertsize(adata: sc.AnnData,
-                    barcodes: Optional[list[str]] = None) -> matplotlib.axes.Axes:
+                    barcodes: Optional[list[str]] = None,
+                    **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
@@ -542,6 +558,8 @@ def plot_insertsize(adata: sc.AnnData,
         AnnData object containing insertsize distribution in adata.uns["insertsize_distribution"].
     barcodes : Optional[list[str]], default None
         Subset of barcodes to plot information for. If None, all barcodes are used.
+    **kwargs : Any
+        Additional arguments passed to seaborn.lineplot.
 
     Returns
     -------
@@ -570,7 +588,7 @@ def plot_insertsize(adata: sc.AnnData,
         table = insertsize_distribution.sum(axis=0)
 
     # Plot
-    ax = sns.lineplot(x=table.index, y=table.values)
+    ax = sns.lineplot(x=table.index, y=table.values, **kwargs)
     ax.set_xlabel("Insertsize (bp)")
     ax.set_ylabel("Count")
 
@@ -684,7 +702,8 @@ def quality_violin(adata: sc.AnnData,
                    thresholds: Optional[dict[Literal["min", "max"], int | float]] = None,
                    global_threshold: bool = True,
                    interactive: bool = True,
-                   save: Optional[str] = None
+                   save: Optional[str] = None,
+                   **kwargs: Any
                    ) -> Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox],
                               Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe],
                                               Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
@@ -721,6 +740,8 @@ def quality_violin(adata: sc.AnnData,
         Whether to show interactive sliders. If False, the static matplotlib plot is shown.
     save : Optional[str], optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
+    **kwargs : Any
+        Additional arguments passed to seaborn.violinplot.
 
     Returns
     -------
@@ -820,7 +841,7 @@ def quality_violin(adata: sc.AnnData,
         slider_dict[column] = {}
 
         # Plot data from table
-        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0)
+        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0, **kwargs)
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
         ax.set_xlabel("")

@@ -369,7 +369,8 @@ def predict_sex(adata: sc.AnnData,
                 gene_column: Optional[str] = None,
                 threshold: float = 0.3,
                 plot: bool = True,
-                save: Optional[str] = None) -> None:
+                save: Optional[str] = None,
+                **kwargs: Any) -> None:
     """
     Predict sex based on expression of Xist (or another gene).
 
@@ -389,6 +390,8 @@ def predict_sex(adata: sc.AnnData,
         Whether to plot the distribution of gene expression per group.
     save : Optional[str], default None
         If provided, the plot will be saved to this path.
+    **kwargs : Any
+        Additional arguments are passed to scanpy.pl.violin.
 
     Notes
     -----
@@ -459,7 +462,7 @@ def predict_sex(adata: sc.AnnData,
         axarr[0].set_ylabel(f"Normalized {gene} expression")
 
         # Plot violins per group + color for female cells
-        sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups)
+        sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups, **kwargs)
         axarr[1].set_xticklabels(groups, rotation=45, ha="right")
         axarr[1].set_ylabel("")
         xlim = axarr[1].get_xlim()
