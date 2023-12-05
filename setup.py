@@ -8,7 +8,7 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pyyaml', 'uropa', 'ipywidgets', 'pybedtools', 'episcanpy'],
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'pybedtools', 'pygenometracks'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
@@ -62,7 +62,7 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
+    python_requires='>=3.9,<3.11',  # dict type hints as we use it require python 3.9; pybedtools is not compatible with python 3.11
     install_requires=[
         'pysam',
         'matplotlib',

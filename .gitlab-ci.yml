@@ -178,7 +178,7 @@ notebook-output-check:
   stage: test
   script:
     - python --version
-    - python scripts/check_notebooks.py */*.ipynb
+    - python scripts/check_notebooks.py */*.ipynb */*/*.ipynb
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
@@ -193,10 +193,11 @@ notebooks:
   #  - gwdg-shared
   artifacts:
     paths:
-      - rna-notebooks/pipeline_output/logs/*.txt
+      - rna_analysis/logs/*.txt
   script:
     - pip install papermill
     - pip install .[all]   # reinstall to make sure the current branch version is used
+    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
     - which pip                # for debug
@@ -207,9 +208,8 @@ notebooks:
     - python scripts/run_notebooks.py
   after_script:
     - pwd
-    - ls -l rna-notebooks/pipeline_output/logs/
-    - for f in rna-notebooks/pipeline_output/logs/*; do echo $f; cat $f; done
-
+    - ls -l rna_analysis/logs/
+    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
       when: manual  # manual trigger
@@ -231,7 +231,7 @@ build-pages:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
-    - pip install .  # ensure that the current branch version is used for building pages
+    - pip install .[all]  # ensure that the current branch version is used for building pages
     - cd docs
     - make html
   artifacts:

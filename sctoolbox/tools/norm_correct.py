@@ -344,6 +344,8 @@ def batch_correction(adata: sc.AnnData,
     ValueError:
         1. If batch_key column is not in adata.obs
         2. If batch correction method is invalid.
+    KeyError:
+        If PCA has not been calculated before running bbknn.
     """
 
     if not callable(method):
@@ -360,7 +362,10 @@ def batch_correction(adata: sc.AnnData,
         import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
 
         # Get number of pcs in adata, as bbknn hardcodes n_pcs=50
-        n_pcs = adata.obsm["X_pca"].shape[1]
+        try:
+            n_pcs = adata.obsm["X_pca"].shape[1]
+        except KeyError:
+            raise KeyError("PCA has not been calculated. Please run sc.pp.pca() before running bbknn.")
 
         # Run bbknn
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
@@ -440,6 +445,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
                           obsm_key: str = 'X_umap',
                           col_name: str = 'LISI_score',
                           max_dims: int = 5,
+                          perplexity: int = 30,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Evaluate batch effect methods using LISI.
@@ -456,6 +462,8 @@ def evaluate_batch_effect(adata: sc.AnnData,
         Column name for storing the LISI score in .obs.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
+    perplexity : int, default 30
+        Perplexity for the LISI score calculation.
     inplace : bool, default False
         Whether to work inplace on the anndata object.
 
@@ -495,7 +503,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 
     # run LISI on all adata objects
     obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
-    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key])
+    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key], perplexity=perplexity)
     adata_m.obs[col_name] = lisi_res.flatten()
 
     if not inplace:
@@ -551,8 +559,11 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
 
         pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
         for adata in adatas_m.values():
+            n_cells = adata.shape[0]
+            perplexity = min(30, int(n_cells / 3))  # adjust perplexity for small datasets
+
             for obsm in obsm_keys:
-                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, inplace=True)
+                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, perplexity=perplexity, inplace=True)
                 pbar.update()
     else:
         utils.check_module("harmonypy")
@@ -561,11 +572,14 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         pool = mp.Pool(threads)
         jobs = {}
         for i, adata in enumerate(adatas_m.values()):
+            n_cells = adata.shape[0]
+            perplexity = min(30, int(n_cells / 3))  # adjust perplexity for small datasets
+
             for obsm_key in obsm_keys:
                 obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
                 obs_mat = adata.obs[[batch_key]]
 
-                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key]))
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key], perplexity,))
                 jobs[(i, obsm_key)] = job
         pool.close()
 
