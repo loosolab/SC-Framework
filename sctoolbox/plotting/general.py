@@ -727,7 +727,7 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     .. plot::
         :context: close-figs
 
-        venn2 = { 'Group A': {1, 2, 3, 4}, 
+        venn2 = { 'Group A': {1, 2, 3, 4},
                   'Group B': {3, 4, 5, 6}
                 }
         venn_fruits = { 'Fruits A': {'Lemon', 'Orange', Blueberry, 'Grapefruit'},
