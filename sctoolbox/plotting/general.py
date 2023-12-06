@@ -721,7 +721,7 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     ------
     ValueError
         If number of groups in groups_dict is not 2 or 3.
-    
+
     Examples
     --------
     .. plot::
