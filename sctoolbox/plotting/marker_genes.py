@@ -631,7 +631,7 @@ def group_heatmap(adata: sc.AnnData,
     Returns
     -------
     matplotlib.axes.Axes
-    
+
     Examples
     --------
     .. plot::
