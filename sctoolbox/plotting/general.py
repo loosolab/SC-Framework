@@ -721,6 +721,26 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     ------
     ValueError
         If number of groups in groups_dict is not 2 or 3.
+    
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        venn2 = { 'Group A': {1, 2, 3, 4}, 
+                  'Group B': {3, 4, 5, 6}
+                }
+        venn_fruits = { 'Fruits A': {'Lemon', 'Orange', Blueberry, 'Grapefruit'},
+                        'Fruits B': {'Pineapple', 'Mango', 'Banana', 'Papaya', Blueberry, 'Strawberry'},
+                        'Fruits C': {'Strawberry', 'Blueberry', 'Raspberry', 'Orange', 'Mango'}
+                    }
+
+    .. plot::
+        :context: close-figs
+
+        pl.venn2(venn2, title = "Simple Venn2 plot")
+        pl.venn2(venn3, title = "Simple Venn3 plot")
+
     """
 
     # Extract the lists of items from the dictionary and convert them to sets
