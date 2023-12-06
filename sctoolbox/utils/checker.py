@@ -365,6 +365,13 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
     -------
     bool
         Returns whether the value is between the set limits.
+
+    Example
+    -------
+    .. plot::
+        :context: close-figs
+
+        in_range(value=0.5, limits = (0.5,1), include_limits = True)
     """
 
     if include_limits:
