@@ -58,7 +58,7 @@ def recluster(adata: sc.AnnData,
     Example
     ------
     --Clustering_merge
-        :context:
+        :context: close-figs
 
         sctoolbox.tools.recluster(adata,column="Leiden_1.5",clusters=["1","2"],task="join",method="leiden",     resolution=1.5,plot = True, embedding= None)
     """
