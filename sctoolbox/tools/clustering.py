@@ -58,12 +58,12 @@ def recluster(adata: sc.AnnData,
     Example
     ------
     __Clustering_merge::
-        :content: close-figs
+        :context: close-figs
 
         sctoolbox.tools.recluster(adata,column="Leiden_1.5",clusters=["1","2"],task="join",method="leiden",     resolution=1.5,plot = True, embedding= None)
 
     __Clustering_split::
-        :content: close-figs
+        :context: close-figs
 
         sctoolbox.tools.recluster(adata,column="Leiden_1.5",clusters=["3","4"],task="split",method="leiden",     resolution=1.5,plot = True, embedding= None)
     """
