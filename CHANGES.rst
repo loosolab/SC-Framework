@@ -1,6 +1,7 @@
 0.4 (in progress)
 -----------------
 - Added code examples for tools and utils (#140)
+- Added code examples for plot_venn (#140)
 
 
 0.3 (30-11-2023)
