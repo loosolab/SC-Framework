@@ -16,7 +16,7 @@ RUN apt-get update --assume-yes && \
     apt-get install -y libcurl4
 
 # install git to check for file changes
-RUN apt-get install git-all
+RUN apt-get install -y git-all
 
 # update mamba
 RUN mamba update -n base mamba && \
