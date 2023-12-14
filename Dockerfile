@@ -15,6 +15,9 @@ RUN apt-get update --assume-yes && \
     apt-get install bedtools && \
     apt-get install -y libcurl4
 
+# install git to check for file changes
+RUN apt-get install git-all
+
 # update mamba
 RUN mamba update -n base mamba && \
     mamba --version
