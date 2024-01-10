@@ -1,6 +1,7 @@
 0.4 (in progress)
 -------------------
 - Bugfixes for CI jobs
+- Fix typos (#173 & #174)
 
 
 0.3 (30-11-2023)
