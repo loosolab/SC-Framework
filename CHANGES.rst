@@ -1,6 +1,7 @@
 0.4 (in progress)
 -----------------
 - Added code examples for tools and utils (#140)
+	- group_heatmap
 
 
 0.3 (30-11-2023)
