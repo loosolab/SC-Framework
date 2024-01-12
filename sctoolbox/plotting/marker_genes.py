@@ -639,7 +639,7 @@ def group_heatmap(adata: sc.AnnData,
 
         adata.obs["condition"] = np.random.choice(['CTRL', 'TREATED'], size=adata.shape[0])
         genes = adata.var.index[:15]
-        
+
         group_heatmap(adata, groupby='condition', gene_list=genes, figsize=(5, 5))
     """
     _, ax = plt.subplots(figsize=figsize)
