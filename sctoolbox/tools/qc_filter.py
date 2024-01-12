@@ -59,7 +59,20 @@ def calculate_qc_metrics(adata: sc.AnnData,
     --------
     scanpy.pp.calculate_qc_metrics
         https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
+
+    Examples
+    --------
+    .. exec_code::
+
+        import scanpy as sc
+        import sctoolbox as sct
+
+        adata = sc.datasets.pbmc3k()
+        print("Columns in .obs before 'calculate_qc_metrics':", adata.obs.columns.tolist())
+        sct.tools.calculate_qc_metrics(adata, inplace=True)
+        print("Columns in .obs after 'calculate_qc_metrics':", adata.obs.columns.tolist())
     """
+
     # add metrics to copy of anndata
     if not inplace:
         adata = adata.copy()
