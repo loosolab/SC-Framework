@@ -7,7 +7,7 @@
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
   figure_dir: "../figures/02_QC/"
-  log_file: "p../logs/02_log.txt"
+  log_file: "../logs/02_log.txt"
   overwrite_log: True
 
 "03":

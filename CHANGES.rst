@@ -1,8 +1,9 @@
 0.4 (in progress)
 -----------------
+- Bugfixes for CI jobs
+- Fix typos (#173 & #174)
 - Added code examples for tools and utils (#140)
 	- group_heatmap
-
 
 0.3 (30-11-2023)
 -----------------
