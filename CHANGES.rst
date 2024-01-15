@@ -2,6 +2,7 @@
 -------------------
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
+- Update receptor-ligand notebook (#176)
 
 
 0.3 (30-11-2023)
