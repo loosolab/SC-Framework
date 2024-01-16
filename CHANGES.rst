@@ -2,6 +2,7 @@
 -------------------
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
+- Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 
 
 0.3 (30-11-2023)
