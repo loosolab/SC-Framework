@@ -73,18 +73,14 @@ def _add_path() -> str:
     """
     Add python executables path to environment variable PATH.
 
-    Parameters
-    ----------
-    None.
-
     Returns
     -------
     str
         Path to python executables.
     """
 
-    python_exec_dir = os.path.dirname(sys.executable) # get path to python executable
-    if python_exec_dir in os.environ['PATH']: # check if path is already in environment variable
+    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
+    if python_exec_dir in os.environ['PATH']:  # check if path is already in environment variable
         os.environ['PATH'] += os.pathsep + python_exec_dir  # add python executable path to environment variable
         return python_exec_dir
     else:
