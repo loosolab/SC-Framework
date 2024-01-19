@@ -80,7 +80,7 @@ setup(
         'pandas',
         'seaborn',
         'ipympl',
-        'ipywidgets==7.7.5',
+        'ipywidgets<=7.7.5',
         'scrublet',
         'leidenalg',
         'louvain',
