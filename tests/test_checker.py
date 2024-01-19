@@ -1,10 +1,11 @@
 """Test checker functions."""
 
 import pytest
-import sctoolbox.checker as ch
+import sctoolbox.utils.checker as ch
 import scanpy as sc
 import os
 import re
+import sys
 
 
 @pytest.fixture
@@ -46,3 +47,10 @@ def test_get_index_type(snapatac_adata):
 
     assert ch.get_index_type(snapatac_index) == 'snapatac'
     assert ch.get_index_type(start_with_name_index) == 'start_name'
+
+def test_add_path():
+    """Test _add_path function."""
+    # test if the path is added correctly
+    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
+    assert python_exec_dir == ch._add_path()
+    assert python_exec_dir in os.environ['PATH']
