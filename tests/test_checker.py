@@ -48,6 +48,7 @@ def test_get_index_type(snapatac_adata):
     assert ch.get_index_type(snapatac_index) == 'snapatac'
     assert ch.get_index_type(start_with_name_index) == 'start_name'
 
+
 def test_add_path():
     """Test _add_path function."""
     # test if the path is added correctly

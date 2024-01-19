@@ -7,6 +7,7 @@ import re
 import os
 import shutil
 
+
 @pytest.fixture
 def bedfile():
     """Return a bedfile."""
@@ -14,6 +15,7 @@ def bedfile():
     f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
 
     return f
+
 
 @pytest.fixture
 def snapatac_adata():
@@ -47,8 +49,9 @@ def test_barcode_index(snapatac_adata):
     # execute barcode_index again to check if it will raise an error
     bioutils.barcode_index(snapatac_adata)
 
+
 def test_overlap_two_bedfiles(bedfile):
-    """test overlap_two_bedfiles"""
+    """Test overlap_two_bedfiles."""
 
     # Copy a file from source to destination
     test_data_dir = os.path.split(bedfile)[0]
