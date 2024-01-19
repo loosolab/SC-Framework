@@ -70,6 +70,4 @@ def test_overlap_two_bedfiles(bedfile):
         os.remove(bedfile_copy)
         os.remove(overlap_file)
     except FileNotFoundError:
-        print("The file does not exist")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        raise FileNotFoundError("The file does not exist")
