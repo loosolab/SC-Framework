@@ -52,5 +52,6 @@ def test_add_path():
     """Test _add_path function."""
     # test if the path is added correctly
     python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
+
     assert python_exec_dir == ch._add_path()
     assert python_exec_dir in os.environ['PATH']

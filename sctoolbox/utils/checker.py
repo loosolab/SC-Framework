@@ -72,7 +72,7 @@ def _is_interactive() -> bool:
 def _add_path() -> str:
     """
     Add python executables path to environment variable PATH.
-
+<
     Returns
     -------
     str
