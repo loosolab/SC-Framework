@@ -641,7 +641,7 @@ def group_heatmap(adata: sc.AnnData,
         genes = adata.var.index[:15]
 
         group_heatmap(adata, groupby='condition', gene_list=genes, figsize=(5, 5))
-        
+
         # to force display the plot
         import matplotlib.pyplot as plt
         plt.show()
