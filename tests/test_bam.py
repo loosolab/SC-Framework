@@ -113,30 +113,14 @@ def test_get_bam_reads(bam_handle):
     assert total == 10000
 
 
-def test__monitor_progress():
-    pass
-
-
-def test__buffered_reader():
-    pass
-
-
-def test__writer():
-    pass
-
-
-def test_split_bam_clusters(bam_handle):
+@pytest.mark.parametrize("parallel", [True, False])
+def test_split_bam_clusters(bam_handle, bam_file, adata, parallel):
     """Test split_bam_clusters success."""
-
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
-
     # Get input reads
     n_reads_input = sctoolbox.bam.get_bam_reads(bam_handle)
 
     # Split bam
-    adata = sc.read_h5ad(adata_f)
-    sctoolbox.bam.split_bam_clusters(adata, bam_f, groupby="Sample", parallel=True)
+    sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", parallel=parallel)
 
     # Check if the bam file is split and the right size
     output_bams = glob.glob("split_Sample*.bam")
@@ -188,18 +172,6 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
     os.remove(fragments_f)
     if outdir is not None:
         shutil.rmtree(outdir)
-
-
-def test__get_barcode_from_readname():
-    pass
-
-
-def test__get_barcode_from_tag():
-    pass
-
-
-def test__write_fragments():
-    pass
 
 
 def test_create_fragment_file_multiprocessing():
