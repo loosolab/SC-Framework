@@ -19,7 +19,7 @@ import scanpy as sc
 from beartype import beartype
 from beartype.typing import Optional, Tuple, Union, Literal, Any
 
-import sctoolbox.utils as utils
+import sctoolbox.utils.bioutils as utils
 from sctoolbox.tools.bam import create_fragment_file
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -44,6 +44,8 @@ def _convert_gtf_to_bed(gtf: str,
         Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
     temp_files : list[str], default []
         List of temporary files.
+    temp_dir : str, default '.'
+        Path to temporary directory.
 
     Returns
     -------
@@ -73,69 +75,13 @@ def _convert_gtf_to_bed(gtf: str,
                 line = row[0] + '\t' + row[3] + '\t' + row[4] + '\n'
                 out_file.write(line)
     # sort gtf
-    sort_cmd = f'sort -k1,1 -k2,2n {out_unsorted} > {out_sorted}'
-    os.system(sort_cmd)
+    utils._sort_bed(out_unsorted, out_sorted)
 
     # remove unsorted
     os.remove(out_unsorted)
 
     # return the path to sorted bed
     return out_sorted, temp_files
-
-
-@beartype
-def _overlap_two_beds(bed1: str,
-                      bed2: str,
-                      out: Optional[str] = None,
-                      temp_files: list[str] = []) -> Union[bool, Tuple[str, str]]:
-    """
-    Overlap two BED files using Bedtools Intersect.
-
-    The result is a BED file containing regions in bed1 that overlaps with at least one region in bed2.
-
-    Parameters
-    ----------
-    bed1 : str
-        Path to first BED file.
-    bed2 : str
-        Path to second BED file.
-    out : Optional[str], default None
-        Path to save overlapped file. If none, the file will be saved in the same folder as tha BAM file.
-    temp_files : list[str], default []
-        List of temporary files.
-
-    Returns
-    -------
-    Union[bool, Tuple[str, str]]
-        Path to fragments and temp files.
-        False if no overlap is found
-    """
-
-    utils.check_module("pybedtools")
-    import pybedtools
-
-    # get names of the bed files
-    name_1 = Path(bed1).stem
-    name_2 = Path(bed2).stem
-
-    if not out:
-        path = os.path.splitext(bed1)
-        out_overlap = f"{path[0]}_{name_2}_overlap.bed"
-    else:
-        out_overlap = os.path.join(out, f'{name_1}_{name_2}_overlap.bed')
-
-    temp_files.append(out_overlap)
-
-    # overlap two bed files
-    utils._overlap_two_bedfiles(bed1, bed2, out_overlap)
-
-    # check if there is an overlap
-    bed_file = pybedtools.BedTool(out_overlap)
-    if len(bed_file) == 0:
-        return False
-
-    # return path to overlapped file
-    return out_overlap, temp_files
 
 
 @deco.log_anndata
@@ -216,7 +162,8 @@ def pct_fragments_overlap(adata: sc.AnnData,
                           nproc: int = 1,
                           sort_bam: bool = False,
                           sort_regions: bool = False,
-                          keep_fragments: bool = False) -> None:
+                          keep_fragments: bool = False,
+                          temp_dir: Optional[str] = None) -> None:
     """
     Calculate the percentage of fragments.
 
@@ -250,6 +197,8 @@ def pct_fragments_overlap(adata: sc.AnnData,
         If True sort bed file on regions.
     keep_fragments : bool, default False
         If True keep fragment files.
+    temp_dir : Optional[str], default None
+        Path to temporary directory.
 
     Returns
     -------
@@ -274,45 +223,61 @@ def pct_fragments_overlap(adata: sc.AnnData,
     else:
         barcodes = adata.obs.index.to_list()
 
+    # check if temp_dir is given
+    if not temp_dir:
+        # if not, use current working directory
+        temp_dir = os.getcwd()
+
     temp_files = []
     # check if regions file is gtf or bed
     file_ext = Path(regions_file).suffix
     if file_ext.lower() == '.gtf':
         logger.info("Converting GTF to BED...")
         # convert gtf to bed with columns chr, start, end
-        bed_file, temp_files = _convert_gtf_to_bed(regions_file, temp_files=temp_files, out=None)
+        bed_file, temp_files = _convert_gtf_to_bed(regions_file, temp_files=temp_files, out=temp_dir)
+
     elif file_ext.lower() == '.bed':
-        bed_file = os.path.splitext(regions_file)[0] + '_sorted.bed'
+        bed_file = os.path.join(temp_dir, os.path.splitext(os.path.split(regions_file)[1])[0]) + '_sorted.bed'
         temp_files.append(bed_file)
-        if sort_regions:
-            sort_cmd = f'sort -k1,1 -k2,2n {regions_file} > {bed_file}'
-            os.system(sort_cmd)
+        if not utils._bed_is_sorted(regions_file):
+            logger.info("Sorting BED file...")
+            utils._sort_bed(regions_file, bed_file)
+        else:
+            bed_file = regions_file
 
     # if only bam file is available -> convert to fragments
     if bam_file and not fragments_file:
         logger.info('Converting BAM to fragments file! This may take a while...')
-        fragments_file, temp_files = create_fragment_file(bam_file,
-                                                          cb_tag=cb_tag,
-                                                          out=None,
-                                                          nproc=nproc,
-                                                          sort_bam=sort_bam,
-                                                          keep_temp=keep_fragments,
-                                                          temp_files=temp_files)
+        fragments_file = create_fragment_file(bam=bam_file,
+                                              barcode_tag=cb_tag,
+                                              outdir=temp_dir,
+                                              nproc=nproc)
+        temp_files.append(fragments_file)
+
+    # Check if fragments file is sorted
+    if not utils._bed_is_sorted(fragments_file):
+        # sort fragments file
+        logger.info('Sorting fragments file...')
+        unsorted_fragments_file = fragments_file
+        fragments_file = os.path.join(temp_dir, os.path.splitext(os.path.split(unsorted_fragments_file)[1])[0]) + '_sorted.bed'
+        utils._sort_bed(unsorted_fragments_file, fragments_file)
 
     # overlap reads in fragments with promoter regions, return path to overlapped file
     logger.info('Finding overlaps...')
-    overlap_file, temp_files = _overlap_two_beds(fragments_file, bed_file, out=None, temp_files=temp_files)
+    overlap_file = os.path.join(temp_dir, 'overlap_fragments_gtf.bed')
+    utils._overlap_two_bedfiles(fragments_file, bed_file, overlap=overlap_file, wa=True, wb=True, sorted=True)
+    temp_files.append(overlap_file)
 
     #
-    mp_calc_pct = MPOverlapPct()
-    mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
+    #mp_calc_pct = MPOverlapPct()
+    #mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
 
     #
-    logger.info('Adding results to adata object...')
-    logger.info("cleaning up...")
-    for f in temp_files:
-        os.remove(f)
-    logger.info('Done')
+    #logger.info('Adding results to adata object...')
+    #logger.info("cleaning up...")
+    #for f in temp_files:
+    #    os.remove(f)
+    #logger.info('Done')
 
 
 @beartype
@@ -415,7 +380,7 @@ class MPOverlapPct():
             job = pool.apply_async(self.get_barcodes_sum, args=(chunk, barcodes, column), callback=self.log_result)
             jobs.append(job)
         # monitor progress
-        utils.monitor_jobs(jobs, description="Progress")
+        #utils.monitor_jobs(jobs, description="Progress")
         # close pool
         pool.close()
         # wait for all jobs to finish
@@ -425,3 +390,15 @@ class MPOverlapPct():
         self.merged_dict = None
 
         return returns
+
+if __name__ == '__main__':
+
+    promoters_gtf = "/mnt/flatfiles/organisms/new_organism/mus_musculus/104/mus_musculus.104.promoters2000.gtf"
+    fragments_file = '/mnt/workspace2/jdetlef/experimental/mm10_atac_fragemnts.bed'
+    h5ad_file = '/mnt/workspace2/jdetlef/experimental/mm10_atac.h5ad'
+
+    adata = sc.read_h5ad(h5ad_file)
+
+    pct_fragments_overlap(adata, regions_file=promoters_gtf, fragments_file=fragments_file, temp_dir='/mnt/workspace2/jdetlef/experimental/temp')
+
+    print('Done')
