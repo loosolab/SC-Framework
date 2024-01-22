@@ -1,6 +1,8 @@
 """Module for type checking functions."""
 
 import re
+import os
+import sys
 import importlib
 import matplotlib
 import numpy as np
@@ -64,6 +66,25 @@ def _is_interactive() -> bool:
         return True
     else:
         return False
+
+
+@beartype
+def _add_path() -> str:
+    """
+    Add python executables path to environment variable PATH.
+
+    Returns
+    -------
+    str
+        Path to python executables.
+    """
+
+    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
+    if python_exec_dir in os.environ['PATH']:  # check if path is already in environment variable
+        os.environ['PATH'] += os.pathsep + python_exec_dir  # add python executable path to environment variable
+        return python_exec_dir
+    else:
+        return python_exec_dir
 
 
 #####################################################################
