@@ -8,6 +8,8 @@ import sctoolbox.tools.bam as stb
 import glob
 import scanpy as sc
 import logging
+import random
+import re
 
 
 @pytest.fixture
@@ -22,6 +24,18 @@ def bam_handle(bam_file):
     handle = sctoolbox.bam.open_bam(bam_file, "rb")
 
     return handle
+
+
+@pytest.fixture
+def barcodes(bam_file, bam_handle):
+    """Returns 100 randomly selected barcodes."""
+    # bam_handle is not used to avoid consuming the iterator
+    read_count = stb.open_bam(bam_file, "rb").count()
+
+    # select random indexes
+    indices = random.sample(range(0, read_count), k=100)
+
+    return [read.get_tag("CB") for index, read in enumerate(bam_handle) if index in indices]
 
 
 @pytest.fixture(scope="session")
@@ -59,8 +73,30 @@ def test_check_barcode_tag(adata, bam_file, mocker, caplog):
         stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
 
 
-def test_subset_bam():
-    pass
+def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
+    """Check the subset_bam function."""
+    outfile = tmpdir / "subset.bam"
+
+    # check success
+    stb.subset_bam(bam_in=bam_file,
+                   bam_out=str(outfile),
+                   barcodes=barcodes,
+                   read_tag="CB",
+                   pysam_threads=4,
+                   overwrite=False)
+
+    assert bool(re.match(r"Wrote \d+ reads to output bam", caplog.messages[-1]))
+    assert outfile.isfile()
+
+    # check overwrite warning
+    stb.subset_bam(bam_in=bam_file,
+                   bam_out=str(outfile),
+                   barcodes=barcodes,
+                   read_tag="CB",
+                   pysam_threads=4,
+                   overwrite=False)
+
+    assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
 
 
 def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
