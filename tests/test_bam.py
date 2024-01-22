@@ -28,7 +28,7 @@ def bam_handle(bam_file):
 
 @pytest.fixture
 def barcodes(bam_file, bam_handle):
-    """Returns 100 randomly selected barcodes."""
+    """Return 100 randomly selected barcodes."""
     # bam_handle is not used to avoid consuming the iterator
     read_count = stb.open_bam(bam_file, "rb").count()
 
