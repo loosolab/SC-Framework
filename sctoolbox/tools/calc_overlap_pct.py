@@ -268,6 +268,27 @@ def pct_fragments_overlap(adata: sc.AnnData,
     utils._overlap_two_bedfiles(fragments_file, bed_file, overlap=overlap_file, wa=True, wb=True, sorted=True)
     temp_files.append(overlap_file)
 
+    overlap_df = pd.read_csv(overlap_file,
+                             delimiter='\t',
+                             header=None,
+                             names=['chr_f', 'start_f', 'stop_f', 'barcode', 'count', 'chr_g', 'start_g', 'stop_g'])
+
+    fragments_df = pd.read_csv(fragments_file,
+                               delimiter='\t',
+                               header=None,
+                               names=['chr', 'start', 'stop', 'barcode', 'count'])
+
+    counts_ov = pd.DataFrame(count_fragments_per_cell(overlap_df, barcode_col='barcode', frag_count='count'))
+    counts_all = pd.DataFrame(count_fragments_per_cell(fragments_df, barcode_col='barcode', frag_count='count'))
+
+    merged_df = counts_ov.join(counts_all, how='right', lsuffix='_ov', rsuffix='_all')
+
+    merged_df['fold_change'] = merged_df['count_ov'] / merged_df['count_all']
+
+    merged_df = merged_df.fillna(0)
+
+    adata.obs = adata.obs.join(merged_df['fold_change'], how='left')
+
     #
     #mp_calc_pct = MPOverlapPct()
     #mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
@@ -278,6 +299,13 @@ def pct_fragments_overlap(adata: sc.AnnData,
     #for f in temp_files:
     #    os.remove(f)
     #logger.info('Done')
+
+
+def count_fragments_per_cell(df, barcode_col='barcode', frag_count='count'):
+
+    fragments_per_cell = df.groupby(df.columns[barcode_col])[df.columns[frag_count]].sum()
+
+    return fragments_per_cell
 
 
 @beartype
