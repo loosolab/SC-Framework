@@ -727,27 +727,27 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     .. plot::
         :context: close-figs
 
-        venn2 = { 'Group A': {1, 2, 3, 4},
-                  'Group B': {3, 4, 5, 6}
-                }
+        venn2_example = { 'Group A': {1, 2, 3, 4},
+                          'Group B': {3, 4, 5, 6}
+                        }
 
     .. plot::
         :context: close-figs
 
-        pl.venn2(venn2, "Simple Venn2 plot")
+        pl.plot_venn(venn2_example, "Simple Venn2 plot")
 
     .. plot::
         :context: close-figs
 
-        venn3= { 'Fruits A': {'Lemon', 'Orange', 'Blueberry', 'Grapefruit'},
-                        'Fruits B': {'Pineapple', 'Mango', 'Banana', 'Papaya', 'Blueberry', 'Strawberry'},
-                        'Fruits C': {'Strawberry', 'Blueberry', 'Raspberry', 'Orange', 'Mango'}
-                    }
+        venn3_example = { 'Fruits A': {'Lemon', 'Orange', 'Blueberry', 'Grapefruit'},
+                          'Fruits B': {'Pineapple', 'Mango', 'Banana', 'Papaya', 'Blueberry', 'Strawberry'},
+                          'Fruits C': {'Strawberry', 'Blueberry', 'Raspberry', 'Orange', 'Mango'}
+                        }
 
     .. plot::
         :context: close-figs
 
-        pl.venn3(venn3, "Simple Venn3 plot")
+        pl.plot_venn(venn3_example, "Simple Venn3 plot")
 
     """
 
