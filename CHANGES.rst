@@ -4,6 +4,7 @@
 - Fix typos (#173 & #174)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
+- Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
 
 
 0.3 (30-11-2023)
