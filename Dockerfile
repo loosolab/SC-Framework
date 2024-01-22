@@ -5,6 +5,9 @@ LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 COPY . /tmp/
 COPY scripts /scripts/
 
+# Set the time zone (before installing any packages)
+RUN echo 'Europe/Berlin' > apt-get install -y tzdata
+
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
@@ -14,6 +17,9 @@ RUN apt-get update --assume-yes && \
     # Install missing libraries
     apt-get install bedtools && \
     apt-get install -y libcurl4
+
+# install git to check for file changes
+RUN apt-get install -y git
 
 # update mamba
 RUN mamba update -n base mamba && \
@@ -30,9 +36,6 @@ RUN pip install "/tmp/[all]" && \
 
 # clear tmp
 RUN rm -r /tmp/*
-
-# Set the time zone
-RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \
