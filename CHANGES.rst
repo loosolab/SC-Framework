@@ -1,6 +1,7 @@
 0.4 (in progress)
 -----------------
 - Added code examples for tools and utils (#140)
+    - plot_venn
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
 
