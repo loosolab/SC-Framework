@@ -4,17 +4,63 @@ import os
 import shutil
 import pytest
 import sctoolbox.bam
+import sctoolbox.tools.bam as stb
 import glob
 import scanpy as sc
+import logging
 
 
 @pytest.fixture
-def bam_handle():
+def bam_file():
+    """Fixture pointing to test bam."""
+    return os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
+
+
+@pytest.fixture
+def bam_handle(bam_file):
     """Fixture for a bam file handle."""
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    handle = sctoolbox.bam.open_bam(bam_f, "rb")
+    handle = sctoolbox.bam.open_bam(bam_file, "rb")
 
     return handle
+
+
+@pytest.fixture(scope="session")
+def adata():
+    """Load and returns an anndata object."""
+
+    # has .X of type numpy.array
+    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+
+    return obj
+
+
+def test_check_barcode_tag(adata, bam_file, mocker, caplog):
+    """Tests the barcode overlap amount between adata and bam file."""
+    caplog.set_level(logging.INFO)
+
+    # test overlap == 0%
+    mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0)
+    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+    assert 'None of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column cb-tag or bamfile.' in caplog.text
+
+    # test overlap <= 5%
+    mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.05)
+    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+    assert 'Only 5% or less of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bamfile.' in caplog.text
+
+    # test overlap > 5%
+    mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.8)
+    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+    assert 'Barcode tag: OK' in caplog.text
+
+    # test overlap error (TODO don't know how this could be triggered)
+    with pytest.raises(ValueError):
+        mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=float("nan"))
+        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+
+
+def test_subset_bam():
+    pass
 
 
 def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
@@ -29,6 +75,18 @@ def test_get_bam_reads(bam_handle):
     total = sctoolbox.bam.get_bam_reads(bam_handle)
 
     assert total == 10000
+
+
+def test__monitor_progress():
+    pass
+
+
+def test__buffered_reader():
+    pass
+
+
+def test__writer():
+    pass
 
 
 def test_split_bam_clusters(bam_handle):
@@ -94,6 +152,18 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
     os.remove(fragments_f)
     if outdir is not None:
         shutil.rmtree(outdir)
+
+
+def test__get_barcode_from_readname():
+    pass
+
+
+def test__get_barcode_from_tag():
+    pass
+
+
+def test__write_fragments():
+    pass
 
 
 def test_create_fragment_file_multiprocessing():
