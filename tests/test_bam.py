@@ -113,14 +113,14 @@ def test_get_bam_reads(bam_handle):
     assert total == 10000
 
 
-@pytest.mark.parametrize("parallel", [True, False])
-def test_split_bam_clusters(bam_handle, bam_file, adata, parallel):
+@pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
+def test_split_bam_clusters(bam_handle, bam_file, adata, parallel, sort_bams, index_bams):
     """Test split_bam_clusters success."""
     # Get input reads
     n_reads_input = sctoolbox.bam.get_bam_reads(bam_handle)
 
     # Split bam
-    sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", parallel=parallel)
+    sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata.obs["Sample"])) + 1)
 
     # Check if the bam file is split and the right size
     output_bams = glob.glob("split_Sample*.bam")
@@ -132,6 +132,21 @@ def test_split_bam_clusters(bam_handle, bam_file, adata, parallel):
     # Clean up
     for bam in output_bams:
         os.remove(bam)
+
+
+def test_failure_split_bam_clusters(bam_file, adata):
+    """Test split_bam_clusters failure."""
+    # test groupby
+    with pytest.raises(ValueError):
+        sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="SOME_NONEXISTENT_COLUMN_NAME")
+
+    # test barcode_col
+    with pytest.raises(ValueError):
+        sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", barcode_col="SOME_NONEXISTENT_TAG")
+
+    # test sort_bam/index_bam
+    with pytest.raises(ValueError):
+        sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", sort_bams=False, index_bams=True)
 
 
 def test_bam_to_bigwig():
