@@ -853,7 +853,8 @@ def get_interactions(anndata: sc.AnnData,
                      interaction_score: Optional[float | int] = None,
                      interaction_perc: Optional[float | int] = None,
                      group_a: Optional[list[str]] = None,
-                     group_b: Optional[list[str]] = None) -> pd.DataFrame:
+                     group_b: Optional[list[str]] = None,
+                     save: Optional[str] = None) -> pd.DataFrame:
     """
     Get interaction table from anndata and apply filters.
 
@@ -871,6 +872,8 @@ def get_interactions(anndata: sc.AnnData,
         List of cluster names that must be present in any given receptor-ligand interaction.
     group_b : Optional[list[str]], default None
         List of cluster names that must be present in any given receptor-ligand interaction.
+    save : Optional[str], default None
+        Output filename. Uses the internal 'sctoolbox.settings.table_dir'.
 
     Returns
     -------
@@ -916,6 +919,9 @@ def get_interactions(anndata: sc.AnnData,
         group = group_a if group_a else group_b
 
         subset = subset[subset["receptor_cluster"].isin(group) | subset["ligand_cluster"].isin(group)]
+
+    if save:
+        subset.to_csv(f"{settings.table_dir}/{save}", sep='\t', index=False)
 
     return subset
 
