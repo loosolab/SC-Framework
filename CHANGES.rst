@@ -1,5 +1,6 @@
 0.4 (in progress)
 -------------------
+- Refactor receptor-ligand notebook (#176)
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
 - Update receptor-ligand notebook (#176)
