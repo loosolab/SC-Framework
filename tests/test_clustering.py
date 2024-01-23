@@ -3,6 +3,7 @@
 import pytest
 import numpy as np
 import anndata
+import scanpy as sc
 import pandas as pd
 from scipy import sparse
 import sctoolbox.tools as tl
@@ -67,6 +68,71 @@ def unequal_adata():
     adata = build_adata(mtx)
 
     return adata
+
+
+@pytest.fixture
+def clust_adata():
+    """Return a clustered adata."""
+    return sc.datasets.pbmc3k_processed()
+
+
+def test_recluster(clust_adata):
+    """Test recluster success."""
+    # join monocytes clusters
+    tl.recluster(adata=clust_adata,
+                 column="louvain",
+                 clusters=["CD14+ Monocytes", "FCGR3A+ Monocytes"],
+                 task="join",
+                 method="leiden",
+                 resolution=1,
+                 key_added="joined_louvain",
+                 plot=True,
+                 embedding="X_umap")
+
+    assert "joined_louvain" in clust_adata.obs.columns
+    assert len(set(clust_adata.obs["louvain"])) - 1 == len(set(clust_adata.obs["joined_louvain"]))
+
+    # split cluster
+    tl.recluster(adata=clust_adata,
+                 column="louvain",
+                 clusters=["CD4 T cells"],
+                 task="split",
+                 method="leiden",
+                 resolution=1,
+                 key_added="split_louvain",
+                 plot=True,
+                 embedding="X_umap")
+
+    assert "split_louvain" in clust_adata.obs.columns
+    assert len(set(clust_adata.obs["louvain"])) < len(set(clust_adata.obs["split_louvain"]))
+
+
+def test_recluster_exceptions(clust_adata):
+    """Test recluster failure."""
+
+    # invalid column name
+    with pytest.raises(KeyError):
+        tl.recluster(adata=clust_adata,
+                     column="INVALID",
+                     clusters="B cells",
+                     task="join",
+                     method="leiden",
+                     resolution=1,
+                     key_added=None,
+                     plot=True,
+                     embedding="X_umap")
+
+    # invalid column name
+    with pytest.raises(ValueError):
+        tl.recluster(adata=clust_adata,
+                     column="louvain",
+                     clusters="B_cells",
+                     task="join",
+                     method="leiden",
+                     resolution=1,
+                     key_added=None,
+                     plot=True,
+                     embedding="X_umap")
 
 
 def test_gini():
