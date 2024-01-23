@@ -1,3 +1,5 @@
+"""Test io functions."""
+
 import sctoolbox.utils as utils
 import os
 
