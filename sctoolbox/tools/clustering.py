@@ -50,9 +50,6 @@ def recluster(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
-        1. If clustering method is not valid.
-        2. If task is not valid.
     KeyError:
         If the given embeding is not in the data.
     """
@@ -62,7 +59,7 @@ def recluster(adata: sc.AnnData,
     # --- Get ready --- #
     # check if column is in adata.obs
     if column not in adata.obs.columns:
-        raise ValueError(f"Column {column} not found in adata.obs")
+        raise KeyError(f"Column {column} not found in adata.obs")
 
     # Decide key_added
     if key_added is None:
@@ -77,9 +74,6 @@ def recluster(adata: sc.AnnData,
         cl_function = sc.tl.leiden
     elif method == "louvain":
         cl_function = sc.tl.louvain
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
     # TODO: Check if clusters are found in column
 
