@@ -3,6 +3,8 @@
 - Add pseudotime & velocity analysis notebooks (#164)
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
+- Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
+- Implemented _add_path() to automatically add python path to environment
 
 
 0.3 (30-11-2023)
