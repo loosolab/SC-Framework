@@ -1,5 +1,6 @@
 0.4 (in progress)
 -------------------
+- Add pseudotime & velocity analysis notebooks (#164)
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
 
