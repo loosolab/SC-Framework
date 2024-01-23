@@ -90,7 +90,7 @@ def test_convert_gtf_to_bed(gtf, out):
 @pytest.mark.parametrize("regions_file", ['bed', 'gtf'])
 @pytest.mark.parametrize("bam_file,fragments_file", [('bam', None), (None, 'fragments')])
 def test_fc_fragments_in_regions(adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
-
+    """Test fc_fragments_in_regions function for run completion."""
     if regions_file == 'bed':
         regions_file = bed
     elif regions_file == 'gtf':

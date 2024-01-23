@@ -127,6 +127,5 @@ def rm_tmp(temp_dir: Optional[str] = None,
             except Exception as e:
                 warnings.warn(f"Could not remove directory {temp_dir}. Exception was: {e}")
 
-
     except OSError as error:
         print(error)

@@ -8,16 +8,14 @@ reads that overlap with regions specified in any BED file. The BED file must hav
 as first columns.
 """
 
-from collections import Counter
 import os
 import pkg_resources
 import pandas as pd
 from pathlib import Path
-import multiprocessing as mp
 import scanpy as sc
 
 from beartype import beartype
-from beartype.typing import Optional, Tuple, Literal, Any
+from beartype.typing import Optional, Tuple, Literal
 
 import deprecation
 import sctoolbox
@@ -130,8 +128,6 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
         gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
     nproc : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    sort_bam : bool, default False
-        Set to True if the provided BAM file is not sorted.
 
     Raises
     ------
@@ -148,8 +144,14 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
         promoters_gtf = gtf_file
 
     # call function
-    fc_fragments_in_regions(adata, regions_file=promoters_gtf, bam_file=bam_file, fragments_file=fragments_file,
-                          cb_col=cb_col, cb_tag=cb_tag, regions_name='promoters', nproc=nproc)
+    fc_fragments_in_regions(adata,
+                            regions_file=promoters_gtf,
+                            bam_file=bam_file,
+                            fragments_file=fragments_file,
+                            cb_col=cb_col,
+                            cb_tag=cb_tag,
+                            regions_name='promoters',
+                            nproc=nproc)
 
 
 @deco.log_anndata
@@ -192,11 +194,6 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
     temp_dir : Optional[str], default None
         Path to temporary directory.
-
-    Returns
-    -------
-    adata : sc.AnnData
-        The anndata object with new columns in adata.obs.
 
     Raises
     ------
@@ -277,23 +274,23 @@ def fc_fragments_in_regions(adata: sc.AnnData,
                                names=['chr', 'start', 'stop', 'barcode', 'count'])
 
     # count fragments per cell
-    counts_ov = pd.DataFrame(count_fragments_per_cell(overlap_df, barcode_col='barcode', frag_count='count')) # count fragments per cell in overlap
-    counts_all = pd.DataFrame(count_fragments_per_cell(fragments_df, barcode_col='barcode', frag_count='count')) # count fragments per cell in all
+    counts_ov = pd.DataFrame(count_fragments_per_cell(overlap_df, barcode_col='barcode', frag_count='count'))  # count fragments per cell in overlap
+    counts_all = pd.DataFrame(count_fragments_per_cell(fragments_df, barcode_col='barcode', frag_count='count'))  # count fragments per cell in all
 
     # merge counts
-    merged_df = counts_ov.join(counts_all, how='outer', lsuffix='_ov', rsuffix='_all') # merge outer to keep all cells
+    merged_df = counts_ov.join(counts_all, how='outer', lsuffix='_ov', rsuffix='_all')  # merge outer to keep all cells
 
     # calculate fold change
     logger.info('Calculating fold change...')
-    column_name = f'fold_change_{regions_name}_fragments' # name of the new column
-    merged_df[column_name] = merged_df['count_ov'] / merged_df['count_all'] # calculate fold change (Maybe better to use log2 fold change?)
+    column_name = f'fold_change_{regions_name}_fragments'  # name of the new column
+    merged_df[column_name] = merged_df['count_ov'] / merged_df['count_all']  # calculate fold change (Maybe better to use log2 fold change?)
 
     # fill NaN with 0 as NaN means no fragments in that cell
     merged_df = merged_df.fillna(0)
 
     # add to adata.obs
     logger.info('Adding results to adata object...')
-    adata.obs = adata.obs.join(merged_df[column_name], how='left') # merge left to keep only cells in adata.obs
+    adata.obs = adata.obs.join(merged_df[column_name], how='left')  # merge left to keep only cells in adata.obs
 
     # clean up temp files
     logger.info("cleaning up...")
@@ -302,9 +299,10 @@ def fc_fragments_in_regions(adata: sc.AnnData,
                  rm_dir=temp_was_none)
 
 
-def count_fragments_per_cell(df: pd.DataFrame, barcode_col: str = 'barcode', frag_count: str = 'count'):
+def count_fragments_per_cell(df: pd.DataFrame, barcode_col: str = 'barcode', frag_count: str = 'count') -> pd.DataFrame:
     """
-    This function counts the number of fragments per cell.
+    Get counts per cell from a dataframe containing fragments.
+    The dataframe must have a column with cell barcodes and a column with fragment counts.
 
     Parameters
     ----------

@@ -4,6 +4,7 @@
 - Fix typos (#173 & #174)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
+- Add temp_dir to calc_overlap_fc.py (#167) and revised the functions
 
 
 0.3 (30-11-2023)
