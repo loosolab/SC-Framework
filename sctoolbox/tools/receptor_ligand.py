@@ -5,8 +5,6 @@ import scipy
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pathlib import Path
-import os
 import igraph as ig
 from itertools import combinations_with_replacement
 from matplotlib import cm
