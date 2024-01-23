@@ -302,6 +302,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
 def count_fragments_per_cell(df: pd.DataFrame, barcode_col: str = 'barcode', frag_count: str = 'count') -> pd.DataFrame:
     """
     Get counts per cell from a dataframe containing fragments.
+
     The dataframe must have a column with cell barcodes and a column with fragment counts.
 
     Parameters

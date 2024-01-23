@@ -80,7 +80,7 @@ def test_convert_gtf_to_bed(gtf, out):
     else:
         expected = name
 
-    assert sorted_bed == expected and os.path.isfile(sorted_bed)#
+    assert sorted_bed == expected and os.path.isfile(sorted_bed)
 
     # clean up
     for file in temp:
