@@ -1,5 +1,6 @@
 0.4 (in progress)
 -------------------
+- Fix get_rank_genes_tables for run if no marker gene is found for group (#179)
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
