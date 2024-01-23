@@ -50,8 +50,7 @@ def test_get_index_type(snapatac_adata):
 
 
 def test_add_path():
-    """Test _add_path function."""
-    # test if the path is added correctly
+    """Test if _add_path adds the path correctly."""
     python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
 
     assert python_exec_dir == ch._add_path()
