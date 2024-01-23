@@ -114,11 +114,13 @@ def rm_tmp(temp_dir: Optional[str] = None,
             else:
                 logger.info('tempfiles is None, not deleting any files')
 
-        for f in temp_files:
-            try:
-                os.remove(f)
-            except Exception as e:
-                warnings.warn(f"Could not remove file {f}. Exception was: {e}")
+        if temp_files is not None:
+            logger.info('removing tempfiles')
+            for f in temp_files:
+                try:
+                    os.remove(f)
+                except Exception as e:
+                    warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
         if rm_dir:
             logger.info('removing temp_dir')
