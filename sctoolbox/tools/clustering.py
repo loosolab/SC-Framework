@@ -52,6 +52,8 @@ def recluster(adata: sc.AnnData,
     ------
     KeyError:
         If the given embeding is not in the data.
+    ValueError:
+        If a given cluster is not found in the adata.
     """
 
     adata_copy = adata.copy()
@@ -75,19 +77,17 @@ def recluster(adata: sc.AnnData,
     elif method == "louvain":
         cl_function = sc.tl.louvain
 
-    # TODO: Check if clusters are found in column
+    # Check if clusters are found in column
+    if not set(clusters).issubset(adata_copy.obs[column]):
+        invalid_clusters = set(clusters) - set(adata_copy.obs[column])
+        raise ValueError(f"Cluster(s) not found in adata.obs['{column}']: {invalid_clusters}")
 
     # --- Start reclustering --- #
     if task == "join":
         translate = {cluster: clusters[0] for cluster in clusters}
         adata.obs[key_added] = adata.obs[column].replace(translate)
-
     elif task == "split":
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
-
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError(f"Task '{task}' is not valid. Task must be one of: 'join', 'split'")
 
     adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
 
