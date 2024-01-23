@@ -17,9 +17,11 @@ import multiprocessing as mp
 import scanpy as sc
 
 from beartype import beartype
-from beartype.typing import Optional, Tuple, Union, Literal, Any
+from beartype.typing import Optional, Tuple, Literal, Any
 
-import sctoolbox.utils.bioutils as utils
+import deprecation
+import sctoolbox
+import sctoolbox.utils as utils
 from sctoolbox.tools.bam import create_fragment_file
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -44,8 +46,6 @@ def _convert_gtf_to_bed(gtf: str,
         Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.
     temp_files : list[str], default []
         List of temporary files.
-    temp_dir : str, default '.'
-        Path to temporary directory.
 
     Returns
     -------
@@ -84,6 +84,9 @@ def _convert_gtf_to_bed(gtf: str,
     return out_sorted, temp_files
 
 
+@deprecation.deprecated(deprecated_in="0.4b", removed_in="0.5",
+                        current_version=sctoolbox.__version__,
+                        details="Use the overlap_fragments_in_regions function instead.")
 @deco.log_anndata
 @beartype
 def pct_fragments_in_promoters(adata: sc.AnnData,
@@ -97,8 +100,7 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
                                                          'drosophila_melanogaster', 'gallus_gallus',
                                                          'homo_sapiens', 'mus_musculus', 'oryzias_latipes',
                                                          'rattus_norvegicus', 'sus_scrofa', 'xenopus_tropicalis']] = None,
-                               nproc: int = 1,
-                               sort_bam: bool = False) -> None:
+                               nproc: int = 1) -> None:
     """
     Calculate the percentage of fragments in promoters.
 
@@ -146,24 +148,21 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
         promoters_gtf = gtf_file
 
     # call function
-    pct_fragments_overlap(adata, regions_file=promoters_gtf, bam_file=bam_file, fragments_file=fragments_file,
-                          cb_col=cb_col, cb_tag=cb_tag, regions_name='promoters', nproc=nproc, sort_bam=sort_bam)
+    fc_fragments_in_regions(adata, regions_file=promoters_gtf, bam_file=bam_file, fragments_file=fragments_file,
+                          cb_col=cb_col, cb_tag=cb_tag, regions_name='promoters', nproc=nproc)
 
 
 @deco.log_anndata
 @beartype
-def pct_fragments_overlap(adata: sc.AnnData,
-                          regions_file: str,
-                          bam_file: Optional[str] = None,
-                          fragments_file: Optional[str] = None,
-                          cb_col: Optional[str] = None,
-                          cb_tag: str = 'CB',
-                          regions_name: str = 'list',
-                          nproc: int = 1,
-                          sort_bam: bool = False,
-                          sort_regions: bool = False,
-                          keep_fragments: bool = False,
-                          temp_dir: Optional[str] = None) -> None:
+def fc_fragments_in_regions(adata: sc.AnnData,
+                            regions_file: str,
+                            bam_file: Optional[str] = None,
+                            fragments_file: Optional[str] = None,
+                            cb_col: Optional[str] = None,
+                            cb_tag: str = 'CB',
+                            regions_name: str = 'list',
+                            nproc: int = 4,
+                            temp_dir: Optional[str] = None) -> None:
     """
     Calculate the percentage of fragments.
 
@@ -191,24 +190,22 @@ def pct_fragments_overlap(adata: sc.AnnData,
         to be added to the anndata object (e.g. pct_fragments_in_{regions_name}).
     nproc : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
-    sort_bam : bool, default False
-        Set to True if the provided BAM file is not sorted.
-    sort_regions : bool, default False
-        If True sort bed file on regions.
-    keep_fragments : bool, default False
-        If True keep fragment files.
     temp_dir : Optional[str], default None
         Path to temporary directory.
 
     Returns
     -------
-    None
+    adata : sc.AnnData
+        The anndata object with new columns in adata.obs.
 
     Raises
     ------
     ValueError
         If bam_file and fragment file is not provided.
     """
+    if temp_dir:
+        temp_was_none = False
+        utils.create_dir(temp_dir)
 
     if not bam_file and not fragments_file:
         raise ValueError("Either BAM file or fragments file has to be provided!")
@@ -216,16 +213,15 @@ def pct_fragments_overlap(adata: sc.AnnData,
     # check for column in adata.obs where barcodes are
     if cb_col:
         try:
-            barcodes = adata.obs[cb_col].to_list()
+            adata.obs.set_index(cb_col)
         except KeyError:
             logger.error(f"{cb_col} is not in adata.obs!")
             return
-    else:
-        barcodes = adata.obs.index.to_list()
 
     # check if temp_dir is given
     if not temp_dir:
         # if not, use current working directory
+        temp_was_none = True
         temp_dir = os.getcwd()
 
     temp_files = []
@@ -268,165 +264,63 @@ def pct_fragments_overlap(adata: sc.AnnData,
     utils._overlap_two_bedfiles(fragments_file, bed_file, overlap=overlap_file, wa=True, wb=True, sorted=True)
     temp_files.append(overlap_file)
 
+    # read overlap bedfile as dataframe
     overlap_df = pd.read_csv(overlap_file,
                              delimiter='\t',
                              header=None,
                              names=['chr_f', 'start_f', 'stop_f', 'barcode', 'count', 'chr_g', 'start_g', 'stop_g'])
 
+    # read fragments bedfile as dataframe
     fragments_df = pd.read_csv(fragments_file,
                                delimiter='\t',
                                header=None,
                                names=['chr', 'start', 'stop', 'barcode', 'count'])
 
-    counts_ov = pd.DataFrame(count_fragments_per_cell(overlap_df, barcode_col='barcode', frag_count='count'))
-    counts_all = pd.DataFrame(count_fragments_per_cell(fragments_df, barcode_col='barcode', frag_count='count'))
+    # count fragments per cell
+    counts_ov = pd.DataFrame(count_fragments_per_cell(overlap_df, barcode_col='barcode', frag_count='count')) # count fragments per cell in overlap
+    counts_all = pd.DataFrame(count_fragments_per_cell(fragments_df, barcode_col='barcode', frag_count='count')) # count fragments per cell in all
 
-    merged_df = counts_ov.join(counts_all, how='right', lsuffix='_ov', rsuffix='_all')
+    # merge counts
+    merged_df = counts_ov.join(counts_all, how='outer', lsuffix='_ov', rsuffix='_all') # merge outer to keep all cells
 
-    merged_df['fold_change'] = merged_df['count_ov'] / merged_df['count_all']
+    # calculate fold change
+    logger.info('Calculating fold change...')
+    column_name = f'fold_change_{regions_name}_fragments' # name of the new column
+    merged_df[column_name] = merged_df['count_ov'] / merged_df['count_all'] # calculate fold change (Maybe better to use log2 fold change?)
 
+    # fill NaN with 0 as NaN means no fragments in that cell
     merged_df = merged_df.fillna(0)
 
-    adata.obs = adata.obs.join(merged_df['fold_change'], how='left')
+    # add to adata.obs
+    logger.info('Adding results to adata object...')
+    adata.obs = adata.obs.join(merged_df[column_name], how='left') # merge left to keep only cells in adata.obs
 
-    #
-    #mp_calc_pct = MPOverlapPct()
-    #mp_calc_pct.calc_pct(overlap_file, fragments_file, barcodes, adata, regions_name=regions_name, n_threads=8)
-
-    #
-    #logger.info('Adding results to adata object...')
-    #logger.info("cleaning up...")
-    #for f in temp_files:
-    #    os.remove(f)
-    #logger.info('Done')
+    # clean up temp files
+    logger.info("cleaning up...")
+    utils.rm_tmp(temp_dir=temp_dir,
+                 temp_files=temp_files,
+                 rm_dir=temp_was_none)
 
 
-def count_fragments_per_cell(df, barcode_col='barcode', frag_count='count'):
+def count_fragments_per_cell(df: pd.DataFrame, barcode_col: str = 'barcode', frag_count: str = 'count'):
+    """
+    This function counts the number of fragments per cell.
 
-    fragments_per_cell = df.groupby(df.columns[barcode_col])[df.columns[frag_count]].sum()
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe of a bedfile containing the fragments.
+    barcode_col : str, default 'barcode'
+        The column name containing the cell barcodes.
+    frag_count : str, default 'count'
+        The column name containing the fragment counts.
+
+    Returns
+    -------
+    pd.DataFrame
+        The dataframe containing the number of fragments per cell.
+    """
+
+    fragments_per_cell = df.groupby(barcode_col)[frag_count].sum()
 
     return fragments_per_cell
-
-
-@beartype
-class MPOverlapPct():
-    """
-    Class to calculate percentage of fragments overlapping with regions of interest.
-
-    Notes
-    -----
-    This class will be removed in the future and replaced by a function due to over engineering.
-    Therefore this will be documented sparsely.
-    """
-
-    def __init__(self):
-        """Init class variables."""
-
-        self.merged_dict = None
-
-    def calc_pct(self,
-                 overlap_file: str,
-                 fragments_file: str,
-                 barcodes: list[str],
-                 adata: sc.AnnData,
-                 regions_name: str = 'list',
-                 n_threads: int = 8) -> sc.AnnData:
-        """Calculate percentage of fragments overlapping with regions of interest."""
-
-        # check if there was an overlap
-        if not overlap_file:
-            logger.info("There was no overlap!")
-            return
-
-        # get unique barcodes from adata.obs
-        barcodes = set(barcodes)
-
-        # make columns names that will be added to adata.obs
-        col_total_fragments = 'n_total_fragments'
-        # if no name is given or None, set default name
-        if not regions_name:
-            col_n_fragments_in_list = 'n_fragments_in_list'
-            col_pct_fragments = 'pct_fragments_in_list'
-        else:
-            col_n_fragments_in_list = 'n_fragments_in_' + regions_name
-            col_pct_fragments = 'pct_fragments_in_' + regions_name
-
-        # calculating percentage
-        logger.info('Calculating percentage...')
-        # read overlap file as dataframe
-        ov_fragments = pd.read_csv(overlap_file, sep="\t", header=None, chunksize=1000000)
-        merged_ov_dict = self.mp_counter(ov_fragments, barcodes=barcodes, column=col_n_fragments_in_list, n_threads=n_threads)
-        fragments = pd.read_csv(fragments_file, sep="\t", header=None, chunksize=1000000)
-        merged_fl_dict = self.mp_counter(fragments, barcodes=barcodes, column=col_total_fragments, n_threads=n_threads)
-
-        # add to adata.obs
-        adata.obs[col_n_fragments_in_list] = adata.obs.index.map(merged_ov_dict).fillna(0)
-        adata.obs[col_total_fragments] = adata.obs.index.map(merged_fl_dict).fillna(0)
-
-        # calc pct
-        adata.obs[col_pct_fragments] = adata.obs[col_n_fragments_in_list] / adata.obs[col_total_fragments]
-
-        return adata
-
-    def get_barcodes_sum(self,
-                         df: pd.DataFrame,
-                         barcodes: list[str],
-                         col_name: str) -> dict:
-        """Get the sum of reads counts in each cell barcode."""
-
-        # drop columns we dont need
-        df.drop(df.iloc[:, 5:], axis=1, inplace=True)
-        df.columns = ['chr', 'start', 'end', 'barcode', col_name]
-        # remove barcodes not found in adata.obs
-        df = df.loc[df['barcode'].isin(barcodes)]
-        # drop chr start end columns
-        df.drop(['chr', 'start', 'end'], axis=1, inplace=True)
-        # get the sum of reads counts in each cell barcode
-        df = df.groupby('barcode').sum()
-
-        count_dict = df[col_name].to_dict()
-
-        return count_dict
-
-    def log_result(self, result: Any) -> None:
-        """Log results from mp_counter."""
-
-        if self.merged_dict:
-            self.merged_dict = dict(Counter(self.merged_dict) + Counter(result))
-            # print('merging')
-        else:
-            self.merged_dict = result
-
-    def mp_counter(self, fragments: list[str], barcodes: list[str], column: str, n_threads: int = 8):
-        """Count reads for each cell barcode in parallel."""
-
-        pool = mp.Pool(n_threads, maxtasksperchild=48)
-        jobs = []
-        # split fragments into chunks
-        for chunk in fragments:
-            # apply async job wit callback function
-            job = pool.apply_async(self.get_barcodes_sum, args=(chunk, barcodes, column), callback=self.log_result)
-            jobs.append(job)
-        # monitor progress
-        #utils.monitor_jobs(jobs, description="Progress")
-        # close pool
-        pool.close()
-        # wait for all jobs to finish
-        pool.join()
-        # reset settings
-        returns = self.merged_dict
-        self.merged_dict = None
-
-        return returns
-
-if __name__ == '__main__':
-
-    promoters_gtf = "/mnt/flatfiles/organisms/new_organism/mus_musculus/104/mus_musculus.104.promoters2000.gtf"
-    fragments_file = '/mnt/workspace2/jdetlef/experimental/mm10_atac_fragemnts.bed'
-    h5ad_file = '/mnt/workspace2/jdetlef/experimental/mm10_atac.h5ad'
-
-    adata = sc.read_h5ad(h5ad_file)
-
-    pct_fragments_overlap(adata, regions_file=promoters_gtf, fragments_file=fragments_file, temp_dir='/mnt/workspace2/jdetlef/experimental/temp')
-
-    print('Done')

@@ -1,6 +1,6 @@
 """Test functions related to files containing genomic ranges."""
 
-from sctoolbox import calc_overlap_pct as overlap
+import sctoolbox.tools as tools
 import os
 import pytest
 import anndata as ad
@@ -8,16 +8,16 @@ import pkg_resources
 
 
 @pytest.fixture
-def test_bam():
+def bam():
     """Load bam file."""
-    bam_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'homo_sapiens_liver.bam')
-    # bam_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-    # bam_path = os.path.join(bam_dir, 'mm10_atac.bam')
+    bam_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
+    bam_path = os.path.join(bam_dir, 'mm10_atac.bam')
+
     return bam_path
 
 
 @pytest.fixture
-def test_gtf():
+def gtf():
     """Load gtf file."""
 
     # Location of gene lists
@@ -28,35 +28,35 @@ def test_gtf():
 
 
 @pytest.fixture
-def test_gtf_with_header():
+def gtf_with_header():
     """Load a gtf like file with a header."""
     gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf')
+
     return gtf_path
 
 
 @pytest.fixture
-def test_fragments():
+def fragments():
     """Load a bed file containing fragments."""
-    fragments_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'homo_sapiens_liver_fragments_sorted_test.bed')
-    # fragments_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-    # fragments_path = os.path.join(fragments_dir, 'homo_sapiens_liver_fragments_sorted.bed')
+    fragments_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
+
     return fragments_path
 
 
 @pytest.fixture
-def test_bed():
+def bed():
     """Load a bed with blacklisted regions."""
     bed_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'hg38.blacklist.v2_sorted.bed')
-    # bed_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-    # bed_path = os.path.join(bed_dir, 'mm10_promoters.gtf_sorted.bed')
+
     return bed_path
 
 
 @pytest.fixture
-def test_adata():
+def adata():
     """Load adata."""
     adata_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-    adata = ad.read_h5ad(adata_dir + '/homo_sapiens_liver.h5ad')
+    adata = ad.read_h5ad(adata_dir + '/mm10_atac.h5ad')
+
     return adata
 
 
@@ -67,63 +67,45 @@ def tmp_dir():
 
 
 @pytest.mark.parametrize("out", [None, 'tests/data/tmp'])
-def test_convert_gtf_to_bed(test_gtf, out):
+def test_convert_gtf_to_bed(gtf, out):
     """Test _convert_gtf_to_bed success."""
     if out:
         tmp_dir()
 
-    sorted_bed, temp = overlap._convert_gtf_to_bed(test_gtf, out=out)
-    name = test_gtf + "_sorted.bed"
+    sorted_bed, temp = tools._convert_gtf_to_bed(gtf, out=out)
+    name = gtf + "_sorted.bed"
 
     if out:
         expected = os.path.join(out, os.path.basename(name))
     else:
         expected = name
 
-    assert sorted_bed == expected and os.path.isfile(sorted_bed)
+    assert sorted_bed == expected and os.path.isfile(sorted_bed)#
+
+    # clean up
+    for file in temp:
+        os.remove(file)
 
 
-# These tests do not work due to _overlap_two_beds returning "There was no overlap!"
-# @pytest.mark.parametrize("out", [None, 'tests/data/tmp'])
-# def test_overlap_two_beds(test_fragments, test_bed, out):
-#     """Test _overlap_two_beds success."""
-#     if out:
-#         tmp_dir()
+@pytest.mark.parametrize("regions_file", ['bed', 'gtf'])
+@pytest.mark.parametrize("bam_file,fragments_file", [('bam', None), (None, 'fragments')])
+def test_fc_fragments_in_regions(adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
 
-#     overlap_bed = overlap._overlap_two_beds(test_fragments, test_bed, out=out)
+    if regions_file == 'bed':
+        regions_file = bed
+    elif regions_file == 'gtf':
+        regions_file = gtf
 
-#     # get names of the bed files
-#     name = os.path.splitext(test_fragments)[0] + "_" + os.path.splitext(os.path.basename(test_bed))[0] + "_overlap.bed"
-#     if out:
-#         expected = os.path.join(out, os.path.basename(name))
-#     else:
-#         expected = name
+    if bam_file == 'bam':
+        bam_file = bam
+    if fragments_file == 'fragments':
+        fragments_file = fragments
 
-#     assert overlap_bed == expected and os.path.isfile(overlap_bed)
+    tools.fc_fragments_in_regions(adata,
+                                  regions_file=regions_file,
+                                  bam_file=bam_file,
+                                  fragments_file=fragments_file,
+                                  regions_name='promoters',
+                                  temp_dir='tests/data/tmp')
 
-
-# @pytest.mark.parametrize("species", ['homo_sapiens', 'mus_musculus'])
-# def test_pct_fragments_in_promoters(test_adata, test_bam, species):
-#     """Test pct_fragments_in_promoters success."""
-
-#     overlap.pct_fragments_in_promoters(test_adata, bam_file=test_bam, species=species, sort_bam=True)
-
-#     col_total_fragments = 'n_total_fragments'
-#     col_n_fragments_in_list = 'n_fragments_in_promoters'
-#     col_pct_fragments = 'pct_fragments_in_promoters'
-
-#     assert {col_total_fragments, col_n_fragments_in_list, col_pct_fragments}.issubset(test_adata.obs.columns)
-
-
-# regions_1 = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'hg38.blacklist.v2.bed')
-# @pytest.mark.parametrize("regions, name", [(regions_1, 'blacklist')])
-# def test_pct_fragments_overlap(test_adata, regions, test_bam, name):
-#     """Test pct_fragments_overlap success."""
-#     overlap.pct_fragments_overlap(adata=test_adata, regions_file=regions, bam_file=test_bam,
-#                                   regions_name=name, sort_bam=True, sort_regions=True)
-
-#     col_total_fragments = 'n_total_fragments'
-#     col_n_fragments_in_list = 'n_fragments_in_' + name
-#     col_pct_fragments = 'pct_fragments_in_' + name
-
-#     assert {col_total_fragments, col_n_fragments_in_list, col_pct_fragments}.issubset(test_adata.obs.columns)
+    assert 'fold_change_promoters_fragments' in adata.obs.columns
