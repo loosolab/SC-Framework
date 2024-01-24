@@ -60,46 +60,46 @@ def test_write_TSS(gtf):
         os.remove(tempfile)
 
 
-# def test_overlap_and_aggregate(gtf, fragments):
-#     """Test overlap_and_aggregate function."""
-#     # Build temporary TSS file path
-#     temp_dir = tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-#     tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes_tss.bed')
-#     overlap = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'overlap.bed')
-#
-#     tempfiles = [tss_file, overlap]
-#     # Write TSS file
-#     tss_list, temp = tools.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
-#     tempfiles.extend(temp)
-#
-#     # overlap_and_aggregate
-#     agg, temp = tools.overlap_and_aggregate(fragments, tss_file, overlap, tss_list)
-#     tempfiles.extend(temp)
-#
-#     # Check if agg is a dictionary
-#     assert type(agg) is dict
-#     # check if overlap file exists
-#     assert os.path.exists(overlap)
-#     # Check if file is not empty
-#     # assert os.path.getsize(overlap) > 0
-#     # Check if file has 3 columns
-#     assert np.loadtxt(overlap, dtype=str).shape[1] == 5
-#
-#     # Remove temporary files
-#     for tempfile in tempfiles:
-#         os.remove(tempfile)
-#
-#
-# def test_add_tsse_score(adata, fragments, gtf):
-#     """Test add_tsse_score function."""
-#     adata = tools.add_tsse_score(adata,
-#                                  fragments,
-#                                  gtf,
-#                                  negativ_shift=2000,
-#                                  positiv_shift=2000,
-#                                  edge_size_total=100,
-#                                  edge_size_per_base=50,
-#                                  min_bias=0.01,
-#                                  keep_tmp=False,
-#                                  temp_dir="")
-#     assert 'tsse_score' in adata.obs.columns
+def test_overlap_and_aggregate(gtf, fragments):
+    """Test overlap_and_aggregate function."""
+    # Build temporary TSS file path
+    temp_dir = tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac')
+    tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes_tss.bed')
+    overlap = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'overlap.bed')
+
+    tempfiles = [tss_file, overlap]
+    # Write TSS file
+    tss_list, temp = tools.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
+    tempfiles.extend(temp)
+
+    # overlap_and_aggregate
+    agg, temp = tools.overlap_and_aggregate(fragments, tss_file, overlap, tss_list)
+    tempfiles.extend(temp)
+
+    # Check if agg is a dictionary
+    assert type(agg) is dict
+    # check if overlap file exists
+    assert os.path.exists(overlap)
+    # Check if file is not empty
+    # assert os.path.getsize(overlap) > 0
+    # Check if file has 3 columns
+    assert np.loadtxt(overlap, dtype=str).shape[1] == 5
+
+    # Remove temporary files
+    for tempfile in tempfiles:
+        os.remove(tempfile)
+
+
+def test_add_tsse_score(adata, fragments, gtf):
+    """Test add_tsse_score function."""
+    adata = tools.add_tsse_score(adata,
+                                 fragments,
+                                 gtf,
+                                 negativ_shift=2000,
+                                 positiv_shift=2000,
+                                 edge_size_total=100,
+                                 edge_size_per_base=50,
+                                 min_bias=0.01,
+                                 keep_tmp=False,
+                                 temp_dir="")
+    assert 'tsse_score' in adata.obs.columns
