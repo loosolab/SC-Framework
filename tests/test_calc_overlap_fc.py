@@ -1,6 +1,7 @@
 """Test functions related to files containing genomic ranges."""
 
 import sctoolbox.tools as tools
+import sctoolbox.utils as utils
 import os
 import pytest
 import anndata as ad
@@ -78,13 +79,12 @@ def test_convert_gtf_to_bed(gtf, out):
     if out:
         expected = os.path.join(out, os.path.basename(name))
     else:
-        expected = name
+        expected = os.path.join(os.getcwd(), os.path.basename(name))
 
     assert sorted_bed == expected and os.path.isfile(sorted_bed)
 
     # clean up
-    for file in temp:
-        os.remove(file)
+    utils.rm_tmp(temp_files=temp)
 
 
 @pytest.mark.parametrize("regions_file", ['bed', 'gtf'])

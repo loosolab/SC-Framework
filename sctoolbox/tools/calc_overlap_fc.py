@@ -51,14 +51,13 @@ def _convert_gtf_to_bed(gtf: str,
         Path to fragments and temp files.
     """
 
+    name = os.path.basename(gtf)
+
     if not out:
-        path = os.path.splitext(gtf)
-        out_unsorted = f"{path[0]}_tmp.bed"
-        out_sorted = f"{path[0]}.gtf_sorted.bed"
-    else:
-        name = os.path.basename(gtf)
-        out_unsorted = os.path.join(out, f'{name}_tmp.bed')
-        out_sorted = os.path.join(out, f'{name}_sorted.bed')
+        out = os.getcwd()
+
+    out_unsorted = os.path.join(out, f'{name}_tmp.bed')
+    out_sorted = os.path.join(out, f'{name}_sorted.bed')
 
     # add temp file to list
     temp_files.append(out_sorted)
