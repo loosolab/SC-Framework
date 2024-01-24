@@ -55,3 +55,9 @@ def test_add_path():
 
     assert python_exec_dir == ch._add_path()
     assert python_exec_dir in os.environ['PATH']
+
+    ori_PATH = os.environ['PATH']  # save the original PATH
+    os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # mock notebook like path
+    assert python_exec_dir == ch._add_path()
+    os.environ['PATH'] = ori_PATH  # restore the original PATH
+    assert python_exec_dir in os.environ['PATH']
