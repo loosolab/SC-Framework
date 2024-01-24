@@ -368,10 +368,9 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
 
     Example
     -------
-    .. plot::
-        :context: close-figs
+    .. exec_code::
 
-        in_range(value=0.5, limits = (0.5,1), include_limits = True)
+        in_range(value=0.5, limits=(0.5, 1), include_limits=True)
     """
 
     if include_limits:
