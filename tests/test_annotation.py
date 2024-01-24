@@ -1,10 +1,8 @@
 """Test functions related to annotation."""
 
 import argparse
-
 import pytest
-import sctoolbox.annotation as anno
-import sctoolbox.utilities as utils
+import sctoolbox.tools as anno
 import scanpy as sc
 import os
 
