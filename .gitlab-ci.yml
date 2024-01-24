@@ -202,7 +202,7 @@ notebooks:
       - rna_analysis/logs/*.txt
   script:
     - pip install papermill
-    - pip install urllib3
+    - pip install --ignore-installed urllib3
     - pip install .[all]   # reinstall to make sure the current branch version is used
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
