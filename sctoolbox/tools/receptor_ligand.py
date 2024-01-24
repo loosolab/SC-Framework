@@ -335,7 +335,7 @@ def interaction_violin_plot(adata: sc.AnnData,
 
     # save plot
     if save:
-        fig.savefig("{settings.figure_dir}/{save}")
+        fig.savefig(f"{settings.figure_dir}/{save}")
 
     return axs
 
@@ -474,7 +474,7 @@ def hairball(adata: sc.AnnData,
     plt.subplots_adjust(right=0.9)
 
     if save:
-        fig.savefig("{settings.figure_dir}/{save}")
+        fig.savefig(f"{settings.figure_dir}/{save}")
 
     return axes
 
@@ -624,7 +624,7 @@ def interaction_progress(datalist: list[sc.AnnData],
     plt.tight_layout()
 
     if save:
-        plt.savefig("{settings.figure_dir}/{save}")
+        plt.savefig(f"{settings.figure_dir}/{save}")
 
     return plot
 
