@@ -1,12 +1,4 @@
-"""
-Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions.
-
-Module to calculate percentage of reads from a BAM or fragments file that overlap promoter regions specified
-in a GTF file using 'pct_reads_in_promoters' function.
-pct_reads_overlap() calculates percentage of
-reads that overlap with regions specified in any BED file. The BED file must have three columns ['chr','start','end']
-as first columns.
-"""
+"""Module to calculate fold change of reads or fragments from a BAM or fragments file that overlap specified regions."""
 
 import os
 import pkg_resources
@@ -97,14 +89,14 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
                                                          'drosophila_melanogaster', 'gallus_gallus',
                                                          'homo_sapiens', 'mus_musculus', 'oryzias_latipes',
                                                          'rattus_norvegicus', 'sus_scrofa', 'xenopus_tropicalis']] = None,
-                               nproc: int = 1) -> None:
+                               threads: int = 1) -> None:
     """
-    Calculate the percentage of fragments in promoters.
+    Calculate the fold change of fragments in promoters.
 
-    This function calculates for each cell, the percentage of fragments in a BAM alignment file
+    This function calculates for each cell, the fold change of fragments in a BAM alignment file
     that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
-    as new columns (n_total_fragments, n_fragments_in_promoters and pct_fragments_in_promoters).
-    This is a wrapper function for pct_fragments_overlap.
+    as new column.
+    This is a wrapper function for fc_fragments_in_regions to use promoters.
 
     Parameters
     ----------
@@ -125,7 +117,7 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
         Name of the species, will only be used if gtf_file is None to use internal GTF files.
         Species are {bos_taurus, caenorhabditis_elegans, canis_lupus_familiaris, danio_rerio, drosophila_melanogaster,
         gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
-    nproc : int, default 1
+    threads : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
 
     Raises
@@ -150,7 +142,7 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
                             cb_col=cb_col,
                             cb_tag=cb_tag,
                             regions_name='promoters',
-                            nproc=nproc)
+                            threads=threads)
 
 
 @deco.log_anndata
@@ -162,14 +154,14 @@ def fc_fragments_in_regions(adata: sc.AnnData,
                             cb_col: Optional[str] = None,
                             cb_tag: str = 'CB',
                             regions_name: str = 'list',
-                            nproc: int = 4,
+                            threads: int = 4,
                             temp_dir: Optional[str] = None) -> None:
     """
-    Calculate the percentage of fragments.
+    Calculate the fold change of fragments in a region against the background.
 
-    This function calculates for each cell, the percentage of fragments in a BAM alignment file
-    that overlap with regions specified in a BED or GTF file. The results are added to the anndata object
-    as new columns.
+    This function calculates the fold change of fragments overlapping a region against the background for each cell.
+    The regions are specified in a BED or GTF file and the fragments should be provided by a fragments or Bam file.
+    The results are added to the anndata object as new column.
 
     Parameters
     ----------
@@ -189,7 +181,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     regions_name : str, default 'list'
         The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name
         to be added to the anndata object (e.g. pct_fragments_in_{regions_name}).
-    nproc : int, default 1
+    threads : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
     temp_dir : Optional[str], default None
         Path to temporary directory.
@@ -243,7 +235,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         fragments_file = create_fragment_file(bam=bam_file,
                                               barcode_tag=cb_tag,
                                               outdir=temp_dir,
-                                              nproc=nproc)
+                                              nproc=threads)
         temp_files.append(fragments_file)
 
     # Check if fragments file is sorted
