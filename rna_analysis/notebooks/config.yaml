@@ -32,6 +32,14 @@
   log_file: "../logs/05_log.txt"
   overwrite_log: True
 
+"11":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/11_receptor_ligand/"
+  table_dir: "../tables/11_receptor_ligand/"
+  log_file: "../logs/11_log.txt"
+  overwrite_log: True
+
 "13":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
