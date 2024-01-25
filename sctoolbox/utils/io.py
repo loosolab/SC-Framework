@@ -90,9 +90,8 @@ def rm_tmp(temp_dir: Optional[str] = None,
     """
     Delete given directory.
 
-    First attempts to remove all given `tempfiles` from directory. If `tempfiles` is `None` and `all` is `True` all files are removed.
+    Removes all given `tempfiles` from directory. If `tempfiles` is `None` and `all` is `True` all files are removed.
 
-    TODO deletion or refactoring
 
     Parameters
     ----------
@@ -107,13 +106,10 @@ def rm_tmp(temp_dir: Optional[str] = None,
     """
 
     try:
-        if temp_files is None and temp_dir:
-            if all:
-                temp_files = glob.glob(os.path.join(temp_dir, "*"))
-            else:
-                logger.info('tempfiles is None, not deleting any files')
-
-        if temp_files is not None:
+        if temp_files is None and not all:
+            logger.info('tempfiles is None, not deleting any files')
+        else:
+            temp_files = glob.glob(os.path.join(temp_dir, "*")) if all else temp_files
             logger.info('removing tempfiles')
             for f in temp_files:
                 try:
