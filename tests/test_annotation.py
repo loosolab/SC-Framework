@@ -1,10 +1,8 @@
 """Test functions related to annotation."""
 
 import argparse
-
 import pytest
-import sctoolbox.annotation as anno
-import sctoolbox.utilities as utils
+import sctoolbox.tools as anno
 import scanpy as sc
 import os
 
@@ -101,39 +99,6 @@ def test_annot_HVG(adata_rna, inplace):
         assert "highly_variable" in adata_rna.var.columns
     else:
         assert "highly_variable" in out.var.columns
-
-
-def touch_file(f):
-    """Create file if not existing."""
-    try:
-        open(f, 'x')
-    except FileExistsError:
-        pass
-
-
-def test_rm_tmp():
-    """Test create_dir and rm_tmp success."""
-
-    temp_dir = "tempdir"
-    utils.create_dir(temp_dir)
-    touch_file("tempdir/afile.gtf")
-    touch_file("tempdir/tempfile1.txt")
-    touch_file("tempdir/tempfile2.txt")
-
-    # Remove tempfile in tempdir (but tempdir should still exist)
-    tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
-    utils.rm_tmp(temp_dir, tempfiles)
-
-    dir_exists = os.path.exists(temp_dir)
-    files_removed = sum([os.path.exists(f) for f in tempfiles]) == 0
-
-    assert dir_exists and files_removed
-
-    # Check that tempdir is removed if it is empty
-    utils.rm_tmp(temp_dir)
-    dir_exists = os.path.exists(temp_dir)
-
-    assert dir_exists is False
 
 
 # ------------------------- Tests for gtf formats ------------------------- #
