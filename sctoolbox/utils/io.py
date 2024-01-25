@@ -107,13 +107,10 @@ def rm_tmp(temp_dir: Optional[str] = None,
     """
 
     try:
-        if temp_files is None:
-            if force:
-                temp_files = glob.glob(os.path.join(temp_dir, "*"))
-            else:
-                logger.info('tempfiles is None, not deleting any files')
-
-        if temp_files is not None:
+        if temp_files is None and not force:
+            logger.info('tempfiles is None, not deleting any files')
+        else:
+            temp_files = glob.glob(os.path.join(temp_dir, "*")) if force else temp_files  
             logger.info('removing tempfiles')
             for f in temp_files:
                 try:
