@@ -93,7 +93,6 @@ def rm_tmp(temp_dir: Optional[str] = None,
     First attempts to remove all given `tempfiles` from directory. If `tempfiles` is `None` all files with 'gtf' in the filename (or exstension) are removed.
     After the matching files are deleted the function tries to delete the directory. Possible OSErrors are caught and printed.
 
-    TODO deletion or refactoring
 
     Parameters
     ----------
