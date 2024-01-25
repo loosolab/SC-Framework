@@ -61,12 +61,11 @@ def adata():
     return adata
 
 
-@pytest.mark.parametrize("out", [None, 'tmp_gtf/'])
+@pytest.mark.parametrize("out", [None, 'tmp'])
 def test_convert_gtf_to_bed(tmpdir, gtf, out):
     """Test _convert_gtf_to_bed success."""
     if out:
-        out = tmpdir.mkdir(out)
-        out = str(out)
+        out = str(tmpdir)
 
     sorted_bed, temp = tools._convert_gtf_to_bed(gtf, out=out)
     name = gtf + "_sorted.bed"
@@ -95,13 +94,11 @@ def test_fc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, region
     if fragments_file == 'fragments':
         fragments_file = fragments
 
-    temp = str(tmpdir.mkdir('tmp_test_fc_fragments_in_regions'))
-
     tools.fc_fragments_in_regions(adata,
                                   regions_file=regions_file,
                                   bam_file=bam_file,
                                   fragments_file=fragments_file,
                                   regions_name='promoters',
-                                  temp_dir=temp)
+                                  temp_dir=str(tmpdir))
 
     assert 'fold_change_promoters_fragments' in adata.obs.columns
