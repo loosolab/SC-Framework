@@ -2,14 +2,7 @@
 
 import sctoolbox.utils as utils
 import os
-
-
-def touch_file(f):
-    """Create file if not existing."""
-    try:
-        open(f, 'x')
-    except FileExistsError:
-        pass
+import pathlib
 
 
 def test_rm_tmp():
@@ -17,9 +10,9 @@ def test_rm_tmp():
 
     temp_dir = "tempdir"
     utils.create_dir(temp_dir)
-    touch_file("tempdir/afile.gtf")
-    touch_file("tempdir/tempfile1.txt")
-    touch_file("tempdir/tempfile2.txt")
+    pathlib.Path("tempdir/afile.gtf").touch(exist_ok=True)
+    pathlib.Path("tempdir/tempfile1.txt").touch(exist_ok=True)
+    pathlib.Path("tempdir/tempfile2.txt").touch(exist_ok=True)
 
     # Remove tempfile in tempdir (but tempdir should still exist)
     tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
@@ -31,7 +24,7 @@ def test_rm_tmp():
     assert dir_exists and files_removed
 
     # Check that tempdir is removed if it is empty
-    utils.rm_tmp(temp_dir=temp_dir, rm_dir=True, force=True)
+    utils.rm_tmp(temp_dir=temp_dir, rm_dir=True, all=True)
     dir_exists = os.path.exists(temp_dir)
 
     assert dir_exists is False

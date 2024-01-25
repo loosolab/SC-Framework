@@ -86,12 +86,11 @@ def remove_files(file_list: list[str]) -> None:
 def rm_tmp(temp_dir: Optional[str] = None,
            temp_files: Optional[list[str]] = None,
            rm_dir: bool = False,
-           force: bool = False) -> None:
+           all: bool = False) -> None:
     """
     Delete given directory.
 
-    First attempts to remove all given `tempfiles` from directory. If `tempfiles` is `None` all files with 'gtf' in the filename (or exstension) are removed.
-    After the matching files are deleted the function tries to delete the directory. Possible OSErrors are caught and printed.
+    First attempts to remove all given `tempfiles` from directory. If `tempfiles` is `None` and `all` is `True` all files are removed.
 
     TODO deletion or refactoring
 
@@ -103,13 +102,13 @@ def rm_tmp(temp_dir: Optional[str] = None,
         Paths to files to be deleted before removing the temp directory.
     rm_dir : bool, default False
         If True, the temp directory is removed.
-    force : bool, default False
+    all : bool, default False
         If True, all files in the temp directory are removed.
     """
 
     try:
-        if temp_files is None:
-            if force:
+        if temp_files is None and temp_dir:
+            if all:
                 temp_files = glob.glob(os.path.join(temp_dir, "*"))
             else:
                 logger.info('tempfiles is None, not deleting any files')

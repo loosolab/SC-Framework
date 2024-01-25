@@ -61,17 +61,12 @@ def adata():
     return adata
 
 
-def tmp_dir():
-    """Create a temporary directory."""
-    if not os.path.exists("tests/data/tmp"):
-        os.mkdir("tests/data/tmp")
-
-
-@pytest.mark.parametrize("out", [None, 'tests/data/tmp'])
-def test_convert_gtf_to_bed(gtf, out):
+@pytest.mark.parametrize("out", [None, 'tmp_gtf/'])
+def test_convert_gtf_to_bed(tmpdir, gtf, out):
     """Test _convert_gtf_to_bed success."""
     if out:
-        tmp_dir()
+        out = tmpdir.mkdir(out)
+        out = str(out)
 
     sorted_bed, temp = tools._convert_gtf_to_bed(gtf, out=out)
     name = gtf + "_sorted.bed"
@@ -83,13 +78,12 @@ def test_convert_gtf_to_bed(gtf, out):
 
     assert sorted_bed == expected and os.path.isfile(sorted_bed)
 
-    # clean up
     utils.rm_tmp(temp_files=temp)
 
 
 @pytest.mark.parametrize("regions_file", ['bed', 'gtf'])
 @pytest.mark.parametrize("bam_file,fragments_file", [('bam', None), (None, 'fragments')])
-def test_fc_fragments_in_regions(adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
+def test_fc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
     """Test fc_fragments_in_regions function for run completion."""
     if regions_file == 'bed':
         regions_file = bed
@@ -101,11 +95,13 @@ def test_fc_fragments_in_regions(adata, bed, gtf, bam, fragments, regions_file, 
     if fragments_file == 'fragments':
         fragments_file = fragments
 
+    temp = str(tmpdir.mkdir('tmp_test_fc_fragments_in_regions'))
+
     tools.fc_fragments_in_regions(adata,
                                   regions_file=regions_file,
                                   bam_file=bam_file,
                                   fragments_file=fragments_file,
                                   regions_name='promoters',
-                                  temp_dir='tests/data/tmp')
+                                  temp_dir=temp)
 
     assert 'fold_change_promoters_fragments' in adata.obs.columns
