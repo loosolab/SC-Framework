@@ -5,6 +5,8 @@
 - Update receptor-ligand notebook (#176)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
+- added tests for _add_path() and _overlap_two_bedfiles() (#177)
+- constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
 
 
 0.3 (30-11-2023)
