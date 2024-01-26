@@ -21,6 +21,17 @@ def adata_atac():
     return sc.read_h5ad(adata_f)
 
 
+# TODO add precalculated qc adata to save runtime
+@pytest.fixture(scope="module")
+def adata_atac_qc():
+    """Add qc to anndata."""
+    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata = sc.read_h5ad(adata_f)
+    sc.pp.calculate_qc_metrics(adata, inplace=True)
+
+    return adata
+
+
 @pytest.fixture
 def adata_atac_emptyvar(adata_atac):
     """Create anndata with empty adata.var."""
@@ -135,6 +146,32 @@ def test_rm_tmp():
 
     assert dir_exists is False
 
+
+@pytest.mark.parametrize("inplace", [True, False])
+def test_get_variable_features(adata_atac_qc, inplace):
+    """Test get_variable_features success."""
+    adata = adata_atac_qc.copy()
+
+    assert "highly_variable" not in adata.var.columns
+
+    output = anno.get_variable_features(adata=adata,
+                                   max_cells=None,
+                                   min_cells=0,
+                                   show=True,
+                                   inplace=inplace)
+
+    if inplace:
+        assert output is None
+        assert "highly_variable" in adata.var.columns
+    else:
+        assert "highly_variable" in output.var.columns
+        assert "highly_variable" not in adata.var.columns
+
+
+def test_get_variable_features_fail(adata_atac):
+    """Test get_variable_features failure."""
+    with pytest.raises(KeyError):
+        anno.get_variable_features(adata=adata_atac)
 
 # ------------------------- Tests for gtf formats ------------------------- #
 
