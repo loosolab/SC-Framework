@@ -46,3 +46,10 @@
   figure_dir: "../figures/13_prop_analysis/"
   log_file: "../logs/13_log.txt"
   overwrite_log: True
+  
+"14":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/14_velocity_analysis/"
+  log_file: "../logs/14_velocity_log.txt"
+  overwrite_log: True

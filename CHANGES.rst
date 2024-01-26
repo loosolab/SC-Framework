@@ -1,5 +1,6 @@
 0.4 (in progress)
 -------------------
+- Add pseudotime & velocity analysis notebooks (#164)
 - Fix get_rank_genes_tables for run if no marker gene is found for group (#179)
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
