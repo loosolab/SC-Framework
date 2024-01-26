@@ -350,7 +350,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 @beartype
 def get_rank_genes_tables(adata: sc.AnnData,
                           key: str = "rank_genes_groups",
-                          n_genes: int = 200,
+                          n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
                           save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
