@@ -15,6 +15,7 @@ dependencies:
   - pybedtools
   - ipykernel # needed to register environment as jupyter kernel
   - pybedtools
+  - scvelo
   - pip  # for installing additional packages
   - pip:
     - scanpro
