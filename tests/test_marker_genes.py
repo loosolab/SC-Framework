@@ -146,6 +146,20 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
         assert score_name in out.obs.columns
 
 
+def test_add_gene_expression(adata):
+    """Test add_gene_expression success and failure."""
+    gene = adata.var.index[0]
+
+    # success
+    assert f"{gene}_values" not in adata.obs.columns
+    mg.add_gene_expression(adata=adata, gene=gene)
+    assert f"{gene}_values" in adata.obs.columns
+
+    # failure
+    with pytest.raises(ValueError):
+        mg.add_gene_expression(adata=adata, gene="INVALID")
+
+
 def test_run_rank_genes(adata):
     """Test ranking genes function."""
 
