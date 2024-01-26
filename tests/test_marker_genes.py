@@ -4,6 +4,7 @@ import pytest
 import os
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import sctoolbox.marker_genes as mg
 
 
@@ -169,13 +170,20 @@ def test_run_rank_genes(adata):
 
 
 def test_run_rank_genes_fail(adata):
-    """Test if invalid input is catched."""
+    """Test if invalid input is caught."""
 
     adata = adata.copy()
     adata.obs["invalid_cat"] = "invalid"
 
     with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
         mg.run_rank_genes(adata, groupby="invalid_cat")
+
+
+def test_pairwise_rank_genes(adata):
+    """Test pairwise_rank_genes success."""
+    output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
+
+    assert isinstance(output, pd.DataFrame)
 
 
 # Outcommented because the CI job currently does not have R and DESeq2 installed
