@@ -144,6 +144,7 @@ def test_automatic_thresholds_failure(adata):
     with pytest.raises(ValueError):
         qc.automatic_thresholds(adata, groupby="INVALID")
 
+
 def test_thresholds_as_table(threshold_dict):
     """Test whether treshold dict is successfully converted to pandas table."""
 
