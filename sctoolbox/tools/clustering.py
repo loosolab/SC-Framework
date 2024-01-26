@@ -51,7 +51,8 @@ def recluster(adata: sc.AnnData,
     Raises
     ------
     KeyError:
-        If the given embeding is not in the data.
+        1. If the given embeding is not in the data.
+        2. If given column is not found in adata.obs
     ValueError:
         If a given cluster is not found in the adata.
     """

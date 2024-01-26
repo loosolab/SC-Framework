@@ -201,4 +201,4 @@ def test_deseq(adata, condition_col, error):
     else:  # should run without exceptions
         df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
 
-        assert type(df).__name__ == "DataFrame"
+        assert isinstance(df, pd.DataFrame)
