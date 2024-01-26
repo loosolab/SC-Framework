@@ -186,22 +186,19 @@ def test_pairwise_rank_genes(adata):
     assert isinstance(output, pd.DataFrame)
 
 
-# Outcommented because the CI job currently does not have R and DESeq2 installed
-# Can be outcommented for testing locally
-#
-# @pytest.mark.parametrize("condition_col, error",
-#                         [("not_present", "was not found in adata.obs.columns"),
-#                          ("condition-col", "not a valid column name within R"),
-#                          ("condition", None)])
-# def test_deseq(adata, condition_col, error):
-#    """Test if deseq2 is run and returns a dataframe."""
-#
-#    # test if error is raised
-#    if isinstance(error, str):
-#        with pytest.raises(ValueError, match=error):
-#            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-#
-#    else:  # should run without exceptions
-#        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-#
-#        assert type(df).__name__ == "DataFrame"
+@pytest.mark.parametrize("condition_col, error",
+                        [("not_present", "was not found in adata.obs.columns"),
+                         ("condition-col", "not a valid column name within R"),
+                         ("condition", None)])
+def test_deseq(adata, condition_col, error):
+    """Test if deseq2 is run and returns a dataframe."""
+
+    # test if error is raised
+    if isinstance(error, str):
+        with pytest.raises(ValueError, match=error):
+            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+
+    else:  # should run without exceptions
+        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+
+        assert type(df).__name__ == "DataFrame"
