@@ -98,7 +98,7 @@ def annot_HVG(anndata: sc.AnnData,
 @beartype
 def get_variable_features(adata: sc.AnnData,
                           max_cells: Optional[float | int] = None,
-                          min_cells: Optional[float | int] = None,
+                          min_cells: Optional[float | int] = 0,
                           show: bool = True,
                           inplace: bool = True) -> Optional[sc.AnnData]:
     """
@@ -109,8 +109,8 @@ def get_variable_features(adata: sc.AnnData,
     adata : sc.AnnData
         The anndata object containing counts for variables.
     max_cells : Optional[float | int], default None
-        The maximum variability score to set as threshold.
-    min_cells : Optional[float | int], default None
+        The maximum variability score to set as threshold. Defaults to knee estimated threshold.
+    min_cells : Optional[float | int], default 0
         The minimum variability score to set as threshold.
     show : bool, default True
         Show plot of variability scores and thresholds.
@@ -121,12 +121,20 @@ def get_variable_features(adata: sc.AnnData,
     -----
     Designed for scATAC-seq data
 
+    Raises
+    ------
+    KeyError
+        If adata.var['n_cells_by_counts'] is not available.
+
     Returns
     -------
     Optional[sc.AnnData]
         If inplace is False, the function returns None
         If inplace is True, the function returns an anndata object.
     """
+
+    if 'n_cells_by_counts' not in adata.var.columns:
+        raise KeyError("Required column adata.var['n_cells_by_counts'] missing. Can be computed using scanpy.pp.calculate_qc_metrics.")
 
     utils.check_module("kneed")
     utils.check_module("statsmodels")
