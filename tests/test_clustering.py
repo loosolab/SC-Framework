@@ -122,11 +122,11 @@ def test_recluster_exceptions(clust_adata):
                      plot=True,
                      embedding="X_umap")
 
-    # invalid column name
+    # invalid cluster name
     with pytest.raises(ValueError):
         tl.recluster(adata=clust_adata,
                      column="louvain",
-                     clusters="B_cells",
+                     clusters="INVALID",
                      task="join",
                      method="leiden",
                      resolution=1,
