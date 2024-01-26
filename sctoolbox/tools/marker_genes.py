@@ -431,7 +431,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             expressed.columns = ["names", "n_expr"]
 
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-            group_tables[group][group + "_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
+            group_tables[group][group + "_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group] if group in n_cells_dict else 0
 
             # Fraction of cells for individual groups
             if out_group_fractions is True:
@@ -440,7 +440,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
                         s = (adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0).A1
                         expressed = pd.DataFrame(s, index=adata.var.index)  # expression per gene for this group
                         expressed.columns = [compare_group + "_fraction"]
-                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group]
+                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0
 
                         group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
 
@@ -457,7 +457,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             else:
                 out_group_name = "out_group_fraction"
 
-            n_out_group = sum([n_cells_dict[other_group] for other_group in other_groups])  # sum of cells in other groups
+            n_out_group = sum([n_cells_dict[other_group] if other_group in n_cells_dict else 0 for other_group in other_groups])  # sum of cells in other groups
             group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / n_out_group
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 

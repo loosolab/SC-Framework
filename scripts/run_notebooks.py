@@ -10,7 +10,7 @@ rna_notebook_path_suffix = "/../rna_analysis/notebooks/"
 # Run RNA notebooks
 notebook_dir = script_dir + rna_notebook_path_suffix
 rna_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
-rna_notebooks = [nb for nb in rna_notebooks if "05" not in nb and "11" not in nb]
+rna_notebooks = [nb for nb in rna_notebooks if "05" not in nb]
 print(rna_notebooks)
 
 for notebook in rna_notebooks:

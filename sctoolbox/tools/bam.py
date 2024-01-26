@@ -1075,7 +1075,7 @@ def create_fragment_file(bam: str,
 
     # Remove temp files
     if not keep_temp:
-        utils.remove_files(temp_files)
+        utils.rm_tmp(temp_files=temp_files)
 
     # Index fragments file
     if index:
