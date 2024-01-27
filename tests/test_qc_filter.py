@@ -23,12 +23,22 @@ def adata():
     adata = sc.read_h5ad(f)
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
 
+    # add random groups
+    adata.obs["group"] = np.random.choice(["grp1", "grp2", "grp3"], size=len(adata))
+    adata.var["group"] = np.random.choice(["grp1", "grp2", "grp3"], size=len(adata.var))
+
     # Add fake qc variables to anndata
     n1 = int(adata.shape[0] * 0.8)
     n2 = adata.shape[0] - n1
 
     adata.obs["qc_variable1"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=2))
     adata.obs["qc_variable2"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=3))
+
+    n1 = int(adata.shape[1] * 0.8)
+    n2 = adata.shape[1] - n1
+
+    adata.var["qc_variable1"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=2))
+    adata.var["qc_variable2"] = np.append(np.random.normal(size=n1), np.random.normal(size=n2, loc=1, scale=3))
 
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
@@ -116,12 +126,23 @@ def test_get_thresholds():
     assert "min" in threshold and "max" in threshold
 
 
-def test_automatic_thresholds(adata):
+@pytest.mark.parametrize("groupby", [None, "group"])
+@pytest.mark.parametrize("columns", [None, ["qc_variable1", "qc_variable2"]])
+@pytest.mark.parametrize("which", ["obs", "var"])
+def test_automatic_thresholds(adata, which, columns, groupby):
     """Test whether automatic thresholds are successfully calculated and added to the threshold dict."""
-    thresholds = qc.automatic_thresholds(adata, columns=["qc_variable1", "qc_variable2"])
+    thresholds = qc.automatic_thresholds(adata, which=which, columns=columns, groupby=groupby)
     threshold_keys = sorted(thresholds.keys())
 
-    assert threshold_keys == ["qc_variable1", "qc_variable2"]
+    if columns:
+        assert threshold_keys == columns
+
+
+def test_automatic_thresholds_failure(adata):
+    """Test automatic_thresholds failure."""
+
+    with pytest.raises(ValueError):
+        qc.automatic_thresholds(adata, groupby="INVALID")
 
 
 def test_thresholds_as_table(threshold_dict):

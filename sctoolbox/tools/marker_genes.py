@@ -350,7 +350,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 @beartype
 def get_rank_genes_tables(adata: sc.AnnData,
                           key: str = "rank_genes_groups",
-                          n_genes: int = 200,
+                          n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
                           save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
@@ -363,7 +363,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
         Anndata object containing ranked genes.
     key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
-    n_genes : int, default 200
+    n_genes : Optional[int], default 200
         Number of genes to be included in the tables. If None, all genes are included.
     out_group_fractions : bool, default False
         If True, the output tables will contain additional columns giving the fraction of genes per group.
