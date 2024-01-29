@@ -90,7 +90,7 @@ def rm_tmp(temp_dir: Optional[str] = None,
     """
     Delete given directory.
 
-    Removes all given `tempfiles` from directory. If `tempfiles` is `None` and `all` is `True` all files are removed.
+    Removes all given `temp_files` from the directory. If `temp_files` is `None` and `all` is `True` all files are removed.
 
 
     Parameters

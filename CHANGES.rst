@@ -1,7 +1,7 @@
 0.4 (in progress)
 -------------------
 - Add pseudotime & velocity analysis notebooks (#164)
-- Fix get_rank_genes_tables for run if no marker gene is found for group (#179)
+- Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
 - Fix typos (#173 & #174)
 - Update receptor-ligand notebook (#176)
@@ -11,6 +11,7 @@
 - constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
 - Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
 - more testing (mainly sctoolbox.tools) (#166)
+- gerneral text revisions
 
 
 0.3 (30-11-2023)
