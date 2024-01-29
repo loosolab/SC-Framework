@@ -11,6 +11,7 @@
 - constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
 - Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
 - more testing (mainly sctoolbox.tools) (#166)
+- gerneral text revisions
 
 
 0.3 (30-11-2023)
