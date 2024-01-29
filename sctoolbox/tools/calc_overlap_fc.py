@@ -111,7 +111,7 @@ def pct_fragments_in_promoters(adata: sc.AnnData,
         BAM file will be converted into fragments file.
     cb_col : str, default None
         The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
-    cb_tag : str, default 'CB
+    cb_tag : str, default 'CB'
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
     species : str, default None
         Name of the species, will only be used if gtf_file is None to use internal GTF files.
@@ -160,7 +160,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     Calculate the fold change of fragments in a region against the background.
 
     This function calculates the fold change of fragments overlapping a region against the background for each cell.
-    The regions are specified in a BED or GTF file and the fragments should be provided by a fragments or Bam file.
+    The regions are specified in a BED or GTF file and the fragments should be provided by a fragments or BAM file.
     The results are added to the anndata object as new column.
 
     Parameters
@@ -180,11 +180,11 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
     regions_name : str, default 'list'
         The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name
-        to be added to the anndata object (e.g. pct_fragments_in_{regions_name}).
+        added to the anndata object (e.g. pct_fragments_in_{regions_name}).
     threads : int, default 1
         Number of threads for parallelization. Will be used to convert BAM to fragments file.
     temp_dir : Optional[str], default None
-        Path to temporary directory.
+        Path to temporary directory. Will use the current working directory by default.
 
     Raises
     ------
@@ -192,8 +192,9 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         If bam_file and fragment file is not provided.
     """
     if temp_dir:
-        temp_was_none = False
         utils.create_dir(temp_dir)
+    else:
+        temp_dir = os.getcwd()
 
     if not bam_file and not fragments_file:
         raise ValueError("Either BAM file or fragments file has to be provided!")
@@ -205,12 +206,6 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         except KeyError:
             logger.error(f"{cb_col} is not in adata.obs!")
             return
-
-    # check if temp_dir is given
-    if not temp_dir:
-        # if not, use current working directory
-        temp_was_none = True
-        temp_dir = os.getcwd()
 
     temp_files = []
     # check if regions file is gtf or bed
@@ -287,7 +282,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     logger.info("cleaning up...")
     utils.rm_tmp(temp_dir=temp_dir,
                  temp_files=temp_files,
-                 rm_dir=temp_was_none)
+                 rm_dir=False if temp_dir else True)
 
 
 def count_fragments_per_cell(df: pd.DataFrame, barcode_col: str = 'barcode', frag_count: str = 'count') -> pd.DataFrame:

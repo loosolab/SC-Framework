@@ -134,7 +134,7 @@ def get_variable_features(adata: sc.AnnData,
     """
 
     if 'n_cells_by_counts' not in adata.var.columns:
-        raise KeyError("Required column adata.var['n_cells_by_counts'] missing. Please run  scanpy.pp.calculate_qc_metrics.")
+        raise KeyError("Required column adata.var['n_cells_by_counts'] missing. Please run scanpy.pp.calculate_qc_metrics.")
 
     utils.check_module("kneed")
     utils.check_module("statsmodels")
