@@ -7,6 +7,7 @@
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
 - added tests for _add_path() and _overlap_two_bedfiles() (#177)
+- read the docks example (#140)
 
 
 0.3 (30-11-2023)
