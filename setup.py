@@ -78,9 +78,9 @@ setup(
         'statsmodels',
         'tqdm',
         'pandas',
-        'seaborn',
+        'seaborn<0.12', # statannotations 0.6.0 requires seaborn<0.12
         'ipympl',
-        'ipywidgets<=7.7.5',
+        'ipywidgets<=7.7.5', # later versions cause problems in some cases for interactive plots
         'scrublet',
         'leidenalg',
         'louvain',
