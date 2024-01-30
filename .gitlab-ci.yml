@@ -143,9 +143,7 @@ test coverage:
 
 #Changes.rst file must be changed in merge requests
 check_changes:
-  image:
-    name: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"   # ensures that git + python is available
-    entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
+  image: python:3.10
   inherit:
     default: false
   script:
