@@ -204,6 +204,7 @@ notebooks:
     - pip install papermill
     - pip install .[all]   # reinstall to make sure the current branch version is used
     - pip install --force-reinstall urllib3 # Fixes metadata bug
+    - ls -al /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
     - which python             # for debug
