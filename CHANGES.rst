@@ -3,6 +3,7 @@
 - Add pseudotime & velocity analysis notebooks (#164)
 - Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
+- Fix check_changes pipeline
 - Fix typos (#173 & #174)
 - Update receptor-ligand notebook (#176)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
