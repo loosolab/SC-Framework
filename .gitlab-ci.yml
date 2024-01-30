@@ -151,6 +151,7 @@ check_changes:
   script:
     - python scripts/check_changes.py $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
   rules:
+    - if: $CI_PIPELINE_SOURCE != "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
       - tests/*.py
