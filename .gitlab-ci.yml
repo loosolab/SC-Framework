@@ -212,6 +212,7 @@ notebooks:
     - which papermill          # for debug
     - python -c "import sys; print(sys.path)" # for debug
     - jupyter kernelspec list  # for debug
+    - cp ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
     - pwd
