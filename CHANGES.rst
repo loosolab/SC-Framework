@@ -1,3 +1,19 @@
+0.4 (in progress)
+-------------------
+- Add pseudotime & velocity analysis notebooks (#164)
+- Fix get_rank_genes_tables for groups without marker genes (#179)
+- Bugfixes for CI jobs
+- Fix typos (#173 & #174)
+- Update receptor-ligand notebook (#176)
+- Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
+- Implemented _add_path() to automatically add python path to environment
+- added tests for _add_path() and _overlap_two_bedfiles() (#177)
+- constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
+- Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
+- more testing (mainly sctoolbox.tools) (#166)
+- gerneral text revisions
+
+
 0.3 (30-11-2023)
 -----------------
 - Add parameter type hinting including runtime type checking (#46)
