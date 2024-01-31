@@ -1,11 +1,13 @@
-0.4 (in progress)
--------------------
-- Add pseudotime & velocity analysis notebooks (#164)
+0.5 (in progess)
+-------------
+
+
+0.4 (31-1-23)
+-------------
 - Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
 - Fix check_changes pipeline
 - Fix typos (#173 & #174)
-- Update receptor-ligand notebook (#176)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
 - added tests for _add_path() and _overlap_two_bedfiles() (#177)
@@ -14,9 +16,14 @@
 - more testing (mainly sctoolbox.tools) (#166)
 - gerneral text revisions
 
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Add pseudotime & velocity analysis notebooks (#164)
+- Update receptor-ligand notebook (#176)
+
 
 0.3 (30-11-2023)
------------------
+----------------
 - Add parameter type hinting including runtime type checking (#46)
 - Fixed prepare_for_cellxgene color issue (#145, #146)
 - Add CI/CD container build pipeline for testing (#135)
