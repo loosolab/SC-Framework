@@ -151,12 +151,7 @@ check_changes:
     - python scripts/check_changes.py $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
-      changes:
-      - tests/*.py
-      - sctoolbox/**/*.py
-      - ./*/*/*.ipynb  # changes in notebooks
-      - ./*/*.ipynb    # changes in general notebooks
-    - when: never
+
 
 #In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
 check_version:
