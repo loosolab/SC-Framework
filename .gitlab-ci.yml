@@ -146,6 +146,7 @@ check_changes:
   image: python:3.10
   inherit:
     default: false
+  stage: test
   script:
     - python scripts/check_changes.py $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
   rules:
