@@ -154,7 +154,7 @@ check_changes:
       changes:
         - tests/*.py
         - sctoolbox/**/*.py
-        - {rna_notebooks|atac_notebooks}/notebooks/*.ipynb
+        - {rna_notebooks,atac_notebooks}/notebooks/*.ipynb
         - general_notebooks/*.ipynb    # changes in general notebooks
 
 #In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
