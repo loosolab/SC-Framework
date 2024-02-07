@@ -69,5 +69,5 @@ def test_format_adata_var(fixture, expected, request):
 
 def test_bam_adata_ov(adata_atac, bamfile):
     """Test bam_adata_ov success."""
-    hitrate = tools.bam_adata_ov(adata_atac, bamfile, cb_col='CB')
+    hitrate = tools.bam_adata_ov(adata_atac, bamfile, cb_tag='CB')
     assert hitrate >= 0.10

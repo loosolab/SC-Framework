@@ -164,7 +164,7 @@ def test_violin(adata_inter):
     """Violin plot is functional."""
     plot = rl.interaction_violin_plot(adata_inter,
                                       min_perc=0,
-                                      output=None,
+                                      save=None,
                                       figsize=(5, 30),
                                       dpi=100)
 
@@ -177,7 +177,7 @@ def test_hairball(adata_inter):
                        min_perc=0,
                        interaction_score=0,
                        interaction_perc=90,
-                       output=None,
+                       save=None,
                        title=None,
                        color_min=0,
                        color_max=None,
@@ -194,7 +194,7 @@ def test_connectionPlot(adata_inter):
                              figsize=(5, 10),
                              dpi=100,
                              connection_alpha="interaction_score",
-                             output=None,
+                             save=None,
                              title=None,
                              receptor_cluster_col="receptor_cluster",
                              receptor_col="receptor_gene",

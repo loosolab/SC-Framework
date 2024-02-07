@@ -4,6 +4,7 @@ import pytest
 import os
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import sctoolbox.marker_genes as mg
 
 
@@ -146,6 +147,20 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
         assert score_name in out.obs.columns
 
 
+def test_add_gene_expression(adata):
+    """Test add_gene_expression success and failure."""
+    gene = adata.var.index[0]
+
+    # success
+    assert f"{gene}_values" not in adata.obs.columns
+    mg.add_gene_expression(adata=adata, gene=gene)
+    assert f"{gene}_values" in adata.obs.columns
+
+    # failure
+    with pytest.raises(ValueError):
+        mg.add_gene_expression(adata=adata, gene="INVALID")
+
+
 def test_run_rank_genes(adata):
     """Test ranking genes function."""
 
@@ -155,7 +170,7 @@ def test_run_rank_genes(adata):
 
 
 def test_run_rank_genes_fail(adata):
-    """Test if invalid input is catched."""
+    """Test if invalid input is caught."""
 
     adata = adata.copy()
     adata.obs["invalid_cat"] = "invalid"
@@ -164,22 +179,26 @@ def test_run_rank_genes_fail(adata):
         mg.run_rank_genes(adata, groupby="invalid_cat")
 
 
-# Outcommented because the CI job currently does not have R and DESeq2 installed
-# Can be outcommented for testing locally
-#
-# @pytest.mark.parametrize("condition_col, error",
-#                         [("not_present", "was not found in adata.obs.columns"),
-#                          ("condition-col", "not a valid column name within R"),
-#                          ("condition", None)])
-# def test_deseq(adata, condition_col, error):
-#    """Test if deseq2 is run and returns a dataframe."""
-#
-#    # test if error is raised
-#    if isinstance(error, str):
-#        with pytest.raises(ValueError, match=error):
-#            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-#
-#    else:  # should run without exceptions
-#        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-#
-#        assert type(df).__name__ == "DataFrame"
+def test_pairwise_rank_genes(adata):
+    """Test pairwise_rank_genes success."""
+    output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
+
+    assert isinstance(output, pd.DataFrame)
+
+
+@pytest.mark.parametrize("condition_col, error", [
+    ("not_present", "was not found in adata.obs.columns"),
+    ("condition-col", "not a valid column name within R"),
+    ("condition", None)])
+def test_deseq(adata, condition_col, error):
+    """Test if deseq2 is run and returns a dataframe."""
+
+    # test if error is raised
+    if isinstance(error, str):
+        with pytest.raises(ValueError, match=error):
+            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+
+    else:  # should run without exceptions
+        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+
+        assert isinstance(df, pd.DataFrame)
