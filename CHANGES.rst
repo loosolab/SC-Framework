@@ -1,6 +1,6 @@
 0.5 (in progess)
 -------------
-
+- Added general annotation notebook
 
 0.4 (31-1-23)
 -------------
