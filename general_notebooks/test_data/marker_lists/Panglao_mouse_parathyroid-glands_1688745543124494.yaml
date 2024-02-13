@@ -1,0 +1,31 @@
+marker_list:
+- markers:
+  - SLC2A4 ENSMUSG00000018566
+  - GCM2 ENSMUSG00000021362
+  name: Oxyphil cells
+- markers:
+  - KL ENSMUSG00000058488
+  - CASR ENSMUSG00000051980
+  - VDR ENSMUSG00000022479
+  - FGFR1 ENSMUSG00000031565
+  - FLG ENSMUSG00000102439
+  - CYP27B1 ENSMUSG00000006724
+  - LRP2 ENSMUSG00000027070
+  - PTH ENSMUSG00000059077
+  - RAB3A ENSMUSG00000031840
+  name: Parathyroid chief cells
+metadata:
+  date: 27.03.2020
+  id: '1688745543124494'
+  list_name: Panglao_mouse_parathyroid-glands
+  marker_type: Genes
+  organism:
+    organism_name: mouse
+    taxonomy_id: '10090'
+  source: panglao.se
+  submitter:
+    email: Micha-Frederick.Kessler@mpi-bn.mpg.de
+    name: Kessler, Micha Frederick
+  tags:
+    list_type: Cell type annotation
+    tissue: parathyroid-glands

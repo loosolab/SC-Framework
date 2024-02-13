@@ -1,0 +1,33 @@
+marker_list:
+- markers:
+  - TTF1 ENSG00000125482
+  - SLC6A4 ENSG00000108576
+  - HTT ENSG00000197386
+  - KCNIP3 ENSG00000115041
+  - TSHR ENSG00000165409
+  - TG ENSG00000042832
+  - IYD ENSG00000009765
+  - ASGR1 ENSG00000141505
+  - PRLR ENSG00000113494
+  - TPO ENSG00000115705
+  - DIO1 ENSG00000211452
+  - SLC26A7 ENSG00000147606
+  - CDH16 ENSG00000166589
+  - SLC16A11 ENSG00000174326
+  - FOXE1 ENSG00000178919
+  name: Follicular cells
+metadata:
+  date: 27.03.2020
+  id: '1688745542409119'
+  list_name: Panglao_human_thyroid
+  marker_type: Genes
+  organism:
+    organism_name: human
+    taxonomy_id: '9606'
+  source: panglao.se
+  submitter:
+    email: Micha-Frederick.Kessler@mpi-bn.mpg.de
+    name: Kessler, Micha Frederick
+  tags:
+    list_type: Cell type annotation
+    tissue: thyroid
