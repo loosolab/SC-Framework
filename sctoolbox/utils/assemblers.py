@@ -486,6 +486,11 @@ def convertToAdata(file: str,
     # this also converts to anndata
     adata = globalenv["object"]
 
+    # fixes https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/205
+    adata.obs.index = adata.obs.index.astype('object')
+    adata.var.index = adata.var.index.astype('object')
+
+
     # Add information to uns
     utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
