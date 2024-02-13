@@ -1,5 +1,6 @@
 0.5 (in progess)
 -------------
+- fix error when writing adata converted from an R object (#205)
 
 
 0.4 (31-1-23)
