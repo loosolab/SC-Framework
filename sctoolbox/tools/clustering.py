@@ -57,7 +57,7 @@ def recluster(adata: sc.AnnData,
         If the given embeding is not in the data.
     Example
     ------
-    __Clustering_merge::
+    .. plot::
         :context: close-figs
 
         sctoolbox.tools.recluster(adata,column="Leiden_1.5",clusters=["1","2"],task="join",method="leiden",     resolution=1.5,plot = True, embedding= None)
