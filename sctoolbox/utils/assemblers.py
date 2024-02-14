@@ -490,7 +490,6 @@ def convertToAdata(file: str,
     adata.obs.index = adata.obs.index.astype('object')
     adata.var.index = adata.var.index.astype('object')
 
-
     # Add information to uns
     utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 

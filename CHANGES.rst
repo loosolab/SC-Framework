@@ -1,6 +1,6 @@
 0.5 (in progess)
 -------------
-- fix error when writing adata converted from an R object (#205)
+- Fix error when writing adata converted from an R object (#205)
 - Set scvelo version to >=0.3.1 (#193)
 - Added fa2 as dependency for pseudotime analysis
 
