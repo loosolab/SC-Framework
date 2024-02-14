@@ -69,19 +69,59 @@ The SC framework provides a settings class (`SctoolboxConfig`) that is intended 
 The framework provides two ways of logging. One being traditional logging usually written to a log file. This includes messages, warnings and errors that appear during execution of functions. The second is called function logging. Whenever a function that receives an adata object is executed a log will be added to the adata (`adata.uns["sctoolbox"]["log"]`) that stores information regarding the function call (name of the executed function, the parameters, the start time, who executed it, etc.). The function log can be accessed with `sctoolbox.utils.get_parameter_table(adata)`
 
 ## Getting Started
+Once the evironment is set up and everything is installed it is time for starting an analysis using the provided jupyter notebooks. This can be done in a few easy steps:
 
+1. Select the notebooks that fit to you datatype. At the moment we provide notebooks to analyze scRNA or scATAC data. The notebooks are located in directories in the root of this repository:
+    - scRNA: `rna_analysis/`
+    - scATAC: `atac_analysis/`
+
+2. 1. Copy the folder of the step above to your preferred analysis path. E.g.: `cp -r rna_analysis/ /my/groubreaking/analysis/`
+
+   2. (optional) We provide notebooks that are independent of the datatype. They are located in `general_notebooks/`. If you intend to run one (or more) of them we recommend to copy them to same directory as the other analysis notebooks. E.g. if you want to run pseudotime analysis `cp general_notebooks/pseudotime_analysis.ipynb /my/groubreaking/analysis/rna_analysis/notebooks/`
+
+3. Access the notebooks within the directory and run them in order to do your analysis (general notebooks should be run last).
 
 ## Folder structure
+While going through the analysis notebooks a folder structure is created to store all the results and intermediate steps (figures, .h5ad files, tables etc.). The default structure is created in the `*_analysis` directory that contains the notebooks. It is independent of datatype.
+
+```
+└── *_analysis
+    ├── adatas
+    │   └── *.h5ad
+    ├── figures
+    │   ├── 02_QC
+    │   │   ├── *.png
+    │   │   └── *.pdf
+    │   ├── 03_batch_correction
+    │   │   ├── *.png
+    │   │   └── *.pdf
+    │   ...
+    ├── logs
+    │   └── *.txt
+    ├── notebooks
+    │   ├── *.ipynb
+    │   └── config.yml
+    └── tables
+        ├── 02_QC
+        │   ├── *.xlsx
+        │   └── *.tsv
+        ├── 03_batch_correction
+        │   ├── *.xlsx
+        │   └── *.tsv
+        ...
+```
+
+The `*_analysis` directory contains up to five subdirectories. In the beginning, there is only the `notebooks` directory it contains all of the analysis notebooks and a `config.yml`. The `config.yml` holds general settings (e.g. paths) for each notebook. It is loaded earlier in the execution of a notebook and can be adjusted as needed. The rest of the subdirectories are created during the execution of the notebooks as they are needed. `adatas/` contains intermediate `.h5ad` files created at the end of each notebook. `figures/` contains all of the plots created during analysis. `logs/` contains log-files and `tables/` stores additional result tables. The directories `figures/` and `tables/` are divided into one directory per notebook.
 
 # FAQ
-1. I have an old/ already started analysis. How do I find out what was done or who was responsible?
+### Q: I have an old/ already started analysis. How do I find out what was done or who was responsible?
 
-The function logging can be accessed using `sctoolbox.utils.get_parameter_table(adata)`. For more information see [here](https://loosolab.pages.gwdg.de/software/sc_framework/API/utils.html#sctoolbox.utils.decorator.get_parameter_table).
+**A:** The function logging can be accessed using `sctoolbox.utils.get_parameter_table(adata)`. For more information see [here](https://loosolab.pages.gwdg.de/software/sc_framework/API/utils.html#sctoolbox.utils.decorator.get_parameter_table).
 
-2. My `.h5ad` file is already pre-analyzed. I want to skip some of the analysis notebooks. What do I do?
+### Q: My `.h5ad` file is already pre-analyzed. I want to skip some of the analysis notebooks. What do I do?
 
-You should always start with the assembly notebook (the first notebook). This ensures a proper output structure. Afterwards, go to the first notebook you want to run
+**A:** You should always start with the assembly notebook (the first notebook). This ensures a proper output structure. Afterwards, go to the first notebook you want to run
 
-3. I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
+### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
-We are always happy to help but it can be hard to keep track of everything at once. So if you encounter anything that you feel needs attention open an issue with a detailed explanation and if possible small code examples. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
+**A:** We are always happy to help but it can be hard to keep track of everything at once. So if you encounter anything that you feel needs attention open an issue with a detailed explanation and if possible small code examples. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
