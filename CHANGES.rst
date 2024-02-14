@@ -1,6 +1,14 @@
 0.5 (in progess)
 -------------
-- Added general annotation notebook
+- Marker Repo integration (#162)
+- Set scvelo version to >=0.3.1 (#193)
+- Added fa2 as dependency for pseudotime analysis
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
+- 14_velocity_analysis: Remove duplicate parameter (#194)
+
 
 0.4 (31-1-23)
 -------------
