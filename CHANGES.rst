@@ -8,6 +8,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
 - 14_velocity_analysis: Remove duplicate parameter (#194)
+- pseudotime_analysis: Save generated plots (#211)
 
 
 0.4 (31-1-23)
