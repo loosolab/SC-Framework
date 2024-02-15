@@ -636,8 +636,6 @@ def automatic_thresholds(adata: sc.AnnData,
         table = adata.obs
     elif which == "var":
         table = adata.var
-    else:
-        raise ValueError("'which' must be either 'obs' or 'var'.")
 
     # Establish which columns to find thresholds for
     if columns is None:

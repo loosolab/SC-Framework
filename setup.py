@@ -8,11 +8,12 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'ipywidgets', 'pybedtools', 'pygenometracks'],
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
-
+                  "velocity": ['scvelo'],
+                  "pseudotime": ["fa2"],
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
                   "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
                   }
@@ -78,8 +79,9 @@ setup(
         'statsmodels',
         'tqdm',
         'pandas',
-        'seaborn',
+        'seaborn<0.12',  # statannotations 0.6.0 requires seaborn<0.12
         'ipympl',
+        'ipywidgets<=7.7.5',  # later versions cause problems in some cases for interactive plots
         'scrublet',
         'leidenalg',
         'louvain',
