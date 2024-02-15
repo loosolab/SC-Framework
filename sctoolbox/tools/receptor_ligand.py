@@ -721,7 +721,7 @@ def connectionPlot(adata: sc.AnnData,
     # filter receptor genes
     if receptor_genes:
         data = data[data[receptor_col].isin(receptor_genes)]
-    
+
     # filter ligand genes
     if ligand_genes:
         data = data[data[ligand_col].isin(ligand_genes)]
