@@ -1,7 +1,12 @@
+"""Functions for plotting clustering results e.g. UMAPs colored by clusters."""
+
 import numpy as np
 import scanpy as sc
 import matplotlib.pyplot as plt
 import warnings
+
+from beartype import beartype
+from beartype.typing import Literal, Tuple, Optional, Any
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -11,23 +16,25 @@ logger = settings.logger
 
 
 @deco.log_anndata
-def search_clustering_parameters(adata,
-                                 method="leiden",
-                                 resolution_range=(0.1, 1, 0.1),
-                                 embedding="X_umap",
-                                 ncols=3,
-                                 verbose=True,
-                                 save=None):
+@beartype
+def search_clustering_parameters(adata: sc.AnnData,
+                                 method: Literal["leiden", "louvain"] = "leiden",
+                                 resolution_range: Tuple[float | int, float | int, float | int] = (0.1, 1, 0.1),
+                                 embedding: str = "X_umap",
+                                 ncols: int = 3,
+                                 verbose: bool = True,
+                                 save: Optional[str] = None,
+                                 **kwargs: Any) -> np.ndarray:
     """
     Plot a grid of different resolution parameters for clustering.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix object.
     method : str, default: "leiden"
         Clustering method to use. Can be one of 'leiden' or 'louvain'.
-    resolution_range : tuple, default: (0.1, 1, 0.1)
+    resolution_range : Tuple[float | int, float | int, float | int], default: (0.1, 1, 0.1)
         Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
     embedding : str, default: "X_umap".
         Embedding method to use. Must be a key in adata.obsm. If not, will try to use f"X_{embedding}".
@@ -35,30 +42,30 @@ def search_clustering_parameters(adata,
         Number of columns in the grid.
     verbose : bool, default: True
         Print progress to console.
-    save : str, default None
+    save : Optional[str], default None
         Path to save figure.
+    **kwargs : Any
+        Keyword arguments to be passed to sc.pl.embedding.
 
     Returns
     -------
-    axarr : array of matplotlib.axes.Axes
+    axarr : np.ndarray
         Array of axes objects containing the plot(s).
 
-    Example
+    Raises
+    ------
+    ValueError
+        If step is lager than max - min
+    KeyError
+        If embedding is not found in adata.obsm.
+
+    Examples
     --------
-    .. plot::
-        :context: close-figs
-
-        import sctoolbox.plotting as pl
-
     .. plot::
         :context: close-figs
 
         pl.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
     """
-
-    # Check input
-    if len(resolution_range) != 3:
-        raise ValueError("The parameter 'dist_range' must be a tuple in the form (min, max, step)")
 
     # Check validity of parameters
     res_min, res_max, res_step = resolution_range
@@ -76,8 +83,6 @@ def search_clustering_parameters(adata,
         cl_function = sc.tl.leiden
     elif method == "louvain":
         cl_function = sc.tl.louvain
-    else:
-        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
     # Setup parameters to loop over
     res_min, res_max, res_step = resolution_range
@@ -102,13 +107,13 @@ def search_clustering_parameters(adata,
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
         adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
-        n_clusters = len(adata.obs[key_added].cat.categories)
+        n_clusters = adata.obs[key_added].nunique()
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-            sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
+            sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False, **kwargs)
 
     # Hide plots not filled in
     for ax in axes[len(resolutions):]:
@@ -121,40 +126,45 @@ def search_clustering_parameters(adata,
 
 
 @deco.log_anndata
-def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, save=None, figsize=None):
-    """ Plot an overview of marker genes and clustering.
+@beartype
+def marker_gene_clustering(adata: sc.AnnData,
+                           groupby: str,
+                           marker_genes_dict: dict[str, list[str]],
+                           show_umap: bool = True,
+                           save: Optional[str] = None,
+                           figsize: Optional[Tuple[float | int, float | int]] = None,
+                           **kwargs: Any) -> list:
+    """
+    Plot an overview of marker genes and clustering.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata : sc.AnnData
         Annotated data matrix.
-    groupby : `str`
+    groupby : str
         Key in `adata.obs` for which to plot the clustering.
-    marker_genes_dict : `dict`
+    marker_genes_dict : dict[str, list[str]]
         Dictionary of marker genes to plot. Keys are the names of the groups and values are lists of marker genes.
-    show_umap : `bool`, optional (default: `True`)
+    show_umap : bool, default: True
         Whether to show a UMAP plot on the left.
-    save : `str`, optional (default: `None`)
+    save : Optional[str], default: None
         If given, save the figure to this path.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : Tuple[float | int, float | int], default: None
         Size of the figure. If `None`, use default size.
+    **kwargs : Any
+        Keyword arguments to be passed to sc.pl.dotplot.
 
-    Example
+    Returns
+    -------
+    axarr : list
+        List of axes objects containing the plot(s).
+
+    Examples
     --------
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
-        adata = sc.datasets.pbmc68k_reduced()
         marker_genes_dict = {"S": ["PCNA"], "G2M": ["HMGB2"]}
-
-    .. plot::
-        :context: close-figs
 
         pl.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
     """
@@ -178,7 +188,7 @@ def marker_gene_clustering(adata, groupby, marker_genes_dict, show_umap=True, sa
     marker_genes_dict = utils.check_marker_lists(adata, marker_genes_dict)
 
     # Plot marker gene expression on the right
-    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])
+    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i], **kwargs)
     ax["mainplot_ax"].set_ylabel(groupby)
     ax["mainplot_ax"].set_xticklabels(ax["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
 

@@ -1,3 +1,5 @@
+"""Sctoolbox a collection of single cell analysis functions."""
+
 from setuptools import setup
 from setuptools import find_namespace_packages
 import re
@@ -6,11 +8,12 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['episcanpy', 'pyyaml', 'uropa', 'ipywidgets', 'sinto', 'pybedtools'],
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
-
+                  "velocity": ['scvelo'],
+                  "pseudotime": ["fa2 @ git+https://github.com/AminAlam/forceatlas2.git"],  # fa2 is abandoned we should replace it soon! (see #212)
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
                   "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
                   }
@@ -18,8 +21,25 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
 
 
-# Find version for package
-def find_version(f):
+def find_version(f: str) -> str:
+    """
+    Get package version from file.
+
+    Parameters
+    ----------
+    f : str
+        Path to version file.
+
+    Returns
+    -------
+    str
+        Version string.
+
+    Raises
+    ------
+    RuntimeError
+        If version string is missing.
+    """
     version_file = open(f).read()
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     if version_match:
@@ -43,13 +63,14 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3,<3.11',  # pybedtools is not compatible with python 3.11
+    python_requires='>=3.9,<3.11',  # dict type hints as we use it require python 3.9; pybedtools is not compatible with python 3.11
     install_requires=[
         'pysam',
         'matplotlib',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
-        'numba==0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
+        'anndata>=0.8',  # anndata 0.7 is not upward compatible
+        'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
         'kneed',
         'qnorm',
@@ -58,8 +79,9 @@ setup(
         'statsmodels',
         'tqdm',
         'pandas',
-        'seaborn',
+        'seaborn<0.12',  # statannotations 0.6.0 requires seaborn<0.12
         'ipympl',
+        'ipywidgets<=7.7.5',  # later versions cause problems in some cases for interactive plots
         'scrublet',
         'leidenalg',
         'louvain',
@@ -71,6 +93,9 @@ setup(
         'python-gitlab',
         'psutil',
         'pyyaml',
+        'deprecation',
+        'beartype',
+        'pybedtools',
     ],
     include_package_data=True,
     extras_require=extras_require

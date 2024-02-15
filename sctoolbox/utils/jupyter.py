@@ -1,18 +1,23 @@
+"""Jupyter notebook related functions."""
+
 import os
 from IPython.core.magic import register_line_magic
 from IPython.display import HTML, display
 import sctoolbox.utils as utils
 
+from beartype.typing import Optional
 
-def _is_notebook():
+
+def _is_notebook() -> bool:
     """
-    Utility to check if function is being run from a notebook or a script.
+    Check if function is run within a notebook.
 
     Returns
     -------
-    boolean :
+    bool
         True if running from a notebook, False otherwise.
     """
+
     try:
         _ = get_ipython()
         return True
@@ -22,9 +27,11 @@ def _is_notebook():
 
 if _is_notebook():
     @register_line_magic
-    def bgcolor(color, cell=None):
+    def bgcolor(color: str, cell: Optional[str] = None) -> None:
         """
-        Set background color of current jupyter cell. Adapted from https://stackoverflow.com/a/53746904.
+        Set background color of current jupyter cell.
+
+        Adapted from https://stackoverflow.com/a/53746904.
         Note: Jupyter notebook v6+ needed
 
         Change color of the cell by either calling the function
@@ -40,9 +47,10 @@ if _is_notebook():
                 - rgb(255,0,0)
                 - #FF0000
             See https://www.rapidtables.com/web/css/css-color.html
-        cell : str, default None
+        cell : Optional[str], default None
             Code of the cell that will be evaluated.
         """
+
         script = f"""
                 var cell = this.closest('.code_cell');
                 var editor = cell.querySelector('.CodeMirror-sizer');
@@ -53,11 +61,13 @@ if _is_notebook():
         display(HTML(f'<img src onerror="{script}">'))
 
 
-def clear():
+def clear() -> None:
     """
     Clear stout of console or jupyter notebook.
+
     https://stackoverflow.com/questions/37071230/clear-overwrite-standard-output-in-python
     """
+
     import platform
 
     if _is_notebook():

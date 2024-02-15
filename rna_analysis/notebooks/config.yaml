@@ -1,0 +1,55 @@
+"01":
+  adata_output_dir: "../adatas/"
+  log_file: "../logs/01_log.txt"
+  overwrite_log: True
+
+"02":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/02_QC/"
+  log_file: "../logs/02_log.txt"
+  overwrite_log: True
+
+"03":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/03_batch_correction/"
+  log_file: "../logs/03_log.txt"
+  overwrite_log: True
+
+"04":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/04_clustering/"
+  log_file: "../logs/04_log.txt"
+  overwrite_log: True
+
+"05":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/05_markers/"
+  table_dir: "../tables/05_markers/"
+  log_file: "../logs/05_log.txt"
+  overwrite_log: True
+
+"11":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/11_receptor_ligand/"
+  table_dir: "../tables/11_receptor_ligand/"
+  log_file: "../logs/11_log.txt"
+  overwrite_log: True
+
+"13":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/13_prop_analysis/"
+  log_file: "../logs/13_log.txt"
+  overwrite_log: True
+  
+"14":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/14_velocity_analysis/"
+  log_file: "../logs/14_velocity_log.txt"
+  overwrite_log: True

@@ -1,44 +1,60 @@
+"""Table related functions."""
+
 import warnings
 import pandas as pd
 from scipy.stats import zscore
 import sctoolbox.utils as utils
 
+# type hint imports
+from beartype.typing import Optional, Any, Literal
+from beartype import beartype
 
-def rename_categories(series):
+
+@beartype
+def rename_categories(series: pd.Series) -> pd.Series:
     """
     Rename categories in a pandas series to numbers between 1-(number of categories).
 
     Parameters
     ----------
-    series : pandas.Series
-        Series to rename categories in.
+    series : pd.Series
+        Pandas Series to rename categories in.
 
     Returns
     -------
-    pandas.Series
+    pd.Series
         Series with renamed categories.
     """
 
-    n_categories = series.cat.categories
+    series_cat = series.astype("category")
+    n_categories = series_cat.cat.categories
     new_names = [str(i) for i in range(1, len(n_categories) + 1)]
-    translate_dict = dict(zip(series.cat.categories.tolist(), new_names))
-    series = series.cat.rename_categories(translate_dict)
+    translate_dict = dict(zip(series_cat.cat.categories.tolist(), new_names))
+    series_cat = series_cat.cat.rename_categories(translate_dict)
 
-    return series
+    return series_cat
 
 
-def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}):
+@beartype
+def fill_na(df: pd.DataFrame,
+            inplace: bool = True,
+            replace: dict[str, Any] = {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}) -> Optional[pd.DataFrame]:
     """
-    Fill all NA values in pandas depending on the column data type
+    Fill all NA values in a pandas DataFrame depending on the column data type.
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : pd.DataFrame
         DataFrame object with NA values over multiple columns
     inplace : boolean, default True
         Whether the DataFrame object is modified inplace.
-    replace :  dict, default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
+    replace :  dict[str, Any], default {"bool": False, "str": "-", "float": 0, "int": 0, "category": ""}
         dict that contains default values to replace nas depedning on data type
+
+    Returns
+    -------
+    Optional[pd.DataFrame]
+        DataFrame with replaced NA values.
     """
 
     if not inplace:
@@ -68,9 +84,12 @@ def fill_na(df, inplace=True, replace={"bool": False, "str": "-", "float": 0, "i
         return df
 
 
-def _sanitize_sheetname(s, replace="_"):
+@beartype
+def _sanitize_sheetname(s: str,
+                        replace: str = "_") -> str:
     """
     Alters given string to produce a valid excel sheetname.
+
     https://www.excelcodex.com/2012/06/worksheets-naming-conventions/
 
     Parameters
@@ -82,25 +101,36 @@ def _sanitize_sheetname(s, replace="_"):
 
     Returns
     -------
-    str :
+    str
         Valid excel sheetname
     """
 
     return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
-def write_excel(table_dict, filename, index=False):
+@beartype
+def write_excel(table_dict: dict[str, Any],
+                filename: str,
+                index: bool = False,
+                **kwargs: Any) -> None:
     """
     Write a dictionary of tables to a single excel file with one table per sheet.
 
     Parameters
     ----------
-    table_dict : dict
+    table_dict : dict[str, Any]
         Dictionary of tables in the format {<sheet_name1>: table, <sheet_name2>: table, (...)}.
     filename : str
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
+    **kwargs : Any
+        Keyword arguments passed to pandas.DataFrame.to_excel.
+
+    Raises
+    ------
+    Exception
+        If `table_dict` contains items not of type DataFrame.
     """
 
     # Check if tables are pandas dataframes
@@ -108,27 +138,38 @@ def write_excel(table_dict, filename, index=False):
         if not isinstance(table, pd.DataFrame):
             raise Exception(f"Table {name} is not a pandas DataFrame!")
 
+    # Setup kwargs
+    write_kwargs = {"engine": "xlsxwriter"}  # default: faster than openpyxl
+    write_kwargs.update(kwargs)  # overwrite defaults with user input
+
     # Write to excel
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
-            table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
+            table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, **write_kwargs)
 
 
-def table_zscore(table, how="row"):
+@beartype
+def table_zscore(table: pd.DataFrame,
+                 how: Literal["row", "col"] = "row") -> pd.DataFrame:
     """
     Z-score a table.
 
     Parameters
     ----------
-    table : pandas.DataFrame
+    table : pd.DataFrame
         Table to z-score.
-    how : str, default "row"
+    how : {'row', 'col'}
         Whether to z-score rows or columns.
 
     Returns
     -------
-    pandas.DataFrame :
+    pd.DataFrame
         Z-scored table.
+
+    Raises
+    ------
+    Exception
+        If `how` has invalid selection.
     """
 
     if how == "row":
@@ -136,6 +177,7 @@ def table_zscore(table, how="row"):
     elif how == "col":
         counts_z = table.apply(zscore)
     else:
+        # Will not be called due to beartype checking for input
         raise Exception(f"'{how}' is invalid for 'how' - it must be 'row' or 'col'.")
 
     return counts_z

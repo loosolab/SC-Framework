@@ -1,29 +1,35 @@
+"""Settings for running sctoolbox functions including paths to output directories, logging, verbosity etc."""
+
 import os
 import yaml
 import sys
 import logging
 
+from beartype import beartype
+from beartype.typing import Optional
+
 
 class SctoolboxConfig(object):
-    """
-    Config manager for sctoolbox
-    """
+    """Config manager for sctoolbox."""
 
     __frozen = False
 
     def __init__(self,
                  figure_dir: str = "",           # Directory to write figures to
-                 figure_prefix: str = "",        # Prefix for all figures to write (within figure_path)
+                 figure_prefix: str = "",        # Prefix for all figures to write (within figure_dir)
+                 table_dir: str = "",            # Directory to write tables to
+                 table_prefix: str = "",         # Prefix for all tables to write (within table_dir)
                  adata_input_dir: str = "",      # Directory to read adata objects from
-                 adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_path)
+                 adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_dir)
                  adata_output_dir: str = "",     # Directory to write adata objects to
-                 adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_path)
-                 threads: int = 4,  # default number of threads to use when multiprocessing is available
-                 create_dirs: bool = True,  # create output directories if they do not exist
+                 adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_dir)
+                 threads: int = 4,               # default number of threads to use when multiprocessing is available
+                 create_dirs: bool = True,       # create output directories if they do not exist
                  verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
                  ):
+        """Initialize settings."""
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
 
@@ -34,30 +40,25 @@ class SctoolboxConfig(object):
         self._freeze()  # Freeze the class; no new attributes can be added
 
     def reset(self):
-        """ Reset all settings to default """
+        """Reset all settings to default."""
         self.__init__()
 
     def _freeze(self):
-        """ Set __frozen to True, disallowing new attributes to be added """
+        """Set __frozen to True, disallowing new attributes to be added."""
         self.__frozen = True
 
     def __setattr__(self, key, value):
-        """ Set attribute if it exists in __init__ and is of the correct type """
+        """Set attribute if it exists in __init__ and is of the correct type."""
 
         if self.__frozen and not hasattr(self, key):
             valid_parameters = [key for key in self.__dict__ if not key.startswith("_")]
             raise ValueError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
-        # Validate and set parameter
+        # Validate parameter types
         if "__frozen" in key:  # allow __frozen to be set without checking
             pass
         elif key == "_logger":
             pass  # allow logger to be set without checking
-
-        elif key in ["figure_dir", "adata_input_dir", "adata_output_dir"]:
-            value = os.path.join(value, '')  # add trailing slash if not present
-            self._validate_string(value)
-            self._create_dir(value)
 
         elif key == "log_file":
             if value is not None:
@@ -71,6 +72,16 @@ class SctoolboxConfig(object):
 
         elif self.__init__.__annotations__[key] == str:
             self._validate_string(value)
+
+        # Additionally check specific attributes for validity
+        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir"]:
+            value = os.path.join(value, '')  # add trailing slash if not present
+            self._create_dir(value)
+
+        elif key == "verbosity":
+            self._validate_int(value)
+            if value not in [0, 1, 2]:
+                raise ValueError("Verbosity must be 0, 1 or 2.")
 
         object.__setattr__(self, key, value)
 
@@ -93,7 +104,7 @@ class SctoolboxConfig(object):
             raise TypeError("Parameter must be of type bool.")
 
     def _create_dir(self, dirname: str):
-        """ Create a directory if it does not exist yet """
+        """Create a directory if it does not exist yet."""
 
         if dirname == "":  # do not create directory if path is empty
             return
@@ -106,7 +117,7 @@ class SctoolboxConfig(object):
     # Getter / setter for filename prefixes
     @property
     def full_figure_prefix(self):
-        """ Combine figure_dir and figure_prefix on the fly to get the full figure prefix """
+        """Combine figure_dir and figure_prefix on the fly to get the full figure prefix."""
         return self.figure_dir + self.figure_prefix   # figure_dir has trailing slash
 
     @full_figure_prefix.setter
@@ -114,8 +125,17 @@ class SctoolboxConfig(object):
         raise ValueError("'full_figure_prefix' cannot be set directly. Adjust 'figure_dir' & 'figure_prefix' instead.")
 
     @property
+    def full_table_prefix(self):
+        """Combine table_dir and table_prefix on the fly to get the full table prefix."""
+        return self.table_dir + self.table_prefix
+
+    @full_table_prefix.setter
+    def full_table_prefix(self, value):
+        raise ValueError("'full_table_prefix' cannot be set directly. Adjust 'table_dir' & 'table_prefix' instead.")
+
+    @property
     def full_adata_input_prefix(self):
-        """ Combine adata_input_dir and adata_input_prefix on the fly to get the full adata input prefix """
+        """Combine adata_input_dir and adata_input_prefix on the fly to get the full adata input prefix."""
         return self.adata_input_dir + self.adata_input_prefix
 
     @full_adata_input_prefix.setter
@@ -124,7 +144,7 @@ class SctoolboxConfig(object):
 
     @property
     def full_adata_output_prefix(self):
-        """ Combine adata_output_dir and adata_output_prefix on the fly to get the full adata output prefix """
+        """Combine adata_output_dir and adata_output_prefix on the fly to get the full adata output prefix."""
         return self.adata_output_dir + self.adata_output_prefix
 
     @full_adata_output_prefix.setter
@@ -132,7 +152,7 @@ class SctoolboxConfig(object):
         raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
 
     def _setup_logger(self, verbosity: int = None, log_file: str = None, overwrite_log: bool = False):
-        """ Set up logger on the basis of the verbosity level """
+        """Set up logger on the basis of the verbosity level."""
 
         # Use current settings if no new settings are provided
         if log_file is None:
@@ -190,31 +210,33 @@ class SctoolboxConfig(object):
             self._logger.addHandler(F)
 
     def close_logfile(self):
-        """ Close all open filehandles of logger """
+        """Close all open filehandles of logger."""
         for handler in self._logger.handlers:
             if isinstance(handler, logging.FileHandler):
                 handler.close()
 
     @property
     def logger(self):
+        """Return logger object."""
         return self._logger
 
 
-def settings_from_config(config_file, key=None):
+@beartype
+def settings_from_config(config_file: str, key: Optional[str] = None):
     """
-    Set settings from a config file in yaml format.
+    Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 
     Parameters
     ----------
     config_file : str
         Path to the config file.
-    key : str, optional
+    key : Optional[str], default None
         If given, get settings for a specific key.
 
-    Returns
-    -------
-    None
-        Settings are set in sctoolbox.settings.
+    Raises
+    ------
+    KeyError
+        If key is not found in config file.
     """
 
     # Read yaml file

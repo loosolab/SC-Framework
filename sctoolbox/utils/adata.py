@@ -1,28 +1,42 @@
+"""anndata.AnnData related functions."""
+
 import numpy as np
 import scanpy as sc
 from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
+import scipy
+import matplotlib.pyplot as plt
+from scipy.sparse import issparse
+
+from beartype.typing import Optional, Any
+from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def get_adata_subsets(adata, groupby):
+@beartype
+def get_adata_subsets(adata: sc.AnnData, groupby: str) -> dict[str, sc.AnnData]:
     """
     Split an anndata object into a dict of sub-anndata objects based on a grouping column.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object to split.
     groupby : str
         Column name in adata.obs to split by.
 
     Returns
     -------
-    dict :
+    dict[str, sc.AnnData]
         Dictionary of anndata objects in the format {<group1>: anndata, <group2>: anndata, (...)}.
+
+    Raises
+    ------
+    ValueError
+        If groupby is not found in `adata.obs.columns`.
     """
 
     if groupby not in adata.obs.columns:
@@ -37,16 +51,22 @@ def get_adata_subsets(adata, groupby):
 
 
 @deco.log_anndata
-def add_expr_to_obs(adata, gene):
+@beartype
+def add_expr_to_obs(adata: sc.AnnData, gene: str) -> None:
     """
     Add expression of a gene from adata.X to adata.obs as a new column.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object to add expression to.
     gene : str
         Gene name to add expression of.
+
+    Raises
+    ------
+    Exception
+        If the gene is not found in the adata object.
     """
 
     boolean = adata.var.index == gene
@@ -59,22 +79,24 @@ def add_expr_to_obs(adata, gene):
 
 
 @deco.log_anndata
-def shuffle_cells(adata, seed=42):
+@beartype
+def shuffle_cells(adata: sc.AnnData, seed: int = 42) -> sc.AnnData:
     """
     Shuffle cells in an adata object to improve plotting.
+
     Otherwise, cells might be hidden due plotting samples in order e.g. sample1, sample2, etc.
 
     Parameters
-    -----------
-    adata : anndata.AnnData
+    ----------
+    adata : sc.AnnData
         Anndata object to shuffle cells in.
+    seed : int, default 42
+        Seed for random number generator.
 
     Returns
     -------
-    anndata.AnnData :
+    sc.AnnData
         Anndata object with shuffled cells.
-    seed : int, default 42
-        Seed for random number generator.
     """
 
     import random
@@ -89,17 +111,19 @@ def shuffle_cells(adata, seed=42):
     return adata
 
 
-def get_minimal_adata(adata):
-    """ Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
+@beartype
+def get_minimal_adata(adata: sc.AnnData) -> sc.AnnData:
+    """
+    Return a minimal copy of an anndata object e.g. for estimating UMAP in parallel.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
 
     Returns
     -------
-    anndata.AnnData
+    sc.AnnData
         Minimal copy of anndata object.
     """
 
@@ -111,7 +135,8 @@ def get_minimal_adata(adata):
     return adata_minimal
 
 
-def load_h5ad(path):
+@beartype
+def load_h5ad(path: str) -> sc.AnnData:
     """
     Load an anndata object from .h5ad file.
 
@@ -122,7 +147,7 @@ def load_h5ad(path):
 
     Returns
     -------
-    anndata.AnnData :
+    sc.AnnData
         Loaded anndata object.
     """
 
@@ -135,13 +160,14 @@ def load_h5ad(path):
 
 
 @deco.log_anndata
-def save_h5ad(adata, path):
+@beartype
+def save_h5ad(adata: sc.AnnData, path: str) -> None:
     """
     Save an anndata object to an .h5ad file.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
@@ -154,20 +180,31 @@ def save_h5ad(adata, path):
     logger.info(f"The adata object was saved to: {adata_output}")
 
 
-def add_uns_info(adata, key, value, how="overwrite"):
+@beartype
+def add_uns_info(adata: sc.AnnData,
+                 key: str | list[str],
+                 value: Any,
+                 how: str = "overwrite") -> None:
     """
-    Add information to adata.uns['sctoolbox']. This is used for logging the parameters and options of different steps in the analysis.
+    Add information to adata.uns['sctoolbox'].
+
+    This is used for logging the parameters and options of different steps in the analysis.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         An AnnData object.
-    key : str or list
+    key : str | list[str]
         The key to add to adata.uns['sctoolbox']. If the key is a list, it represents a path within a nested dictionary.
-    value : any
+    value : Any
         The value to add to adata.uns['sctoolbox'].
-    how : str, default overwrite
+    how : str, default "overwrite"
         When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
+
+    Raises
+    ------
+    ValueError
+        If value can not be appended.
     """
 
     if "sctoolbox" not in adata.uns:
@@ -214,3 +251,169 @@ def add_uns_info(adata, key, value, how="overwrite"):
             # If list; remove duplicates and keep the last occurrence
             if isinstance(d[last_key], Sequence):
                 d[last_key] = list(reversed(OrderedDict.fromkeys(reversed(d[last_key]))))  # reverse list to keep last occurrence instead of first
+
+
+@beartype
+def get_cell_values(adata: sc.AnnData,
+                    element: str) -> np.ndarray:
+    """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object.
+    element : str
+        The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+
+    Returns
+    -------
+    np.ndarray
+        Array of values per cell in adata.
+
+    Raises
+    ------
+    ValueError
+        If element is not found in adata.obs or adata.var.
+    """
+
+    if element in adata.obs:
+        values = np.array(adata.obs[element].values)
+    elif element in adata.var.index:
+        idx = list(adata.var.index).index(element)
+        values = adata.X[:, idx]
+        values = values.todense().A1 if issparse(values) else values
+    else:
+        raise ValueError(f"Element '{element}' not found in adata.obs or adata.var.")
+
+    return values
+
+
+@beartype
+def prepare_for_cellxgene(adata: sc.AnnData,
+                          keep_obs: Optional[list[str]] = None,
+                          keep_var: Optional[list[str]] = None,
+                          rename_obs: Optional[dict[str, str]] = None,
+                          rename_var: Optional[dict[str, str]] = None,
+                          embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
+                          cmap: Optional[str] = None,
+                          palette: Optional[str | Sequence[str]] = None,
+                          inplace: bool = False) -> Optional[sc.AnnData]:
+    """
+    Prepare the given adata for cellxgene deployment.
+
+    Parameters
+    ----------
+    adata : sc.Anndata
+        Anndata object.
+    keep_obs : Optional[list[str]], default None
+        adata.obs columns that should be kept. None to keep all.
+    keep_var : Optional[list[str]], default None
+        adata.var columns that should be kept. None to keep all.
+    rename_obs : Optional[dict[str, str]], default None
+        Dictionary of .obs columns to rename. Key is the old name, value the new one.
+    rename_var : Optional[dict[str, str]], default None
+        Dictionary of .var columns to rename. Key is the old name, value the new one.
+    embedding_names : Optional[list[str]], default ["pca", "umap", "tsne"]
+        List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.
+    cmap : Optional[str], default None
+        Color map to use for continous variables.
+        Use this replacement color map for broken color maps.
+        If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
+    palette : Optional[str | Sequence[str]], default None
+        Color map to use for categorical annotation groups.
+        Use this replacement color map for broken color maps.
+        If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
+    inplace : bool, default False
+
+    Raises
+    ------
+    ValueError
+        If not at least one of the named embeddings are found in the adata.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Returns the deployment ready Anndata object.
+    """
+
+    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
+        """Clean either obs or var section of given adata object."""
+        if axis == "obs":
+            sec_table = obj.obs
+        elif axis == "var":
+            sec_table = obj.var
+
+        # drop columns
+        if keep is not None:
+            drop = set(sec_table.columns) - set(keep)
+            sec_table.drop(columns=drop, inplace=True)
+
+            # drop matching color maps
+            for col in drop:
+                if f"{col}_colors" in obj.uns.keys():
+                    obj.uns.pop(f"{col}_colors")
+
+        # rename columns
+        if rename:
+            sec_table.rename(columns=rename, inplace=True)
+
+            # rename color maps
+            for old, new in rename.items():
+                if f"{old}_colors" in obj.uns.keys():
+                    obj.uns[f"{new}_colors"] = obj.uns.pop(f"{old}_colors")
+
+        # convert Int32 to float64 columns
+        for c in sec_table:
+            if sec_table[c].dtype == 'Int32':
+                sec_table[c] = sec_table[c].astype('float64')
+
+        sec_table.index.names = ['index']
+
+    out = adata if inplace else adata.copy()
+
+    # TODO remove more adata internals not needed for cellxgene
+
+    # ----- .obsm -----
+    if embedding_names:
+        if not any(f"X_{e}" == k for e in embedding_names for k in out.obsm.keys()):
+            raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
+
+    # ----- .obs -----
+    clean_section(out, axis="obs", keep=keep_obs, rename=rename_obs)
+
+    # ----- .var -----
+    clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+
+    # ----- .X -----
+    # convert .X to sparse matrix if needed
+    if not scipy.sparse.isspmatrix(out.X):
+        out.X = scipy.sparse.csc_matrix(out.X)
+
+    out.X = out.X.astype("float32")
+
+    # ----- .uns -----
+    for key in list(out.uns):  # avoid RuntimeError by forcing a copy of dict keys.
+        if key.endswith('colors'):
+            obs_key = key.split("_colors")[0]
+            # delete colors if they don't match a .obs column.
+            if obs_key not in out.obs.columns:
+                out.uns.pop(key)
+
+                logger.warning(f"Deleted .uns[{key}] since it did not match a .obs column.")
+                continue
+
+            # fix colors not in 6-digit hex format
+            # https://github.com/chanzuckerberg/cellxgene/issues/2598
+            out.uns[key] = np.array([(c if len(c) <= 7 else c[:-2]) for c in out.uns[key]])
+
+            # fix number of colors < number of categories
+            if len(out.uns[key]) != len(set(out.obs[obs_key])):
+                logger.warning(f"Coloring for adata.obs['{obs_key}'] broken. Reverting to {cmap if cmap else 'scanpy default'} color map.")
+
+                # scanpy replaces broken colormap before plotting
+                basis = list(out.obsm.keys())[0]
+                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=palette, color_map=cmap, show=False)
+                plt.close()  # prevent that plot is shown
+
+    if not inplace:
+        return out

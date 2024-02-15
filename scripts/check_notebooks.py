@@ -4,6 +4,7 @@ Script to check whether notebook(s) contains output. Fails if it does.
 
 import sys
 import json
+import glob
 
 
 def check_notebook(path):
@@ -24,5 +25,9 @@ if __name__ == '__main__':
         print('Usage: check_notebooks.py notebook1.ipynb notebook2.ipynb ...')
         sys.exit(1)
 
-    for path in sys.argv[1:]:
+    paths = [glob.glob(f) for f in sys.argv[1:]]
+    paths = sum(paths, [])  # flatten list
+
+    for path in paths:
+        print(f"Checking {path} for output...")
         check_notebook(path)

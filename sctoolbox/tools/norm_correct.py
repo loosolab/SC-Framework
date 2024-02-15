@@ -1,49 +1,72 @@
-"""
-Normalization and correction tools
-"""
-
+"""Normalization and correction tools."""
 import numpy as np
 from scipy import sparse
 import io
 from contextlib import redirect_stderr
 import copy
 import multiprocessing as mp
-import anndata
 import scanpy as sc
 import scanpy.external as sce
 
+from beartype.typing import Optional, Any, Union, Literal, Callable
+from beartype import beartype
+
 import sctoolbox.utils as utils
-from sctoolbox.tools.dim_reduction import lsi, compute_PCA
-from sctoolbox.tools import highly_variable as hv
+from sctoolbox.tools.dim_reduction import lsi
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+batch_methods = Literal["bbknn",
+                        "combat",
+                        "mnn",
+                        "harmony",
+                        "scanorama"]
 
 #####################################################################
 # --------------------- Normalization methods --------------------- #
 #####################################################################
 
+
+def atac_norm(*args: Any, **kwargs: Any):
+    """Normalize ATAC data - deprecated functionality. Use normalize_adata instead."""
+
+    logger.warning("The function 'atac_norm' is deprecated. Use 'normalize_adata' instead.")
+    return normalize_adata(*args, **kwargs)
+
+
 @deco.log_anndata
-def atac_norm(adata, method):
+@beartype
+def normalize_adata(adata: sc.AnnData,
+                    method: str | list[str],
+                    exclude_highly_expressed: bool = True,
+                    target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
     """
-    A function that normalizes count matrix using different methods.
+    Normalize the count matrix and calculate dimension reduction using different methods.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Annotated data matrix.
-    method : str or list of str
+    method : str | list[str]
         Normalization method. Either 'total' and/or 'tfidf'.
-
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
+    exclude_highly_expressed : bool, default True
+        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    target_sum : Optional[int], default None
+        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
 
     Returns
     -------
-    dict of anndata.AnnData
+    dict[str, sc.AnnData]
         Dictionary containing method name as key, and anndata as values.
         Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
+
+    Raises
+    ------
+    ValueError
+        If method is not valid. Needs to be either 'total' or 'tfidf'.
     """
 
     if isinstance(method, str):
@@ -55,7 +78,7 @@ def atac_norm(adata, method):
 
         if method_str == "total":  # perform total normalization and pca
             logger.info('Performing total normalization and PCA...')
-            sc.pp.normalize_total(adata, exclude_highly_expressed=True)
+            sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
             sc.pp.log1p(adata)
             sc.pp.pca(adata)
 
@@ -72,98 +95,44 @@ def atac_norm(adata, method):
     return adatas
 
 
-def adata_normalize_total(anndata, excl=True, inplace=False, norm_kwargs={}, log_kwargs={}):
+@beartype
+def tfidf(data: sc.AnnData,
+          log_tf: bool = True,
+          log_idf: bool = True,
+          log_tfidf: bool = False,
+          scale_factor: int = 1e4) -> None:
     """
-    Normalizing the total counts and converting to log
+    Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
-    Parameters
-    ----------
-    anndata : anndata.AnnData
-        Anndata object to normalize.
-    excl : boolean, default True
-        Decision to exclude highly expressed genes (HEG) from normalization.
-    inplace : boolean, default False
-        Whether the anndata object is modified inplace.
-    norm_kwargs : dict, default {}
-        Additional parameters forwarded to scanpy.pp.normalize_total().
-    log_kwargs : dict, default {}
-        Additional parameters forwarded to scanpy.pp.log1p().
-
-    Returns
-    -------
-    anndata.AnnData or None:
-        Returns normalized and logged anndata object. Or None if inplace = True.
-    """
-    adata_m = anndata if inplace else anndata.copy()
-
-    # Normalizing and logaritimyzing
-    # print("Normalizing the data and converting to log")
-    sc.pp.normalize_total(adata_m, exclude_highly_expressed=excl, inplace=True, **norm_kwargs)
-    sc.pp.log1p(adata_m, copy=False, **log_kwargs)
-
-    # Adding info in anndata.uns["infoprocess"]
-    # cr.build_infor(adata_m, "Scanpy normalization", "exclude_highly_expressed= " + str(excl), inplace=True)
-
-    if not inplace:
-        return adata_m
-
-
-def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
-    """
-    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
-
-    Parameters
-    ----------
-    anndata : anndata.AnnData
-        Anndata object to work on.
-    exclude_HEG : boolean, default True
-        If True, highly expressed genes (HEG) will be not considered in the normalization.
-    use_HVG_PCA : boolean, default True
-        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-    inplace : boolean, default False
-        Whether to work inplace on the anndata object.
-
-    Returns
-    -------
-    anndata.Anndata or None:
-        Anndata with expression values normalized and log converted and PCA computed.
-    """
-    adata_m = anndata if inplace else anndata.copy()
-
-    # Normalization and converting to log
-    adata_normalize_total(adata_m, exclude_HEG, inplace=True)
-
-    # Annotate highly variable genes
-    hv.annot_HVG(adata_m, inplace=True)
-
-    # Compute PCA
-    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
-
-    if not inplace:
-        return adata_m
-
-
-def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
-    """Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
     TF: peak counts are normalised by total number of counts per cell.
     DF: total number of counts for each peak.
     IDF: number of cells divided by DF.
     By default, log(TF) * log(IDF) is returned.
 
-    Note: Function is from the muon package.
+    Parameters
+    ----------
+    data : sc.AnnData
+        AnnData object with peak counts.
+    log_tf : bool, default True
+        Log-transform TF term if True.
+    log_idf : bool, default True
+        Log-transform IDF term if True.
+    log_tfidf : bool, default Frue
+        Log-transform TF*IDF term if True. Can only be used when log_tf and log_idf are False.
+    scale_factor : int, default 1e4
+        Scale factor to multiply the TF-IDF matrix by.
 
-    :param anndata.AnnData data: AnnData object with peak counts.
-    :param bool log_tf: Log-transform TF term, defaults to True.
-    :param bool log_idf: Log-transform IDF term, defaults to True.
-    :param bool log_tfidf: Log-transform TF*IDF term. Can only be used when log_tf and log_idf are False, defaults to False.
-    :param int scale_factor: Scale factor to multiply the TF-IDF matrix by, defaults to 1e4.
-    :raises TypeError: data must be anndata object.
-    :raises AttributeError: log(TF*IDF) requires log(TF) and log(IDF) to be False.
+    Notes
+    -----
+    Function is from the muon package.
+
+    Raises
+    ------
+    AttributeError:
+        log(TF*IDF) requires log(TF) and log(IDF) to be False.
     """
-    if isinstance(data, anndata.AnnData):
-        adata = data
-    else:
-        raise TypeError("Expected AnnData object!")
+
+    adata = data
 
     if log_tfidf and (log_tf or log_idf):
         raise AttributeError(
@@ -200,20 +169,32 @@ def tfidf(data, log_tf=True, log_idf=True, log_tfidf=False, scale_factor=1e4):
     adata.X = np.nan_to_num(tf_idf, 0)
 
 
-def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq"):
-    """ Perform TF-IDF normalization on a sparse matrix.
+@beartype
+def tfidf_normalization(matrix: sparse.spmatrix,
+                        tf_type: Literal["raw", "term_frequency", "log"] = "term_frequency",
+                        idf_type: Literal["unary", "inverse_freq", "inverse_freq_smooth"] = "inverse_freq") -> sparse.csr_matrix:
+    """
+    Perform TF-IDF normalization on a sparse matrix.
+
     The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.
 
-    Note: this function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
-
     Parameters
-    -----------
+    ----------
     matrix : scipy.sparse matrix
         The matrix to be normalized.
-    tf_type : string, optional
-        The type of term frequency to use. Can be either "raw", "term_frequency" or "log". Default: "term_frequency".
-    idf_type : string, optional
-        The type of inverse document frequency to use. Can be either "unary", "inverse_freq" or "inverse_freq_smooth". Default: "inverse_freq".
+    tf_type : Literal["term_frequency", "log", "raw"], default "term_frequency"
+        The type of term frequency to use. Can be either "raw", "term_frequency" or "log".
+    idf_type : Literal["inverse_freq", "unary", "inverse_freq_smooth"], default "inverse_freq"
+        The type of inverse document frequency to use. Can be either "unary", "inverse_freq" or "inverse_freq_smooth".
+
+    Returns
+    -------
+    sparse.csr_matrix
+        tfidf normalized sparse matrix.
+
+    Notes
+    -----
+    This function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
     """
 
     # t - term (peak)
@@ -255,20 +236,23 @@ def tfidf_normalization(matrix, tf_type="term_frequency", idf_type="inverse_freq
 ###################################################################################
 
 
-def wrap_corrections(adata,
-                     batch_key,
-                     methods=["bbknn", "mnn"],
-                     method_kwargs={}):
+@beartype
+def wrap_corrections(adata: sc.AnnData,
+                     batch_key: str,
+                     methods: Union[batch_methods,
+                                    list[batch_methods],
+                                    Callable] = ["bbknn", "mnn"],
+                     method_kwargs: dict = {}) -> dict[str, sc.AnnData]:
     """
-    Wrapper for calculating multiple batch corrections for adata using the 'batch_correction' function.
+    Calculate multiple batch corrections for adata using the 'batch_correction' function.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
-    methods : list of str or function
+    methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
         The method(s) to use for batch correction. Options are:
         - bbknn
         - mnn
@@ -281,9 +265,15 @@ def wrap_corrections(adata,
 
     Returns
     -------
-    dict of anndata.Anndata :
+    dict[str, sc.AnnData]
         Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.
+
+    Raises
+    ------
+    ValueError
+        If not all methods in methods are valid.
     """
+
     # Ensure that methods can be looped over
     if isinstance(methods, str):
         methods = [methods]
@@ -312,13 +302,20 @@ def wrap_corrections(adata,
 
 
 @deco.log_anndata
-def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
+@beartype
+def batch_correction(adata: sc.AnnData,
+                     batch_key: str,
+                     method: Union[batch_methods,
+                                   list[batch_methods],
+                                   Callable] = ["bbknn", "mnn"],
+                     highly_variable: bool = True,
+                     **kwargs: Any) -> sc.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         An annotated data matrix object to apply corrections to.
     batch_key : str
         The column in adata.obs containing batch information.
@@ -334,14 +331,23 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
-    **kwargs :
+    **kwargs : Any
         Additional arguments will be forwarded to the method function.
 
     Returns
     -------
-    anndata.AnnData :
+    sc.AnnData
         A copy of the anndata with applied batch correction.
+
+    Raises
+    ------
+    ValueError:
+        1. If batch_key column is not in adata.obs
+        2. If batch correction method is invalid.
+    KeyError:
+        If PCA has not been calculated before running bbknn.
     """
+
     if not callable(method):
         method = method.lower()
 
@@ -356,7 +362,10 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
         import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
 
         # Get number of pcs in adata, as bbknn hardcodes n_pcs=50
-        n_pcs = adata.obsm["X_pca"].shape[1]
+        try:
+            n_pcs = adata.obsm["X_pca"].shape[1]
+        except KeyError:
+            raise KeyError("PCA has not been calculated. Please run sc.pp.pca() before running bbknn.")
 
         # Run bbknn
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
@@ -381,11 +390,8 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
         # Join corrected adatas
         corrected_adatas = corrected_adatas[0]  # the output is a dict of list ([adata1, adata2, (...)], )
-        adata = anndata.concat(corrected_adatas, join="outer", uns_merge="first")
+        adata = sc.concat(corrected_adatas, join="outer", uns_merge="first")
         adata.var = var_table  # add var table back into corrected adata
-
-        # Make sure that the batch_key is still a categorical
-        adata.obs[batch_key] = adata.obs[batch_key].astype("category")
 
         sc.pp.scale(adata)  # from the mnnpy github example
         sc.tl.pca(adata)  # rerun pca
@@ -393,6 +399,7 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
     elif method == "harmony":
         adata = adata.copy()  # there is no copy option for harmony
+        adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
 
         sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]
@@ -432,37 +439,52 @@ def batch_correction(adata, batch_key, method, highly_variable=True, **kwargs):
 
 
 @deco.log_anndata
-def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_score', max_dims=5, inplace=False):
+@beartype
+def evaluate_batch_effect(adata: sc.AnnData,
+                          batch_key: str,
+                          obsm_key: str = 'X_umap',
+                          col_name: str = 'LISI_score',
+                          max_dims: int = 5,
+                          perplexity: int = 30,
+                          inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Evaluate batch effect methods using LISI.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         Anndata object with PCA and umap/tsne for batch evaluation.
     batch_key : str
         The column in adata.obs containing batch information.
     obsm_key : str, default 'X_umap'
         The column in adata.obsm containing coordinates.
-    col_name : str
+    col_name : str, default 'LISI_score'
         Column name for storing the LISI score in .obs.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
-    inplace : boolean, default False
+    perplexity : int, default 30
+        Perplexity for the LISI score calculation.
+    inplace : bool, default False
         Whether to work inplace on the anndata object.
 
     Returns
     -------
-    anndata.Anndata or None:
+    Optional[sc.AnnData]
         if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.
 
-    NOTES
-    -------
+    Notes
+    -----
     - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.
     - indicates the effective number of different categories represented in the local neighborhood of each cell.
     - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.
     - The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.
     - For further information on LISI: https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+
+    Raises
+    ------
+    KeyError:
+        1. If obsm_key is not in adata.obsm.
+        2. If batch_key is no column in adata.obs.
     """
 
     # Load LISI
@@ -481,38 +503,43 @@ def evaluate_batch_effect(adata, batch_key, obsm_key='X_umap', col_name='LISI_sc
 
     # run LISI on all adata objects
     obsm_matrix = adata_m.obsm[obsm_key][:, :max_dims]
-    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key])
+    lisi_res = compute_lisi(obsm_matrix, adata_m.obs, [batch_key], perplexity=perplexity)
     adata_m.obs[col_name] = lisi_res.flatten()
 
     if not inplace:
         return adata_m
 
 
-def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], threads=1, max_dims=5, inplace=False):
+@beartype
+def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
+                          batch_key: str,
+                          obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
+                          threads: int = 1,
+                          max_dims: int = 5,
+                          inplace: bool = False) -> Optional[dict[str, sc.AnnData]]:
     """
-    Evaluating batch correction methods for a dict of anndata objects (using LISI score calculation)
+    Evaluate batch correction methods for a dict of anndata objects (using LISI score calculation).
 
     Parameters
     ----------
-    adatas : dict of anndata.AnnData
+    adatas : dict[str, sc.AnnData]
         Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.
         E.g.: {"bbknn": anndata}
     batch_key : str
         The column in adata.obs containing batch information.
-    obsm_keys : str or list of str, default ['X_pca', 'X_umap']
+    obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
+    threads : int, default 1
+        Number of threads to use for parallelization.
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
-    threads : int
-        Number of threads to use for parallelization.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether to work inplace on the anndata dict.
 
     Returns
     -------
-    dict of anndata.AnnData
+    Optional[dict[str, sc.AnnData]]
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
-
     """
 
     if utils._is_notebook() is True:
@@ -532,8 +559,11 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
 
         pbar = tqdm(total=len(adatas_m) * len(obsm_keys), desc="Calculation progress ")
         for adata in adatas_m.values():
+            n_cells = adata.shape[0]
+            perplexity = min(30, int(n_cells / 3))  # adjust perplexity for small datasets
+
             for obsm in obsm_keys:
-                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, inplace=True)
+                evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, perplexity=perplexity, inplace=True)
                 pbar.update()
     else:
         utils.check_module("harmonypy")
@@ -542,11 +572,14 @@ def wrap_batch_evaluation(adatas, batch_key, obsm_keys=['X_pca', 'X_umap'], thre
         pool = mp.Pool(threads)
         jobs = {}
         for i, adata in enumerate(adatas_m.values()):
+            n_cells = adata.shape[0]
+            perplexity = min(30, int(n_cells / 3))  # adjust perplexity for small datasets
+
             for obsm_key in obsm_keys:
                 obsm_matrix = adata.obsm[obsm_key][:, :max_dims]
                 obs_mat = adata.obs[[batch_key]]
 
-                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key]))
+                job = pool.apply_async(compute_lisi, args=(obsm_matrix, obs_mat, [batch_key], perplexity,))
                 jobs[(i, obsm_key)] = job
         pool.close()
 

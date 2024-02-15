@@ -1,64 +1,98 @@
+"""Plots for marker genes e.g. as results of sc.tl.rank_genes_groups."""
+
 import scanpy as sc
 import numpy as np
 import qnorm
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import zscore
+import re
+import deprecation
+from sctoolbox import __version__
 
 # for plotting
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
+from beartype.typing import Optional, Tuple, Literal, Iterable, Any
+from beartype import beartype
+
 # sctoolbox functions
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import bidirectional_barplot, _save_figure
+from sctoolbox.plotting.general import bidirectional_barplot, _save_figure, _make_square
 import sctoolbox.utils.decorator as deco
 
 
 @deco.log_anndata
-def rank_genes_plot(adata,
-                    genes=None,
-                    key=None,
-                    n_genes=15,
-                    dendrogram=False,
-                    groupby=None,
-                    title=None,
-                    style="dots",
-                    measure="expression",
-                    save=None,
-                    **kwargs):
+@beartype
+def rank_genes_plot(adata: sc.AnnData,
+                    key: Optional[str] = "rank_genes_groups",
+                    genes: Optional[list[str] | dict[str, list[str]]] = None,
+                    n_genes: int = 15,
+                    dendrogram: bool = False,
+                    groupby: Optional[str] = None,
+                    title: Optional[str] = None,
+                    style: Literal["dots", "heatmap"] = "dots",
+                    measure: str = "expression",
+                    save: Optional[str] = None,
+                    **kwargs: Any) -> dict:
     """
     Plot expression of genes from rank_genes_groups or from a gene list/dict.
 
     Parameters
     ----------
-    adata : `anndata.AnnData`
+    adata : sc.AnnData
         Annotated data matrix.
-    genes : `list` or `dict`, optional (default: `None`)
-        List of genes to plot. If a dict is passed, the keys are the group names and the values are lists of genes.
-    key : `str`, optional (default: `None`)
-        Key from `adata.uns` to plot. If specified, `genes` must be `None`.
-    n_genes : `int`, optional (default: `15`)
+    key : Optional[str], default "rank_genes_groups"
+        Key from `adata.uns` to plot. For example, `rank_genes_groups` or `rank_genes_groups_filtered`.
+    genes : Optional[list[str] | dict[str, list[str]]], default None
+        List of genes to plot across groups in 'groupby'. If a dict is passed, the keys are the group names and the values are lists of genes. Setting 'genes' overrides the 'key' parameter.
+    n_genes : int, default 15
         Number of genes to plot if `key` is specified.
-    dendrogram : `bool`, optional (default: `False`)
+    dendrogram : bool, default False
         Whether to show the dendrogram for groups.
-    groupby : `str`, optional (default: `None`)
+    groupby : Optional[str], default None
         Key from `adata.obs` to group cells by.
-    title : `str`, optional (default: `None`)
+    title : Optional[str], default None
         Title for the plot.
-    style : `str`, optional (default: `dots`)
+    style : Literal["dots", "heatmap"], default "dots"
         Style of the plot. Either `dots` or `heatmap`.
-    measure : `str`, optional (default: `expression`)
+    measure : str, default "expression"
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
+    save : Optional[str], default None
+        If given, save the figure to this path.
+    **kwargs : Any
+        Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
+
+    Raises
+    ------
+    ValueError
+        1. If `style` is not one of `dots` or `heatmap`
+        2. If `groupby` is not specified when `genes` is specified.
+
+    Returns
+    -------
+    g : dict
+        Dictionary containing the matplotlib axes objects for the plot.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.rank_genes_plot(adata, n_genes=5)
+
+    .. plot::
+        :context: close-figs
+
+        pl.rank_genes_plot(adata, genes={"group1": adata.var.index[:10], "group2": adata.var.index[10:20]}, groupby="bulk_labels")
     """
 
-    available_styles = ["dots", "heatmap"]
-    if style not in available_styles:
-        raise ValueError(f"style must be one of {available_styles}.")
-
-    if genes is not None and key is not None:
-        raise ValueError("Only one of genes or key can be specified.")
+    # Key is not needed if genes are specified
+    if genes is not None:
+        key = None
 
     # Plot genes from rank_genes_groups or from gene list
     parameters = {"swap_axes": False}  # default parameters
@@ -154,49 +188,61 @@ def rank_genes_plot(adata,
 #####################################################################
 
 @deco.log_anndata
-def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, style="violin",
-                   normalize=False,
-                   ax=None,
-                   save=None,
-                   **kwargs):
+@beartype
+def grouped_violin(adata: sc.AnnData,
+                   x: str | list[str],
+                   y: Optional[str] = None,
+                   groupby: Optional[str] = None,
+                   figsize: Optional[Tuple[int | float, int | float]] = None,
+                   title: Optional[str] = None,
+                   style: Literal["violin", "boxplot", "bar"] = "violin",
+                   normalize: bool = False,
+                   ax: Optional[matplotlib.axes.Axes] = None,
+                   save: Optional[str] = None,
+                   **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
+
     Can for example show the expression of one gene across groups (x = obs_group, y = gene),
     expression of multiple genes grouped by cell type (x = gene_list, groupby = obs_cell_type),
     or values from adata.obs across cells (x = obs_group, y = obs_column).
 
     Parameters
     ----------
-    adata : AnnData
+    adata : sc.AnnData
         Annotated data matrix.
-    x : str or list
+    x : str | list[str]
         Column name in adata.obs or gene name(s) in adata.var.index to group by on the x-axis. Multiple gene names can be given in a list.
-    y : str, default None
+    y : Optional[str], default None
         A column name in adata.obs or a gene in adata.var.index to plot values for. Only needed if x is a column in adata.obs.
-    groupby : str, default None
+    groupby : Optional[str], default None
         Column name in adata.obs to create grouped violins. If None, a single violin is plotted per group in 'x'.
-    figsize : tuple, default None
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Figure size.
-    title : str, default None
+    title : Optional[str], default None
         Title of the plot. If None, no title is shown.
-    style : str, default "violin"
+    style : Literal["violin", "boxplot", "bar"], default "violin"
         Plot style. Either "violin" or "boxplot" or "bar".
     normalize : bool, default False
         If True, normalize the values in 'y' to the range [0, 1] per group in 'x'.
-    ax : matplotlib.axes.Axes, default None
+    ax : Optional[matplotlib.axes.Axes], default None
         A matplotlib axes object to plot violinplots in. If None, a new figure and axes is created.
-    save : str, default None
+    save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
-    kwargs : arguments, optional
+    **kwargs : Any
         Additional arguments passed to seaborn.violinplot or seaborn.boxplot.
 
     Returns
     -------
     matplotlib.axes.Axes
 
-    Example
-    --------
+    Raises
+    ------
+    ValueError
+        If x or y are not columns in adata.obs or a genes in adata.var.index.
 
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -300,30 +346,36 @@ def grouped_violin(adata, x, y=None, groupby=None, figsize=None, title=None, sty
 
 
 @deco.log_anndata
-def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
+@beartype
+def group_expression_boxplot(adata: sc.AnnData,
+                             gene_list: list[str],
+                             groupby: str,
+                             figsize: Optional[Tuple[int | float, int | float]] = None,
+                             **kwargs: Any) -> matplotlib.axes.Axes:
     """
-    Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`. The total gene expression is quantile normalized
-    per group, and are subsequently normalized to 0-1 per gene across groups.
+    Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
+
+    The total gene expression is quantile normalized per group, and are subsequently normalized to 0-1 per gene across groups.
 
     Parameters
-    ------------
-    adata : anndata.AnnData object
+    ----------
+    adata : sc.AnnData
         An annotated data matrix object containing counts in .X.
-    gene_list : list
+    gene_list : list[str]
         A list of genes to show expression for.
     groupby : str
         A column in .obs for grouping cells into groups on the x-axis
-    figsize : tuple, optional
-        Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+    figsize : Optional[Tuple[int | float, int | float]], default None (matplotlib default)
+        Control the size of the output figure, e.g. (6,10).
+    **kwargs : Any
+        Additional arguments passed to seaborn.boxplot.
 
-    EXAMPLE
+    Returns
     -------
+    matplotlib.axes.Axes
 
-    .. plot::
-        :context: close-figs
-
-        import sctoolbox.plotting as pl
-
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -357,7 +409,7 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
     # Joined figure with all
     fig, ax = plt.subplots(figsize=figsize)
-    g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey")
+    g = sns.boxplot(data=gene_table_melted_sorted, x=groupby, y="value", ax=ax, color="darkgrey", **kwargs)
     ax.set_ylabel("Normalized expression")
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
@@ -366,47 +418,64 @@ def group_expression_boxplot(adata, gene_list, groupby, figsize=None):
 
 
 @deco.log_anndata
-def gene_expression_heatmap(adata, genes, cluster_column,
-                            gene_name_column=None,
-                            title=None,
-                            groupby=None,
-                            row_cluster=True,
-                            col_cluster=False,
-                            show_row_dendrogram=False,
-                            show_col_dendrogram=False,
-                            figsize=None,
-                            save=None,
-                            **kwargs):
-    """ Plot a heatmap of z-score normalized gene expression across clusters/groups.
+@beartype
+def gene_expression_heatmap(adata: sc.AnnData,
+                            genes: list[str],
+                            cluster_column: str,
+                            gene_name_column: Optional[str] = None,
+                            title: Optional[str] = None,
+                            groupby: Optional[str] = None,
+                            row_cluster: bool = True,
+                            col_cluster: bool = False,
+                            show_row_dendrogram: bool = False,
+                            show_col_dendrogram: bool = False,
+                            figsize: Optional[Tuple[int | float, int | float]] = None,
+                            save: Optional[str] = None,
+                            **kwargs: Any) -> Any:  # Any since beartype cannot handle sns datatypes
+    """
+    Plot a heatmap of z-score normalized gene expression across clusters/groups.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata : sc.AnnData
         Annotated data matrix.
-    genes : `list`
+    genes : list[str]
         List of genes to plot. Must match names in `adata.var.index`.
-    cluster_column : `str`
+    cluster_column : str
         Key in `adata.obs` for which to cluster the x-axis.
-    gene_name_column : `str`, optional (default: `None`)
-        Column in `adata.var` for which to use for gene row names. Default is to use the index.
-    title : `str`, optional (default: `None`)
+    gene_name_column : Optional[str], default None
+        Column in `adata.var` for which to use for gene row names. Default is to use the .var index.
+    title : Optional[str], default None
         Title of the plot.
-    groupby : `str`, optional (default: `None`)
+    groupby : Optional[str], default None
         Key in `adata.obs` for which to plot a colorbar per cluster.
-    row_cluster : `bool`, optional (default: `True`)
+    row_cluster : bool, default True
         Whether to cluster the rows.
-    col_cluster : `bool`, optional (default: `False`)
+    col_cluster : bool, default False
         Whether to cluster the columns.
-    show_row_dendrogram : `bool`, optional (default: `False`)
+    show_row_dendrogram : bool, default False
         Whether to show the dendrogram for the rows.
-    show_col_dendrogram : `bool`, optional (default: `False`)
+    show_col_dendrogram : bool, default False
         Whether to show the dendrogram for the columns.
-    figsize : `tuple`, optional (default: `None`)
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Size of the figure. If `None`, use default size.
-    save : `str`, optional (default: `None`)
+    save : Optional[str], default None
         If given, save the figure to this path.
+    **kwargs : Any
+        Additional arguments passed to `seaborn.clustermap`.
 
-    Example
+    Returns
+    -------
+    g : Any
+        sns.matrix.ClusterGrid: The seaborn ClusterGrid object containing the heatmap.
+        Note: Any since sns.matrix.ClusterGrid cannot be checked by beartype.
+
+    Raises
+    ------
+    KeyError
+        If `gene_name_column` is not a column in `adata.var`.
+
+    Examples
     --------
     .. plot::
         :context: close-figs
@@ -417,7 +486,6 @@ def gene_expression_heatmap(adata, genes, cluster_column,
         genes = adata.var.index[:15]
         pl.gene_expression_heatmap(adata, genes, cluster_column="samples",
                                    groupby="condition",
-                                   gene_name_column="gene",
                                    title="Gene expression",
                                    col_cluster=True,
                                    show_col_dendrogram=True,
@@ -531,29 +599,38 @@ def gene_expression_heatmap(adata, genes, cluster_column,
     return g
 
 
+@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
+                        current_version=__version__,
+                        details="Use the gene_expression_heatmap function instead.")
 @deco.log_anndata
-def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
-    """ Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
-
-    NOTE: Likely to be covered in funtionality by gene_expression_heatmap.
+@beartype
+def group_heatmap(adata: sc.AnnData,
+                  groupby: str,
+                  gene_list: Optional[list[str]] = None,
+                  save: Optional[str] = None,
+                  figsize: Optional[Tuple[int | float, int | float]] = None) -> matplotlib.axes.Axes:
+    """
+    Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
 
     Parameters
     ----------
-    adata : anndata.AnnData object
+    adata : sc.AnnData
         An annotated data matrix object containing counts in .X.
     groupby : str
         A column in .obs for grouping cells into groups on the x-axis
-    gene_list : list, optional
-        A list of genes to show expression for. Default: None (all genes)
-    save : str, optional
-        Save the figure to a file. Default: None (do not save)
-    figsize : tuple, optional
-        Control the size of the output figure, e.g. (6,10). Default: None (matplotlib default).
+    gene_list : Optional[list[str]], default None
+        A list of genes to show expression for.
+        If None, all genes are selected.
+    save : Optional[str], default None
+        Save the figure to a file.
+        If None, figure is not saved.
+    figsize : Optional[Tuple[int | float, int | float]], default None
+        Control the size of the output figure, e.g. (6,10).
+        If None, takes the matplotlib default.
 
     Returns
     -------
-    g : seaborn.clustermap
-        The seaborn clustermap object
+    matplotlib.axes.Axes
     """
     _, ax = plt.subplots(figsize=figsize)
 
@@ -577,31 +654,53 @@ def group_heatmap(adata, groupby, gene_list=None, save=None, figsize=None):
     return g
 
 
-def plot_differential_genes(rank_table, title="Differentially expressed genes",
-                            save=None,
-                            **kwargs):
-    """ Plot number of differentially expressed genes per contrast in a barplot.
-    Takes the output of mg.pairwise_rank_genes as input.
+@beartype
+def plot_differential_genes(rank_table: pd.DataFrame,
+                            title: str = "Differentially expressed genes",
+                            save: Optional[str] = None,
+                            **kwargs: Any) -> matplotlib.axes.Axes:
+    """
+    Plot number of differentially expressed genes per contrast in a barplot.
 
     Parameters
     ----------
-    rank_table : `pandas.DataFrame`
-        Output of mg.pairwise_rank_genes.
-    title : `str`, optional (default: `"Differentially expressed genes"`)
+    rank_table : pd.DataFrame
+        Output of sctoolbox.tools.marker_genes.pairwise_rank_genes.
+    title : str, default "Differentially expressed genes"
         Title of the plot.
-    **kwargs : keyword arguments
+    save : Optional[str], default None
+        If given, save the figure to this path.
+    **kwargs : Any
         Keyword arguments passed to pl.bidirectional_barplot.
+
+    Raises
+    ------
+    ValueError
+        If no significant differentially expressed genes are found in the data.
 
     Returns
     -------
-    `matplotlib.axes.Axes`
+    matplotlib.axes.Axes
         Axes object.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        import sctoolbox.tools as tl
+        adata.obs["groups"] = np.random.choice(["G1", "G2", "G3"], size=adata.shape[0])
+        pairwise_table = tl.marker_genes.pairwise_rank_genes(adata, foldchange_threshold=0.2, groupby="groups")
+
+        pl.plot_differential_genes(pairwise_table)
     """
     group_columns = [col for col in rank_table.columns if "_group" in col]
 
     info = {}
     for col in group_columns:
-        contrast = tuple(col.split("_")[0].split("/"))
+        m = re.match("(.+)/(.+)_group", col)  # tuple(col.split("_")[0].split("/"))
+        contrast = tuple([m.group(1), m.group(2)])
+
         counts = rank_table[col].value_counts()
         if all(x in list(counts.index) for x in ['C1', 'C2']):
             info[contrast] = {"left_value": counts["C1"], "right_value": counts["C2"]}
@@ -616,3 +715,83 @@ def plot_differential_genes(rank_table, title="Differentially expressed genes",
     ax.set_xlabel("Number of genes")
 
     return ax
+
+
+@beartype
+def plot_gene_correlation(adata: sc.AnnData,
+                          ref_gene: str,
+                          gene_list: list[str] | str,
+                          ncols: int = 3,
+                          figsize: Optional[Tuple[int | float, int | float]] = None,
+                          save: Optional[str] = None,
+                          **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
+    """
+    Plot the gene expression of one reference gene against the expression of a set of genes.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        An annotated data matrix object containing counts in .X.
+    ref_gene : str
+        Reference gene to which other genes are comapred to.
+    gene_list : list[str] | str
+        A list of genes to show expression for.
+    ncols : int, default 3
+        Number of columns in plot grid.
+    figsize : Optional[Tuple[int | float, int | float]], default None
+        Control the size of the output figure, e.g. (6,10).
+    save : Optional[str], default None
+        Save the figure to a file.
+    **kwargs : Any
+        Additional arguments passed to seaborn.regplot.
+
+    Returns
+    -------
+    Iterable[matplotlib.axes.Axes]
+        List containing all axis objects.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        gene_list=("HES4", "PRMT2", "ITGB2")
+        pl.plot_gene_correlation(adata, "SUMO3", gene_list)
+    """
+
+    if isinstance(gene_list, str):
+        gene_list = [gene_list]
+
+    # Find out how many rows we need
+    nrows = int(np.ceil(len(gene_list) / ncols))
+
+    if figsize is None:
+        figsize = (ncols * 3, nrows * 3)
+
+    fig, axarr = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
+    axes_list = axarr.flatten()
+
+    # Get expression values of reference gene
+    ref = adata[:, ref_gene].to_df()[ref_gene]
+
+    for i, gene in enumerate(gene_list):
+        ax = axes_list[i]
+        gene_expr = adata[:, gene].to_df()[gene]
+        sns.regplot(x=ref, y=gene_expr, ax=ax, **kwargs)
+
+    # Hide axes not used
+    for ax in axes_list[len(gene_list):]:
+        ax.set_visible(False)
+    axes_list = axes_list[:len(gene_list)]
+
+    # Make plots square
+    for ax in axes_list:
+        _make_square(ax)
+
+    fig.tight_layout()
+
+    # Save figure if chosen
+    if save:
+        _save_figure(save)
+
+    return axes_list

@@ -1,3 +1,5 @@
+"""Test logging functions."""
+
 import os
 import scanpy as sc
 import pytest
@@ -12,14 +14,14 @@ logger = settings.logger
 
 @pytest.fixture
 def adata():
-    """ Load and returns an anndata object. """
+    """Load and returns an anndata object."""
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
     return sc.read_h5ad(f)
 
 
 def test_log_anndata(adata):
-    """ Test if log_anndata  decorator works. """
+    """Test if log_anndata  decorator works."""
 
     # define a function with the decorator
     @deco.log_anndata
@@ -48,7 +50,7 @@ def test_log_anndata(adata):
 
 
 def test_get_parameter_table(adata):
-    """ Test if get_parameter_table works. """
+    """Test if get_parameter_table works."""
 
     # Run a few functions on the adata
     qc.calculate_qc_metrics(adata)
@@ -62,7 +64,7 @@ def test_get_parameter_table(adata):
 
 
 def test_add_uns_info(adata):
-    """ Test if add_uns_info works on both string and list keys. """
+    """Test if add_uns_info works on both string and list keys."""
 
     utils.add_uns_info(adata, "akey", "info")
 
@@ -78,7 +80,7 @@ def test_add_uns_info(adata):
 
 
 def test_user_logging():
-    """ Test is logfile is correctly overwritten """
+    """Test is logfile is correctly overwritten."""
 
     settings.log_file = "test.log"
     logger.info("test_info")

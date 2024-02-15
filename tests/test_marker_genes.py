@@ -1,7 +1,10 @@
+"""Test gene marker functions."""
+
 import pytest
 import os
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import sctoolbox.marker_genes as mg
 
 
@@ -9,6 +12,7 @@ import sctoolbox.marker_genes as mg
 
 @pytest.fixture
 def adata():
+    """Create testing adata."""
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -28,7 +32,7 @@ def adata():
 
 @pytest.fixture
 def adata_score(adata):
-    """ Prepare adata for scoring/ cell cycle test. """
+    """Prepare adata for scoring/ cell cycle test."""
 
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
@@ -41,13 +45,14 @@ def adata_score(adata):
 
 @pytest.fixture
 def gene_set(adata_score):
+    """Return subset of adata genes."""
     return adata_score.var.index.to_list()[:50]
 
 
 # ------------------------------ TESTS --------------------------------- #
 
 def test_get_chromosome_genes():
-    """ Test if get_chromosome_genes get the right genes from the gtf """
+    """Test if get_chromosome_genes get the right genes from the gtf."""
 
     gtf = os.path.join(os.path.dirname(__file__), 'data', 'genes.gtf')
 
@@ -64,7 +69,7 @@ def test_get_chromosome_genes():
 @pytest.mark.parametrize("species, gene_column", [("mouse", None),
                                                   ("unicorn", "gene")])
 def test_label_genes(adata, species, gene_column):
-    """ Test of genes are labeled in adata.var """
+    """Test of genes are labeled in adata.var."""
 
     if species is None:
         with pytest.raises(ValueError):
@@ -73,7 +78,7 @@ def test_label_genes(adata, species, gene_column):
     else:
         mg.label_genes(adata, gene_column=gene_column, species=species)
 
-    added_columns = ["is_ribo", "is_mito", "cellcycle", "is_gender"]
+    added_columns = ["is_ribo", "is_mito", "is_gender"]
     missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
 
     if species == "mouse":
@@ -83,7 +88,7 @@ def test_label_genes(adata, species, gene_column):
 
 
 def test_get_rank_genes_tables(adata):
-    """ test if rank gene tables are created and saved to excel file """
+    """Test if rank gene tables are created and saved to excel file."""
 
     sc.tl.rank_genes_groups(adata, groupby="condition")
 
@@ -92,9 +97,21 @@ def test_get_rank_genes_tables(adata):
     assert len(tables) == 3
     assert os.path.exists("rank_genes.xlsx")
 
+    os.remove("rank_genes.xlsx")
+
+
+@pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str
+def test_get_rank_genes_tables_errors(adata, kwargs):
+    """Test if get_rank_gene_tables raises errors."""
+
+    sc.tl.rank_genes_groups(adata, groupby="condition")
+
+    with pytest.raises(ValueError):
+        mg.get_rank_genes_tables(adata, out_group_fractions=True, **kwargs)
+
 
 def test_mask_rank_genes(adata):
-    """ Test if genes are masked in adata.uns['rank_genes_groups'] """
+    """Test if genes are masked in adata.uns['rank_genes_groups']."""
 
     sc.tl.rank_genes_groups(adata, groupby="condition")
 
@@ -116,7 +133,7 @@ def test_mask_rank_genes(adata):
     indirect=["gene_set"]
 )
 def test_score_genes(adata_score, score_name, gene_set, inplace):
-    """ Test if genes are scored and added to adata.obs """
+    """Test if genes are scored and added to adata.obs."""
 
     assert score_name not in adata_score.obs.columns
 
@@ -130,22 +147,58 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
         assert score_name in out.obs.columns
 
 
-# Outcommented because the CI job currently does not have R and DESeq2 installed
-# Can be outcommented for testing locally
-#
-# @pytest.mark.parametrize("condition_col, error",
-#                         [("not_present", "was not found in adata.obs.columns"),
-#                          ("condition-col", "not a valid column name within R"),
-#                          ("condition", None)])
-# def test_deseq(adata, condition_col, error):
-#    """ Test if deseq2 is run and returns a dataframe """
-#
-#    # test if error is raised
-#    if isinstance(error, str):
-#        with pytest.raises(ValueError, match=error):
-#            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-#
-#    else:  # should run without exceptions
-#        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-#
-#        assert type(df).__name__ == "DataFrame"
+def test_add_gene_expression(adata):
+    """Test add_gene_expression success and failure."""
+    gene = adata.var.index[0]
+
+    # success
+    assert f"{gene}_values" not in adata.obs.columns
+    mg.add_gene_expression(adata=adata, gene=gene)
+    assert f"{gene}_values" in adata.obs.columns
+
+    # failure
+    with pytest.raises(ValueError):
+        mg.add_gene_expression(adata=adata, gene="INVALID")
+
+
+def test_run_rank_genes(adata):
+    """Test ranking genes function."""
+
+    adata.uns["log1p"] = {"base": [1, 2, 3]}
+    mg.run_rank_genes(adata, groupby="samples", n_genes=10)
+    assert adata.uns["rank_genes_groups"]
+
+
+def test_run_rank_genes_fail(adata):
+    """Test if invalid input is caught."""
+
+    adata = adata.copy()
+    adata.obs["invalid_cat"] = "invalid"
+
+    with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
+        mg.run_rank_genes(adata, groupby="invalid_cat")
+
+
+def test_pairwise_rank_genes(adata):
+    """Test pairwise_rank_genes success."""
+    output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
+
+    assert isinstance(output, pd.DataFrame)
+
+
+@pytest.mark.parametrize("condition_col, error", [
+    ("not_present", "was not found in adata.obs.columns"),
+    ("condition-col", "not a valid column name within R"),
+    ("condition", None)])
+def test_deseq(adata, condition_col, error):
+    """Test if deseq2 is run and returns a dataframe."""
+
+    # test if error is raised
+    if isinstance(error, str):
+        with pytest.raises(ValueError, match=error):
+            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+
+    else:  # should run without exceptions
+        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+
+        assert isinstance(df, pd.DataFrame)

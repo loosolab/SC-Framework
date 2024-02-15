@@ -1,8 +1,8 @@
-import argparse
+"""Test functions related to annotation."""
 
+import argparse
 import pytest
-import sctoolbox.annotation as anno
-import sctoolbox.utilities as utils
+import sctoolbox.tools as anno
 import scanpy as sc
 import os
 
@@ -14,12 +14,25 @@ uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 @pytest.fixture
 def adata_atac():
+    """Load atac anndata."""
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
 
+# TODO add precalculated qc adata to save runtime
+@pytest.fixture(scope="module")
+def adata_atac_qc():
+    """Add qc to anndata."""
+    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata = sc.read_h5ad(adata_f)
+    sc.pp.calculate_qc_metrics(adata, inplace=True)
+
+    return adata
+
+
 @pytest.fixture
 def adata_atac_emptyvar(adata_atac):
+    """Create anndata with empty adata.var."""
     adata = adata_atac.copy()
     adata.var = adata.var.drop(columns=adata.var.columns)
     return adata
@@ -27,6 +40,7 @@ def adata_atac_emptyvar(adata_atac):
 
 @pytest.fixture
 def adata_atac_invalid(adata_atac):
+    """Create adata with invalid adata.var index."""
     adata = adata_atac.copy()
     adata.var.iloc[0, 1] = 500  # start
     adata.var.iloc[0, 2] = 100  # end
@@ -36,6 +50,7 @@ def adata_atac_invalid(adata_atac):
 
 @pytest.fixture
 def adata_rna():
+    """Load rna anndata."""
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
@@ -43,7 +58,7 @@ def adata_rna():
 # ------------------------- Tests ------------------------- #
 
 def test_add_cellxgene_annotation(adata_rna):
-    """ Test if 'cellxgene' column is added to adata.obs. """
+    """Test if 'cellxgene' column is added to adata.obs."""
 
     csv_f = os.path.join(os.path.dirname(__file__), 'data', 'cellxgene_anno.csv')
     anno.add_cellxgene_annotation(adata_rna, csv_f)
@@ -55,9 +70,10 @@ def test_add_cellxgene_annotation(adata_rna):
                          [(True, 1, None, True, None),
                           (False, 2, uropa_config, False, ["chr", "start", "stop"])])
 def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_cols):
+    """Test annotate_adata success."""
 
     adata_atac.var["distance_to_gene"] = 100  # initialize distance column to test the warning message
-    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
+    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'chr4_mm10_genes.gtf')
 
     out = anno.annotate_adata(adata_atac, gtf=gtf_path, threads=threads, inplace=inplace,
                               config=config, best=best, coordinate_cols=coordinate_cols)
@@ -72,6 +88,7 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
 
 @pytest.mark.parametrize("config", [None, uropa_config])
 def test_annotate_narrowPeak(config):
+    """Test annotate_narrowPeak success."""
 
     gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
     peaks_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'cropped_testing.narrowPeak')
@@ -83,7 +100,7 @@ def test_annotate_narrowPeak(config):
 
 @pytest.mark.parametrize("inplace", [True, False])
 def test_annot_HVG(adata_rna, inplace):
-    """ Test if 'highly_variable' column is added to adata.var. """
+    """Test if 'highly_variable' column is added to adata.var."""
 
     sc.pp.log1p(adata_rna)
     out = anno.annot_HVG(adata_rna, inplace=inplace)
@@ -95,39 +112,34 @@ def test_annot_HVG(adata_rna, inplace):
         assert "highly_variable" in out.var.columns
 
 
-def touch_file(f):
-    try:
-        open(f, 'x')
-    except FileExistsError:
-        pass
+@pytest.mark.parametrize("inplace", [True, False])
+def test_get_variable_features(adata_atac_qc, inplace):
+    """Test get_variable_features success."""
+    adata = adata_atac_qc.copy()
+
+    assert "highly_variable" not in adata.var.columns
+
+    output = anno.get_variable_features(adata=adata,
+                                        max_cells=None,
+                                        min_cells=0,
+                                        show=True,
+                                        inplace=inplace)
+
+    if inplace:
+        assert output is None
+        assert "highly_variable" in adata.var.columns
+    else:
+        assert "highly_variable" in output.var.columns
+        assert "highly_variable" not in adata.var.columns
 
 
-def test_rm_tmp():
-
-    temp_dir = "tempdir"
-    utils.create_dir(temp_dir)
-    touch_file("tempdir/afile.gtf")
-    touch_file("tempdir/tempfile1.txt")
-    touch_file("tempdir/tempfile2.txt")
-
-    # Remove tempfile in tempdir (but tempdir should still exist)
-    tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
-    utils.rm_tmp(temp_dir, tempfiles)
-
-    dir_exists = os.path.exists(temp_dir)
-    files_removed = sum([os.path.exists(f) for f in tempfiles]) == 0
-
-    assert dir_exists and files_removed
-
-    # Check that tempdir is removed if it is empty
-    utils.rm_tmp(temp_dir)
-    dir_exists = os.path.exists(temp_dir)
-
-    assert dir_exists is False
+def test_get_variable_features_fail(adata_atac):
+    """Test get_variable_features failure."""
+    with pytest.raises(KeyError):
+        anno.get_variable_features(adata=adata_atac)
 
 
 # ------------------------- Tests for gtf formats ------------------------- #
-
 gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf'),
              "header": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf'),
              "unsorted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf'),
@@ -140,6 +152,7 @@ gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac',
 # indirect test of gtf_integrity as well
 @pytest.mark.parametrize("key, gtf", [(key, gtf_files[key]) for key in gtf_files])
 def test_prepare_gtf(key, gtf):
+    """Test _prepare_gtf success and failure."""
 
     if key in ["noheader", "header", "unsorted", "gtf_gz"]:  # these gtfs are valid and can be read
         gtf_out, tempfiles = anno._prepare_gtf(gtf, "")

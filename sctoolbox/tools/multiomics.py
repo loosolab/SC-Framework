@@ -1,46 +1,58 @@
-import anndata as ad
+"""Tools for multiomics analysis."""
+import scanpy as sc
 import pandas as pd
 from functools import reduce
 import warnings
 
+from beartype import beartype
+from beartype.typing import Literal
+
 import sctoolbox.utils as utils
 
 
-def merge_anndata(anndata_dict, join="inner"):
+@beartype
+def merge_anndata(anndata_dict: dict[str, sc.AnnData],
+                  join: Literal["inner", "outer"] = "inner") -> sc.AnnData:
     """
     Merge two h5ad files for dual cellxgene deplyoment.
-    Important: Depending on the size of the anndata objects the function takes
-    around 60 to 300 GB of RAM!
-
-    To save RAM and runtime the function generates a minimal anndata object.
-    Only .X, .var, .obs and .obsm are kept. Layers, .varm, etc is removed.
 
     Parameters
     ----------
-    anndata_dict : dict
-        dictionary with labels as keys and anndata objects as values
-    join : str, deafult 'inner'
-        set how to join cells of the adata objects: ['inner', 'outer']
-        This only affects the cells since the var/gene section is simply added
+    anndata_dict : dict[str, sc.AnnData]
+        Dictionary with labels as keys and anndata objects as values.
+    join : Literal['inner', 'outer'], default 'inner'
+        Set how to join cells of the adata objects: ['inner', 'outer'].
+        This only affects the cells since the var/gene section is simply added.
 
-        - 'inner': only keep overlapping cells
-        - 'outer': keep all cells. This will add placeholder cells/dots to plots currently disabled
+        - 'inner': only keep overlapping cells.
+        - 'outer': keep all cells. This will add placeholder cells/dots to plots currently disabled.
 
     Returns
     -------
-    merged anndata.AnnData object
+    sc.AnnData
+        Merged anndata object.
+
+    Notes
+    -----
+    Important: Depending on the size of the anndata objects the function takes
+    around 60 to 300 GB of RAM!
+    To save RAM and runtime the function generates a minimal anndata object.
+    Only .X, .var, .obs and .obsm are kept. Layers, .varm, etc is removed.
+
+    Raises
+    ------
+    ValueError:
+        If no indices of both adata.obs tables are overlapping.
     """
+
     if join == "outer":
         warnings.warn("'outer' join is currently not supported. Proceeding with 'inner' ...")
         join = "inner"
 
-    if join not in ["inner", "outer"]:
-        raise ValueError(f"Invalid join value: {join}. Set to 'inner' or 'outer'")
-
     # Generate minimal anndata objects
     minimal_adata_dict = dict()
     for label, adata in anndata_dict.items():
-        minimal_adata_dict[label] = ad.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
+        minimal_adata_dict[label] = sc.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
         if not adata.obs.index.is_unique:
             warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
             minimal_adata_dict[label].obs_names_make_unique()
@@ -77,7 +89,7 @@ def merge_anndata(anndata_dict, join="inner"):
         # save obs in list
         obs_list.append(adata.obs)
     # Merge X and var
-    merged_adata = ad.concat(minimal_adata_dict, join="outer", label="source", axis=1)
+    merged_adata = sc.concat(minimal_adata_dict, join="outer", label="source", axis=1)
 
     # Merge obs
     merged_adata.obs = reduce(lambda left, right: pd.merge(left, right,
