@@ -1,5 +1,6 @@
 0.5 (in progess)
 -------------
+- add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - Marker Repo integration (#162)
 - Set scvelo version to >=0.3.1 (#193)
 - Added fa2 as dependency for pseudotime analysis
