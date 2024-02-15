@@ -1,6 +1,15 @@
 0.5 (in progess)
 -------------
-- readme update
+- readme update(#188)
+- Marker Repo integration (#162)
+- Set scvelo version to >=0.3.1 (#193)
+- Added fa2 as dependency for pseudotime analysis
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
+- 14_velocity_analysis: Remove duplicate parameter (#194)
+- pseudotime_analysis: Save generated plots (#211)
 
 
 0.4 (31-1-23)
