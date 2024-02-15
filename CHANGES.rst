@@ -1,5 +1,6 @@
 0.5 (in progess)
 -------------
+- readme update
 
 
 0.4 (31-1-23)
