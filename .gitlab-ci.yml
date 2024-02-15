@@ -130,11 +130,8 @@ test coverage:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
-      changes:
-      - tests/*.py
-      - sctoolbox/**/*.py
-    - if: $CI_COMMIT_BRANCH != "dev" && $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
+    - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
       changes:
       - tests/*.py
       - sctoolbox/**/*.py
@@ -177,7 +174,7 @@ check_version:
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
-  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
+  image: python:3.10-alpine3.19
   inherit:
     default: false
   stage: test
@@ -219,11 +216,12 @@ notebooks:
     - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
-      when: manual  # manual trigger
-      allow_failure: True  # Currently allowed to fail while we solve issues with the automatic notebook runs
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
+      changes:
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        #- general_notebooks/*.ipynb
       when: manual
-      allow_failure: True  # the manual rule is allowed to fail
 
 
 # ----------------------------- Gitlab pages ---------------------------------#
@@ -299,7 +297,7 @@ deploy-pages-commit:
       allow_failure: True
 
 # Deploy documentation to public pages if it was the main branch
-pages:
+release-pages:
   stage: deploy
   needs:
     - job: build-pages
