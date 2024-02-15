@@ -220,7 +220,7 @@ notebooks:
       changes:
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
-        #- general_notebooks/*.ipynb
+        - general_notebooks/*.ipynb
       when: manual
 
 
