@@ -513,7 +513,7 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> 
 
     # Perform the intersection
     # The kwargs can be passed directly to the intersect function
-    intersected = bedfile1.intersect(bedfile2, sorted=True, **kwargs)
+    intersected = bedfile1.intersect(bedfile2, **kwargs)
 
     # Save the output
     intersected.saveas(overlap)

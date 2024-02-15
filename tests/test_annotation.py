@@ -1,10 +1,8 @@
 """Test functions related to annotation."""
 
 import argparse
-
 import pytest
-import sctoolbox.annotation as anno
-import sctoolbox.utilities as utils
+import sctoolbox.tools as anno
 import scanpy as sc
 import os
 
@@ -19,6 +17,17 @@ def adata_atac():
     """Load atac anndata."""
     adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
+
+
+# TODO add precalculated qc adata to save runtime
+@pytest.fixture(scope="module")
+def adata_atac_qc():
+    """Add qc to anndata."""
+    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata = sc.read_h5ad(adata_f)
+    sc.pp.calculate_qc_metrics(adata, inplace=True)
+
+    return adata
 
 
 @pytest.fixture
@@ -103,41 +112,34 @@ def test_annot_HVG(adata_rna, inplace):
         assert "highly_variable" in out.var.columns
 
 
-def touch_file(f):
-    """Create file if not existing."""
-    try:
-        open(f, 'x')
-    except FileExistsError:
-        pass
+@pytest.mark.parametrize("inplace", [True, False])
+def test_get_variable_features(adata_atac_qc, inplace):
+    """Test get_variable_features success."""
+    adata = adata_atac_qc.copy()
+
+    assert "highly_variable" not in adata.var.columns
+
+    output = anno.get_variable_features(adata=adata,
+                                        max_cells=None,
+                                        min_cells=0,
+                                        show=True,
+                                        inplace=inplace)
+
+    if inplace:
+        assert output is None
+        assert "highly_variable" in adata.var.columns
+    else:
+        assert "highly_variable" in output.var.columns
+        assert "highly_variable" not in adata.var.columns
 
 
-def test_rm_tmp():
-    """Test create_dir and rm_tmp success."""
-
-    temp_dir = "tempdir"
-    utils.create_dir(temp_dir)
-    touch_file("tempdir/afile.gtf")
-    touch_file("tempdir/tempfile1.txt")
-    touch_file("tempdir/tempfile2.txt")
-
-    # Remove tempfile in tempdir (but tempdir should still exist)
-    tempfiles = ["tempdir/tempfile1.txt", "tempdir/tempfile2.txt"]
-    utils.rm_tmp(temp_dir, tempfiles)
-
-    dir_exists = os.path.exists(temp_dir)
-    files_removed = sum([os.path.exists(f) for f in tempfiles]) == 0
-
-    assert dir_exists and files_removed
-
-    # Check that tempdir is removed if it is empty
-    utils.rm_tmp(temp_dir)
-    dir_exists = os.path.exists(temp_dir)
-
-    assert dir_exists is False
+def test_get_variable_features_fail(adata_atac):
+    """Test get_variable_features failure."""
+    with pytest.raises(KeyError):
+        anno.get_variable_features(adata=adata_atac)
 
 
 # ------------------------- Tests for gtf formats ------------------------- #
-
 gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf'),
              "header": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf'),
              "unsorted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf'),

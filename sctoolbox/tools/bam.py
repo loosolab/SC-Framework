@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 @beartype
 def bam_adata_ov(adata: sc.AnnData,
                  bamfile: str,
-                 cb_col: str) -> float:
+                 cb_tag: str = "CB") -> float:
     """
     Check if adata.obs barcodes existing in a column of a bamfile.
 
@@ -33,7 +33,7 @@ def bam_adata_ov(adata: sc.AnnData,
         adata object where adata.obs is stored
     bamfile : str
         path of the bamfile to investigate
-    cb_col : str
+    cb_tag : str, default 'CB'
         bamfile column to extract the barcodes from
 
     Returns
@@ -49,7 +49,7 @@ def bam_adata_ov(adata: sc.AnnData,
     counter = 0
     iterations = 1000
     for read in bam_obj:
-        tag = read.get_tag(cb_col)
+        tag = read.get_tag(cb_tag)
         sample.append(tag)
         if counter == iterations:
             break
@@ -66,7 +66,8 @@ def bam_adata_ov(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def check_barcode_tag(adata: sc.AnnData,
-                      bamfile: str, cb_col: str) -> None:
+                      bamfile: str,
+                      cb_tag: str = "CB") -> None:
     """
     Check for the possibilty that the wrong barcode is used.
 
@@ -76,7 +77,7 @@ def check_barcode_tag(adata: sc.AnnData,
         adata object where adata.obs is stored
     bamfile : str
         path of the bamfile to investigate
-    cb_col : str
+    cb_tag : str, default 'CB'
         bamfile column to extract the barcodes from
 
     Raises
@@ -85,7 +86,7 @@ def check_barcode_tag(adata: sc.AnnData,
         If barcode hit rate could not be identified
     """
 
-    hitrate = bam_adata_ov(adata, bamfile, cb_col)
+    hitrate = bam_adata_ov(adata, bamfile, cb_tag)
 
     if hitrate == 0:
         logger.warning('None of the barcodes from the bamfile found in the .obs table.\n'
@@ -1074,7 +1075,7 @@ def create_fragment_file(bam: str,
 
     # Remove temp files
     if not keep_temp:
-        utils.remove_files(temp_files)
+        utils.rm_tmp(temp_files=temp_files)
 
     # Index fragments file
     if index:
