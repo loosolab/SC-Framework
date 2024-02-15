@@ -9,6 +9,8 @@ Changes to notebooks
 - prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
 - 14_velocity_analysis: Remove duplicate parameter (#194)
 - pseudotime_analysis: Save generated plots (#211)
+- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 
 
 0.4 (31-1-23)
