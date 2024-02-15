@@ -1,33 +1,36 @@
+"""Embedding tools."""
 import scanpy as sc
 import multiprocessing as mp
+
+from beartype.typing import Iterable, Any
+from beartype import beartype
 
 import sctoolbox.utils as utils
 
 
-def wrap_umap(adatas, threads=4):
+@beartype
+def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> None:
     """
     Compute umap for a list of adatas in parallel.
 
     Parameters
     ----------
-    adatas : list of anndata.AnnData
+    adatas : Iterable[sc.AnnData]
         List of anndata objects to compute umap on.
     threads : int, default 4
         Number of threads to use.
-
-    Returns
-    -------
-    None
-        UMAP coordinates are added to each adata.obsm["X_umap"].
+    **kwargs : Any
+        Additional arguments to be passed to sc.tl.umap.
     """
 
-    # TODO: Check that adatas is a list of anndata objects
     pool = mp.Pool(threads)
+
+    kwargs["copy"] = True  # always copy
 
     jobs = []
     for i, adata in enumerate(adatas):
         adata_minimal = utils.get_minimal_adata(adata)
-        job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds={"copy": True})
+        job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds=kwargs)
         jobs.append(job)
     pool.close()
 

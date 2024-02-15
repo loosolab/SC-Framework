@@ -1,16 +1,27 @@
+"""Module for type checking functions."""
+
 import re
+import os
+import sys
 import importlib
 import matplotlib
 import numpy as np
 import gzip
 import shutil
+import scanpy as sc
+import pandas as pd
+
+from beartype.typing import Optional, Tuple, Any, Iterable
+from beartype import beartype
+import numpy.typing as npt
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
 logger = settings.logger
 
 
-def check_module(module):
+@beartype
+def check_module(module: str) -> None:
     """
     Check if <module> can be imported without error.
 
@@ -24,6 +35,7 @@ def check_module(module):
     ImportError
         If the module is not available for import.
     """
+
     error = 0
     try:
         importlib.import_module(module)
@@ -38,13 +50,13 @@ def check_module(module):
         raise ImportError(s)
 
 
-def _is_interactive():
+def _is_interactive() -> bool:
     """
     Check if matplotlib backend is interactive.
 
     Returns
     -------
-    boolean :
+    bool
         True if interactive, False otherwise.
     """
 
@@ -56,23 +68,84 @@ def _is_interactive():
         return False
 
 
+@beartype
+def _add_path() -> str:
+    """
+    Add python executables path to environment variable PATH.
+
+    Returns
+    -------
+    str
+        Path to python executables.
+    """
+
+    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
+
+    if python_exec_dir not in os.environ['PATH']:  # check if path is already in environment variable
+        os.environ['PATH'] += os.pathsep + python_exec_dir  # add python executable path to environment variable
+        return python_exec_dir
+    else:
+        return python_exec_dir
+
+
 #####################################################################
 # ------------------------- Type checking ------------------------ #
 #####################################################################
 
-def _is_gz_file(filepath):
+@beartype
+def _is_gz_file(filepath: str) -> bool:
+    """
+    Check wheather file is a compressed .gz file.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to file.
+
+    Returns
+    -------
+    bool
+        True if the file is a compressed .gz file.
+    """
+
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == b'\x1f\x8b'
 
 
-def gunzip_file(f_in, f_out):
+@beartype
+def gunzip_file(f_in: str, f_out: str) -> None:
+    """
+    Decompress file.
+
+    Parameters
+    ----------
+    f_in : str
+        Path to compressed input file.
+    f_out : str
+        Destination to decompressed output file.
+    """
+
     with gzip.open(f_in, 'rb') as h_in:
         with open(f_out, 'wb') as h_out:
             shutil.copyfileobj(h_in, h_out)
 
 
-def is_str_numeric(ans):
-    """ Check if string can be converted to number. """
+@beartype
+def is_str_numeric(ans: str) -> bool:
+    """
+    Check if string can be converted to number.
+
+    Parameters
+    ----------
+    ans : str
+        String to check.
+
+    Returns
+    -------
+    bool
+        True if string can be converted to float.
+    """
+
     try:
         float(ans)
         return True
@@ -80,18 +153,23 @@ def is_str_numeric(ans):
         return False
 
 
-def format_index(adata, from_column=None):
+@beartype
+def var_index_from(adata: sc.AnnData,
+                   from_column: Optional[str] = None) -> None:
     """
-    This formats the index of adata.var by the pattern ["chr", "start", "stop"]
+    Format adata.var index from specified column or from the index available.
+
+    This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
+    The adata is changed inplace.
+
     Parameters
     ----------
-    adata: anndata.AnnData
-    from_column: None or column name (str) in adata.var to be set as index
-
-    Returns
-    -------
-
+    adata : sc.AnnData
+        The anndata object to reformat.
+    from_column : Optional[str], default None
+        Column name in adata.var to be set as index.
     """
+
     if from_column is None:
         entry = adata.var.index[0]
         index_type = get_index_type(entry)
@@ -149,16 +227,20 @@ def format_index(adata, from_column=None):
             adata.var.set_index('new_index', inplace=True)
 
 
-def get_index_type(entry):
+@beartype
+def get_index_type(entry: str) -> Optional[str]:
     """
-    Check the format of the index by regex
+    Check the format of the index by regex.
+
     Parameters
     ----------
-    entry
+    entry : str
+        String to identify the format on.
 
     Returns
     -------
-
+    Optional[str]
+        The index format. Either 'snapatac', 'start_name' or None for unknown format.
     """
 
     regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
@@ -170,21 +252,30 @@ def get_index_type(entry):
         return 'start_name'
 
 
-def validate_regions(adata, coordinate_columns):
-    """ Checks if the regions in adata.var are valid.
+@beartype
+def validate_regions(adata: sc.AnnData,
+                     coordinate_columns: Iterable[str]) -> None:
+    """
+    Check if the regions in adata.var are valid.
 
     Parameters
-    -----------
-    adata : AnnData
+    ----------
+    adata : sc.AnnData
         AnnData object containing the regions to be checked.
-    coordinate_columns : list of str
-        List of length 3 for column names in adata.var containing chr, start, end coordinates. """
+    coordinate_columns : Iterable[str]
+        List of length 3 for column names in adata.var containing chr, start, end coordinates.
+
+    Raises
+    ------
+    ValueError
+        If invalid regions are detected.
+    """
 
     # Test whether the first three columns are in the right format
     chr, start, end = coordinate_columns
 
     # Test if coordinate columns are in adata.var
-    utils.check_columns(adata.var, coordinate_columns, "adata.var")
+    utils.check_columns(adata.var, coordinate_columns, name="adata.var")
 
     # Test whether the first three columns are in the right format
     for _, line in adata.var.to_dict(orient="index").items():
@@ -198,11 +289,13 @@ def validate_regions(adata, coordinate_columns):
             raise ValueError("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
 
 
-def format_adata_var(adata,
-                     coordinate_columns=None,
-                     columns_added=["chr", "start", "end"]):
+@beartype
+def format_adata_var(adata: sc.AnnData,
+                     coordinate_columns: Optional[Iterable[str]] = None,
+                     columns_added: Iterable[str] = ["chr", "start", "end"]) -> None:
     """
-    Formats the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
+    Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
+
     If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
     If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
     "*[_:-]start[_:-]stop"
@@ -210,13 +303,24 @@ def format_adata_var(adata,
     If the index can be formatted, the formatted columns (columns_added) will be added.
     If the index cannot be formatted, an error will be raised.
 
-    :param adata: AnnData
+    NOTE: adata object is changed inplace.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
         The anndata object containing features to annotate.
-    :param coordinate_columns: list of str or None
+    coordinate_columns : Optional[Iterable[str][str]], default None
         List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
         If None, the index will be formatted.
-    :param columns_added: list of str
+    columns_added : Iterable[str], default ['chr', 'start', 'end']
         List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
+
+    Raises
+    ------
+    KeyError
+        If `coordinate_columns` are not available.
+    ValueError
+        If regions are of incorrect format.
     """
 
     # Test whether the first three columns are in the right format
@@ -264,66 +368,87 @@ def format_adata_var(adata,
         validate_regions(adata, columns_added)
 
 
-def in_range(value, limits, include_limits=True):
+@beartype
+def in_range(value: int | float, limits: Tuple[int | float, int | float],
+             include_limits: bool = True) -> bool:
     """
     Check if a value is in a given range.
 
     Parameters
     ----------
-    value : int
+    value : int | float
         Number to check if in range.
-    limits : int tuple
+    limits : Tuple[int | float, int | float]
         Lower and upper limits. E.g. (0, 10)
     include_limits : bool, default True
         If True includes limits in accepted range.
 
     Returns
     -------
-    bool :
+    bool
         Returns whether the value is between the set limits.
     """
+
     if include_limits:
         return value >= limits[0] and value <= limits[1]
     else:
         return value > limits[0] and value < limits[1]
 
 
-def is_integer_array(arr):
+@beartype
+def is_integer_array(arr: npt.ArrayLike) -> bool:
     """
     Check if all values of arr are integers.
 
     Parameters
     ----------
-    x : numpy.array
+    arr : npt.ArrayLike
         Array of values to be checked.
 
     Returns
     -------
-    boolean :
+    bool
         True if all values are integers, False otherwise.
     """
 
     # https://stackoverflow.com/a/7236784
     boolean = np.equal(np.mod(arr, 1), 0)
 
-    return np.all(boolean)
+    return bool(np.all(boolean))
 
 
-def check_columns(df, columns, name="dataframe"):
+@beartype
+def check_columns(df: pd.DataFrame,
+                  columns: Iterable[str],
+                  error: bool = True,
+                  name: str = "dataframe") -> Optional[bool]:
     """
-    Utility to check whether columns are found within a pandas dataframe.
+    Check whether columns are found within a pandas dataframe.
+
+    TODO do we need this?
 
     Parameters
-    ------------
-    df : pandas.DataFrame
+    ----------
+    df : pd.DataFrame
         A pandas dataframe to check.
-    columns : list
-        A list of column names to check for within 'df'.
+    columns : Iterable[str]
+        A list of column names to check for within `df`.
+    error : bool, default True
+        If True raise errror if not all columns are found.
+        If False return true or false
+    name : str, default dataframe
+        Dataframe name displayed in the error message.
+
+    Returns
+    -------
+    Optional[bool]
+        True or False depending on if columns are in dataframe
+        None if error is set to True
 
     Raises
-    --------
+    ------
     KeyError
-        If any of the columns are not in 'df'.
+        If any of the columns are not in 'df' and error is set to True.
     """
 
     df_columns = df.columns
@@ -335,20 +460,31 @@ def check_columns(df, columns, name="dataframe"):
                 not_found.append(column)
 
     if len(not_found) > 0:
-        error_str = f"Columns '{not_found}' are not found in {name}. Available columns are: {list(df_columns)}"
-        raise KeyError(error_str)
+        if error:
+            error_str = f"Columns '{not_found}' are not found in {name}. Available columns are: {list(df_columns)}"
+            raise KeyError(error_str)
+        else:
+            return False
+    else:
+        if not error:
+            return True
 
 
-def check_file_ending(file, pattern="gtf"):
+@beartype
+def check_file_ending(file: str,
+                      pattern: str = "gtf") -> None:
     """
     Check if a file has a certain file ending.
+
+    TODO do we need this?
 
     Parameters
     ----------
     file : str
         Path to the file.
-    pattern : str or regex
-        File ending to be checked for. If regex, the regex must match the entire string.
+    pattern : str, default 'gtf'
+        File ending to be checked for.
+        If regex, the regex must match the entire string.
 
     Raises
     ------
@@ -369,7 +505,8 @@ def check_file_ending(file, pattern="gtf"):
         raise ValueError(f"File '{file}' does not have the expected file ending '{pattern}'")
 
 
-def is_regex(regex):
+@beartype
+def is_regex(regex: str) -> bool:
     """
     Check if a string is a valid regex.
 
@@ -380,7 +517,7 @@ def is_regex(regex):
 
     Returns
     -------
-    boolean :
+    bool
         True if string is a valid regex, False otherwise.
     """
 
@@ -392,23 +529,26 @@ def is_regex(regex):
         return False
 
 
-def check_marker_lists(adata, marker_dict):
+@beartype
+def check_marker_lists(adata: sc.AnnData,
+                       marker_dict: dict[str, list[str]]) -> dict[str, list[str]]:
     """
     Remove genes in custom marker genes lists which are not present in dataset.
 
     Parameters
     ----------
-    adata : AnnData object
+    adata : sc.AnnData
         The anndata object containing features to annotate.
-    marker_dict : dict
+    marker_dict : dict[str, list[str]]
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
         The marker genes given in the lists need to match the index of adata.var.
 
     Returns
     -------
-    dict :
+    dict[str, list[str]]
         A dictionary containing a list of marker genes as values and corresponding cell types as keys.
     """
+
     marker_dict = marker_dict.copy()
 
     for key, genes in list(marker_dict.items()):
@@ -422,3 +562,31 @@ def check_marker_lists(adata, marker_dict):
             marker_dict[key] = found_in_var
             logger.info(f"Removed {not_found_in_var} from {key} marker gene list")
     return marker_dict
+
+
+def check_type(obj: Any, obj_name: str, test_type: Any):
+    """
+    Check type of given object.
+
+    Parameters
+    ----------
+    obj : Any
+        Object for which the type should be checked
+    obj_name : str
+        Object name that would be shown in the error message.
+    test_type : Any
+        Type that obj is tested for.
+
+    Raises
+    ------
+    TypeError
+        If object type does not match test type.
+
+    Notes
+    -----
+    This function is mostly replaced by beartype.
+    Only used for types not supported by beartype.
+    """
+    if not isinstance(obj, test_type):
+        raise TypeError(f"Paramter {obj_name} is required to be of type: "
+                        + f"{test_type}, but is type: {type(obj)}")

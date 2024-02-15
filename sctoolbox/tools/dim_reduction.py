@@ -1,13 +1,12 @@
-"""
-Tools for dimensionality reduction with PCA/SVD.
-"""
-
+"""Tools for dimensionality reduction with PCA/SVD."""
 import numpy as np
 import scanpy as sc
 import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
-from anndata import AnnData
+
+from beartype.typing import Optional, Any
+from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -19,26 +18,31 @@ logger = settings.logger
 ############################################################################
 
 @deco.log_anndata
-def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
+@beartype
+def compute_PCA(anndata: sc.AnnData,
+                use_highly_variable: bool = True,
+                inplace: bool = False,
+                **kwargs: Any) -> Optional[sc.AnnData]:
     """
-    Compute PCA and add information to adata.uns['infoprocess']
+    Compute a principal component analysis.
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object to add the PCA to.
-    use_highly_variable : boolean, default True
+    use_highly_variable : bool, default True
         If true, use highly variable genes to compute PCA.
-    inplace : boolean, default False
+    inplace : bool, default False
         Whether the anndata object is modified inplace.
-    **kwargs :
+    **kwargs : Any
         Additional parameters forwarded to scanpy.pp.pca().
 
     Returns
     -------
-    anndata.AnnData or None:
+    Optional[sc.AnnData]
         Returns anndata object with PCA components. Or None if inplace = True.
     """
+
     adata_m = anndata if inplace else anndata.copy()
 
     # Computing PCA
@@ -52,56 +56,28 @@ def compute_PCA(anndata, use_highly_variable=True, inplace=False, **kwargs):
         return adata_m
 
 
-# wrapper no longer used
-# def norm_log_PCA(anndata, exclude_HEG=True, use_HVG_PCA=True, inplace=False):
-#    """
-#    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
-#
-#    Parameters
-#    ----------
-#    anndata : anndata.AnnData
-#        Anndata object to work on.
-#    exclude_HEG : boolean, default True
-#        If True, highly expressed genes (HEG) will be not considered in the normalization.
-#    use_HVG_PCA : boolean, default True
-#        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-#    inplace : boolean, default False
-#        Whether to work inplace on the anndata object.
-#
-#    Returns
-#    -------
-#    anndata.Anndata or None:
-#        Anndata with expression values normalized and log converted and PCA computed.
-#    """
-#    adata_m = anndata if inplace else anndata.copy()
-#
-#    # Normalization and converting to log
-#    nc.adata_normalize_total(adata_m, exclude_HEG, inplace=True)
-#
-#    # Annotate highly variable genes
-#    hv.annot_HVG(adata_m, inplace=True)
-#
-#    # Compute PCA
-#    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
-#
-#    if not inplace:
-#        return adata_m
-
-
-def lsi(data, scale_embeddings=True, n_comps=50):
-    """Run Latent Semantic Indexing.
-
-    Note: Function is from muon package.
-
-    :param anndata.AnnData data: AnnData object with peak counts.
-    :param bool scale_embeddings: Scale embeddings to zero mean and unit variance, defaults to True.
-    :param int n_comps: Number of components to calculate with SVD, defaults to 50.
-    :raises TypeError: data must be anndata object.
+@beartype
+def lsi(data: sc.AnnData,
+        scale_embeddings: bool = True,
+        n_comps: int = 50) -> None:
     """
-    if isinstance(data, AnnData):
-        adata = data
-    else:
-        raise TypeError("Expected AnnData object!")
+    Run Latent Semantic Indexing.
+
+    Parameters
+    ----------
+    data : sc.AnnData
+        AnnData object with peak counts.
+    scale_embeddings : bool, default True
+        Scale embeddings to zero mean and unit variance.
+    n_comps : int, default 50
+        Number of components to calculate with SVD.
+
+    Notes
+    -----
+    Function is taken from muon package.
+    """
+
+    adata = data
 
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
     n_comps = min(n_comps, adata.X.shape[1])
@@ -134,19 +110,22 @@ def lsi(data, scale_embeddings=True, n_comps=50):
     adata.uns["pca"] = adata.uns["lsi"]
 
 
-def apply_svd(adata, layer=None):
-    """ Singular value decomposition of anndata object.
+@beartype
+def apply_svd(adata: sc.AnnData,
+              layer: str = None) -> sc.AnnData:
+    """
+    Singular value decomposition of anndata object.
 
     Parameters
-    -----------
-    adata : anndata.AnnData
+    ----------
+    adata : sc.AnnData
         The anndata object to be decomposed.
-    layer : string, optional
-        The layer to be decomposed. If None, the layer is set to "X". Default: None.
+    layer : str, default None
+        The layer to be decomposed. If None, the layer is set to "X".
 
-    Returns:
-    --------
-    adata : anndata.AnnData
+    Returns
+    -------
+    sc.AnnData
         The decomposed anndata object containing .obsm, .varm and .uns information.
     """
 
@@ -183,7 +162,8 @@ def apply_svd(adata, layer=None):
 #                         Subset number of PCs                             #
 ############################################################################
 
-def define_PC(anndata):
+@beartype
+def define_PC(anndata: sc.AnnData) -> int:
     """
     Define threshold for most variable PCA components.
 
@@ -191,14 +171,20 @@ def define_PC(anndata):
 
     Parameters
     ----------
-    anndata : anndata.AnnData
+    anndata : sc.AnnData
         Anndata object with PCA to get significant PCs threshold from.
 
     Returns
     -------
-    int :
+    int
         An int representing the number of PCs until elbow, defining PCs with significant variance.
+
+    Raises
+    ------
+    ValueError:
+        If PCA is not found in anndata.
     """
+
     # check if pca exists
     if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
@@ -218,14 +204,19 @@ def define_PC(anndata):
 
 
 @deco.log_anndata
-def subset_PCA(adata, n_pcs, start=0, inplace=True):
+@beartype
+def subset_PCA(adata: sc.AnnData,
+               n_pcs: int,
+               start: int = 0,
+               inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
+
     Additionally, subset the PCs in adata.varm["PCs"] and the variance ratio in adata.uns["pca"]["variance_ratio"].
 
     Parameters
-    -----------
-    adata : anndata.AnnData
+    ----------
+    adata : sc.AnnData
         Anndata object containing the PCA coordinates.
     n_pcs : int
         Number of PCs to keep.
@@ -235,8 +226,8 @@ def subset_PCA(adata, n_pcs, start=0, inplace=True):
         Whether to work inplace on the anndata object.
 
     Returns
-    --------
-    adata or None
+    -------
+    Optional[sc.AnnData]
         Anndata object with the subsetted PCA coordinates. Or None if inplace = True.
     """
 

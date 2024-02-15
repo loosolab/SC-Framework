@@ -1,12 +1,24 @@
+"""File input/output utilities."""
+
 import os
 import tempfile
 import warnings
 import glob
+import deprecation
+
+from beartype import beartype
+from beartype.typing import Optional
+
+import sctoolbox
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
-def create_dir(path):
+@beartype
+def create_dir(path: str) -> None:
     """
     Create a directory if it is not existing yet.
+
     'path' can be either a direct path of the directory, or a path to a file for which the upper directory should be created.
 
     Parameters
@@ -26,8 +38,21 @@ def create_dir(path):
             os.makedirs(path, exist_ok=True)
 
 
-def get_temporary_filename(tempdir="."):
-    """ Get a writeable temporary filename by creating a temporary file and closing it again. """
+@beartype
+def get_temporary_filename(tempdir: str = ".") -> str:
+    """
+    Get a writeable temporary filename by creating a temporary file and closing it again.
+
+    Parameters
+    ----------
+    tempdir : str, default "."
+        The path where the temp file will be created.
+
+    Returns
+    -------
+    str
+        Name of the temporary file.
+    """
 
     filehandle = tempfile.NamedTemporaryFile(mode="w", dir=tempdir, delete=True)
     filename = filehandle.name
@@ -36,8 +61,19 @@ def get_temporary_filename(tempdir="."):
     return filename
 
 
-def remove_files(file_list):
-    """ Delete all files in a file list. Prints a warning if deletion was not possible. """
+@deprecation.deprecated(deprecated_in="0.4b", removed_in="0.6",
+                        current_version=sctoolbox.__version__,
+                        details="Use rm_tmp() with rm_dir=False.")
+@beartype
+def remove_files(file_list: list[str]) -> None:
+    """
+    Delete all files in a file list. Prints a warning if deletion was not possible.
+
+    Parameters
+    ----------
+    file_list : list[str]
+        List of files to delete.
+    """
 
     for f in file_list:
         try:
@@ -46,30 +82,47 @@ def remove_files(file_list):
             warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
 
-def rm_tmp(temp_dir, tempfiles=None):
+@beartype
+def rm_tmp(temp_dir: Optional[str] = None,
+           temp_files: Optional[list[str]] = None,
+           rm_dir: bool = False,
+           all: bool = False) -> None:
     """
-    1. Running with tempfiles list:
-    Removing temporary directory by previously removing temporary files from the tempfiles list.
-    If the temporary directory is not empty it will not be removed.
-    2. Running without tempfiles list:
-    All gtf related files will be removed automatically no list of them required.
-    The directory is then removed afterwards.
+    Delete given directory.
 
-    :param temp_dir: str
+    Removes all given `temp_files` from the directory. If `temp_files` is `None` and `all` is `True` all files are removed.
+
+
+    Parameters
+    ----------
+    temp_dir : Optional[list[str]], default None
         Path to the temporary directory.
-    :param tempfiles: list of str
+    temp_files : Optional[list[str]], default None
         Paths to files to be deleted before removing the temp directory.
-    :return: None
+    rm_dir : bool, default False
+        If True, the temp directory is removed.
+    all : bool, default False
+        If True, all files in the temp directory are removed.
     """
-    try:
-        if tempfiles is None:
-            for f in glob.glob(temp_dir + "/*gtf*"):
-                os.remove(f)
-        else:
-            for f in tempfiles:
-                os.remove(f)
 
-        os.rmdir(temp_dir)
+    try:
+        if temp_files is None and not all:
+            logger.info('tempfiles is None, not deleting any files')
+        else:
+            temp_files = glob.glob(os.path.join(temp_dir, "*")) if all else temp_files
+            logger.info('removing tempfiles')
+            for f in temp_files:
+                try:
+                    os.remove(f)
+                except Exception as e:
+                    warnings.warn(f"Could not remove file {f}. Exception was: {e}")
+
+        if rm_dir:
+            logger.info('removing temp_dir')
+            try:
+                os.rmdir(temp_dir)
+            except Exception as e:
+                warnings.warn(f"Could not remove directory {temp_dir}. Exception was: {e}")
 
     except OSError as error:
         print(error)

@@ -1,8 +1,13 @@
+"""Tools to calculate fragemnt- and insertsize for scATAC."""
 import os
 import re
 import pandas as pd
 import gzip
 import datetime
+import scanpy as sc
+
+from beartype import beartype
+from beartype.typing import Any, Optional
 
 import sctoolbox.utils as utils
 import sctoolbox.tools.bam
@@ -16,44 +21,70 @@ logger = settings.logger
 # --------------------- Insertsize distribution ----------------------- #
 # --------------------------------------------------------------------- #
 
-def _check_in_list(element, alist):
+@beartype
+def _check_in_list(element: Any, alist: list[Any] | set[Any]) -> bool:
+    """
+    Check if element is in list.
+
+    TODO Do we need this function?
+
+    Parameters
+    ----------
+    element : Any
+        Element that is checked for.
+    alist : list[Any] | set[Any]
+        List or set in which the element is searched for.
+
+    Returns
+    -------
+    bool
+        True if element is in list else False
+    """
+
     return element in alist
 
 
-def _check_true(element, alist):  # true regardless of input
+def _check_true(element, alist) -> True:  # true regardless of input
+    """TODO WHY?."""
+
     return True
 
 
 @deco.log_anndata
-def add_insertsize(adata,
-                   bam=None,
-                   fragments=None,
-                   barcode_col=None,
-                   barcode_tag="CB",
-                   regions=None):
+@beartype
+def add_insertsize(adata: sc.AnnData,
+                   bam: Optional[str] = None,
+                   fragments: Optional[str] = None,
+                   barcode_col: Optional[str] = None,
+                   barcode_tag: str = "CB",
+                   regions: Optional[str] = None) -> None:
     """
     Add information on insertsize to the adata object using either a .bam-file or a fragments file.
+
     Adds columns "insertsize_count" and "mean_insertsize" to adata.obs and a key "insertsize_distribution" to adata.uns containing the
     insertsize distribution as a pandas dataframe.
 
     Parameters
     ----------
-    adata : anndata.AnnData
+    adata : sc.AnnData
         AnnData object to add insertsize information to.
-    bam : str, default None
+    bam : Optional[str], default None
         Path to bam file containing paired-end reads. If None, the fragments file is used instead.
-    fragments : str, default None
+    fragments : Optional[str], default None
         Path to fragments file containing fragments information. If None, the bam file is used instead.
-    barcode_col : str, default None
+    barcode_col : Optional[str], default None
         Column in adata.obs containing the name of the cell barcode. If barcode_col is None, it is assumed that the index of adata.obs contains the barcode.
     barcode_tag : str, default 'CB'
         Only for bamfiles: Tag used for the cell barcode for each read.
-    regions : str, default None
+    regions : Optional[str], default None
         Only for bamfiles: A list of regions to obtain reads from, e.g. ['chr1:1-2000000']. If None, all reads in the .bam-file are used.
 
-    Returns
-    -------
-    None - adata is adjusted in place.
+    Raises
+    ------
+    ValueError:
+        1. If bam and fragments is given.
+        2. If bam and fragments is not given.
+        3. If no barcodes between bam- or fragment-file and adata overlap
     """
 
     adata_barcodes = adata.obs.index.tolist() if barcode_col is None else adata.obs[barcode_col].tolist()
@@ -98,31 +129,38 @@ def add_insertsize(adata,
     logger.info("Added insertsize information to adata.obs[[\"insertsize_count\", \"mean_insertsize\"]] and adata.uns[\"insertsize_distribution\"].")
 
 
-def _insertsize_from_bam(bam,
-                         barcode_tag="CB",
-                         barcodes=None,
-                         regions='chr1:1-2000000',
-                         chunk_size=100000):
+@beartype
+def _insertsize_from_bam(bam: str,
+                         barcode_tag: str = "CB",
+                         barcodes: Optional[list[str]] = None,
+                         regions: Optional[str | list[str]] = 'chr1:1-2000000',
+                         chunk_size: int = 100000) -> pd.DataFrame:
     """
-    Get fragment insertsize distributions per barcode from bam file.
+    Get insertsize distributions per barcode from bam file.
 
     Parameters
-    -----------
+    ----------
     bam : str
         Path to bam file
     barcode_tag : str, default "CB"
         The read tag representing the barcode.
-    barcodes : list, default None
+    barcodes : Optional[list[str]], default None
         List of barcodes to include in the analysis. If None, all barcodes are included.
-    regions : str or list of str, default 'chr1:1-2000000'
+    regions : Optional[str | list[str]], default 'chr1:1-2000000'
         Regions to include in the analysis. If None, all reads are included.
     chunk_size : int, default 500000
         Size of bp chunks to read from bam file.
 
     Returns
-    --------
-    pandas.DataFrame
+    -------
+    pd.DataFrame
         DataFrame with insertsize distributions per barcode.
+
+    Raises
+    ------
+    ValueError:
+        1. No reads found in bam-file.
+        2. If no reads in bam-file overlap with barcodes.
     """
 
     # Load modules
@@ -225,20 +263,22 @@ def _insertsize_from_bam(bam,
     return table
 
 
-def _insertsize_from_fragments(fragments, barcodes=None):
+@beartype
+def _insertsize_from_fragments(fragments: str,
+                               barcodes: Optional[list[str]] = None) -> pd.DataFrame:
     """
     Get fragment insertsize distributions per barcode from fragments file.
 
     Parameters
-    -----------
+    ----------
     fragments : str
         Path to fragments.bed(.gz) file.
-    barcodes : list of str, default None
+    barcodes : Optional[list[str]], default None
         Only collect fragment sizes for the barcodes in barcodes
 
     Returns
-    --------
-    pandas.DataFrame
+    -------
+    pd.DataFrame
         DataFrame with insertsize distributions per barcode.
     """
 
@@ -296,13 +336,17 @@ def _insertsize_from_fragments(fragments, barcodes=None):
     return table
 
 
-def _add_fragment(count_dict, barcode, size, count=1):
+@beartype
+def _add_fragment(count_dict: dict[str, int],
+                  barcode: str,
+                  size: int,
+                  count: int = 1) -> dict[str, int]:
     """
     Add fragment of size 'size' to count_dict.
 
     Parameters
-    -----------
-    count_dict : dict
+    ----------
+    count_dict : dict[str, int]
         Dictionary containing the counts per insertsize.
     barcode : str
         Barcode of the read.
@@ -312,8 +356,8 @@ def _add_fragment(count_dict, barcode, size, count=1):
         Number of reads to add to count_dict.
 
     Returns
-    --------
-    count_dict : dict
+    -------
+    dict[str, int]
         Updated count_dict
     """
 

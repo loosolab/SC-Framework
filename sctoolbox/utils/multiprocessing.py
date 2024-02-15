@@ -1,8 +1,18 @@
+"""Functions related to multiprocessing."""
+
 import time
 import sctoolbox.utils as utils
 
+# type hint imports
+from beartype.typing import TYPE_CHECKING, Any, Tuple
+from beartype import beartype
 
-def get_pbar(total, description):
+if TYPE_CHECKING:
+    import tqdm
+
+
+@beartype
+def get_pbar(total: int, description: str, **kwargs: Any) -> "tqdm.tqdm":
     """
     Get a progress bar depending on whether the user is using a notebook or not.
 
@@ -12,10 +22,12 @@ def get_pbar(total, description):
         Total number elements to be shown in the progress bar.
     description : str
         Description to be shown in the progress bar.
+    **kwargs : Any
+        Keyword arguments to be passed to tqdm.
 
     Returns
     -------
-    tqdm
+    tqdm.tqdm
         A progress bar object.
     """
 
@@ -24,18 +36,19 @@ def get_pbar(total, description):
     else:
         from tqdm import tqdm
 
-    pbar = tqdm(total=total, desc=description)
+    pbar = tqdm(total=total, desc=description, **kwargs)
     return pbar
 
 
-def monitor_jobs(jobs, description="Progress"):
+@beartype
+def monitor_jobs(jobs: dict[Tuple[int, int], Any] | list[Any], description: str = "Progress") -> None:
     """
     Monitor the status of jobs submitted to a pool.
 
     Parameters
     ----------
-    jobs : list of job objects
-        List of job objects, e.g. as returned by pool.map_async().
+    jobs : dict[Tuple[int, int], Any] | list[Any]
+        List or dict of job objects, e.g. as returned by pool.map_async().
     description : str, default "Progress"
         Description to be shown in the progress bar.
     """

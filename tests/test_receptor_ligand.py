@@ -1,3 +1,5 @@
+"""Test receptor-ligand functions."""
+
 import pytest
 import os
 import pandas as pd
@@ -17,14 +19,18 @@ plt.switch_backend("Agg")
 
 @pytest.fixture
 def adata():
-    """ Load and returns an anndata object. """
+    """Load and returns an anndata object."""
     f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 
     obj = sc.read_h5ad(f)
 
     # add cluster column
     def repeat_items(list, count):
-        """ Repeat list until size reached. https://stackoverflow.com/a/54864336/19870975 """
+        """
+        Repeat list until size reached.
+
+        https://stackoverflow.com/a/54864336/19870975
+        """
         return list * (count // len(list)) + list[:(count % len(list))]
 
     obj.obs["cluster"] = repeat_items([f"cluster {i}" for i in range(10)], len(obj))
@@ -34,13 +40,13 @@ def adata():
 
 @pytest.fixture
 def db_file():
-    """ Path to receptor-ligand database """
+    """Path to receptor-ligand database."""
     return os.path.join(os.path.dirname(__file__), 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture
 def adata_db(adata, db_file):
-    """ Adds interaction db to adata """
+    """Add interaction db to adata."""
     return rl.download_db(adata=adata,
                           db_path=db_file,
                           ligand_column='ligand_gene_symbol',
@@ -51,7 +57,7 @@ def adata_db(adata, db_file):
 
 @pytest.fixture
 def adata_inter(adata_db):
-    """ Adds interaction scores to adata """
+    """Add interaction scores to adata."""
     obj = adata_db.copy()
 
     # replace with random interactions
@@ -73,7 +79,7 @@ def adata_inter(adata_db):
 # ----- test setup functions ----- #
 
 def test_download_db(adata, db_file):
-    """ Assert rl database is added into anndata"""
+    """Assert rl database is added into anndata."""
     obj = adata.copy()
 
     # adata does not have database
@@ -93,7 +99,7 @@ def test_download_db(adata, db_file):
 
 
 def test_interaction_table(adata_db):
-    """ Assert interaction are computed/ added into anndata """
+    """Assert interaction are computed/ added into anndata."""
     obj = adata_db.copy()
 
     # adata has db but no scores
@@ -131,7 +137,7 @@ def test_interaction_table(adata_db):
 # ----- test helpers ----- #
 
 def test_get_interactions(adata_inter):
-    """ Assert that interactions can be received """
+    """Assert that interactions can be received."""
     interactions_table = rl.get_interactions(adata_inter)
 
     # output is a pandas table
@@ -139,7 +145,7 @@ def test_get_interactions(adata_inter):
 
 
 def test_check_interactions(adata, adata_db, adata_inter):
-    """ Assert that interaction test is properly checked """
+    """Assert that interaction test is properly checked."""
     # raise error without rl info
     with pytest.raises(ValueError):
         rl._check_interactions(adata)
@@ -155,10 +161,10 @@ def test_check_interactions(adata, adata_db, adata_inter):
 # ----- test plotting ----- #
 
 def test_violin(adata_inter):
-    """ Violin plot is functional """
+    """Violin plot is functional."""
     plot = rl.interaction_violin_plot(adata_inter,
                                       min_perc=0,
-                                      output=None,
+                                      save=None,
                                       figsize=(5, 30),
                                       dpi=100)
 
@@ -166,12 +172,12 @@ def test_violin(adata_inter):
 
 
 def test_hairball(adata_inter):
-    """ Hairball network plot is functional """
+    """Hairball network plot is functional."""
     plot = rl.hairball(adata_inter,
                        min_perc=0,
                        interaction_score=0,
                        interaction_perc=90,
-                       output=None,
+                       save=None,
                        title=None,
                        color_min=0,
                        color_max=None,
@@ -182,13 +188,13 @@ def test_hairball(adata_inter):
 
 
 def test_connectionPlot(adata_inter):
-    """ Test if connectionPlot is working """
+    """Test if connectionPlot is working."""
     plot = rl.connectionPlot(adata=adata_inter,
                              restrict_to=None,
                              figsize=(5, 10),
                              dpi=100,
                              connection_alpha="interaction_score",
-                             output=None,
+                             save=None,
                              title=None,
                              receptor_cluster_col="receptor_cluster",
                              receptor_col="receptor_gene",

@@ -1,3 +1,5 @@
+"""Test plotting functions."""
+
 import pytest
 import sctoolbox.plotting as pl
 import scanpy as sc
@@ -10,15 +12,23 @@ import seaborn as sns
 import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
+import glob
+import deprecation
+
+from beartype.roar import BeartypeCallHintParamViolation
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
 
 # ------------------------------ FIXTURES --------------------------------- #
+
+quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """ Load and returns an anndata object. """
+    """Load and returns an anndata object."""
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -32,6 +42,9 @@ def adata():
     adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
     adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
     adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
+
+    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
+    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
     sc.pp.normalize_total(adata, target_sum=None)
     sc.pp.log1p(adata)
@@ -47,13 +60,14 @@ def adata():
 
 @pytest.fixture
 def df():
-    """Create and return a pandas dataframe"""
+    """Create and return a pandas dataframe."""
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
 
 
 @pytest.fixture
 def pairwise_ranked_genes():
+    """Return a DataFrame of genes ranked in groups."""
     return pd.DataFrame(data={"1/2_group": ["C1", "C1", "C2", "C2"],
                               "1/3_group": ["C1", "NS", "C2", "C2"],
                               "2/3_group": ["C1", "C1", "NS", "C2"]},
@@ -62,6 +76,7 @@ def pairwise_ranked_genes():
 
 @pytest.fixture
 def pairwise_ranked_genes_nosig():
+    """Return a DataFrame of genes ranked in groups with none significant."""
     return pd.DataFrame(data={"1/2_group": ["NS", "NS", "NS", "NS"],
                               "1/3_group": ["NS", "NS", "NS", "NS"],
                               "2/3_group": ["NS", "NS", "NS", "NS"]},
@@ -70,6 +85,7 @@ def pairwise_ranked_genes_nosig():
 
 @pytest.fixture
 def df_bidir_bar():
+    """Create DataFrame for bidirectional barplot."""
     return pd.DataFrame(data={'left_label': np.random.choice(["B1", "B2", "B3"], size=5),
                               'right_label': np.random.choice(["A1", "A2", "A3"], size=5),
                               'left_value': np.random.normal(size=5),
@@ -78,6 +94,7 @@ def df_bidir_bar():
 
 @pytest.fixture
 def venn_dict():
+    """Create arbitrary groups for venn."""
     return {"Group A": [1, 2, 3, 4, 5, 6],
             "Group B": [2, 3, 7, 8],
             "Group C": [3, 4, 5, 9, 10]}
@@ -85,7 +102,7 @@ def venn_dict():
 
 @pytest.fixture
 def tmp_file():
-    """ Return path for a temporary file. """
+    """Return path for a temporary file."""
     tmpdir = tempfile.mkdtemp()
 
     yield os.path.join(tmpdir, "output.pdf")
@@ -96,40 +113,46 @@ def tmp_file():
 
 @pytest.fixture
 def slider():
-    return widgets.IntRangeSlider(value=[5, 7], min=0, max=10, step=1)
+    """Create a slider widget."""
+    return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
 
 
 @pytest.fixture
 def slider_list(slider):
+    """Create a list of slider widgets."""
     return [slider for _ in range(2)]
 
 
 @pytest.fixture
 def checkbox():
+    """Create a checkbox widget."""
     return widgets.Checkbox()
 
 
 @pytest.fixture
 def slider_dict(slider):
+    """Create a dict of sliders."""
     return {c: slider for c in ['LISI_score_pca', 'qc_float']}
 
 
 @pytest.fixture
 def slider_dict_grouped(slider):
+    """Create a nested dict of slider widgets."""
     return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
 
 
 @pytest.fixture
 def slider_dict_grouped_diff(slider):
-    return {"A": {"1": slider, "2": widgets.IntRangeSlider(value=[1, 5], min=0, max=10, step=1)},
-            "B": {"1": slider, "2": widgets.IntRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
+    """Create a nested dict of slider widgets with different selections."""
+    return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
+            "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
 # ------------------------------ TESTS --------------------------------- #
 
 
 def test_sc_colormap():
-    """ Test whether sc_colormap returns a colormap """
+    """Test whether sc_colormap returns a colormap."""
 
     cmap = pl.sc_colormap()
     assert type(cmap).__name__ == "ListedColormap"
@@ -137,7 +160,7 @@ def test_sc_colormap():
 
 @pytest.mark.parametrize("n_selected", [None, 1, 2])
 def test_plot_pca_variance(adata, n_selected):
-    """ Test if Axes object is returned. """
+    """Test if Axes object is returned."""
     ax = pl.plot_pca_variance(adata, n_selected=n_selected)
     ax_type = type(ax).__name__
 
@@ -145,45 +168,77 @@ def test_plot_pca_variance(adata, n_selected):
 
 
 def test_plot_pca_variance_fail(adata):
-    """ Test if failes on invalid method. """
-    # generate invalid method
-    invalid = "-".join(list(adata.uns.keys())) + "-invalid"
+    """Test if function fails on invalid parameters."""
 
-    with pytest.raises(KeyError):
-        pl.plot_pca_variance(adata, method=invalid)
+    with pytest.raises(KeyError, match="The given method"):
+        pl.plot_pca_variance(adata, method="invalid")
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.plot_pca_variance(adata, ax="invalid")
 
 
-@pytest.mark.parametrize("method", ["umap"])  # , "tsne"]) # tsne option is currently broken and sends the function to sleep. Will be added if fixed.
-def test_search_dim_red_parameters(adata, method):
-    """ Test if search_dim_red_parameters returns an array of axes. """
+@pytest.mark.parametrize("kwargs", [{"which": "var", "method": "spearmanr"},
+                                    {"basis": "umap", "method": "pearsonr"},
+                                    {"basis": "umap", "plot_values": "pvalues"}])
+def test_plot_pca_correlation(adata, kwargs):
+    """Test if Axes object is returned without error."""
 
-    axarr = pl._search_dim_red_parameters(adata, color="condition",
-                                          method=method,
-                                          min_dist_range=(0.1, 0.3, 0.1),
-                                          spread_range=(2.0, 3.0, 0.5),
-                                          learning_rate_range=(100, 300, 100),
-                                          perplexity_range=(20, 30, 5))
+    ax = pl.plot_pca_correlation(adata, title="Title", **kwargs)
+    ax_type = type(ax).__name__
+
+    assert ax_type.startswith("Axes")
+
+
+@pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
+                                    {"basis": "invalid"},
+                                    {"method": "invalid"},
+                                    {"which": "invalid"},
+                                    {"columns": ["invalid", "columns"]}])
+def test_plot_pca_correlation_fail(adata, kwargs):
+    """Test that an exception is raised upon error."""
+
+    with pytest.raises((BeartypeCallHintParamViolation, KeyError, ValueError)):
+        pl.plot_pca_correlation(adata, **kwargs)
+
+
+def test_search_umap_parameters(adata):
+    """Test if search_umap_parameters returns an array of axes."""
+
+    axarr = pl.search_umap_parameters(adata, color="condition",
+                                      min_dist_range=(0.1, 0.3, 0.1),
+                                      spread_range=(2.0, 3.0, 0.5))
+    assert type(axarr).__name__ == "ndarray"
+    assert axarr.shape == (2, 2)
+
+
+def test_search_tsne_parameters(adata):
+    """Test if search_tsne_parameters returns an array of axes."""
+
+    axarr = pl.search_tsne_parameters(adata, color="condition",
+                                      learning_rate_range=(100, 300, 100),
+                                      perplexity_range=(20, 30, 5))
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
 
 def test_invalid_method_search_dim_red_parameter(adata):
-    with pytest.raises(ValueError):
+    """Test if error is raised for invalid method."""
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl._search_dim_red_parameters(adata, color="condition",
                                       method="invalid")
 
 
 @pytest.mark.parametrize("range", [(0.1, 0.2, 0.1, 0.1), (0.1, 0.2, 0.3)])
 def test_search_dim_red_parameters_ranges(adata, range):
-    """ Test that invalid ranges raise ValueError. """
+    """Test that invalid ranges raise ValueError."""
 
-    with pytest.raises(ValueError):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
                                       min_dist_range=range,
                                       spread_range=(2.0, 3.0, 0.5))
 
-    with pytest.raises(ValueError):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl._search_dim_red_parameters(adata, method="umap",
                                       color="condition",
                                       spread_range=range,
@@ -192,6 +247,7 @@ def test_search_dim_red_parameters_ranges(adata, range):
 
 @pytest.mark.parametrize("embedding", ["pca", "umap", "tsne"])
 def test_plot_group_embeddings(adata, embedding):
+    """Test if plot_group_embeddings runs through."""
 
     axarr = pl.plot_group_embeddings(adata, groupby="condition",
                                      embedding=embedding, ncols=2)
@@ -203,6 +259,7 @@ def test_plot_group_embeddings(adata, embedding):
                                                  ("umap", "condition"),
                                                  ("tsne", "list")])
 def test_compare_embeddings(adata, embedding, var_list):
+    """Test if compare_embeddings runs trough."""
 
     adata_cp = adata.copy()
 
@@ -222,6 +279,7 @@ def test_compare_embeddings(adata, embedding, var_list):
 
 
 def test_invalid_var_list_compare_embeddings(adata):
+    """Test if compare_embeddings raises error."""
     with pytest.raises(ValueError):
         adata_cp = adata.copy()
         adata_list = [adata, adata_cp]
@@ -231,7 +289,7 @@ def test_invalid_var_list_compare_embeddings(adata):
 
 @pytest.mark.parametrize("method", ["leiden", "louvain"])
 def test_search_clustering_parameters(adata, method):
-    """ Test if search_clustering_parameters returns an array of axes. """
+    """Test if search_clustering_parameters returns an array of axes."""
 
     axarr = pl.search_clustering_parameters(adata, method=method,
                                             resolution_range=(0.1, 0.31, 0.1),
@@ -241,22 +299,33 @@ def test_search_clustering_parameters(adata, method):
 
 
 def test_wrong_embeding_search_clustering_parameters(adata):
+    """Test if search_cluster_parameters raises error."""
     with pytest.raises(KeyError):
         pl.search_clustering_parameters(adata, embedding="Invalid")
 
 
-@pytest.mark.parametrize("method,resrange", [("leiden", (0.1, 0.2, 0.1, 0.1)),
-                                             ("leiden", (0.1, 0.2, 0.3)),
-                                             ("unknown", (0.1, 0.3, 0.1))])
-def test_search_clustering_parameters_errors(adata, method, resrange):
+def test_search_clustering_parameters_errors(adata):
+    """Test if search_clustering_parameters raises error."""
 
     with pytest.raises(ValueError):
-        pl.search_clustering_parameters(adata, resolution_range=resrange,
-                                        method=method)
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
+                                        method="leiden")
+
+
+def test_search_clustering_parameters_beartype(adata):
+    """Test if beartype checks for tuple length."""
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
+                                        method="leiden")
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
+                                        method="unknown")
 
 
 def test_anndata_overview(adata, tmp_file):
-    """ Test anndata_overview success and file generation. """
+    """Test anndata_overview success and file generation."""
     adatas = {"raw": adata, "corrected": adata}
 
     assert not os.path.exists(tmp_file)
@@ -285,12 +354,12 @@ def test_anndata_overview(adata, tmp_file):
 
 
 def test_anndata_overview_fail_color_by(adata):
-    """ Test invalid parameter inputs """
+    """Test invalid parameter inputs."""
     adatas = {"raw": adata}
 
     # invalid color_by
     # no input
-    with pytest.raises(ValueError, match="Couldn't find column"):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=None,
@@ -313,7 +382,7 @@ def test_anndata_overview_fail_color_by(adata):
 
 
 def test_anndata_overview_fail(adata):
-    """ Test invalid parameter inputs """
+    """Test invalid parameter inputs."""
     adatas_invalid = {"raw": adata, "invalid": "Not an anndata"}
     adata_cp = adata.copy()
     adata_cp.obs = adata_cp.obs.drop(["LISI_score_pca"], axis=1)
@@ -343,12 +412,12 @@ def test_anndata_overview_fail(adata):
 
 
 def test_anndata_overview_fail_plots(adata):
-    """ Test invalid parameter inputs """
+    """Test invalid parameter inputs."""
     adatas = {"raw": adata}
 
     # invalid plots
     # no input
-    with pytest.raises(ValueError, match="Invalid plot specified:"):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -359,7 +428,7 @@ def test_anndata_overview_fail_plots(adata):
         )
 
     # wrong input
-    with pytest.raises(ValueError, match="Invalid plot specified:"):
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
@@ -371,7 +440,7 @@ def test_anndata_overview_fail_plots(adata):
 
 
 def test_group_expression_boxplot(adata):
-    """ Test if group_expression_boxplot returns a plot """
+    """Test if group_expression_boxplot returns a plot."""
     gene_list = adata.var_names.tolist()[:10]
     ax = pl.group_expression_boxplot(adata, gene_list, groupby="condition")
     ax_type = type(ax).__name__
@@ -381,7 +450,7 @@ def test_group_expression_boxplot(adata):
 
 
 def test_boxplot(df):
-    """ Test if Axes object is returned. """
+    """Test if Axes object is returned."""
     ax = pl.boxplot(df)
     ax_type = type(ax).__name__
 
@@ -390,7 +459,7 @@ def test_boxplot(df):
 
 @pytest.mark.parametrize("color", ["ENSMUSG00000102693", "clustering", "qc_float"])
 def test_plot_3D_UMAP(adata, color):
-    """ Test if 3d plot is written to html """
+    """Test if 3d plot is written to html."""
 
     # Run 3d plotting
     pl.plot_3D_UMAP(adata, color=color, save="3D_test")
@@ -401,13 +470,13 @@ def test_plot_3D_UMAP(adata, color):
 
 
 def test_invalid_color_plot_3D_UMAP(adata):
-    """ Test if plot_3D_UMAP return KeyError if color paramater cannot be found in adata"""
+    """Test if plot_3D_UMAP return KeyError if color paramater cannot be found in adata."""
     with pytest.raises(KeyError):
         pl.plot_3D_UMAP(adata, color="invalid", save="3D_test")
 
 
 def test_group_correlation(adata):
-    """ Test if plot is written to pdf """
+    """Test if plot is written to pdf."""
 
     # Run group correlation
     pl.group_correlation(adata, groupby="condition",
@@ -421,6 +490,7 @@ def test_group_correlation(adata):
 @pytest.mark.parametrize("groupby", [None, "condition"])
 @pytest.mark.parametrize("add_labels", [True, False])
 def test_n_cells_barplot(adata, groupby, add_labels):
+    """Test n_cells_barplot success."""
 
     axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby,
                                add_labels=add_labels)
@@ -436,6 +506,7 @@ def test_n_cells_barplot(adata, groupby, add_labels):
                                       ("clustering", "qc_float", True)])
 @pytest.mark.parametrize("style", ["violin", "boxplot", "bar"])
 def test_grouped_violin(adata, x, y, norm, style):
+    """Test grouped_violin success."""
 
     ax = pl.grouped_violin(adata, x=x, y=y, style=style,
                            groupby="condition", normalize=norm)
@@ -445,6 +516,8 @@ def test_grouped_violin(adata, x, y, norm, style):
 
 
 def test_grouped_violin_fail(adata):
+    """Test grouped_violin fail."""
+
     with pytest.raises(ValueError, match='is not a column in adata.obs or a gene in adata.var.index'):
         pl.grouped_violin(adata, x="Invalid", y=None, groupby="condition")
     with pytest.raises(ValueError, match='x must be either a column in adata.obs or all genes in adata.var.index'):
@@ -453,13 +526,13 @@ def test_grouped_violin_fail(adata):
         pl.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
     with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
         pl.grouped_violin(adata, x="clustering", y=None, groupby="condition")
-    with pytest.raises(ValueError, match="Style 'Invalid' is not valid for this function."):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
 
 
 @pytest.mark.parametrize("show_umap", [True, False])
 def test_marker_gene_clustering(adata, show_umap):
-    """ Test marker_gene_clustering"""
+    """Test marker_gene_clustering."""
 
     marker_dict = {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
                    "Celltype B": ['ENSMUSG00000102272']}
@@ -473,6 +546,7 @@ def test_marker_gene_clustering(adata, show_umap):
 
 @pytest.mark.parametrize("how", ["vertical", "horizontal"])
 def test_flip_embedding(adata, how):
+    """Test flip_embedding success."""
     tmp = adata.copy()
     key = "X_umap"
     pl.flip_embedding(adata, key=key, how=how)
@@ -484,7 +558,8 @@ def test_flip_embedding(adata, how):
 
 
 def test_invalid_flip_embedding(adata):
-    with pytest.raises(ValueError):
+    """Test flip_embedding failure."""
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.flip_embedding(adata, how="invalid")
 
     with pytest.raises(KeyError):
@@ -494,13 +569,14 @@ def test_invalid_flip_embedding(adata):
 @pytest.mark.parametrize("n, res", [(500, 12), (1000, 8),
                                     (5000, 8), (10000, 3), (20000, 3)])
 def test_get_3d_dotsize(n, res):
+    """Test _get_3d_dotsize success."""
     assert pl._get_3d_dotsize(int(n)) == res
 
 
 @pytest.mark.parametrize("marker", ["ENSMUSG00000103377",
                                     ["ENSMUSG00000103377", 'ENSMUSG00000104428']])
 def test_umap_marker_overview(adata, marker):
-    """ Test umap_marker_overview """
+    """Test umap_marker_overview."""
     axes_list = pl.umap_marker_overview(adata, marker)
 
     assert isinstance(axes_list, list)
@@ -508,11 +584,51 @@ def test_umap_marker_overview(adata, marker):
     assert ax_type.startswith("Axes")
 
 
+@pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
+                                    {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
+@pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
+def test_embedding(adata, style, kwargs):
+    """Assert embedding works and returns Axes object."""
+
+    # Collect test colors
+    colors = ["qcvar1"]   # continous obs variable
+    colors.append(adata.var.index[0])  # continous gene variable
+    colors.append(None)          # no color / density plot
+    if style != "hexbin":
+        colors.append("clustering")  # categorical obs variable; only available for dots/density
+
+    axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
+
+    # Assert number of plots
+    components = kwargs.get("components", "1,2")
+    n_components = 1 if isinstance(components, str) else len(components)
+    assert len(axes_list) == len(colors) * n_components
+
+    # Assert type of output
+    ax_type = type(axes_list[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_embedding_single(adata):
+    """Test that embedding works with single color."""
+    axarr = pl.plot_embedding(adata, color="qcvar1")
+
+    ax_type = type(axarr[0]).__name__
+    assert ax_type.startswith("Axes")
+
+
+def test_embedding_error(adata):
+    """Test that embedding raises error for invalid input."""
+    with pytest.raises(ValueError):
+        pl.plot_embedding(adata, components="3,4")
+
+
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", "Condition"),
                                          (["condition", "clustering"], None),
                                          (["condition", "clustering"], ["Condition", "Clustering"])])
 def test_umap_pub(adata, color, title):
-    """ Test umap_pub plotting with different color and title parameter. """
+    """Test umap_pub plotting with different color and title parameter."""
     axes_list = pl.umap_pub(adata, color=color, title=title)
 
     assert type(axes_list).__name__ == "list"
@@ -520,24 +636,25 @@ def test_umap_pub(adata, color, title):
     assert ax_type.startswith("Axes")
 
 
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("color,title", [("condition", ["Title 1", "Title 2"]),
                                          (["condition", "clustering"], "Title 1")])
 def test_invalid_parameter_len_umap_pub(adata, color, title):
-    """ Test case if color and title are not the same lenght """
+    """Test case if color and title are not the same lenght."""
     with pytest.raises(ValueError):
         pl.umap_pub(adata, color=color, title=title)
 
 
 @pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
 def test_add_figure_title_axis(adata, color):
-    """ Test if function _add_figure_title runs with axis object(s) as input """
+    """Test if function _add_figure_title runs with axis object(s) as input."""
     axes = sc.pl.umap(adata, color=color, show=False)
     pl._add_figure_title(axes, "UMAP plots", fontsize=20)
     assert True
 
 
 def test_add_figure_title_axis_dict(adata):
-    """ Test if function _add_figure_title runs with axis dict as input """
+    """Test if function _add_figure_title runs with axis dict as input."""
     markers = ['ENSMUSG00000103377', 'ENSMUSG00000102851']
     axes = sc.pl.dotplot(adata, markers, groupby='condition',
                          dendrogram=True, show=False)
@@ -546,7 +663,7 @@ def test_add_figure_title_axis_dict(adata):
 
 
 def test_add_figure_title_axis_clustermap(adata):
-    """ Test if function _add_figure_title runs with clustermap as input """
+    """Test if function _add_figure_title runs with clustermap as input."""
     clustermap = sns.clustermap(adata.obs[['LISI_score_pca', 'qc_float']])
     pl._add_figure_title(clustermap, "Heatmap", fontsize=20)
     assert True
@@ -554,6 +671,7 @@ def test_add_figure_title_axis_clustermap(adata):
 
 @pytest.mark.parametrize("label", [None, "label"])
 def test_add_labels(df, label):
+    """Test _add_labels success."""
     if label:
         df["label"] = ["A", "B", "C", "D", "E"]
     texts = pl._add_labels(df, x="col1", y="col2", label_col=label)
@@ -561,47 +679,35 @@ def test_add_labels(df, label):
     assert type(texts[0]).__name__ == "Annotation"
 
 
-@pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
-                                             (np.array([[1, 2, 3], [1, 2, 3]]), 1, 100),
-                                             (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
-def test_scale_values(array, mini, maxi):
-    """ Test that scaled values are in given range. """
-    result = pl._scale_values(array, mini, maxi)
-
-    assert len(result) == len(array)
-    if len(result.shape) == 1:
-        assert all((mini <= result) & (result <= maxi))
-    else:
-        for i in range(len(result)):
-            assert all((mini <= result[i]) & (result[i] <= maxi))
-
-
 def test_clustermap_dotplot():
-    """ Test clustermap_dotplot. """
+    """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
-    pl.clustermap_dotplot(table=table, x="bulk_labels",
-                          y="index", color="n_genes",
-                          size="n_counts", cmap="viridis",
-                          vmin=0, vmax=10)
-    assert True
+    axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
+                                 y="index", hue="n_genes",
+                                 size="n_counts", palette="viridis",
+                                 title="Title", show_grid=True)
+
+    assert isinstance(axes, list)
+    ax_type = type(axes[0]).__name__
+    assert ax_type.startswith("Axes")
 
 
 def test_bidirectional_barplot(df_bidir_bar):
-    """ Test bidirectoional_barplot. """
+    """Test bidirectoional_barplot success."""
     pl.bidirectional_barplot(df_bidir_bar, title="Title")
     assert True
 
 
 def test_bidirectional_barplot_fail(df):
-    """ test bidorectional_barplot with invalid input. """
-    with pytest.raises(ValueError):
+    """Test bidorectional_barplot with invalid input."""
+    with pytest.raises(KeyError, match='Column left_label not found in dataframe.'):
         pl.bidirectional_barplot(df)
 
 
 @pytest.mark.parametrize("ylabel,color_by,hlines", [(True, None, 0.5),
                                                     (False, "clustering", [0.5, 0.5, 0.5, 0.5])])
 def test_violinplot(adata, ylabel, color_by, hlines):
-    """ Test violinplot. """
+    """Test violinplot success."""
     ax = pl.violinplot(adata.obs, "qc_float", color_by=color_by,
                        hlines=hlines, colors=None, ax=None,
                        title="Title", ylabel=ylabel)
@@ -610,7 +716,7 @@ def test_violinplot(adata, ylabel, color_by, hlines):
 
 
 def test_violinplot_fail(adata):
-    """ Test invalid input for violinplot. """
+    """Test invalid input for violinplot."""
     with pytest.raises(ValueError, match='not found in column names of table!'):
         pl.violinplot(adata.obs, y="Invalid")
 
@@ -626,7 +732,7 @@ def test_violinplot_fail(adata):
 
 
 def test_plot_venn(venn_dict):
-    """ Test plot_venn with 3 and 2 groups. """
+    """Test plot_venn with 3 and 2 groups."""
     pl.plot_venn(venn_dict, title="Test")
     venn_dict.pop("Group C")
     pl.plot_venn(venn_dict, title="Test")
@@ -634,17 +740,17 @@ def test_plot_venn(venn_dict):
 
 
 def test_plot_venn_fail(venn_dict):
-    """ Test for invalid input. """
+    """Test for invalid input."""
     venn_dict["Group D"] = [1, 2]
     with pytest.raises(ValueError):
         pl.plot_venn(venn_dict)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.plot_venn([1, 2, 3, 4, 5])
 
 
 def test_violin_HVF_distribution(adata):
-    """ Test violin_HVF_distribution. """
+    """Test violin_HVF_distribution."""
     adata_HVF = adata.copy()
     adata_HVF.var['highly_variable'] = np.random.choice([True, False], size=adata_HVF.shape[1])
     adata_HVF.var['n_cells_by_counts'] = np.random.normal(size=adata_HVF.shape[1])
@@ -653,13 +759,13 @@ def test_violin_HVF_distribution(adata):
 
 
 def test_violin_HVF_distribution_fail(adata):
-    """ Test if input is invalid. """
+    """Test if input is invalid."""
     with pytest.raises(KeyError):
         pl.violin_HVF_distribution(adata)
 
 
 def test_scatter_HVF_distribution(adata):
-    """ Test scatter_HVF_distribution. """
+    """Test scatter_HVF_distribution."""
     adata_HVF = adata.copy()
     adata_HVF.var['variability_score'] = np.random.normal(size=adata_HVF.shape[1])
     adata_HVF.var['n_cells'] = np.random.normal(size=adata_HVF.shape[1])
@@ -668,7 +774,7 @@ def test_scatter_HVF_distribution(adata):
 
 
 def test_scatter_HVF_distribution_fail(adata):
-    """ Test if input is invalid. """
+    """Test if input is invalid."""
     with pytest.raises(KeyError):
         pl.scatter_HVF_distribution(adata)
 
@@ -680,7 +786,7 @@ def test_scatter_HVF_distribution_fail(adata):
                           (False, None, 'rank_genes_groups', False)])
 @pytest.mark.parametrize("style", ["dots", "heatmap"])
 def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
-    """ Test rank_genes_plot for ranked genes and gene lists. """
+    """Test rank_genes_plot for ranked genes and gene lists."""
     # Gene list
     d = pl.rank_genes_plot(adata, groupby="clustering",
                            genes=genes, key=key,
@@ -691,15 +797,15 @@ def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
 
 
 def test_rank_genes_plot_fail(adata):
-    """ Test rank_genes_plot for invalid input. """
-    with pytest.raises(ValueError, match='style must be one of'):
+    """Test rank_genes_plot for invalid input."""
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
                            style="Invalid")
-    with pytest.raises(ValueError, match='Only one of genes or key can be specified.'):
+    with pytest.raises(KeyError, match='Could not find keys.*'):
         pl.rank_genes_plot(adata, groupby="clustering",
                            key='rank_genes_groups',
-                           genes=["A", "B", "C"])
+                           genes=["A", "B", "C"])  # invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
                            genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
@@ -709,32 +815,71 @@ def test_rank_genes_plot_fail(adata):
                          [(None, "title"),
                           ("condition", None)])
 def test_gene_expression_heatmap(adata, title, groupby):
-    """ Test gene_expression_heatmap. """
+    """Test gene_expression_heatmap success."""
+
+    genes = adata.var_names.tolist()[:10]
     g = pl.gene_expression_heatmap(adata,
-                                   genes=['ENSMUSG00000102851',
-                                          'ENSMUSG00000102272'],
+                                   genes=genes,
                                    groupby=groupby, title=title,
+                                   col_cluster=True,            # ensure title is tested
+                                   show_col_dendrogram=True,    # ensure title is tested
                                    cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
 
 
+@deprecation.fail_if_not_removed
 @pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
                                               'ENSMUSG00000102272']])
 @pytest.mark.parametrize("figsize", [None, (10, 10)])
 def test_group_heatmap(adata, gene_list, figsize):
-    """ Test group heatmap. """
-    pl.group_heatmap(adata, "clustering", gene_list=gene_list,
-                     figsize=figsize)
+    """Test group heatmap success."""
+    ax = pl.group_heatmap(adata, "clustering", gene_list=gene_list,
+                          figsize=figsize)
+
+    assert type(ax).__name__.startswith("Axes")
+
+
+@pytest.mark.parametrize("kwargs, exception",
+                         [({"gene_name_column": "invalid"}, KeyError)])
+def test_gene_expression_heatmap_error(adata, kwargs, exception):
+    """Test gene_expression_heatmap failure."""
+
+    genes = adata.var_names.tolist()[:10]
+    with pytest.raises(exception):
+        pl.gene_expression_heatmap(adata, genes=genes, cluster_column="clustering", **kwargs)
 
 
 def test_plot_differential_genes(pairwise_ranked_genes):
+    """Test plot_differential_genes success."""
     ax = pl.plot_differential_genes(pairwise_ranked_genes)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
 
 
+@pytest.mark.parametrize("gene_list,save,figsize",
+                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
+                          ("Gm18956", "out.png", None)])
+def test_plot_gene_correlation(adata, gene_list, save, figsize):
+    """Test gene correlation."""
+
+    adata_c = adata.copy()
+    # set gene names as index instead of ensemble ids
+    adata_c.var.reset_index(inplace=True)
+    adata_c.var['gene'] = adata_c.var['gene'].astype('str')
+    adata_c.var.set_index('gene', inplace=True)
+    adata_c.var_names_make_unique()
+
+    axes = pl.plot_gene_correlation(adata_c, "Xkr4", gene_list,
+                                    save=save, figsize=figsize)
+    assert type(axes).__name__ == "ndarray"
+    assert type(axes[0]).__name__.startswith("Axes")
+
+    if save:
+        os.remove(save)
+
+
 def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
-    """ Test if ValueError is raised if no significant genes are found. """
+    """Test if ValueError is raised if no significant genes are found."""
     with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
         pl.plot_differential_genes(pairwise_ranked_genes_nosig)
 
@@ -744,6 +889,7 @@ def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
                           (None, None, (4, 4), None)],
                          )
 def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
+    """Test pseudotime_heatmap success."""
     ax = pl.pseudotime_heatmap(adata, ['ENSMUSG00000103377',
                                        'ENSMUSG00000102851'],
                                sortby=sortby, title=title,
@@ -753,6 +899,7 @@ def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
 
 
 def test_link_sliders(slider_list):
+    """Test _link_sliders success."""
     linkage_list = pl._link_sliders(slider_list)
     assert isinstance(linkage_list, list)
     assert type(linkage_list[0]).__name__ == 'link'
@@ -760,7 +907,7 @@ def test_link_sliders(slider_list):
 
 @pytest.mark.parametrize("global_threshold", [True, False])
 def test_toggle_linkage(checkbox, slider_list, global_threshold):
-    """ Test if toggle_linkage runs without error. """
+    """Test if toggle_linkage runs without error."""
     column = "Test"
     linkage_dict = dict()
     linkage_dict[column] = pl._link_sliders(slider_list) if global_threshold is True else None
@@ -772,7 +919,7 @@ def test_toggle_linkage(checkbox, slider_list, global_threshold):
 
 
 def test_update_threshold(slider):
-    """ Test if update_threshold runs wihtout error. """
+    """Test if update_threshold runs wihtout error."""
     fig, _ = plt.subplots()
     slider.observe(functools.partial(pl._update_thresholds, fig=fig,
                                      min_line=1, min_shade=1,
@@ -787,6 +934,7 @@ def test_update_threshold(slider):
 @pytest.mark.parametrize("color_list", [None, sns.color_palette("Set1", 3)])
 @pytest.mark.parametrize("title", [None, "Title"])
 def test_quality_violin(adata, groupby, columns, which, title, color_list):
+    """Test quality_violin success."""
     figure, slider = pl.quality_violin(adata, columns=columns, groupby=groupby,
                                        which=which, title=title, color_list=color_list)
     assert type(figure).__name__ == "Figure"
@@ -794,7 +942,8 @@ def test_quality_violin(adata, groupby, columns, which, title, color_list):
 
 
 def test_quality_violin_fail(adata):
-    with pytest.raises(ValueError, match="'which' must be either 'obs' or 'var'."):
+    """Test quality_violin failure."""
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.quality_violin(adata, columns=["qc_float"], which="Invalid")
     with pytest.raises(ValueError, match="Increase the color_list variable"):
         pl.quality_violin(adata, groupby="condition", columns=["qc_float"],
@@ -807,7 +956,7 @@ def test_quality_violin_fail(adata):
 
 
 def test_get_slider_thresholds_dict(slider_dict):
-    """ Test get_slider_threshold for non grouped slider_dict. """
+    """Test get_slider_threshold for non grouped slider_dict."""
     threshold_dict = pl.get_slider_thresholds(slider_dict)
     assert isinstance(threshold_dict, dict)
     assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7},
@@ -815,7 +964,7 @@ def test_get_slider_thresholds_dict(slider_dict):
 
 
 def test_get_slider_thresholds_dict_grouped(slider_dict_grouped):
-    """ Test get_slider_threshold for grouped slider_dict. """
+    """Test get_slider_threshold for grouped slider_dict."""
     threshold_dict = pl.get_slider_thresholds(slider_dict_grouped)
     assert isinstance(threshold_dict, dict)
     assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7},
@@ -823,10 +972,72 @@ def test_get_slider_thresholds_dict_grouped(slider_dict_grouped):
 
 
 def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
-    """ Test get_slider_threshold for grouped slider_dict with different slider values. """
+    """Test get_slider_threshold for grouped slider_dict with different slider values."""
     threshold_dict = pl.get_slider_thresholds(slider_dict_grouped_diff)
     assert isinstance(threshold_dict, dict)
     assert threshold_dict == {'A': {'1': {'min': 5, 'max': 7},
                                     '2': {'min': 1, 'max': 5}},
                               'B': {'1': {'min': 5, 'max': 7},
                                     '2': {'min': 3, 'max': 4}}}
+
+
+@pytest.mark.parametrize("columns", [["invalid"], ["not", "present"]])
+def test_pairwise_scatter_invalid(adata, columns):
+    """Test that invalid columns raise error."""
+    with pytest.raises(ValueError):
+        pl.pairwise_scatter(adata.obs, columns=columns)
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.pairwise_scatter(adata.obs, columns="invalid")
+
+
+@pytest.mark.parametrize("thresholds", [None,
+                                        {"qcvar1": {"min": 0.1}, "qcvar2": {"min": 0.4}}])
+def test_pairwise_scatter(adata, thresholds):
+    """Test pairwise scatterplot with different input."""
+    axarr = pl.pairwise_scatter(adata.obs, columns=["qcvar1", "qcvar2"], thresholds=thresholds)
+
+    assert axarr.shape == (2, 2)
+    assert type(axarr[0, 0]).__name__.startswith("Axes")
+
+
+@pytest.mark.parametrize("order", [None, ["KO-2", "KO-1", "Ctrl-2", "Ctrl-1"]])
+def test_plot_starsolo_quality(order):
+    """Test plot_starsolo_quality success."""
+    res = pl.plot_starsolo_quality(quant_folder, order=order)
+
+    assert isinstance(res, np.ndarray)
+
+
+def test_plot_starsolo_quality_failure():
+    """Test plot_starsolo_quality failure with invalid input."""
+
+    with pytest.raises(ValueError, match="No STARsolo summary files found in folder*"):
+        pl.plot_starsolo_quality("invalid")
+
+    with pytest.raises(KeyError, match="Measure .* not found in summary table"):
+        pl.plot_starsolo_quality(quant_folder, measures=["invalid"])
+
+
+def test_plot_starsolo_UMI():
+    """Test plot_starsolo_UMI success."""
+    res = pl.plot_starsolo_UMI(quant_folder)
+
+    assert isinstance(res, np.ndarray)
+
+
+def test_plot_starsolo_UMI_failure():
+    """Test plot_starsolo_UMI failure with invalid input."""
+
+    # Create a quant folder without UMI files
+    shutil.copytree(quant_folder, "quant_without_UMI", dirs_exist_ok=True)
+    UMI_files = glob.glob("quant_without_UMI/*/solo/Gene/UMI*")
+    for file in UMI_files:
+        os.remove(file)
+
+    # Test that valueerror is raised
+    with pytest.raises(ValueError, match="No UMI files found in folder*"):
+        pl.plot_starsolo_UMI("quant_without_UMI")
+
+    # remove folder
+    shutil.rmtree("quant_without_UMI")

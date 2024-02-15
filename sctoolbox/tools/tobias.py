@@ -1,6 +1,10 @@
+"""Tools for TOBIAS usage."""
 import yaml
 import os
 import sctoolbox.utils as utils
+
+from beartype import beartype
+from beartype.typing import Optional, Literal
 
 
 # from: https://github.com/yaml/pyyaml/issues/127#issuecomment-525800484
@@ -14,60 +18,55 @@ class _SpaceDumper(yaml.SafeDumper):
             super().write_line_break()
 
 
-def write_TOBIAS_config(out_path,
-                        bams=[],
-                        names=None,
-                        fasta=None,
-                        blacklist=None,
-                        gtf=None,
-                        motifs=None,
-                        organism="human",
-                        output="TOBIAS_output",
-                        plot_comparison=True,
-                        plot_correction=True,
-                        plot_venn=True,
-                        coverage=True,
-                        wilson=True):
+@beartype
+def write_TOBIAS_config(out_path: str,
+                        bams: list[str] = [],
+                        names: Optional[list[str]] = None,
+                        fasta: Optional[str] = None,
+                        blacklist: Optional[str] = None,
+                        gtf: Optional[str] = None,
+                        motifs: Optional[str] = None,
+                        organism: Literal["human", "mouse", "zebrafish"] = "human",
+                        output: str = "TOBIAS_output",
+                        plot_comparison: bool = True,
+                        plot_correction: bool = True,
+                        plot_venn: bool = True,
+                        coverage: bool = True,
+                        wilson: bool = True) -> None:
     """
     Write a TOBIAS config file from input bams/fasta/blacklist etc.
 
     Parameters
-    -----------
-    out_path : string
+    ----------
+    out_path : str
         Path to output yaml file.
-    bams : list of strings, optional
+    bams : list[str], default []
         List of paths to bam files.
-    names : list of strings, optional
-        List of names for the bams. If None, the names are set to the bam file names with common prefix and suffix removed. Default: None.
-    fasta : string, optional
-        Path to fasta file. Default: None.
-    blacklist : string, optional
-        Path to blacklist file. Default: None.
-    gtf : string, optional
-        Path to gtf file. Default: None.
-    motifs : string, optional
-        Path to motif file. Default: None.
-    organism : string, optional
-        Organism name. TOBIAS supports 'human', 'mouse' or 'zebrafish'. Default: "human".
-    output : string, optional
-        Output directory of the TOBIAS run. Default: "TOBIAS_output".
-    plot_comparison : boolean, optional
-        Flag for the step of plotting comparison of the TOBIAS run. Default: True.
-    plot_correction : boolean, optional
-        Flag for the step of plotting correction of the TOBIAS run. Default: True.
-    plot_venn : boolean, optional
-        Flag for the step of plotting venn diagramms of the TOBIAS run. Default: True.
-    coverage : boolean, optional
-        Flag for coverage step of the TOBIAS run. Default: True.
-    wilson: boolean, optional
-        Flag for wilson step of the TOBIAS run. Default: True.
+    names : Optional[list[str]], default None
+        List of names for the bams. If None, the names are set to the bam file names with common prefix and suffix removed.
+    fasta : Optional[str], default None
+        Path to fasta file.
+    blacklist : Optional[str], default None
+        Path to blacklist file.
+    gtf : Optional[str], default None
+        Path to gtf file.
+    motifs : Optional[str], default None
+        Path to motif file.
+    organism : Literal["human", "mouse", "zebrafish"], default 'human'
+        Organism name. TOBIAS supports 'human', 'mouse' or 'zebrafish'.
+    output : str, default 'Tobias_output'
+        Output directory of the TOBIAS run.
+    plot_comparison : bool, default True
+        Flag for the step of plotting comparison of the TOBIAS run.
+    plot_correction : bool, default True
+        Flag for the step of plotting correction of the TOBIAS run.
+    plot_venn : bool, default True
+        Flag for the step of plotting venn diagramms of the TOBIAS run.
+    coverage : bool, default True
+        Flag for coverage step of the TOBIAS run.
+    wilson : bool, default True
+        Flag for wilson step of the TOBIAS run.
     """
-
-    # Check organism input
-    organism = organism.lower()
-    valid_organisms = ["human", "mouse", "zebrafish"]
-    if organism not in valid_organisms:
-        raise ValueError(f"'{organism}' is not a valid organism. Valid organisms are: " + ", ".join(valid_organisms))
 
     # Remove any common prefix and suffix from names
     if names is None:
@@ -79,7 +78,7 @@ def write_TOBIAS_config(out_path,
     # Start building yaml
     data = {}
     data["data"] = {names[i]: bams[i] for i in range(len(bams))}
-    data["run_info"] = {"organism": organism,
+    data["run_info"] = {"organism": organism.lower(),
                         "blacklist": blacklist,
                         "fasta": fasta,
                         "gtf": gtf,
