@@ -374,6 +374,11 @@ notebooks MR - new image:
     - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"
+      changes:  # if any of the files were changed
+        - setup.py
+        - sctoolbox_env.yml
+        - Dockerfile
+        - sctoolbox/_version.py
       when: manual
   
 notebooks MR - dev image:
