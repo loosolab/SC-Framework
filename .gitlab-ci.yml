@@ -345,7 +345,6 @@ notebooks main:
 
 notebooks MR - new image:
   image: "$CI_REGISTRY_IMAGE:MR-${MR_VERSION}"
-  needs: [build-image-mr]
   inherit:
     default: false
   stage: test
