@@ -20,7 +20,7 @@ extract-version:
 # get the sctoolbox version as global variable 
 test-test-test:
   stage: .pre
-  image: python:3.10-alpine3.19
+  image: alpine/git:latest
   script:
     - matched_line="$(git log -1 --pretty=%B | grep 'See merge request')"
     - mr_iid=${matched_line##*\!}
