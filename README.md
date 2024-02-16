@@ -59,7 +59,7 @@ git config --replace-all include.path "../.gitconfig"
 All notebooks follow the same general template and rules:
 - Notebooks usually start with loading the adata object and a cell for user inputs.
 - Cells with a blue background require user input.
-- Not blue cells are most likely locked cells, which should should not be changed by user.
+- Not blue cells are most likely locked cells, which should not be changed by user.
 - The last step of a notebook is to store the analyzed adata as a `.h5ad` file to be used by following analysis steps.
 
 ### 2. Module settings
