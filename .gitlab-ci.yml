@@ -380,9 +380,9 @@ notebooks MR - new image:
         - Dockerfile
         - sctoolbox/_version.py
       when: manual
-  
+
 notebooks MR - dev image:
-  image: "$CI_REGISTRY_IMAGE:$dev"
+  image: "$CI_REGISTRY_IMAGE:dev"
   inherit:
     default: false
   stage: test
@@ -506,6 +506,11 @@ deploy-pages-MR:
       - docs/build/html/
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "main" # dev/main are built automatically
+      changes:
+        - sctoolbox/**/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb  # changes in general notebooks
       allow_failure: True
 
 # Deploy pages for a commit without a MR
