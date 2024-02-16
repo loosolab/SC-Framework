@@ -1,3 +1,7 @@
+# ############################################################################################################################################################
+# ######################################################### pre ##############################################################################################
+# ############################################################################################################################################################
+
 # get the sctoolbox version as global variable 
 extract-version:
   stage: .pre
@@ -12,11 +16,29 @@ extract-version:
   rules:
     - when: always
 
+
+# get the sctoolbox version as global variable 
+test-test-test:
+  stage: .pre
+  image: python:3.10-alpine3.19
+  script:
+    - echo ${CI_MERGE_REQUEST_ID}
+    - echo ${CI_MERGE_REQUEST_IID}
+    - echo ${CI_MERGE_REQUEST_PROJECT_ID}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+
+# ############################################################################################################################################################
+# ######################################################### build docker image ###############################################################################
+# ############################################################################################################################################################
+
 # The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
-build-job:       # This job runs in the build stage, which runs first.
+
+# build image for commits on main
+build-image-main:
   stage: build
   image: docker:latest # image as building environment
   services:
@@ -32,14 +54,64 @@ build-job:       # This job runs in the build stage, which runs first.
       - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
       - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
   rules:
+    - if: $CI_COMMIT_BRANCH == "main"  # only for commits to dev
+      changes:  # if any of the files were changed
+        - setup.py
+        - sctoolbox_env.yml
+        - Dockerfile
+        - sctoolbox/_version.py
+
+# build image for commits on dev
+build-image-dev:
+  stage: build
+  image: docker:latest # image as building environment
+  services:
+      - name: "docker:dind" # docker in docker to build
+        alias: docker
+  before_script:
+      - echo $BUILD_VERSION
+      - apk update && apk add git # install git for authentification and pushing to registry
+      - apt-get update -qq && apt-get install -y -qq git 
+      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
+  script:
+      - ls .
+      - docker build --pull -t "$CI_REGISTRY_IMAGE:dev" . # build the image from Dockerfile in the repository
+      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
+  rules:
     - if: $CI_COMMIT_BRANCH == "dev"  # only for commits to dev
       changes:  # if any of the files were changed
         - setup.py
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
-    - when: manual    # or manually
-      allow_failure: true
+
+# build image for merge-requests
+build-image-mr:       # This job runs in the build stage, which runs first.
+  stage: build
+  image: docker:latest # image as building environment
+  services:
+      - name: "docker:dind" # docker in docker to build
+        alias: docker
+  before_script:
+      - echo $BUILD_VERSION
+      - apk update && apk add git # install git for authentification and pushing to registry
+      - apt-get update -qq && apt-get install -y -qq git 
+      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
+  script:
+      - ls .
+      - docker build --pull -t "$CI_REGISTRY_IMAGE:${mr_id}" . # build the image from Dockerfile in the repository
+      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+      changes:  # if any of the files were changed
+        - setup.py
+        - sctoolbox_env.yml
+        - Dockerfile
+        - sctoolbox/_version.py
+
+# ############################################################################################################################################################
+# ######################################################### test #############################################################################################
+# ############################################################################################################################################################
 
 # Change pip's cache directory to be inside the project directory since we can
 # only cache local items.
@@ -172,7 +244,9 @@ check_version:
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
-# ------------------------ Tests for notebooks in repo -----------------------#
+# ############################################################################################################################################################
+# ######################################################### Test Notebooks ###################################################################################
+# ############################################################################################################################################################
 
 # test if notebooks contain output; these should be removed using the .gitconfig addition given in the README
 notebook-output-check:
@@ -225,8 +299,9 @@ notebooks:
         - general_notebooks/*.ipynb
       when: manual
 
-
-# ----------------------------- Gitlab pages ---------------------------------#
+# ############################################################################################################################################################
+# ######################################################### Build and deploy documentation ###################################################################
+# ############################################################################################################################################################
 
 # Build documentation
 build-pages:
