@@ -22,9 +22,9 @@ test-test-test:
   stage: .pre
   image: alpine/git:latest
   script:
-    - git log -1 --pretty=%B | grep 'See merge request'
-    - matched_line="$(git log -1 --pretty=%B | grep 'See merge request')"
-    - mr_iid=${matched_line##*\!}
+    - echp "$(git log -1 --pretty=%B | grep 'See merge request')"
+    #- matched_line="$(git log -1 --pretty=%B | grep 'See merge request')"
+    #- mr_iid=${matched_line##*\!}
   rules:
     - when: always
 
