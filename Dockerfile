@@ -14,12 +14,30 @@ RUN chmod +x scripts/bedGraphToBigWig
 # install Fortran compiler 
 RUN apt-get update --assume-yes && \
     apt-get install --assume-yes gfortran && \
-    # Install missing libraries
     apt-get install bedtools && \
     apt-get install -y libcurl4
 
 # install git to check for file changes
 RUN apt-get install -y git
+
+# create non-root user
+RUN useradd --no-log-init -r -g users user
+
+# setup home directory
+WORKDIR /home/user
+
+# change permissions and groups
+RUN chown -R user:users /opt && \
+    chown -R user:users /tmp && \
+    chown -R user:users /scripts && \
+    chown -R user:users /home/user && \
+    chmod -R 775 /opt && \
+    chmod -R 775 /tmp && \
+    chmod -R 775 /scripts && \
+    chmod -R 775 /home/user
+
+# change the user
+USER user
 
 # update mamba
 RUN mamba update -n base mamba && \
@@ -35,6 +53,9 @@ RUN pip install "/tmp/[all]" && \
     pip install pytest-html && \
     pip install pytest-mock
 
+# change user to root for cleanup
+USER root
+
 # clear tmp
 RUN rm -r /tmp/*
 
@@ -43,6 +64,6 @@ RUN apt-get install -y openssh-client && \
     mkdir .ssh && \
     ssh-keygen -t ed25519 -N "" -f .ssh/id_ed25519
 
-ENV ROOT=TRUE \
-    DISABLE_AUTH=TRUE
+# Switch to non root default user
+USER user
 
