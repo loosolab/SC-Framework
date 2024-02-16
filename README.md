@@ -57,32 +57,38 @@ git config --replace-all include.path "../.gitconfig"
 ## Idioms
 ### 1. Notebook structure
 All notebooks follow the same general template and rules:
+- Notebooks usually start with loading the adata object and a cell for user inputs.
 - Cells with a blue background require user input. 
 - Most cells are locked and normally should not be changed.
-- Notebooks usually start with loading the adata object and a cell for user inputs.
 - The last step of a notebook is to store the analyzed adata as a `.h5ad` file to be used by following analysis steps.
 
 ### 2. Module settings
-The SC framework provides a settings class (`SctoolboxConfig`) that is intended to set options not related to analysis like output paths, number of threads, file prefixes, logging level. The settings can be changed using the above mentioned class or via loading a config file (`sctoolbox.utils.settings_from_config`).
+The SC framework provides a settings class (`SctoolboxConfig`)
+- (`SctoolboxConfig`) is intended to set options not related to analysis like output paths, number of threads, file prefixes, logging level. 
+- The settings can be changed using the above mentioned class or via loading a config file (`sctoolbox.utils.settings_from_config`).
 
 ### 3. Logging
-The framework provides two ways of logging. One being traditional logging usually written to a log file. This includes messages, warnings and errors that appear during execution of functions. The second is called function logging. Whenever a function that receives an adata object is executed a log will be added to the adata (`adata.uns["sctoolbox"]["log"]`) that stores information regarding the function call (name of the executed function, the parameters, the start time, who executed it, etc.). The function log can be accessed with `sctoolbox.utils.get_parameter_table(adata)`
+The framework provides two ways of logging: 
+1- Traditional logging written to a log file. This includes messages, warnings and errors that appear during execution of functions. 
+2- The second is 'function logging'. This will be added to the adata (`adata.uns["sctoolbox"]["log"]`) each time a function that receives an adata object is executed, and stored information regarding the function call (name of the executed function, the parameters, the start time, who executed it, etc.).
+- The function log can be accessed using `sctoolbox.utils.get_parameter_table(adata)`
 
 ## Getting Started
-Once the evironment is set up and everything is installed it is time for starting an analysis using the provided jupyter notebooks. This can be done in a few easy steps:
+Once the evironment is set up and everything is installed, the analysis can be started using the provided jupyter notebooks. This can be done in a few steps:
 
-1. Select the notebooks that fit to you datatype. At the moment we provide notebooks to analyze scRNA or scATAC data. The notebooks are located in directories in the root of this repository:
+1. Select the notebooks that fit to your datatype. (for example: scRNA or scATAC data). The notebooks are located in the fowllowing directories of the repository root:
     - scRNA: `rna_analysis/`
     - scATAC: `atac_analysis/`
 
-2. 1. Copy the folder of the step above to your preferred analysis path. E.g.: `cp -r rna_analysis/ /my/groubreaking/analysis/`
+2. Copy the folder of the step above to your preferred analysis path. `cp -r rna_analysis/ /my/groubreaking/analysis/`
 
-   2. (optional) We provide notebooks that are independent of the datatype. They are located in `general_notebooks/`. If you intend to run one (or more) of them we recommend to copy them to same directory as the other analysis notebooks. E.g. if you want to run pseudotime analysis `cp general_notebooks/pseudotime_analysis.ipynb /my/groubreaking/analysis/rna_analysis/notebooks/`
+3. (optional) Some notebooks are independent of the datatype, located in `general_notebooks/`. Those can be copied to the same directory as the other analysis notebooks. 
+	E.g. `cp general_notebooks/pseudotime_analysis.ipynb /my/groubreaking/analysis/rna_analysis/notebooks/`
 
-3. Access the notebooks within the directory and run them in order to do your analysis (general notebooks should be run last).
+4. Access the notebooks within the directory and run them in order to do your analysis (General notebooks should be run last).
 
 ## Folder structure
-While going through the analysis notebooks a folder structure is created to store all the results and intermediate steps (figures, .h5ad files, tables etc.). The default structure is created in the `*_analysis` directory that contains the notebooks. It is independent of datatype.
+While going through the analysis notebooks, a folder structure is created to store all the results and intermediate step files (figures, .h5ad files, tables etc.). The default structure is created in the `*_analysis` directory that contains the notebooks. It is independent of datatype.
 
 ```
 └── *_analysis
@@ -116,12 +122,12 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 # FAQ
 ### Q: I have an old/ already started analysis. How do I find out what was done or who was responsible?
 
-**A:** The function logging can be accessed using `sctoolbox.utils.get_parameter_table(adata)`. For more information see [here](https://loosolab.pages.gwdg.de/software/sc_framework/API/utils.html#sctoolbox.utils.decorator.get_parameter_table).
+**A:** The function logging which contains this information, can be accessed using `sctoolbox.utils.get_parameter_table(adata)`. For more information see [here](https://loosolab.pages.gwdg.de/software/sc_framework/API/utils.html#sctoolbox.utils.decorator.get_parameter_table).
 
 ### Q: My `.h5ad` file is already pre-analyzed. I want to skip some of the analysis notebooks. What do I do?
 
-**A:** You should always start with the assembly notebook (the first notebook). This ensures a proper output structure. Afterwards, go to the first notebook you want to run
+**A:** You should always start with the assembly notebook (the first notebook), which ensures a proper output structure. Afterwards, go ahead with the notebook you want to run
 
 ### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
-**A:** We are always happy to help but it can be hard to keep track of everything at once. So if you encounter anything that you feel needs attention open an issue with a detailed explanation and if possible small code examples. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
+**A:** We are always happy to help. In order to keep track of every changes, if you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
