@@ -1,5 +1,6 @@
 0.5 (in progess)
 -------------
+- Fix error when writing adata converted from an R object (#205, #180)
 - Marker Repo integration (#162)
 - Set scvelo version to >=0.3.1 (#193)
 - Added fa2 as dependency for pseudotime analysis
