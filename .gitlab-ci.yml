@@ -478,6 +478,11 @@ build-pages-MR:
       - docs/build/html/
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+      changes:
+        - sctoolbox/**/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb  # changes in general notebooks
       when: manual
       allow_failure: True  # manual is not required
     - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
