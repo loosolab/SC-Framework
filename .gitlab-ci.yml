@@ -22,11 +22,11 @@ test-test-test:
   stage: .pre
   image: alpine/git:latest
   script:
-    - echp "$(git log -1 --pretty=%B | grep 'See merge request')"
+    - echo "$(git log -1 --pretty=%B | grep 'See merge request')"
     #- matched_line="$(git log -1 --pretty=%B | grep 'See merge request')"
     #- mr_iid=${matched_line##*\!}
   rules:
-    - when: always
+    - if: $CI_COMMIT_BRANCH == "dev-test"  # only for commits to dev
 
 # ############################################################################################################################################################
 # ######################################################### build docker image ###############################################################################
