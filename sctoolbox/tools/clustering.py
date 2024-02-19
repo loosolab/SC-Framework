@@ -50,11 +50,13 @@ def recluster(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
-        1. If clustering method is not valid.
-        2. If task is not valid.
     KeyError:
         If the given embeding is not in the data.
+        1. If the given embedding is not in the data.
+        2. If given column is not found in adata.obs
+    ValueError:
+        If a given cluster is not found in the adata.
+        
     Example
     ------
     .. plot::
@@ -73,7 +75,7 @@ def recluster(adata: sc.AnnData,
     # --- Get ready --- #
     # check if column is in adata.obs
     if column not in adata.obs.columns:
-        raise ValueError(f"Column {column} not found in adata.obs")
+        raise KeyError(f"Column {column} not found in adata.obs")
 
     # Decide key_added
     if key_added is None:
@@ -88,23 +90,18 @@ def recluster(adata: sc.AnnData,
         cl_function = sc.tl.leiden
     elif method == "louvain":
         cl_function = sc.tl.louvain
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError(f"Method '{method} is not valid. Method must be one of: leiden, louvain")
 
-    # TODO: Check if clusters are found in column
+    # Check if clusters are found in column
+    if not set(clusters).issubset(adata_copy.obs[column]):
+        invalid_clusters = set(clusters) - set(adata_copy.obs[column])
+        raise ValueError(f"Cluster(s) not found in adata.obs['{column}']: {invalid_clusters}")
 
     # --- Start reclustering --- #
     if task == "join":
         translate = {cluster: clusters[0] for cluster in clusters}
         adata.obs[key_added] = adata.obs[column].replace(translate)
-
     elif task == "split":
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
-
-    else:
-        # Will not be called due to beartype checks
-        raise ValueError(f"Task '{task}' is not valid. Task must be one of: 'join', 'split'")
 
     adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
 
