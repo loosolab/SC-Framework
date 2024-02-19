@@ -8,7 +8,7 @@ A python framework for single cell analysis. It provides a plethora of functions
 ![](image/sc_framework_overview.png)
 
 # Readthedocs
-The SC framework is accompanied by an extensive documentation where detailed information regarding available notebooks, functions and a multitude of examples can be found. It can be accesed using the following link:
+The SC framework is accompanied by an extensive documentation where detailed information regarding available notebooks, functions and a multitude of examples can be found. It can be accessed using the following link:
 
 https://loosolab.pages.gwdg.de/software/sc_framework/
 
@@ -52,32 +52,33 @@ If you want to push changes to notebooks, you need to add the custom .gitconfig 
 ```
 git config --replace-all include.path "../.gitconfig"
 ```
+**Make sure to activate the `sctoolbox` environment before staging the notebook file.**
 
 # Analysis
 ## Idioms
-### 1. Notebook structure
+### 1. Notebook Structure
 All notebooks follow the same general template and rules:
-- Notebooks usually start with loading the adata object and a cell for user inputs.
+- Notebooks typically begin with loading the anndata object and a cell for user inputs.
 - Cells with a blue background require user input.
-- Not blue cells are most likely locked cells, which should not be changed by user.
-- The last step of a notebook is to store the analyzed adata as a `.h5ad` file to be used by following analysis steps.
+- Colorless cells are considered static and therefore shouldn't be changed. They are also locked and cannot be changed.
+- The last step of a notebook is to save the analyzed anndata as a `.h5ad` file to be used by subsequent analysis steps (notebooks).
 
 ### 2. Module settings
-The SC framework provides a settings class (`SctoolboxConfig`)
-- (`SctoolboxConfig`) is intended to set options not related to analysis like output paths, number of threads, file prefixes, logging level. 
-- The settings can be changed using the above mentioned class or via loading a config file (`sctoolbox.utils.settings_from_config`).
+The SC framework provides a settings class (`SctoolboxConfig`).
+- `SctoolboxConfig` is used to set non-analysis options like output paths, number of threads, file prefixes, logging level. 
+- The settings can be changed using the above mentioned class or by loading a config file (`sctoolbox.utils.settings_from_config`).
 
 ### 3. Logging
 The framework provides two types of logging: 
 1. **Traditional logging** written to a log file. This includes messages, warnings and errors that occur during the execution of functions. 
-2. The second is **function logging**. This type of logging is added to the adata object (adata.uns["sctoolbox"]["log"]). Whenever a function works on an anndata object (usually when receiving an anndata through a parameter), general information about the function call is stored inside the anndata object (name of the executed function, parameters, start time, who executed it, etc.).
+2. The second is **function logging**. This type of logging is added to the anndata object (`adata.uns["sctoolbox"]["log"]`). Whenever a function works on an anndata object (usually when receiving an anndata through a parameter), general information about the function call is stored inside the anndata object (name of the executed function, parameters, start time, who executed it, etc.).
 
 The function log can be accessed using `sctoolbox.utils.get_parameter_table(adata)`
 
 ## Getting Started
-Once the evironment is set up and everything is installed, the analysis can be started using the provided jupyter notebooks. This can be done in a few steps:
+Once the environment is set up and everything is installed, the analysis can be started using the provided jupyter notebooks. This can be done in a few steps:
 
-1. Select the notebooks that fit to your datatype. (for example: scRNA or scATAC data). The notebooks are located in the following directories found in the root directory of the repository:
+1. Select the notebooks that fit to your data type (for example: scRNA or scATAC data). The notebooks are located in the following directories found in the root directory of the repository:
     - scRNA: `rna_analysis/`
     - scATAC: `atac_analysis/`
 
@@ -86,7 +87,7 @@ Once the evironment is set up and everything is installed, the analysis can be s
 cp -r rna_analysis/ </my/groubreaking/analysis/>
 ```
 
-3. (optional) Some notebooks are datatype independent and are located in `general_notebooks/`. These can be copied to the same directory as the other analysis notebooks. E.g.:
+3. (optional) Some notebooks are data type independent and are located in `general_notebooks/`. These can be copied to the same directory as the other analysis notebooks. E.g.:
 ```
 cp general_notebooks/pseudotime_analysis.ipynb </my/groubreaking/analysis/rna_analysis/notebooks/>
 ```
@@ -94,7 +95,7 @@ cp general_notebooks/pseudotime_analysis.ipynb </my/groubreaking/analysis/rna_an
 4. Access the notebooks in the directory and run them perform your analysis (general notebooks should be run last).
 
 ## Folder structure
-While going through the analysis notebooks, a folder structure is created to store all the results and intermediate step files (figures, .h5ad files, tables etc.). The default structure is created in the `*_analysis` directory that contains the notebooks. It is independent of datatype.
+While going through the analysis notebooks, a folder structure is created to store all the results and intermediate files (figures, `.h5ad` files, tables etc.). The default structure is created in the `*_analysis` directory that contains the notebooks. It is independent of data type.
 
 ```
 └── *_analysis
