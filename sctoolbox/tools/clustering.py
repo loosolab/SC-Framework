@@ -62,12 +62,12 @@ def recluster(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        sctoolbox.tools.recluster(adata,column="Leiden_1.5",clusters=["1","2"],task="join",method="leiden",     resolution=1.5,plot = True, embedding= None)
+        sctoolbox.tools.recluster(adata, column="louvain", clusters=["1", "2"], task="join", method="leiden", resolution=1.5, plot=True, embedding=None)
 
     .. plot::
         :context: close-figs
 
-        sctoolbox.tools.recluster(adata,column="Leiden_1.5",clusters=["3","4"],task="split",method="leiden",     resolution=1.5,plot = True, embedding= None)
+        sctoolbox.tools.recluster(adata,column="louvain", clusters=["3", "4"], task="split", method="leiden", resolution=1.5, plot=True, embedding=None)
     """
 
     adata_copy = adata.copy()
