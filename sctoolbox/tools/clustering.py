@@ -56,7 +56,7 @@ def recluster(adata: sc.AnnData,
         2. If given column is not found in adata.obs
     ValueError:
         If a given cluster is not found in the adata.
-        
+
     Example
     ------
     .. plot::
