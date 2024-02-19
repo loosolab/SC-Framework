@@ -68,10 +68,11 @@ The SC framework provides a settings class (`SctoolboxConfig`)
 - The settings can be changed using the above mentioned class or via loading a config file (`sctoolbox.utils.settings_from_config`).
 
 ### 3. Logging
-The framework provides two ways of logging: 
-1- Traditional logging written to a log file. This includes messages, warnings and errors that appear during execution of functions. 
-2- The second is 'function logging'. This will be added to the adata (`adata.uns["sctoolbox"]["log"]`) each time a function that receives an adata object is executed, and stored information regarding the function call (name of the executed function, the parameters, the start time, who executed it, etc.).
-- The function log can be accessed using `sctoolbox.utils.get_parameter_table(adata)`
+The framework provides two types of logging: 
+1. **Traditional logging** written to a log file. This includes messages, warnings and errors that occur during the execution of functions. 
+2. The second is **function logging**. This type of logging is added to the adata object (adata.uns["sctoolbox"]["log"]). Whenever a function works on an anndata object (usually when receiving an anndata through a parameter), general information about the function call is stored inside the anndata object (name of the executed function, parameters, start time, who executed it, etc.).
+
+The function log can be accessed using `sctoolbox.utils.get_parameter_table(adata)`
 
 ## Getting Started
 Once the evironment is set up and everything is installed, the analysis can be started using the provided jupyter notebooks. This can be done in a few steps:
