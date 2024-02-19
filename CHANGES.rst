@@ -1,5 +1,6 @@
 0.5 (in progess)
 -------------
+- readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
 - Marker Repo integration (#162)
 - Set scvelo version to >=0.3.1 (#193)
