@@ -77,16 +77,21 @@ The function log can be accessed using `sctoolbox.utils.get_parameter_table(adat
 ## Getting Started
 Once the evironment is set up and everything is installed, the analysis can be started using the provided jupyter notebooks. This can be done in a few steps:
 
-1. Select the notebooks that fit to your datatype. (for example: scRNA or scATAC data). The notebooks are located in the fowllowing directories of the repository root:
+1. Select the notebooks that fit to your datatype. (for example: scRNA or scATAC data). The notebooks are located in the following directories found in the root directory of the repository:
     - scRNA: `rna_analysis/`
     - scATAC: `atac_analysis/`
 
-2. Copy the folder of the step above to your preferred analysis path. `cp -r rna_analysis/ /my/groubreaking/analysis/`
+2. Copy the folder of the step above to your preferred analysis path.
+```
+cp -r rna_analysis/ </my/groubreaking/analysis/>
+```
 
-3. (optional) Some notebooks are independent of the datatype, located in `general_notebooks/`. Those can be copied to the same directory as the other analysis notebooks. 
-	E.g. `cp general_notebooks/pseudotime_analysis.ipynb /my/groubreaking/analysis/rna_analysis/notebooks/`
+3. (optional) Some notebooks are datatype independent and are located in `general_notebooks/`. These can be copied to the same directory as the other analysis notebooks. E.g.:
+```
+cp general_notebooks/pseudotime_analysis.ipynb </my/groubreaking/analysis/rna_analysis/notebooks/>
+```
 
-4. Access the notebooks within the directory and run them in order to do your analysis (General notebooks should be run last).
+4. Access the notebooks in the directory and run them perform your analysis (general notebooks should be run last).
 
 ## Folder structure
 While going through the analysis notebooks, a folder structure is created to store all the results and intermediate step files (figures, .h5ad files, tables etc.). The default structure is created in the `*_analysis` directory that contains the notebooks. It is independent of datatype.
