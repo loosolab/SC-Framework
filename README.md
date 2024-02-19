@@ -132,7 +132,7 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 
 ### Q: My `.h5ad` file is already pre-analyzed. I want to skip some of the analysis notebooks. What do I do?
 
-**A:** You should always start with the assembly notebook (the first notebook), which ensures a proper output structure. Afterwards, go ahead with the notebook you want to run
+**A:** You should always start with the assembly notebook (the first notebook), which ensures a proper output structure. Afterwards, go ahead with the notebook you want to run.
 
 ### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
