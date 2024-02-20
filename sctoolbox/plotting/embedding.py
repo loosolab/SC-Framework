@@ -1518,7 +1518,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                                   loc=6)
 
                 # Adjust colorbars (for continuous color)
-                elif i == len(adatas) - 1 and color in adata.obs.select_dtypes(include="number").columns:
+                elif i == len(adatas) - 1 and (color in adata.obs.select_dtypes(include="number").columns or color in adata.var.index):
                     # Replace native scanpy colorbar with self-made one to gain the abililty to set a label
                     # Size parameter values are taken from scanpy: https://github.com/scverse/scanpy/blob/383a61b2db0c45ba622f231f01d0e7546d99566b/scanpy/plotting/_tools/scatterplots.py#L456
                     plt.colorbar(ax.collections[0], pad=0.01, fraction=0.08, aspect=30, ax=ax, orientation='vertical', label=color)
