@@ -31,10 +31,10 @@ RUN chown -R user:users /opt && \
     chown -R user:users /tmp && \
     chown -R user:users /scripts && \
     chown -R user:users /home/user && \
-    chmod -R 775 /opt && \
-    chmod -R 775 /tmp && \
-    chmod -R 775 /scripts && \
-    chmod -R 775 /home/user
+    chmod -R 777 /opt && \
+    chmod -R 777 /tmp && \
+    chmod -R 777 /scripts && \
+    chmod -R 777 /home/user
 
 # change the user
 USER user
