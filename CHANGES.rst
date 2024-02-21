@@ -1,15 +1,20 @@
 0.5 (in progess)
 -------------
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
+- readme update(#188)
+- Fix error when writing adata converted from an R object (#205, #180)
 - Marker Repo integration (#162)
 - Set scvelo version to >=0.3.1 (#193)
 - Added fa2 as dependency for pseudotime analysis
+- anndata_overview: fix issue where colorbars for continuous data was not shown
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- rna assembly: refactor
 - prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
 - 14_velocity_analysis: Remove duplicate parameter (#194)
 - pseudotime_analysis: Save generated plots (#211)
+- rna 03_batch: added qc metrics to overview plot
 
 
 0.4 (31-1-23)
