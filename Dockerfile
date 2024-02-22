@@ -20,6 +20,7 @@ RUN apt-get update --assume-yes && \
 # install git to check for file changes
 RUN apt-get install -y git
 
+# create the group docker for the non root user
 RUN groupadd -g 998 docker
 
 # create non-root user
@@ -27,8 +28,6 @@ RUN useradd --no-log-init -r -g docker user
 
 # setup home directory
 WORKDIR /home/user
-
-RUN mkdir /home/user/data
 
 # change permissions and groups
 RUN chown -R user:users /opt && \
