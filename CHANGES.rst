@@ -34,6 +34,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
+- Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
 
 
 0.3 (30-11-2023)
