@@ -26,18 +26,18 @@ RUN groupadd -g 998 docker
 # create non-root user
 RUN useradd --no-log-init -r -g docker user
 
-# setup home directory
-WORKDIR /home/user
+# create workspace to mount volume
+RUN mkdir /workspace
 
 # change permissions and groups
 RUN chown -R user:users /opt && \
     chown -R user:users /tmp && \
     chown -R user:users /scripts && \
-    chown -R user:users /home/user && \
+    chown -R user:users /workspace && \
     chmod -R 777 /opt && \
     chmod -R 777 /tmp && \
     chmod -R 777 /scripts && \
-    chmod -R 777 /home/user
+    chmod -R 777 /workspace
 
 # change the user
 USER user
