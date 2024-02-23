@@ -1,5 +1,6 @@
 0.5 (in progess)
 -------------
+- add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
 - Marker Repo integration (#162)
