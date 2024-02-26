@@ -64,16 +64,18 @@ def recluster(adata: sc.AnnData,
 
         import scanpy as sc
         import sctoolbox
+
         adata = sc.datasets.pbmc68k_reduced()
-        sctoolbox.tools.recluster(adata, column="louvain", clusters=["1", "2"], task="join", method="leiden", resolution=1.5, plot=True, embedding=None)
+        sctoolbox.tools.recluster(adata, column="louvain", clusters=["1", "2"], task="join", method="leiden", resolution=1.5, plot=True)
 
     .. plot::
         :context: close-figs
 
         import scanpy as sc
         import sctoolbox
+
         adata = sc.datasets.pbmc68k_reduced()
-        sctoolbox.tools.recluster(adata,column="louvain", clusters=["3", "4"], task="split", method="leiden", resolution=1.5, plot=True, embedding=None)
+        sctoolbox.tools.recluster(adata, column="louvain", clusters=["3", "4"], task="split", method="leiden", resolution=1.5, plot=True)
     """
 
     adata_copy = adata.copy()
