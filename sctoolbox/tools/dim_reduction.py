@@ -60,7 +60,7 @@ def compute_PCA(anndata: sc.AnnData,
 def lsi(data: sc.AnnData,
         scale_embeddings: bool = True,
         n_comps: int = 50,
-        use_highly_variable = True) -> None:
+        use_highly_variable=True) -> None:
     """
     Run Latent Semantic Indexing.
 
