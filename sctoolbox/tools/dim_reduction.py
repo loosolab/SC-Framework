@@ -59,7 +59,8 @@ def compute_PCA(anndata: sc.AnnData,
 @beartype
 def lsi(data: sc.AnnData,
         scale_embeddings: bool = True,
-        n_comps: int = 50) -> None:
+        n_comps: int = 50,
+        use_highly_variable = True) -> None:
     """
     Run Latent Semantic Indexing.
 
@@ -71,6 +72,8 @@ def lsi(data: sc.AnnData,
         Scale embeddings to zero mean and unit variance.
     n_comps : int, default 50
         Number of components to calculate with SVD.
+    use_highly_variable : bool, default True
+        If true, use highly variable genes to compute LSI.
 
     Notes
     -----
@@ -79,11 +82,14 @@ def lsi(data: sc.AnnData,
 
     adata = data
 
+    # Subset adata to highly variable genes
+    adata_comp = (adata[:, adata.var['highly_variable']] if use_highly_variable else adata)
+
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
-    n_comps = min(n_comps, adata.X.shape[1])
+    n_comps = min(n_comps, adata_comp.X.shape[1])
 
     # logging.info("Performing SVD")
-    cell_embeddings, svalues, peaks_loadings = svds(adata.X, k=n_comps)
+    cell_embeddings, svalues, peaks_loadings = svds(adata_comp.X, k=n_comps)
 
     # Re-order components in the descending order
     cell_embeddings = cell_embeddings[:, ::-1]
@@ -96,10 +102,18 @@ def lsi(data: sc.AnnData,
         )
 
     var_explained = np.round(svalues ** 2 / np.sum(svalues ** 2), decimals=3)
-    stdev = svalues / np.sqrt(adata.X.shape[0] - 1)
+    stdev = svalues / np.sqrt(adata_comp.X.shape[0] - 1)
 
+    # Add results to adata
     adata.obsm["X_lsi"] = cell_embeddings
-    adata.varm["LSI"] = peaks_loadings.T
+    # if highly variable genes are used, only store the loadings for those genes and set the rest to 0
+    if use_highly_variable:
+        adata.varm["LSI"] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm["LSI"][adata.var['highly_variable']] = peaks_loadings.T
+    else:
+        adata.varm["LSI"] = peaks_loadings.T
+
+    # Add variance explained to uns
     adata.uns["lsi"] = {"stdev": stdev,
                         "variance": svalues,
                         "variance_ratio": var_explained}
