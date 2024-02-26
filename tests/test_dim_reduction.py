@@ -26,5 +26,3 @@ def test_lsi(adata):
                    use_highly_variable=False)
 
     assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
-
-
