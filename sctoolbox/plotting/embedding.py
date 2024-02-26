@@ -1444,7 +1444,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                 # Only show legend for the last column
                 if i == len(adatas) - 1:
                     legend_loc = "right margin"
-                    colorbar_loc = "right"
+                    # Disable colorbar for continuous values (will be re-added later)
+                    colorbar_loc = "right" if color in adata.obs.select_dtypes(exclude="number").columns else None
                 else:
                     legend_loc = "none"
                     colorbar_loc = None
@@ -1457,7 +1458,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                 embedding_kwargs = {"color": color,
                                     "palette": color_dict,  # only used for categorical color
                                     "title": "",
-                                    "legend_loc": legend_loc, "colorbar_loc": colorbar_loc,
+                                    "legend_loc": legend_loc,
+                                    "colorbar_loc": colorbar_loc,
                                     "show": False}
                 embedding_kwargs.update(**kwargs)  # overwrite with kwargs from user
 
@@ -1516,10 +1518,10 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                                   loc=6)
 
                 # Adjust colorbars (for continuous color)
-                elif hasattr(ax, "_colorbars") and len(ax._colorbars) > 0:
-                    ax._colorbars[0].set_title(color, ha="left")
-                    ax._colorbars[0]._colorbar_info["shrink"] = 0.8
-                    ax._colorbars[0]._colorbar_info["pad"] = -0.15  # move colorbar closer to plot
+                elif i == len(adatas) - 1 and (color in adata.obs.select_dtypes(include="number").columns or color in adata.var.index):
+                    # Replace native scanpy colorbar with self-made one to gain the abililty to set a label
+                    # Size parameter values are taken from scanpy: https://github.com/scverse/scanpy/blob/383a61b2db0c45ba622f231f01d0e7546d99566b/scanpy/plotting/_tools/scatterplots.py#L456
+                    plt.colorbar(ax.collections[0], pad=0.01, fraction=0.08, aspect=30, ax=ax, orientation='vertical', label=color)
 
                 _make_square(ax)
                 ax_idx += 1  # increment index for next plot

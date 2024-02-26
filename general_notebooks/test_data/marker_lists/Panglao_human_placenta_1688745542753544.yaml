@@ -1,0 +1,31 @@
+marker_list:
+- markers:
+  - BATF3 ENSG00000123685
+  - DIO3 ENSG00000197406
+  - DKKL1 ENSG00000104901
+  - DUSP9 ENSG00000130829
+  - H19 ENSG00000130600
+  - LAS1L ENSG00000001497
+  - LDOC1 ENSG00000182195
+  - MBNL3 ENSG00000076770
+  - PHLDA2 ENSG00000181649
+  - PRSS8 ENSG00000052344
+  - SCT ENSG00000070031
+  - TFRC ENSG00000072274
+  - KRT23 ENSG00000108244
+  name: Undefined placental cells
+metadata:
+  date: 27.03.2020
+  id: '1688745542753544'
+  list_name: Panglao_human_placenta
+  marker_type: Genes
+  organism:
+    organism_name: human
+    taxonomy_id: '9606'
+  source: panglao.se
+  submitter:
+    email: Micha-Frederick.Kessler@mpi-bn.mpg.de
+    name: Kessler, Micha Frederick
+  tags:
+    list_type: Cell type annotation
+    tissue: placenta

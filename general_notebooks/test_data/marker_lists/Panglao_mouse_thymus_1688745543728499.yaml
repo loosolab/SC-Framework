@@ -1,0 +1,38 @@
+marker_list:
+- markers:
+  - NOTCH1 ENSMUSG00000026923
+  - CD38 ENSMUSG00000029084
+  - CXCR4 ENSMUSG00000045382
+  - TNF ENSMUSG00000024401
+  - CD2 ENSMUSG00000027863
+  - CD4 ENSMUSG00000023274
+  - CD5 ENSMUSG00000024669
+  - CD8A ENSMUSG00000053977
+  - IL2RA ENSMUSG00000026770
+  - CD69 ENSMUSG00000030156
+  - SLAMF1 ENSMUSG00000015316
+  - TAGAP ENSMUSG00000033450
+  - MS4A4B ENSMUSG00000056290
+  - UCP2 ENSMUSG00000033685
+  - TSHR ENSMUSG00000020963
+  - CD27 ENSMUSG00000030336
+  - CD28 ENSMUSG00000026012
+  - BCL6 ENSMUSG00000022508
+  - CIDEA ENSMUSG00000024526
+  - EZR ENSMUSG00000052397
+  name: Thymocytes
+metadata:
+  date: 27.03.2020
+  id: '1688745543728499'
+  list_name: Panglao_mouse_thymus
+  marker_type: Genes
+  organism:
+    organism_name: mouse
+    taxonomy_id: '10090'
+  source: panglao.se
+  submitter:
+    email: Micha-Frederick.Kessler@mpi-bn.mpg.de
+    name: Kessler, Micha Frederick
+  tags:
+    list_type: Cell type annotation
+    tissue: thymus

@@ -1,0 +1,40 @@
+marker_list:
+- markers:
+  - BATF3 ENSMUSG00000026630
+  - DIO3 ENSMUSG00000075707
+  - DKKL1 ENSMUSG00000030792
+  - DUSP9 ENSMUSG00000031383
+  - FTHL17A ENSMUSG00000035491
+  - H19 ENSMUSG00000000031
+  - LAS1L ENSMUSG00000057421
+  - LDOC1 ENSMUSG00000057615
+  - MBNL3 ENSMUSG00000036109
+  - PHLDA2 ENSMUSG00000010760
+  - PRL3B1 ENSMUSG00000038891
+  - PRSS8 ENSMUSG00000030800
+  - RHOX5 ENSMUSG00000095180
+  - RHOX6 ENSMUSG00000006200
+  - RHOX9 ENSMUSG00000068048
+  - SCT ENSMUSG00000038580
+  - SERPINB9E ENSMUSG00000062342
+  - SERPINB9G ENSMUSG00000057726
+  - TEX19.1 ENSMUSG00000039329
+  - TFRC ENSMUSG00000022797
+  - TPBPA ENSMUSG00000033834
+  - KRT23 ENSMUSG00000006777
+  name: Undefined placental cells
+metadata:
+  date: 27.03.2020
+  id: '1688745543555569'
+  list_name: Panglao_mouse_placenta
+  marker_type: Genes
+  organism:
+    organism_name: mouse
+    taxonomy_id: '10090'
+  source: panglao.se
+  submitter:
+    email: Micha-Frederick.Kessler@mpi-bn.mpg.de
+    name: Kessler, Micha Frederick
+  tags:
+    list_type: Cell type annotation
+    tissue: placenta
