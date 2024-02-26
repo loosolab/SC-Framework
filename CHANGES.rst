@@ -1,7 +1,8 @@
 0.5 (in progess)
 -------------
 - Added code examples for tools and utils (#140)
-	- group_heatmap
+    - recluster 
+    - group_heatmap
     - plot_venn
 - Marker Repo integration (#162)
 - Set scvelo version to >=0.3.1 (#193)
@@ -32,7 +33,6 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
-
 
 0.3 (30-11-2023)
 ----------------
