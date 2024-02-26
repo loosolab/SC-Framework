@@ -2,7 +2,7 @@
 -------------
 - Added code examples for tools and utils (#140)
     - recluster 
-	- group_heatmap
+    - group_heatmap
     - plot_venn
 - Marker Repo integration (#162)
 - Set scvelo version to >=0.3.1 (#193)
