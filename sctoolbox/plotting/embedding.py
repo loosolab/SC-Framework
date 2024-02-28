@@ -1654,22 +1654,15 @@ def plot_pca_variance(adata: sc.AnnData,
     return ax
 
 
-@deco.log_anndata
 @beartype
-def plot_pca_correlation(adata: sc.AnnData,
-                         which: Literal["obs", "var"] = "obs",
-                         basis: str = "pca",
-                         n_components: int = 10,
-                         columns: Optional[list[str]] = None,
-                         pvalue_threshold: float = 0.01,
-                         method: Literal["spearmanr", "pearsonr"] = "spearmanr",
-                         plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
-                         figsize: Optional[Tuple[int, int]] = None,
-                         title: Optional[str] = None,
-                         save: Optional[str] = None,
-                         **kwargs: Any) -> matplotlib.axes.Axes:
+def _correlation_matrix(adata: sc.AnnData,
+                        which: Literal["obs", "var"] = "obs",
+                        basis: str = "pca",
+                        n_components: int = 10,
+                        columns: Optional[list[str]] = None,
+                        method: Literal["spearmanr", "pearsonr"] = "spearmanr") -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
+    Compute a matrix of correlation values between an embedding and given columns.
 
     Parameters
     ----------
@@ -1683,44 +1676,16 @@ def plot_pca_correlation(adata: sc.AnnData,
         Number of components to use for the correlation.
     columns : Optional[list[str]], default None
         List of columns to use for the correlation. If None, all numeric columns are used.
-    pvalue_threshold : float, default 0.01
-        Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
     method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
-    plot_values: Literal["corrcoefs", "pvalues"], default "corrcoefs"
-        Values which will be used to plot the heatmap, either "corrcoefs" (correlation coefficients) or "pvalues".
-    figsize : Optional[Tuple[int, int]], default None
-        Size of the figure in inches. If None, the size is automatically determined.
-    title : Optional[str], default None
-        Title of the plot. If None, no title is added.
-    save : Optional[str], default None
-        Filename to save the figure.
-    **kwargs : Any
-        Additional keyword arguments are passed to :func:`seaborn.heatmap`.
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
-        Axes object containing the heatmap.
+    Tuple[pd.DataFrame, pd.DataFrame] :
+        correlation coefficient, p-values
 
     Raises
     ------
-    ValueError
-        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
-    KeyError
-        If any of the given columns is not found in the respective table.
-
-    Examples
-    --------
-    .. plot::
-        :context: close-figs
-
-        pl.plot_pca_correlation(adata, which="obs")
-
-    .. plot::
-        :context: close-figs
-
-        pl.plot_pca_correlation(adata, basis="umap")
     """
 
     # Check that basis is in adata.obsm
@@ -1766,7 +1731,7 @@ def plot_pca_correlation(adata: sc.AnnData,
     combinations = list(itertools.product(numeric_columns, comp_columns))
 
     corr_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
-    corr_table_annot = corr_table.copy()
+    pvalue_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
     for row, col in combinations:
         # remove NaN values and the corresponding values from both lists
         x = np.vstack([comp_table[row], comp_table[col]])  # stack values of row and column
@@ -1774,32 +1739,126 @@ def plot_pca_correlation(adata: sc.AnnData,
 
         res = corr_method(x[0], x[1])
 
-        if plot_values == "corrcoefs":
-            value = res.statistic
-            # center of cbar is 0
-            vmin = -1
-            vmax = 1
-        elif plot_values == "pvalues":
-            value = -np.sign(res.statistic) * np.log10(res.pvalue)
-            # infer min and max for cbar from data
-            vmin = None
-            vmax = None
+        corr_table.loc[row, col] = res.statistic
+        pvalue_table.loc[row, col] = res.pvalue
 
-        corr_table.loc[row, col] = value
-        corr_table_annot.loc[row, col] = str(np.round(value, 2))
-        corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
+    return corr_table, pvalue_table
+
+
+@deco.log_anndata
+@beartype
+def plot_pca_correlation(adata: sc.AnnData,
+                         which: Literal["obs", "var"] = "obs",
+                         basis: str = "pca",
+                         n_components: int = 10,
+                         columns: Optional[list[str]] = None,
+                         pvalue_threshold: float = 0.01,
+                         method: Literal["spearmanr", "pearsonr"] = "spearmanr",
+                         plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
+                         figsize: Optional[Tuple[int, int]] = None,
+                         title: Optional[str] = None,
+                         save: Optional[str] = None,
+                         **kwargs: Any) -> matplotlib.axes.Axes:
+    """
+    Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix object.
+    which : Literal["obs", "var"], default "obs"
+        Whether to use the observations ("obs") or variables ("var") for the correlation.
+    basis : str, default "pca"
+        Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
+    n_components : int, default 10
+        Number of components to use for the correlation.
+    columns : Optional[list[str]], default None
+        List of columns to use for the correlation. If None, all numeric columns are used.
+    pvalue_threshold : float, default 0.01
+        Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
+    method : Literal["spearmanr", "pearson"], default "spearmanr"
+        Method to use for correlation. Must be either "pearsonr" or "spearmanr".
+    plot_values: Literal["corrcoefs", "pvalues"], default "corrcoefs"
+        Values which will be used to plot the heatmap, either "corrcoefs" (correlation coefficients) or "pvalues". P-values will be shown as
+        `np.sign(corrcoefs)*np.log10(p-value)`, the logged p-value with the sign of the corresponding correlation coefficient.
+    figsize : Optional[Tuple[int, int]], default None
+        Size of the figure in inches. If None, the size is automatically determined.
+    title : Optional[str], default None
+        Title of the plot. If None, no title is added.
+    save : Optional[str], default None
+        Filename to save the figure.
+    **kwargs : Any
+        Additional keyword arguments are passed to :func:`seaborn.heatmap`.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Axes object containing the heatmap.
+
+    Raises
+    ------
+    ValueError
+        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
+    KeyError
+        If any of the given columns is not found in the respective table.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_correlation(adata, which="obs")
+
+    .. plot::
+        :context: close-figs
+
+        pl.plot_pca_correlation(adata, basis="umap")
+    """
+
+    # compute correlation matrix
+    corrcoefs, pvalues = _correlation_matrix(adata=adata,
+                                             which=which,
+                                             basis=basis,
+                                             n_components=n_components,
+                                             columns=columns,
+                                             method=method)
+
+    # decide which values should be shown
+    if plot_values == "corrcoefs":
+        table = corrcoefs
+    elif plot_values == "pvalues":
+        # log pvalues
+        table = np.sign(corrcoefs) * np.log10(pvalues)
+
+    # prepare annotation shown on the heatmap
+    annot = table.copy()
+
+    annot = annot.applymap(lambda x: str(np.round(x, 2)))
+    # add stars to significant values
+    stars =  pvalues.applymap(lambda p: "*" if p < pvalue_threshold else "")
+    annot += stars
 
     # Plot heatmap
-    figsize = figsize if figsize is not None else (len(comp_columns) / 1.5, len(numeric_columns) / 1.5)
+    figsize = figsize if figsize is not None else (len(corrcoefs.columns) / 1.5, len(corrcoefs) / 1.5)
     fig, ax = plt.subplots(figsize=figsize)
 
-    ax = sns.heatmap(corr_table,
-                     annot=corr_table_annot,
+    if plot_values == "corrcoefs":
+        # center of cbar is 0
+        vmin = -1
+        vmax = 1
+    elif plot_values == "pvalues":
+        # infer min and max for cbar from data
+        vmin = None
+        vmax = None
+
+    ax = sns.heatmap(corrcoefs,
+                     annot=annot,
                      fmt='',
                      annot_kws={"fontsize": 9},
                      cbar_kws={"label": f"{method} ({plot_values})"},
                      cmap="seismic",
-                     vmin=vmin, vmax=vmax,
+                     vmin=vmin,
+                     vmax=vmax,
                      ax=ax,
                      **kwargs)
     ax.set_aspect(0.8)
