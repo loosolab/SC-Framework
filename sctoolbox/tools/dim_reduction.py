@@ -77,6 +77,11 @@ def lsi(data: sc.AnnData,
     use_highly_variable : bool, default True
         If true, use highly variable genes to compute LSI.
 
+    Raises
+    ------
+    ValueError:
+        If highly variable genes are used and not found in adata.var['highly_variable'].
+
     Notes
     -----
     Function is taken from muon package.
