@@ -21,8 +21,10 @@ def test_lsi(adata):
     dim_reduct.lsi(adata_ori, use_highly_variable=True)
     assert "X_lsi" in adata_ori.obsm and "lsi" in adata_ori.uns and "LSI" in adata_ori.varm
     assert np.sum(adata_ori.varm['LSI'][~adata_ori.var['highly_variable']]) == 0
+    assert np.sum(adata_ori.varm['LSI'][adata_ori.var['highly_variable']]) != 0
 
     dim_reduct.lsi(data=adata,
                    use_highly_variable=False)
 
     assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
+    assert np.sum(adata.varm['LSI'][adata.var['highly_variable']]) != 0

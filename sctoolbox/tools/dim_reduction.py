@@ -62,7 +62,9 @@ def lsi(data: sc.AnnData,
         n_comps: int = 50,
         use_highly_variable: bool = False) -> None:
     """
-    Run Latent Semantic Indexing.
+    Run Latent Semantic Indexing for dimensionality reduction.
+    Values represent the similarity of cells in the original space.
+    doi: 10.3389/fphys.2013.00008
 
     Parameters
     ----------
@@ -83,7 +85,12 @@ def lsi(data: sc.AnnData,
     adata = data
 
     # Subset adata to highly variable genes
-    adata_comp = (adata[:, adata.var['highly_variable']] if use_highly_variable else adata)
+    if use_highly_variable:
+        if "highly_variable" not in adata.var:
+            raise ValueError("Highly variable genes not found in adata.var['highly_variable'].")
+        adata_comp = adata[:, adata.var['highly_variable']]
+    else:
+        adata_comp = adata
 
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
     n_comps = min(n_comps, adata_comp.X.shape[1])

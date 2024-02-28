@@ -7,7 +7,7 @@
 - Set scvelo version to >=0.3.1 (#193)
 - Added fa2 as dependency for pseudotime analysis
 - anndata_overview: fix issue where colorbars for continuous data was not shown
-- added ability to use highly variable using the lsi() function (#165)
+- added ability to use highly variable features using the lsi() function (#165)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
