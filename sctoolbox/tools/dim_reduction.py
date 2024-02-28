@@ -63,6 +63,7 @@ def lsi(data: sc.AnnData,
         use_highly_variable: bool = False) -> None:
     """
     Run Latent Semantic Indexing for dimensionality reduction.
+    
     Values represent the similarity of cells in the original space.
     doi: 10.3389/fphys.2013.00008
 
