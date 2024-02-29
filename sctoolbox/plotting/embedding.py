@@ -21,8 +21,6 @@ import plotly.graph_objects as go
 
 from numba import errors as numba_errors
 
-import deprecation
-from sctoolbox import __version__
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Union, Any
 import numpy.typing as npt
