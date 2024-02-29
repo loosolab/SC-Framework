@@ -13,7 +13,6 @@ import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 import glob
-import deprecation
 
 from beartype.roar import BeartypeCallHintParamViolation
 
