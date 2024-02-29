@@ -14,7 +14,8 @@ extract-version:
     reports:
       dotenv: build.env
   rules:
-    - when: always
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 # Get ID of current MR
 get-mr-id:
@@ -94,7 +95,7 @@ build-image-mr:       # This job runs in the build stage, which runs first.
       - name: "docker:dind" # docker in docker to build
         alias: docker
   before_script:
-      - echo $BUILD_VERSION
+      - echo $MR_VERSION
       - apk update && apk add git # install git for authentification and pushing to registry
       - apt-get update -qq && apt-get install -y -qq git 
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
