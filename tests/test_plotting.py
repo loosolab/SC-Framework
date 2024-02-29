@@ -805,18 +805,6 @@ def test_gene_expression_heatmap(adata, title, groupby):
     assert type(g).__name__ == "ClusterGrid"
 
 
-@deprecation.fail_if_not_removed
-@pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
-                                              'ENSMUSG00000102272']])
-@pytest.mark.parametrize("figsize", [None, (10, 10)])
-def test_group_heatmap(adata, gene_list, figsize):
-    """Test group heatmap success."""
-    ax = pl.group_heatmap(adata, "clustering", gene_list=gene_list,
-                          figsize=figsize)
-
-    assert type(ax).__name__.startswith("Axes")
-
-
 @pytest.mark.parametrize("kwargs, exception",
                          [({"gene_name_column": "invalid"}, KeyError)])
 def test_gene_expression_heatmap_error(adata, kwargs, exception):
