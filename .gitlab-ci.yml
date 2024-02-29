@@ -459,7 +459,7 @@ build-pages-dev:
       - docs/build/html/
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event" & $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event" && $CI_COMMIT_BRANCH == "dev"
       when: manual
       allow_failure: True
 
