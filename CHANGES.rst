@@ -8,6 +8,7 @@
 - Added fa2 as dependency for pseudotime analysis
 - anndata_overview: fix issue where colorbars for continuous data was not shown
 - added ability to use highly variable features using the lsi() function (#165)
+- removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
