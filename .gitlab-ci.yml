@@ -323,7 +323,7 @@ notebooks main:
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp ./general_notebooks/* ./rna_analysis/notebooks/
+    - cp -r ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
     - pwd
@@ -348,7 +348,7 @@ notebooks MR - new image:
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp ./general_notebooks/* ./rna_analysis/notebooks/
+    - cp -r ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
     - pwd
@@ -379,7 +379,7 @@ notebooks MR - dev image:
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp ./general_notebooks/* ./rna_analysis/notebooks/
+    - cp -r ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
     - pwd
