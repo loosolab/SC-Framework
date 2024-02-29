@@ -100,7 +100,7 @@ build-image-mr:       # This job runs in the build stage, which runs first.
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
       - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:MR-${MR_VERSION}" . # build the image from Dockerfile in the repository
+      - docker build --pull -t "$CI_REGISTRY_IMAGE:MR-$MR_VERSION" . # build the image from Dockerfile in the repository
       - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
@@ -192,7 +192,6 @@ test coverage main:
   script:
     - echo $BUILD_VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pip install .[all]  # make sure dependencies of current branch version are installed
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
@@ -208,14 +207,13 @@ test coverage main:
 # Run test coverage
 test coverage MR new image:
   stage: test
-  image: "$CI_REGISTRY_IMAGE:MR-${MR_VERSION}"
+  image: "$CI_REGISTRY_IMAGE:MR-$MR_VERSION"
   tags:
     - sctoolbox
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
-    - echo $BUILD_VERSION
+    - echo $MR_VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pip install .[all]  # make sure dependencies of current branch version are installed
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
@@ -241,9 +239,7 @@ test coverage MR dev-image:
     - sctoolbox
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
-    - echo $BUILD_VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pip install .[all]  # make sure dependencies of current branch version are installed
     - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
@@ -324,16 +320,9 @@ notebooks main:
       - rna_analysis/logs/*.txt
   script:
     - pip install papermill
-    - pip install .[all]   # reinstall to make sure the current branch version is used
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - which python             # for debug
-    - which pip                # for debug
-    - which python3            # for debug
-    - which papermill          # for debug
-    - python -c "import sys; print(sys.path)" # for debug
-    - jupyter kernelspec list  # for debug
     - cp ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
@@ -344,7 +333,7 @@ notebooks main:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
 notebooks MR - new image:
-  image: "$CI_REGISTRY_IMAGE:MR-${MR_VERSION}"
+  image: "$CI_REGISTRY_IMAGE:MR-$MR_VERSION"
   inherit:
     default: false
   stage: test
@@ -356,16 +345,9 @@ notebooks MR - new image:
       - rna_analysis/logs/*.txt
   script:
     - pip install papermill
-    - pip install .[all]   # reinstall to make sure the current branch version is used
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - which python             # for debug
-    - which pip                # for debug
-    - which python3            # for debug
-    - which papermill          # for debug
-    - python -c "import sys; print(sys.path)" # for debug
-    - jupyter kernelspec list  # for debug
     - cp ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
@@ -394,16 +376,9 @@ notebooks MR - dev image:
       - rna_analysis/logs/*.txt
   script:
     - pip install papermill
-    - pip install .[all]   # reinstall to make sure the current branch version is used
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - which python             # for debug
-    - which pip                # for debug
-    - which python3            # for debug
-    - which papermill          # for debug
-    - python -c "import sys; print(sys.path)" # for debug
-    - jupyter kernelspec list  # for debug
     - cp ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
   after_script:
@@ -432,7 +407,6 @@ build-pages-main:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
-    - pip install .[all]  # ensure that the current branch version is used for building pages
     - cd docs
     - make html
   artifacts:
@@ -451,7 +425,6 @@ build-pages-dev:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
-    - pip install .[all]  # ensure that the current branch version is used for building pages
     - cd docs
     - make html
   artifacts:
@@ -462,7 +435,7 @@ build-pages-dev:
 
 # Build documentation
 build-pages-MR:
-  image: "$CI_REGISTRY_IMAGE:MR-${MR_VERSION}"  # ensure that all dependencies are available
+  image: "$CI_REGISTRY_IMAGE:MR-$MR_VERSION"  # ensure that all dependencies are available
   stage: deploy
   script:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
@@ -470,7 +443,6 @@ build-pages-MR:
     - pip install sphinx sphinx-rtd-theme
     - pip install nbsphinx
     - pip install nbsphinx_link
-    - pip install .[all]  # ensure that the current branch version is used for building pages
     - cd docs
     - make html
   artifacts:
