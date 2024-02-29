@@ -470,9 +470,6 @@ deploy-pages-MR:
   script: 
     - ls -l docs/
     - echo "deploy"
-  artifacts:
-    paths:
-      - docs/build/html/
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "main" # dev/main are built automatically
       changes:
