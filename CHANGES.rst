@@ -1,4 +1,4 @@
-0.5 (in progess)
+0.5 (29-02-24)
 -------------
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
@@ -18,7 +18,7 @@ Changes to notebooks
 - rna 03_batch: added qc metrics to overview plot
 
 
-0.4 (31-1-23)
+0.4 (31-1-24)
 -------------
 - Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
