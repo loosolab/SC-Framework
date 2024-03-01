@@ -111,6 +111,7 @@ build-image-mr:       # This job runs in the build stage, which runs first.
         - Dockerfile
         - sctoolbox/_version.py
       when: manual # set to manual for now until further checks for when it has to be run are implemented
+      allow_failure: true # until further checks/rules are implemented
 
 # ############################################################################################################################################################
 # ######################################################### test #############################################################################################
