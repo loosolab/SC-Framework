@@ -24,7 +24,7 @@ for notebook in rna_notebooks:
     std_out_file = open(f"{script_dir}/../rna_analysis/{notebook_name}_std_out.txt", "w")
     std_err_file = open(f"{script_dir}/../rna_analysis/{notebook_name}_std_err.txt", "w")
 
-    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="DEBUG", report_mode=True, cwd=notebook_dir, stdout_file=std_out_file, stderr_file=std_err_file)
+    pm.execute_notebook(notebook, output_path=f"{script_dir}/../rna_analysis/{notebook_name}_out.ipynb", kernel_name='sctoolbox', log_level="DEBUG", report_mode=True, cwd=notebook_dir, stdout_file=std_out_file, stderr_file=std_err_file)
     std_out_file.close()
     std_err_file.close()
 # Run ATAC notebooks
