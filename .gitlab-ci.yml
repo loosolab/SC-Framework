@@ -275,7 +275,7 @@ check_changes:
 #In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
 check_version:
   image:
-    name: cicirello/alpine-plus-plus:latest
+    name: alpine/git:latest
     entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
   inherit:
     default: false
@@ -284,7 +284,7 @@ check_version:
     - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
     - cat changed_files.txt
     - if grep -q "sctoolbox/_version.py" changed_files.txt; then echo "The 'sctoolbox/_version.py' file was changed."; else echo "The 'sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
-    - version=$(grep -oP '(?<=\").*?(?=\")' <<< $(head -n 1 sctoolbox/_version.py)) # Get version from _version.py file
+    - version=$(sed -e 's/.*\"\(.*\)\".*/\1/' <<< $(head -n 1 sctoolbox/_version.py)) # Get version from _version.py file
     - if [[ ! ${version} =~ "^\d+\.\d+\.\d+$" ]]; then exit 1; fi
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
