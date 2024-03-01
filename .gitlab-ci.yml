@@ -324,13 +324,14 @@ notebook-output-check:
 notebooks main:
   image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
   #needs: [build-image-mr]
-  inherit:
-    default: false
+  #inherit:
+  #  default: false
   stage: test
   #tags:
   #  - gwdg
   #  - gwdg-shared
   artifacts:
+    when: always
     paths:
       - rna_analysis/logs/*.txt
       - rna_analysis/notebooks/*.txt
