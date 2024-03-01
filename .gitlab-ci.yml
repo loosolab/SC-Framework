@@ -341,6 +341,7 @@ notebooks main:
     - pip install papermill
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de:loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
     - cp -r ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
@@ -366,6 +367,7 @@ notebooks MR - new image:
     - pip install papermill
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de:loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
     - cp -r ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
@@ -397,6 +399,7 @@ notebooks MR - dev image:
     - pip install papermill
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de:loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
     - cp -r ./general_notebooks/* ./rna_analysis/notebooks/
     - python scripts/run_notebooks.py
