@@ -110,6 +110,7 @@ build-image-mr:       # This job runs in the build stage, which runs first.
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+      when: manual # set to manual for now until further checks for when it has to be run are implemented
 
 # ############################################################################################################################################################
 # ######################################################### test #############################################################################################
@@ -321,7 +322,7 @@ notebook-output-check:
 # Test notebooks when code is pushed to main
 notebooks main:
   image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
-  needs: [build-image-mr]
+  #needs: [build-image-mr]
   inherit:
     default: false
   stage: test
