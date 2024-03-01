@@ -242,10 +242,18 @@ test coverage MR dev-image:
     reports:
       junit: pytest.xml
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # all merge requests with changes
       changes:
         - tests/*.py
         - sctoolbox/**/*.py
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - setup.py
+        - sctoolbox_env.yml
+        - Dockerfile
+        - sctoolbox/_version.py
+      when: never
+
 
 #Changes.rst file must be changed in merge requests
 check_changes:
