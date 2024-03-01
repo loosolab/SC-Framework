@@ -14,9 +14,16 @@ rna_notebooks = [nb for nb in rna_notebooks if "05" not in nb and "14" not in nb
 print(rna_notebooks)
 
 for notebook in rna_notebooks:
-    print(f"Running notebook: {notebook}")
-    std_out_file = open(f"./{notebook}_std_out.txt", "w")
-    std_err_file = open(f"./{notebook}_std_err.txt", "w")
+    # get filename
+    notebook_file = os.path.basename(notebook)
+    notebook_name = os.path.splitext(notebook_file)[0]
+
+    print(f"Running notebook: {notebook_file}")
+
+    # create log files
+    std_out_file = open(f"./{notebook_name}_std_out.txt", "w")
+    std_err_file = open(f"./{notebook_name}_std_err.txt", "w")
+
     pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="DEBUG", report_mode=True, cwd=notebook_dir, stdout_file=std_out_file, stderr_file=std_err_file)
     std_out_file.close()
     std_err_file.close()
