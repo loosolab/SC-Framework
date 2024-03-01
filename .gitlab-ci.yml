@@ -286,7 +286,7 @@ check_version:
     - if grep -q "sctoolbox/_version.py" changed_files.txt; then echo "The 'sctoolbox/_version.py' file was changed."; else echo "The 'sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
     - version=$(sed -e 's/.*\"\(.*\)\".*/\1/' <<< $(head -n 1 sctoolbox/_version.py)) # Get version from _version.py file
     - echo ${version} # for debugging
-    - if [[ ! ${version} =~ "^\d+\.\d+\.\d+$" ]]; then exit 1; fi
+    - if [[ ! ${version} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then exit 1; fi
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
