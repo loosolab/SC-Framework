@@ -267,7 +267,7 @@ check_changes:
 #In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
 check_version:
   image:
-    name: alpine/git:latest
+    name: cicirello/alpine-plus-plus:latest
     entrypoint: [""]  #hack from https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4027
   inherit:
     default: false
