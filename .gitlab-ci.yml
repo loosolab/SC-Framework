@@ -333,6 +333,7 @@ notebooks main:
   artifacts:
     paths:
       - rna_analysis/logs/*.txt
+      - rna_analysis/notebooks/*.txt
   script:
     - pip install papermill
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug

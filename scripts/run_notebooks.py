@@ -15,7 +15,7 @@ print(rna_notebooks)
 
 for notebook in rna_notebooks:
     print(f"Running notebook: {notebook}")
-    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
+    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="DEBUG", report_mode=True, cwd=notebook_dir, stdout_file=f"./{notebook}_std_out.txt", stderr_file=f"./{notebook}_std_err.txt")
 
 # Run ATAC notebooks
 notebook_dir = script_dir + "/../atac_analysis/notebooks/"
