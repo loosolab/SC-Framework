@@ -307,7 +307,7 @@ notebook-output-check:
 
 # Test notebooks when code is pushed to main
 notebooks main:
-  image: "$CI_REGISTRY_IMAGE:$MR_VERSION"
+  image: "$CI_REGISTRY_IMAGE:MR-$MR_VERSION"
   needs: [build-image-mr]
   inherit:
     default: false
