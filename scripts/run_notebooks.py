@@ -19,22 +19,15 @@ for notebook in rna_notebooks:
     notebook_name = os.path.splitext(notebook_file)[0]
 
     print(f"Running notebook: {notebook_file}")
+    pm.execute_notebook(notebook, output_path=f"{script_dir}/../rna_analysis/{notebook_name}_out.ipynb", kernel_name='sctoolbox', log_level="DEBUG", report_mode=True, cwd=notebook_dir)
 
-    # create log files
-    std_out_file = open(f"{script_dir}/../rna_analysis/{notebook_name}_std_out.txt", "w")
-    std_err_file = open(f"{script_dir}/../rna_analysis/{notebook_name}_std_err.txt", "w")
-
-    pm.execute_notebook(notebook, output_path=f"{script_dir}/../rna_analysis/{notebook_name}_out.ipynb", kernel_name='sctoolbox', log_level="DEBUG", report_mode=True, cwd=notebook_dir, stdout_file=std_out_file, stderr_file=std_err_file)
-    std_out_file.close()
-    std_err_file.close()
 
 # Run ATAC notebooks
-# TODO enable atac notebooks
-# notebook_dir = script_dir + "/../atac_analysis/notebooks/"
-# atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
-# atac_notebooks = [nb for nb in atac_notebooks if "05" not in nb and "06" not in nb]  # 05 is not tested yet; 06 uses the output of 05
-# print(atac_notebooks)
+notebook_dir = script_dir + "/../atac_analysis/notebooks/"
+atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
+atac_notebooks = [nb for nb in atac_notebooks if "05" not in nb and "06" not in nb]  # 05 is not tested yet; 06 uses the output of 05
+print(atac_notebooks)
 
-# for notebook in atac_notebooks:
-#     print(f"Running notebook: {notebook}")
-#     pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
+for notebook in atac_notebooks:
+    print(f"Running notebook: {notebook}")
+    pm.execute_notebook(notebook, output_path="out.ipynb", kernel_name='sctoolbox', log_level="INFO", report_mode=True, cwd=notebook_dir)
