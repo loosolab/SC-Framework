@@ -1238,7 +1238,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     Raises
     ------
     ValueError
-        If any of the adatas is not of type anndata.AnnData or an invalid plot is specified.
+        If any of the adatas is not of type anndata.AnnData.
 
     Examples
     --------
@@ -1283,12 +1283,6 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         for name, adata in adatas.items():
             if color_group not in adata.obs.columns and color_group not in adata.var.index:
                 raise ValueError(f"Couldn't find column '{color_group}' in the adata.obs or adata.var for '{name}'")
-
-    # check if plots are valid
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
-    invalid_plots = set(plots) - set(valid_plots)
-    if invalid_plots:
-        raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
     # ---- plotting ---- #
     # setup subplot structure
@@ -1380,7 +1374,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                 # Set title for the legend (for categorical color)
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
 
-                    # Get current legend and rmove
+                    # Get current legend and remove
                     lines, labels = ax.get_legend_handles_labels()
                     ax.get_legend().remove()
 
@@ -1404,7 +1398,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                 elif i == len(adatas) - 1 and (color in adata.obs.select_dtypes(include="number").columns or color in adata.var.index):
                     # Replace native scanpy colorbar with self-made one to gain the abililty to set a label
                     # Size parameter values are taken from scanpy: https://github.com/scverse/scanpy/blob/383a61b2db0c45ba622f231f01d0e7546d99566b/scanpy/plotting/_tools/scatterplots.py#L456
-                    plt.colorbar(ax.collections[0], pad=0.01, fraction=0.08, aspect=30, ax=ax, orientation='vertical', label=color)
+                    if len(ax.collections) > 0:
+                        plt.colorbar(ax.collections[0], pad=0.01, fraction=0.08, aspect=30, ax=ax, orientation='vertical', label=color)
 
                 _make_square(ax)
                 ax_idx += 1  # increment index for next plot
