@@ -1,0 +1,29 @@
+marker_list:
+- markers:
+  - TRPV1 ENSMUSG00000005952
+  - NAT1 ENSMUSG00000025588
+  - UPK1B ENSMUSG00000049436
+  - PIEZO1 ENSMUSG00000014444
+  - UMODL1 ENSMUSG00000054134
+  - IVL ENSMUSG00000049128
+  - SLC14A1 ENSMUSG00000059336
+  - UPK3A ENSMUSG00000022435
+  - UPK1A ENSMUSG00000006313
+  - UPK2 ENSMUSG00000041523
+  - UPK3B ENSMUSG00000042985
+  name: Urothelial cells
+metadata:
+  date: 27.03.2020
+  id: '1688745543217052'
+  list_name: Panglao_mouse_urinary-bladder
+  marker_type: Genes
+  organism:
+    organism_name: mouse
+    taxonomy_id: '10090'
+  source: panglao.se
+  submitter:
+    email: Micha-Frederick.Kessler@mpi-bn.mpg.de
+    name: Kessler, Micha Frederick
+  tags:
+    list_type: Cell type annotation
+    tissue: bladder
