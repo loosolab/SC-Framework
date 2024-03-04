@@ -1,4 +1,4 @@
-0.5 (29-02-24)
+0.5 (04-03-24)
 -------------
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
