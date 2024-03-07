@@ -340,7 +340,7 @@ notebooks main:
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb
     - python scripts/run_notebooks.py
   after_script:
     - pwd
@@ -366,20 +366,26 @@ notebooks MR - new image:
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb
     - python scripts/run_notebooks.py
   after_script:
     - pwd
     - ls -l rna_analysis/logs/
     - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"
-      changes:  # if any of the files were changed
-        - setup.py
-        - sctoolbox_env.yml
-        - Dockerfile
-        - sctoolbox/_version.py
-      when: manual
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - setup.py
+      - sctoolbox_env.yml
+      - Dockerfile
+      - sctoolbox/_version.py
+  except:
+    variables:
+      - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    changes:
+      - tests/*.py
+      - sctoolbox/**/*.py
 
 notebooks MR - dev image:
   image: "$CI_REGISTRY_IMAGE:dev"
@@ -398,19 +404,26 @@ notebooks MR - dev image:
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb
     - python scripts/run_notebooks.py
   after_script:
     - pwd
     - ls -l rna_analysis/logs/
     - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
-  rules:
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
-      changes:
-        - rna_analysis/notebooks/*.ipynb
-        - atac_analysis/notebooks/*.ipynb
-        - general_notebooks/*.ipynb
-      when: manual
+  only:
+    refs:
+      - merge_requests
+    changes:
+        - tests/*.py
+        - sctoolbox/**/*.py
+  except:
+    variables:
+      - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+    changes:
+      - setup.py
+      - sctoolbox_env.yml
+      - Dockerfile
+      - sctoolbox/_version.py
 
 # ############################################################################################################################################################
 # ######################################################### Build and deploy documentation ###################################################################
