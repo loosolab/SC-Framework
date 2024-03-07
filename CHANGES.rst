@@ -1,19 +1,33 @@
-0.5 (in progess)
+0.6 (Current)
 -------------
-- Marker Repo integration (#162)
-- Set scvelo version to >=0.3.1 (#193)
-- Added fa2 as dependency for pseudotime analysis
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
-- prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
-- 14_velocity_analysis: Remove duplicate parameter (#194)
-- pseudotime_analysis: Save generated plots (#211)
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 
+0.5 (04-03-24)
+-------------
+- add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
+- readme update(#188)
+- Fix error when writing adata converted from an R object (#205, #180)
+- Marker Repo integration (#162)
+- Set scvelo version to >=0.3.1 (#193)
+- Added fa2 as dependency for pseudotime analysis
+- anndata_overview: fix issue where colorbars for continuous data was not shown
+- added ability to use highly variable features using the lsi() function (#165)
+- removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
 
-0.4 (31-1-23)
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- rna assembly: refactor
+- prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
+- 14_velocity_analysis: Remove duplicate parameter (#194)
+- pseudotime_analysis: Save generated plots (#211)
+- rna 03_batch: added qc metrics to overview plot
+
+
+0.4 (31-1-24)
 -------------
 - Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
@@ -31,6 +45,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
+- Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
 
 
 0.3 (30-11-2023)

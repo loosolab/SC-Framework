@@ -643,11 +643,13 @@ def connectionPlot(adata: sc.AnnData,
                    receptor_col: str = "receptor_gene",
                    receptor_hue: str = "receptor_score",
                    receptor_size: str = "receptor_percent",
+                   receptor_genes: Optional[list[str]] = None,
                    # ligand params
                    ligand_cluster_col: str = "ligand_cluster",
                    ligand_col: str = "ligand_gene",
                    ligand_hue: str = "ligand_score",
                    ligand_size: str = "ligand_percent",
+                   ligand_genes: Optional[list[str]] = None,
                    filter: Optional[str] = None,
                    lw_multiplier: int | float = 2,
                    wspace: float = 0.4,
@@ -679,6 +681,8 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing receptor scores. Shown as point color.
     receptor_size : str, default 'receptor_percent'
         Name of column containing receptor expression percentage. Shown as point size.
+    receptor_genes : Optional[list[str]], default None
+            Restrict receptors to given genes.
     ligand_cluster_col : str, default 'ligand_cluster'
         Name of column containing cluster names of ligands. Shown on x-axis.
     ligand_col : str, default 'ligand_gene'
@@ -687,6 +691,8 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing ligand scores. Shown as point color.
     ligand_size : str, default 'ligand_percent'
         Name of column containing ligand expression percentage. Shown as point size.
+    ligand_genes : Optional[list[str]], default None
+            Restrict ligands to given genes.
     filter : Optional[str], default None
         Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
     lw_multiplier : int | float, default 2
@@ -711,6 +717,14 @@ def connectionPlot(adata: sc.AnnData,
     _check_interactions(adata)
 
     data = get_interactions(adata).copy()
+
+    # filter receptor genes
+    if receptor_genes:
+        data = data[data[receptor_col].isin(receptor_genes)]
+
+    # filter ligand genes
+    if ligand_genes:
+        data = data[data[ligand_col].isin(ligand_genes)]
 
     # filter interactions
     if filter:
@@ -771,49 +785,45 @@ def connectionPlot(adata: sc.AnnData,
         data["alpha"] = minmax_scale(data[connection_alpha], feature_range=(0, 1))
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
+    else:
+        data["alpha"] = 1
 
+    # find receptor label location
+    for i, label in enumerate(axs[0].get_yticklabels()):
+        data.loc[data[receptor_col] == label.get_text(), "rec_index"] = i
+
+    # find ligand label location
+    for i, label in enumerate(axs[1].get_yticklabels()):
+        data.loc[data[ligand_col] == label.get_text(), "lig_index"] = i
+
+    # add receptor-ligand lines
+    # draws strongest connection for each pair
     for rec, color in zip(receptors, colors):
-        # find receptor label location
-        rec_index = None
-        for i, label in enumerate(axs[0].get_yticklabels()):
-            if label.get_text() == rec:
-                rec_index = i
-                break
+        pairs = data.loc[data[receptor_col] == rec]
 
-        for lig in data.loc[data[receptor_col] == rec, ligand_col]:
-            # find ligand label location
-            lig_index = None
-            for i, label in enumerate(axs[1].get_yticklabels()):
-                if label.get_text() == lig:
-                    lig_index = i
-                    break
+        for lig in set(pairs[ligand_col]):
+            # get all connections for current pair
+            connections = pairs.loc[pairs[ligand_col] == lig]
 
-            # TODO
-            # a r-l pair can have multiple clusters, which results in overlapping connection lines
-            # add the moment these lines are plotted on top of each other
-            # compute line alpha
-            if connection_alpha:
-                alphas = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"]
-            else:
-                alphas = [1]
+            # get max connection
+            max_con = connections.loc[connections["alpha"].idxmax()]
 
-            for alpha in alphas:
-                # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
-                # Draw a line between the different points, defined in different coordinate
-                # systems.
-                con = ConnectionPatch(
-                    # x in axes coordinates, y in data coordinates
-                    xyA=(1, rec_index), coordsA=axs[0].get_yaxis_transform(),
-                    # x in axes coordinates, y in data coordinates
-                    xyB=(0, lig_index), coordsB=axs[1].get_yaxis_transform(),
-                    arrowstyle="-",
-                    color=color,
-                    zorder=-1000,
-                    alpha=alpha,
-                    linewidth=alpha * lw_multiplier
-                )
+            # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
+            # Draw a line between the different points, defined in different coordinate
+            # systems.
+            con = ConnectionPatch(
+                # x in axes coordinates, y in data coordinates
+                xyA=(1, max_con["rec_index"]), coordsA=axs[0].get_yaxis_transform(),
+                # x in axes coordinates, y in data coordinates
+                xyB=(0, max_con["lig_index"]), coordsB=axs[1].get_yaxis_transform(),
+                arrowstyle="-",
+                color=color,
+                zorder=-1000,
+                alpha=max_con["alpha"],
+                linewidth=max_con["alpha"] * lw_multiplier
+            )
 
-                axs[1].add_artist(con)
+            axs[1].add_artist(con)
 
     # ----- legends -----
     # set receptor plot legend position
