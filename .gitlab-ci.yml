@@ -404,7 +404,7 @@ notebooks MR - dev image:
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb
     - python scripts/run_notebooks.py
   after_script:
     - pwd
