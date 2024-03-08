@@ -208,7 +208,6 @@ def _none2null(none_obj: None) -> "rpy2.rinterface_lib.sexp.NULLType":
     rpy2.rinterface_lib.sexp.NULLType
         R NULL object.
     """
-    setup_R()
 
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     from rpy2.robjects import r
