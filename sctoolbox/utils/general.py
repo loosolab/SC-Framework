@@ -16,10 +16,10 @@ import pandas as pd
 from beartype.typing import Any, TYPE_CHECKING, Optional, Union, Sequence
 from beartype import beartype
 import numpy.typing as npt
-from rpy2.rinterface_lib import openrlib
 
 if TYPE_CHECKING:
     import rpy2.rinterface_lib.sexp
+
 
 # ------------------ Logging about run ----------------- #
 
@@ -186,6 +186,8 @@ def setup_R(r_home: Optional[str] = None) -> None:
 
     if not exists(r_home):
         raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
+
+    from rpy2.rinterface_lib import openrlib
 
     os.environ['R_HOME'] = r_home
     openrlib.R_HOME = r_home
