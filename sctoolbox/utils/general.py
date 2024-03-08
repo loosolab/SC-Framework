@@ -3,23 +3,23 @@
 import os
 import re
 import sys
-from os.path import join, dirname, exists
+from os.path import exists
 import subprocess
 import shutil
-from pathlib import Path
 import getpass
 from datetime import datetime
 import numpy as np
 import pandas as pd
 
+
 # type hint imports
 from beartype.typing import Any, TYPE_CHECKING, Optional, Union, Sequence
 from beartype import beartype
 import numpy.typing as npt
+from rpy2.rinterface_lib import openrlib
 
 if TYPE_CHECKING:
     import rpy2.rinterface_lib.sexp
-
 
 # ------------------ Logging about run ----------------- #
 
@@ -182,13 +182,13 @@ def setup_R(r_home: Optional[str] = None) -> None:
 
     # Set R installation path
     if not r_home:
-        # https://stackoverflow.com/a/54845971
-        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
+        r_home = os.path.join(sys.executable.split('/bin/')[0], 'lib/R')
 
     if not exists(r_home):
         raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
 
     os.environ['R_HOME'] = r_home
+    openrlib.R_HOME = r_home
 
 
 @beartype
@@ -208,6 +208,7 @@ def _none2null(none_obj: None) -> "rpy2.rinterface_lib.sexp.NULLType":
     rpy2.rinterface_lib.sexp.NULLType
         R NULL object.
     """
+    setup_R()
 
     # See https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     from rpy2.robjects import r
