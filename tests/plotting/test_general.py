@@ -1,3 +1,18 @@
+"""Test general plotting functions."""
+
+import pytest
+import pandas as pd
+import numpy as np
+import os
+import scanpy as sc
+import sctoolbox.plotting as pl
+
+from beartype.roar import BeartypeCallHintParamViolation
+
+
+# ------------------------------ FIXTURES --------------------------------- #
+
+
 @pytest.fixture
 def df_bidir_bar():
     """Create DataFrame for bidirectional barplot."""
@@ -52,6 +67,9 @@ def venn_dict():
     return {"Group A": [1, 2, 3, 4, 5, 6],
             "Group B": [2, 3, 7, 8],
             "Group C": [3, 4, 5, 9, 10]}
+
+
+# ------------------------------ TESTS --------------------------------- #
 
 
 def test_clustermap_dotplot():
@@ -150,4 +168,4 @@ def test_pairwise_scatter(adata, thresholds):
 
     assert axarr.shape == (2, 2)
     assert type(axarr[0, 0]).__name__.startswith("Axes")
-
+    
