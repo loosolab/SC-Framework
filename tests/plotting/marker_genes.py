@@ -4,11 +4,8 @@ import pytest
 import sctoolbox.plotting as pl
 import scanpy as sc
 import os
-import tempfile
-import shutil
 import pandas as pd
 import numpy as np
-import ipywidgets as widgets
 import matplotlib.pyplot as plt
 
 from beartype.roar import BeartypeCallHintParamViolation
