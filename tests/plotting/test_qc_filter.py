@@ -3,6 +3,7 @@
 import pytest
 import sctoolbox.plotting as pl
 import os
+import scanpy as sc
 import shutil
 import numpy as np
 import glob
@@ -11,6 +12,7 @@ import glob
 # ------------------------------ FIXTURES --------------------------------- #
 
 quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
@@ -60,7 +62,7 @@ def test_plot_starsolo_quality_failure():
 
     with pytest.raises(KeyError, match="Measure .* not found in summary table"):
         pl.plot_starsolo_quality(quant_folder, measures=["invalid"])
-        
+
 
 def test_plot_starsolo_UMI():
     """Test plot_starsolo_UMI success."""
