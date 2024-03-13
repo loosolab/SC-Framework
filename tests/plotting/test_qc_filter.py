@@ -99,3 +99,14 @@ def test_n_cells_barplot(adata, groupby, add_labels):
         assert len(axarr) == 1
     else:
         assert len(axarr) == 2
+
+
+def test_group_correlation(adata):
+    """Test if plot is written to pdf."""
+
+    # Run group correlation
+    pl.group_correlation(adata, groupby="condition",save="group_correlation.pdf")
+
+    # Assert creation of file
+    assert os.path.isfile("group_correlation.pdf")
+    os.remove("group_correlation.pdf")
