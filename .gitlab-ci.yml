@@ -62,6 +62,7 @@ build-image-main:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
 
 # build image for commits on dev
 build-image-dev:
@@ -86,6 +87,7 @@ build-image-dev:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
 
 # build image for merge-requests
 build-image-mr:       # This job runs in the build stage, which runs first.
@@ -110,6 +112,7 @@ build-image-mr:       # This job runs in the build stage, which runs first.
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
       when: manual # set to manual for now until further checks for when it has to be run are implemented
       allow_failure: true # until further checks/rules are implemented
 
@@ -225,6 +228,7 @@ test coverage MR new image:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
 
 # Run test coverage
 test coverage MR dev-image:
@@ -269,6 +273,7 @@ test coverage MR dev-image:
       - sctoolbox_env.yml
       - Dockerfile
       - sctoolbox/_version.py
+      - MANIFEST.in
 
 
 #Changes.rst file must be changed in merge requests
@@ -418,8 +423,11 @@ notebooks MR - dev image:
     refs:
       - merge_requests
     changes:
+<<<<<<< HEAD
         - tests/*.py
         - tests/**/*.py
+=======
+>>>>>>> dev
         - sctoolbox/**/*.py
   except:
     variables:
