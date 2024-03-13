@@ -12,6 +12,7 @@ import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 import glob
+import tempfile
 
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -22,6 +23,56 @@ plt.switch_backend("Agg")
 # ------------------------------ FIXTURES --------------------------------- #
 
 quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+
+
+@pytest.fixture(scope="session")  # re-use the fixture for all tests
+def adata():
+    """Load and returns an anndata object."""
+
+    np.random.seed(1)  # set seed for reproducibility
+
+    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    adata = sc.read_h5ad(f)
+
+    adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+    adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
+    adata.obs["cat"] = adata.obs["condition"].astype("category")
+
+    adata.obs["LISI_score_pca"] = np.random.normal(size=adata.shape[0])
+    adata.obs["qc_float"] = np.random.uniform(0, 1, size=adata.shape[0])
+    adata.var["qc_float_var"] = np.random.uniform(0, 1, size=adata.shape[1])
+
+    adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
+    adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
+
+    sc.pp.normalize_total(adata, target_sum=None)
+    sc.pp.log1p(adata)
+
+    sc.tl.umap(adata, n_components=3)
+    sc.tl.tsne(adata)
+    # sc.tl.pca(adata)
+    sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
+    # sc.tl.dendrogram(adata, groupby='clustering')
+
+    return adata
+
+
+@pytest.fixture
+def df():
+    """Create and return a pandas dataframe."""
+    return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
+                              'col2': [3, 4, 5, 6, 7]})
+
+
+@pytest.fixture
+def tmp_file():
+    """Return path for a temporary file."""
+    tmpdir = tempfile.mkdtemp()
+
+    yield os.path.join(tmpdir, "output.pdf")
+
+    # clean up directory and contents
+    shutil.rmtree(tmpdir)
 
 
 @pytest.fixture
