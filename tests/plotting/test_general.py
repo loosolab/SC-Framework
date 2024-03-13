@@ -167,5 +167,4 @@ def test_pairwise_scatter(adata, thresholds):
     axarr = pl.pairwise_scatter(adata.obs, columns=["qcvar1", "qcvar2"], thresholds=thresholds)
 
     assert axarr.shape == (2, 2)
-    assert type(axarr[0, 0]).__name__.startswith("Axes")
-    
+    assert type(axarr[0, 0]).__name__.startswith("Axes")    
