@@ -3,9 +3,23 @@
 import pytest
 import numpy as np
 import pandas as pd
-
+import scanpy as sc
+import os
 import sctoolbox.analyser as an
 import sctoolbox.utilities as utils
+
+
+@pytest.fixture(scope="session")
+def adata():
+    """Load and returns an anndata object."""
+
+    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
+    adata = sc.read_h5ad(f)
+
+    # Add batch column
+    adata.obs['batch'] = ["a", "b"] * 100
+
+    return adata
 
 
 @pytest.fixture
