@@ -1,5 +1,7 @@
 0.6 (Current)
 -------------
+-TEST CLEANUP
+        -qc_filter: 
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
