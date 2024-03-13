@@ -423,11 +423,8 @@ notebooks MR - dev image:
     refs:
       - merge_requests
     changes:
-<<<<<<< HEAD
         - tests/*.py
         - tests/**/*.py
-=======
->>>>>>> dev
         - sctoolbox/**/*.py
   except:
     variables:
