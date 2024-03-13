@@ -158,3 +158,10 @@ def test_quality_violin_fail(adata):
         pl.quality_violin(adata, groupby="condition", columns=["qc_float"], header=[])
     with pytest.raises(ValueError, match="The following columns from 'columns' were not found"):
         pl.quality_violin(adata, columns=["Invalid"])
+
+
+def test_get_slider_thresholds_dict(slider_dict):
+    """Test get_slider_threshold for non grouped slider_dict."""
+    threshold_dict = pl.get_slider_thresholds(slider_dict)
+    assert isinstance(threshold_dict, dict)
+    assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7}, 'qc_float': {'min': 5, 'max': 7}}
