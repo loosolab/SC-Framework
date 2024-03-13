@@ -86,3 +86,16 @@ def test_plot_starsolo_UMI_failure():
 
     # remove folder
     shutil.rmtree("quant_without_UMI")
+
+
+@pytest.mark.parametrize("groupby", [None, "condition"])
+@pytest.mark.parametrize("add_labels", [True, False])
+def test_n_cells_barplot(adata, groupby, add_labels):
+    """Test n_cells_barplot success."""
+
+    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby,add_labels=add_labels)
+
+    if groupby is None:
+        assert len(axarr) == 1
+    else:
+        assert len(axarr) == 2
