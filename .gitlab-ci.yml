@@ -159,6 +159,7 @@ lint:
       changes:
         - setup.py
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
@@ -260,6 +261,7 @@ test coverage MR dev-image:
       - merge_requests
     changes:
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
   except:
     changes:
@@ -281,6 +283,7 @@ check_changes:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
@@ -385,6 +388,7 @@ notebooks MR - new image:
       - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
     changes:
       - tests/*.py
+      - tests/**/*.py
       - sctoolbox/**/*.py
 
 notebooks MR - dev image:
@@ -415,6 +419,7 @@ notebooks MR - dev image:
       - merge_requests
     changes:
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
   except:
     variables:
