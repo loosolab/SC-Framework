@@ -57,6 +57,14 @@ def venn_dict():
 def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
+    axes = pl.clustermap_dotplot(table=table, x="bulk_labels",
+                                 y="index", hue="n_genes",
+                                 size="n_counts", palette="viridis",
+                                 title="Title", show_grid=True)
+
+    assert isinstance(axes, list)
+    ax_type = type(axes[0]).__name__
+    assert ax_type.startswith("Axes")
 
 
 def test_bidirectional_barplot(df_bidir_bar):
