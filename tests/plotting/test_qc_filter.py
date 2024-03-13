@@ -1,21 +1,11 @@
-"""Test qc_filter plotting function"""
+"""Test qc_filter plotting function."""
 
 import pytest
 import sctoolbox.plotting as pl
-import scanpy as sc
 import os
-import tempfile
 import shutil
-import pandas as pd
 import numpy as np
-import seaborn as sns
-import ipywidgets as widgets
-import functools
-import matplotlib.pyplot as plt
 import glob
-
-from beartype.roar import BeartypeCallHintParamViolation
-
 
 
 @pytest.mark.parametrize("order", [None, ["KO-2", "KO-1", "Ctrl-2", "Ctrl-1"]])
