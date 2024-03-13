@@ -2,6 +2,7 @@
 -------------
 - TEST CLEANUP
     - embedding
+- Fix unable to determine R_HOME error (#190)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
