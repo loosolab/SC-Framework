@@ -1,5 +1,7 @@
 0.6 (Current)
 -------------
+- TEST CLEANUP
+    - marker_genes
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
