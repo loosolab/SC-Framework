@@ -1,5 +1,6 @@
 0.6 (Current)
 -------------
+- Fix unable to determine R_HOME error (#190)
 
 - TEST CLEANUP
     - embedding

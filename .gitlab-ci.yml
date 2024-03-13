@@ -62,6 +62,7 @@ build-image-main:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
 
 # build image for commits on dev
 build-image-dev:
@@ -86,6 +87,7 @@ build-image-dev:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
 
 # build image for merge-requests
 build-image-mr:       # This job runs in the build stage, which runs first.
@@ -110,6 +112,7 @@ build-image-mr:       # This job runs in the build stage, which runs first.
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
       when: manual # set to manual for now until further checks for when it has to be run are implemented
       allow_failure: true # until further checks/rules are implemented
 
@@ -159,6 +162,7 @@ lint:
       changes:
         - setup.py
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
@@ -224,6 +228,7 @@ test coverage MR new image:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
+        - MANIFEST.in
 
 # Run test coverage
 test coverage MR dev-image:
@@ -260,6 +265,7 @@ test coverage MR dev-image:
       - merge_requests
     changes:
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
   except:
     changes:
@@ -267,6 +273,7 @@ test coverage MR dev-image:
       - sctoolbox_env.yml
       - Dockerfile
       - sctoolbox/_version.py
+      - MANIFEST.in
 
 
 #Changes.rst file must be changed in merge requests
@@ -281,6 +288,7 @@ check_changes:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
         - tests/*.py
+        - tests/**/*.py
         - sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
@@ -384,7 +392,6 @@ notebooks MR - new image:
     variables:
       - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
     changes:
-      - tests/*.py
       - sctoolbox/**/*.py
 
 notebooks MR - dev image:
@@ -414,7 +421,6 @@ notebooks MR - dev image:
     refs:
       - merge_requests
     changes:
-        - tests/*.py
         - sctoolbox/**/*.py
   except:
     variables:
