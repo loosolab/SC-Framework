@@ -1,8 +1,6 @@
 """Test analysis functions."""
 
 import pytest
-import scanpy as sc
-import os
 import numpy as np
 import pandas as pd
 

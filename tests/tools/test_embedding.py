@@ -1,3 +1,5 @@
+"""Test embedding tool functions."""
+
 import pytest
 import scanpy as sc
 import os
