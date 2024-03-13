@@ -1,5 +1,7 @@
 0.6 (Current)
 -------------
+- TEST CLEANUP
+    - embedding
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
