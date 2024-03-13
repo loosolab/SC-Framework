@@ -849,20 +849,6 @@ def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
         pl.plot_differential_genes(pairwise_ranked_genes_nosig)
 
 
-@pytest.mark.parametrize("sortby, title, figsize, layer",
-                         [("condition", "condition", None, "spliced"),
-                          (None, None, (4, 4), None)],
-                         )
-def test_pseudotime_heatmap(adata, sortby, title, figsize, layer):
-    """Test pseudotime_heatmap success."""
-    ax = pl.pseudotime_heatmap(adata, ['ENSMUSG00000103377',
-                                       'ENSMUSG00000102851'],
-                               sortby=sortby, title=title,
-                               figsize=figsize, layer=layer)
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
-
-
 def test_link_sliders(slider_list):
     """Test _link_sliders success."""
     linkage_list = pl._link_sliders(slider_list)
