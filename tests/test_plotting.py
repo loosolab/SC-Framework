@@ -22,7 +22,7 @@ plt.switch_backend("Agg")
 
 # ------------------------------ FIXTURES --------------------------------- #
 
-quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
+quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
