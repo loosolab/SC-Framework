@@ -10,7 +10,7 @@ import sctoolbox.analyser as an
 def adata():
     """Load and returns an anndata object."""
 
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
     adata = sc.read_h5ad(f)
 
     # Add batch column
