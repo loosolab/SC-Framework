@@ -93,7 +93,7 @@ def test_plot_starsolo_UMI_failure():
 def test_n_cells_barplot(adata, groupby, add_labels):
     """Test n_cells_barplot success."""
 
-    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby,add_labels=add_labels)
+    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby, add_labels=add_labels)
 
     if groupby is None:
         assert len(axarr) == 1
@@ -105,7 +105,7 @@ def test_group_correlation(adata):
     """Test if plot is written to pdf."""
 
     # Run group correlation
-    pl.group_correlation(adata, groupby="condition",save="group_correlation.pdf")
+    pl.group_correlation(adata, groupby="condition", save="group_correlation.pdf")
 
     # Assert creation of file
     assert os.path.isfile("group_correlation.pdf")
