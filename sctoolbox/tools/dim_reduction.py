@@ -210,6 +210,7 @@ def define_PC(anndata: sc.AnnData) -> int:
     return knee
 
 
+@beartype
 def propose_pcs(anndata: sc.AnnData,
                 how: List[Literal["variance", "cummulative variance", "correlation"]] = ["cummulative variance", "correlation"],
                 var_method: Literal["knee", "percent"] = "knee",
@@ -257,7 +258,7 @@ def propose_pcs(anndata: sc.AnnData,
         variance = anndata.uns["pca"]["variance_ratio"]
 
         # compute knee
-        kn = KneeLocator(variance, PC_names, curve='convex', direction='decreasing')
+        kn = KneeLocator(PC_names, variance, curve='convex', direction='decreasing')
         knee = int(kn.knee)  # cast from numpy.int64
 
         selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
@@ -266,7 +267,7 @@ def propose_pcs(anndata: sc.AnnData,
         cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
 
         # compute knee
-        kn = KneeLocator(cumulative, PC_names, curve='concave', direction='increasing')
+        kn = KneeLocator(PC_names, cumulative, curve='concave', direction='increasing')
         knee = int(kn.knee)  # cast from numpy.int64
 
         selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
