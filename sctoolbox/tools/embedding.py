@@ -3,6 +3,9 @@ import scanpy as sc
 import multiprocessing as mp
 import pandas as pd
 import itertools
+import scipy
+import re
+import numpy as np
 
 from beartype.typing import Iterable, Any, Literal, Optional, Tuple
 from beartype import beartype

@@ -214,7 +214,7 @@ def propose_pcs(anndata: sc.AnnData,
                 how: List[Literal["variance", "cummulative variance", "correlation"]] = ["cummulative variance", "correlation"],
                 var_method: Literal["knee", "percent"] = "knee",
                 corr_thresh: float = 0.3,
-                corr_kwargs: Optional[dict] = None):
+                corr_kwargs: Optional[dict] = {}):
     """
     Propose a selection of PCs that can be used for further analysis.
 
