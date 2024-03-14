@@ -30,6 +30,48 @@ get-mr-id:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
+
+# check if merge request changes the environment
+check-env-changes:
+  stage: .pre
+  image: python:3.10-alpine3.19
+  script:
+    - echo "MR_ENV_CHANGED=true" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # all MR
+      changes:
+        - setup.py
+        - sctoolbox_env.yml
+        - Dockerfile
+        - sctoolbox/_version.py
+
+# Setup dynamic image tag // revise this
+set-dynamic-image-tag:
+  stage: .pre
+  image: alpine:latest
+  script:
+    - >
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        echo "DYNAMIC_IMAGE_TAG=$BUILD_VERSION" >> build.env
+      elif [ "$CI_COMMIT_BRANCH" == "dev" ]; then
+        echo "DYNAMIC_IMAGE_TAG=dev" >> build.env
+      elif [ -n "$CI_MERGE_REQUEST_IID" ]; then
+        if ["$MR_ENV_CHANGED" == "true"]; then
+          echo "DYNAMIC_IMAGE_TAG=MR-$CI_MERGE_REQUEST_IID" >> build.env
+        else
+          echo "DYNAMIC_IMAGE_TAG=dev" >> build.env
+        fi
+      else
+        echo "DYNAMIC_IMAGE_TAG=latest" >> build.env
+      fi
+  artifacts:
+    reports:
+      dotenv: build.env
+
+
 # ############################################################################################################################################################
 # ######################################################### build docker image ###############################################################################
 # ############################################################################################################################################################
@@ -39,8 +81,8 @@ get-mr-id:
 # The newly build image is then used for testing later. 
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
 
-# build image for commits on main
-build-image-main:
+# build job
+build:
   stage: build
   image: docker:latest # image as building environment
   services:
@@ -49,69 +91,99 @@ build-image-main:
   before_script:
       - echo $BUILD_VERSION
       - apk update && apk add git # install git for authentification and pushing to registry
-      - apt-get update -qq && apt-get install -y -qq git 
+      - apt-get update -qq && apt-get install -y -qq git
       - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
   script:
-      - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
+      - >
+        if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+          docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
+        elif [ "$CI_COMMIT_BRANCH" == "dev" ]; then
+          docker build --pull -t "$CI_REGISTRY_IMAGE:dev" . # build the image from Dockerfile in the repository
+        elif [ -n "$CI_MERGE_REQUEST_IID" ]; then
+          docker build --pull -t "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID" . # build the image from Dockerfile in the repository
+        fi
       - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"  # only for commits to dev
+    - if: $CI_COMMIT_BRANCH
       changes:  # if any of the files were changed
         - setup.py
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
 
-# build image for commits on dev
-build-image-dev:
-  stage: build
-  image: docker:latest # image as building environment
-  services:
-      - name: "docker:dind" # docker in docker to build
-        alias: docker
-  before_script:
-      - echo $BUILD_VERSION
-      - apk update && apk add git # install git for authentification and pushing to registry
-      - apt-get update -qq && apt-get install -y -qq git 
-      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
-  script:
-      - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:dev" . # build the image from Dockerfile in the repository
-      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
-  rules:
-    - if: $CI_COMMIT_BRANCH == "dev"  # only for commits to dev
-      changes:  # if any of the files were changed
-        - setup.py
-        - sctoolbox_env.yml
-        - Dockerfile
-        - sctoolbox/_version.py
-
-# build image for merge-requests
-build-image-mr:       # This job runs in the build stage, which runs first.
-  stage: build
-  image: docker:latest # image as building environment
-  services:
-      - name: "docker:dind" # docker in docker to build
-        alias: docker
-  before_script:
-      - echo $CI_MERGE_REQUEST_IID
-      - apk update && apk add git # install git for authentification and pushing to registry
-      - apt-get update -qq && apt-get install -y -qq git 
-      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
-  script:
-      - ls .
-      - docker build --pull -t "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID" . # build the image from Dockerfile in the repository
-      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
-      changes:  # if any of the files were changed
-        - setup.py
-        - sctoolbox_env.yml
-        - Dockerfile
-        - sctoolbox/_version.py
-      when: manual # set to manual for now until further checks for when it has to be run are implemented
-      allow_failure: true # until further checks/rules are implemented
+## build image for commits on main
+#build-image-main:
+#  stage: build
+#  image: docker:latest # image as building environment
+#  services:
+#      - name: "docker:dind" # docker in docker to build
+#        alias: docker
+#  before_script:
+#      - echo $BUILD_VERSION
+#      - apk update && apk add git # install git for authentification and pushing to registry
+#      - apt-get update -qq && apt-get install -y -qq git
+#      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
+#  script:
+#      - ls .
+#      - docker build --pull -t "$CI_REGISTRY_IMAGE:$BUILD_VERSION" -t "$CI_REGISTRY_IMAGE:latest" . # build the image from Dockerfile in the repository
+#      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "main"  # only for commits to dev
+#      changes:  # if any of the files were changed
+#        - setup.py
+#        - sctoolbox_env.yml
+#        - Dockerfile
+#        - sctoolbox/_version.py
+#
+## build image for commits on dev
+#build-image-dev:
+#  stage: build
+#  image: docker:latest # image as building environment
+#  services:
+#      - name: "docker:dind" # docker in docker to build
+#        alias: docker
+#  before_script:
+#      - echo $BUILD_VERSION
+#      - apk update && apk add git # install git for authentification and pushing to registry
+#      - apt-get update -qq && apt-get install -y -qq git
+#      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
+#  script:
+#      - ls .
+#      - docker build --pull -t "$CI_REGISTRY_IMAGE:dev" . # build the image from Dockerfile in the repository
+#      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "dev"  # only for commits to dev
+#      changes:  # if any of the files were changed
+#        - setup.py
+#        - sctoolbox_env.yml
+#        - Dockerfile
+#        - sctoolbox/_version.py
+#
+## build image for merge-requests
+#build-image-mr:       # This job runs in the build stage, which runs first.
+#  stage: build
+#  image: docker:latest # image as building environment
+#  services:
+#      - name: "docker:dind" # docker in docker to build
+#        alias: docker
+#  before_script:
+#      - echo $CI_MERGE_REQUEST_IID
+#      - apk update && apk add git # install git for authentification and pushing to registry
+#      - apt-get update -qq && apt-get install -y -qq git
+#      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin # login to registry
+#  script:
+#      - ls .
+#      - docker build --pull -t "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID" . # build the image from Dockerfile in the repository
+#      - docker push --all-tags "$CI_REGISTRY_IMAGE" # push image to registry
+#  rules:
+#    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+#      changes:  # if any of the files were changed
+#        - setup.py
+#        - sctoolbox_env.yml
+#        - Dockerfile
+#        - sctoolbox/_version.py
+#      when: manual # set to manual for now until further checks for when it has to be run are implemented
+#      allow_failure: true # until further checks/rules are implemented
 
 # ############################################################################################################################################################
 # ######################################################### test #############################################################################################
@@ -176,97 +248,127 @@ test import:
         - setup.py
         - sctoolbox/**/*.py
 
-# Run test coverage on main commit
-test coverage main:
-  stage: test
-  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
-  tags:
-    - sctoolbox
-  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
-  script:
-    - echo $BUILD_VERSION
-    - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
-  artifacts:
-    when: always
-    paths:
-      - pytest.xml
-      - pytest.html
-      - htmlcov
-    reports:
-      junit: pytest.xml
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
+# Run tests
+test coverage:
+    stage: test
+    image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+    tags:
+      - sctoolbox
+    coverage: '/TOTAL.*\s(\d*.\d*\%)/'
+    script:
+      - echo $DYNAMIC_IMAGE_TAG
+      - chmod +x scripts/bedGraphToBigWig  # make script executable
+      - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+    artifacts:
+      when: always
+      paths:
+          - pytest.xml
+          - pytest.html
+          - htmlcov
+      reports:
+        junit: pytest.xml
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
+        changes:
+          - setup.py
+          - sctoolbox_env.yml
+          - Dockerfile
+          - sctoolbox/_version.py
+      - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
+      - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
 
-# Run test coverage
-test coverage MR new image:
-  stage: test
-  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
-  tags:
-    - sctoolbox
-  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
-  script:
-    - echo $CI_MERGE_REQUEST_IID
-    - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
-  artifacts:
-    when: always
-    paths:
-      - pytest.xml
-      - pytest.html
-      - htmlcov
-    reports:
-      junit: pytest.xml
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
-      changes:
-        - setup.py
-        - sctoolbox_env.yml
-        - Dockerfile
-        - sctoolbox/_version.py
+#
+## Run test coverage on main commit
+#test coverage main:
+#  stage: test
+#  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"
+#  tags:
+#    - sctoolbox
+#  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
+#  script:
+#    - echo $BUILD_VERSION
+#    - chmod +x scripts/bedGraphToBigWig  # make script executable
+#    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+#  artifacts:
+#    when: always
+#    paths:
+#      - pytest.xml
+#      - pytest.html
+#      - htmlcov
+#    reports:
+#      junit: pytest.xml
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
+#
+## Run test coverage
+#test coverage MR new image:
+#  stage: test
+#  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
+#  tags:
+#    - sctoolbox
+#  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
+#  script:
+#    - echo $CI_MERGE_REQUEST_IID
+#    - chmod +x scripts/bedGraphToBigWig  # make script executable
+#    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+#  artifacts:
+#    when: always
+#    paths:
+#      - pytest.xml
+#      - pytest.html
+#      - htmlcov
+#    reports:
+#      junit: pytest.xml
+#  rules:
+#    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
+#      changes:
+#        - setup.py
+#        - sctoolbox_env.yml
+#        - Dockerfile
+#        - sctoolbox/_version.py
 
-# Run test coverage
-test coverage MR dev-image:
-  stage: test
-  image: "$CI_REGISTRY_IMAGE:dev"
-  tags:
-    - sctoolbox
-  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
-  script:
-    - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
-  artifacts:
-    when: always
-    paths:
-      - pytest.xml
-      - pytest.html
-      - htmlcov
-    reports:
-      junit: pytest.xml
-  #rules:
-  #  - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # all merge requests with changes
-  #    changes:
-  #      - tests/*.py
-  #      - sctoolbox/**/*.py
-  #  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  #    when: never
-  #    changes:
-  #      - setup.py
-  #      - sctoolbox_env.yml
-  #      - Dockerfile
-  #      - sctoolbox/_version.py
-  only:
-    refs:
-      - merge_requests
-    changes:
-        - tests/*.py
-        - sctoolbox/**/*.py
-  except:
-    changes:
-      - setup.py
-      - sctoolbox_env.yml
-      - Dockerfile
-      - sctoolbox/_version.py
+## Run test coverage
+#test coverage MR dev-image:
+#  stage: test
+#  image: "$CI_REGISTRY_IMAGE:dev"
+#  tags:
+#    - sctoolbox
+#  coverage: '/TOTAL.*\s(\d*.\d*\%)/'
+#  script:
+#    - chmod +x scripts/bedGraphToBigWig  # make script executable
+#    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+#  artifacts:
+#    when: always
+#    paths:
+#      - pytest.xml
+#      - pytest.html
+#      - htmlcov
+#    reports:
+#      junit: pytest.xml
+#  #rules:
+#  #  - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # all merge requests with changes
+#  #    changes:
+#  #      - tests/*.py
+#  #      - sctoolbox/**/*.py
+#  #  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#  #    when: never
+#  #    changes:
+#  #      - setup.py
+#  #      - sctoolbox_env.yml
+#  #      - Dockerfile
+#  #      - sctoolbox/_version.py
+#  only:
+#    refs:
+#      - merge_requests
+#    changes:
+#        - tests/*.py
+#        - sctoolbox/**/*.py
+#  except:
+#    changes:
+#      - setup.py
+#      - sctoolbox_env.yml
+#      - Dockerfile
+#      - sctoolbox/_version.py
 
 
 #Changes.rst file must be changed in merge requests
@@ -320,16 +422,14 @@ notebook-output-check:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
-# Test notebooks when code is pushed to main
-notebooks main:
-  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
-  #needs: [build-image-mr]
+# Test notebooks
+notebooks:
+  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
   inherit:
     default: false
   stage: test
-  #tags:
-  #  - gwdg
-  #  - gwdg-shared
+  tags:
+      - sctoolbox
   artifacts:
     paths:
       - rna_analysis/logs/*.txt
@@ -338,7 +438,6 @@ notebooks main:
     - pip install papermill
     - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
-    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
     - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
     - python scripts/run_notebooks.py
@@ -348,31 +447,6 @@ notebooks main:
     - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
-
-notebooks MR - new image:
-  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
-  inherit:
-    default: false
-  stage: test
-  #tags:
-  #  - gwdg
-  #  - gwdg-shared
-  artifacts:
-    paths:
-      - rna_analysis/logs/*.txt
-  script:
-    - pip install papermill
-    - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
-    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
-    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
-    - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
-    - python scripts/run_notebooks.py
-  after_script:
-    - pwd
-    - ls -l rna_analysis/logs/
-    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
-  rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"
       changes:  # if any of the files were changed
         - setup.py
@@ -380,31 +454,6 @@ notebooks MR - new image:
         - Dockerfile
         - sctoolbox/_version.py
       when: manual
-
-notebooks MR - dev image:
-  image: "$CI_REGISTRY_IMAGE:dev"
-  inherit:
-    default: false
-  stage: test
-  #tags:
-  #  - gwdg
-  #  - gwdg-shared
-  artifacts:
-    paths:
-      - rna_analysis/logs/*.txt
-  script:
-    - pip install papermill
-    - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
-    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
-    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
-    - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
-    - python scripts/run_notebooks.py
-  after_script:
-    - pwd
-    - ls -l rna_analysis/logs/
-    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
-  rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
       changes:
         - rna_analysis/notebooks/*.ipynb
@@ -412,13 +461,105 @@ notebooks MR - dev image:
         - general_notebooks/*.ipynb
       when: manual
 
+
+## Test notebooks when code is pushed to main
+#notebooks main:
+#  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
+#  #needs: [build-image-mr]
+#  inherit:
+#    default: false
+#  stage: test
+#  #tags:
+#  #  - gwdg
+#  #  - gwdg-shared
+#  artifacts:
+#    paths:
+#      - rna_analysis/logs/*.txt
+#      - rna_analysis/*.ipynb
+#  script:
+#    - pip install papermill
+#    - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
+#    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+#    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+#    - python -m ipykernel install --user --name sctoolbox
+#    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+#    - python scripts/run_notebooks.py
+#  after_script:
+#    - pwd
+#    - ls -l rna_analysis/logs/
+#    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
+#  rules:
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
+#
+#notebooks MR - new image:
+#  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"
+#  inherit:
+#    default: false
+#  stage: test
+#  #tags:
+#  #  - gwdg
+#  #  - gwdg-shared
+#  artifacts:
+#    paths:
+#      - rna_analysis/logs/*.txt
+#  script:
+#    - pip install papermill
+#    - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
+#    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+#    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+#    - python -m ipykernel install --user --name sctoolbox
+#    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+#    - python scripts/run_notebooks.py
+#  after_script:
+#    - pwd
+#    - ls -l rna_analysis/logs/
+#    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
+#  rules:
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"
+#      changes:  # if any of the files were changed
+#        - setup.py
+#        - sctoolbox_env.yml
+#        - Dockerfile
+#        - sctoolbox/_version.py
+#      when: manual
+#
+#notebooks MR - dev image:
+#  image: "$CI_REGISTRY_IMAGE:dev"
+#  inherit:
+#    default: false
+#  stage: test
+#  #tags:
+#  #  - gwdg
+#  #  - gwdg-shared
+#  artifacts:
+#    paths:
+#      - rna_analysis/logs/*.txt
+#  script:
+#    - pip install papermill
+#    - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
+#    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+#    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+#    - python -m ipykernel install --user --name sctoolbox
+#    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/pseudotime_analysis.ipynb  # ./general_notebooks/prepare_for_cellxgene.ipynb
+#    - python scripts/run_notebooks.py
+#  after_script:
+#    - pwd
+#    - ls -l rna_analysis/logs/
+#    - for f in rna_analysis/../logs/*; do echo $f; cat $f; done
+#  rules:
+#    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" # for all other pushes, you can manually trigger the notebooks
+#      changes:
+#        - rna_analysis/notebooks/*.ipynb
+#        - atac_analysis/notebooks/*.ipynb
+#        - general_notebooks/*.ipynb
+#      when: manual
+
 # ############################################################################################################################################################
 # ######################################################### Build and deploy documentation ###################################################################
 # ############################################################################################################################################################
 
-# Build documentation
-build-pages-main:
-  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"  # ensure that all dependencies are available
+build-pages:
+  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
   stage: deploy
   script:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
@@ -433,41 +574,13 @@ build-pages-main:
       - docs/build/html/
   rules:
     - if: $CI_COMMIT_BRANCH == "main" # always for commits to main
-
-# Build documentation
-build-pages-dev:
-  image: "$CI_REGISTRY_IMAGE:dev"  # ensure that all dependencies are available
-  stage: deploy
-  script:
-    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
-    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
-    - pip install sphinx sphinx-rtd-theme
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - cd docs
-    - make html
-  artifacts:
-    paths:
-      - docs/build/html/
-  rules:
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
-
-# Build documentation
-build-pages-MR:
-  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"  # ensure that all dependencies are available
-  stage: deploy
-  script:
-    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
-    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
-    - pip install sphinx sphinx-rtd-theme
-    - pip install nbsphinx
-    - pip install nbsphinx_link
-    - cd docs
-    - make html
-  artifacts:
-    paths:
-      - docs/build/html/
-  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+      changes:
+        - sctoolbox/**/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb  # changes in general notebooks
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
         - sctoolbox/**/*.py
@@ -479,22 +592,84 @@ build-pages-MR:
     - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
       when: never   # but not again for any merge requests coming from dev
 
-# Deploy pages for a MR - needs to be separate from deploy-pages-commit due to 
-# $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != $CI_COMMIT_BRANCH
-deploy-pages-MR:
+
+## Build documentation
+#build-pages-main:
+#  image: "$CI_REGISTRY_IMAGE:$BUILD_VERSION"  # ensure that all dependencies are available
+#  stage: deploy
+#  script:
+#    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
+#    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
+#    - pip install sphinx sphinx-rtd-theme
+#    - pip install nbsphinx
+#    - pip install nbsphinx_link
+#    - cd docs
+#    - make html
+#  artifacts:
+#    paths:
+#      - docs/build/html/
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "main" # always for commits to main
+#
+## Build documentation
+#build-pages-dev:
+#  image: "$CI_REGISTRY_IMAGE:dev"  # ensure that all dependencies are available
+#  stage: deploy
+#  script:
+#    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
+#    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
+#    - pip install sphinx sphinx-rtd-theme
+#    - pip install nbsphinx
+#    - pip install nbsphinx_link
+#    - cd docs
+#    - make html
+#  artifacts:
+#    paths:
+#      - docs/build/html/
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
+#
+## Build documentation
+#build-pages-MR:
+#  image: "$CI_REGISTRY_IMAGE:MR-$CI_MERGE_REQUEST_IID"  # ensure that all dependencies are available
+#  stage: deploy
+#  script:
+#    - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
+#    - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
+#    - pip install sphinx sphinx-rtd-theme
+#    - pip install nbsphinx
+#    - pip install nbsphinx_link
+#    - cd docs
+#    - make html
+#  artifacts:
+#    paths:
+#      - docs/build/html/
+#  rules:
+#    - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
+#      changes:
+#        - sctoolbox/**/*.py
+#        - rna_analysis/notebooks/*.ipynb
+#        - atac_analysis/notebooks/*.ipynb
+#        - general_notebooks/*.ipynb  # changes in general notebooks
+#      when: manual
+#      allow_failure: True  # manual is not required
+#    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "dev"
+#      when: never   # but not again for any merge requests coming from dev
+
+deploy-pages:
   stage: deploy
-  needs: 
-    - job: build-pages-MR
+  needs:
+    - job: build-pages
       artifacts: True
   inherit:
     default: false
   environment:
-    name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    name: pages/$CI_COMMIT_BRANCH
     url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   artifacts:
     paths:
       - docs/build/html/
-  script: 
+  script:
     - ls -l docs/
     - echo "deploy"
   rules:
@@ -505,32 +680,13 @@ deploy-pages-MR:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
       allow_failure: True
-
-# Deploy pages for a commit without a MR
-deploy-pages-dev:
-  stage: deploy
-  needs:
-    - job: build-pages-dev
-      artifacts: True
-  inherit:
-    default: false
-  environment:
-    name: pages/$CI_COMMIT_BRANCH
-    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
-  script:
-    - ls -l docs/
-    - echo "deploy" #mv docs/build/html/ public/
-  artifacts:
-    paths:
-      - docs/build/html/
-  rules:
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
 
 # Deploy documentation to public pages if it was the main branch
 release-pages:
   stage: deploy
   needs:
-    - job: build-pages-main
+    - job: build-pages
       artifacts: True
   inherit:
     default: false
@@ -542,3 +698,67 @@ release-pages:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" # after accepted MR to main
       allow_failure: False  # main not allowed to fail
+
+## Deploy pages for a MR - needs to be separate from deploy-pages-commit due to
+## $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != $CI_COMMIT_BRANCH
+#deploy-pages-MR:
+#  stage: deploy
+#  needs:
+#    - job: build-pages-MR
+#      artifacts: True
+#  inherit:
+#    default: false
+#  environment:
+#    name: pages/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+#    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+#  artifacts:
+#    paths:
+#      - docs/build/html/
+#  script:
+#    - ls -l docs/
+#    - echo "deploy"
+#  rules:
+#    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "dev" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "main" # dev/main are built automatically
+#      changes:
+#        - sctoolbox/**/*.py
+#        - rna_analysis/notebooks/*.ipynb
+#        - atac_analysis/notebooks/*.ipynb
+#        - general_notebooks/*.ipynb  # changes in general notebooks
+#      allow_failure: True
+#
+## Deploy pages for a commit without a MR
+#deploy-pages-dev:
+#  stage: deploy
+#  needs:
+#    - job: build-pages-dev
+#      artifacts: True
+#  inherit:
+#    default: false
+#  environment:
+#    name: pages/$CI_COMMIT_BRANCH
+#    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+#  script:
+#    - ls -l docs/
+#    - echo "deploy" #mv docs/build/html/ public/
+#  artifacts:
+#    paths:
+#      - docs/build/html/
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
+#
+## Deploy documentation to public pages if it was the main branch
+#release-pages:
+#  stage: deploy
+#  needs:
+#    - job: build-pages-main
+#      artifacts: True
+#  inherit:
+#    default: false
+#  script:
+#    - mv docs/build/html/ public/
+#  artifacts:
+#    paths:
+#      - public
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "main" # after accepted MR to main
+#      allow_failure: False  # main not allowed to fail
