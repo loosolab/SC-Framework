@@ -5,9 +5,13 @@ import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 
-from beartype.typing import Optional, Any
+import deprecation
+from sctoolbox import __version__
+
+from beartype.typing import Optional, Any, Literal, List, Union
 from beartype import beartype
 
+import sctoolbox.tools.embedding as scem
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -162,6 +166,9 @@ def apply_svd(adata: sc.AnnData,
 #                         Subset number of PCs                             #
 ############################################################################
 
+@deprecation.deprecated(deprecated_in="0.5", removed_in="0.7",
+                        current_version=__version__,
+                        details="Use the 'sctoolbox.tools.propose_pcs' function instead.")
 @beartype
 def define_PC(anndata: sc.AnnData) -> int:
     """
@@ -201,6 +208,81 @@ def define_PC(anndata: sc.AnnData) -> int:
     # cr.build_infor(anndata, "PCA_knee_threshold", knee)
 
     return knee
+
+
+def propose_pcs(anndata: sc.AnnData,
+                how: List[Literal["variance", "cummulative variance", "correlation"]] = ["cummulative variance", "correlation"],
+                var_method: Literal["knee", "percent"] = "knee",
+                corr_thresh: float = 0.3,
+                corr_kwargs: Optional[dict] = None):
+    """
+    Propose a selection of PCs that can be used for further analysis.
+
+    Note: Function expects PCA to be computed beforehand.
+
+    Parameters
+    ----------
+    anndata: sc.AnnData
+        Anndata object with PCA to get PCs from.
+    how: List[Literal["variance", "cummulative variance", "correlation"]], default ["cummulative variance", "correlation"]
+        Values to use for PC proposal. Will independently apply filters to all selected methods and return the union of PCs.
+    var_method: Literal["knee", "percent"], default "knee"
+        TBA only "knee" available.
+    corr_thresh: float, default 0.3
+        Filter PCs with a correlation greater than the given value.
+    corr_kwargs: Optional(dict), default None
+        Parameters forwarded to TODO
+    
+    Returns
+    -------
+    List[int] :
+        List of PCs proposed for further use.
+
+    Raises
+    ------
+    ValueError:
+        If PCA is not found in anndata.
+    """
+
+    # check if pca exists
+    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
+        raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
+
+    # setup PC names
+    PC_names = range(1, len(anndata.uns["pca"]["variance_ratio"]) + 1)
+
+    selected_pcs = []
+
+    if "variance" in how:
+        variance = anndata.uns["pca"]["variance_ratio"]
+
+        # compute knee
+        kn = KneeLocator(variance, PC_names, curve='convex', direction='decreasing')
+        knee = int(kn.knee)  # cast from numpy.int64
+
+        selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+
+    if "cummulative variance" in how:
+        cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
+
+        # compute knee
+        kn = KneeLocator(cumulative, PC_names, curve='concave', direction='increasing')
+        knee = int(kn.knee)  # cast from numpy.int64
+
+        selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+
+    if "correlation" in how:
+        # color by highest absolute correlation
+        corrcoefs, _ = scem.correlation_matrix(adata=anndata, **corr_kwargs)
+
+        abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
+
+        selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
+
+    # create overlap of selected PCs
+    selected_pcs = set.intersection(*selected_pcs)
+
+    return selected_pcs
 
 
 @deco.log_anndata
