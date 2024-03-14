@@ -212,8 +212,9 @@ def define_PC(anndata: sc.AnnData) -> int:
 
 @beartype
 def propose_pcs(anndata: sc.AnnData,
-                how: List[Literal["variance", "cummulative variance", "correlation"]] = ["cummulative variance", "correlation"],
-                var_method: Literal["knee", "percent"] = "knee",
+                how: List[Literal["variance", "cumulative variance", "correlation"]] = ["variance", "correlation"],
+                var_method: Literal["knee", "percent"] = "percent",
+                perc_thresh: Union[int, float] = 30,
                 corr_thresh: float = 0.3,
                 corr_kwargs: Optional[dict] = {}):
     """
@@ -225,14 +226,16 @@ def propose_pcs(anndata: sc.AnnData,
     ----------
     anndata: sc.AnnData
         Anndata object with PCA to get PCs from.
-    how: List[Literal["variance", "cummulative variance", "correlation"]], default ["cummulative variance", "correlation"]
+    how: List[Literal["variance", "cumulative variance", "correlation"]], default ["variance", "correlation"]
         Values to use for PC proposal. Will independently apply filters to all selected methods and return the union of PCs.
-    var_method: Literal["knee", "percent"], default "knee"
-        TBA only "knee" available.
+    var_method: Literal["knee", "percent"], default "percent"
+        Either define a threshold based on a knee algorithm or use the percentile.
+    perc_thresh: Union[int, float], default 30
+        Percentile threshold of the PCs that should be included. Only for var_method="percent" and expects a value from 0-100.
     corr_thresh: float, default 0.3
         Filter PCs with a correlation greater than the given value.
     corr_kwargs: Optional(dict), default None
-        Parameters forwarded to TODO
+        Parameters forwarded to `sctoolbox.tools.correlation_matrix`.
     
     Returns
     -------
@@ -257,20 +260,32 @@ def propose_pcs(anndata: sc.AnnData,
     if "variance" in how:
         variance = anndata.uns["pca"]["variance_ratio"]
 
-        # compute knee
-        kn = KneeLocator(PC_names, variance, curve='convex', direction='decreasing')
-        knee = int(kn.knee)  # cast from numpy.int64
+        if var_method == "knee":
+            # compute knee
+            kn = KneeLocator(PC_names, variance, curve='convex', direction='decreasing')
+            knee = int(kn.knee)  # cast from numpy.int64
 
-        selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+            selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+        elif var_method == "percent":
+            # compute percentile
+            percentile = np.percentile(a=variance, q=perc_thresh)
 
-    if "cummulative variance" in how:
+            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var < percentile))
+
+    if "cumulative variance" in how:
         cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
 
-        # compute knee
-        kn = KneeLocator(PC_names, cumulative, curve='concave', direction='increasing')
-        knee = int(kn.knee)  # cast from numpy.int64
+        if var_method == "knee":
+            # compute knee
+            kn = KneeLocator(PC_names, cumulative, curve='concave', direction='increasing')
+            knee = int(kn.knee)  # cast from numpy.int64
 
-        selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+            selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+        elif var_method == "percent":
+            # compute percentile
+            percentile = np.percentile(a=cumulative, q=perc_thresh)
+
+            selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum < percentile))
 
     if "correlation" in how:
         # color by highest absolute correlation
@@ -281,7 +296,7 @@ def propose_pcs(anndata: sc.AnnData,
         selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
 
     # create overlap of selected PCs
-    selected_pcs = set.intersection(*selected_pcs)
+    selected_pcs = list(set.intersection(*selected_pcs))
 
     return selected_pcs
 
