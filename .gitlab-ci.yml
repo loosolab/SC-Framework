@@ -186,7 +186,7 @@ test coverage main:
   script:
     - echo $BUILD_VERSION
     - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
     paths:
@@ -208,7 +208,7 @@ test coverage MR new image:
   script:
     - echo $CI_MERGE_REQUEST_IID
     - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
     paths:
@@ -234,7 +234,7 @@ test coverage MR dev-image:
   coverage: '/TOTAL.*\s(\d*.\d*\%)/'
   script:
     - chmod +x scripts/bedGraphToBigWig  # make script executable
-    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+    - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
   artifacts:
     when: always
     paths:
