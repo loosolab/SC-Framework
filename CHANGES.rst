@@ -1,6 +1,9 @@
 0.6 (Current)
 -------------
 
+- TEST CLEANUP
+    - plotting/clustering
+
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
