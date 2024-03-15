@@ -24,10 +24,11 @@ from numba import errors as numba_errors
 import deprecation
 from sctoolbox import __version__
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any
+from beartype.typing import Literal, Tuple, Optional, Union, Any, List
 import numpy.typing as npt
 
 import sctoolbox.utils as utils
+import sctoolbox.tools as tools
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -1558,10 +1559,16 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 def plot_pca_variance(adata: sc.AnnData,
                       method: str = "pca",
                       n_pcs: int = 20,
-                      n_selected: Optional[int] = None,
+                      selected: Optional[Union[int, List[int]]] = None,
                       show_cumulative: bool = True,
+                      n_thresh: Optional[int] = None,
+                      corr_plot: Optional[Literal["spearmanr", "pearsonr"]] = None,
+                      corr_thresh: Optional[float] = None,
                       ax: Optional[matplotlib.axes.Axes] = None,
-                      save: Optional[str] = None) -> matplotlib.axes.Axes:
+                      save: Optional[str] = None,
+                      sel_col = "grey",
+                      om_col = "lightgrey"
+                      ) -> matplotlib.axes.Axes:
     """Plot the pca variance explained by each component as a barplot.
 
     Parameters
@@ -1572,14 +1579,24 @@ def plot_pca_variance(adata: sc.AnnData,
         Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>].
     n_pcs : int, default 20
         Number of components to plot.
-    n_selected : Optional[int], default None
-        Number of components to highlight in the plot with a red line.
     show_cumulative : bool, default True
         Whether to show the cumulative variance explained in a second y-axis.
+    selected : Optional[List[int]], default None
+        Number of components to highlight in the plot.
+    n_thresh : Optional[int], default None
+        Enables a vertical threshold line.
+    corr_plot : Optional[str], default None
+        Enable correlation plot. Shows highest absolute correlation for each bar.
+    corr_thresh : Optional[float], default None
+        Enables a red threshold line in the lower plot.
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
         Filename to save the figure. If None, the figure is not saved.
+    sel_col : str, default "grey"
+        Bar color of selected bars.
+    om_col : str, default "lightgrey"
+        Bar color of omitted bars.
 
     Returns
     -------
@@ -1617,132 +1634,95 @@ def plot_pca_variance(adata: sc.AnnData,
     # Cumulative variance
     var_cumulative = np.cumsum(var_explained)
 
+    if corr_plot:
+        # color by highest absolute correlation
+        corrcoefs, _ = tools.correlation_matrix(adata,
+                                           which="obs",
+                                           basis=method,
+                                           n_components=n_pcs,
+                                           columns=None,
+                                           method=corr_plot)
+
+        abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
+
+    # prepare bar coloring by threshold
+    if selected:
+        palette = [sel_col if i in selected else om_col for i in range(1, n_pcs+1)]
+    else:
+        # no threshold
+        palette = [sel_col] * n_pcs
+
+    # integrate into other figure
+    fig = ax.get_figure()
+    gridspec = ax.get_subplotspec()
+    subfig = fig.add_subfigure(gridspec)
+
+    # spacing between plots
+    subfig.subplots_adjust(hspace=0.1)
+
+    axs = subfig.subplots(2 if corr_plot else 1, 1, sharex=True)
+
+    axs = axs.flatten() if corr_plot else [axs]  # flatten to 1d array per row
+
     # Plot barplot of variance
     x = list(range(1, len(var_explained) + 1))
     sns.barplot(x=x,
                 y=var_explained,
                 color="grey",
-                ax=ax)
+                palette=palette,
+                ax=axs[0])
+
+    axs[0].set_ylabel("Variance explained (%)", fontsize=12)
 
     # Plot cumulative variance
     if show_cumulative:
-        ax2 = ax.twinx()
+        ax2 = axs[0].twinx()
         ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
-        ax2.set_ylabel("Cumulative variance explained (%)", color="blue", fontsize=12)
+        ax2.set_ylabel("Cumulative\nvariance explained (%)", color="blue", fontsize=12)
         ax2.spines['right'].set_color('blue')
         ax2.yaxis.label.set_color('blue')
         ax2.tick_params(axis='y', colors='blue')
 
     # Add number of selected as line
-    if n_selected is not None:
+    if n_thresh:
         if show_cumulative:
             ylim = ax2.get_ylim()
             yrange = ylim[1] - ylim[0]
             ax2.set_ylim(ylim[0], ylim[1] + yrange * 0.1)  # add 10% to make room for legend of n_seleced line
-        ax.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
-        ax.legend()
+        axs[0].axvline(n_thresh - 0.5, color="red")  # , label=f"n components included: {n_selected}")
+        # axs[0].legend()
 
-    # Finalize plot
-    ax.set_xlabel('Principal components', fontsize=12, labelpad=10)
-    ax.set_ylabel("Variance explained (%)", fontsize=12)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
-    ax.set_axisbelow(True)
+    # Plot absolute correlation bar plot
+    if corr_plot:
+        if corr_thresh:
+            # add threshold line
+            axs[1].axhline(corr_thresh, color="red")
+
+        sns.barplot(x=x,
+                    y=abs_corrcoefs,
+                    color="grey",
+                    palette=palette,
+                    ax=axs[1])
+
+        # Finalize plot
+        axs[1].set_xlabel('Principal components', fontsize=12, labelpad=10)
+        axs[1].set_ylabel(f"max( |{corr_plot}| )", fontsize=12)
+        axs[1].set_ylim([0, 1])
+        axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=90, size=7)
+        axs[1].set_axisbelow(True)
+        axs[1].invert_yaxis()
+
+        axs[0].tick_params(bottom=False)
+    else:
+        # Finalize plot
+        axs[0].set_xlabel('Principal components', fontsize=12, labelpad=10)
+        axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=90, size=7)
+        axs[0].set_axisbelow(True)
 
     # Save figure
     _save_figure(save)
 
     return ax
-
-
-@beartype
-def _correlation_matrix(adata: sc.AnnData,
-                        which: Literal["obs", "var"] = "obs",
-                        basis: str = "pca",
-                        n_components: int = 10,
-                        columns: Optional[list[str]] = None,
-                        method: Literal["spearmanr", "pearsonr"] = "spearmanr") -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Compute a matrix of correlation values between an embedding and given columns.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        Annotated data matrix object.
-    which : Literal["obs", "var"], default "obs"
-        Whether to use the observations ("obs") or variables ("var") for the correlation.
-    basis : str, default "pca"
-        Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
-    n_components : int, default 10
-        Number of components to use for the correlation.
-    columns : Optional[list[str]], default None
-        List of columns to use for the correlation. If None, all numeric columns are used.
-    method : Literal["spearmanr", "pearson"], default "spearmanr"
-        Method to use for correlation. Must be either "pearsonr" or "spearmanr".
-
-    Returns
-    -------
-    Tuple[pd.DataFrame, pd.DataFrame] :
-        correlation coefficient, p-values
-
-    Raises
-    ------
-    """
-
-    # Check that basis is in adata.obsm
-    if basis not in adata.obsm:
-        basis = "X_" + basis if not basis.startswith("X_") else basis  # check if basis is available as "X_<basis>"
-        if basis not in adata.obsm:
-            raise KeyError(f"The given basis '{basis}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
-
-    # Establish which table to use
-    if which == "obs":
-        table = adata.obs.copy()
-        mat = adata.obsm[basis]
-    elif which == "var":
-        if "pca" not in basis.lower():
-            raise ValueError("Correlation with 'var' can only be calculated with PCA components!")
-        table = adata.var.copy()
-        mat = adata.varm["PCs"]
-
-    # Check that method is available
-    try:
-        corr_method = getattr(scipy.stats, method)
-    except AttributeError:
-        s = f"'{method}' is not a valid method within scipy.stats. Please choose one of pearsonr/spearmanr."
-        raise ValueError(s)
-
-    # Get columns
-    if columns is None:
-        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-        numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
-    else:
-        utils.check_columns(table, columns)
-
-    # Get table of pcs and columns
-    n_components = min(n_components, mat.shape[1])  # make sure we don't exceed the number of pcs available
-    if "pca" in basis.lower():
-        comp_columns = [f"PC{i+1}" for i in range(n_components)]  # e.g. PC1, PC2, ...
-    else:
-        comp_columns = [f"{re.sub('^X_', '', basis.upper())}{i+1}" for i in range(n_components)]  # e.g. UMAP1, UMAP2, ...
-    comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
-    comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
-
-    # Calculate correlation of columns
-    combinations = list(itertools.product(numeric_columns, comp_columns))
-
-    corr_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
-    pvalue_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
-    for row, col in combinations:
-        # remove NaN values and the corresponding values from both lists
-        x = np.vstack([comp_table[row], comp_table[col]])  # stack values of row and column
-        x = x[:, ~np.any(np.isnan(x), axis=0)]  # remove columns with NaN values
-
-        res = corr_method(x[0], x[1])
-
-        corr_table.loc[row, col] = res.statistic
-        pvalue_table.loc[row, col] = res.pvalue
-
-    return corr_table, pvalue_table
 
 
 @deco.log_anndata
@@ -1816,7 +1796,7 @@ def plot_pca_correlation(adata: sc.AnnData,
     """
 
     # compute correlation matrix
-    corrcoefs, pvalues = _correlation_matrix(adata=adata,
+    corrcoefs, pvalues = tools.correlation_matrix(adata=adata,
                                              which=which,
                                              basis=basis,
                                              n_components=n_components,
