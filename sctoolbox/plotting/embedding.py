@@ -8,7 +8,6 @@ import pandas as pd
 import scipy.stats
 from scipy.sparse import issparse
 import itertools
-import re
 
 import seaborn as sns
 import matplotlib
@@ -1566,8 +1565,8 @@ def plot_pca_variance(adata: sc.AnnData,
                       corr_thresh: Optional[float] = None,
                       ax: Optional[matplotlib.axes.Axes] = None,
                       save: Optional[str] = None,
-                      sel_col = "grey",
-                      om_col = "lightgrey"
+                      sel_col: str = "grey",
+                      om_col: str = "lightgrey"
                       ) -> matplotlib.axes.Axes:
     """Plot the pca variance explained by each component as a barplot.
 
@@ -1579,10 +1578,10 @@ def plot_pca_variance(adata: sc.AnnData,
         Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>].
     n_pcs : int, default 20
         Number of components to plot.
-    show_cumulative : bool, default True
-        Whether to show the cumulative variance explained in a second y-axis.
     selected : Optional[List[int]], default None
         Number of components to highlight in the plot.
+    show_cumulative : bool, default True
+        Whether to show the cumulative variance explained in a second y-axis.
     n_thresh : Optional[int], default None
         Enables a vertical threshold line.
     corr_plot : Optional[str], default None
@@ -1637,17 +1636,17 @@ def plot_pca_variance(adata: sc.AnnData,
     if corr_plot:
         # color by highest absolute correlation
         corrcoefs, _ = tools.correlation_matrix(adata,
-                                           which="obs",
-                                           basis=method,
-                                           n_components=n_pcs,
-                                           columns=None,
-                                           method=corr_plot)
+                                                which="obs",
+                                                basis=method,
+                                                n_components=n_pcs,
+                                                columns=None,
+                                                method=corr_plot)
 
         abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
 
     # prepare bar coloring by threshold
     if selected:
-        palette = [sel_col if i in selected else om_col for i in range(1, n_pcs+1)]
+        palette = [sel_col if i in selected else om_col for i in range(1, n_pcs + 1)]
     else:
         # no threshold
         palette = [sel_col] * n_pcs
@@ -1775,13 +1774,6 @@ def plot_pca_correlation(adata: sc.AnnData,
     ax : matplotlib.axes.Axes
         Axes object containing the heatmap.
 
-    Raises
-    ------
-    ValueError
-        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
-    KeyError
-        If any of the given columns is not found in the respective table.
-
     Examples
     --------
     .. plot::
@@ -1797,11 +1789,11 @@ def plot_pca_correlation(adata: sc.AnnData,
 
     # compute correlation matrix
     corrcoefs, pvalues = tools.correlation_matrix(adata=adata,
-                                             which=which,
-                                             basis=basis,
-                                             n_components=n_components,
-                                             columns=columns,
-                                             method=method)
+                                                  which=which,
+                                                  basis=basis,
+                                                  n_components=n_components,
+                                                  columns=columns,
+                                                  method=method)
 
     # decide which values should be shown
     if plot_values == "corrcoefs":
@@ -1815,7 +1807,7 @@ def plot_pca_correlation(adata: sc.AnnData,
 
     annot = annot.applymap(lambda x: str(np.round(x, 2)))
     # add stars to significant values
-    stars =  pvalues.applymap(lambda p: "*" if p < pvalue_threshold else "")
+    stars = pvalues.applymap(lambda p: "*" if p < pvalue_threshold else "")
     annot += stars
 
     # Plot heatmap

@@ -216,7 +216,7 @@ def propose_pcs(anndata: sc.AnnData,
                 var_method: Literal["knee", "percent"] = "percent",
                 perc_thresh: Union[int, float] = 30,
                 corr_thresh: float = 0.3,
-                corr_kwargs: Optional[dict] = {}):
+                corr_kwargs: Optional[dict] = {}) -> List[int]:
     """
     Propose a selection of PCs that can be used for further analysis.
 
@@ -236,7 +236,7 @@ def propose_pcs(anndata: sc.AnnData,
         Filter PCs with a correlation greater than the given value.
     corr_kwargs: Optional(dict), default None
         Parameters forwarded to `sctoolbox.tools.correlation_matrix`.
-    
+
     Returns
     -------
     List[int] :
@@ -337,7 +337,7 @@ def subset_PCA(adata: sc.AnnData,
 
     if select:
         # adjust selection to be 0-based
-        select = [i-1 for i in select]
+        select = [i - 1 for i in select]
 
         adata.obsm["X_pca"] = adata.obsm["X_pca"][:, select]
         adata.varm["PCs"] = adata.varm["PCs"][:, select]

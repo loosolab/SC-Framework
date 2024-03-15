@@ -50,11 +50,11 @@ def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> 
 
 @beartype
 def correlation_matrix(adata: sc.AnnData,
-                        which: Literal["obs", "var"] = "obs",
-                        basis: str = "pca",
-                        n_components: Optional[int] = None,
-                        columns: Optional[list[str]] = None,
-                        method: Literal["spearmanr", "pearsonr"] = "spearmanr") -> Tuple[pd.DataFrame, pd.DataFrame]:
+                       which: Literal["obs", "var"] = "obs",
+                       basis: str = "pca",
+                       n_components: Optional[int] = None,
+                       columns: Optional[list[str]] = None,
+                       method: Literal["spearmanr", "pearsonr"] = "spearmanr") -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Compute a matrix of correlation values between an embedding and given columns.
 
@@ -75,11 +75,15 @@ def correlation_matrix(adata: sc.AnnData,
 
     Returns
     -------
-    Tuple[pd.DataFrame, pd.DataFrame] :
+    Tuple[pd.DataFrame, pd.DataFrame]
         correlation coefficient, p-values
 
     Raises
     ------
+    ValueError
+        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
+    KeyError
+        If any of the given columns is not found in the respective table.
     """
 
     # Check that basis is in adata.obsm
