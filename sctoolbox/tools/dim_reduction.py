@@ -304,8 +304,9 @@ def propose_pcs(anndata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def subset_PCA(adata: sc.AnnData,
-               n_pcs: int,
+               n_pcs: Optional[int] = None,
                start: int = 0,
+               select: Optional[List[int]] = None,
                inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
@@ -316,10 +317,12 @@ def subset_PCA(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object containing the PCA coordinates.
-    n_pcs : int
+    n_pcs : Optional[int], default None
         Number of PCs to keep.
     start : int, default 0
         Index (0-based) of the first PC to keep. E.g. if start = 1 and n_pcs = 10, you will exclude the first PC to keep 9 PCs.
+    select : Optional[List[int]], default None
+        Provide a list of PC numbers to keep. E.g. [2, 3, 5] will select the second, third and fifth PC. Will overwrite the n_pcs and start parameter.
     inplace : bool, default True
         Whether to work inplace on the anndata object.
 
@@ -332,11 +335,21 @@ def subset_PCA(adata: sc.AnnData,
     if inplace is False:
         adata = adata.copy()
 
-    adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
-    adata.varm["PCs"] = adata.varm["PCs"][:, start:n_pcs]
+    if select:
+        # adjust selection to be 0-based
+        select = [i-1 for i in select]
 
-    if "variance_ratio" in adata.uns.get("pca", {}):
-        adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][start:n_pcs]
+        adata.obsm["X_pca"] = adata.obsm["X_pca"][:, select]
+        adata.varm["PCs"] = adata.varm["PCs"][:, select]
+
+        if "variance_ratio" in adata.uns.get("pca", {}):
+            adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][select]
+    else:
+        adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
+        adata.varm["PCs"] = adata.varm["PCs"][:, start:n_pcs]
+
+        if "variance_ratio" in adata.uns.get("pca", {}):
+            adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][start:n_pcs]
 
     if inplace is False:
         return adata
