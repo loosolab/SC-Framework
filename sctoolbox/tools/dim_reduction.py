@@ -268,9 +268,9 @@ def propose_pcs(anndata: sc.AnnData,
             selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
         elif var_method == "percent":
             # compute percentile
-            percentile = np.percentile(a=variance, q=perc_thresh)
+            percentile = np.percentile(a=variance, q=100 - perc_thresh)
 
-            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var < percentile))
+            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var > percentile))
 
     if "cumulative variance" in how:
         cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
