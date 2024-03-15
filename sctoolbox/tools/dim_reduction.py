@@ -239,7 +239,7 @@ def propose_pcs(anndata: sc.AnnData,
 
     Returns
     -------
-    List[int] :
+    List[int]
         List of PCs proposed for further use.
 
     Raises
