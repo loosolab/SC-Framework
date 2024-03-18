@@ -1708,12 +1708,11 @@ def plot_pca_variance(adata: sc.AnnData,
 
         # add basis text box
         axs[1].text(
-            x=0.05,
+            x=0.95,
             y=0.05,
             s=f"Based on .{corr_on} columns",
-            fontsize=12
-            boxstyle="round",
-            alpha=0.5,
+            fontsize=12,
+            bbox={"boxstyle": "Round", "facecolor": "white", "edgecolor": "black", "alpha": 0.5},
             horizontalalignment="right",
             verticalalignment="bottom",
             transform=axs[1].transAxes
