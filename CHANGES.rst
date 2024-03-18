@@ -4,6 +4,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- replace scanpy pseudotime with scFates in pseudotime_analysis notebook
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 
