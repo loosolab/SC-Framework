@@ -1562,6 +1562,7 @@ def plot_pca_variance(adata: sc.AnnData,
                       show_cumulative: bool = True,
                       n_thresh: Optional[int] = None,
                       corr_plot: Optional[Literal["spearmanr", "pearsonr"]] = None,
+                      corr_on: Literal["obs", "var"] = "obs",
                       corr_thresh: Optional[float] = None,
                       ax: Optional[matplotlib.axes.Axes] = None,
                       save: Optional[str] = None,
@@ -1586,6 +1587,8 @@ def plot_pca_variance(adata: sc.AnnData,
         Enables a vertical threshold line.
     corr_plot : Optional[str], default None
         Enable correlation plot. Shows highest absolute correlation for each bar.
+    corr_on : Literal["obs", "var"], default "obs"
+        Calculate correlation on either observations (adata.obs) or variables (adata.var).
     corr_thresh : Optional[float], default None
         Enables a red threshold line in the lower plot.
     ax : Optional[matplotlib.axes.Axes], default None
@@ -1636,7 +1639,7 @@ def plot_pca_variance(adata: sc.AnnData,
     if corr_plot:
         # color by highest absolute correlation
         corrcoefs, _ = tools.correlation_matrix(adata,
-                                                which="obs",
+                                                which=corr_on,
                                                 basis=method,
                                                 n_components=n_pcs,
                                                 columns=None,
@@ -1702,6 +1705,19 @@ def plot_pca_variance(adata: sc.AnnData,
                     color="grey",
                     palette=palette,
                     ax=axs[1])
+
+        # add basis text box
+        axs[1].text(
+            x=0.05,
+            y=0.05,
+            s=f"Based on .{corr_on} columns",
+            fontsize=12
+            boxstyle="round",
+            alpha=0.5,
+            horizontalalignment="right",
+            verticalalignment="bottom",
+            transform=axs[1].transAxes
+        )
 
         # Finalize plot
         axs[1].set_xlabel('Principal components', fontsize=12, labelpad=10)
