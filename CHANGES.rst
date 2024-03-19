@@ -1,5 +1,6 @@
 0.6 (Current)
 -------------
+- Move proportion_analysis notebooks to general notebooks (#195 and #214)
 - Fix unable to determine R_HOME error (#190)
 
 Changes to notebooks
