@@ -42,7 +42,8 @@ RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
 RUN pip install "/tmp/[all]" && \
     pip install pytest && \
     pip install pytest-cov && \
-    pip install pytest-html 
+    pip install pytest-html && \
+    pip install pytest-mock
 
 # clear tmp
 RUN rm -r /tmp/*

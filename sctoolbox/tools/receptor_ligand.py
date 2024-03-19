@@ -5,8 +5,6 @@ import scipy
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pathlib import Path
-import os
 import igraph as ig
 from itertools import combinations_with_replacement
 from matplotlib import cm
@@ -23,6 +21,7 @@ import numpy.typing as npt
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
 
 
 # -------------------------------------------------- setup functions -------------------------------------------------- #
@@ -284,7 +283,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 @beartype
 def interaction_violin_plot(adata: sc.AnnData,
                             min_perc: int | float,
-                            output: Optional[str] = None,
+                            save: Optional[str] = None,
                             figsize: Tuple[int, int] = (5, 20),
                             dpi: int = 100) -> npt.ArrayLike:
     """
@@ -296,8 +295,8 @@ def interaction_violin_plot(adata: sc.AnnData,
         AnnData object
     min_perc : int | float
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
-    output : str, default None
-        Path to output file.
+    save : str, default None
+        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
     figsize : int tuple, default (5, 20)
         Figure size
     dpi : float, default 100
@@ -335,10 +334,8 @@ def interaction_violin_plot(adata: sc.AnnData,
         flat_axs[i].set_title(f"Cluster {cluster}")
 
     # save plot
-    if output:
-        # create path if necessary
-        Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
-        fig.savefig(output)
+    if save:
+        fig.savefig(f"{settings.figure_dir}/{save}")
 
     return axs
 
@@ -349,7 +346,7 @@ def hairball(adata: sc.AnnData,
              min_perc: int | float,
              interaction_score: float | int = 0,
              interaction_perc: Optional[int | float] = None,
-             output: Optional[str] = None,
+             save: Optional[str] = None,
              title: Optional[str] = "Network",
              color_min: float | int = 0,
              color_max: Optional[float | int] = None,
@@ -371,8 +368,8 @@ def hairball(adata: sc.AnnData,
         Interaction score must be above this threshold for the interaction to be counted in the graph.
     interaction_perc : Optional[int | float], default None
         Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
-    output : str, default None
-        Path to output file.
+    save : str, default None
+        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
     title : str, default 'Network'
         The plots title.
     color_min : float, default 0
@@ -476,12 +473,8 @@ def hairball(adata: sc.AnnData,
     plt.tight_layout()
     plt.subplots_adjust(right=0.9)
 
-    if output:
-        # create path if necessary
-        Path(os.path.dirname(output)).mkdir(parents=True, exist_ok=True)
-
-        # Save the figure
-        fig.savefig(output)
+    if save:
+        fig.savefig(f"{settings.figure_dir}/{save}")
 
     return axes
 
@@ -492,7 +485,7 @@ def progress_violins(datalist: list[pd.DataFrame],
                      cluster_a: str,
                      cluster_b: str,
                      min_perc: float | int,
-                     output: str,
+                     save: str,
                      figsize: Tuple[int | float, int | float] = (12, 6)) -> str:
     """
     Show cluster interactions over timepoints.
@@ -513,7 +506,7 @@ def progress_violins(datalist: list[pd.DataFrame],
         Name of the second interacting cluster.
     min_perc : float | int
         Minimum percentage of cells in a cluster each gene must be expressed in.
-    output : str
+    save : str
         Path to output file.
     figsize : Tuple[int, int], default (12, 6)
         Tuple of plot (width, height).
@@ -541,8 +534,8 @@ def progress_violins(datalist: list[pd.DataFrame],
 
     plt.tight_layout()
 
-    if output is not None:
-        fig.savefig(output)
+    if save is not None:
+        fig.savefig(save)
 
 
 @beartype
@@ -554,7 +547,7 @@ def interaction_progress(datalist: list[sc.AnnData],
                          ligand_cluster: str,
                          figsize: Tuple[int | float, int | float] = (4, 4),
                          dpi: int = 100,
-                         output: Optional[str] = None) -> matplotlib.axes.Axes:
+                         save: Optional[str] = None) -> matplotlib.axes.Axes:
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
 
@@ -578,8 +571,8 @@ def interaction_progress(datalist: list[sc.AnnData],
         Figure size in inch.
     dpi : int, default 100
         Dots per inch.
-    output : Optional[str], default None
-        Path to output file.
+    save : Optional[str], default None
+        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
 
     Returns
     -------
@@ -630,8 +623,8 @@ def interaction_progress(datalist: list[sc.AnnData],
 
     plt.tight_layout()
 
-    if output:
-        plt.savefig(output)
+    if save:
+        plt.savefig(f"{settings.figure_dir}/{save}")
 
     return plot
 
@@ -643,18 +636,20 @@ def connectionPlot(adata: sc.AnnData,
                    figsize: Tuple[int | float, int | float] = (10, 15),
                    dpi: int = 100,
                    connection_alpha: Optional[str] = "interaction_score",
-                   output: Optional[str] = None,
+                   save: Optional[str] = None,
                    title: Optional[str] = None,
                    # receptor params
                    receptor_cluster_col: str = "receptor_cluster",
                    receptor_col: str = "receptor_gene",
                    receptor_hue: str = "receptor_score",
                    receptor_size: str = "receptor_percent",
+                   receptor_genes: Optional[list[str]] = None,
                    # ligand params
                    ligand_cluster_col: str = "ligand_cluster",
                    ligand_col: str = "ligand_gene",
                    ligand_hue: str = "ligand_score",
                    ligand_size: str = "ligand_percent",
+                   ligand_genes: Optional[list[str]] = None,
                    filter: Optional[str] = None,
                    lw_multiplier: int | float = 2,
                    wspace: float = 0.4,
@@ -674,8 +669,8 @@ def connectionPlot(adata: sc.AnnData,
         The resolution of the figure in dots-per-inch.
     connection_alpha : str, default 'interaction_score'
         Name of column that sets alpha value of lines between plots. None to disable.
-    output : Optional[str], default None
-        Path to output file.
+    save : Optional[str], default None
+        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
     title : Optional[str], default None
         Title of the plot
     receptor_cluster_col : str, default 'receptor_cluster'
@@ -686,6 +681,8 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing receptor scores. Shown as point color.
     receptor_size : str, default 'receptor_percent'
         Name of column containing receptor expression percentage. Shown as point size.
+    receptor_genes : Optional[list[str]], default None
+            Restrict receptors to given genes.
     ligand_cluster_col : str, default 'ligand_cluster'
         Name of column containing cluster names of ligands. Shown on x-axis.
     ligand_col : str, default 'ligand_gene'
@@ -694,6 +691,8 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing ligand scores. Shown as point color.
     ligand_size : str, default 'ligand_percent'
         Name of column containing ligand expression percentage. Shown as point size.
+    ligand_genes : Optional[list[str]], default None
+            Restrict ligands to given genes.
     filter : Optional[str], default None
         Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
     lw_multiplier : int | float, default 2
@@ -718,6 +717,14 @@ def connectionPlot(adata: sc.AnnData,
     _check_interactions(adata)
 
     data = get_interactions(adata).copy()
+
+    # filter receptor genes
+    if receptor_genes:
+        data = data[data[receptor_col].isin(receptor_genes)]
+
+    # filter ligand genes
+    if ligand_genes:
+        data = data[data[ligand_col].isin(ligand_genes)]
 
     # filter interactions
     if filter:
@@ -778,49 +785,45 @@ def connectionPlot(adata: sc.AnnData,
         data["alpha"] = minmax_scale(data[connection_alpha], feature_range=(0, 1))
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
+    else:
+        data["alpha"] = 1
 
+    # find receptor label location
+    for i, label in enumerate(axs[0].get_yticklabels()):
+        data.loc[data[receptor_col] == label.get_text(), "rec_index"] = i
+
+    # find ligand label location
+    for i, label in enumerate(axs[1].get_yticklabels()):
+        data.loc[data[ligand_col] == label.get_text(), "lig_index"] = i
+
+    # add receptor-ligand lines
+    # draws strongest connection for each pair
     for rec, color in zip(receptors, colors):
-        # find receptor label location
-        rec_index = None
-        for i, label in enumerate(axs[0].get_yticklabels()):
-            if label.get_text() == rec:
-                rec_index = i
-                break
+        pairs = data.loc[data[receptor_col] == rec]
 
-        for lig in data.loc[data[receptor_col] == rec, ligand_col]:
-            # find ligand label location
-            lig_index = None
-            for i, label in enumerate(axs[1].get_yticklabels()):
-                if label.get_text() == lig:
-                    lig_index = i
-                    break
+        for lig in set(pairs[ligand_col]):
+            # get all connections for current pair
+            connections = pairs.loc[pairs[ligand_col] == lig]
 
-            # TODO
-            # a r-l pair can have multiple clusters, which results in overlapping connection lines
-            # add the moment these lines are plotted on top of each other
-            # compute line alpha
-            if connection_alpha:
-                alphas = data.loc[(data[receptor_col] == rec) & (data[ligand_col] == lig), "alpha"]
-            else:
-                alphas = [1]
+            # get max connection
+            max_con = connections.loc[connections["alpha"].idxmax()]
 
-            for alpha in alphas:
-                # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
-                # Draw a line between the different points, defined in different coordinate
-                # systems.
-                con = ConnectionPatch(
-                    # x in axes coordinates, y in data coordinates
-                    xyA=(1, rec_index), coordsA=axs[0].get_yaxis_transform(),
-                    # x in axes coordinates, y in data coordinates
-                    xyB=(0, lig_index), coordsB=axs[1].get_yaxis_transform(),
-                    arrowstyle="-",
-                    color=color,
-                    zorder=-1000,
-                    alpha=alpha,
-                    linewidth=alpha * lw_multiplier
-                )
+            # stolen from https://matplotlib.org/stable/gallery/userdemo/connect_simple01.html
+            # Draw a line between the different points, defined in different coordinate
+            # systems.
+            con = ConnectionPatch(
+                # x in axes coordinates, y in data coordinates
+                xyA=(1, max_con["rec_index"]), coordsA=axs[0].get_yaxis_transform(),
+                # x in axes coordinates, y in data coordinates
+                xyB=(0, max_con["lig_index"]), coordsB=axs[1].get_yaxis_transform(),
+                arrowstyle="-",
+                color=color,
+                zorder=-1000,
+                alpha=max_con["alpha"],
+                linewidth=max_con["alpha"] * lw_multiplier
+            )
 
-                axs[1].add_artist(con)
+            axs[1].add_artist(con)
 
     # ----- legends -----
     # set receptor plot legend position
@@ -842,8 +845,8 @@ def connectionPlot(adata: sc.AnnData,
         # set ligand plot legend position
         axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
 
-    if output:
-        plt.savefig(output, bbox_inches='tight')
+    if save:
+        plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')
 
     return axs
 
@@ -858,7 +861,8 @@ def get_interactions(anndata: sc.AnnData,
                      interaction_score: Optional[float | int] = None,
                      interaction_perc: Optional[float | int] = None,
                      group_a: Optional[list[str]] = None,
-                     group_b: Optional[list[str]] = None) -> pd.DataFrame:
+                     group_b: Optional[list[str]] = None,
+                     save: Optional[str] = None) -> pd.DataFrame:
     """
     Get interaction table from anndata and apply filters.
 
@@ -876,6 +880,8 @@ def get_interactions(anndata: sc.AnnData,
         List of cluster names that must be present in any given receptor-ligand interaction.
     group_b : Optional[list[str]], default None
         List of cluster names that must be present in any given receptor-ligand interaction.
+    save : Optional[str], default None
+        Output filename. Uses the internal 'sctoolbox.settings.table_dir'.
 
     Returns
     -------
@@ -921,6 +927,9 @@ def get_interactions(anndata: sc.AnnData,
         group = group_a if group_a else group_b
 
         subset = subset[subset["receptor_cluster"].isin(group) | subset["ligand_cluster"].isin(group)]
+
+    if save:
+        subset.to_csv(f"{settings.table_dir}/{save}", sep='\t', index=False)
 
     return subset
 

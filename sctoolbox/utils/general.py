@@ -3,14 +3,14 @@
 import os
 import re
 import sys
-from os.path import join, dirname, exists
+from os.path import exists
 import subprocess
 import shutil
-from pathlib import Path
 import getpass
 from datetime import datetime
 import numpy as np
 import pandas as pd
+
 
 # type hint imports
 from beartype.typing import Any, TYPE_CHECKING, Optional, Union, Sequence
@@ -182,13 +182,15 @@ def setup_R(r_home: Optional[str] = None) -> None:
 
     # Set R installation path
     if not r_home:
-        # https://stackoverflow.com/a/54845971
-        r_home = join(dirname(dirname(Path(sys.executable).as_posix())), "lib", "R")
+        r_home = os.path.join(sys.executable.split('/bin/')[0], 'lib/R')
 
     if not exists(r_home):
         raise Exception(f'Path to R installation does not exist! Make sure R is installed. {r_home}')
 
+    from rpy2.rinterface_lib import openrlib
+
     os.environ['R_HOME'] = r_home
+    openrlib.R_HOME = r_home
 
 
 @beartype

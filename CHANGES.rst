@@ -1,17 +1,60 @@
-0.4 (in progress)
------------------
+0.6 (Current)
+-------------
 - Added code examples for tools and utils (#140)
+    - recluster 
+    - group_heatmap
     - plot_venn
+- Fix unable to determine R_HOME error (#190)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
+
+0.5 (04-03-24)
+-------------
+- add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
+- readme update(#188)
+- Fix error when writing adata converted from an R object (#205, #180)
+- Marker Repo integration (#162)
+- Set scvelo version to >=0.3.1 (#193)
+- Added fa2 as dependency for pseudotime analysis
+- anndata_overview: fix issue where colorbars for continuous data was not shown
+- added ability to use highly variable features using the lsi() function (#165)
+- removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- rna assembly: refactor
+- prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
+- 14_velocity_analysis: Remove duplicate parameter (#194)
+- pseudotime_analysis: Save generated plots (#211)
+- rna 03_batch: added qc metrics to overview plot
+
+
+0.4 (31-1-24)
+-------------
+- Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
+- Fix check_changes pipeline
 - Fix typos (#173 & #174)
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
 - added tests for _add_path() and _overlap_two_bedfiles() (#177)
 - read the docks example (#140)
+- constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
+- Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
+- more testing (mainly sctoolbox.tools) (#166)
+- gerneral text revisions
 
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Add pseudotime & velocity analysis notebooks (#164)
+- Update receptor-ligand notebook (#176)
+- Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
 
 0.3 (30-11-2023)
------------------
+----------------
 - Add parameter type hinting including runtime type checking (#46)
 - Fixed prepare_for_cellxgene color issue (#145, #146)
 - Add CI/CD container build pipeline for testing (#135)
