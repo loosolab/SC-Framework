@@ -1,4 +1,13 @@
-0.5 (in progess)
+0.6 (Current)
+-------------
+- Fix unable to determine R_HOME error (#190)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
+
+0.5 (04-03-24)
 -------------
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
@@ -7,6 +16,8 @@
 - Set scvelo version to >=0.3.1 (#193)
 - Added fa2 as dependency for pseudotime analysis
 - anndata_overview: fix issue where colorbars for continuous data was not shown
+- added ability to use highly variable features using the lsi() function (#165)
+- removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -17,7 +28,7 @@ Changes to notebooks
 - rna 03_batch: added qc metrics to overview plot
 
 
-0.4 (31-1-23)
+0.4 (31-1-24)
 -------------
 - Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
