@@ -29,11 +29,11 @@ def adata_pca():
 # ------------------------------------ lsi ------------------------------------
 
 def test_lsi(adata_no_pca):
-     """Test lsi success."""
-     adata = adata_no_pca.copy()
+    """Test lsi success."""
+    adata = adata_no_pca.copy()
 
-     std.lsi(adata)
-     assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
+    std.lsi(adata)
+    assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
 
 
 # --------------------------------- define_PC ---------------------------------
