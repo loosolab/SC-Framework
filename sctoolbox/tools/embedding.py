@@ -115,6 +115,7 @@ def correlation_matrix(adata: sc.AnnData,
         numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
     else:
         utils.check_columns(table, columns)
+        numeric_columns = columns
 
     # Get table of pcs and columns
     n_components = min(n_components, mat.shape[1]) if n_components else mat.shape[1]  # make sure we don't exceed the number of pcs available
