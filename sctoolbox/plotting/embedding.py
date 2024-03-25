@@ -1617,7 +1617,8 @@ def plot_pca_variance(adata: sc.AnnData,
 
         pl.plot_pca_variance(adata, method="pca",
                       n_pcs=20,
-                      n_selected=7)
+                      selected=[2, 3, 4, 5, 7, 8, 9],
+                      corr_plot="spearmanr")
     """
 
     if ax is None:
