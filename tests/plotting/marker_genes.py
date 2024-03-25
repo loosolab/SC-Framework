@@ -175,6 +175,12 @@ def test_plot_differential_genes(pairwise_ranked_genes):
     assert ax_type.startswith("Axes")
 
 
+def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
+    """Test if ValueError is raised if no significant genes are found."""
+    with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
+        pl.plot_differential_genes(pairwise_ranked_genes_nosig)
+
+
 @pytest.mark.parametrize("gene_list,save,figsize",
                          [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
                           ("Gm18956", "out.png", None)])
