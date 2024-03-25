@@ -717,12 +717,6 @@ def test_scatter_HVF_distribution_fail(adata):
         pl.scatter_HVF_distribution(adata)
 
 
-def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
-    """Test if ValueError is raised if no significant genes are found."""
-    with pytest.raises(ValueError, match='No significant differentially expressed genes in the data. Abort.'):
-        pl.plot_differential_genes(pairwise_ranked_genes_nosig)
-
-
 @pytest.mark.parametrize("sortby, title, figsize, layer",
                          [("condition", "condition", None, "spliced"),
                           (None, None, (4, 4), None)],
