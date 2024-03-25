@@ -392,8 +392,6 @@ notebooks MR - new image:
     variables:
       - $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
     changes:
-      - tests/*.py
-      - tests/**/*.py
       - sctoolbox/**/*.py
 
 notebooks MR - dev image:
