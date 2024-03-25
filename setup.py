@@ -96,6 +96,7 @@ setup(
         'deprecation',
         'beartype',
         'pybedtools',
+        'packaging'
     ],
     include_package_data=True,
     extras_require=extras_require

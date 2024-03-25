@@ -7,8 +7,6 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import zscore
 import re
-import deprecation
-from sctoolbox import __version__
 
 # for plotting
 import seaborn as sns
@@ -593,61 +591,6 @@ def gene_expression_heatmap(adata: sc.AnnData,
             g.ax_heatmap.text(counts_z.shape[1] / 2, -2, title,  # ensures space beetween title and heatmap
                               transform=g.ax_heatmap.transData, ha="center", va="bottom",
                               fontsize=13)
-
-    _save_figure(save)
-
-    return g
-
-
-@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
-                        current_version=__version__,
-                        details="Use the gene_expression_heatmap function instead.")
-@deco.log_anndata
-@beartype
-def group_heatmap(adata: sc.AnnData,
-                  groupby: str,
-                  gene_list: Optional[list[str]] = None,
-                  save: Optional[str] = None,
-                  figsize: Optional[Tuple[int | float, int | float]] = None) -> matplotlib.axes.Axes:
-    """
-    Plot a heatmap of gene expression across groups in `groupby`. The rows are z-scored per gene.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        An annotated data matrix object containing counts in .X.
-    groupby : str
-        A column in .obs for grouping cells into groups on the x-axis
-    gene_list : Optional[list[str]], default None
-        A list of genes to show expression for.
-        If None, all genes are selected.
-    save : Optional[str], default None
-        Save the figure to a file.
-        If None, figure is not saved.
-    figsize : Optional[Tuple[int | float, int | float]], default None
-        Control the size of the output figure, e.g. (6,10).
-        If None, takes the matplotlib default.
-
-    Returns
-    -------
-    matplotlib.axes.Axes
-    """
-    _, ax = plt.subplots(figsize=figsize)
-
-    # Obtain pseudobulk
-    gene_table = utils.pseudobulk_table(adata, groupby)
-
-    # Subset to input gene list
-    if gene_list is not None:
-        gene_table = gene_table.loc[gene_list, :]
-
-    # Z-score
-    gene_table = utils.table_zscore(gene_table)
-
-    # Plot heatmap
-    g = sns.heatmap(gene_table, xticklabels=True,
-                    yticklabels=True, cmap="RdBu_r",
-                    center=0, ax=ax)  # center=0, vmin=-2, vmax=2)
 
     _save_figure(save)
 

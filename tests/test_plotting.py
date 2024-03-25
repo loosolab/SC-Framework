@@ -13,7 +13,6 @@ import ipywidgets as widgets
 import functools
 import matplotlib.pyplot as plt
 import glob
-import deprecation
 
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -623,28 +622,6 @@ def test_embedding_error(adata):
         pl.plot_embedding(adata, components="3,4")
 
 
-@deprecation.fail_if_not_removed
-@pytest.mark.parametrize("color,title", [("condition", "Condition"),
-                                         (["condition", "clustering"], None),
-                                         (["condition", "clustering"], ["Condition", "Clustering"])])
-def test_umap_pub(adata, color, title):
-    """Test umap_pub plotting with different color and title parameter."""
-    axes_list = pl.umap_pub(adata, color=color, title=title)
-
-    assert type(axes_list).__name__ == "list"
-    ax_type = type(axes_list[0]).__name__
-    assert ax_type.startswith("Axes")
-
-
-@deprecation.fail_if_not_removed
-@pytest.mark.parametrize("color,title", [("condition", ["Title 1", "Title 2"]),
-                                         (["condition", "clustering"], "Title 1")])
-def test_invalid_parameter_len_umap_pub(adata, color, title):
-    """Test case if color and title are not the same lenght."""
-    with pytest.raises(ValueError):
-        pl.umap_pub(adata, color=color, title=title)
-
-
 @pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
 def test_add_figure_title_axis(adata, color):
     """Test if function _add_figure_title runs with axis object(s) as input."""
@@ -825,18 +802,6 @@ def test_gene_expression_heatmap(adata, title, groupby):
                                    show_col_dendrogram=True,    # ensure title is tested
                                    cluster_column="clustering")
     assert type(g).__name__ == "ClusterGrid"
-
-
-@deprecation.fail_if_not_removed
-@pytest.mark.parametrize("gene_list", [None, ['ENSMUSG00000102851',
-                                              'ENSMUSG00000102272']])
-@pytest.mark.parametrize("figsize", [None, (10, 10)])
-def test_group_heatmap(adata, gene_list, figsize):
-    """Test group heatmap success."""
-    ax = pl.group_heatmap(adata, "clustering", gene_list=gene_list,
-                          figsize=figsize)
-
-    assert type(ax).__name__.startswith("Axes")
 
 
 @pytest.mark.parametrize("kwargs, exception",
