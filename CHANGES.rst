@@ -1,9 +1,13 @@
 0.6 (Current)
 -------------
 - Fix unable to determine R_HOME error (#190)
+- implemented propose_pcs to automatically select PCA components (#187)
+- add correlation barplot to plot_pca_variance
+- created correlation_matrix method by restructuring plot_pca_correlation
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- rna 03_batch revision (#209, #202, #200, #152)
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 
