@@ -1,6 +1,6 @@
 0.5 (04-03-24)
-v.2.0.9 (26-03-24)
 -------------
+
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
