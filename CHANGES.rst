@@ -1,3 +1,12 @@
+0.6 (Current)
+-------------
+- Fix unable to determine R_HOME error (#190)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
+
 0.5 (04-03-24)
 -------------
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
