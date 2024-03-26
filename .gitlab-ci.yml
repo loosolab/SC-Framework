@@ -375,7 +375,7 @@ notebooks:
     - pip install .[all]
   script:
     - pip install papermill
-    # - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
+    - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
     - cp -t ./rna_analysis/notebooks/ ./general_notebooks/prepare_for_cellxgene.ipynb  # ./general_notebooks/pseudotime_analysis.ipynb
