@@ -1524,7 +1524,7 @@ def plot_pca_variance(adata: sc.AnnData,
     var_cumulative = np.cumsum(var_explained)
 
     if corr_plot:
-        # color by highest absolute correlation
+        # compute correlation coefficients
         corrcoefs, _ = tools.correlation_matrix(adata,
                                                 which=corr_on,
                                                 basis=method,
