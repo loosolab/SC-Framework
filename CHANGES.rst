@@ -1,4 +1,4 @@
-0.6 (Current)
+0.6 (27-03-24)
 -------------
 - Fix unable to determine R_HOME error (#190)
 - implemented propose_pcs to automatically select PCA components (#187)
