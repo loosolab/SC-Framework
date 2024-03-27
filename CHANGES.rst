@@ -1,6 +1,7 @@
 0.6 (Current)
 -------------
 - Fix unable to determine R_HOME error (#190)
+- Fix beartype issue with Lists and Iterables containing Literals (#227)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
