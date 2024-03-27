@@ -13,6 +13,7 @@ Changes to notebooks
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 - rna 03_batch revision (#209, #202, #200, #152)
+- 05_marker_genes: Complete Overhaul (#181)
 
 0.5 (04-03-24)
 -------------
