@@ -4,6 +4,7 @@
 
 - TEST CLEANUP
     - tobias
+    - embedding tools
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
