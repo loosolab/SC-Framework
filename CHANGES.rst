@@ -5,14 +5,8 @@
 - TEST CLEANUP
     - tobias
     - embedding tools
-
-- TEST CLEANUP
     - genometracks
-
-- TEST CLEANUP
     - plotting/clustering
-
-- TEST CLEANUP
     - velocity
 
 Changes to notebooks
