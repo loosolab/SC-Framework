@@ -11,36 +11,17 @@ RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
-# install Fortran compiler 
+# Clear the local repository of retrieved package files
 RUN apt-get update --assume-yes && \
-    apt-get install --assume-yes gfortran && \
-    apt-get install bedtools && \
-    apt-get install -y libcurl4
+    apt-get clean
 
-# install git to check for file changes
-RUN apt-get install -y git
+# install Fortran compiler 
+RUN apt-get install --assume-yes gfortran
 
-# create the group docker for the non root user
-RUN groupadd -g 998 docker
-
-# create non-root user
-RUN useradd --no-log-init -r -g docker user
-
-# create workspace
-WORKDIR /home/user
-
-# change permissions and groups
-RUN chown -R user:docker /opt && \
-    chown -R user:docker /tmp && \
-    chown -R user:docker /scripts && \
-    chown -R user:docker /home/user && \
-    chmod -R 777 /opt && \
-    chmod -R 777 /tmp && \
-    chmod -R 777 /scripts && \
-    chmod -R 777 /home/user
-
-# change the user
-USER user
+# Install missing libraries
+RUN apt-get install bedtools && \
+    apt-get install -y libcurl4 && \
+    apt-get install -y git
 
 # update mamba
 RUN mamba update -n base mamba && \
@@ -56,9 +37,6 @@ RUN pip install "/tmp/[all]" && \
     pip install pytest-html && \
     pip install pytest-mock
 
-# change user to root for cleanup
-USER root
-
 # clear tmp
 RUN rm -r /tmp/*
 
@@ -66,7 +44,4 @@ RUN rm -r /tmp/*
 RUN apt-get install -y openssh-client && \
     mkdir .ssh && \
     ssh-keygen -t ed25519 -N "" -f .ssh/id_ed25519
-
-# Switch to non root default user
-USER user
 

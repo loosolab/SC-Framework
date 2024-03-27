@@ -21,10 +21,9 @@ import plotly.graph_objects as go
 
 from numba import errors as numba_errors
 
-import deprecation
-from sctoolbox import __version__
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any
+from beartype.typing import Literal, Tuple, Optional, Union, Any, Annotated, List
+from beartype.vale import Is
 import numpy.typing as npt
 
 import sctoolbox.utils as utils
@@ -1193,125 +1192,17 @@ def umap_marker_overview(adata: sc.AnnData,
     return list(axes_list)
 
 
-@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
-                        current_version=__version__,
-                        details="Use the 'sctoolbox.pl.plot_embedding' function instead.")
-@deco.log_anndata
-@beartype
-def umap_pub(adata: sc.AnnData,
-             color: Optional[str | list[str]] = None,
-             title: Optional[str | list[str]] = None,
-             save: Optional[str] = None,
-             **kwargs: Any) -> list:
-    """Plot a publication ready UMAP without spines, but with a small UMAP1/UMAP2 legend.
+# See https://github.com/beartype/beartype/issues/347
+_VALID_PLOTS = frozenset(("UMAP", "tSNE", "PCA", "PCA-var", "LISI"))
 
-    Parameters
-    ----------
-    adata : sc.AnnData
-        Annotated data matrix.
-    color : Optional[str | list[str]], default None
-        Key for annotation of observations/cells or variables/genes.
-    title : Optional[str | list[str]], default None
-        Title of the plot. Default is no title.
-    save : Optional[str], default None
-        Filename to save the figure.
-    **kwargs : Any
-        Additional arguments passed to `sc.pl.umap`.
-
-    Returns
-    -------
-    axarr : list
-        list of matplotlib axis objects
-
-    Raises
-    ------
-    ValueError
-        If color and title have different lengths.
-
-    Examples
-    --------
-    .. plot::
-        :context: close-figs
-
-        pl.umap_pub(adata, color="louvain", title="Louvain clusters")
-    """
-
-    axarr = sc.pl.umap(adata, color=color, show=False, **kwargs)
-
-    if title is not None and not isinstance(title, list):
-        title = [title]
-
-    if not isinstance(axarr, list):
-        axarr = [axarr]
-        color = [color]
-
-    if title and len(title) != len(color):
-        raise ValueError("Color and Title must have the same length.")
-
-    colorbar_count = 0
-    for i, ax in enumerate(axarr):
-
-        # Set legend
-        legend = ax.get_legend()
-        if legend is not None:  # legend of categorical variables
-            legend.set_title(color[i])
-        else:                   # legend of continuous variables
-            colorbar_idx = i + colorbar_count + 1
-            local_axes = ax.figure._localaxes
-            if colorbar_idx < len(local_axes) and local_axes[colorbar_idx]._label == '<colorbar>':
-                local_axes[colorbar_idx].set_title(color[i])
-                colorbar_count += 1
-
-        # Remove automatic title
-        ax.set_title("")
-        if title is not None:
-            ax.set_title(title[i])
-
-        # Remove all spines (axes lines)
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-
-        # Move x and y-labels to the start of axes
-        label = ax.xaxis.get_label()
-        label.set_horizontalalignment('left')
-        x_lab_pos, y_lab_pos = label.get_position()
-        label.set_position([0, y_lab_pos])
-
-        label = ax.yaxis.get_label()
-        label.set_horizontalalignment('left')
-        x_lab_pos, y_lab_pos = label.get_position()
-        label.set_position([x_lab_pos, 0])
-
-        # Draw UMAP coordinate arrows
-        ymin, ymax = ax.get_ylim()
-        xmin, xmax = ax.get_xlim()
-        yrange = ymax - ymin
-        xrange = xmax - xmin
-        arrow_len_y = yrange * 0.2
-        arrow_len_x = xrange * 0.2
-
-        ax.annotate("", xy=(xmin, ymin), xytext=(xmin, ymin + arrow_len_y), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP2 / y-axis
-        ax.annotate("", xy=(xmin, ymin), xytext=(xmin + arrow_len_x, ymin), arrowprops=dict(arrowstyle="<-", shrinkB=0))  # UMAP1 / x-axis
-
-        # Add number of cells to plot
-        ax.text(0.02, 0.02, f"{adata.n_obs:,} cells",
-                transform=ax.transAxes,
-                horizontalalignment='left',
-                verticalalignment='bottom')
-
-        # Adjust aspect ratio
-        _make_square(ax)
-
-    # Save figure
-    _save_figure(save)
-
-    return axarr
+ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], Is[
+    lambda lst: all(item in _VALID_PLOTS for item in lst)]]
 
 
 @beartype
 def anndata_overview(adatas: dict[str, sc.AnnData],
                      color_by: str | list[str],
-                     plots: Union[list[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]],
+                     plots: Union[ListOfValidPlots,
                                   Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]] = ["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize: Optional[Tuple[int, int]] = None,
                      max_clusters: int = 20,
@@ -1355,7 +1246,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     Raises
     ------
     ValueError
-        If any of the adatas is not of type anndata.AnnData or an invalid plot is specified.
+        If any of the adatas is not of type anndata.AnnData.
 
     Examples
     --------
@@ -1400,12 +1291,6 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         for name, adata in adatas.items():
             if color_group not in adata.obs.columns and color_group not in adata.var.index:
                 raise ValueError(f"Couldn't find column '{color_group}' in the adata.obs or adata.var for '{name}'")
-
-    # check if plots are valid
-    valid_plots = ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
-    invalid_plots = set(plots) - set(valid_plots)
-    if invalid_plots:
-        raise ValueError(f"Invalid plot specified: {invalid_plots}")
 
     # ---- plotting ---- #
     # setup subplot structure
@@ -1497,7 +1382,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                 # Set title for the legend (for categorical color)
                 if hasattr(ax, "legend_") and ax.legend_ is not None:
 
-                    # Get current legend and rmove
+                    # Get current legend and remove
                     lines, labels = ax.get_legend_handles_labels()
                     ax.get_legend().remove()
 
@@ -1521,7 +1406,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                 elif i == len(adatas) - 1 and (color in adata.obs.select_dtypes(include="number").columns or color in adata.var.index):
                     # Replace native scanpy colorbar with self-made one to gain the abililty to set a label
                     # Size parameter values are taken from scanpy: https://github.com/scverse/scanpy/blob/383a61b2db0c45ba622f231f01d0e7546d99566b/scanpy/plotting/_tools/scatterplots.py#L456
-                    plt.colorbar(ax.collections[0], pad=0.01, fraction=0.08, aspect=30, ax=ax, orientation='vertical', label=color)
+                    if len(ax.collections) > 0:
+                        plt.colorbar(ax.collections[0], pad=0.01, fraction=0.08, aspect=30, ax=ax, orientation='vertical', label=color)
 
                 _make_square(ax)
                 ax_idx += 1  # increment index for next plot
