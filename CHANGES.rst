@@ -3,6 +3,7 @@
 - Fix unable to determine R_HOME error (#190)
 - Fix beartype issue with Lists and Iterables containing Literals (#227)
 - CICD overhaul (#191)
+- fixed notebook version in the env to 6.5.2 (#199, partly #44)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
