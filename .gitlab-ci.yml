@@ -445,7 +445,7 @@ deploy-pages:
     default: false
   environment:
     name: pages/$CI_COMMIT_REF_NAME
-    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework_cicd_testrepo/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
+    url: "https://loosolab.pages.gwdg.de/-/software/sc_framework/-/jobs/$CI_JOB_ID/artifacts/docs/build/html/index.html"
   artifacts:
     paths:
       - docs/build/html/
