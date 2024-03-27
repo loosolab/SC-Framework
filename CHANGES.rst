@@ -2,6 +2,9 @@
 -------------
 - Fix unable to determine R_HOME error (#190)
 
+- TEST CLEANUP
+    - tobias
+
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
