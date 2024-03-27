@@ -426,17 +426,16 @@ def test_anndata_overview_fail_plots(adata):
             dpi=300
         )
 
-    # Disbaled until #227 is not resolved
     # wrong input
-    # with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
-    #     pl.anndata_overview(
-    #         adatas=adatas,
-    #         color_by=list(adata.obs.columns),
-    #         plots=["PCA", "invalid"],
-    #         figsize=None,
-    #         output=None,
-    #         dpi=300
-    #     )
+    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
+        pl.anndata_overview(
+            adatas=adatas,
+            color_by=list(adata.obs.columns),
+            plots=["PCA", "invalid"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
 
 
 def test_group_expression_boxplot(adata):
