@@ -6,7 +6,6 @@ import os
 import scanpy as sc
 import numpy as np
 import anndata as ad
-import yaml
 
 import sctoolbox.plotting as pl
 
@@ -52,15 +51,6 @@ def test_atac_norm(adata, method):
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
     elif method == "total":
         assert "X_pca" in adata_norm.obsm and "pca" in adata_norm.uns and "PCs" in adata_norm.varm
-
-
-def test_write_TOBIAS_config():
-    """Test write_TOBIAS_config success."""
-
-    sctoolbox.atac.write_TOBIAS_config("tobias.yml", bams=["bam1.bam", "bam2.bam"])
-    yml = yaml.full_load(open("tobias.yml"))
-
-    assert yml["data"]["1"] == "bam1.bam"
 
 
 def test_add_insertsize_fragments(adata):

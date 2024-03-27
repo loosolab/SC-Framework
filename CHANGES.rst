@@ -1,5 +1,16 @@
 0.6 (Current)
 -------------
+- Fix unable to determine R_HOME error (#190)
+
+- TEST CLEANUP
+    - tobias
+    - embedding tools
+
+- TEST CLEANUP
+    - genometracks
+
+- TEST CLEANUP
+    - plotting/clustering
 
 - TEST CLEANUP
     - velocity

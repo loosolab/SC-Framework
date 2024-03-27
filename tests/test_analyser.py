@@ -1,11 +1,10 @@
 """Test analysis functions."""
 
 import pytest
-import scanpy as sc
-import os
 import numpy as np
 import pandas as pd
-
+import scanpy as sc
+import os
 import sctoolbox.analyser as an
 import sctoolbox.utilities as utils
 
@@ -52,20 +51,6 @@ def test_rename_categories():
     renamed_series = utils.rename_categories(series)
 
     assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
-
-
-def test_wrap_umap(adata):
-    """Test if X_umap is added to obsm in parallel."""
-
-    adata_dict = {"adata_" + str(i): adata.copy() for i in range(3)}
-    for adata in adata_dict.values():
-        if "X_umap" in adata.obsm:
-            del adata.obsm["X_umap"]
-
-    an.wrap_umap(adata_dict.values())
-
-    for adata in adata_dict.values():
-        assert "X_umap" in adata.obsm
 
 
 @pytest.mark.parametrize("method", ["total", "tfidf"])
