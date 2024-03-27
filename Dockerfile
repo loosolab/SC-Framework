@@ -11,15 +11,17 @@ RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
-# install Fortran compiler 
+# Clear the local repository of retrieved package files
 RUN apt-get update --assume-yes && \
-    apt-get install --assume-yes gfortran && \
-    # Install missing libraries
-    apt-get install bedtools && \
-    apt-get install -y libcurl4
+    apt-get clean
 
-# install git to check for file changes
-RUN apt-get install -y git
+# install Fortran compiler 
+RUN apt-get install --assume-yes gfortran
+
+# Install missing libraries
+RUN apt-get install bedtools && \
+    apt-get install -y libcurl4 && \
+    apt-get install -y git
 
 # update mamba
 RUN mamba update -n base mamba && \

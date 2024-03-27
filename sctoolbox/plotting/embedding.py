@@ -21,7 +21,8 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any, List
+from beartype.typing import Literal, Tuple, Optional, Union, Any, Annotated, List
+from beartype.vale import Is
 import numpy.typing as npt
 
 import sctoolbox.utils as utils
@@ -1191,10 +1192,17 @@ def umap_marker_overview(adata: sc.AnnData,
     return list(axes_list)
 
 
+# See https://github.com/beartype/beartype/issues/347
+_VALID_PLOTS = frozenset(("UMAP", "tSNE", "PCA", "PCA-var", "LISI"))
+
+ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], Is[
+    lambda lst: all(item in _VALID_PLOTS for item in lst)]]
+
+
 @beartype
 def anndata_overview(adatas: dict[str, sc.AnnData],
                      color_by: str | list[str],
-                     plots: Union[list[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]],
+                     plots: Union[ListOfValidPlots,
                                   Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]] = ["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize: Optional[Tuple[int, int]] = None,
                      max_clusters: int = 20,
