@@ -94,7 +94,7 @@ setup(
         'psutil',
         'pyyaml',
         'deprecation',
-        'beartype<=0.16.4',
+        'beartype',
         'pybedtools',
         'packaging'
     ],
