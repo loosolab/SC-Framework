@@ -45,6 +45,3 @@ RUN apt-get install -y openssh-client && \
     mkdir .ssh && \
     ssh-keygen -t ed25519 -N "" -f .ssh/id_ed25519
 
-ENV ROOT=TRUE \
-    DISABLE_AUTH=TRUE
-

@@ -6,6 +6,7 @@
 - created correlation_matrix method by restructuring plot_pca_correlation
 - Fix beartype issue with Lists and Iterables containing Literals (#227)
 - CICD overhaul (#191)
+- fixed notebook version in the env to 6.5.2 (#199, partly #44)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
