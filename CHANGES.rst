@@ -1,3 +1,8 @@
+0.6.1 (28-03-24)
+-------------
+- Fix release pages by renaming the release-pages: job to pages:
+- refactor move clean-orphaned-tags to new stage .post (#229)
+
 0.6 (27-03-24)
 -------------
 - Fix unable to determine R_HOME error (#190)
@@ -19,6 +24,7 @@ Changes to notebooks
 
 0.5 (04-03-24)
 -------------
+
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
@@ -28,6 +34,8 @@ Changes to notebooks
 - anndata_overview: fix issue where colorbars for continuous data was not shown
 - added ability to use highly variable features using the lsi() function (#165)
 - removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
+- add doku page
+- start change log
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
