@@ -1,3 +1,8 @@
+0.6.1 (28-03-24)
+-------------
+- Fix release pages by renaming the release-pages: job to pages:
+- refactor move clean-orphaned-tags to new stage .post (#229)
+
 0.6 (27-03-24)
 -------------
 - Fix unable to determine R_HOME error (#190)
