@@ -156,4 +156,4 @@ Changes to ATAC notebooks
 
 0.1 (22-05-2023)
 ----------------
-- First versio
+- First version
