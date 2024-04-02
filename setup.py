@@ -78,7 +78,7 @@ setup(
         'scipy',
         'statsmodels',
         'tqdm',
-        'pandas',
+        'pandas<=1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn<0.12',  # statannotations 0.6.0 requires seaborn<0.12
         'ipympl',
         'ipywidgets<=7.7.5',  # later versions cause problems in some cases for interactive plots
