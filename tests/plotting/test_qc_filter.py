@@ -7,11 +7,13 @@ import scanpy as sc
 import shutil
 import numpy as np
 import glob
+import matplotlib.pyplot as plt
+import seaborn as sns
+import functools
 
 # ------------------------------ FIXTURES --------------------------------- #
 
 quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
-
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
