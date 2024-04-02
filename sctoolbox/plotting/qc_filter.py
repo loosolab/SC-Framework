@@ -20,7 +20,7 @@ from sctoolbox.plotting.general import violinplot, _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from beartype.typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
 from beartype import beartype
 
 import deprecation
@@ -743,7 +743,8 @@ def quality_violin(adata: sc.AnnData,
 
     Returns
     -------
-    Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+    Tuple[Any, Dict[str, Any]]
+        Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
         First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
 
     Raises
@@ -959,7 +960,7 @@ def quality_violin(adata: sc.AnnData,
     else:
         figure = fig  # non interactive figure
 
-    return figure, slider_dict
+    return (figure, slider_dict)
 
 
 @beartype
