@@ -391,8 +391,9 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
     Examples
     --------
     .. exec_code::
-
-        in_range(value=0.5, limits=(0.5, 1), include_limits=True)
+        limit = (0.5, 1)
+        value = 0.5
+        print(utils.in_range(value=value, limits=limit, include_limits=True))
 
     This will return 'True'; the value is in between the limits including the limits.
     """
