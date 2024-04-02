@@ -84,6 +84,11 @@ page_headers["plotting"] += ".. plot ::\n\n"
 page_headers["plotting"] += "    " + open("plot_pre_code.py").read().replace("\n", "\n    ") + "\n\n"
 page_headers["plotting"] += hline() + "\n"
 
+page_headers["utils"] = ".. rubric:: Setup\n\n"
+page_headers["utils"] += ".. plot ::\n\n"
+page_headers["utils"] += "    " + open("utils_pre_code.py").read().replace("\n", "\n    ") + "\n\n"
+page_headers["utils"] += hline() + "\n"
+
 
 ##############################################################################
 # ------------- Main function for generating API documentation ------------- #

@@ -1,6 +1,5 @@
 # Import the plotting module
 import sctoolbox.plotting as pl
-import sctoolbox.utilities as utils
 
 # Load example dataset
 import numpy as np

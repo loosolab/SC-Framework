@@ -95,6 +95,7 @@ plot_html_show_source_link = False
 plot_formats = [("png", 90)]
 plot_html_show_formats = False
 plot_pre_code = open("plot_pre_code.py").read()
+utils_pre_code = open("utils_pre_code.py").read()
 
 plot_rcparams = {'savefig.bbox': 'tight'}  # make sure plots are not cut off in the docs
 plot_apply_rcparams = True                 # if context option is used
