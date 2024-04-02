@@ -704,9 +704,7 @@ def quality_violin(adata: sc.AnnData,
                    interactive: bool = True,
                    save: Optional[str] = None,
                    **kwargs: Any
-                   ) -> Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox],
-                              Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe],
-                                              Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
+                   ) -> Tuple[Any, Dict[str, Any]]:
     """
     Plot quality measurements for cells/features in an anndata object.
 
