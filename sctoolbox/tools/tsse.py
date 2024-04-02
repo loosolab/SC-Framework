@@ -78,7 +78,7 @@ def overlap_and_aggregate(fragments: str,
                           overlap: str,
                           tss_list: list[list[str | int]],
                           negativ_shift: int = 2000,
-                          positiv_shift: int = 2000) -> Tuple[dict[str, list[np.ndarray, int]], list[str]]:
+                          positiv_shift: int = 2000) -> Tuple[dict[str, list], list[str]]:
     """
     Overlap the fragments with the custom TSS file and aggregates the fragments in a dictionary.
 
@@ -105,7 +105,7 @@ def overlap_and_aggregate(fragments: str,
 
     Returns
     -------
-    Tuple[dict[str, list[np.array, int]], list[str]]
+    Tuple[dict[str, list], list[str]]
         dictionary with the following structure:
         {barcode: [tss_agg, n_fragments]}
         tss_agg is a numpy array with the aggregated fragments around the TSS with flanks of negativ_shift and positiv_shift.
