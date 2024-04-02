@@ -1193,16 +1193,18 @@ def umap_marker_overview(adata: sc.AnnData,
 
 
 # See https://github.com/beartype/beartype/issues/347
-_VALID_PLOTS = frozenset(("UMAP", "tSNE", "PCA", "PCA-var", "LISI"))
+#_VALID_PLOTS = frozenset(("UMAP", "tSNE", "PCA", "PCA-var", "LISI"))
 
-ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], Is[
-    lambda lst: all(item in _VALID_PLOTS for item in lst)]]
+#ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], Is[
+#    lambda lst: all(item in _VALID_PLOTS for item in lst)]]
+
+VALID_PLOTS = ["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]
 
 
 @beartype
 def anndata_overview(adatas: dict[str, sc.AnnData],
                      color_by: str | list[str],
-                     plots: Union[ListOfValidPlots,
+                     plots: Union[list[str],
                                   Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]] = ["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize: Optional[Tuple[int, int]] = None,
                      max_clusters: int = 20,
@@ -1260,6 +1262,12 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
         pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
+    # Check independent of beartype since beartype currently (<=0.18.0) does not check all values.
+    if isinstance(plots, list):
+        for p in plots:
+            if p not in VALID_PLOTS:
+                raise ValueError(f"Invalid plots parameter set: '{p}'. See documentation for valid options.")
+
     if not isinstance(color_by, list):
         color_by = [color_by]
 
