@@ -1,3 +1,8 @@
+0.7.0 (in progess)
+-------------
+- Add example code to doc-strings
+  - utils/checker.py: in_range()
+
 0.6.1 (28-03-24)
 -------------
 - Fix release pages by renaming the release-pages: job to pages:
@@ -59,7 +64,6 @@ Changes to notebooks
 - Include kwargs in utils.bioutils._overlap_two_bedfiles(#177)
 - Implemented _add_path() to automatically add python path to environment
 - added tests for _add_path() and _overlap_two_bedfiles() (#177)
-- read the docks example (#140)
 - constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
 - Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
 - more testing (mainly sctoolbox.tools) (#166)
