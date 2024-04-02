@@ -391,6 +391,7 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
     Examples
     --------
     .. exec_code::
+
         limit = (0.5, 1)
         value = 0.5
         print(utils.in_range(value=value, limits=limit, include_limits=True))
