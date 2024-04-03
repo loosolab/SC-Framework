@@ -1196,7 +1196,7 @@ def umap_marker_overview(adata: sc.AnnData,
 _VALID_PLOTS = frozenset(("UMAP", "tSNE", "PCA", "PCA-var", "LISI"))
 
 ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], Is[
-   lambda lst: all(item in _VALID_PLOTS for item in lst)]]
+    lambda lst: all(item in _VALID_PLOTS for item in lst)]]
 
 
 @beartype
