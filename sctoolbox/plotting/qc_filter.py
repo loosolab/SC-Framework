@@ -1,6 +1,5 @@
 """Functions for plotting QC-related figures e.g. number of cells per group and violins."""
 
-from math import ceil
 import pandas as pd
 import copy
 import numpy as np
@@ -16,15 +15,12 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import violinplot, _save_figure
+from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
 from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
 from beartype import beartype
-
-import deprecation
-from sctoolbox import __version__
 
 
 ########################################################################################
