@@ -861,7 +861,7 @@ def get_keys(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
+    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
         Dictionary with key - adata.obs.column overlap
     """
 
