@@ -427,7 +427,7 @@ def test_anndata_overview_fail_plots(adata):
         )
 
     # wrong input
-    with pytest.raises(ValueError):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
