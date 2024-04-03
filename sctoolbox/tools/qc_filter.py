@@ -794,7 +794,7 @@ def validate_threshold_dict(table: pd.DataFrame,
 def get_thresholds_wrapper(adata: sc.AnnData,
                            manual_thresholds: dict,
                            only_automatic_thresholds: bool = True,
-                           groupby: Optional[str] = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+                           groupby: Optional[str] = None) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
     """
     Get the thresholds for the filtering.
 
@@ -811,7 +811,7 @@ def get_thresholds_wrapper(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
+    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
         Dictionary containing the thresholds
     """
     manual_thresholds = get_keys(adata, manual_thresholds)
