@@ -848,7 +848,7 @@ def get_thresholds_wrapper(adata: sc.AnnData,
 
 @beartype
 def get_keys(adata: sc.AnnData,
-             manual_thresholds: dict[str, Any]) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+             manual_thresholds: dict[str, Any]) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
     """
     Get threshold dictionary with keys that overlap with adata.obs.columns.
 
