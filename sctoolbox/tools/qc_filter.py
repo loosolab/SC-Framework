@@ -668,13 +668,13 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, float | int]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, float | int | dict[str, int | float]]]) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
     Parameters
     ----------
-    threshold_dict : dict[str, dict[str, float | int]]
+    threshold_dict : dict[str, dict[str, float | int | dict[str, int | float]]]
         Dictionary with thresholds.
 
     Returns
@@ -794,7 +794,7 @@ def validate_threshold_dict(table: pd.DataFrame,
 def get_thresholds_wrapper(adata: sc.AnnData,
                            manual_thresholds: dict,
                            only_automatic_thresholds: bool = True,
-                           groupby: Optional[str] = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+                           groupby: Optional[str] = None) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
     """
     Get the thresholds for the filtering.
 
@@ -811,7 +811,7 @@ def get_thresholds_wrapper(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
+    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
         Dictionary containing the thresholds
     """
     manual_thresholds = get_keys(adata, manual_thresholds)
@@ -848,7 +848,7 @@ def get_thresholds_wrapper(adata: sc.AnnData,
 
 @beartype
 def get_keys(adata: sc.AnnData,
-             manual_thresholds: dict[str, Any]) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+             manual_thresholds: dict[str, Any]) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
     """
     Get threshold dictionary with keys that overlap with adata.obs.columns.
 
@@ -861,7 +861,7 @@ def get_keys(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
+    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
         Dictionary with key - adata.obs.column overlap
     """
 
