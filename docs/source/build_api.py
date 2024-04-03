@@ -85,7 +85,7 @@ page_headers["plotting"] += "    " + open("plot_pre_code.py").read().replace("\n
 page_headers["plotting"] += hline() + "\n"
 
 page_headers["utils"] = ".. rubric:: Setup\n\n"
-page_headers["utils"] += ".. plot ::\n\n"
+page_headers["utils"] += ".. code_exec ::\n\n"
 page_headers["utils"] += "    " + open("utils_pre_code.py").read().replace("\n", "\n    ") + "\n\n"
 page_headers["utils"] += hline() + "\n"
 
