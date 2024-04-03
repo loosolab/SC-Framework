@@ -668,13 +668,13 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, float | int]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, float | int | dict[str, int | float]]]) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
     Parameters
     ----------
-    threshold_dict : dict[str, dict[str, float | int]]
+    threshold_dict : dict[str, dict[str, float | int | dict[str, int | float]]]
         Dictionary with thresholds.
 
     Returns
