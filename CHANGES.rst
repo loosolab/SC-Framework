@@ -1,3 +1,11 @@
+0.7.0 (in progess)
+-------------
+- Added code examples for tools and utils (#140)
+    - recluster 
+    - group_heatmap
+    - plot_venn
+    - in_range
+
 0.6.1 (28-03-24)
 -------------
 - Fix release pages by renaming the release-pages: job to pages:
@@ -65,7 +73,6 @@ Changes to notebooks
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
 - Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
-
 
 0.3 (30-11-2023)
 ----------------

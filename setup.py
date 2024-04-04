@@ -94,7 +94,7 @@ setup(
         'psutil',
         'pyyaml',
         'deprecation',
-        'beartype',
+        'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'pybedtools',
         'packaging'
     ],

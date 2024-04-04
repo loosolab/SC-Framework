@@ -354,7 +354,7 @@ def hairball(adata: sc.AnnData,
              show_count: bool = False,
              restrict_to: Optional[list[str]] = None,
              additional_nodes: Optional[list[str]] = None,
-             hide_edges: list[Tuple[str, str]] = None) -> npt.ArrayLike:
+             hide_edges: Optional[list[Tuple[str, str]]] = None) -> npt.ArrayLike:
     """
     Generate network graph of interactions between clusters.
 
