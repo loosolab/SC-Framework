@@ -63,25 +63,6 @@ def test_normalize_adata(adata, method):
     assert not utils.is_integer_array(mat)
 
 
-def test_define_PC(adata):
-    """Test if threshold is returned."""
-    assert isinstance(an.define_PC(adata), int)
-
-
-def test_define_PC_error(adata_no_pca):
-    """Test if error without PCA."""
-    with pytest.raises(ValueError, match="PCA not found! Please make sure to compute PCA before running this function."):
-        an.define_PC(adata_no_pca)
-
-
-def test_subset_PCA(adata):
-    """Test whether number of PCA coordinate dimensions was reduced."""
-
-    an.subset_PCA(adata, 10)
-
-    assert adata.obsm["X_pca"].shape[1] == 10
-
-
 def test_evaluate_batch_effect(adata):
     """Test if AnnData containing LISI column in .obs is returned."""
     ad = an.evaluate_batch_effect(adata, 'batch')

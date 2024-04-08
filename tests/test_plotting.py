@@ -157,10 +157,10 @@ def test_sc_colormap():
     assert type(cmap).__name__ == "ListedColormap"
 
 
-@pytest.mark.parametrize("n_selected", [None, 1, 2])
-def test_plot_pca_variance(adata, n_selected):
+@pytest.mark.parametrize("selected", [None, [1, 2, 3], [2, 4, 6]])
+def test_plot_pca_variance(adata, selected):
     """Test if Axes object is returned."""
-    ax = pl.plot_pca_variance(adata, n_selected=n_selected)
+    ax = pl.plot_pca_variance(adata, selected=selected)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -284,6 +284,158 @@ def test_invalid_var_list_compare_embeddings(adata):
         adata_list = [adata, adata_cp]
         pl.compare_embeddings(adata_list, ["invalid_1", "invalid_2"],
                               embedding="umap")
+
+
+@pytest.mark.parametrize("method", ["leiden", "louvain"])
+def test_search_clustering_parameters(adata, method):
+    """Test if search_clustering_parameters returns an array of axes."""
+
+    axarr = pl.search_clustering_parameters(adata, method=method,
+                                            resolution_range=(0.1, 0.31, 0.1),
+                                            ncols=2)
+    assert type(axarr).__name__ == "ndarray"
+    assert axarr.shape == (2, 2)
+
+
+def test_wrong_embeding_search_clustering_parameters(adata):
+    """Test if search_cluster_parameters raises error."""
+    with pytest.raises(KeyError):
+        pl.search_clustering_parameters(adata, embedding="Invalid")
+
+
+def test_search_clustering_parameters_errors(adata):
+    """Test if search_clustering_parameters raises error."""
+
+    with pytest.raises(ValueError):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
+                                        method="leiden")
+
+
+def test_search_clustering_parameters_beartype(adata):
+    """Test if beartype checks for tuple length."""
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
+                                        method="leiden")
+
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
+                                        method="unknown")
+
+
+def test_anndata_overview(adata, tmp_file):
+    """Test anndata_overview success and file generation."""
+    adatas = {"raw": adata, "corrected": adata}
+
+    assert not os.path.exists(tmp_file)
+
+    pl.anndata_overview(
+        adatas=adatas,
+        color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
+        plots=["PCA", "PCA-var", "UMAP", "tSNE", "LISI"],
+        figsize=None,
+        output=None,
+        dpi=300
+    )
+
+    assert not os.path.exists(tmp_file)
+
+    pl.anndata_overview(
+        adatas=adatas,
+        color_by=list(adata.obs.columns),
+        plots=["PCA"],
+        figsize=None,
+        output=tmp_file,
+        dpi=300
+    )
+
+    assert os.path.exists(tmp_file)
+
+
+def test_anndata_overview_fail_color_by(adata):
+    """Test invalid parameter inputs."""
+    adatas = {"raw": adata}
+
+    # invalid color_by
+    # no input
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.anndata_overview(
+            adatas=adatas,
+            color_by=None,
+            plots=["PCA"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+    # wrong input
+    with pytest.raises(ValueError, match="Couldn't find column"):
+        pl.anndata_overview(
+            adatas=adatas,
+            color_by="-".join(list(adata.obs.columns)) + "-invalid",
+            plots=["PCA"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+
+def test_anndata_overview_fail(adata):
+    """Test invalid parameter inputs."""
+    adatas_invalid = {"raw": adata, "invalid": "Not an anndata"}
+    adata_cp = adata.copy()
+    adata_cp.obs = adata_cp.obs.drop(["LISI_score_pca"], axis=1)
+    adatas = {"raw": adata_cp}
+
+    # invalid datatype
+    with pytest.raises(ValueError, match="All items in 'adatas'"):
+        pl.anndata_overview(
+            adatas=adatas_invalid,
+            color_by=list(adata.obs.columns) + [adata.var_names.tolist()[0]],
+            plots=["PCA"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+    # Missing LISI score
+    with pytest.raises(ValueError, match="No LISI scores found"):
+        pl.anndata_overview(
+            adatas=adatas,
+            color_by=list(adata_cp.obs.columns) + [adata_cp.var_names.tolist()[0]],
+            plots=["LISI"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+
+def test_anndata_overview_fail_plots(adata):
+    """Test invalid parameter inputs."""
+    adatas = {"raw": adata}
+
+    # invalid plots
+    # no input
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.anndata_overview(
+            adatas=adatas,
+            color_by=list(adata.obs.columns),
+            plots=None,
+            figsize=None,
+            output=None,
+            dpi=300
+        )
+
+    # wrong input
+    with pytest.raises(BeartypeCallHintParamViolation):
+        pl.anndata_overview(
+            adatas=adatas,
+            color_by=list(adata.obs.columns),
+            plots=["PCA", "invalid"],
+            figsize=None,
+            output=None,
+            dpi=300
+        )
 
 
 def test_group_expression_boxplot(adata):

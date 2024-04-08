@@ -35,13 +35,6 @@ def test_tfidf(tfidf_x):
     assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
 
 
-def test_lsi(adata):
-    """Test lsi success."""
-    sctoolbox.atac.tfidf(adata)
-    sctoolbox.atac.lsi(adata)
-    assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
-
-
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_atac_norm(adata, method):
     """Test atac_norm success."""

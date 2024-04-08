@@ -23,10 +23,3 @@
   figure_dir: "../figures/04_clustering/"
   log_file: "../logs/04_log.txt"
   overwrite_log: True
-
-"06":
-  adata_input_dir: "../adatas/"
-  adata_output_dir: "../adatas/"
-  figure_dir: "../figures/06_prop_analysis/"
-  log_file: "../logs/06_log.txt"
-  overwrite_log: True
