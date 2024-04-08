@@ -1,5 +1,7 @@
 0.7.0 (in progess)
 -------------
+- TEST CLEANUP
+    - marker_genes
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
@@ -13,8 +15,6 @@
 
 0.6 (27-03-24)
 -------------
-- TEST CLEANUP
-    - marker_genes
 - Fix unable to determine R_HOME error (#190)
 - implemented propose_pcs to automatically select PCA components (#187)
 - add correlation barplot to plot_pca_variance
