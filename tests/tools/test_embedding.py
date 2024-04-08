@@ -2,7 +2,6 @@
 
 import pytest
 import scanpy as sc
-import os
 
 import sctoolbox.tools.embedding as ste
 import sctoolbox.analyser as an
