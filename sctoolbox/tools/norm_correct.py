@@ -100,7 +100,7 @@ def tfidf(data: sc.AnnData,
           log_tf: bool = True,
           log_idf: bool = True,
           log_tfidf: bool = False,
-          scale_factor: int = 1e4) -> None:
+          scale_factor: int = int(1e4)) -> None:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
