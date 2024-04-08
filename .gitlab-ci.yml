@@ -251,6 +251,8 @@ test coverage:
           - Dockerfile
           - sctoolbox/_version.py
           - sctoolbox/**/*.py
+          - tests/*.py
+          - tests/**/*.py
       - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
       - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
 
