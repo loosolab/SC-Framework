@@ -323,6 +323,9 @@ check-changes:
         - Dockerfile
         - sctoolbox/_version.py
         - sctoolbox/**/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb
 
 #In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
 check-version:
