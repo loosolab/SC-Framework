@@ -1,16 +1,52 @@
-0.6 (Current)
+0.7.0 (in progess)
+-------------
+- TEST CLEANUP
+    - marker_genes
+- Added code examples for tools and utils (#140)
+    - recluster 
+    - group_heatmap
+    - plot_venn
+    - in_range
+
+0.6.1 (28-03-24)
+-------------
+- Fix release pages by renaming the release-pages: job to pages:
+- refactor move clean-orphaned-tags to new stage .post (#229)
+
+0.6 (27-03-24)
 -------------
 - TEST CLEANUP
     - embedding
 - Fix unable to determine R_HOME error (#190)
+- implemented propose_pcs to automatically select PCA components (#187)
+- add correlation barplot to plot_pca_variance
+- created correlation_matrix method by restructuring plot_pca_correlation
+- Fix beartype issue with Lists and Iterables containing Literals (#227)
+- CICD overhaul (#191)
+- fixed notebook version in the env to 6.5.2 (#199, partly #44)
+
+- TEST CLEANUP
+    - tobias
+    - embedding tools
+
+- TEST CLEANUP
+    - genometracks
+
+- TEST CLEANUP
+    - plotting/clustering
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- Move proportion_analysis notebooks to general notebooks (#195 and #214)
+- replace scanpy pseudotime with scFates in pseudotime_analysis notebook
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
+- rna 03_batch revision (#209, #202, #200, #152)
+- 05_marker_genes: Complete Overhaul (#181)
 
 0.5 (04-03-24)
 -------------
+
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
@@ -20,6 +56,8 @@ Changes to notebooks
 - anndata_overview: fix issue where colorbars for continuous data was not shown
 - added ability to use highly variable features using the lsi() function (#165)
 - removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
+- add doku page
+- start change log
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -49,7 +87,6 @@ Changes to notebooks
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
 - Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
-
 
 0.3 (30-11-2023)
 ----------------

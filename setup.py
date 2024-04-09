@@ -13,7 +13,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
                   "velocity": ['scvelo'],
-                  "pseudotime": ["fa2 @ git+https://github.com/AminAlam/forceatlas2.git"],  # fa2 is abandoned we should replace it soon! (see #212)
+                  "pseudotime": ["scFates"],
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
                   "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
                   }
@@ -78,7 +78,7 @@ setup(
         'scipy',
         'statsmodels',
         'tqdm',
-        'pandas',
+        'pandas<=1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn<0.12',  # statannotations 0.6.0 requires seaborn<0.12
         'ipympl',
         'ipywidgets<=7.7.5',  # later versions cause problems in some cases for interactive plots
@@ -94,7 +94,7 @@ setup(
         'psutil',
         'pyyaml',
         'deprecation',
-        'beartype',
+        'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'pybedtools',
         'packaging'
     ],
