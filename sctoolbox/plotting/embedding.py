@@ -21,7 +21,7 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any, Annotated, List
+from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated
 from beartype.vale import Is
 import numpy.typing as npt
 
@@ -1260,6 +1260,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
         pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
+
     if not isinstance(color_by, list):
         color_by = [color_by]
 

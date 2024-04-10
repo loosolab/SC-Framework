@@ -84,6 +84,11 @@ page_headers["plotting"] += ".. plot ::\n\n"
 page_headers["plotting"] += "    " + open("plot_pre_code.py").read().replace("\n", "\n    ") + "\n\n"
 page_headers["plotting"] += hline() + "\n"
 
+page_headers["utils"] = ".. rubric:: Setup\n\n"
+page_headers["utils"] += ".. exec_code ::\n\n"
+page_headers["utils"] += "    " + open("utils_pre_code.py").read().replace("\n", "\n    ") + "\n\n"
+page_headers["utils"] += hline() + "\n"
+
 
 ##############################################################################
 # ------------- Main function for generating API documentation ------------- #
@@ -96,6 +101,7 @@ def main():
 
     # Create one page per module
     for module in modules:
+        print(module)
         with open("API/" + module + ".rst", 'w') as fp:
 
             fp.write(header(module.capitalize(), 1))
