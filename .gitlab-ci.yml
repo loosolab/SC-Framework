@@ -33,9 +33,9 @@ ci-variables:
   script:
     - export
   rules:
-    # To enable job again switch from when: never to if: $CI
+    # To enable the job again switch "when: never" to "if: $CI".
     - when: never
-    #- if: $CI
+    # - if: $CI
 
 # get the sctoolbox version as global variable
 extract-version:
