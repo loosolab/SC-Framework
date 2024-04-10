@@ -5,6 +5,11 @@
     - group_heatmap
     - plot_venn
     - in_range
+- Fix notebooks in readthedocs documentation (#220)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Overhaul notebooks structure
 
 0.6.1 (28-03-24)
 -------------
