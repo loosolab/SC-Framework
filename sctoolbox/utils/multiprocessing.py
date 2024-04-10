@@ -41,13 +41,13 @@ def get_pbar(total: int, description: str, **kwargs: Any) -> "tqdm.tqdm":
 
 
 @beartype
-def monitor_jobs(jobs: dict[Tuple[int, int], Any] | list[Any], description: str = "Progress") -> None:
+def monitor_jobs(jobs: dict[Tuple[int, int | str], Any] | list[Any], description: str = "Progress") -> None:
     """
     Monitor the status of jobs submitted to a pool.
 
     Parameters
     ----------
-    jobs : dict[Tuple[int, int], Any] | list[Any]
+    jobs : dict[Tuple[int, int | str], Any] | list[Any]
         List or dict of job objects, e.g. as returned by pool.map_async().
     description : str, default "Progress"
         Description to be shown in the progress bar.

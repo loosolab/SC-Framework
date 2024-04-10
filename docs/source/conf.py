@@ -34,7 +34,8 @@ author = 'Loosolab'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['matplotlib.sphinxext.plot_directive',
+extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in docs
+              'sphinx_exec_code',   # for code examples in docs
               'sphinx.ext.autodoc',
               'sphinx.ext.autosummary',
               'sphinx.ext.napoleon',
@@ -103,6 +104,7 @@ plot_html_show_source_link = False
 plot_formats = [("png", 90)]
 plot_html_show_formats = False
 plot_pre_code = open("plot_pre_code.py").read()
+utils_pre_code = open("utils_pre_code.py").read()
 
 plot_rcparams = {'savefig.bbox': 'tight'}  # make sure plots are not cut off in the docs
 plot_apply_rcparams = True                 # if context option is used

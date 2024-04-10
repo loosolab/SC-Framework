@@ -20,6 +20,7 @@ stages:
   - setup
   - test
   - deploy
+  - .post
 
 # ############################################################################################################################################################
 # ######################################################### pre ##############################################################################################
@@ -96,60 +97,6 @@ build:
         - MANIFEST.in
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_SLUG == 'main'  # all MR to main
 
-
-# clean up
-# This job is used to delete orphan tags from the registry.
-# It is used to delete tags that are not associated with a branch or a semantic versioning.
-# The job is only executed if the commit is on the main branch.
-# For the cleanupo the branches and tags are fetched from the repository via the Gitlab API.
-# Requests are made by using curl and the jq package is used to parse the json responses.
-# The tags are then compared against the branches and deleted if they are not associated with a branch or a semantic versioning.
-# The job uses crane (https://github.com/google/go-containerregistry/tree/main/cmd/crane) to delete the tags from the registry.
-cleanup-orphan-tags:
-  stage: build
-  image: alpine:latest
-  before_script:
-    # Install curl and jq
-    - apk add --no-cache curl jq
-    # Install crane
-    - curl -L "https://github.com/google/go-containerregistry/releases/download/v0.7.0/go-containerregistry_Linux_x86_64.tar.gz" -o /tmp/crane.tar.gz
-    - tar -zxvf /tmp/crane.tar.gz -C /usr/local/bin/ crane
-    - rm /tmp/crane.tar.gz
-    - crane version
-    # Login to the registry
-    - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  script:
-    - |
-      # Fetch all branch names
-      BRANCHES=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches" | jq -r '.[].name')
-      echo "Branches:"
-      echo "$BRANCHES"
-      
-      # Fetch repository ID for Docker Registry
-      repo_id=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/registry/repositories" | jq -r ".[0].id")
-      
-      # Fetch all image tags
-      TAGS=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/registry/repositories/${repo_id}/tags" | jq -r '.[].name')
-      echo "Tags:"
-      echo "$TAGS"
-      
-      # Regular expression for semantic versioning
-      SEMVER_REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)$"
-
-      # Compare tags against branches and skip semantic versioning tags
-      for tag in $TAGS; do
-        if [[ $tag =~ $SEMVER_REGEX ]] || [[ $tag == "latest" ]] || [[ $tag == "dev" ]]; then
-          echo "Tag '$tag' follows semantic versioning or is 'latest' and will be kept."
-        elif ! echo "$BRANCHES" | grep -qx "$tag"; then
-          echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
-          # Use crane to delete the tag
-          crane delete "$CI_REGISTRY_IMAGE:$tag"
-        else
-          echo "Tag '$tag' matches a branch and will not be deleted."
-        fi
-      done
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"  # only for commits to main
 
 # ############################################################################################################################################################
 # ######################################################### setup #############################################################################################
@@ -417,6 +364,7 @@ build-pages:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
     - pip install sphinx sphinx-rtd-theme
+    - pip install sphinx-exec-code
     - pip install nbsphinx
     - pip install nbsphinx_link
     - cd docs
@@ -475,7 +423,7 @@ deploy-pages:
       allow_failure: true
 
 # Deploy documentation to public pages if it was the main branch
-release-pages:
+pages:
   stage: deploy
   needs:
     - job: build-pages
@@ -490,3 +438,62 @@ release-pages:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" # after accepted MR to main
       allow_failure: false  # main not allowed to fail
+
+# ############################################################################################################################################################
+# ######################################################### .post #############################################################################################
+# ############################################################################################################################################################
+
+# clean up
+# This job is used to delete orphan tags from the registry.
+# It is used to delete tags that are not associated with a branch or a semantic versioning.
+# The job is only executed if the commit is on the main branch.
+# For the cleanupo the branches and tags are fetched from the repository via the Gitlab API.
+# Requests are made by using curl and the jq package is used to parse the json responses.
+# The tags are then compared against the branches and deleted if they are not associated with a branch or a semantic versioning.
+# The job uses crane (https://github.com/google/go-containerregistry/tree/main/cmd/crane) to delete the tags from the registry.
+cleanup-orphan-tags:
+  stage: .post
+  image: alpine:latest
+  before_script:
+    # Install curl and jq
+    - apk add --no-cache curl jq
+    # Install crane
+    - curl -L "https://github.com/google/go-containerregistry/releases/download/v0.7.0/go-containerregistry_Linux_x86_64.tar.gz" -o /tmp/crane.tar.gz
+    - tar -zxvf /tmp/crane.tar.gz -C /usr/local/bin/ crane
+    - rm /tmp/crane.tar.gz
+    - crane version
+    # Login to the registry
+    - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - |
+      # Fetch all branch names
+      BRANCHES=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches" | jq -r '.[].name')
+      echo "Branches:"
+      echo "$BRANCHES"
+      
+      # Fetch repository ID for Docker Registry
+      repo_id=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/registry/repositories" | jq -r ".[0].id")
+      
+      # Fetch all image tags
+      TAGS=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/registry/repositories/${repo_id}/tags" | jq -r '.[].name')
+      echo "Tags:"
+      echo "$TAGS"
+      
+      # Regular expression for semantic versioning
+      SEMVER_REGEX="^([0-9]+)\.([0-9]+)\.([0-9]+)$"
+
+      # Compare tags against branches and skip semantic versioning tags
+      for tag in $TAGS; do
+        if [[ $tag =~ $SEMVER_REGEX ]] || [[ $tag == "latest" ]] || [[ $tag == "dev" ]]; then
+          echo "Tag '$tag' follows semantic versioning or is 'latest' and will be kept."
+        elif ! echo "$BRANCHES" | grep -qx "$tag"; then
+          echo "Tag '$tag' does not match any branch and does not follow semantic versioning, will be deleted."
+          # Use crane to delete the tag
+          crane delete "$CI_REGISTRY_IMAGE:$tag"
+        else
+          echo "Tag '$tag' matches a branch and will not be deleted."
+        fi
+      done
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"  # only for commits to main
+    
