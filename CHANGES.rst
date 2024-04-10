@@ -5,6 +5,7 @@
     - group_heatmap
     - plot_venn
     - in_range
+- Removed custom_marker_annotation script
 
 0.6.1 (28-03-24)
 -------------
