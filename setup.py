@@ -8,7 +8,7 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks'],
+                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks', 'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
