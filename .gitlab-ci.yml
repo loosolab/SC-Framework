@@ -26,13 +26,16 @@ stages:
 # ######################################################### pre ##############################################################################################
 # ############################################################################################################################################################
 
+# Shows all CI-variables with values. Only for debugging.
 ci-variables:
   stage: .pre
   image: python:3.10-alpine3.19
   script:
     - export
   rules:
-    - if: $CI
+    # To enable the job again switch "when: never" to "if: $CI".
+    - when: never
+    # - if: $CI
 
 # get the sctoolbox version as global variable
 extract-version:
@@ -359,6 +362,7 @@ build-pages:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
     - pip install sphinx sphinx-rtd-theme
+    - pip install sphinx-exec-code
     - pip install nbsphinx
     - pip install nbsphinx_link
     - cd docs
