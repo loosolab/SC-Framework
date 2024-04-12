@@ -10,6 +10,7 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - Overhaul notebooks structure
+- Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
 -------------
