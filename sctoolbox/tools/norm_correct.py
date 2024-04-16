@@ -83,7 +83,7 @@ def normalize_adata(adata: sc.AnnData,
             logger.info('Performing total normalization and PCA...')
             sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
             sc.pp.log1p(adata)
-            sc.pp.pca(adata,  use_highly_variable=use_highly_variable)
+            sc.pp.pca(adata, use_highly_variable=use_highly_variable)
 
         elif method_str == "tfidf":
             logger.info('Performing TFIDF and LSI...')
