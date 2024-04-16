@@ -40,7 +40,7 @@ def atac_norm(*args: Any, **kwargs: Any):
 def normalize_adata(adata: sc.AnnData,
                     method: str | list[str],
                     exclude_highly_expressed: bool = True,
-                    use_highly_variable: bool = True,
+                    use_highly_variable: bool = False,
                     target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
@@ -55,7 +55,7 @@ def normalize_adata(adata: sc.AnnData,
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
     exclude_highly_expressed : bool, default True
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
-    use_highly_variable : bool, default True
+    use_highly_variable : bool, default False
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
     target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
