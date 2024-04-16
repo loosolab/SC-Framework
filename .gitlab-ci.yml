@@ -26,13 +26,16 @@ stages:
 # ######################################################### pre ##############################################################################################
 # ############################################################################################################################################################
 
+# Shows all CI-variables with values. Only for debugging.
 ci-variables:
   stage: .pre
   image: python:3.10-alpine3.19
   script:
     - export
   rules:
-    - if: $CI
+    # To enable the job again switch "when: never" to "if: $CI".
+    - when: never
+    # - if: $CI
 
 # get the sctoolbox version as global variable
 extract-version:
