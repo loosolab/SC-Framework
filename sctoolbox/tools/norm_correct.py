@@ -40,6 +40,7 @@ def atac_norm(*args: Any, **kwargs: Any):
 def normalize_adata(adata: sc.AnnData,
                     method: str | list[str],
                     exclude_highly_expressed: bool = True,
+                    use_highly_variable: bool = True,
                     target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
@@ -54,6 +55,8 @@ def normalize_adata(adata: sc.AnnData,
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
     exclude_highly_expressed : bool, default True
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    use_highly_variable
+        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
     target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
 
@@ -80,12 +83,12 @@ def normalize_adata(adata: sc.AnnData,
             logger.info('Performing total normalization and PCA...')
             sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
             sc.pp.log1p(adata)
-            sc.pp.pca(adata)
+            sc.pp.pca(adata,  use_highly_variable=use_highly_variable)
 
         elif method_str == "tfidf":
             logger.info('Performing TFIDF and LSI...')
             tfidf(adata)
-            lsi(adata)  # corresponds to PCA
+            lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
 
         else:
             raise ValueError(f"Method '{method_str}' is invalid - must be either 'total' or 'tfidf'.")
