@@ -16,8 +16,6 @@ plt.switch_backend("Agg")
 
 # ------------------------------ FIXTURES --------------------------------- #
 
-quant_folder = os.path.join(os.path.dirname(__file__), 'data', 'quant')
-
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
@@ -25,7 +23,7 @@ def adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
 
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])

@@ -2,11 +2,17 @@
 -------------
 - TEST CLEANUP
     - marker_genes
+    - tobias
+    - embedding tools
+    - genometracks
+    - plotting/clustering
+    - velocity
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
     - plot_venn
     - in_range
+- Removed custom_marker_annotation script
 
 0.6.1 (28-03-24)
 -------------
@@ -24,16 +30,6 @@
 - Fix beartype issue with Lists and Iterables containing Literals (#227)
 - CICD overhaul (#191)
 - fixed notebook version in the env to 6.5.2 (#199, partly #44)
-
-- TEST CLEANUP
-    - tobias
-    - embedding tools
-
-- TEST CLEANUP
-    - genometracks
-
-- TEST CLEANUP
-    - plotting/clustering
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
