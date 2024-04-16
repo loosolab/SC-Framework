@@ -7,7 +7,7 @@ import pytest
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
-tracks_folder = os.path.join(os.path.dirname(__file__), 'data', 'tracks')
+tracks_folder = os.path.join(os.path.dirname(__file__), '../data', 'tracks')
 
 
 def test_genometracks():

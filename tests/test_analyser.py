@@ -1,11 +1,10 @@
 """Test analysis functions."""
 
 import pytest
-import scanpy as sc
-import os
 import numpy as np
 import pandas as pd
-
+import scanpy as sc
+import os
 import sctoolbox.analyser as an
 import sctoolbox.utilities as utils
 
@@ -54,20 +53,6 @@ def test_rename_categories():
     assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
 
 
-def test_wrap_umap(adata):
-    """Test if X_umap is added to obsm in parallel."""
-
-    adata_dict = {"adata_" + str(i): adata.copy() for i in range(3)}
-    for adata in adata_dict.values():
-        if "X_umap" in adata.obsm:
-            del adata.obsm["X_umap"]
-
-    an.wrap_umap(adata_dict.values())
-
-    for adata in adata_dict.values():
-        assert "X_umap" in adata.obsm
-
-
 @pytest.mark.parametrize("method", ["total", "tfidf"])
 def test_normalize_adata(adata, method):
     """Test that data was normalized."""
@@ -76,25 +61,6 @@ def test_normalize_adata(adata, method):
     mat = adata.X.todense()
 
     assert not utils.is_integer_array(mat)
-
-
-def test_define_PC(adata):
-    """Test if threshold is returned."""
-    assert isinstance(an.define_PC(adata), int)
-
-
-def test_define_PC_error(adata_no_pca):
-    """Test if error without PCA."""
-    with pytest.raises(ValueError, match="PCA not found! Please make sure to compute PCA before running this function."):
-        an.define_PC(adata_no_pca)
-
-
-def test_subset_PCA(adata):
-    """Test whether number of PCA coordinate dimensions was reduced."""
-
-    an.subset_PCA(adata, 10)
-
-    assert adata.obsm["X_pca"].shape[1] == 10
 
 
 def test_evaluate_batch_effect(adata):
