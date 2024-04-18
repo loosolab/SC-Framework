@@ -5,7 +5,13 @@
     - group_heatmap
     - plot_venn
     - in_range
+- Fix notebooks in readthedocs documentation (#220)
 - Removed custom_marker_annotation script
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Overhaul notebooks structure
+- Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
 -------------
