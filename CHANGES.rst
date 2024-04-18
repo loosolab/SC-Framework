@@ -7,7 +7,7 @@
     - genometracks
     - plotting/clustering
     - velocity
-    - qc_filter
+    - plotting/test_qc_filter
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
