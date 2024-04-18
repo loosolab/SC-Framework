@@ -10,6 +10,7 @@ import glob
 import matplotlib.pyplot as plt
 import seaborn as sns
 import functools
+import ipywidgets as widgets
 
 from beartype.roar import BeartypeCallHintParamViolation
 
