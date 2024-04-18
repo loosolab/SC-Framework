@@ -18,6 +18,30 @@ from beartype.roar import BeartypeCallHintParamViolation
 quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 
+@pytest.fixture
+def slider():
+    """Create a slider widget."""
+    return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
+
+
+@pytest.fixture
+def slider_list(slider):
+    """Create a list of slider widgets."""
+    return [slider for _ in range(2)]
+
+
+@pytest.fixture
+def checkbox():
+    """Create a checkbox widget."""
+    return widgets.Checkbox()
+
+
+@pytest.fixture
+def slider_dict(slider):
+    """Create a dict of sliders."""
+    return {c: slider for c in ['LISI_score_pca', 'qc_float']}
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
