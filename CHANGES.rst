@@ -6,6 +6,7 @@
     - plot_venn
     - in_range
 - Fix notebooks in readthedocs documentation (#220)
+- Removed custom_marker_annotation script
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
