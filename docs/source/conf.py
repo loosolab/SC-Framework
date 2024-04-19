@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'SC FRAMEWORK'
-copyright = '2023, Loosolab'
+copyright = '2024, Loosolab'
 author = 'Loosolab'
 
 # -- General configuration ---------------------------------------------------
@@ -68,10 +68,19 @@ for link in links:
     os.remove(link)
 
 # Create nblinks for current notebooks
-notebooks = glob.glob("../../*notebooks/*.ipynb")  # captures both rna-notebooks, atac-notebooks etc.
+notebooks = glob.glob("../../*_analysis/notebooks/*.ipynb") # captures both rna-notebooks, atac-notebooks etc.
+notebooks.extend(glob.glob("../../*_notebooks/*.ipynb")) # capture general_notebooks
 for f in notebooks:
 
-    notebook_folder = f.split("/")[-2] + "/"
+    if "rna_analysis" in f:
+        notebook_folder = "rna-notebooks/"
+    elif "atac_analysis" in f:
+        notebook_folder = "atac-notebooks/"
+    elif "general_notebooks" in f:
+        notebook_folder = "general-notebooks/"
+    else:
+        raise ValueError("Did not recoginze notebook type.")
+    
     os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
 
     f_name = os.path.basename(f).replace(".ipynb", "")
