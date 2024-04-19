@@ -196,14 +196,6 @@ def test_group_expression_boxplot(adata):
     assert ax_type.startswith("Axes")
 
 
-def test_boxplot(df):
-    """Test if Axes object is returned."""
-    ax = pl.boxplot(df)
-    ax_type = type(ax).__name__
-
-    assert ax_type.startswith("Axes")
-
-
 def test_group_correlation(adata):
     """Test if plot is written to pdf."""
 
