@@ -71,6 +71,39 @@ def venn_dict():
 
 # ------------------------------ TESTS --------------------------------- #
 
+@pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
+def test_add_figure_title_axis(adata, color):
+    """Test if function _add_figure_title runs with axis object(s) as input."""
+    axes = sc.pl.umap(adata, color=color, show=False)
+    pl._add_figure_title(axes, "UMAP plots", fontsize=20)
+    assert True
+
+
+def test_add_figure_title_axis_dict(adata):
+    """Test if function _add_figure_title runs with axis dict as input."""
+    markers = ['ENSMUSG00000103377', 'ENSMUSG00000102851']
+    axes = sc.pl.dotplot(adata, markers, groupby='condition',
+                         dendrogram=True, show=False)
+    pl._add_figure_title(axes, "Dotplot", fontsize=20)
+    assert True
+
+
+def test_add_figure_title_axis_clustermap(adata):
+    """Test if function _add_figure_title runs with clustermap as input."""
+    clustermap = sns.clustermap(adata.obs[['LISI_score_pca', 'qc_float']])
+    pl._add_figure_title(clustermap, "Heatmap", fontsize=20)
+    assert True
+
+
+@pytest.mark.parametrize("label", [None, "label"])
+def test_add_labels(df, label):
+    """Test _add_labels success."""
+    if label:
+        df["label"] = ["A", "B", "C", "D", "E"]
+    texts = pl._add_labels(df, x="col1", y="col2", label_col=label)
+    assert isinstance(texts, list)
+    assert type(texts[0]).__name__ == "Annotation"
+
 
 def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
