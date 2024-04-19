@@ -7,6 +7,7 @@
     - genometracks
     - plotting/clustering
     - velocity
+    - general
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
