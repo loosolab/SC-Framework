@@ -7,6 +7,7 @@
     - in_range
 - Removed custom_marker_annotation script
 - Disintegrated FLD scoring and added PEAKQC to setup.py 
+- Updated ATAC notebooks
 
 0.6.1 (28-03-24)
 -------------
