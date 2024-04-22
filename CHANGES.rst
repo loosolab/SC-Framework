@@ -1,6 +1,6 @@
 0.7.0 (in progess)
 -------------
-- TEST CLEANUP
+- TEST CLEANUP (#215)
     - marker_genes
     - tobias
     - embedding tools
