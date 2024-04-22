@@ -2,6 +2,7 @@
 
 import pytest
 import sctoolbox.plotting as pl
+import sctoolbox.atac
 import os
 import scanpy as sc
 import shutil
@@ -43,6 +44,19 @@ def slider_dict(slider):
     return {c: slider for c in ['LISI_score_pca', 'qc_float']}
 
 
+@pytest.fixture
+def slider_dict_grouped(slider):
+    """Create a nested dict of slider widgets."""
+    return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
+
+
+@pytest.fixture
+def slider_dict_grouped_diff(slider):
+    """Create a nested dict of slider widgets with different selections."""
+    return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
+            "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
@@ -72,6 +86,13 @@ def adata():
     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
     # sc.tl.dendrogram(adata, groupby='clustering')
 
+    return adata
+
+
+@pytest.fixture
+def atac_adata():
+    """Fixture for an AnnData object."""
+    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
 
@@ -141,6 +162,19 @@ def test_group_correlation(adata):
     os.remove("group_correlation.pdf")
 
 
+def test_insertsize_plotting(atac_adata):
+    """Test if insertsize plotting works."""
+
+    adata = atac_adata.copy()
+    fragments = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac_fragments.bed')
+    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
+
+    ax = pl.plot_insertsize(adata)
+
+    ax_type = type(ax).__name__
+    assert ax_type.startswith("Axes")
+
+
 def test_link_sliders(slider_list):
     """Test _link_sliders success."""
     linkage_list = pl._link_sliders(slider_list)
@@ -195,3 +229,21 @@ def test_get_slider_thresholds_dict(slider_dict):
     threshold_dict = pl.get_slider_thresholds(slider_dict)
     assert isinstance(threshold_dict, dict)
     assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7}, 'qc_float': {'min': 5, 'max': 7}}
+
+
+def test_get_slider_thresholds_dict_grouped(slider_dict_grouped):
+    """Test get_slider_threshold for grouped slider_dict."""
+    threshold_dict = pl.get_slider_thresholds(slider_dict_grouped)
+    assert isinstance(threshold_dict, dict)
+    assert threshold_dict == {'LISI_score_pca': {'min': 5, 'max': 7},
+                              'qc_float': {'min': 5, 'max': 7}}
+
+
+def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
+    """Test get_slider_threshold for grouped slider_dict with different slider values."""
+    threshold_dict = pl.get_slider_thresholds(slider_dict_grouped_diff)
+    assert isinstance(threshold_dict, dict)
+    assert threshold_dict == {'A': {'1': {'min': 5, 'max': 7},
+                                    '2': {'min': 1, 'max': 5}},
+                              'B': {'1': {'min': 5, 'max': 7},
+                                    '2': {'min': 3, 'max': 4}}}
