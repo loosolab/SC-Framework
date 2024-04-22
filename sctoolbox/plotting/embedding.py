@@ -1549,7 +1549,7 @@ def plot_pca_variance(adata: sc.AnnData,
     fig = ax.get_figure()
 
     # create a gridspec (a manual subplot grid) and position it at the location of the ax object
-    upper_left, bottom_right =  ax.get_position().get_points()
+    upper_left, bottom_right = ax.get_position().get_points()
     gridspec = fig.add_gridspec(ncols=1,
                                 nrows=2 if corr_plot else 1,
                                 left=upper_left[0],
