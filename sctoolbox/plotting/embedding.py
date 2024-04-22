@@ -1557,7 +1557,7 @@ def plot_pca_variance(adata: sc.AnnData,
                                 top=bottom_right[1],
                                 bottom=upper_left[1],
                                 hspace=0.1)  # set the horizontal space between the plots
-    
+
     axs = [fig.add_subplot(gridspec[0, 0])]
 
     if corr_plot:
