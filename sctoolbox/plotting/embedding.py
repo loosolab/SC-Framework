@@ -1542,17 +1542,29 @@ def plot_pca_variance(adata: sc.AnnData,
         # no threshold
         palette = [sel_col] * n_pcs
 
-    # integrate into other figure
+    # hide the initial ax object
+    ax.set_axis_off()
+
+    # get the figure where the plots will be drawn on
     fig = ax.get_figure()
-    gridspec = ax.get_subplotspec()
-    subfig = fig.add_subfigure(gridspec)
 
-    # spacing between plots
-    subfig.subplots_adjust(hspace=0.1)
+    # create a gridspec (a manual subplot grid) and position it at the location of the ax object
+    upper_left, bottom_right =  ax.get_position().get_points()
+    gridspec = fig.add_gridspec(ncols=1,
+                                nrows=2 if corr_plot else 1,
+                                left=upper_left[0],
+                                right=bottom_right[0],
+                                top=bottom_right[1],
+                                bottom=upper_left[1],
+                                hspace=0.1)  # set the horizontal space between the plots
+    
+    axs = [fig.add_subplot(gridspec[0, 0])]
 
-    axs = subfig.subplots(2 if corr_plot else 1, 1, sharex=True)
+    if corr_plot:
+        axs.append(fig.add_subplot(gridspec[1, 0]))
 
-    axs = axs.flatten() if corr_plot else [axs]  # flatten to 1d array per row
+        # share x axis between plots
+        axs[0].sharex(axs[1])
 
     # Plot barplot of variance
     x = list(range(1, len(var_explained) + 1))
@@ -1613,13 +1625,16 @@ def plot_pca_variance(adata: sc.AnnData,
         axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=90, size=7)
         axs[1].set_axisbelow(True)
         axs[1].invert_yaxis()
+        axs[1].margins(x=0.01)  # space before first and after last bar
 
-        axs[0].tick_params(bottom=False)
+        axs[0].tick_params(bottom=False, labelbottom=False)
+        axs[0].margins(x=0.01)  # space before first and after last bar
     else:
         # Finalize plot
         axs[0].set_xlabel('Principal components', fontsize=12, labelpad=10)
         axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=90, size=7)
         axs[0].set_axisbelow(True)
+        axs[0].margins(x=0.01)  # space before first and after last bar
 
     # Save figure
     _save_figure(save)
