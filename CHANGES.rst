@@ -6,6 +6,7 @@
     - plot_venn
     - in_range
 - Removed custom_marker_annotation script
+- fixed PCA-var plot not fitting into anndata_overview (#232)
 
 0.6.1 (28-03-24)
 -------------
