@@ -8,11 +8,10 @@
 - Fix notebooks in readthedocs documentation (#220)
 - Removed custom_marker_annotation script
 - Disintegrated FLD scoring and added PEAKQC to setup.py (#233)
-- Updated ATAC notebooks
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
-- Overhaul notebooks structure
+- Overhaul RNA & ATAC notebook structure (includes #207)
 - Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
