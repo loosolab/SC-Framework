@@ -1,4 +1,4 @@
-[![coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/dev/coverage.svg?key_text=coverage&key_width=70)](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/commits/dev)
+![coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/coverage.svg?key_text=coverage&key_width=70)
 
 
 # SC Framework
