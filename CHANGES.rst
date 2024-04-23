@@ -7,6 +7,7 @@
     - in_range
 - Fix notebooks in readthedocs documentation (#220)
 - Removed custom_marker_annotation script
+- fixed PCA-var plot not fitting into anndata_overview (#232)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
