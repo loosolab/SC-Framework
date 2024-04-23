@@ -143,7 +143,7 @@ def lsi(data: sc.AnnData,
 
 @beartype
 def apply_svd(adata: sc.AnnData,
-              layer: str = None) -> sc.AnnData:
+              layer: Optional[str] = None) -> sc.AnnData:
     """
     Singular value decomposition of anndata object.
 
@@ -151,7 +151,7 @@ def apply_svd(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object to be decomposed.
-    layer : str, default None
+    layer : Optional[str], default None
         The layer to be decomposed. If None, the layer is set to "X".
 
     Returns

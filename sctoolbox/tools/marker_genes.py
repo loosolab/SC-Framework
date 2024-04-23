@@ -251,7 +251,7 @@ def run_rank_genes(adata: sc.AnnData,
 @beartype
 def pairwise_rank_genes(adata: sc.AnnData,
                         groupby: str,
-                        foldchange_threshold: float = 1,
+                        foldchange_threshold: int | float = 1,
                         min_in_group_fraction: float = 0.25,
                         max_out_group_fraction: float = 0.5,
                         **kwargs: Any
@@ -265,7 +265,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
         Anndata object containing expression data.
     groupby : str
         Key in adata.obs containing groups to be compared.
-    foldchange_threshold : float, default 1
+    foldchange_threshold : int | float, default 1
         Minimum foldchange (+/-) to be considered as a marker gene.
     min_in_group_fraction : float, default 0.25
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.

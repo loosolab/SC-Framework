@@ -1,3 +1,20 @@
+0.7.0 (23-04-24)
+-------------
+- Added code examples for tools and utils (#140)
+    - recluster 
+    - group_heatmap
+    - plot_venn
+    - in_range
+- Fix notebooks in readthedocs documentation (#220)
+- Removed custom_marker_annotation script
+- Disintegrated FLD scoring and added PEAKQC to setup.py (#233)
+- fixed PCA-var plot not fitting into anndata_overview (#232)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Overhaul RNA & ATAC notebooks structure (includes #207)
+- Revise RNA notebook 4 recluster section (#201)
+
 0.6.1 (28-03-24)
 -------------
 - Fix release pages by renaming the release-pages: job to pages:
@@ -65,7 +82,6 @@ Changes to notebooks
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
 - Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
-
 
 0.3 (30-11-2023)
 ----------------
