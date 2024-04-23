@@ -1,4 +1,4 @@
-0.7.0 (in progess)
+0.7.0 (23-04-24)
 -------------
 - Added code examples for tools and utils (#140)
     - recluster 
