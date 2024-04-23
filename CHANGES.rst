@@ -8,6 +8,7 @@
 - Fix notebooks in readthedocs documentation (#220)
 - Removed custom_marker_annotation script
 - Disintegrated FLD scoring and added PEAKQC to setup.py (#233)
+- fixed PCA-var plot not fitting into anndata_overview (#232)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
