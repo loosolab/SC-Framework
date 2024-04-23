@@ -1,12 +1,13 @@
 0.7.0 (in progess)
 -------------
-- TEST CLEANUP
+- TEST CLEANUP (#215)
     - marker_genes
     - tobias
     - embedding tools
     - genometracks
     - plotting/clustering
     - velocity
+    - plotting/test_qc_filter
     - general
 - Added code examples for tools and utils (#140)
     - recluster 

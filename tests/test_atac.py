@@ -7,8 +7,6 @@ import scanpy as sc
 import numpy as np
 import anndata as ad
 
-import sctoolbox.plotting as pl
-
 
 @pytest.fixture
 def adata():
@@ -66,16 +64,3 @@ def test_add_insertsize_bam(adata):
 
     assert "insertsize_distribution" in adata.uns
     assert "mean_insertsize" in adata.obs.columns
-
-
-def test_insertsize_plotting(adata):
-    """Test if insertsize plotting works."""
-
-    adata = adata.copy()
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
-    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
-
-    ax = pl.plot_insertsize(adata)
-
-    ax_type = type(ax).__name__
-    assert ax_type.startswith("Axes")
