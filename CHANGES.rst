@@ -11,7 +11,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
-- Overhaul RNA & ATAC notebook structure (includes #207)
+- Overhaul RNA & ATAC notebooks structure (includes #207)
 - Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
