@@ -1,11 +1,6 @@
 """Test clustering functions."""
 
-import pytest
 import numpy as np
-import anndata
-import scanpy as sc
-import pandas as pd
-from scipy import sparse
 import sctoolbox.tools as tl
 
 
