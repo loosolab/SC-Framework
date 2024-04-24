@@ -17,7 +17,6 @@ def equal_adata():
     adata = build_adata(mtx)
 
     return adata
-    
 
 @pytest.fixture
 def clust_adata():
@@ -117,3 +116,4 @@ def equal_mtx():
     mtx = sparse.csr_matrix(ones_arr)
 
     return mtx
+
