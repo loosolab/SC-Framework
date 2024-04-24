@@ -4,6 +4,9 @@ import numpy as np
 import sctoolbox.tools as tl
 import pytest
 import scanpy as sc
+import anndata
+import pandas as pd
+from scipy import sparse
 
 
 @pytest.fixture
