@@ -1,5 +1,5 @@
-0.7.0 (23-04-24)
--------------
+0.8.0 (in progress)
+-------------------
 - TEST CLEANUP (#215)
     - marker_genes
     - tobias
@@ -9,6 +9,9 @@
     - velocity
     - plotting/test_qc_filter
     - general
+
+0.7.0 (23-04-24)
+-------------
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
