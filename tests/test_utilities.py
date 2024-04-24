@@ -123,14 +123,39 @@ def test_check_module():
         utils.check_module("nonexisting_module")
 
 
-def test_get_adata_subsets(adata):
-    """Test if adata subsets are returned correctly."""
+def test_remove_suffix(berries):
+    """Test if suffix is removed from a string."""
 
-    subsets = utils.get_adata_subsets(adata, "group")
+    nosuffix = [utils.remove_suffix(s, "berry") for s in berries]
+    assert nosuffix == ["blue", "straw", "black"]
 
-    for group, sub_adata in subsets.items():
-        assert sub_adata.obs["group"][0] == group
-        assert sub_adata.obs["group"].nunique() == 1
+
+def test_split_list(berries):
+    """Test if list is split correctly."""
+
+    split = utils.split_list(berries, 2)
+    assert split == [["blueberry", "blackberry"], ["strawberry"]]
+
+
+def test_read_list_file(berries):
+    """Test if read_list_file returns the correct list from a file."""
+
+    path = "berries.txt"
+    utils.write_list_file(berries, path)
+    berries_read = utils.read_list_file(path)
+    os.remove(path)  # file no longer needed
+
+    assert berries == berries_read
+
+
+def test_write_list_file(berries):
+    """Test if write_list_file writes a file."""
+
+    path = "berries.txt"
+    utils.write_list_file(berries, path)
+
+    assert os.path.isfile(path)
+    os.remove(path)  # clean up after tests
 
 
 def test_remove_files():
@@ -153,15 +178,6 @@ def test_pseudobulk_table(adata):
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
 
-
-def test_save_h5ad(adata):
-    """Test if h5ad file is saved correctly."""
-
-    path = "test.h5ad"
-    utils.save_h5ad(adata, path)
-
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
 
 
 def test_get_organism():
