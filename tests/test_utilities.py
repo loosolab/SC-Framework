@@ -114,20 +114,6 @@ def test_longest_common_suffix(berries):
     assert suffix == "berry"
 
 
-def test_create_dir():
-    """Test if the directory is created."""
-
-    # Ensure that testdir is not already existing
-    if os.path.isdir("testdir"):
-        shutil.rmtree("testdir")
-
-    # create the dir with the utils function
-    utils.create_dir("testdir")
-    assert os.path.isdir("testdir")
-
-    shutil.rmtree("testdir")  # clean up after tests
-
-
 def test_is_notebook():
     """Test if the function is run in a notebook."""
 
@@ -209,18 +195,6 @@ def test_get_adata_subsets(adata):
     for group, sub_adata in subsets.items():
         assert sub_adata.obs["group"][0] == group
         assert sub_adata.obs["group"].nunique() == 1
-
-
-def test_remove_files():
-    """Remove files from list."""
-
-    if not os.path.isfile("afile.txt"):
-        os.mknod("afile.txt")
-
-    files = ["afile.txt", "notfound.txt"]
-    utils.remove_files(files)
-
-    assert os.path.isfile("afile.txt") is False
 
 
 def test_pseudobulk_table(adata):

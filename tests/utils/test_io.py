@@ -3,6 +3,33 @@
 import sctoolbox.utils as utils
 import os
 import pathlib
+import shutil
+
+
+def test_create_dir():
+    """Test if the directory is created."""
+
+    # Ensure that testdir is not already existing
+    if os.path.isdir("testdir"):
+        shutil.rmtree("testdir")
+
+    # create the dir with the utils function
+    utils.create_dir("testdir")
+    assert os.path.isdir("testdir")
+
+    shutil.rmtree("testdir")  # clean up after tests
+
+
+def test_remove_files():
+    """Remove files from list."""
+
+    if not os.path.isfile("afile.txt"):
+        os.mknod("afile.txt")
+
+    files = ["afile.txt", "notfound.txt"]
+    utils.remove_files(files)
+
+    assert os.path.isfile("afile.txt") is False
 
 
 def test_rm_tmp():
