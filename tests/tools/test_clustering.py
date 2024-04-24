@@ -116,4 +116,3 @@ def equal_mtx():
     mtx = sparse.csr_matrix(ones_arr)
 
     return mtx
-
