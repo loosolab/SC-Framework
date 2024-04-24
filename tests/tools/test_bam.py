@@ -3,13 +3,8 @@
 import pytest
 import os
 import scanpy as sc
-import shutil
-import glob
-import logging
 import random
-import re
 
-import sctoolbox.tools as tools
 import sctoolbox.bam
 import sctoolbox.tools.bam as stb
 
@@ -48,6 +43,7 @@ def adata():
     obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
 
     return obj
+
 
 @pytest.fixture
 def adata_atac():
