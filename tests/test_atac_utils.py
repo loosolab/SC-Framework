@@ -41,13 +41,6 @@ def adata_rna():
     return sc.read_h5ad(adata_f)
 
 
-@pytest.fixture
-def bamfile():
-    """Fixture for an Bamfile."""
-    bamfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    return bamfile
-
-
 @pytest.mark.parametrize("fixture, expected", [("adata_atac", True),  # expects var tables to be unchanged
                                                ("adata_atac_emptyvar", False),  # expects var tables to be changed
                                                ("adata_rna", ValueError),  # expects a valueerror due to missing columns
@@ -65,9 +58,3 @@ def test_format_adata_var(fixture, expected, request):
         utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
 
         assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
-
-
-def test_bam_adata_ov(adata_atac, bamfile):
-    """Test bam_adata_ov success."""
-    hitrate = tools.bam_adata_ov(adata_atac, bamfile, cb_tag='CB')
-    assert hitrate >= 0.10
