@@ -77,23 +77,23 @@ def test_check_barcode_tag(adata, bam_file, mocker, caplog):
 
     # test overlap == 0%
     mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0)
-    stb.check_barcode_tag(adata=adata, bam_file=bam_file, cb_tag="CB")
+    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
     assert 'None of the barcodes from the bam_file found in the .obs table.\nConsider if you are using the wrong column cb-tag or bam_file.' in caplog.text
 
     # test overlap <= 5%
     mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.05)
-    stb.check_barcode_tag(adata=adata, bam_file=bam_file, cb_tag="CB")
+    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
     assert 'Only 5% or less of the barcodes from the bam_file found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bam_file.' in caplog.text
 
     # test overlap > 5%
     mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.8)
-    stb.check_barcode_tag(adata=adata, bam_file=bam_file, cb_tag="CB")
+    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
     assert 'Barcode tag: OK' in caplog.text
 
     # test overlap error (TODO don't know how this could be triggered)
     with pytest.raises(ValueError):
         mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=float("nan"))
-        stb.check_barcode_tag(adata=adata, bam_file=bam_file, cb_tag="CB")
+        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
 
 
 def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
