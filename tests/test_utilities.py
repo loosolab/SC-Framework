@@ -3,7 +3,6 @@
 import pytest
 import os
 import numpy as np
-import shutil
 import pandas as pd
 import sctoolbox.utilities as utils
 import subprocess
