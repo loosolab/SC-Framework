@@ -5,6 +5,7 @@ import sctoolbox.plotting as pl
 import scanpy as sc
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
@@ -41,10 +42,10 @@ def adata():
     # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
-    
-    
+
+
 # ------------------------------ TESTS --------------------------------- #
-    
+
 def test_violin_HVF_distribution(adata):
     """Test violin_HVF_distribution."""
     adata_HVF = adata.copy()
@@ -58,8 +59,8 @@ def test_violin_HVF_distribution_fail(adata):
     """Test if input is invalid."""
     with pytest.raises(KeyError):
         pl.violin_HVF_distribution(adata)
-        
-    
+
+
 def test_scatter_HVF_distribution(adata):
     """Test scatter_HVF_distribution."""
     adata_HVF = adata.copy()
