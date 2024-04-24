@@ -179,7 +179,6 @@ def test_pseudobulk_table(adata):
     assert pseudobulk.shape[1] == 3  # number of groups
 
 
-
 def test_get_organism():
     """Test function get_organism()."""
 
