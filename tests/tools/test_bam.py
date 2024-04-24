@@ -6,13 +6,14 @@ import scanpy as sc
 import random
 
 import sctoolbox.bam
+import sctoolbox.tools as tools
 import sctoolbox.tools.bam as stb
 
 
 @pytest.fixture
 def bam_file():
     """Fixture pointing to test bam."""
-    return os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
 
 
 @pytest.fixture
@@ -48,7 +49,7 @@ def adata():
 @pytest.fixture
 def adata_atac():
     """Load atac adata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
 
