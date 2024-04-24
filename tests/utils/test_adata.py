@@ -8,6 +8,7 @@ import sctoolbox.utils.adata as ad
 
 # test
 
+
 @pytest.fixture(scope="session")
 def adata_icxg():
     """Load and returns an cellxgene incompatible anndata object."""
