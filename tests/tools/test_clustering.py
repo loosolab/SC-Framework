@@ -2,6 +2,9 @@
 
 import numpy as np
 import sctoolbox.tools as tl
+import pytest
+import scanpy as sc
+
 
 @pytest.fixture
 def equal_adata():
@@ -12,6 +15,7 @@ def equal_adata():
 
     return adata
     
+
 @pytest.fixture
 def clust_adata():
     """Return a clustered adata."""
