@@ -3,6 +3,20 @@
 import numpy as np
 import sctoolbox.tools as tl
 
+@pytest.fixture
+def equal_adata():
+    """Build a mock anndata object with equally distributed features."""
+
+    mtx = equal_mtx()
+    adata = build_adata(mtx)
+
+    return adata
+    
+@pytest.fixture
+def clust_adata():
+    """Return a clustered adata."""
+    return sc.datasets.pbmc3k_processed()
+
 
 def test_recluster(clust_adata):
     """Test recluster success."""
