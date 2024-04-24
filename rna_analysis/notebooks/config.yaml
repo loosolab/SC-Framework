@@ -24,32 +24,25 @@
   log_file: "../logs/04_log.txt"
   overwrite_log: True
 
-"05":
+"0A":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
-  figure_dir: "../figures/05_markers/"
-  table_dir: "../tables/05_markers/"
-  log_file: "../logs/05_log.txt"
+  figure_dir: "../figures/0A_markers/"
+  table_dir: "../tables/0A_markers/"
+  log_file: "../logs/0A_log.txt"
   overwrite_log: True
 
-"11":
+"0B":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
-  figure_dir: "../figures/11_receptor_ligand/"
-  table_dir: "../tables/11_receptor_ligand/"
-  log_file: "../logs/11_log.txt"
+  figure_dir: "../figures/0B_receptor_ligand/"
+  table_dir: "../tables/0B_receptor_ligand/"
+  log_file: "../logs/0B_log.txt"
   overwrite_log: True
 
-"13":
+"0C":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
-  figure_dir: "../figures/13_prop_analysis/"
-  log_file: "../logs/13_log.txt"
-  overwrite_log: True
-  
-"14":
-  adata_input_dir: "../adatas/"
-  adata_output_dir: "../adatas/"
-  figure_dir: "../figures/14_velocity_analysis/"
-  log_file: "../logs/14_velocity_log.txt"
+  figure_dir: "../figures/0C_velocity_analysis/"
+  log_file: "../logs/0C_velocity_log.txt"
   overwrite_log: True

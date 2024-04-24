@@ -1,4 +1,4 @@
-0.7.0 (in progess)
+0.7.0 (23-04-24)
 -------------
 - TEST CLEANUP (#215)
     - marker_genes
@@ -14,7 +14,15 @@
     - group_heatmap
     - plot_venn
     - in_range
+- Fix notebooks in readthedocs documentation (#220)
 - Removed custom_marker_annotation script
+- Disintegrated FLD scoring and added PEAKQC to setup.py (#233)
+- fixed PCA-var plot not fitting into anndata_overview (#232)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Overhaul RNA & ATAC notebooks structure (includes #207)
+- Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
 -------------
