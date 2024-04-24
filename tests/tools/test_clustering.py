@@ -18,6 +18,7 @@ def equal_adata():
 
     return adata
 
+
 @pytest.fixture
 def clust_adata():
     """Return a clustered adata."""
