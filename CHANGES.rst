@@ -9,6 +9,7 @@
     - velocity
     - plotting/test_qc_filter
     - general
+    - tools/clustering.py
 
 0.7.0 (23-04-24)
 -------------
