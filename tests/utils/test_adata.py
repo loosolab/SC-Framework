@@ -6,7 +6,7 @@ import scipy
 
 import sctoolbox.utils.adata as ad
 
-#test
+# test
 
 @pytest.fixture(scope="session")
 def adata_icxg():
