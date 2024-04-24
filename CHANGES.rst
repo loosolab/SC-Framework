@@ -9,6 +9,7 @@
     - velocity
     - plotting/test_qc_filter
     - general
+    - highly_variable
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
