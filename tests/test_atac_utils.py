@@ -6,7 +6,6 @@ import scanpy as sc
 import numpy as np
 
 import sctoolbox.utilities as utils
-import sctoolbox.tools as tools
 
 
 @pytest.fixture
