@@ -2,8 +2,12 @@
 
 import pytest
 import os
+import shutil
+import glob
+import logging
 import scanpy as sc
 import random
+import re
 
 import sctoolbox.bam
 import sctoolbox.tools as tools

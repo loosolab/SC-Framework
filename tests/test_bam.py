@@ -1,15 +1,11 @@
 """Test bam related functions."""
 
 import os
-import shutil
 import pytest
 import sctoolbox.bam
 import sctoolbox.tools.bam as stb
-import glob
 import scanpy as sc
-import logging
 import random
-import re
 
 
 @pytest.fixture
