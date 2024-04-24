@@ -45,7 +45,7 @@ def adata():
     """Load and returns an anndata object."""
 
     # has .X of type numpy.array
-    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
 
     return obj
 
@@ -172,13 +172,12 @@ def test_get_bam_reads(bam_handle):
     assert total == 10000
 
 
-def test_bam_to_bigwig():
+def test_bam_to_bigwig(bam_file):
     """Test whether the bigwig is written."""
 
     bigwig_out = "mm10_atac.bw"
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_f, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
+    bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_file, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
 
@@ -196,7 +195,7 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
     if barcode_regex:
         barcode_tag = None
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', bam_name + ".bam")
+    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
     fragments_f = sctoolbox.bam.create_fragment_file(bam=bam_f, nproc=1, outdir=outdir,
                                                      barcode_tag=barcode_tag, barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
                                                      index=True)  # requires bgzip and tabix
@@ -215,7 +214,7 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
 def test_create_fragment_file_multiprocessing():
     """Assert that the result is the same regardless of number of cores used."""
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
+    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
 
     n_fragments = []
     for nproc in [1, 4]:
