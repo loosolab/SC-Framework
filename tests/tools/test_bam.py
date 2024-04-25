@@ -78,12 +78,12 @@ def test_check_barcode_tag(adata, bam_file, mocker, caplog):
     # test overlap == 0%
     mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0)
     stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
-    assert 'None of the barcodes from the bam_file found in the .obs table.\nConsider if you are using the wrong column cb-tag or bam_file.' in caplog.text
+    assert 'None of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column cb-tag or bamfile.' in caplog.text
 
     # test overlap <= 5%
     mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.05)
     stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
-    assert 'Only 5% or less of the barcodes from the bam_file found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bam_file.' in caplog.text
+    assert 'Only 5% or less of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bamfile.' in caplog.text
 
     # test overlap > 5%
     mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.8)
