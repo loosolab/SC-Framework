@@ -1,4 +1,4 @@
-""" Test tables functions"""
+"""Test tables functions."""
 
 import pytest
 import numpy as np
