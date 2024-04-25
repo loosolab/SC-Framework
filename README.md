@@ -1,4 +1,4 @@
-![coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/coverage.svg?key_text=coverage&key_width=70)
+[![DOI](https://zenodo.org/badge/791703115.svg)](https://zenodo.org/doi/10.5281/zenodo.11065517)
 
 
 # SC Framework
