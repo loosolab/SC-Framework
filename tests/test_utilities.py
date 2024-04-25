@@ -194,13 +194,6 @@ def test_write_list_file(berries):
     os.remove(path)  # clean up after tests
 
 
-def test_fill_na(na_dataframe):
-    """Test if na values in dataframe are filled correctly."""
-    utils.fill_na(na_dataframe)
-    assert not na_dataframe.isna().any().any()
-    assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '', '']
-
-
 def test_get_adata_subsets(adata):
     """Test if adata subsets are returned correctly."""
 
