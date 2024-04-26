@@ -8,7 +8,6 @@ import pandas as pd
 import scipy.stats
 from scipy.sparse import issparse
 import itertools
-import re
 
 import seaborn as sns
 import matplotlib
@@ -22,10 +21,12 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any
+from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated
+from beartype.vale import Is
 import numpy.typing as npt
 
 import sctoolbox.utils as utils
+import sctoolbox.tools as tools
 from sctoolbox.plotting.general import _save_figure, _make_square, boxplot
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -1191,10 +1192,17 @@ def umap_marker_overview(adata: sc.AnnData,
     return list(axes_list)
 
 
+# See https://github.com/beartype/beartype/issues/347
+_VALID_PLOTS = frozenset(("UMAP", "tSNE", "PCA", "PCA-var", "LISI"))
+
+ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]], Is[
+    lambda lst: all(item in _VALID_PLOTS for item in lst)]]
+
+
 @beartype
 def anndata_overview(adatas: dict[str, sc.AnnData],
                      color_by: str | list[str],
-                     plots: Union[list[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]],
+                     plots: Union[ListOfValidPlots,
                                   Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]] = ["PCA", "PCA-var", "UMAP", "LISI"],
                      figsize: Optional[Tuple[int, int]] = None,
                      max_clusters: int = 20,
@@ -1252,6 +1260,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
         pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
+
     if not isinstance(color_by, list):
         color_by = [color_by]
 
@@ -1436,10 +1445,17 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 def plot_pca_variance(adata: sc.AnnData,
                       method: str = "pca",
                       n_pcs: int = 20,
-                      n_selected: Optional[int] = None,
+                      selected: Optional[List[int]] = None,
                       show_cumulative: bool = True,
+                      n_thresh: Optional[int] = None,
+                      corr_plot: Optional[Literal["spearmanr", "pearsonr"]] = None,
+                      corr_on: Literal["obs", "var"] = "obs",
+                      corr_thresh: Optional[float] = None,
                       ax: Optional[matplotlib.axes.Axes] = None,
-                      save: Optional[str] = None) -> matplotlib.axes.Axes:
+                      save: Optional[str] = None,
+                      sel_col: str = "grey",
+                      om_col: str = "lightgrey"
+                      ) -> matplotlib.axes.Axes:
     """Plot the pca variance explained by each component as a barplot.
 
     Parameters
@@ -1450,14 +1466,26 @@ def plot_pca_variance(adata: sc.AnnData,
         Method used for calculating variation. Is used to look for the coordinates in adata.uns[<method>].
     n_pcs : int, default 20
         Number of components to plot.
-    n_selected : Optional[int], default None
-        Number of components to highlight in the plot with a red line.
+    selected : Optional[List[int]], default None
+        Number of components to highlight in the plot.
     show_cumulative : bool, default True
         Whether to show the cumulative variance explained in a second y-axis.
+    n_thresh : Optional[int], default None
+        Enables a vertical threshold line.
+    corr_plot : Optional[str], default None
+        Enable correlation plot. Shows highest absolute correlation for each bar.
+    corr_on : Literal["obs", "var"], default "obs"
+        Calculate correlation on either observations (adata.obs) or variables (adata.var).
+    corr_thresh : Optional[float], default None
+        Enables a red threshold line in the lower plot.
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
         Filename to save the figure. If None, the figure is not saved.
+    sel_col : str, default "grey"
+        Bar color of selected bars.
+    om_col : str, default "lightgrey"
+        Bar color of omitted bars.
 
     Returns
     -------
@@ -1476,7 +1504,8 @@ def plot_pca_variance(adata: sc.AnnData,
 
         pl.plot_pca_variance(adata, method="pca",
                       n_pcs=20,
-                      n_selected=7)
+                      selected=[2, 3, 4, 5, 7, 8, 9],
+                      corr_plot="spearmanr")
     """
 
     if ax is None:
@@ -1495,36 +1524,117 @@ def plot_pca_variance(adata: sc.AnnData,
     # Cumulative variance
     var_cumulative = np.cumsum(var_explained)
 
+    if corr_plot:
+        # compute correlation coefficients
+        corrcoefs, _ = tools.correlation_matrix(adata,
+                                                which=corr_on,
+                                                basis=method,
+                                                n_components=n_pcs,
+                                                columns=None,
+                                                method=corr_plot)
+
+        abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
+
+    # prepare bar coloring by threshold
+    if selected:
+        palette = [sel_col if i in selected else om_col for i in range(1, n_pcs + 1)]
+    else:
+        # no threshold
+        palette = [sel_col] * n_pcs
+
+    # hide the initial ax object
+    ax.set_axis_off()
+
+    # get the figure where the plots will be drawn on
+    fig = ax.get_figure()
+
+    # create a gridspec (a manual subplot grid) and position it at the location of the ax object
+    upper_left, bottom_right = ax.get_position().get_points()
+    gridspec = fig.add_gridspec(ncols=1,
+                                nrows=2 if corr_plot else 1,
+                                left=upper_left[0],
+                                right=bottom_right[0],
+                                top=bottom_right[1],
+                                bottom=upper_left[1],
+                                hspace=0.1)  # set the horizontal space between the plots
+
+    axs = [fig.add_subplot(gridspec[0, 0])]
+
+    if corr_plot:
+        axs.append(fig.add_subplot(gridspec[1, 0]))
+
+        # share x axis between plots
+        axs[0].sharex(axs[1])
+
     # Plot barplot of variance
     x = list(range(1, len(var_explained) + 1))
     sns.barplot(x=x,
                 y=var_explained,
                 color="grey",
-                ax=ax)
+                palette=palette,
+                ax=axs[0])
+
+    axs[0].set_ylabel("Variance explained (%)", fontsize=12)
 
     # Plot cumulative variance
     if show_cumulative:
-        ax2 = ax.twinx()
+        ax2 = axs[0].twinx()
         ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
-        ax2.set_ylabel("Cumulative variance explained (%)", color="blue", fontsize=12)
+        ax2.set_ylabel("Cumulative\nvariance explained (%)", color="blue", fontsize=12)
         ax2.spines['right'].set_color('blue')
         ax2.yaxis.label.set_color('blue')
         ax2.tick_params(axis='y', colors='blue')
 
     # Add number of selected as line
-    if n_selected is not None:
+    if n_thresh:
         if show_cumulative:
             ylim = ax2.get_ylim()
             yrange = ylim[1] - ylim[0]
             ax2.set_ylim(ylim[0], ylim[1] + yrange * 0.1)  # add 10% to make room for legend of n_seleced line
-        ax.axvline(n_selected - 0.5, color="red", label=f"n components included: {n_selected}")
-        ax.legend()
+        axs[0].axvline(n_thresh - 0.5, color="red")  # , label=f"n components included: {n_selected}")
+        # axs[0].legend()
 
-    # Finalize plot
-    ax.set_xlabel('Principal components', fontsize=12, labelpad=10)
-    ax.set_ylabel("Variance explained (%)", fontsize=12)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90, size=7)
-    ax.set_axisbelow(True)
+    # Plot absolute correlation bar plot
+    if corr_plot:
+        if corr_thresh:
+            # add threshold line
+            axs[1].axhline(corr_thresh, color="red")
+
+        sns.barplot(x=x,
+                    y=abs_corrcoefs,
+                    color="grey",
+                    palette=palette,
+                    ax=axs[1])
+
+        # add basis text box
+        axs[1].text(
+            x=0.95,
+            y=0.05,
+            s=f"Based on .{corr_on} columns",
+            fontsize=12,
+            bbox={"boxstyle": "Round", "facecolor": "white", "edgecolor": "black", "alpha": 0.5},
+            horizontalalignment="right",
+            verticalalignment="bottom",
+            transform=axs[1].transAxes
+        )
+
+        # Finalize plot
+        axs[1].set_xlabel('Principal components', fontsize=12, labelpad=10)
+        axs[1].set_ylabel(f"max( |{corr_plot}| )", fontsize=12)
+        axs[1].set_ylim([0, 1])
+        axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=90, size=7)
+        axs[1].set_axisbelow(True)
+        axs[1].invert_yaxis()
+        axs[1].margins(x=0.01)  # space before first and after last bar
+
+        axs[0].tick_params(bottom=False, labelbottom=False)
+        axs[0].margins(x=0.01)  # space before first and after last bar
+    else:
+        # Finalize plot
+        axs[0].set_xlabel('Principal components', fontsize=12, labelpad=10)
+        axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=90, size=7)
+        axs[0].set_axisbelow(True)
+        axs[0].margins(x=0.01)  # space before first and after last bar
 
     # Save figure
     _save_figure(save)
@@ -1566,7 +1676,8 @@ def plot_pca_correlation(adata: sc.AnnData,
     method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
     plot_values: Literal["corrcoefs", "pvalues"], default "corrcoefs"
-        Values which will be used to plot the heatmap, either "corrcoefs" (correlation coefficients) or "pvalues".
+        Values which will be used to plot the heatmap, either "corrcoefs" (correlation coefficients) or "pvalues". P-values will be shown as
+        `np.sign(corrcoefs)*np.log10(p-value)`, the logged p-value with the sign of the corresponding correlation coefficient.
     figsize : Optional[Tuple[int, int]], default None
         Size of the figure in inches. If None, the size is automatically determined.
     title : Optional[str], default None
@@ -1581,13 +1692,6 @@ def plot_pca_correlation(adata: sc.AnnData,
     ax : matplotlib.axes.Axes
         Axes object containing the heatmap.
 
-    Raises
-    ------
-    ValueError
-        If "basis" is not found in data, if "which" is not "obs" or "var", if "method" is not "pearsonr" or "spearmanr", or if "which" is "var" and "basis" not "pca".
-    KeyError
-        If any of the given columns is not found in the respective table.
-
     Examples
     --------
     .. plot::
@@ -1601,83 +1705,50 @@ def plot_pca_correlation(adata: sc.AnnData,
         pl.plot_pca_correlation(adata, basis="umap")
     """
 
-    # Check that basis is in adata.obsm
-    if basis not in adata.obsm:
-        basis = "X_" + basis if not basis.startswith("X_") else basis  # check if basis is available as "X_<basis>"
-        if basis not in adata.obsm:
-            raise KeyError(f"The given basis '{basis}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
+    # compute correlation matrix
+    corrcoefs, pvalues = tools.correlation_matrix(adata=adata,
+                                                  which=which,
+                                                  basis=basis,
+                                                  n_components=n_components,
+                                                  columns=columns,
+                                                  method=method)
 
-    # Establish which table to use
-    if which == "obs":
-        table = adata.obs.copy()
-        mat = adata.obsm[basis]
-    elif which == "var":
-        if "pca" not in basis.lower():
-            raise ValueError("Correlation with 'var' can only be calculated with PCA components!")
-        table = adata.var.copy()
-        mat = adata.varm["PCs"]
+    # decide which values should be shown
+    if plot_values == "corrcoefs":
+        table = corrcoefs
+    elif plot_values == "pvalues":
+        # log pvalues
+        table = np.sign(corrcoefs) * np.log10(pvalues)
 
-    # Check that method is available
-    try:
-        corr_method = getattr(scipy.stats, method)
-    except AttributeError:
-        s = f"'{method}' is not a valid method within scipy.stats. Please choose one of pearsonr/spearmanr."
-        raise ValueError(s)
+    # prepare annotation shown on the heatmap
+    annot = table.copy()
 
-    # Get columns
-    if columns is None:
-        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-        numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
-    else:
-        utils.check_columns(table, columns)
-
-    # Get table of pcs and columns
-    n_components = min(n_components, mat.shape[1])  # make sure we don't exceed the number of pcs available
-    if "pca" in basis.lower():
-        comp_columns = [f"PC{i+1}" for i in range(n_components)]  # e.g. PC1, PC2, ...
-    else:
-        comp_columns = [f"{re.sub('^X_', '', basis.upper())}{i+1}" for i in range(n_components)]  # e.g. UMAP1, UMAP2, ...
-    comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
-    comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
-
-    # Calculate correlation of columns
-    combinations = list(itertools.product(numeric_columns, comp_columns))
-
-    corr_table = pd.DataFrame(index=numeric_columns, columns=comp_columns, dtype=float)
-    corr_table_annot = corr_table.copy()
-    for row, col in combinations:
-        # remove NaN values and the corresponding values from both lists
-        x = np.vstack([comp_table[row], comp_table[col]])  # stack values of row and column
-        x = x[:, ~np.any(np.isnan(x), axis=0)]  # remove columns with NaN values
-
-        res = corr_method(x[0], x[1])
-
-        if plot_values == "corrcoefs":
-            value = res.statistic
-            # center of cbar is 0
-            vmin = -1
-            vmax = 1
-        elif plot_values == "pvalues":
-            value = -np.sign(res.statistic) * np.log10(res.pvalue)
-            # infer min and max for cbar from data
-            vmin = None
-            vmax = None
-
-        corr_table.loc[row, col] = value
-        corr_table_annot.loc[row, col] = str(np.round(value, 2))
-        corr_table_annot.loc[row, col] += "*" if res.pvalue < pvalue_threshold else ""
+    annot = annot.applymap(lambda x: str(np.round(x, 2)))
+    # add stars to significant values
+    stars = pvalues.applymap(lambda p: "*" if p < pvalue_threshold else "")
+    annot += stars
 
     # Plot heatmap
-    figsize = figsize if figsize is not None else (len(comp_columns) / 1.5, len(numeric_columns) / 1.5)
+    figsize = figsize if figsize is not None else (len(corrcoefs.columns) / 1.5, len(corrcoefs) / 1.5)
     fig, ax = plt.subplots(figsize=figsize)
 
-    ax = sns.heatmap(corr_table,
-                     annot=corr_table_annot,
+    if plot_values == "corrcoefs":
+        # center of cbar is 0
+        vmin = -1
+        vmax = 1
+    elif plot_values == "pvalues":
+        # infer min and max for cbar from data
+        vmin = None
+        vmax = None
+
+    ax = sns.heatmap(corrcoefs,
+                     annot=annot,
                      fmt='',
                      annot_kws={"fontsize": 9},
                      cbar_kws={"label": f"{method} ({plot_values})"},
                      cmap="seismic",
-                     vmin=vmin, vmax=vmax,
+                     vmin=vmin,
+                     vmax=vmax,
                      ax=ax,
                      **kwargs)
     ax.set_aspect(0.8)

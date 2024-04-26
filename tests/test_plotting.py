@@ -157,10 +157,10 @@ def test_sc_colormap():
     assert type(cmap).__name__ == "ListedColormap"
 
 
-@pytest.mark.parametrize("n_selected", [None, 1, 2])
-def test_plot_pca_variance(adata, n_selected):
+@pytest.mark.parametrize("selected", [None, [1, 2, 3], [2, 4, 6]])
+def test_plot_pca_variance(adata, selected):
     """Test if Axes object is returned."""
-    ax = pl.plot_pca_variance(adata, n_selected=n_selected)
+    ax = pl.plot_pca_variance(adata, selected=selected)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -427,7 +427,7 @@ def test_anndata_overview_fail_plots(adata):
         )
 
     # wrong input
-    with pytest.raises((BeartypeCallHintParamViolation, ValueError)):
+    with pytest.raises(BeartypeCallHintParamViolation):
         pl.anndata_overview(
             adatas=adatas,
             color_by=list(adata.obs.columns),
