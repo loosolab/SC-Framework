@@ -9,6 +9,7 @@
     - velocity
     - plotting/test_qc_filter
     - general
+    - tools/bam
     - highly_variable
     - tables
 
