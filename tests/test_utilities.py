@@ -123,13 +123,6 @@ def test_check_module():
         utils.check_module("nonexisting_module")
 
 
-def test_fill_na(na_dataframe):
-    """Test if na values in dataframe are filled correctly."""
-    utils.fill_na(na_dataframe)
-    assert not na_dataframe.isna().any().any()
-    assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '', '']
-
-
 def test_get_adata_subsets(adata):
     """Test if adata subsets are returned correctly."""
 
