@@ -10,6 +10,7 @@
     - plotting/test_qc_filter
     - general
     - io
+    - highly_variable
     - tables
 
 0.7.0 (23-04-24)
