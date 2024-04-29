@@ -11,6 +11,7 @@
     - general
     - highly_variable
     - tables
+    - utils/general
 
 0.7.0 (23-04-24)
 -------------
