@@ -1,3 +1,5 @@
+"""Test general utility functions."""
+
 import pytest
 import os
 import subprocess
