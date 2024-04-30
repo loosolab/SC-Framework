@@ -21,8 +21,7 @@ def equal_adata():
 
 @pytest.fixture
 def unequal_adata():
-    """Build a mock anndata object with unequally distributed features."""
-    
+    """Build a mock anndata object with unequally distributed features."""    
     mtx = unequal_mtx()
     adata = build_adata(mtx)
 
