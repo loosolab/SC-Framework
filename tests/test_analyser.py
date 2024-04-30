@@ -1,8 +1,6 @@
 """Test analysis functions."""
 
 import pytest
-import numpy as np
-import pandas as pd
 import scanpy as sc
 import os
 import sctoolbox.analyser as an
@@ -42,15 +40,6 @@ def adata_batch_dict(adata):
 
 
 # ------------------------------ TESTS -------------------------------- #
-
-def test_rename_categories():
-    """Assert if categories were renamed."""
-
-    data = np.random.choice(["C1", "C2", "C3"], size=100)
-    series = pd.Series(data).astype("category")
-    renamed_series = utils.rename_categories(series)
-
-    assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
 
 
 @pytest.mark.parametrize("method", ["total", "tfidf"])
