@@ -14,7 +14,7 @@ from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref
 @pytest.fixture
 def adata():
     """Fixture for simple adata to test with."""
-    h5ad = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
+    h5ad = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 
     adata.obs["condition"] = np.random.choice(["C1", "C2"], size=adata.shape[0])
