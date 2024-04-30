@@ -20,6 +20,16 @@ def equal_adata():
 
 
 @pytest.fixture
+def unequal_adata():
+    """Build a mock anndata object with unequally distributed features."""
+    
+    mtx = unequal_mtx()
+    adata = build_adata(mtx)
+
+    return adata
+
+
+@pytest.fixture
 def clust_adata():
     """Return a clustered adata."""
     return sc.datasets.pbmc3k_processed()
