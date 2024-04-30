@@ -1,6 +1,7 @@
 0.8.0 (in progress)
 -------------------
 - TEST CLEANUP (#215)
+    - gene_correlation
     - marker_genes
     - tobias
     - embedding tools
