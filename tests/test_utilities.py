@@ -4,7 +4,7 @@ import pytest
 import os
 import numpy as np
 import shutil
-import pandas as pd
+# import pandas as pd
 import sctoolbox.utilities as utils
 import scanpy as sc
 
@@ -120,7 +120,6 @@ def test_pseudobulk_table(adata):
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
-
 
 
 def test_get_organism():
