@@ -11,8 +11,7 @@ import sctoolbox.utilities as utils
 @pytest.fixture
 def adata():
     """Load and returns an anndata object."""
-    # remove "utils"-folder (last folder) from path 
-    f = os.path.join("/".join(os.path.dirname(__file__).split("/")[:-1]), 'data', "adata.h5ad") 
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
 
     return sc.read_h5ad(f)
 
