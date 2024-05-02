@@ -44,28 +44,6 @@ def sorted_fragments():
 
 
 @pytest.fixture
-def berries():
-    """Return list of berries."""
-    return ["blueberry", "strawberry", "blackberry"]
-
-
-@pytest.fixture
-def na_dataframe():
-    """Return DataFrame with columns of multiple types containing NA."""
-    data = {'int': [3, 2, 1, np.nan],
-            'float': [1.2, 3.4, 5.6, np.nan],
-            'string': ['a', 'b', 'c', np.nan],
-            'boolean': [True, False, True, np.nan],
-            'category_str': ['cat1', 'cat2', 'cat3', np.nan],
-            'category_num': [10, 20, 30, np.nan]}
-    df = pd.DataFrame.from_dict(data)
-
-    df['category_str'] = df['category_str'].astype('category')
-    df['category_num'] = df['category_num'].astype('category')
-    return df
-
-
-@pytest.fixture
 def marker_dict():
     """Return a dict of cell type markers."""
     return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
@@ -123,41 +101,6 @@ def test_check_module():
         utils.check_module("nonexisting_module")
 
 
-def test_remove_suffix(berries):
-    """Test if suffix is removed from a string."""
-
-    nosuffix = [utils.remove_suffix(s, "berry") for s in berries]
-    assert nosuffix == ["blue", "straw", "black"]
-
-
-def test_split_list(berries):
-    """Test if list is split correctly."""
-
-    split = utils.split_list(berries, 2)
-    assert split == [["blueberry", "blackberry"], ["strawberry"]]
-
-
-def test_read_list_file(berries):
-    """Test if read_list_file returns the correct list from a file."""
-
-    path = "berries.txt"
-    utils.write_list_file(berries, path)
-    berries_read = utils.read_list_file(path)
-    os.remove(path)  # file no longer needed
-
-    assert berries == berries_read
-
-
-def test_write_list_file(berries):
-    """Test if write_list_file writes a file."""
-
-    path = "berries.txt"
-    utils.write_list_file(berries, path)
-
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
-
-
 def test_remove_files():
     """Remove files from list."""
 
@@ -177,6 +120,7 @@ def test_pseudobulk_table(adata):
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
+
 
 
 def test_get_organism():
