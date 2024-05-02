@@ -8,12 +8,20 @@ import os
 import sctoolbox.utilities as utils
 
 
-@pytest.fixture
+# @pytest.fixture
+# def adata():
+#    """Load and returns an anndata object."""
+#    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
+#
+#    return sc.read_h5ad(f)
+@pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
+    """Return adata object with 3 groups."""
 
-    return sc.read_h5ad(f)
+    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+    return adata
 
 
 def test_get_adata_subsets(adata):
