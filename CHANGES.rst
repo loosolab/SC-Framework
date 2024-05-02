@@ -14,8 +14,8 @@
     - tools/bam
     - highly_variable
     - tables
-    - utils/general
     - utils/adata
+    - utils/general
 
 0.7.0 (23-04-24)
 -------------

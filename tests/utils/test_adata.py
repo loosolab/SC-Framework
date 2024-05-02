@@ -9,12 +9,6 @@ import numpy as np
 import sctoolbox.utilities as utils
 
 
-# @pytest.fixture
-# def adata():
-#    """Load and returns an anndata object."""
-#    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
-#
-#    return sc.read_h5ad(f)
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Return adata object with 3 groups."""
