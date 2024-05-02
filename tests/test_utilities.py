@@ -4,7 +4,7 @@ import pytest
 import os
 import numpy as np
 import shutil
-import pandas as pd
+# import pandas as pd
 import sctoolbox.utilities as utils
 import scanpy as sc
 
@@ -41,28 +41,6 @@ def sorted_fragments():
 
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
     return fragments
-
-
-@pytest.fixture
-def berries():
-    """Return list of berries."""
-    return ["blueberry", "strawberry", "blackberry"]
-
-
-@pytest.fixture
-def na_dataframe():
-    """Return DataFrame with columns of multiple types containing NA."""
-    data = {'int': [3, 2, 1, np.nan],
-            'float': [1.2, 3.4, 5.6, np.nan],
-            'string': ['a', 'b', 'c', np.nan],
-            'boolean': [True, False, True, np.nan],
-            'category_str': ['cat1', 'cat2', 'cat3', np.nan],
-            'category_num': [10, 20, 30, np.nan]}
-    df = pd.DataFrame.from_dict(data)
-
-    df['category_str'] = df['category_str'].astype('category')
-    df['category_num'] = df['category_num'].astype('category')
-    return df
 
 
 @pytest.fixture
@@ -123,16 +101,6 @@ def test_check_module():
         utils.check_module("nonexisting_module")
 
 
-def test_get_adata_subsets(adata):
-    """Test if adata subsets are returned correctly."""
-
-    subsets = utils.get_adata_subsets(adata, "group")
-
-    for group, sub_adata in subsets.items():
-        assert sub_adata.obs["group"][0] == group
-        assert sub_adata.obs["group"].nunique() == 1
-
-
 def test_remove_files():
     """Remove files from list."""
 
@@ -152,16 +120,6 @@ def test_pseudobulk_table(adata):
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
-
-
-def test_save_h5ad(adata):
-    """Test if h5ad file is saved correctly."""
-
-    path = "test.h5ad"
-    utils.save_h5ad(adata, path)
-
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
 
 
 def test_get_organism():

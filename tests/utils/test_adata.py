@@ -3,8 +3,40 @@
 import pytest
 import scanpy as sc
 import scipy
+import os
+import numpy as np
 
-import sctoolbox.utils.adata as ad
+import sctoolbox.utilities as utils
+
+
+@pytest.fixture(scope="session")  # re-use the fixture for all tests
+def adata():
+    """Return adata object with 3 groups."""
+
+    adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
+    adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+    return adata
+
+
+def test_get_adata_subsets(adata):
+    """Test if adata subsets are returned correctly."""
+
+    subsets = utils.get_adata_subsets(adata, "group")
+
+    for group, sub_adata in subsets.items():
+        assert sub_adata.obs["group"][0] == group
+        assert sub_adata.obs["group"].nunique() == 1
+
+
+def test_save_h5ad(adata):
+    """Test if h5ad file is saved correctly."""
+
+    path = "test.h5ad"
+    utils.save_h5ad(adata, path)
+
+    assert os.path.isfile(path)
+    os.remove(path)  # clean up after tests
 
 
 @pytest.fixture(scope="session")
@@ -33,13 +65,29 @@ def adata_icxg():
     return obj
 
 
+def test_add_uns_info(adata):
+    """Test if add_uns_info works on both string and list keys."""
+
+    utils.add_uns_info(adata, "akey", "info")
+
+    assert "akey" in adata.uns["sctoolbox"]
+    assert adata.uns["sctoolbox"]["akey"] == "info"
+
+    utils.add_uns_info(adata, ["upper", "lower"], "info")
+    assert "upper" in adata.uns["sctoolbox"]
+    assert adata.uns["sctoolbox"]["upper"]["lower"] == "info"
+
+    utils.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
+    assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
+
+
 def test_prepare_for_cellxgene(adata_icxg):
     """Test the prepare_for_cellxgene function."""
 
     obs_names = list(adata_icxg.obs.columns)
     var_names = list(adata_icxg.var.columns)
 
-    cxg_adata = ad.prepare_for_cellxgene(
+    cxg_adata = utils.prepare_for_cellxgene(
         adata_icxg,
         keep_obs=obs_names[1:],
         keep_var=var_names[1:],
@@ -90,9 +138,9 @@ def test_prepare_cellxgene_emb(adata_icxg, inplace, embedding_names):
 
     if "invalid" in embedding_names:
         with pytest.raises(ValueError):
-            ad.prepare_for_cellxgene(adata, embedding_names=embedding_names)
+            utils.prepare_for_cellxgene(adata, embedding_names=embedding_names)
     else:
-        out = ad.prepare_for_cellxgene(
+        out = utils.prepare_for_cellxgene(
             adata,
             embedding_names=embedding_names,
             keep_obs=[adata.obs.columns[0]],
