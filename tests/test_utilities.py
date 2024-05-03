@@ -3,8 +3,6 @@
 import pytest
 import os
 import numpy as np
-import shutil
-# import pandas as pd
 import sctoolbox.utilities as utils
 import scanpy as sc
 
@@ -64,20 +62,6 @@ def test_is_integer_array(arr, boolean):
     assert result == boolean
 
 
-def test_create_dir():
-    """Test if the directory is created."""
-
-    # Ensure that testdir is not already existing
-    if os.path.isdir("testdir"):
-        shutil.rmtree("testdir")
-
-    # create the dir with the utils function
-    utils.create_dir("testdir")
-    assert os.path.isdir("testdir")
-
-    shutil.rmtree("testdir")  # clean up after tests
-
-
 def test_is_notebook():
     """Test if the function is run in a notebook."""
 
@@ -99,18 +83,6 @@ def test_check_module():
 
     with pytest.raises(Exception):
         utils.check_module("nonexisting_module")
-
-
-def test_remove_files():
-    """Remove files from list."""
-
-    if not os.path.isfile("afile.txt"):
-        os.mknod("afile.txt")
-
-    files = ["afile.txt", "notfound.txt"]
-    utils.remove_files(files)
-
-    assert os.path.isfile("afile.txt") is False
 
 
 def test_pseudobulk_table(adata):
