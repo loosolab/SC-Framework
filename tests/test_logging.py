@@ -63,22 +63,6 @@ def test_get_parameter_table(adata):
     assert set(["func", "args", "kwargs", "user", "timestamp"]).issubset(table.columns)
 
 
-def test_add_uns_info(adata):
-    """Test if add_uns_info works on both string and list keys."""
-
-    utils.add_uns_info(adata, "akey", "info")
-
-    assert "akey" in adata.uns["sctoolbox"]
-    assert adata.uns["sctoolbox"]["akey"] == "info"
-
-    utils.add_uns_info(adata, ["upper", "lower"], "info")
-    assert "upper" in adata.uns["sctoolbox"]
-    assert adata.uns["sctoolbox"]["upper"]["lower"] == "info"
-
-    utils.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
-    assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
-
-
 def test_user_logging():
     """Test is logfile is correctly overwritten."""
 

@@ -1,21 +1,23 @@
 """Test bam related functions."""
 
+import pytest
 import os
 import shutil
-import pytest
-import sctoolbox.bam
-import sctoolbox.tools.bam as stb
 import glob
-import scanpy as sc
 import logging
+import scanpy as sc
 import random
 import re
+
+import sctoolbox.bam
+import sctoolbox.tools as tools
+import sctoolbox.tools.bam as stb
 
 
 @pytest.fixture
 def bam_file():
     """Fixture pointing to test bam."""
-    return os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
 
 
 @pytest.fixture
@@ -43,9 +45,30 @@ def adata():
     """Load and returns an anndata object."""
 
     # has .X of type numpy.array
-    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+    obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
 
     return obj
+
+
+@pytest.fixture
+def adata_atac():
+    """Load atac adata."""
+    adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
+    return sc.read_h5ad(adata_f)
+
+
+@pytest.fixture
+def adata_atac_emptyvar(adata_atac):
+    """Create adata with empty adata.var."""
+    adata = adata_atac.copy()
+    adata.var = adata.var.drop(columns=adata.var.columns)
+    return adata
+
+
+def test_bam_adata_ov(adata_atac, bam_file):
+    """Test bam_adata_ov success."""
+    hitrate = tools.bam_adata_ov(adata_atac, bam_file, cb_tag='CB')
+    assert hitrate >= 0.10
 
 
 def test_check_barcode_tag(adata, bam_file, mocker, caplog):
@@ -99,20 +122,6 @@ def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
     assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
 
 
-def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
-    """Test open_bam success."""
-
-    assert type(bam_handle).__name__ == "AlignmentFile"
-
-
-def test_get_bam_reads(bam_handle):
-    """Test get_bam_reads success."""
-
-    total = sctoolbox.bam.get_bam_reads(bam_handle)
-
-    assert total == 10000
-
-
 @pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
 def test_split_bam_clusters(bam_handle, bam_file, adata, parallel, sort_bams, index_bams):
     """Test split_bam_clusters success."""
@@ -149,12 +158,26 @@ def test_failure_split_bam_clusters(bam_file, adata):
         sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", sort_bams=False, index_bams=True)
 
 
+def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
+    """Test open_bam success."""
+
+    assert type(bam_handle).__name__ == "AlignmentFile"
+
+
+def test_get_bam_reads(bam_handle):
+    """Test get_bam_reads success."""
+
+    total = sctoolbox.bam.get_bam_reads(bam_handle)
+
+    assert total == 10000
+
+
 def test_bam_to_bigwig():
     """Test whether the bigwig is written."""
 
     bigwig_out = "mm10_atac.bw"
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
+    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
     bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_f, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
@@ -173,7 +196,7 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
     if barcode_regex:
         barcode_tag = None
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', bam_name + ".bam")
+    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
     fragments_f = sctoolbox.bam.create_fragment_file(bam=bam_f, nproc=1, outdir=outdir,
                                                      barcode_tag=barcode_tag, barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
                                                      index=True)  # requires bgzip and tabix
@@ -192,7 +215,7 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
 def test_create_fragment_file_multiprocessing():
     """Assert that the result is the same regardless of number of cores used."""
 
-    bam_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
+    bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'homo_sapiens_liver_sorted.bam')
 
     n_fragments = []
     for nproc in [1, 4]:

@@ -1,6 +1,7 @@
 0.8.0 (in progress)
 -------------------
 - TEST CLEANUP (#215)
+    - gene_correlation
     - marker_genes
     - tobias
     - embedding tools
@@ -10,8 +11,12 @@
     - plotting/test_qc_filter
     - general
     - io
+    - tools/clustering
+    - tools/bam
     - highly_variable
     - tables
+    - utils/adata
+    - utils/general
 
 0.7.0 (23-04-24)
 -------------
