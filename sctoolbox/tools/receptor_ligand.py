@@ -479,6 +479,363 @@ def hairball(adata: sc.AnnData,
     return axes
 
 
+def top_genes_and_interactions_for_cell_clusters(
+    data: pd.DataFrame,
+    receptor_cluster_col: str = 'receptor_cluster',
+    receptor_percent_col: str = "receptor_percent",
+    receptor_col: str = 'receptor_gene',
+    ligand_cluster_col: str = 'ligand_cluster',
+    ligand_percent_col: str = "ligand_percent",
+    ligand_col: str = 'ligand_gene',
+    min_perc: int | float = 70,
+    interaction_score: float | int = 0,
+    sector_text_size: int | float = 8,
+    directional: bool = False,
+    sector_size_is_cluster_size: bool = False,
+    show_genes: bool = True,
+    gene_amount: int = 5,
+    colormap_input: str = "viridis",
+    title: Optional[str] = None,
+    figsize: Tuple[int | float, int | float] = (10, 10),
+    dpi: int | float = 100,
+    save: Optional[str] = None,
+):
+    """
+    Show specific receptor-ligand connections between clusters as well as their top genes.
+    
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Table containing all receptor-ligand interactions (one per row).
+    receptor_cluster_col : str, default 'receptor_cluster'
+        Name of the column containing cluster names of receptors.
+    receptor_col : str, default 'receptor_gene'
+        Name of the column containing gene names of receptors.
+    ligand_cluster_col : str, default 'ligand_cluster'
+        Name of the column containing cluster names of ligands.
+    ligand_col : str, default 'ligand_gene'
+        Name of the column containing gene names of ligands. Shown on y-axis.
+    min_perc : int | float
+        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+    interaction_score : float | int, default 0
+        Interaction score must be above this threshold for the interaction to be counted in the graph.
+    sector_text_size: int | float, default 8
+        The text size for the sector name.
+    directional: bool, defalut False
+        Determines whether to display the interactions as arrows.
+    sector_size_is_cluster_size: bool, default False
+        Determines whether the sector's size is equivalent to the coresponding cluster's number of cells.
+    show_genes: bool, default True
+        Determines whether to display the top genes as an additional track.
+    gene_amount: int = 5
+        The amount of genes per receptor and ligand to display on the
+        outer track (displayed genes per sector = gene_amount*2).
+    colormap_input: str, default "viridis"
+        The colormap to be used when plotting.
+    title : Optional[str], default None
+        Title of the plot.
+    figsize : Tuple[int | float, int | float], default (10, 10)
+        Figure size
+    dpi : int | float, default 100
+        The resolution of the figure in dots-per-inch.
+    save : Optional[str], default None
+        Output filename
+    
+    Returns
+    -------
+    npt.ArrayLike
+        Object containing all plots. As returned by matplotlib.pyplot.subplots
+
+    
+    """    
+    # ---------------------filtering data---------------------------------
+  
+    receptor_ligand_filtered = data[(data[receptor_percent_col] > min_perc)
+                                   & (data[ligand_percent_col] > min_perc)]
+    
+    high_interaction_score = receptor_ligand_filtered[receptor_ligand_filtered["interaction_score"] > interaction_score]
+    
+    # ------------------- getting important values ----------------------------
+    
+    # saves a table of how many times each receptor cluster interacted with each ligand cluster
+    number_of_interactions = pd.DataFrame(
+        high_interaction_score[[receptor_cluster_col, ligand_cluster_col]].value_counts())
+    
+    number_of_interactions.reset_index(inplace=True)
+    
+    # Adds the number of interactions for each pair of receptor and ligand
+    # if they should be displayed non directional.
+    #
+    # e.g.: ligand A interacts with receptor B five times
+    #       and ligand B interacts with receptor A ten times
+    #       therefore A and B interact fifteen times non directional
+    if not directional:
+        number_of_interactions2 = pd.DataFrame(columns=[receptor_cluster_col, ligand_cluster_col, "count"])
+        
+        for index, row in number_of_interactions.iterrows():
+            receptor = row[receptor_cluster_col]
+            ligand = row[ligand_cluster_col]
+            
+            if receptor == ligand:
+                number_of_interactions2.loc[index] = [
+                    receptor,
+                    ligand,
+                    number_of_interactions.set_index([receptor_cluster_col,
+                                                      ligand_cluster_col])
+                    .loc[(receptor, ligand), "count"]
+                ]
+            elif not len(
+            number_of_interactions2[
+                ((number_of_interactions2[receptor_cluster_col] == ligand)
+                 & (number_of_interactions2[ligand_cluster_col] == receptor))
+            ]
+            ):
+                try:
+                    number_of_interactions2.loc[index] = [
+                        receptor,
+                        ligand,
+                        number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col])
+                        .loc[(receptor, ligand), "count"] + number_of_interactions
+                        .set_index(["receptor_cluster","ligand_cluster"]).loc[(ligand, receptor), "count"]
+                    ]
+                except:
+                    number_of_interactions2.loc[index] = [
+                        receptor,
+                        ligand,
+                        number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col])
+                        .loc[(receptor, ligand), "count"]
+                    ]
+            
+        number_of_interactions = number_of_interactions2
+    
+    # creates a DataFrame of interactions between receptors and ligands
+    interactions = number_of_interactions.copy().drop(columns="count")
+    
+    # Combines the interactions of receptors and ligands if they should be displayed non directional
+    #
+    # e.g.: ligand C interacts with receptor D
+    #       ligand D interacts with receptor C
+    #       therefore the interaction C - D is saved an D - C is disregared
+    if not directional:
+        
+        interactions2 = pd.DataFrame(columns=[receptor_cluster_col,ligand_cluster_col])
+
+        for index, interaction in interactions.iterrows():
+            receptor = interactions.at[index,receptor_cluster_col]
+            ligand = interactions.at[index,ligand_cluster_col]
+            if len(
+            interactions2[
+                ((interactions2[receptor_cluster_col] == receptor)&(interactions2[ligand_cluster_col] == ligand))|
+                ((interactions2[receptor_cluster_col] == ligand)&(interactions2[ligand_cluster_col] == receptor))
+            ]
+            ) == 0:
+                interactions2.loc[index] = [receptor,ligand]
+
+        interactions = interactions2
+    
+    # gets the size of the clusters and saves it in cluster_to_size
+    receptor_cluster_to_size = data[[receptor_cluster_col,"receptor_cluster_size"]]
+    ligand_cluster_to_size = data[[ligand_cluster_col,"ligand_cluster_size"]]
+
+
+    receptor_cluster_to_size = receptor_cluster_to_size.drop_duplicates()
+    ligand_cluster_to_size = ligand_cluster_to_size.drop_duplicates()
+
+
+    receptor_cluster_to_size.rename(
+        columns={receptor_cluster_col: "cluster", "receptor_cluster_size": "cluster_size"},
+        inplace=True
+    )
+    ligand_cluster_to_size.rename(
+        columns={ligand_cluster_col: "cluster", "ligand_cluster_size": "cluster_size"},
+        inplace=True
+    )
+
+    cluster_to_size = [receptor_cluster_to_size,ligand_cluster_to_size]
+
+    cluster_to_size = pd.concat(cluster_to_size)
+
+    cluster_to_size.drop_duplicates(inplace=True)
+    
+    # gets a list of the different cluster types
+    receptor_types = data[receptor_cluster_col]
+    
+    ligand_types = data[ligand_cluster_col]
+    
+    cluster_types = [receptor_types,ligand_types]
+    
+    cluster_types = pd.concat(cluster_types)
+    
+    cluster_types.drop_duplicates(inplace=True)
+    
+    # set up for colormapping
+    colormap = mpl.colormaps[colormap_input]
+    
+    norm = colors.Normalize(number_of_interactions["count"].min(), number_of_interactions["count"].max())
+    
+    # sorts the interactions based on interaction score
+    interaction_scores_sorted = high_interaction_score[[receptor_cluster_col,
+                                                        ligand_cluster_col,
+                                                        receptor_col,
+                                                        ligand_col,
+                                                        "interaction_score"]].sort_values(by=["interaction_score"],
+                                                                                          ascending=False)
+    
+    # ---------------------------setting up for the plot-----------------------------
+
+    # saving the cluster types in the sectors dictionary to use in the plot
+    # their size is set to 100 unless their size should be displayed depending on the cluster size
+    
+    sectors = {}
+    
+    if not sector_size_is_cluster_size:
+        for index in cluster_types:
+            sectors[index] = 100
+    else:
+        for index in cluster_types:
+            sectors[index] = cluster_to_size.set_index("cluster").at[index, "cluster_size"]
+    
+    # ------------------------plotting the data---------------------------------
+    
+    circos = Circos(sectors, space=5)
+    
+    # calculates the amount of times sector.name is in the table interactions
+    links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
+
+    # creating a from-to-table for a matirx
+    interactions_for_matrix = interactions.copy()
+    
+    interactions_for_matrix["count"] = 1
+
+    matrix = Matrix.parse_fromto_table(interactions_for_matrix)
+    
+    # calculates the width of the links,
+    # reads the first tupel in link_list and saves a modified version using the width in temp,
+    # pops the first element and appends temp to the list
+    link_list = matrix.to_links()
+    
+    for i in range(len(link_list)):
+        
+        start_link_width = circos.get_sector(link_list[0][0][0]).size/(links_per_sector[link_list[0][0][0]])
+        end_link_width = circos.get_sector(link_list[0][1][0]).size/(links_per_sector[link_list[0][1][0]])
+        
+        temp = ((link_list[0][0][0],math.floor(link_list[0][0][1]*start_link_width),math.floor(link_list[0][0][2]*start_link_width)),
+                 (link_list[0][1][0],math.floor(link_list[0][1][1]*end_link_width),math.floor(link_list[0][1][2]*end_link_width)))
+        link_list.pop(0)
+        link_list.append(temp)
+    
+    # adds the calculated links to the circos
+    link_radius = 95
+    
+    if show_genes:
+        link_radius = 65
+    
+    for link in matrix.to_links():
+        if not directional:
+            circos.link(
+            *link,
+            color=colormap(norm(number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
+            r1=link_radius,
+            r2=link_radius,
+        )
+        else:
+            circos.link(
+                *link,
+                color=colormap(norm(number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
+                r1=link_radius,
+                r2=link_radius,
+                direction=-1,
+            )
+    
+    # adds the tracks to the sectors
+    for sector in circos.sectors:
+        
+        # first track
+        track = sector.add_track((65, 70)) if show_genes else sector.add_track((95, 100))
+            
+        track.axis(fc="grey")
+        
+        track.text(sector.name, color="black", size=sector_text_size, r=105)        
+        
+        #shows cluster/sector size in the center of the sector
+        track.text(f"{cluster_to_size.set_index("cluster").at[sector.name,"cluster_size"]}",
+                   r=67 if show_genes else 97,
+                   size=9,
+                   color="white",
+                   adjust_rotation=True)
+        
+        #second track
+        if show_genes:
+            track2 = sector.add_track((73, 77))
+            track2.axis()
+
+            # generates fake data for the heatmap function to give it a red and a blue half
+            fake_data_receptor = [1 for x in range(gene_amount)]
+            fake_data_ligand = [2 for x in range(gene_amount)]
+            fake_data = fake_data_receptor + fake_data_ligand
+
+            track2.heatmap(
+                data=fake_data,
+                rect_kws=dict(ec="black", lw=1, alpha=0.3)
+            )
+
+            top_interaction_scores = interaction_scores_sorted[interaction_scores_sorted[receptor_cluster_col] == sector.name].head(gene_amount)
+            top_genes_receptor = list(top_interaction_scores[receptor_col])
+            top_genes_ligand = list(top_interaction_scores[ligand_col])
+
+            top_genes = top_genes_receptor + top_genes_ligand
+
+            gene_x_ticks = [sector.size*(1/(gene_amount*4))*x for x in list(range(1, gene_amount*4, 2))]
+            
+            track2.xticks(
+                x=gene_x_ticks,
+                tick_length=2,
+                labels=top_genes,
+                label_margin=1,
+                label_size=8,
+                label_orientation="vertical",
+            )
+    
+    
+    circos.text(title, r=120, deg=0, size=15)
+    
+    
+    circos.text("Number of\nInteractions", deg=60, r=147)
+    
+    circos.colorbar(
+        bounds=(1.1, 0.3, 0.02, 0.5),
+        vmin=number_of_interactions.min()["count"],
+        vmax=number_of_interactions.max()["count"],
+        cmap=colormap
+    )
+    
+    
+    fig = circos.plotfig(dpi=dpi, figsize=figsize)
+    
+    
+    patch_handles = [
+        Patch(color="grey", label="Number of cells\nper cluster"),
+    ]
+    
+    anchor = (1, 1)
+    
+    if show_genes:
+        patch_handles = patch_handles + [Patch(color=(1,0,0,0.3), label="top ligand genes\nby interaction score"),
+                                         Patch(color=(0,0,1,0.3), label="top receptor genes\nby interaction score")]
+        anchor = (1, 1.1)
+    
+    patch_legend = circos.ax.legend(
+        handles=patch_handles,
+        bbox_to_anchor=anchor,
+        fontsize=10,
+        handlelength=1,
+    )
+    circos.ax.add_artist(patch_legend)
+    
+    if save:
+        circos.savefig(save, dpi=dpi, figsize=figsize)
+
+
 @beartype
 def progress_violins(datalist: list[pd.DataFrame],
                      datalabel: list[str],
