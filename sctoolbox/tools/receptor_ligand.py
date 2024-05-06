@@ -599,8 +599,8 @@ def top_genes_and_interactions_for_cell_clusters(
         interactions = interactions_directed
 
     # gets the size of the clusters and saves it in cluster_to_size
-    receptor_cluster_to_size = data[[receptor_cluster_col,"receptor_cluster_size"]]
-    ligand_cluster_to_size = data[[ligand_cluster_col,"ligand_cluster_size"]]
+    receptor_cluster_to_size = data[[receptor_cluster_col, "receptor_cluster_size"]]
+    ligand_cluster_to_size = data[[ligand_cluster_col, "ligand_cluster_size"]]
 
     receptor_cluster_to_size = receptor_cluster_to_size.drop_duplicates()
     ligand_cluster_to_size = ligand_cluster_to_size.drop_duplicates()
@@ -614,27 +614,20 @@ def top_genes_and_interactions_for_cell_clusters(
         inplace=True
     )
 
-    cluster_to_size = [receptor_cluster_to_size,ligand_cluster_to_size]
+    # create a table of cluster sizes
+    cluster_to_size = [receptor_cluster_to_size, ligand_cluster_to_size]
 
     cluster_to_size = pd.concat(cluster_to_size)
 
     cluster_to_size.drop_duplicates(inplace=True)
 
-    # gets a list of the different cluster types
-    receptor_types = data[receptor_cluster_col]
-
-    ligand_types = data[ligand_cluster_col]
-
-    cluster_types = [receptor_types,ligand_types]
-
-    cluster_types = pd.concat(cluster_types)
-
-    cluster_types.drop_duplicates(inplace=True)
+    # get a list of the available clusters
+    avail_clusters = set(data[receptor_cluster_col].unique()).union(set(data[ligand_cluster_col].unique()))
 
     # set up for colormapping
     colormap = mpl.colormaps[colormap_input]
 
-    norm = colors.Normalize(interactions_directed["count"].min(), interactions_directed["count"].max())
+    norm = colors.Normalize(interactions["count"].min(), interactions["count"].max())
 
     # sorts the interactions based on interaction score
     interaction_scores_sorted = filtered[[receptor_cluster_col,
@@ -644,7 +637,7 @@ def top_genes_and_interactions_for_cell_clusters(
                                                         "interaction_score"]].sort_values(by=["interaction_score"],
                                                                                           ascending=False)
 
-    # ---------------------------setting up for the plot-----------------------------
+    # --------------------------- setting up for the plot -----------------------------
 
     # saving the cluster types in the sectors dictionary to use in the plot
     # their size is set to 100 unless their size should be displayed depending on the cluster size
@@ -652,20 +645,20 @@ def top_genes_and_interactions_for_cell_clusters(
     sectors = {}
 
     if not sector_size_is_cluster_size:
-        for index in cluster_types:
+        for index in avail_clusters:
             sectors[index] = 100
     else:
-        for index in cluster_types:
+        for index in avail_clusters:
             sectors[index] = cluster_to_size.set_index("cluster").at[index, "cluster_size"]
 
-    # ------------------------plotting the data---------------------------------
+    # ------------------------ plotting ---------------------------------
 
     circos = Circos(sectors, space=5)
 
     # calculates the amount of times sector.name is in the table interactions
     links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
 
-    # creating a from-to-table for a matirx
+    # creating a from-to-table for a matrix
     interactions_for_matrix = interactions.copy()
 
     interactions_for_matrix["count"] = 1
@@ -677,13 +670,13 @@ def top_genes_and_interactions_for_cell_clusters(
     # pops the first element and appends temp to the list
     link_list = matrix.to_links()
 
-    for i in range(len(link_list)):
+    for _ in range(len(link_list)):
+        start_link_width = circos.get_sector(link_list[0][0][0]).size / (links_per_sector[link_list[0][0][0]])
+        end_link_width = circos.get_sector(link_list[0][1][0]).size / (links_per_sector[link_list[0][1][0]])
 
-        start_link_width = circos.get_sector(link_list[0][0][0]).size/(links_per_sector[link_list[0][0][0]])
-        end_link_width = circos.get_sector(link_list[0][1][0]).size/(links_per_sector[link_list[0][1][0]])
+        temp = ((link_list[0][0][0], math.floor(link_list[0][0][1] * start_link_width), math.floor(link_list[0][0][2] * start_link_width)),
+                 (link_list[0][1][0], math.floor(link_list[0][1][1] * end_link_width), math.floor(link_list[0][1][2] * end_link_width)))
 
-        temp = ((link_list[0][0][0],math.floor(link_list[0][0][1]*start_link_width),math.floor(link_list[0][0][2]*start_link_width)),
-                 (link_list[0][1][0],math.floor(link_list[0][1][1]*end_link_width),math.floor(link_list[0][1][2]*end_link_width)))
         link_list.pop(0)
         link_list.append(temp)
 
@@ -694,34 +687,23 @@ def top_genes_and_interactions_for_cell_clusters(
         link_radius = 65
 
     for link in matrix.to_links():
-        if not directional:
-            circos.link(
+        circos.link(
             *link,
-            color=colormap(norm(interactions_directed.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
+            color=colormap(norm(interactions.set_index(cluster_col_list).loc[(link[0][0], link[1][0]), "count"])),
             r1=link_radius,
             r2=link_radius,
+            direction=-1 if directional else 0
         )
-        else:
-            circos.link(
-                *link,
-                color=colormap(norm(interactions_directed.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
-                r1=link_radius,
-                r2=link_radius,
-                direction=-1,
-            )
 
     # adds the tracks to the sectors
     for sector in circos.sectors:
-
         # first track
         track = sector.add_track((65, 70)) if show_genes else sector.add_track((95, 100))
-
         track.axis(fc="grey")
-
         track.text(sector.name, color="black", size=sector_text_size, r=105)        
 
         #shows cluster/sector size in the center of the sector
-        track.text(f"{cluster_to_size.set_index("cluster").at[sector.name,"cluster_size"]}",
+        track.text(f"{cluster_to_size.set_index("cluster").at[sector.name, "cluster_size"]}",
                    r=67 if show_genes else 97,
                    size=9,
                    color="white",
@@ -733,8 +715,8 @@ def top_genes_and_interactions_for_cell_clusters(
             track2.axis()
 
             # generates fake data for the heatmap function to give it a red and a blue half
-            fake_data_receptor = [1 for x in range(gene_amount)]
-            fake_data_ligand = [2 for x in range(gene_amount)]
+            fake_data_receptor = [1 for _ in range(gene_amount)]
+            fake_data_ligand = [2 for _ in range(gene_amount)]
             fake_data = fake_data_receptor + fake_data_ligand
 
             track2.heatmap(
@@ -748,7 +730,7 @@ def top_genes_and_interactions_for_cell_clusters(
 
             top_genes = top_genes_receptor + top_genes_ligand
 
-            gene_x_ticks = [sector.size*(1/(gene_amount*4))*x for x in list(range(1, gene_amount*4, 2))]
+            gene_x_ticks = [sector.size * (1 / (gene_amount * 4)) * x for x in list(range(1, gene_amount * 4, 2))]
 
             track2.xticks(
                 x=gene_x_ticks,
@@ -779,8 +761,8 @@ def top_genes_and_interactions_for_cell_clusters(
     anchor = (1, 1)
 
     if show_genes:
-        patch_handles = patch_handles + [Patch(color=(1,0,0,0.3), label="top ligand genes\nby interaction score"),
-                                         Patch(color=(0,0,1,0.3), label="top receptor genes\nby interaction score")]
+        patch_handles = patch_handles + [Patch(color=(1, 0, 0, 0.3), label="top ligand genes\nby interaction score"),
+                                         Patch(color=(0, 0, 1, 0.3), label="top receptor genes\nby interaction score")]
         anchor = (1, 1.1)
 
     patch_legend = circos.ax.legend(
@@ -793,6 +775,8 @@ def top_genes_and_interactions_for_cell_clusters(
 
     if save:
         circos.savefig(save, dpi=dpi, figsize=figsize)
+
+    return fig
 
 
 @beartype
