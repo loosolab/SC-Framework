@@ -555,20 +555,24 @@ def top_genes_and_interactions_for_cell_clusters(
     npt.ArrayLike
         Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
-    # ---------------------filtering data---------------------------------
+    cluster_col_list = [receptor_cluster_col, ligand_cluster_col]
 
-    receptor_ligand_filtered = data[(data[receptor_percent_col] > min_perc)
-                                   & (data[ligand_percent_col] > min_perc)]
+    # --------------------- filtering data ---------------------------------
 
-    high_interaction_score = receptor_ligand_filtered[receptor_ligand_filtered["interaction_score"] > interaction_score]
+    # filter interactions based on minimum % cells expressing the involved genes
+    # also keep interactions above provided interaction score threshold
+    filtered = data[(data[receptor_percent_col] > min_perc)
+                  & (data[ligand_percent_col] > min_perc)
+                  & (data["interaction_score"] > interaction_score)]
 
     # ------------------- getting important values ----------------------------
 
     # saves a table of how many times each receptor cluster interacted with each ligand cluster
-    number_of_interactions = pd.DataFrame(
-        high_interaction_score[[receptor_cluster_col, ligand_cluster_col]].value_counts())
+    interactions_directed = pd.DataFrame(
+        filtered[cluster_col_list].value_counts()
+    )
 
-    number_of_interactions.reset_index(inplace=True)
+    interactions_directed.reset_index(inplace=True)
 
     # Adds the number of interactions for each pair of receptor and ligand
     # if they should be displayed non directional.
@@ -577,68 +581,22 @@ def top_genes_and_interactions_for_cell_clusters(
     #       and ligand B interacts with receptor A ten times
     #       therefore A and B interact fifteen times non directional
     if not directional:
-        number_of_interactions2 = pd.DataFrame(columns=[receptor_cluster_col, ligand_cluster_col, "count"])
+        interactions_undirected = interactions_directed.copy()
 
-        for index, row in number_of_interactions.iterrows():
-            receptor = row[receptor_cluster_col]
-            ligand = row[ligand_cluster_col]
+        # OpenAI GPT-4 supported >>>
+        # First, make sure each edge is represented in the same way, by sorting the two ends
+        interactions_undirected[cluster_col_list] = np.sort(
+            interactions_undirected[cluster_col_list].values,
+            axis=1
+        )
 
-            if receptor == ligand:
-                number_of_interactions2.loc[index] = [
-                    receptor,
-                    ligand,
-                    number_of_interactions.set_index([receptor_cluster_col,
-                                                      ligand_cluster_col])
-                    .loc[(receptor, ligand), "count"]
-                ]
-            elif not len(
-            number_of_interactions2[
-                ((number_of_interactions2[receptor_cluster_col] == ligand)
-                 & (number_of_interactions2[ligand_cluster_col] == receptor))
-            ]
-            ):
-                try:
-                    number_of_interactions2.loc[index] = [
-                        receptor,
-                        ligand,
-                        number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col])
-                        .loc[(receptor, ligand), "count"] + number_of_interactions
-                        .set_index(["receptor_cluster","ligand_cluster"]).loc[(ligand, receptor), "count"]
-                    ]
-                except:
-                    number_of_interactions2.loc[index] = [
-                        receptor,
-                        ligand,
-                        number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col])
-                        .loc[(receptor, ligand), "count"]
-                    ]
+        # Then, you can group by the two columns and sum the connections 
+        interactions_undirected = interactions_undirected.groupby(cluster_col_list)["count"].sum().reset_index()
+        # <<< OpenAI GPT-4 supported
 
-        number_of_interactions = number_of_interactions2
-
-    # creates a DataFrame of interactions between receptors and ligands
-    interactions = number_of_interactions.copy().drop(columns="count")
-
-    # Combines the interactions of receptors and ligands if they should be displayed non directional
-    #
-    # e.g.: ligand C interacts with receptor D
-    #       ligand D interacts with receptor C
-    #       therefore the interaction C - D is saved an D - C is disregared
-    if not directional:
-
-        interactions2 = pd.DataFrame(columns=[receptor_cluster_col,ligand_cluster_col])
-
-        for index, interaction in interactions.iterrows():
-            receptor = interactions.at[index,receptor_cluster_col]
-            ligand = interactions.at[index,ligand_cluster_col]
-            if len(
-            interactions2[
-                ((interactions2[receptor_cluster_col] == receptor)&(interactions2[ligand_cluster_col] == ligand))|
-                ((interactions2[receptor_cluster_col] == ligand)&(interactions2[ligand_cluster_col] == receptor))
-            ]
-            ) == 0:
-                interactions2.loc[index] = [receptor,ligand]
-
-        interactions = interactions2
+        interactions = interactions_undirected
+    else:
+        interactions = interactions_directed
 
     # gets the size of the clusters and saves it in cluster_to_size
     receptor_cluster_to_size = data[[receptor_cluster_col,"receptor_cluster_size"]]
@@ -676,10 +634,10 @@ def top_genes_and_interactions_for_cell_clusters(
     # set up for colormapping
     colormap = mpl.colormaps[colormap_input]
 
-    norm = colors.Normalize(number_of_interactions["count"].min(), number_of_interactions["count"].max())
+    norm = colors.Normalize(interactions_directed["count"].min(), interactions_directed["count"].max())
 
     # sorts the interactions based on interaction score
-    interaction_scores_sorted = high_interaction_score[[receptor_cluster_col,
+    interaction_scores_sorted = filtered[[receptor_cluster_col,
                                                         ligand_cluster_col,
                                                         receptor_col,
                                                         ligand_col,
@@ -739,14 +697,14 @@ def top_genes_and_interactions_for_cell_clusters(
         if not directional:
             circos.link(
             *link,
-            color=colormap(norm(number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
+            color=colormap(norm(interactions_directed.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
             r1=link_radius,
             r2=link_radius,
         )
         else:
             circos.link(
                 *link,
-                color=colormap(norm(number_of_interactions.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
+                color=colormap(norm(interactions_directed.set_index([receptor_cluster_col,ligand_cluster_col]).loc[(link[0][0], link[1][0]), "count"])),
                 r1=link_radius,
                 r2=link_radius,
                 direction=-1,
@@ -807,8 +765,8 @@ def top_genes_and_interactions_for_cell_clusters(
 
     circos.colorbar(
         bounds=(1.1, 0.3, 0.02, 0.5),
-        vmin=number_of_interactions.min()["count"],
-        vmax=number_of_interactions.max()["count"],
+        vmin=interactions_directed.min()["count"],
+        vmax=interactions_directed.max()["count"],
         cmap=colormap
     )
 
