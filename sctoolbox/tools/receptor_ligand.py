@@ -13,6 +13,7 @@ from matplotlib.patches import ConnectionPatch, Patch
 import matplotlib.lines as lines
 import seaborn as sns
 import igraph as ig
+import pycirclize
 from tqdm import tqdm
 import warnings
 
@@ -557,6 +558,10 @@ def top_genes_and_interactions_for_cell_clusters(
                   & (data[ligand_percent_col] > min_perc)
                   & (data["interaction_score"] > interaction_score)]
 
+    # sort data by interaction score for top gene selection
+    if show_genes:
+        filtered.sort_values(by="interaction_score", ascending=False, inplace=True)
+
     # ------------------- getting important values ----------------------------
 
     # saves a table of how many times each receptor cluster interacted with each ligand cluster
@@ -620,15 +625,7 @@ def top_genes_and_interactions_for_cell_clusters(
     # set up for colormapping
     colormap = matplotlib.colormaps[colormap_input]
 
-    norm = colors.Normalize(interactions["count"].min(), interactions["count"].max())
-
-    # sorts the interactions based on interaction score
-    interaction_scores_sorted = filtered[[receptor_cluster_col,
-                                                        ligand_cluster_col,
-                                                        receptor_col,
-                                                        ligand_col,
-                                                        "interaction_score"]].sort_values(by=["interaction_score"],
-                                                                                          ascending=False)
+    norm = matplotlib.colors.Normalize(interactions["count"].min(), interactions["count"].max())
 
     # --------------------------- setting up for the plot -----------------------------
 
@@ -646,39 +643,53 @@ def top_genes_and_interactions_for_cell_clusters(
 
     # ------------------------ plotting ---------------------------------
 
+    # create initial object with sectors (cell types)
     circos = pycirclize.Circos(sectors, space=5)
-
-    # calculates the amount of times sector.name is in the table interactions
-    links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
 
     # creating a from-to-table for a matrix
     interactions_for_matrix = interactions.copy()
-
+    
+    # set link width to 1 so it can be scaled up later
     interactions_for_matrix["count"] = 1
 
+    # create the links in pycirclize format
     matrix = pycirclize.parser.Matrix.parse_fromto_table(interactions_for_matrix)
-
-    # calculates the width of the links,
-    # reads the first tupel in link_list and saves a modified version using the width in temp,
-    # pops the first element and appends temp to the list
     link_list = matrix.to_links()
+    
+    # calculates the amount of times sector.name is in the table interactions
+    links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
 
+    # adjust the start and end width of each link
     for _ in range(len(link_list)):
-        start_link_width = circos.get_sector(link_list[0][0][0]).size / (links_per_sector[link_list[0][0][0]])
-        end_link_width = circos.get_sector(link_list[0][1][0]).size / (links_per_sector[link_list[0][1][0]])
+        # divide sector size by number of links in a sector to get the same width for all links within a sector
+        start_link_width = circos.get_sector(link_list[0][0][0]).size / links_per_sector[link_list[0][0][0]]
+        end_link_width = circos.get_sector(link_list[0][1][0]).size / links_per_sector[link_list[0][1][0]]
 
-        temp = ((link_list[0][0][0], math.floor(link_list[0][0][1] * start_link_width), math.floor(link_list[0][0][2] * start_link_width)),
-                 (link_list[0][1][0], math.floor(link_list[0][1][1] * end_link_width), math.floor(link_list[0][1][2] * end_link_width)))
+        # link structure:
+        # ((start_sector, left_side_of_link, right_side_of_link),
+        #  (end_sector, left_side_of_link, right_side_of_link))
+        # multiply link width (set to 1) with the respective multiplier from above
+        temp = ((link_list[0][0][0],
+                 math.floor(link_list[0][0][1] * start_link_width),
+                 math.floor(link_list[0][0][2] * start_link_width)
+                ),
+                 (link_list[0][1][0],
+                  math.floor(link_list[0][1][1] * end_link_width),
+                  math.floor(link_list[0][1][2] * end_link_width)
+                )
+               )
 
+        # remove the first link and add the updated version at the end
         link_list.pop(0)
         link_list.append(temp)
 
-    # adds the calculated links to the circos
-    link_radius = 95
-
+    # size of the area where the links will be displayed
     if show_genes:
         link_radius = 65
-
+    else:
+        link_radius = 95
+    
+    # add the calculated links to the circos object
     for link in matrix.to_links():
         circos.link(
             *link,
@@ -688,47 +699,48 @@ def top_genes_and_interactions_for_cell_clusters(
             direction=-1 if directional else 0
         )
 
-    # adds the tracks to the sectors
+    # add the tracks (layers) to the sectors
     for sector in circos.sectors:
-        # first track
+        # first track (grey bars connected with the links)
         track = sector.add_track((65, 70)) if show_genes else sector.add_track((95, 100))
         track.axis(fc="grey")
         track.text(sector.name, color="black", size=sector_text_size, r=105)
 
-        #shows cluster/sector size in the center of the sector
+        # shows cluster/ sector size in the center of the sector
         track.text(f"{cluster_to_size.set_index('cluster').at[sector.name, 'cluster_size']}",
                    r=67 if show_genes else 97,
                    size=9,
                    color="white",
                    adjust_rotation=True)
 
-        #second track
+        # add top receptor/ ligand gene track
         if show_genes:
             track2 = sector.add_track((73, 77))
-            track2.axis()
 
-            # generates fake data for the heatmap function to give it a red and a blue half
-            fake_data_receptor = [1 for _ in range(gene_amount)]
-            fake_data_ligand = [2 for _ in range(gene_amount)]
-            fake_data = fake_data_receptor + fake_data_ligand
+            # get first x unique receptor/ ligand genes
+            # https://stackoverflow.com/a/17016257/19870975
+            sector_interactions = filtered[filtered[receptor_cluster_col] == sector.name]
+            top_receptors = list(dict.fromkeys(sector_interactions[receptor_col]))[:gene_amount]
+            top_ligands = list(dict.fromkeys(sector_interactions[ligand_col]))[:gene_amount]
 
+            # generates dummy data for the heatmap function to give it a red and a blue half
+            dummy_data = [1] * len(top_receptors) + [2] * len(top_ligands)
             track2.heatmap(
-                data=fake_data,
+                data=dummy_data,
                 rect_kws=dict(ec="black", lw=1, alpha=0.3)
             )
 
-            top_interaction_scores = interaction_scores_sorted[interaction_scores_sorted[receptor_cluster_col] == sector.name].head(gene_amount)
-            top_genes_receptor = list(top_interaction_scores[receptor_col])
-            top_genes_ligand = list(top_interaction_scores[ligand_col])
+            # compute x tick positions
+            half_step = sector.size / len(dummy_data) / 2
+            x_tick_pos = np.linspace(half_step,
+                                     sector.size - half_step,
+                                     len(dummy_data))
 
-            top_genes = top_genes_receptor + top_genes_ligand
-
-            gene_x_ticks = [sector.size * (1 / (gene_amount * 4)) * x for x in list(range(1, gene_amount * 4, 2))]
-
+            # add gene ticks
             track2.xticks(
-                x=gene_x_ticks,
+                x=x_tick_pos,
                 tick_length=2,
-                labels=top_genes,
+                labels=top_receptors + top_ligands,
                 label_margin=1,
                 label_size=8,
                 label_orientation="vertical",
@@ -740,8 +752,8 @@ def top_genes_and_interactions_for_cell_clusters(
 
     circos.colorbar(
         bounds=(1.1, 0.3, 0.02, 0.5),
-        vmin=interactions_directed.min()["count"],
-        vmax=interactions_directed.max()["count"],
+        vmin=interactions.min()["count"],
+        vmax=interactions.max()["count"],
         cmap=colormap
     )
 
