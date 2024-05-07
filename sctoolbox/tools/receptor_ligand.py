@@ -1,20 +1,20 @@
 """Tools for a receptor-ligand analysis."""
+import math
+import numpy as np
 import pandas as pd
 from collections import Counter
+from itertools import combinations_with_replacement
 import scipy
-import numpy as np
+from sklearn.preprocessing import minmax_scale
+import scanpy as sc
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import ConnectionPatch, Patch
+import matplotlib.lines as lines
 import seaborn as sns
 import igraph as ig
-from itertools import combinations_with_replacement
-from matplotlib import cm
 from tqdm import tqdm
-import matplotlib
-from matplotlib.patches import ConnectionPatch
-import matplotlib.lines as lines
-from sklearn.preprocessing import minmax_scale
 import warnings
-import scanpy as sc
 
 from beartype.typing import Optional, Tuple
 import numpy.typing as npt
@@ -22,14 +22,6 @@ from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
-
-# TODO cleanup
-import math
-import matplotlib as mpl
-
-from pycirclize.parser import Matrix
-from matplotlib import colors
-from matplotlib.patches import Patch
 
 
 # -------------------------------------------------- setup functions -------------------------------------------------- #
@@ -569,7 +561,8 @@ def top_genes_and_interactions_for_cell_clusters(
 
     # saves a table of how many times each receptor cluster interacted with each ligand cluster
     interactions_directed = pd.DataFrame(
-        filtered[cluster_col_list].value_counts()
+        filtered[cluster_col_list].value_counts(),
+        columns=["count"]
     )
 
     interactions_directed.reset_index(inplace=True)
@@ -590,7 +583,7 @@ def top_genes_and_interactions_for_cell_clusters(
             axis=1
         )
 
-        # Then, you can group by the two columns and sum the connections 
+        # Then, you can group by the two columns and sum the connections
         interactions_undirected = interactions_undirected.groupby(cluster_col_list)["count"].sum().reset_index()
         # <<< OpenAI GPT-4 supported
 
@@ -625,7 +618,7 @@ def top_genes_and_interactions_for_cell_clusters(
     avail_clusters = set(data[receptor_cluster_col].unique()).union(set(data[ligand_cluster_col].unique()))
 
     # set up for colormapping
-    colormap = mpl.colormaps[colormap_input]
+    colormap = matplotlib.colormaps[colormap_input]
 
     norm = colors.Normalize(interactions["count"].min(), interactions["count"].max())
 
@@ -653,7 +646,7 @@ def top_genes_and_interactions_for_cell_clusters(
 
     # ------------------------ plotting ---------------------------------
 
-    circos = Circos(sectors, space=5)
+    circos = pycirclize.Circos(sectors, space=5)
 
     # calculates the amount of times sector.name is in the table interactions
     links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
@@ -663,7 +656,7 @@ def top_genes_and_interactions_for_cell_clusters(
 
     interactions_for_matrix["count"] = 1
 
-    matrix = Matrix.parse_fromto_table(interactions_for_matrix)
+    matrix = pycirclize.parser.Matrix.parse_fromto_table(interactions_for_matrix)
 
     # calculates the width of the links,
     # reads the first tupel in link_list and saves a modified version using the width in temp,
@@ -700,10 +693,10 @@ def top_genes_and_interactions_for_cell_clusters(
         # first track
         track = sector.add_track((65, 70)) if show_genes else sector.add_track((95, 100))
         track.axis(fc="grey")
-        track.text(sector.name, color="black", size=sector_text_size, r=105)        
+        track.text(sector.name, color="black", size=sector_text_size, r=105)
 
         #shows cluster/sector size in the center of the sector
-        track.text(f"{cluster_to_size.set_index("cluster").at[sector.name, "cluster_size"]}",
+        track.text(f"{cluster_to_size.set_index('cluster').at[sector.name, 'cluster_size']}",
                    r=67 if show_genes else 97,
                    size=9,
                    color="white",
