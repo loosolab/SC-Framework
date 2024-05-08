@@ -21,7 +21,7 @@ plt.switch_backend("Agg")
 @pytest.fixture
 def adata():
     """Load and returns an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
 
     obj = sc.read_h5ad(f)
 
@@ -42,7 +42,7 @@ def adata():
 @pytest.fixture
 def db_file():
     """Path to receptor-ligand database."""
-    return os.path.join(os.path.dirname(__file__), 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture
