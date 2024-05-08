@@ -484,21 +484,19 @@ def hairball(adata: sc.AnnData,
 @beartype
 def cyclone(
     adata: sc.AnnData,
-    receptor_cluster_col: str = 'receptor_cluster',
-    receptor_percent_col: str = 'receptor_percent',
-    receptor_col: str = 'receptor_gene',
-    ligand_cluster_col: str = 'ligand_cluster',
-    ligand_percent_col: str = 'ligand_percent',
-    ligand_col: str = 'ligand_gene',
-    min_perc: int | float = 70,
+    min_perc: int | float,
     interaction_score: float | int = 0,
+    interaction_perc: Optional[int | float] = None,
+    title: Optional[str] = "Network",
+    color_min: float | int = 0,
+    color_max: Optional[float | int] = None,
+    cbar_label: str = 'Interaction count',
+    colormap: str = 'viridis',
     sector_text_size: int | float = 10,
     directional: bool = False,
     sector_size_is_cluster_size: bool = False,
     show_genes: bool = True,
     gene_amount: int = 5,
-    colormap_input: str = 'viridis',
-    title: Optional[str] = None,
     figsize: Tuple[int | float, int | float] = (10, 10),
     dpi: int | float = 100,
     save: Optional[str] = None
@@ -510,22 +508,20 @@ def cyclone(
     ----------
     adata : sc.AnnData
         AnnData object
-    receptor_cluster_col : str, default 'receptor_cluster'
-        Name of the column containing cluster names of receptors.
-    receptor_percent_col : str, default 'receptor_percent'
-        Name of the column containing the receptor percentages.
-    receptor_col : str, default 'receptor_gene'
-        Name of the column containing gene names of receptors.
-    ligand_cluster_col : str, default 'ligand_cluster'
-        Name of the column containing cluster names of ligands.
-    ligand_percent_col : str, default 'ligand_percent'
-        Name of the column containing the ligand percentages.
-    ligand_col : str, default 'ligand_gene'
-        Name of the column containing gene names of ligands. Shown on y-axis.
     min_perc : int | float
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     interaction_score : float | int, default 0
         Interaction score must be above this threshold for the interaction to be counted in the graph.
+    interaction_perc : Optional[int | float], default None
+        Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
+    title : str, default 'Network'
+        The plots title.
+    color_min : float, default 0
+        Min value for color range.
+    color_max : Optional[float | int], default None
+        Max value for color range.
+    cbar_label : str, default 'Interaction count'
+        Label above the colorbar.
     sector_text_size: int | float, default 10
         The text size for the sector name.
     directional: bool, defalut False
@@ -536,7 +532,7 @@ def cyclone(
         Determines whether to display the top genes as an additional track.
     gene_amount: int = 5
         The amount of genes per receptor and ligand to display on the
-        outer track (displayed genes per sector = gene_amount*2).
+        outer track (displayed genes per sector = gene_amount *2).
     colormap_input: str, default "viridis"
         The colormap to be used when plotting.
     title : Optional[str], default None
@@ -545,8 +541,8 @@ def cyclone(
         Figure size
     dpi : int | float, default 100
         The resolution of the figure in dots-per-inch.
-    save : Optional[str], default None
-        Output filename
+    save : str, default None
+        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
 
     Returns
     -------
@@ -557,18 +553,14 @@ def cyclone(
     # check if data is available
     _check_interactions(adata)
 
-    data = get_interactions(adata)
-
     # commonly used list
-    cluster_col_list = [receptor_cluster_col, ligand_cluster_col]
+    cluster_col_list = ["receptor_cluster", "ligand_cluster"]
 
     # --------------------- filtering data ---------------------------------
-
-    # filter interactions based on minimum % cells expressing the involved genes
-    # also keep interactions above provided interaction score threshold
-    filtered = data[(data[receptor_percent_col] > min_perc)
-                    & (data[ligand_percent_col] > min_perc)
-                    & (data["interaction_score"] > interaction_score)]
+    filtered = get_interactions(anndata=adata,
+                                min_perc=min_perc,
+                                interaction_score=interaction_score,
+                                interaction_perc=interaction_perc)
 
     # sort data by interaction score for top gene selection
     if show_genes:
@@ -586,7 +578,7 @@ def cyclone(
 
     # Adds the number of interactions for each pair of receptor and ligand
     # if they should be displayed non directional.
-    #
+
     # e.g.: ligand A interacts with receptor B five times
     #       and ligand B interacts with receptor A ten times
     #       therefore A and B interact fifteen times non directional
@@ -609,18 +601,18 @@ def cyclone(
         interactions = interactions_directed
 
     # gets the size of the clusters and saves it in cluster_to_size
-    receptor_cluster_to_size = data[[receptor_cluster_col, "receptor_cluster_size"]]
-    ligand_cluster_to_size = data[[ligand_cluster_col, "ligand_cluster_size"]]
+    receptor_cluster_to_size = filtered[["receptor_cluster", "receptor_cluster_size"]]
+    ligand_cluster_to_size = filtered[["ligand_cluster", "ligand_cluster_size"]]
 
     receptor_cluster_to_size = receptor_cluster_to_size.drop_duplicates()
     ligand_cluster_to_size = ligand_cluster_to_size.drop_duplicates()
 
     receptor_cluster_to_size.rename(
-        columns={receptor_cluster_col: "cluster", "receptor_cluster_size": "cluster_size"},
+        columns={"receptor_cluster": "cluster", "receptor_cluster_size": "cluster_size"},
         inplace=True
     )
     ligand_cluster_to_size.rename(
-        columns={ligand_cluster_col: "cluster", "ligand_cluster_size": "cluster_size"},
+        columns={"ligand_cluster": "cluster", "ligand_cluster_size": "cluster_size"},
         inplace=True
     )
 
@@ -632,10 +624,10 @@ def cyclone(
     cluster_to_size.drop_duplicates(inplace=True)
 
     # get a list of the available clusters
-    avail_clusters = set(data[receptor_cluster_col].unique()).union(set(data[ligand_cluster_col].unique()))
+    avail_clusters = set(filtered["receptor_cluster"].unique()).union(set(filtered["ligand_cluster"].unique()))
 
     # set up for colormapping
-    colormap = matplotlib.colormaps[colormap_input]
+    colormap_ = matplotlib.colormaps[colormap]
 
     norm = matplotlib.colors.Normalize(interactions["count"].min(), interactions["count"].max())
 
@@ -704,7 +696,7 @@ def cyclone(
     for link in matrix.to_links():
         circos.link(
             *link,
-            color=colormap(norm(interactions.set_index(cluster_col_list).loc[(link[0][0], link[1][0]), "count"])),
+            color=colormap_(norm(interactions.set_index(cluster_col_list).loc[(link[0][0], link[1][0]), "count"])),
             r1=link_radius,
             r2=link_radius,
             direction=-1 if directional else 0
@@ -730,9 +722,9 @@ def cyclone(
 
             # get first x unique receptor/ ligand genes
             # https://stackoverflow.com/a/17016257/19870975
-            sector_interactions = filtered[filtered[receptor_cluster_col] == sector.name]
-            top_receptors = list(dict.fromkeys(sector_interactions[receptor_col]))[:gene_amount]
-            top_ligands = list(dict.fromkeys(sector_interactions[ligand_col]))[:gene_amount]
+            sector_interactions = filtered[filtered["receptor_cluster"] == sector.name]
+            top_receptors = list(dict.fromkeys(sector_interactions["receptor_gene"]))[:gene_amount]
+            top_ligands = list(dict.fromkeys(sector_interactions["ligand_gene"]))[:gene_amount]
 
             # generates dummy data for the heatmap function to give it a red and a blue half
             dummy_data = [1] * len(top_receptors) + [2] * len(top_ligands)
@@ -762,13 +754,13 @@ def cyclone(
 
     # legend
     # legend title
-    circos.text("Number of\nInteractions", deg=69, r=137, fontsize=10)
+    circos.text(cbar_label, deg=69, r=137, fontsize=10)
 
     circos.colorbar(
         bounds=(1.1, 0.2, 0.02, 0.5),
-        vmin=interactions.min()["count"],
-        vmax=interactions.max()["count"],
-        cmap=colormap
+        vmin=color_min if color_min else interactions.min()["count"],
+        vmax=color_max if color_max else interactions.max()["count"],
+        cmap=colormap_
     )
 
     patch_handles = [Patch(color="grey", label="Number of cells\nper cluster")]
@@ -797,7 +789,7 @@ def cyclone(
     circos.ax.add_artist(patch_legend)
 
     if save:
-        circos.savefig(save, dpi=dpi, figsize=figsize)
+        circos.savefig(f"{settings.figure_dir}/{save}", dpi=dpi, figsize=figsize)
 
     return fig
 
@@ -1254,7 +1246,7 @@ def get_interactions(anndata: sc.AnnData,
     if save:
         subset.to_csv(f"{settings.table_dir}/{save}", sep='\t', index=False)
 
-    return subset
+    return subset.copy()
 
 
 @beartype
