@@ -480,9 +480,10 @@ def hairball(adata: sc.AnnData,
     return axes
 
 
+@deco.log_anndata
 @beartype
 def cyclone(
-    data: pd.DataFrame,
+    adata: sc.AnnData,
     receptor_cluster_col: str = 'receptor_cluster',
     receptor_percent_col: str = 'receptor_percent',
     receptor_col: str = 'receptor_gene',
@@ -507,8 +508,8 @@ def cyclone(
 
     Parameters
     ----------
-    data : pd.DataFrame
-        Table containing all receptor-ligand interactions (one per row).
+    adata : sc.AnnData
+        AnnData object
     receptor_cluster_col : str, default 'receptor_cluster'
         Name of the column containing cluster names of receptors.
     receptor_col : str, default 'receptor_gene'
@@ -548,6 +549,13 @@ def cyclone(
     matplotlib.figure.Figure
         The Matplotlib figure object containing the plot.
     """
+    
+    # check if data is available
+    _check_interactions(adata)
+
+    data = get_interactions(adata)
+
+    # commonly used list
     cluster_col_list = [receptor_cluster_col, ligand_cluster_col]
 
     # --------------------- filtering data ---------------------------------
