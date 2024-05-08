@@ -501,7 +501,7 @@ def top_genes_and_interactions_for_cell_clusters(
     figsize: Tuple[int | float, int | float] = (10, 10),
     dpi: int | float = 100,
     save: Optional[str] = None,
-):
+) -> matplotlib.figure.Figure:
     """
     Show specific receptor-ligand connections between clusters as well as their top genes.
 
@@ -545,8 +545,8 @@ def top_genes_and_interactions_for_cell_clusters(
 
     Returns
     -------
-    npt.ArrayLike
-        Object containing all plots. As returned by matplotlib.pyplot.subplots
+    matplotlib.figure.Figure
+        The Matplotlib figure object containing the plot.
     """
     cluster_col_list = [receptor_cluster_col, ligand_cluster_col]
 
@@ -731,6 +731,7 @@ def top_genes_and_interactions_for_cell_clusters(
             )
 
             # compute x tick positions
+            # half step to add ticks to the middle of each cell
             half_step = sector.size / len(dummy_data) / 2
             x_tick_pos = np.linspace(half_step,
                                      sector.size - half_step,
@@ -748,31 +749,37 @@ def top_genes_and_interactions_for_cell_clusters(
 
     circos.text(title, r=120, deg=0, size=15)
 
-    circos.text("Number of\nInteractions", deg=60, r=147)
+    # legend
+    # legend title
+    circos.text("Number of\nInteractions", deg=69, r=137, fontsize=10)
 
     circos.colorbar(
-        bounds=(1.1, 0.3, 0.02, 0.5),
+        bounds=(1.1, 0.2, 0.02, 0.5),
         vmin=interactions.min()["count"],
         vmax=interactions.max()["count"],
         cmap=colormap
     )
 
+    patch_handles = [Patch(color="grey", label="Number of cells\nper cluster")]
+
+    # add gene (heatmap) legend
+    if show_genes:
+        patch_handles.extend([Patch(color=(1, 0, 0, 0.3), label="Top ligand genes\nby interaction score"),
+                              Patch(color=(0, 0, 1, 0.3), label="Top receptor genes\nby interaction score")])
+
+    # add directional legend
+    if directional:
+        patch_handles.append(
+            Patch(color=(0, 0, 0, 0), label="Ligand → Receptor")
+        )
+
+    # needed to access ax
     fig = circos.plotfig(dpi=dpi, figsize=figsize)
 
-    patch_handles = [
-        Patch(color="grey", label="Number of cells\nper cluster"),
-    ]
-
-    anchor = (1, 1)
-
-    if show_genes:
-        patch_handles = patch_handles + [Patch(color=(1, 0, 0, 0.3), label="top ligand genes\nby interaction score"),
-                                         Patch(color=(0, 0, 1, 0.3), label="top receptor genes\nby interaction score")]
-        anchor = (1, 1.1)
-
+    # add custom legend to plot
     patch_legend = circos.ax.legend(
         handles=patch_handles,
-        bbox_to_anchor=anchor,
+        bbox_to_anchor=(1, 1),
         fontsize=10,
         handlelength=1,
     )
