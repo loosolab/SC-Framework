@@ -11,7 +11,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks', 'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
+                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize'],  # bbknn requires sk-learn <= 1.2
                   "velocity": ['scvelo'],
                   "pseudotime": ["scFates"],
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
