@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import random
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 import sctoolbox.receptor_ligand as rl
@@ -185,6 +186,19 @@ def test_hairball(adata_inter):
                        show_count=True)
 
     assert isinstance(plot, np.ndarray)
+
+
+def test_cyclone(adata_inter):
+    """Cyclone network plot is functional."""
+    plot = rl.cyclone(adata=adata_inter,
+                      min_perc=70,
+                      interaction_score=0,
+                      directional=True,
+                      sector_size_is_cluster_size=True,
+                      show_genes=True,
+                      title="Test Title")
+
+    assert isinstance(plot, Figure)
 
 
 def test_connectionPlot(adata_inter):
