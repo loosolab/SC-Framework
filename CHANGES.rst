@@ -1,3 +1,11 @@
+0.8.0 (in progress)
+-------------
+- add cyclone (pycirclize based plot) as hairball alternative (#223)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- add cyclone plot to receptor-ligand notebook
+
 0.7.0 (23-04-24)
 -------------
 - Added code examples for tools and utils (#140)
