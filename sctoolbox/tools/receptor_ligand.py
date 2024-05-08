@@ -357,7 +357,7 @@ def hairball(adata: sc.AnnData,
              additional_nodes: Optional[list[str]] = None,
              hide_edges: Optional[list[Tuple[str, str]]] = None) -> npt.ArrayLike:
     """
-    Generate network graph of interactions between clusters.
+    Generate network graph of interactions between clusters. See cyclone plot for alternative.
 
     Parameters
     ----------
@@ -481,29 +481,29 @@ def hairball(adata: sc.AnnData,
 
 
 @beartype
-def top_genes_and_interactions_for_cell_clusters(
+def cyclone(
     data: pd.DataFrame,
     receptor_cluster_col: str = 'receptor_cluster',
-    receptor_percent_col: str = "receptor_percent",
+    receptor_percent_col: str = 'receptor_percent',
     receptor_col: str = 'receptor_gene',
     ligand_cluster_col: str = 'ligand_cluster',
-    ligand_percent_col: str = "ligand_percent",
+    ligand_percent_col: str = 'ligand_percent',
     ligand_col: str = 'ligand_gene',
     min_perc: int | float = 70,
     interaction_score: float | int = 0,
-    sector_text_size: int | float = 8,
+    sector_text_size: int | float = 10,
     directional: bool = False,
     sector_size_is_cluster_size: bool = False,
     show_genes: bool = True,
     gene_amount: int = 5,
-    colormap_input: str = "viridis",
+    colormap_input: str = 'viridis',
     title: Optional[str] = None,
     figsize: Tuple[int | float, int | float] = (10, 10),
     dpi: int | float = 100,
-    save: Optional[str] = None,
+    save: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
-    Show specific receptor-ligand connections between clusters as well as their top genes.
+    Generate network graph of interactions between clusters. See the hairball plot as an alternative.
 
     Parameters
     ----------
@@ -521,10 +521,10 @@ def top_genes_and_interactions_for_cell_clusters(
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     interaction_score : float | int, default 0
         Interaction score must be above this threshold for the interaction to be counted in the graph.
-    sector_text_size: int | float, default 8
+    sector_text_size: int | float, default 10
         The text size for the sector name.
     directional: bool, defalut False
-        Determines whether to display the interactions as arrows.
+        Determines whether to display the interactions as arrows (Ligand -> Receptor).
     sector_size_is_cluster_size: bool, default False
         Determines whether the sector's size is equivalent to the coresponding cluster's number of cells.
     show_genes: bool, default True
@@ -744,7 +744,7 @@ def top_genes_and_interactions_for_cell_clusters(
                 labels=top_receptors + top_ligands,
                 label_margin=1,
                 label_size=8,
-                label_orientation="vertical",
+                label_orientation="vertical"
             )
 
     circos.text(title, r=120, deg=0, size=15)
@@ -781,7 +781,7 @@ def top_genes_and_interactions_for_cell_clusters(
         handles=patch_handles,
         bbox_to_anchor=(1, 1),
         fontsize=10,
-        handlelength=1,
+        handlelength=1
     )
     circos.ax.add_artist(patch_legend)
 
