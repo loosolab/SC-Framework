@@ -758,7 +758,7 @@ def cyclone(
 
     circos.colorbar(
         bounds=(1.1, 0.2, 0.02, 0.5),
-        vmin=color_min if color_min else interactions.min()["count"],
+        vmin=0 if color_min is None else color_min,
         vmax=color_max if color_max else interactions.max()["count"],
         cmap=colormap_
     )
