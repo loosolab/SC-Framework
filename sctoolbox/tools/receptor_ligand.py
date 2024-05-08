@@ -512,10 +512,10 @@ def cyclone(
         AnnData object
     receptor_cluster_col : str, default 'receptor_cluster'
         Name of the column containing cluster names of receptors.
-    receptor_col : str, default 'receptor_gene'
-        Name of the column containing gene names of receptors.
     receptor_percent_col : str, default 'receptor_percent'
         Name of the column containing the receptor percentages.
+    receptor_col : str, default 'receptor_gene'
+        Name of the column containing gene names of receptors.
     ligand_cluster_col : str, default 'ligand_cluster'
         Name of the column containing cluster names of ligands.
     ligand_percent_col : str, default 'ligand_percent'
