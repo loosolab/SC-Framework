@@ -441,7 +441,7 @@ def hairball(adata: sc.AnnData,
         graph.add_edge(a, b, weight=len(subset))
 
     # set edge colors/ width based on weight
-    colormap = cm.get_cmap('viridis', len(graph.es))
+    colormap = matplotlib.cm.get_cmap('viridis', len(graph.es))
     print(f"Max weight {np.max(np.array(graph.es['weight']))}")
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
     for e in graph.es:
@@ -514,8 +514,12 @@ def cyclone(
         Name of the column containing cluster names of receptors.
     receptor_col : str, default 'receptor_gene'
         Name of the column containing gene names of receptors.
+    receptor_percent_col : str, default 'receptor_percent'
+        Name of the column containing the receptor percentages.
     ligand_cluster_col : str, default 'ligand_cluster'
         Name of the column containing cluster names of ligands.
+    ligand_percent_col : str, default 'ligand_percent'
+        Name of the column containing the ligand percentages.
     ligand_col : str, default 'ligand_gene'
         Name of the column containing gene names of ligands. Shown on y-axis.
     min_perc : int | float
@@ -549,7 +553,7 @@ def cyclone(
     matplotlib.figure.Figure
         The Matplotlib figure object containing the plot.
     """
-    
+
     # check if data is available
     _check_interactions(adata)
 
@@ -563,8 +567,8 @@ def cyclone(
     # filter interactions based on minimum % cells expressing the involved genes
     # also keep interactions above provided interaction score threshold
     filtered = data[(data[receptor_percent_col] > min_perc)
-                  & (data[ligand_percent_col] > min_perc)
-                  & (data["interaction_score"] > interaction_score)]
+                    & (data[ligand_percent_col] > min_perc)
+                    & (data["interaction_score"] > interaction_score)]
 
     # sort data by interaction score for top gene selection
     if show_genes:
@@ -656,14 +660,14 @@ def cyclone(
 
     # creating a from-to-table for a matrix
     interactions_for_matrix = interactions.copy()
-    
+
     # set link width to 1 so it can be scaled up later
     interactions_for_matrix["count"] = 1
 
     # create the links in pycirclize format
     matrix = pycirclize.parser.Matrix.parse_fromto_table(interactions_for_matrix)
     link_list = matrix.to_links()
-    
+
     # calculates the amount of times sector.name is in the table interactions
     links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
 
@@ -677,15 +681,14 @@ def cyclone(
         # ((start_sector, left_side_of_link, right_side_of_link),
         #  (end_sector, left_side_of_link, right_side_of_link))
         # multiply link width (set to 1) with the respective multiplier from above
-        temp = ((link_list[0][0][0],
-                 math.floor(link_list[0][0][1] * start_link_width),
-                 math.floor(link_list[0][0][2] * start_link_width)
-                ),
-                 (link_list[0][1][0],
-                  math.floor(link_list[0][1][1] * end_link_width),
-                  math.floor(link_list[0][1][2] * end_link_width)
-                )
-               )
+        temp = (
+            (link_list[0][0][0],
+             math.floor(link_list[0][0][1] * start_link_width),
+             math.floor(link_list[0][0][2] * start_link_width)),
+            (link_list[0][1][0],
+             math.floor(link_list[0][1][1] * end_link_width),
+             math.floor(link_list[0][1][2] * end_link_width))
+        )
 
         # remove the first link and add the updated version at the end
         link_list.pop(0)
@@ -696,7 +699,7 @@ def cyclone(
         link_radius = 65
     else:
         link_radius = 95
-    
+
     # add the calculated links to the circos object
     for link in matrix.to_links():
         circos.link(
@@ -1094,7 +1097,7 @@ def connectionPlot(adata: sc.AnnData,
 
     # create colorramp
     if line_colors:
-        cmap = cm.get_cmap(line_colors, len(receptors))
+        cmap = matplotlib.cm.get_cmap(line_colors, len(receptors))
         colors = cmap(range(len(receptors)))
     else:
         colors = ["black"] * len(receptors)
