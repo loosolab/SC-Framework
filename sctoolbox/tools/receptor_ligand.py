@@ -522,6 +522,8 @@ def cyclone(
         Max value for color range.
     cbar_label : str, default 'Interaction count'
         Label above the colorbar.
+    colormap : str, default "viridis"
+        The colormap to be used when plotting.
     sector_text_size: int | float, default 10
         The text size for the sector name.
     directional: bool, defalut False
@@ -531,12 +533,7 @@ def cyclone(
     show_genes: bool, default True
         Determines whether to display the top genes as an additional track.
     gene_amount: int = 5
-        The amount of genes per receptor and ligand to display on the
-        outer track (displayed genes per sector = gene_amount *2).
-    colormap_input: str, default "viridis"
-        The colormap to be used when plotting.
-    title : Optional[str], default None
-        Title of the plot.
+        The amount of genes per receptor and ligand to display on the outer track (displayed genes per sector = gene_amount *2).
     figsize : Tuple[int | float, int | float], default (10, 10)
         Figure size
     dpi : int | float, default 100
