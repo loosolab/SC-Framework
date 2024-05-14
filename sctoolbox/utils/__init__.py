@@ -1,15 +1,36 @@
 """Provides a range of different utilitis."""
 
-from importlib import import_module
-from sctoolbox._modules import import_submodules
+import importlib as _importlib
 import os
 import sys
 
 # Set base R home directory to prevent R_HOME not found error
 os.environ['R_HOME'] = os.path.join(sys.executable.split('/bin/')[0], 'lib/R')
 
-function_dict = import_submodules(globals())
+# define what is exported in this module
+__all__ = [
+    "adata",
+    "assemblers",
+    "bioutils",
+    "checker",
+    "creators",
+    "decorator",
+    "general",
+    "io",
+    "jupyter",
+    "multiprocessing",
+    "tables"
+]
 
-# Add settings_from_config to utils (it is now located in _settings)
-settings_module = import_module("sctoolbox._settings")
-globals()["settings_from_config"] = getattr(settings_module, "settings_from_config")
+
+def __dir__():
+    """Returns the defined submodules."""
+    return __all__
+
+
+def __getattr__(name):
+    """Lazyload modules. (Inspired by scipy)"""
+    if name in __all__:
+        _importlib.import_module(f"sctoolbox.utils.{name}")
+    else:
+        raise AttributeError(f"Module 'sctoolbox.utils' does not contain a module named '{name}'.")
