@@ -63,7 +63,7 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3.9,<3.11',  # dict type hints as we use it require python 3.9; pybedtools is not compatible with python 3.11
+    python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
         'pysam',
         'matplotlib',
@@ -95,7 +95,7 @@ setup(
         'pyyaml',
         'deprecation',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
-        'pybedtools',
+        'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
         'packaging'
     ],
     include_package_data=True,
