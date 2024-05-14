@@ -9,7 +9,7 @@ import random
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
-import sctoolbox.receptor_ligand as rl
+import sctoolbox.tools.receptor_ligand as rl
 
 
 # ------------------------------ FIXTURES -------------------------------- #

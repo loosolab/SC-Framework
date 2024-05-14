@@ -1,7 +1,7 @@
 """Test atac functions."""
 
 import pytest
-import sctoolbox.atac
+import sctoolbox.tools as tools
 import os
 import scanpy as sc
 import numpy as np
@@ -31,7 +31,7 @@ def tfidf_x():
 # adapted from muon package
 def test_tfidf(tfidf_x):
     """Test tfidt success."""
-    sctoolbox.atac.tfidf(tfidf_x, log_tf=True, log_idf=True)
+    tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True)
     assert str("%.3f" % tfidf_x.X[0, 0]) == "4.659"
     assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
 
@@ -39,7 +39,7 @@ def test_tfidf(tfidf_x):
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_atac_norm(adata, method):
     """Test atac_norm success."""
-    adata_norm = sctoolbox.atac.atac_norm(adata, method=method)[method]  # return from function is a dict
+    adata_norm = tools.norm_correct.atac_norm(adata, method=method)[method]  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
@@ -50,7 +50,7 @@ def test_atac_norm(adata, method):
 def test_write_TOBIAS_config():
     """Test write_TOBIAS_config success."""
 
-    sctoolbox.atac.write_TOBIAS_config("tobias.yml", bams=["bam1.bam", "bam2.bam"])
+    tools.tobias.write_TOBIAS_config("tobias.yml", bams=["bam1.bam", "bam2.bam"])
     yml = yaml.full_load(open("tobias.yml"))
 
     assert yml["data"]["1"] == "bam1.bam"
@@ -83,7 +83,7 @@ def test_insertsize_plotting(adata):
 
     adata = adata.copy()
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
-    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
+    tools.insertsize.add_insertsize(adata, fragments=fragments)
 
     ax = pl.plot_insertsize(adata)
 

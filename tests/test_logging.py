@@ -5,7 +5,7 @@ import scanpy as sc
 import pytest
 from sctoolbox.utils import decorator as deco
 
-import sctoolbox.qc_filter as qc
+import sctoolbox.tools.qc_filter as qc
 import sctoolbox.utils as utils
 
 from sctoolbox._settings import settings

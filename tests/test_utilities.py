@@ -5,7 +5,7 @@ import os
 import numpy as np
 import shutil
 import pandas as pd
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils
 import subprocess
 import scanpy as sc
 
