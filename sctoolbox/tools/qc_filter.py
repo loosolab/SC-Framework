@@ -20,7 +20,7 @@ from beartype.typing import Optional, Tuple, Union, Any, Literal
 # toolbox functions
 import sctoolbox
 import sctoolbox.utils as utils
-from sctoolbox.plotting import _save_figure
+from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
