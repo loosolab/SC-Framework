@@ -1,7 +1,6 @@
 """Test atac functions."""
 
 import pytest
-import sctoolbox.tools as tools
 import os
 import scanpy as sc
 import numpy as np
@@ -9,6 +8,7 @@ import anndata as ad
 import yaml
 
 import sctoolbox.plotting as pl
+import sctoolbox.tools as tools
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def test_add_insertsize_fragments(adata):
 
     adata = adata.copy()
     fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
-    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
+    tools.insertsize.add_insertsize(adata, fragments=fragments)
 
     assert "insertsize_distribution" in adata.uns
     assert "mean_insertsize" in adata.obs.columns
@@ -72,7 +72,7 @@ def test_add_insertsize_bam(adata):
 
     adata = adata.copy()
     bam = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    sctoolbox.atac.add_insertsize(adata, bam=bam)
+    tools.insertsize.add_insertsize(adata, bam=bam)
 
     assert "insertsize_distribution" in adata.uns
     assert "mean_insertsize" in adata.obs.columns
