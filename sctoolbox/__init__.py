@@ -19,12 +19,12 @@ __all__ = submodules + [
 
 
 def __dir__():
-    """Returns the defined submodules."""
+    """Return the defined submodules."""
     return __all__
 
 
 def __getattr__(name):
-    """Lazyload modules. (Inspired by scipy)"""
+    """Lazyload modules (inspired by scipy)."""
     if name in submodules:
         _importlib.import_module(f"sctoolbox.{name}")
     else:

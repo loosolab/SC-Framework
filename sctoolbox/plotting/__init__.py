@@ -16,12 +16,12 @@ __all__ = [
 
 
 def __dir__():
-    """Returns the defined submodules."""
+    """Return the defined submodules."""
     return __all__
 
 
 def __getattr__(name):
-    """Lazyload modules. (Inspired by scipy)"""
+    """Lazyload modules (inspired by scipy)."""
     if name in __all__:
         _importlib.import_module(f"sctoolbox.plotting.{name}")
     else:
