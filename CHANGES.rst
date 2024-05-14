@@ -1,6 +1,8 @@
 0.8.0 (in progress)
 -------------
 - add cyclone (pycirclize based plot) as hairball alternative (#223)
+- remove legacy import structure
+- implement lazy module loading
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
