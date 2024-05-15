@@ -445,7 +445,7 @@ def _gtf_integrity(gtf: str) -> bool:
     header = False
     format_gtf = False
 
-    if utils._is_gz_file(gtf):
+    if utils.checker._is_gz_file(gtf):
         fp = gzip.open(gtf, 'rt')  # read text (rt) mode
     else:
         fp = open(gtf)

@@ -275,7 +275,7 @@ def validate_regions(adata: sc.AnnData,
     chr, start, end = coordinate_columns
 
     # Test if coordinate columns are in adata.var
-    utils.check_columns(adata.var, coordinate_columns, name="adata.var")
+    utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var")
 
     # Test whether the first three columns are in the right format
     for _, line in adata.var.to_dict(orient="index").items():

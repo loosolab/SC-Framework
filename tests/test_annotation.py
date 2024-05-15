@@ -2,7 +2,9 @@
 
 import argparse
 import pytest
-import sctoolbox.tools as anno
+import sctoolbox.tools.peak_annotation as anno
+import sctoolbox.tools.highly_variable as hv
+import sctoolbox.tools.celltype_annotation as ca
 import scanpy as sc
 import os
 
@@ -61,7 +63,7 @@ def test_add_cellxgene_annotation(adata_rna):
     """Test if 'cellxgene' column is added to adata.obs."""
 
     csv_f = os.path.join(os.path.dirname(__file__), 'data', 'cellxgene_anno.csv')
-    anno.add_cellxgene_annotation(adata_rna, csv_f)
+    ca.add_cellxgene_annotation(adata_rna, csv_f)
 
     assert "cellxgene_clusters" in adata_rna.obs.columns
 
@@ -103,7 +105,7 @@ def test_annot_HVG(adata_rna, inplace):
     """Test if 'highly_variable' column is added to adata.var."""
 
     sc.pp.log1p(adata_rna)
-    out = anno.annot_HVG(adata_rna, inplace=inplace)
+    out = hv.annot_HVG(adata_rna, inplace=inplace)
 
     if inplace:
         assert out is None
@@ -119,7 +121,7 @@ def test_get_variable_features(adata_atac_qc, inplace):
 
     assert "highly_variable" not in adata.var.columns
 
-    output = anno.get_variable_features(adata=adata,
+    output = hv.get_variable_features(adata=adata,
                                         max_cells=None,
                                         min_cells=0,
                                         show=True,
@@ -136,7 +138,7 @@ def test_get_variable_features(adata_atac_qc, inplace):
 def test_get_variable_features_fail(adata_atac):
     """Test get_variable_features failure."""
     with pytest.raises(KeyError):
-        anno.get_variable_features(adata=adata_atac)
+        hv.get_variable_features(adata=adata_atac)
 
 
 # ------------------------- Tests for gtf formats ------------------------- #
