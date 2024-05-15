@@ -59,15 +59,15 @@ def test_format_adata_var(fixture, expected, request):
     adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
     if isinstance(expected, type):
         with pytest.raises(expected):
-            utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+            utils.checker.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
 
     else:
-        utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
+        utils.checker.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
 
         assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
 
 
 def test_bam_adata_ov(adata_atac, bamfile):
     """Test bam_adata_ov success."""
-    hitrate = tools.bam_adata_ov(adata_atac, bamfile, cb_tag='CB')
+    hitrate = tools.bam.bam_adata_ov(adata_atac, bamfile, cb_tag='CB')
     assert hitrate >= 0.10
