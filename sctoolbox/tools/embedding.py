@@ -34,12 +34,12 @@ def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> 
 
     jobs = []
     for i, adata in enumerate(adatas):
-        adata_minimal = utils.get_minimal_adata(adata)
+        adata_minimal = utils.adata.get_minimal_adata(adata)
         job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds=kwargs)
         jobs.append(job)
     pool.close()
 
-    utils.monitor_jobs(jobs, "Computing UMAPs ")
+    utils.multiprocessing.monitor_jobs(jobs, "Computing UMAPs ")
     pool.join()
 
     # Get results and add to adatas

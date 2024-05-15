@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 import sctoolbox.tools as tools
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils
 
 
 @pytest.fixture(scope="session")
@@ -49,7 +49,7 @@ def test_rename_categories():
 
     data = np.random.choice(["C1", "C2", "C3"], size=100)
     series = pd.Series(data).astype("category")
-    renamed_series = utils.rename_categories(series)
+    renamed_series = utils.tables.rename_categories(series)
 
     assert renamed_series.cat.categories.tolist() == ["1", "2", "3"]
 
@@ -75,7 +75,7 @@ def test_normalize_adata(adata, method):
     adata = result_dict[method]
     mat = adata.X.todense()
 
-    assert not utils.is_integer_array(mat)
+    assert not utils.checker.is_integer_array(mat)
 
 
 def test_evaluate_batch_effect(adata):

@@ -292,7 +292,7 @@ def wrap_corrections(adata: sc.AnnData,
         if method in required_packages:  # not all packages need external tools
             f = io.StringIO()
             with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
-                utils.check_module(required_packages[method])
+                utils.checker.check_module(required_packages[method])
 
     # Collect batch correction per method
     anndata_dict = {'uncorrected': adata}
@@ -491,7 +491,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
     """
 
     # Load LISI
-    utils.check_module("harmonypy")
+    utils.checker.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
 
     # Handle inplace option
@@ -545,7 +545,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
 
-    if utils._is_notebook() is True:
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
@@ -569,7 +569,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
                 evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, perplexity=perplexity, inplace=True)
                 pbar.update()
     else:
-        utils.check_module("harmonypy")
+        utils.checker.check_module("harmonypy")
         from harmonypy.lisi import compute_lisi
 
         pool = mp.Pool(threads)
