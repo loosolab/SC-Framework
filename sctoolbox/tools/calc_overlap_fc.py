@@ -64,7 +64,7 @@ def _convert_gtf_to_bed(gtf: str,
                 line = row[0] + '\t' + row[3] + '\t' + row[4] + '\n'
                 out_file.write(line)
     # sort gtf
-    utils._sort_bed(out_unsorted, out_sorted)
+    utils.bioutils._sort_bed(out_unsorted, out_sorted)
 
     # remove unsorted
     os.remove(out_unsorted)
@@ -192,7 +192,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         If bam_file and fragment file is not provided.
     """
     if temp_dir:
-        utils.create_dir(temp_dir)
+        utils.io.create_dir(temp_dir)
     else:
         temp_dir = os.getcwd()
 
@@ -218,9 +218,9 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     elif file_ext.lower() == '.bed':
         bed_file = os.path.join(temp_dir, os.path.splitext(os.path.split(regions_file)[1])[0]) + '_sorted.bed'
         temp_files.append(bed_file)
-        if not utils._bed_is_sorted(regions_file):
+        if not utils.bioutils._bed_is_sorted(regions_file):
             logger.info("Sorting BED file...")
-            utils._sort_bed(regions_file, bed_file)
+            utils.bioutils._sort_bed(regions_file, bed_file)
         else:
             bed_file = regions_file
 
@@ -234,17 +234,17 @@ def fc_fragments_in_regions(adata: sc.AnnData,
         temp_files.append(fragments_file)
 
     # Check if fragments file is sorted
-    if not utils._bed_is_sorted(fragments_file):
+    if not utils.bioutils._bed_is_sorted(fragments_file):
         # sort fragments file
         logger.info('Sorting fragments file...')
         unsorted_fragments_file = fragments_file
         fragments_file = os.path.join(temp_dir, os.path.splitext(os.path.split(unsorted_fragments_file)[1])[0]) + '_sorted.bed'
-        utils._sort_bed(unsorted_fragments_file, fragments_file)
+        utils.bioutils._sort_bed(unsorted_fragments_file, fragments_file)
 
     # overlap reads in fragments with promoter regions, return path to overlapped file
     logger.info('Finding overlaps...')
     overlap_file = os.path.join(temp_dir, 'overlap_fragments_gtf.bed')
-    utils._overlap_two_bedfiles(fragments_file, bed_file, overlap=overlap_file, wa=True, wb=True, sorted=True)
+    utils.bioutils._overlap_two_bedfiles(fragments_file, bed_file, overlap=overlap_file, wa=True, wb=True, sorted=True)
     temp_files.append(overlap_file)
 
     # read overlap bedfile as dataframe
@@ -280,7 +280,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
 
     # clean up temp files
     logger.info("cleaning up...")
-    utils.rm_tmp(temp_dir=temp_dir,
+    utils.io.rm_tmp(temp_dir=temp_dir,
                  temp_files=temp_files,
                  rm_dir=False if temp_dir else True)
 
