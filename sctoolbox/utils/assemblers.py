@@ -52,22 +52,22 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
     if set_index:
         logger.info("formatting index")
-        utils.var_index_from(adata, index_from)
+        utils.checker.var_index_from(adata, index_from)
 
     # Establish columns for coordinates
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
-        utils.check_columns(adata.var,
-                            coordinate_cols,
-                            name="adata.var")  # Check that coordinate_cols are in adata.var)
+        utils.checker.check_columns(adata.var,
+                                    coordinate_cols,
+                                    name="adata.var")  # Check that coordinate_cols are in adata.var)
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")
-    utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
+    utils.checker.format_adata_var(adata, coordinate_cols, coordinate_cols)
 
     # check if the barcode is the index otherwise set it
-    utils.barcode_index(adata)
+    utils.bioutils.barcode_index(adata)
 
     if h5ad_path is not None:
         adata.obs = adata.obs.assign(file=h5ad_path)
