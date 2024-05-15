@@ -506,7 +506,7 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> 
     None
     """
     # Ensure that path to bedtools is set
-    pybedtools.helpers.set_bedtools_path(utils._add_path())
+    pybedtools.helpers.set_bedtools_path(utils.checker._add_path())
     # Load the bed files using Pybedtools
     bedfile1 = pybedtools.BedTool(bed1)
     bedfile2 = pybedtools.BedTool(bed2)
