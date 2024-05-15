@@ -114,7 +114,7 @@ def correlation_matrix(adata: sc.AnnData,
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
         numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
     else:
-        utils.check_columns(table, columns)
+        utils.checker.check_columns(table, columns)
         numeric_columns = columns
 
     # Get table of pcs and columns

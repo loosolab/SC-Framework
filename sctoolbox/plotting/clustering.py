@@ -106,7 +106,7 @@ def search_clustering_parameters(adata: sc.AnnData,
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
-        adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
+        adata.obs[key_added] = utils.tables.rename_categories(adata.obs[key_added])  # rename to start at 1
         n_clusters = adata.obs[key_added].nunique()
 
         # Plot embedding
@@ -185,7 +185,7 @@ def marker_gene_clustering(adata: sc.AnnData,
         axarr = [axarr]  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
-    marker_genes_dict = utils.check_marker_lists(adata, marker_genes_dict)
+    marker_genes_dict = utils.checker.check_marker_lists(adata, marker_genes_dict)
 
     # Plot marker gene expression on the right
     ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i], **kwargs)

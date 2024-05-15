@@ -52,7 +52,7 @@ def _read_starsolo_summary(folder: str) -> pd.DataFrame:
         raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
 
     # Read statistics from summary files
-    names = utils.clean_flanking_strings(summary_files)
+    names = utils.general.clean_flanking_strings(summary_files)
     summary_tables = []
     for name, f in zip(names, summary_files):
         star_table = pd.read_csv(f, index_col=0, header=None, names=[name])
@@ -203,7 +203,7 @@ def plot_starsolo_UMI(folder: str,
     if len(umi_files) == 0:
         raise ValueError("No UMI files found in folder. Please check the path and try again.")
 
-    names = utils.clean_flanking_strings(umi_files)
+    names = utils.general.clean_flanking_strings(umi_files)
 
     # Setup plot
     ncol = min(len(names), ncol)
@@ -432,7 +432,7 @@ def group_correlation(adata: sc.AnnData,
     """
 
     # Calculate correlation of groups
-    count_table = utils.pseudobulk_table(adata, groupby=groupby)
+    count_table = utils.bioutils.pseudobulk_table(adata, groupby=groupby)
     corr = count_table.corr(numeric_only=False, method=method)
 
     clustermap_kwargs = {"figsize": (4, 4),
@@ -676,7 +676,7 @@ def quality_violin(adata: sc.AnnData,
 
     """
 
-    is_interactive = utils._is_interactive()
+    is_interactive = utils.checker._is_interactive()
 
     # ---------------- Test input and get ready --------------#
 

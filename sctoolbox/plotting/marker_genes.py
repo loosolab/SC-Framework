@@ -382,7 +382,7 @@ def group_expression_boxplot(adata: sc.AnnData,
     """
 
     # Obtain pseudobulk
-    gene_table = utils.pseudobulk_table(adata, groupby)
+    gene_table = utils.bioutils.pseudobulk_table(adata, groupby)
 
     # Normalize across clusters
     gene_table = qnorm.quantile_normalize(gene_table, axis=1)
@@ -500,7 +500,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
         adata.obs[groupby_col] = [(s, ) for s in adata.obs[cluster_column]]
 
     # Collect counts for each gene per sample
-    counts = utils.pseudobulk_table(adata, groupby=groupby_col)
+    counts = utils.bioutils.pseudobulk_table(adata, groupby=groupby_col)
     counts_z = counts.T.apply(zscore).T
 
     # Color dict for groupby

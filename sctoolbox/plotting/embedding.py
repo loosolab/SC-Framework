@@ -379,7 +379,7 @@ def plot_embedding(adata: sc.AnnData,
                 else:  # values are categorical
                     cat2color = dict(zip(adata.obs[ax_color].cat.categories, adata.uns[ax_color + "_colors"]))
 
-                    adata_subsets = utils.get_adata_subsets(adata, groupby=ax_color)
+                    adata_subsets = utils.adata.get_adata_subsets(adata, groupby=ax_color)
                     for group, adata_sub in adata_subsets.items():
                         coordinates_sub = adata_sub.obsm[obsm_key][:, [dim1 - 1, dim2 - 1]]
 
@@ -629,7 +629,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         return np.around(np.arange(r[1], r[2], r[3]), 2)
 
     # remove data to save memory
-    adata = utils.get_minimal_adata(adata)
+    adata = utils.adata.get_minimal_adata(adata)
     # Allows for all case variants of method parameter
     method = method.lower()
 
@@ -661,7 +661,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         if run_parallel:
             pool = mp.Pool(threads)
         else:
-            pbar = utils.get_pbar(len(loop_params[0]) * len(loop_params[1]), f"Computing {method.upper()}s")
+            pbar = utils.multiprocessing.get_pbar(len(loop_params[0]) * len(loop_params[1]), f"Computing {method.upper()}s")
 
         # Setup jobs
         jobs = {}
@@ -685,7 +685,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
         if run_parallel:
             pool.close()
-            utils.monitor_jobs(jobs, f"Computing {method.upper()}s")
+            utils.multiprocessing.monitor_jobs(jobs, f"Computing {method.upper()}s")
             pool.join()
 
     # Figure with rows=spread, cols=dist
@@ -1526,12 +1526,12 @@ def plot_pca_variance(adata: sc.AnnData,
 
     if corr_plot:
         # compute correlation coefficients
-        corrcoefs, _ = tools.correlation_matrix(adata,
-                                                which=corr_on,
-                                                basis=method,
-                                                n_components=n_pcs,
-                                                columns=None,
-                                                method=corr_plot)
+        corrcoefs, _ = tools.embedding.correlation_matrix(adata,
+                                                          which=corr_on,
+                                                          basis=method,
+                                                          n_components=n_pcs,
+                                                          columns=None,
+                                                          method=corr_plot)
 
         abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
 
@@ -1706,12 +1706,12 @@ def plot_pca_correlation(adata: sc.AnnData,
     """
 
     # compute correlation matrix
-    corrcoefs, pvalues = tools.correlation_matrix(adata=adata,
-                                                  which=which,
-                                                  basis=basis,
-                                                  n_components=n_components,
-                                                  columns=columns,
-                                                  method=method)
+    corrcoefs, pvalues = tools.embedding.correlation_matrix(adata=adata,
+                                                            which=which,
+                                                            basis=basis,
+                                                            n_components=n_components,
+                                                            columns=columns,
+                                                            method=method)
 
     # decide which values should be shown
     if plot_values == "corrcoefs":
