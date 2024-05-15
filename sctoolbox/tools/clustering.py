@@ -111,7 +111,7 @@ def recluster(adata: sc.AnnData,
     elif task == "split":
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
 
-    adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
+    adata.obs[key_added] = utils.tables.rename_categories(adata.obs[key_added])  # rename to start at 1
 
     # --- Plot reclustering before/after --- #
     if plot is True:
