@@ -291,8 +291,8 @@ def test_search_clustering_parameters(adata, method):
     """Test if search_clustering_parameters returns an array of axes."""
 
     axarr = pl.clustering.search_clustering_parameters(adata, method=method,
-                                                      resolution_range=(0.1, 0.31, 0.1),
-                                                      ncols=2)
+                                                       resolution_range=(0.1, 0.31, 0.1),
+                                                       ncols=2)
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
@@ -308,7 +308,7 @@ def test_search_clustering_parameters_errors(adata):
 
     with pytest.raises(ValueError):
         pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
-                                                  method="leiden")
+                                                   method="leiden")
 
 
 def test_search_clustering_parameters_beartype(adata):
@@ -320,7 +320,7 @@ def test_search_clustering_parameters_beartype(adata):
 
     with pytest.raises(BeartypeCallHintParamViolation):
         pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
-                                                  method="unknown")
+                                                   method="unknown")
 
 
 def test_anndata_overview(adata, tmp_file):
@@ -479,7 +479,7 @@ def test_group_correlation(adata):
 
     # Run group correlation
     pl.qc_filter.group_correlation(adata, groupby="condition",
-                         save="group_correlation.pdf")
+                                   save="group_correlation.pdf")
 
     # Assert creation of file
     assert os.path.isfile("group_correlation.pdf")
@@ -492,7 +492,7 @@ def test_n_cells_barplot(adata, groupby, add_labels):
     """Test n_cells_barplot success."""
 
     axarr = pl.qc_filter.n_cells_barplot(adata, "clustering", groupby=groupby,
-                               add_labels=add_labels)
+                                         add_labels=add_labels)
 
     if groupby is None:
         assert len(axarr) == 1
@@ -508,7 +508,7 @@ def test_grouped_violin(adata, x, y, norm, style):
     """Test grouped_violin success."""
 
     ax = pl.marker_genes.grouped_violin(adata, x=x, y=y, style=style,
-                           groupby="condition", normalize=norm)
+                                        groupby="condition", normalize=norm)
     ax_type = type(ax).__name__
 
     assert ax_type.startswith("Axes")
@@ -537,7 +537,7 @@ def test_marker_gene_clustering(adata, show_umap):
                    "Celltype B": ['ENSMUSG00000102272']}
 
     axes_list = pl.clustering.marker_gene_clustering(adata, "condition",
-                                          marker_dict, show_umap=show_umap)
+                                                     marker_dict, show_umap=show_umap)
     assert isinstance(axes_list, list)
     ax_type = type(axes_list[0]).__name__
     assert ax_type.startswith("Axes")
@@ -660,9 +660,9 @@ def test_clustermap_dotplot():
     """Test clustermap_dotplot success."""
     table = sc.datasets.pbmc68k_reduced().obs.reset_index()[:10]
     axes = pl.general.clustermap_dotplot(table=table, x="bulk_labels",
-                                 y="index", hue="n_genes",
-                                 size="n_counts", palette="viridis",
-                                 title="Title", show_grid=True)
+                                         y="index", hue="n_genes",
+                                         size="n_counts", palette="viridis",
+                                         title="Title", show_grid=True)
 
     assert isinstance(axes, list)
     ax_type = type(axes[0]).__name__
@@ -686,8 +686,8 @@ def test_bidirectional_barplot_fail(df):
 def test_violinplot(adata, ylabel, color_by, hlines):
     """Test violinplot success."""
     ax = pl.general.violinplot(adata.obs, "qc_float", color_by=color_by,
-                       hlines=hlines, colors=None, ax=None,
-                       title="Title", ylabel=ylabel)
+                               hlines=hlines, colors=None, ax=None,
+                               title="Title", ylabel=ylabel)
     ax_type = type(ax).__name__
     assert ax_type.startswith("Axes")
 
@@ -705,7 +705,7 @@ def test_violinplot_fail(adata):
 
     with pytest.raises(ValueError, match='Invalid dict keys in hlines parameter.'):
         pl.general.violinplot(adata.obs, y="qc_float",
-                      color_by="clustering", hlines={"A": 0.5})
+                              color_by="clustering", hlines={"A": 0.5})
 
 
 def test_plot_venn(venn_dict):

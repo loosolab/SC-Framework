@@ -281,8 +281,8 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     # clean up temp files
     logger.info("cleaning up...")
     utils.io.rm_tmp(temp_dir=temp_dir,
-                 temp_files=temp_files,
-                 rm_dir=False if temp_dir else True)
+                    temp_files=temp_files,
+                    rm_dir=False if temp_dir else True)
 
 
 def count_fragments_per_cell(df: pd.DataFrame, barcode_col: str = 'barcode', frag_count: str = 'count') -> pd.DataFrame:

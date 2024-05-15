@@ -18,7 +18,6 @@ from beartype.typing import Optional, Tuple, Union, Any, Literal
 # import scrublet as scr
 
 # toolbox functions
-import sctoolbox
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco

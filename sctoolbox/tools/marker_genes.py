@@ -624,7 +624,7 @@ def run_deseq2(adata: sc.AnnData,
     # Build count matrix
     print("Building count matrix")
     count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                         percentile_range=percentile_range)
+                                                  percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
     count_table.index.name = "gene"
     count_table.reset_index(inplace=True)

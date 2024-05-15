@@ -122,10 +122,10 @@ def test_get_variable_features(adata_atac_qc, inplace):
     assert "highly_variable" not in adata.var.columns
 
     output = hv.get_variable_features(adata=adata,
-                                        max_cells=None,
-                                        min_cells=0,
-                                        show=True,
-                                        inplace=inplace)
+                                      max_cells=None,
+                                      min_cells=0,
+                                      show=True,
+                                      inplace=inplace)
 
     if inplace:
         assert output is None
