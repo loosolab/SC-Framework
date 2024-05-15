@@ -55,7 +55,7 @@ def write_TSS_bed(gtf: str,
     """
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = tools._prepare_gtf(gtf, temp_dir)
+    gtf, tempfiles = tools.peak_annotation._prepare_gtf(gtf, temp_dir)
     # Open tabix file
     tabix_obj = pysam.TabixFile(gtf)
     # Create list of TSS
@@ -115,7 +115,7 @@ def overlap_and_aggregate(fragments: str,
     """
     tempfiles = []
     # Check if fragments are sorted
-    if utils._bed_is_sorted(fragments):
+    if utils.bioutils._bed_is_sorted(fragments):
         logger.info("fragments are sorted")
     else:
         logger.info("sorting fragments")
@@ -125,7 +125,7 @@ def overlap_and_aggregate(fragments: str,
         sorted_bedfile = os.path.join(os.path.split(fragments)[0], (file_name + '_sorted.bed'))
         tempfiles.append(sorted_bedfile)
         # sort fragments
-        utils._sort_bed(fragments, sorted_bedfile)
+        utils.bioutils._sort_bed(fragments, sorted_bedfile)
         # sorted fragments to be used for overlap
         fragments = sorted_bedfile
 
@@ -139,7 +139,7 @@ def overlap_and_aggregate(fragments: str,
     # Read in overlap file
     logger.info("opening overlap file")
 
-    overlap_list = utils._read_bedfile(overlap)
+    overlap_list = utils.bioutils._read_bedfile(overlap)
 
     # initialize dictionary
     tSSe_cells = {}
