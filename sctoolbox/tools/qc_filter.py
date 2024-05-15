@@ -147,7 +147,7 @@ def predict_cell_cycle(adata: sc.AnnData,
             # check if s_genes is a file or list
             if isinstance(genes, str):
                 if Path(genes).is_file():  # check if file exists
-                    genes = utils.read_list_file(genes)
+                    genes = utils.general.read_list_file(genes)
                 else:
                     raise FileNotFoundError(f'The file {genes} was not found!')
             elif isinstance(s_genes, np.ndarray):
@@ -174,7 +174,7 @@ def predict_cell_cycle(adata: sc.AnnData,
 
         # check if given species is available
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
+        available_species = utils.general.clean_flanking_strings(available_files)
         if species not in available_species:
             logger.debug("Species was not found in available species!")
             logger.debug(f"genelist_dir: {genelist_dir}")
@@ -289,7 +289,7 @@ def estimate_doublets(adata: sc.AnnData,
                 jobs.append(job)
             pool.close()
 
-            sctoolbox.utilities.monitor_jobs(jobs, "Scrublet per group")
+            utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
             results = [job.get() for job in jobs]
 
         else:
@@ -324,7 +324,7 @@ def estimate_doublets(adata: sc.AnnData,
 
     if fill_na:
         adata.obs[["doublet_score", "predicted_doublet"]] = (
-            utils.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
+            utils.tables.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
 
     # Check if all values in colum are of type boolean
     if adata.obs["predicted_doublet"].dtype != "bool":
