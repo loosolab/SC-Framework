@@ -31,6 +31,7 @@ def __dir__():
 def __getattr__(name):
     """Lazyload modules (inspired by scipy)."""
     if name in __all__:
-        _importlib.import_module(f"sctoolbox.utils.{name}")
+        # return import to make it directly available
+        return _importlib.import_module(f"sctoolbox.utils.{name}")
     else:
         raise AttributeError(f"Module 'sctoolbox.utils' does not contain a module named '{name}'.")
