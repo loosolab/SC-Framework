@@ -227,8 +227,6 @@ class SctoolboxConfig(object):
 
         Parameters
         ----------
-        self : object
-            The current object of the SctoolboxConfig class. Will be set automatically.
         config_file : str
             Path to the config file.
         key : Optional[str], default None
