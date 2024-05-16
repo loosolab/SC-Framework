@@ -316,7 +316,7 @@ def test_search_clustering_parameters_beartype(adata):
 
     with pytest.raises(BeartypeCallHintParamViolation):
         pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
-                                                  method="leiden")
+                                                   method="leiden")
 
     with pytest.raises(BeartypeCallHintParamViolation):
         pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
