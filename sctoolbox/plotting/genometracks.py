@@ -23,7 +23,7 @@ class GenomeTracks():
         :context: close-figs
         :nofigs:
 
-        import sctoolbox.plotting as pl
+        import sctoolbox.plotting.genometracks as pl
 
         G = pl.GenomeTracks()
 

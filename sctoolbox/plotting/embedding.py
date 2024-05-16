@@ -201,28 +201,28 @@ def plot_embedding(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.plot_embedding(adata, color="louvain", legend_loc="on data")
+        pl.embedding.plot_embedding(adata, color="louvain", legend_loc="on data")
 
     .. plot::
         :context: close-figs
 
-        _ = pl.plot_embedding(adata, method="pca", color="n_genes", show_contour=True, show_title=False)
+        _ = pl.embedding.plot_embedding(adata, method="pca", color="n_genes", show_contour=True, show_title=False)
 
     .. plot::
         :context: close-figs
 
-        _ = pl.plot_embedding(adata, color=['n_genes', 'HES4'], style="hexbin")
+        _ = pl.embedding.plot_embedding(adata, color=['n_genes', 'HES4'], style="hexbin")
 
     .. plot::
         :context: close-figs
 
-        _ = pl.plot_embedding(adata, method="pca", color=['n_genes', 'HES4'],
+        _ = pl.embedding.plot_embedding(adata, method="pca", color=['n_genes', 'HES4'],
                               style="hexbin", components=["1,2", "2,3"], ncols=2)
 
     .. plot::
         :context: close-figs
 
-        ax = pl.plot_embedding(adata, color=['n_genes', 'louvain'], style="density")
+        ax = pl.embedding.plot_embedding(adata, color=['n_genes', 'louvain'], style="density")
     """
 
     # Get key in obsm from method
@@ -512,9 +512,9 @@ def search_umap_parameters(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.search_umap_parameters(adata, min_dist_range=(0.2, 0.9, 0.2),
-                                         spread_range=(2.0, 3.0, 0.5),
-                                         color="bulk_labels")
+        pl.embedding.search_umap_parameters(adata, min_dist_range=(0.2, 0.9, 0.2),
+                                            spread_range=(2.0, 3.0, 0.5),
+                                            color="bulk_labels")
     """
 
     args = locals()  # get all arguments passed to function
@@ -563,9 +563,9 @@ def search_tsne_parameters(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.search_tsne_parameters(adata, perplexity_range=(30, 60, 10),
-                                         learning_rate_range=(600, 1000, 200),
-                                         color="bulk_labels")
+        pl.embedding.search_tsne_parameters(adata, perplexity_range=(30, 60, 10),
+                                            learning_rate_range=(600, 1000, 200),
+                                            color="bulk_labels")
     """
 
     args = locals()  # get all arguments passed to function
@@ -772,7 +772,7 @@ def plot_group_embeddings(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
+        pl.embedding.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
     """
 
     # Get categories
@@ -873,7 +873,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
     .. plot::
         :context: close-figs
 
-        pl.compare_embeddings(adata_list, var_list)
+        pl.embedding.compare_embeddings(adata_list, var_list)
     """
 
     embedding = embedding.lower()
@@ -1005,7 +1005,7 @@ def plot_3D_UMAP(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
+        pl.embedding.plot_3D_UMAP(adata, color="louvain", save="my3d_umap")
 
     This will create an .html-file with the interactive 3D UMAP: :download:`my3d_umap.html <my3d_umap.html>`
     """
@@ -1258,7 +1258,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         adatas["parameter1"] = sc.tl.umap(adata, min_dist=1, copy=True)
         adatas["parameter2"] = sc.tl.umap(adata, min_dist=2, copy=True)
 
-        pl.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
+        pl.embedding.anndata_overview(adatas, color_by="louvain", plots=["PCA", "PCA-var", "UMAP"])
     """
 
     if not isinstance(color_by, list):
@@ -1360,7 +1360,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
                     if len(lisi_columns) == 0:
                         e = f"No LISI scores found in adata.obs for '{name}'"
-                        e += "Please run 'sctoolbox.tools.wrap_batch_evaluation()' or remove LISI from the plots list"
+                        e += "Please run 'sctoolbox.tools.norm_correct.wrap_batch_evaluation()' or remove LISI from the plots list"
                         raise ValueError(e)
 
                     # Plot LISI scores
@@ -1502,10 +1502,10 @@ def plot_pca_variance(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.plot_pca_variance(adata, method="pca",
-                      n_pcs=20,
-                      selected=[2, 3, 4, 5, 7, 8, 9],
-                      corr_plot="spearmanr")
+        pl.embedding.plot_pca_variance(adata, method="pca",
+                                       n_pcs=20,
+                                       selected=[2, 3, 4, 5, 7, 8, 9],
+                                       corr_plot="spearmanr")
     """
 
     if ax is None:
@@ -1697,12 +1697,12 @@ def plot_pca_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.plot_pca_correlation(adata, which="obs")
+        pl.embedding.plot_pca_correlation(adata, which="obs")
 
     .. plot::
         :context: close-figs
 
-        pl.plot_pca_correlation(adata, basis="umap")
+        pl.embedding.plot_pca_correlation(adata, basis="umap")
     """
 
     # compute correlation matrix

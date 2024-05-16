@@ -587,7 +587,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         pool.close()
 
         # Monitor all jobs with a pbar
-        utils.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
+        utils.multiprocessing.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
         pool.join()
 
         # Assign results to adata

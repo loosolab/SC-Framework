@@ -64,7 +64,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
+        pl.clustering.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
     """
 
     # Check validity of parameters
@@ -166,7 +166,7 @@ def marker_gene_clustering(adata: sc.AnnData,
 
         marker_genes_dict = {"S": ["PCNA"], "G2M": ["HMGB2"]}
 
-        pl.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
+        pl.clustering.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
     """
 
     i = 0

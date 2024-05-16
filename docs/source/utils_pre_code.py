@@ -1,1 +1,1 @@
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils

@@ -586,7 +586,7 @@ def run_deseq2(adata: sc.AnnData,
 
     See Also
     --------
-    sctoolbox.utils.pseudobulk_table
+    sctoolbox.utils.bioutils.pseudobulk_table
     """
 
     utils.general.setup_R()

@@ -103,7 +103,7 @@ def plot_starsolo_quality(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_quality("data/quant/")
+        pl.qc_filter.plot_starsolo_quality("data/quant/")
     """
 
     # Prepare functions for converting labels
@@ -194,7 +194,7 @@ def plot_starsolo_UMI(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_UMI("data/quant/", ncol=2)
+        pl.qc_filter.plot_starsolo_UMI("data/quant/", ncol=2)
     """
 
     summary_table = _read_starsolo_summary(folder)
@@ -306,12 +306,12 @@ def n_cells_barplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain")
 
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
@@ -428,7 +428,7 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.group_correlation(adata, "phase", method="spearman", save=None)
+        pl.qc_filter.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
     # Calculate correlation of groups

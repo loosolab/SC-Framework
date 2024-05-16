@@ -90,7 +90,7 @@ def get_celltype_assignment(adata: sc.AnnData,
     marker_genes_table = pd.DataFrame(markers)
 
     # Get pseudobulk table
-    table = utils.pseudobulk_table(sub, clustering)
+    table = utils.bioutils.pseudobulk_table(sub, clustering)
     table.index.name = "genes"
     table.reset_index(inplace=True)
 

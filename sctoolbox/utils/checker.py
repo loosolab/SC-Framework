@@ -393,12 +393,12 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
     .. exec_code::
 
         # --- hide: start ---
-        import sctoolbox.utilities as utils
+        import sctoolbox.utils as utils
         # --- hide: stop ---
 
         limit = (0.5, 1)
         value = 0.5
-        print(utils.in_range(value=value, limits=limit, include_limits=True))
+        print(utils.checker.in_range(value=value, limits=limit, include_limits=True))
 
     This will return 'True'; the value is in between the limits including the limits.
     """

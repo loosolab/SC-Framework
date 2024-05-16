@@ -228,7 +228,7 @@ def from_quant(path: str,
     adata = adata_list[0].concatenate(adata_list[1:], join="outer")
 
     # Add information to uns
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
 
     return adata
 
@@ -404,19 +404,19 @@ def convertToAdata(file: str,
     """
 
     # Setup R
-    utils.setup_R(r_home)
+    utils.general.setup_R(r_home)
 
     # Initialize R <-> python interface
-    utils.check_module("anndata2ri")
+    utils.checker.check_module("anndata2ri")
     import anndata2ri
-    utils.check_module("rpy2")
+    utils.checker.check_module("rpy2")
     from rpy2.robjects import r, default_converter, conversion, globalenv
     anndata2ri.activate()
 
     # create rpy2 None to NULL converter
     # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     none_converter = conversion.Converter("None converter")
-    none_converter.py2rpy.register(type(None), utils._none2null)
+    none_converter.py2rpy.register(type(None), utils.general._none2null)
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
@@ -491,7 +491,7 @@ def convertToAdata(file: str,
     adata.var.index = adata.var.index.astype('object')
 
     # Add information to uns
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
     if output:
         # Saving adata.h5ad
