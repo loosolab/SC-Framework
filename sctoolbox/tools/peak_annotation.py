@@ -377,7 +377,7 @@ def _prepare_gtf(gtf: str,
                     gtf_uncompressed = os.path.join(temp_dir, "uncompressed.gtf")
                     logger.info(f"- Uncompressing {gtf} to: {gtf_uncompressed}")
                     try:
-                        utils.gunzip_file(gtf, gtf_uncompressed)
+                        utils.checker.gunzip_file(gtf, gtf_uncompressed)
                     except Exception:
                         raise ValueError("Could not uncompress gtf file to sort. Please ensure that the input gtf is sorted.")
                     gtf = gtf_uncompressed
