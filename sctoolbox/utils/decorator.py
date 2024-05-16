@@ -8,7 +8,7 @@ import matplotlib
 from beartype.typing import Callable
 from beartype import beartype
 
-import sctoolbox.utils.general as utils
+import sctoolbox.utils as utils
 
 
 @beartype
