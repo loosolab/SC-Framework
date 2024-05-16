@@ -47,6 +47,10 @@ class SctoolboxConfig(object):
         """Set __frozen to True, disallowing new attributes to be added."""
         self.__frozen = True
 
+    def _unfreeze(self):
+        """Set __frozen to False, allowing new attributes to be added."""
+        self.__frozen = False
+
     def __setattr__(self, key, value):
         """Set attribute if it exists in __init__ and is of the correct type."""
 
@@ -256,3 +260,8 @@ def settings_from_config(config_file: str, key: Optional[str] = None):
 
 
 settings = SctoolboxConfig()
+
+settings._unfreeze()
+# add settings_from_config function to object
+settings.settings_from_config = settings_from_config
+settings._freeze()
