@@ -243,7 +243,7 @@ def clustermap_dotplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        table = list(adata.obs.reset_index()[:10])
+        table = adata.obs.reset_index()[:10]
 
     .. plot::
         :context: close-figs
