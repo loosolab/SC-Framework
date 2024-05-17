@@ -377,7 +377,7 @@ def group_expression_boxplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        gene_list=("HES4", "PRMT2", "ITGB2")
+        gene_list=["HES4", "PRMT2", "ITGB2"]
         pl.marker_genes.group_expression_boxplot(adata, gene_list, groupby="bulk_labels")
     """
 
@@ -481,8 +481,10 @@ def gene_expression_heatmap(adata: sc.AnnData,
         adata.obs["samples"] = np.random.choice(["CTRL1", "CTRL2", "CTRL3", "CTRL4", "TREAT1", "TREAT2", "TREAT3", "TREAT4"], size=adata.shape[0])
         adata.obs["condition"] = adata.obs["samples"].str.extract("([A-Z]+)")
 
-        genes = adata.var.index[:15]
-        pl.marker_genes.gene_expression_heatmap(adata, genes, cluster_column="samples",
+        genes = list(adata.var.index[:15])
+        pl.marker_genes.gene_expression_heatmap(adata,
+                                                genes,
+                                                cluster_column="samples",
                                                 groupby="condition",
                                                 title="Gene expression",
                                                 col_cluster=True,
@@ -698,7 +700,7 @@ def plot_gene_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        gene_list=("HES4", "PRMT2", "ITGB2")
+        gene_list=["HES4", "PRMT2", "ITGB2"]
         pl.marker_genes.plot_gene_correlation(adata, "SUMO3", gene_list)
     """
 

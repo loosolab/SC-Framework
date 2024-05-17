@@ -23,9 +23,9 @@ class GenomeTracks():
         :context: close-figs
         :nofigs:
 
-        import sctoolbox.plotting.genometracks as pl
+        import sctoolbox.plotting.genometracks as plg
 
-        G = pl.GenomeTracks()
+        G = plg.GenomeTracks()
 
         #Add bigwig tracks
         G.add_track("data/tracks/bigwig1.bw", color="red")
