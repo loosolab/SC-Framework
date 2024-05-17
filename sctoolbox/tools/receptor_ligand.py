@@ -786,7 +786,7 @@ def cyclone(
     circos.ax.add_artist(patch_legend)
 
     if save:
-        circos.savefig(f"{settings.figure_dir}/{save}", dpi=dpi, figsize=figsize)
+        fig.savefig(f"{settings.figure_dir}/{save}", dpi=dpi)
 
     return fig
 
