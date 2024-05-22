@@ -1,5 +1,12 @@
+0.8.0 (in progress)
+----------------
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- rna/ atac clustering renamed "recluster" -> "revise cluster"
+
 0.7.0 (23-04-24)
--------------
+----------------
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
@@ -16,7 +23,7 @@ Changes to notebooks
 - Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
--------------
+----------------
 - Fix release pages by renaming the release-pages: job to pages:
 - refactor move clean-orphaned-tags to new stage .post (#229)
 
@@ -40,7 +47,7 @@ Changes to notebooks
 - 05_marker_genes: Complete Overhaul (#181)
 
 0.5 (04-03-24)
--------------
+--------------
 
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
