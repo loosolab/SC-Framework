@@ -79,10 +79,10 @@ def adata_inter(adata_db):
 # ----- test setup functions ----- #
 
 @pytest.mark.parametrize('db_path,ligand_column,receptor_column',
-                         [(pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'receptor_gene_symbol'),
+                         [(None, 'ligand_gene_symbol', 'receptor_gene_symbol'),
                           ('consensus', 'ligand', 'receptor')]
                          )
-def test_download_db(adata, db_path, ligand_column, receptor_column):
+def test_download_db(adata, db_path, ligand_column, receptor_column, db_file):
     """Assert rl database is added into anndata."""
     obj = adata.copy()
 
@@ -91,7 +91,7 @@ def test_download_db(adata, db_path, ligand_column, receptor_column):
 
     # add database
     rl.download_db(adata=obj,
-                   db_path=db_path,
+                   db_path=db_path if db_path else db_file,
                    ligand_column=ligand_column,
                    receptor_column=receptor_column,
                    inplace=True,
@@ -103,11 +103,11 @@ def test_download_db(adata, db_path, ligand_column, receptor_column):
 
 
 @pytest.mark.parametrize('db_path,ligand_column,receptor_column',
-                         [(pytest.lazy_fixture('db_file'), 'INVALID', 'receptor_gene_symbol'),
-                          (pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'INVALID'),
+                         [(None, 'INVALID', 'receptor_gene_symbol'),
+                          (None, 'ligand_gene_symbol', 'INVALID'),
                           ('INVALID', 'ligand', 'receptor')]
                          )
-def test_download_db_fail(adata, db_path, ligand_column, receptor_column):
+def test_download_db_fail(adata, db_path, ligand_column, receptor_column, db_file):
     """Assert ValueErrors."""
     obj = adata.copy()
 
@@ -116,7 +116,7 @@ def test_download_db_fail(adata, db_path, ligand_column, receptor_column):
 
     with pytest.raises(ValueError):
         rl.download_db(adata=obj,
-                       db_path=db_path,
+                       db_path=db_path if db_path else db_file,
                        ligand_column=ligand_column,
                        receptor_column=receptor_column,
                        inplace=True,
