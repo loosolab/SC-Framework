@@ -32,15 +32,15 @@ def calculate_dot_sizes(values, max_value, min_dot_size, max_dot_size, use_log_s
 
 
 #calculate plot size
-def calculate_figure_size_planet_mode(x_range, y_range, max_size, dot_scale):
-    width = x_range*(3*max_size)*dot_scale
-    height = y_range*(3*max_size)*dot_scale
+def calculate_figure_size_planet_mode(x_range, y_range, max_size, ipd, scaler):
+    width = x_range*(6*max_size)*ipd*scaler
+    height = y_range*(6*max_size)*ipd*scaler
     return width, height
 
 
-def calculate_figure_size_mean_mode(x_range, y_range, max_size, dot_scale):
-    width = x_range*(1.5*max_size)*dot_scale
-    height = y_range*(1.5*max_size)*dot_scale
+def calculate_figure_size_mean_mode(x_range, y_range, max_size, ipd, scaler):
+    width = x_range*(2*max_size)*ipd*scaler
+    height = y_range*(2*max_size)*ipd*scaler
     return width, height
 
 
@@ -53,7 +53,11 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
                                   y_col_subset: list = None,
                                   input_layer: str = None,
                                   fillna: int | float = 0.0,
-                                  expression_threshold: int | float = 0.0):
+                                  expression_threshold: int | float = 0.0,
+                                  layer_value_aggregator : str = "mean",
+                                  gene_count_aggregator : str = "median",
+                                  gene_expression_aggregator : str = "median",
+                                  **kwargs):
     """
     Preprocesses the annData object for the planet plot.
     
@@ -95,32 +99,34 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
     TODO
     
     """
-    #initialize use_raw
-    use_raw = False
-    
-    if input_layer == "raw":
-        use_raw = True
-        input_layer = None
+    #initialize use_raw=False
+    defaultargs = {
+        "use_raw":False
+    }
+    defaultargs.update(kwargs)
     
     if isinstance(genes, str):
         genes = [genes]
+
+    if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
+        raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")
     
     #get the genex values from the adata
-    df_all = sc.get.obs_df(adata, [*genes, x_col, y_col], gene_symbols = gene_symbols, layer = input_layer, use_raw = use_raw)
+    df_all = sc.get.obs_df(adata, [*genes, x_col, y_col], gene_symbols = gene_symbols, layer = input_layer, use_raw = defaultargs['use_raw'])
         
     #get the count from the adata
     df_counts = sc.get.obs_df(adata, [x_col, y_col])
     df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
     
-    #get the count of the expressed
-    df_expressed_counts = df_all.groupby([x_col, y_col]).apply(lambda x: count_greater_than_threshold(x[genes], expression_threshold)).reset_index()
+    #get the count of observations exceeding threshold per gene per given clcuster
+    df_exceedance_counts = df_all.groupby([x_col, y_col]).apply(lambda x: count_greater_than_threshold(x[genes], expression_threshold)).reset_index()
     
-    #get mean expressions  (mode: mean)
-    df_mean_expressions = df_all.groupby([x_col, y_col]).mean().reset_index()
+    #get aggregate expression values per gene per given cluster
+    df_aggregate_values = df_all.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
     
     #merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
-    plot_vars = pd.merge(df_counts, df_expressed_counts, on=[x_col, y_col])
-    plot_vars = pd.merge(plot_vars, df_mean_expressions, on=[x_col, y_col])
+    plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])
+    plot_vars = pd.merge(plot_vars, df_aggregate_values, on=[x_col, y_col])
     
     #perform subsetting
     if x_col_subset is not None:
@@ -130,20 +136,31 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
         plot_vars = plot_vars[plot_vars[y_col].isin(y_col_subset)].reset_index(drop=True)
         plot_vars[y_col] = plot_vars[y_col].cat.remove_unused_categories()
     
-    #calculate expression weighted counts mean, mean expression, percentage expressed (mode: mean, count, percentage)
-    cols_set1 = [col + '_x' for col in genes]
-    cols_set2 = [col + '_y' for col in genes]
+    
+    #calculate aggregates of all the given genes for the center dot
+    cols_count = [col + '_x' for col in genes]
+    cols_expression = [col + '_y' for col in genes]
 
-    plot_vars['expression_weighted_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_set1, cols_set2))/sum(plot_vars[col2] for col2 in cols_set2)
-    plot_vars['mean_expression'] = sum(plot_vars[col2] for col2 in cols_set2)/len(cols_set2)
-    #REVIEW the requirement of percentage_expressed
-    plot_vars['percentage_expressed'] = plot_vars['expression_weighted_count']*100/plot_vars['total_count']
-    plot_vars['percentage_max_expression'] = plot_vars['mean_expression']*100/np.max(plot_vars['mean_expression'])
+    if gene_count_aggregator == "expression_weighted_count":
+        plot_vars['agg_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression))/sum(plot_vars[col2] for col2 in cols_expression)
+    else:
+        plot_vars['agg_count'] = plot_vars[cols_count].agg(gene_count_aggregator, axis=1)
+    
+    if gene_count_aggregator == "count_weighted_expression":
+        plot_vars['agg_expression'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression))/sum(plot_vars[col1] for col1 in cols_count)
+    else:
+        plot_vars['agg_expression'] = plot_vars[cols_expression].agg(gene_expression_aggregator, axis=1)
+
+    #percentage exceedance for the dot size, when size_value = 'percentage'
+    plot_vars['percentage_exceedance'] = plot_vars['agg_count']*100/plot_vars['total_count']
+
+    #percentage max expression for the dot color, when color_value = 'percentage_max_value'
+    plot_vars['percentage_max_value'] = plot_vars['agg_expression']*100/np.max(plot_vars['agg_expression'])
     
     #calculate percentage expressed and percentage max expression observed for each gene (mode: planet, percentage)
     for gene in genes:
-        plot_vars[gene+'_percentage_expressed'] = plot_vars[gene+'_x']*100/plot_vars['total_count']
-        plot_vars[gene+'_percentage_max_expression'] = plot_vars[gene+'_y']*100/np.max(plot_vars[gene+'_y'])
+        plot_vars[gene+'_percentage_exceedance'] = plot_vars[gene+'_x']*100/plot_vars['total_count']
+        plot_vars[gene+'_percentage_max_value'] = plot_vars[gene+'_y']*100/np.max(plot_vars[gene+'_y'])
     
     # Convert the numeric columns to float and fill NaN with 0
     # List of columns to exclude from conversion
@@ -167,9 +184,13 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
                                           input_layer: str = None,
                                           fillna: int | float = 0.0,
                                           expression_threshold: int | float = 0.0,
-                                          planet_columns: list = None,
-                                          planet_thresholds: list = None,
-                                          planet_color_schemas: list = None):
+                                          obs_columns: list = None,
+                                          obs_thresholds: list = None,
+                                          obs_aggregator_array: list = None,
+                                          layer_value_aggregator : str = "mean",
+                                          gene_count_aggregator : str = "median",
+                                          gene_expression_aggregator : str = "median",
+                                          **kwargs):
     """
     This function has additional functionality to use columns other than genes for the dots.
     
@@ -211,36 +232,47 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
     TODO
     
     """
-    #initialize use_raw
-    use_raw = False
-    
-    if input_layer == "raw":
-        use_raw = True
-        input_layer = None
+    #initialize use_raw=False
+    defaultargs = {
+        "use_raw":False
+    }
+    defaultargs.update(kwargs)
     
     if isinstance(genes, str):
         genes = [genes]
+
+    if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
+        raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")
         
-    total_columns = [*genes, *planet_columns]
-    total_thresholds = [*([expression_threshold]*len(genes)), *planet_thresholds]
+    if len(obs_columns) != len(obs_thresholds):
+        raise ValueError("obs_columns and obs_thresholds should have the same lengths")
+    
+    total_columns = [*genes, *obs_columns]
+    total_thresholds = [*([expression_threshold]*len(genes)), *obs_thresholds]
     
     #get the genex values from the adata
-    df_all = sc.get.obs_df(adata, [*genes, *planet_columns, x_col, y_col], gene_symbols = gene_symbols, layer = input_layer, use_raw = use_raw)
+    df_all = sc.get.obs_df(adata, [*genes, *obs_columns, x_col, y_col], gene_symbols = gene_symbols, layer = input_layer, use_raw = defaultargs['use_raw'])
     
     #get the count from the adata
     df_counts = sc.get.obs_df(adata, [x_col, y_col])
     df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
     
-    #get the count of the expressed
-    df_expressed_counts = df_all.groupby([x_col, y_col]).apply(lambda x: pd.Series({total_columns[i]: count_greater_than_threshold(x[total_columns[i]], total_thresholds[i]) for i in range(len(total_columns))})).reset_index()
+    #get the count of the obs exceeding the threshold per cluster for genes as well as other obs columns
+    df_exceedance_counts = df_all.groupby([x_col, y_col]).apply(lambda x: pd.Series({total_columns[i]: count_greater_than_threshold(x[total_columns[i]], total_thresholds[i]) for i in range(len(total_columns))})).reset_index()
     
     
-    #get mean expressions  (mode: mean)
-    df_mean_expressions = df_all.groupby([x_col, y_col]).mean().reset_index()
+    #get aggregate values per cluster for genes as well as other obs columns
+    if obs_aggregator_array is not None and len(obs_aggregator_array) != len(obs_columns):
+        raise ValueError("obs_columns and obs_aggregator_array should have the same lengths or obs_aggregator_array should not be passed")
+    elif obs_aggregator_array is None:
+        df_aggregate_values = df_all.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
+    else:
+        full_aggregator_array = [*([layer_value_aggregator]*len(genes)), *obs_aggregator_array]
+        df_aggregate_values = df_all.groupby([x_col, y_col]).agg({total_columns[i]: full_aggregator_array[i] for i in range(len(total_columns))}).reset_index()
     
     #merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
-    plot_vars = pd.merge(df_counts, df_expressed_counts, on=[x_col, y_col])
-    plot_vars = pd.merge(plot_vars, df_mean_expressions, on=[x_col, y_col])
+    plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])
+    plot_vars = pd.merge(plot_vars, df_aggregate_values, on=[x_col, y_col])
     
     #perform subsetting
     if x_col_subset is not None:
@@ -250,20 +282,30 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
         plot_vars = plot_vars[plot_vars[y_col].isin(y_col_subset)].reset_index(drop=True)
         plot_vars[y_col] = plot_vars[y_col].cat.remove_unused_categories()
     
-    #calculate expression weighted counts mean, mean expression, percentage expressed (mode: mean, count, percentage)
-    cols_set1 = [col + '_x' for col in genes]
-    cols_set2 = [col + '_y' for col in genes]
+    #calculate aggregates of all the given genes for the center dot
+    cols_count = [col + '_x' for col in genes]
+    cols_expression = [col + '_y' for col in genes]
 
-    plot_vars['expression_weighted_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_set1, cols_set2))/sum(plot_vars[col2] for col2 in cols_set2)
-    plot_vars['mean_expression'] = sum(plot_vars[col2] for col2 in cols_set2)/len(cols_set2)
-    #REVIEW the requirement of percentage_expressed
-    plot_vars['percentage_expressed'] = plot_vars['expression_weighted_count']*100/plot_vars['total_count']
-    plot_vars['percentage_max_expression'] = plot_vars['mean_expression']*100/np.max(plot_vars['mean_expression'])
+    if gene_count_aggregator == "expression_weighted_count":
+        plot_vars['agg_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression))/sum(plot_vars[col2] for col2 in cols_expression)
+    else:
+        plot_vars['agg_count'] = plot_vars[cols_count].agg(gene_count_aggregator, axis=1)
+    
+    if gene_expression_aggregator == "count_weighted_expression":
+        plot_vars['agg_expression'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression))/sum(plot_vars[col1] for col1 in cols_count)
+    else:
+        plot_vars['agg_expression'] = plot_vars[cols_expression].agg(gene_expression_aggregator, axis=1)
+
+    #percentage exceedance for the dot size, when size_value = 'percentage'
+    plot_vars['percentage_exceedance'] = plot_vars['agg_count']*100/plot_vars['total_count']
+
+    #percentage max expression for the dot color, when color_value = 'percentage_max_value'
+    plot_vars['percentage_max_value'] = plot_vars['agg_expression']*100/np.max(plot_vars['agg_expression'])
     
     #calculate percentage expressed and percentage max expression observed for each gene (mode: planet, percentage)
     for column in total_columns:
-        plot_vars[column+'_percentage_expressed'] = plot_vars[column+'_x']*100/plot_vars['total_count']
-        plot_vars[column+'_percentage_max_expression'] = plot_vars[column+'_y']*100/np.max(plot_vars[column+'_y'])
+        plot_vars[column+'_percentage_exceedance'] = plot_vars[column+'_x']*100/plot_vars['total_count']
+        plot_vars[column+'_percentage_max_value'] = plot_vars[column+'_y']*100/np.max(plot_vars[column+'_y'])
     
     # Convert the numeric columns to float and fill NaN with 0
     # List of columns to exclude from conversion
@@ -282,30 +324,14 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                         y_col: str,
                         x_label: str = None,
                         y_label: str = None,
-                        mode : Literal["mean", "planet"] = "mean",
+                        mode : Literal["aggregate", "planet"] = "aggregate",
                         size_value : Literal["count", "percentage"] = "count",
-                        color_value : Literal["expression" , "percentage_max"] = "expression",
+                        color_value : Literal["value" , "percentage_max"] = "value",
                         use_log_scale : bool = False,
                         planet_columns: list = None,
                         color_schema: str = "Blues",
                         planet_color_schemas: list = None,
-                        OUTER_SIZE_COUNT_COLUMN: str = 'total_count',
-                        INNER_SIZE_COUNT_COLUMN: str = 'expression_weighted_count',
-                        INNER_SIZE_PERCENTAGE_COLUMN: str = 'percentage_expressed',
-                        DOT_COLOR_VALUE_COLUMN: str = 'mean_expression',
-                        DOT_COLOR_PERCENTAGE_MAX_VALUE_COLUMN: str = 'percentage_max_expression',
-                        PLANET_SIZE_COUNT_SUFFIX: str = '_x',
-                        PLANET_SIZE_PERCENTAGE_SUFFIX: str = '_percentage_expressed',
-                        PLANET_COLOR_VALUE_SUFFIX: str = '_y',
-                        PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX: str = '_percentage_max_expression',
-                        COLOR_BAR_TITLE: str = 'Gene Expression',
-                        COLOR_BAR_TITLE_PMV: str = 'Percentage of max expression\nobserved for the gene',
-                        SIZE_LEGEND_TITLE: str = 'Cell Count',
-                        SIZE_LEGEND_TITLE_PERCENTAGE: str = 'Percentage cells expressed',
-                        OUTER_CIRCLE_LABEL: str = 'Total count',
-                        INNER_DOT_LABEL: str = 'Expressed count',
-                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
-                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Mean'):
+                        **kwargs):
     """
     Renders the planet plot on the basis of the preprocessed data.
     
@@ -363,39 +389,44 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     """
     #plotting parameters:
     #df column mapping defaults
-#     OUTER_SIZE_COUNT_COLUMN = 'total_count'
-#     INNER_SIZE_COUNT_COLUMN = 'expression_weighted_count'
-#     INNER_SIZE_PERCENTAGE_COLUMN = 'percentage_expressed'
-#     DOT_COLOR_VALUE_COLUMN = 'mean_expression'
-#     DOT_COLOR_PERCENTAGE_MAX_VALUE_COLUMN = 'percentage_max_expression'
-#     PLANET_SIZE_COUNT_SUFFIX = '_x'
-#     PLANET_SIZE_PERCENTAGE_SUFFIX = '_percentage_expressed'
-#     PLANET_COLOR_VALUE_SUFFIX = '_y'
-#     PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX = '_percentage_max_expression'
+    OUTER_SIZE_COUNT_COLUMN = kwargs.get('OUTER_SIZE_COUNT_COLUMN','total_count')
+    INNER_SIZE_COUNT_COLUMN = kwargs.get('INNER_SIZE_COUNT_COLUMN','agg_count')
+    INNER_SIZE_PERCENTAGE_COLUMN = kwargs.get('INNER_SIZE_PERCENTAGE_COLUMN','percentage_exceedance')
+    DOT_COLOR_VALUE_COLUMN = kwargs.get('DOT_COLOR_VALUE_COLUMN','agg_expression')
+    DOT_COLOR_PERCENTAGE_MAX_VALUE_COLUMN = kwargs.get('DOT_COLOR_PERCENTAGE_MAX_VALUE_COLUMN','percentage_max_value')
+    PLANET_SIZE_COUNT_SUFFIX = kwargs.get('PLANET_SIZE_COUNT_SUFFIX','_x')
+    PLANET_SIZE_PERCENTAGE_SUFFIX = kwargs.get('PLANET_SIZE_PERCENTAGE_SUFFIX','_percentage_exceedance')
+    PLANET_COLOR_VALUE_SUFFIX = kwargs.get('PLANET_COLOR_VALUE_SUFFIX','_y')
+    PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX = kwargs.get('PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX','_percentage_max_value')
         
     #Init Params:
-    DOT_SCALE = 1/72
-    MAX_DOT_SIZE = 30
-    MIN_DOT_SIZE = 3
-    LINE_WIDTH = 1
+    dpi = kwargs.get('DPI',100)
+    ipd = 1/dpi
+    MAX_DOT_SIZE = kwargs.get('MAX_DOT_SIZE',300)
+    MAX_DOT_RADIUS = np.sqrt(MAX_DOT_SIZE/np.pi)
+    MIN_DOT_SIZE = kwargs.get('MIN_DOT_SIZE',10)
+    MIN_DOT_RADIUS = np.sqrt(MIN_DOT_SIZE/np.pi)
+    LINE_WIDTH = kwargs.get('LINE_WIDTH',1)
+    FIG_SIZE_SCALER = kwargs.get('FIG_SIZE_SCALER',2)
+    PLANET_DIST_SCALER = kwargs.get('PLANET_DIST_SCALER',1.25)
 
     #legend dimensions in inches:
-    LEGEND_COLOR_HEIGHT = 0.2
-    LEGEND_COLOR_WIDTH = 2
-    LEGEND_DOT_HEIGHT = 2.5
-    LEGEND_DOT_WIDTH = 2
-    LEGEND_PLANET_HEIGHT = 2
-    LEGEND_PLANET_WIDTH = 2
+    LEGEND_COLOR_HEIGHT = kwargs.get('LEGEND_COLOR_HEIGHT',0.2)
+    LEGEND_COLOR_WIDTH = kwargs.get('LEGEND_COLOR_WIDTH',2)
+    LEGEND_DOT_HEIGHT = kwargs.get('LEGEND_DOT_HEIGHT',2.5)
+    LEGEND_DOT_WIDTH = kwargs.get('LEGEND_DOT_WIDTH',2)
+    LEGEND_PLANET_HEIGHT = kwargs.get('LEGEND_PLANET_HEIGHT',2)
+    LEGEND_PLANET_WIDTH = kwargs.get('LEGEND_PLANET_WIDTH',2)
     
     #default legend labels    
-#     COLOR_BAR_TITLE = 'Gene Expression'
-#     COLOR_BAR_TITLE_PMV = 'Percentage of max expression\nobserved for the gene'
-#     SIZE_LEGEND_TITLE = 'Cell Count'
-#     SIZE_LEGEND_TITLE_PERCENTAGE = 'Percentage cells expressed'
-#     OUTER_CIRCLE_LABEL = 'Total count'
-#     INNER_DOT_LABEL = 'Expressed count'
-#     ORIENTATION_LEGEND_TITLE = 'Genes'
-#     ORIENTATION_LEGEND_CENTER_LABEL = 'Mean'
+    COLOR_BAR_TITLE = kwargs.get('COLOR_BAR_TITLE','Gene Expression')
+    COLOR_BAR_TITLE_PMV = kwargs.get('COLOR_BAR_TITLE_PMV','Percentage of max expression\nobserved for the gene')
+    SIZE_LEGEND_TITLE = kwargs.get('SIZE_LEGEND_TITLE','Cell Count')
+    SIZE_LEGEND_TITLE_PERCENTAGE = kwargs.get('SIZE_LEGEND_TITLE_PERCENTAGE','Percentage cells expressed')
+    OUTER_CIRCLE_LABEL = kwargs.get('OUTER_CIRCLE_LABEL','Total count')
+    INNER_DOT_LABEL = kwargs.get('INNER_DOT_LABEL','Expressed count')
+    ORIENTATION_LEGEND_TITLE = kwargs.get('ORIENTATION_LEGEND_TITLE','Genes')
+    ORIENTATION_LEGEND_CENTER_LABEL = kwargs.get('ORIENTATION_LEGEND_CENTER_LABEL','Aggregate value')
         
     #planet extras
     if isinstance(planet_columns, str):
@@ -436,27 +467,93 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     
     #dot size calculation
     if size_value == 'count':
-        plot_vars['outer_size'] = calculate_dot_sizes(plot_vars[OUTER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
-        plot_vars['inner_size'] = calculate_dot_sizes(plot_vars[INNER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['outer_area'] = calculate_dot_sizes(plot_vars[OUTER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['outer_radius'] = np.sqrt(plot_vars['outer_area']/np.pi)
+        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_radius'] = np.sqrt(plot_vars['inner_area']/np.pi)
         if mode == 'planet':
             for planet_column in planet_columns:
-                plot_vars[planet_column+'_dot_size'] = calculate_dot_sizes(plot_vars[planet_column+PLANET_SIZE_COUNT_SUFFIX], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column+'_dot_area'] = calculate_dot_sizes(plot_vars[planet_column+PLANET_SIZE_COUNT_SUFFIX], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column+'_dot_radius'] = np.sqrt(plot_vars[planet_column+'_dot_area']/np.pi)
             
     if size_value == 'percentage':
-        plot_vars['inner_size'] = calculate_dot_sizes(plot_vars[INNER_SIZE_PERCENTAGE_COLUMN], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_PERCENTAGE_COLUMN], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_radius'] = np.sqrt(plot_vars['inner_area']/np.pi)
         if mode == 'planet':
             for planet_column in planet_columns:
-                plot_vars[planet_column+'_dot_size'] = calculate_dot_sizes(plot_vars[planet_column+PLANET_SIZE_PERCENTAGE_SUFFIX], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column+'_dot_area'] = calculate_dot_sizes(plot_vars[planet_column+PLANET_SIZE_PERCENTAGE_SUFFIX], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column+'_dot_radius'] = np.sqrt(plot_vars[planet_column+'_dot_area']/np.pi)
         
     #figure size calculation
     if mode == 'planet':
-        w, h = calculate_figure_size_planet_mode(len(plot_vars['x_steps'].unique()), len(plot_vars['y_steps'].unique()), MAX_DOT_SIZE, DOT_SCALE)
+        w, h = calculate_figure_size_planet_mode(len(plot_vars['x_steps'].unique()), len(plot_vars['y_steps'].unique()), MAX_DOT_RADIUS, ipd, FIG_SIZE_SCALER)
     
-    if mode == 'mean':
-        w, h = calculate_figure_size_mean_mode(len(plot_vars['x_steps'].unique()), len(plot_vars['y_steps'].unique()), MAX_DOT_SIZE, DOT_SCALE)
+    if mode == 'aggregate':
+        w, h = calculate_figure_size_mean_mode(len(plot_vars['x_steps'].unique()), len(plot_vars['y_steps'].unique()), MAX_DOT_RADIUS, ipd, FIG_SIZE_SCALER)
                 
     height_per_unit = 1/h
     width_per_unit = 1/w
+
+    # print(f"Plot width: {w} inches")
+    # print(f"Plot height: {h} inches")
+
+    # # Plot main dots
+    # fig, ax = plt.subplots(figsize=(w, h))
+
+    # plt.xticks(ticks=range(len(x_categories)), labels=x_categories, rotation='vertical')
+    # plt.yticks(ticks=range(len(y_categories)), labels=y_categories)
+
+    # # Step 2: Render the plot
+    # # plt.tight_layout()
+    # fig.canvas.draw()
+
+    # # Access the bounding box of the label, axes, etc.
+    # x_label_bbox = ax.xaxis.label.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    # y_label_bbox = ax.yaxis.label.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    # # Get the bounding box of the axes plotting area in display coordinates
+    # plotting_area_bbox = ax.bbox
+
+    # # Display the bounding box coordinates in display units (pixels)
+    # print("Plotting Area Bounding Box (display units):", plotting_area_bbox)
+
+    # print("DPI:", dpi)
+
+    # # Convert the display units to inches
+    # plotting_area_bbox_inches = plotting_area_bbox.transformed(fig.dpi_scale_trans.inverted())
+
+    # # Display the bounding box coordinates in inches
+    # print("Plotting Area Bounding Box (inches):", plotting_area_bbox_inches.bounds) 
+
+    # diff_w = w-plotting_area_bbox_inches.bounds[2]
+    # diff_h = h-plotting_area_bbox_inches.bounds[3]
+
+    # # Print the bounding box coordinates
+    # print("X Label Bounding Box:", x_label_bbox.bounds)
+    # print("Y Label Bounding Box:", y_label_bbox.bounds)
+    # # print("Legend Bounding Box:", legend_bbox)
+
+    # # Step 3: Retrieve the bounding box dimensions of the plot area
+    # renderer = fig.canvas.get_renderer()
+    # bbox = ax.get_tightbbox(renderer).transformed(fig.dpi_scale_trans.inverted())
+
+    # # Extract the dimensions
+    # plot_width = bbox.width
+    # plot_height = bbox.height
+
+    # print(f"Plot area width: {plot_width} inches")
+    # print(f"Plot area height: {plot_height} inches")
+
+    # w = w+diff_w
+    # h = h+diff_h
+
+    # height_per_unit = 1/h
+    # width_per_unit = 1/w
+
+    # print(f"Plot width: {w} inches")
+    # print(f"Plot height: {h} inches")
+
+    x_inches_per_step = len(plot_vars['x_steps'].unique())/w
+    y_inches_per_step = len(plot_vars['y_steps'].unique())/h
 
     # Plot main dots
     fig, ax = plt.subplots(figsize=(w, h))
@@ -464,38 +561,40 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     plt.xticks(ticks=range(len(x_categories)), labels=x_categories, rotation='vertical')
     plt.yticks(ticks=range(len(y_categories)), labels=y_categories)
 
+
+
     #size value condition
     if size_value == 'count':
-        ax.scatter(plot_vars['x_steps'], plot_vars['y_steps'], s=plot_vars['outer_size']**2, facecolors='none', edgecolors='0',linewidths=LINE_WIDTH)
-    if color_value == 'expression':
-        sc = ax.scatter(plot_vars['x_steps'], plot_vars['y_steps'], s=plot_vars['inner_size']**2, c=plot_vars[DOT_COLOR_VALUE_COLUMN], cmap=color_schema, vmin=vmin, vmax=vmax)
+        ax.scatter(plot_vars['x_steps'], plot_vars['y_steps'], s=plot_vars['outer_area'], facecolors='none', edgecolors='0',linewidths=LINE_WIDTH)
+    if color_value == 'value':
+        sc = ax.scatter(plot_vars['x_steps'], plot_vars['y_steps'], s=plot_vars['inner_area'], c=plot_vars[DOT_COLOR_VALUE_COLUMN], cmap=color_schema, vmin=vmin, vmax=vmax)
     if color_value == 'percentage_max':
-        sc = ax.scatter(plot_vars['x_steps'], plot_vars['y_steps'], s=plot_vars['inner_size']**2, c=plot_vars[DOT_COLOR_PERCENTAGE_MAX_VALUE_COLUMN], cmap=color_schema, vmin=0, vmax=100)
+        sc = ax.scatter(plot_vars['x_steps'], plot_vars['y_steps'], s=plot_vars['inner_area'], c=plot_vars[DOT_COLOR_PERCENTAGE_MAX_VALUE_COLUMN], cmap=color_schema, vmin=0, vmax=100)
 
     if mode == 'planet':
         sc_array = {}
         for i, row in plot_vars.iterrows():
             p=0
-            outer_size = row['outer_size']
+            outer_radius = row['outer_radius']
             for planet_column in planet_columns:
                 #test if planet capacity is reached
                 if p>5: continue
-                size = row[planet_column+'_dot_size']
-                size_factor = (3*LINE_WIDTH+ (outer_size+size)/2)*DOT_SCALE
-                offset_x = size_factor*planet_x[p]
-                offset_y = size_factor*planet_y[p]
+                radius = row[planet_column+'_dot_radius']
+                distance_from_center = PLANET_DIST_SCALER*(LINE_WIDTH+outer_radius+radius)*ipd
+                offset_x = distance_from_center*planet_x[p]/x_inches_per_step
+                offset_y = distance_from_center*planet_y[p]/y_inches_per_step
                 secondary_x = row['x_steps'] + offset_x
                 secondary_y = row['y_steps'] + offset_y
                 if planet_color_schemas is not None:
-                    if color_value == 'expression':
-                        sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_size']**2, c=row[planet_column+PLANET_COLOR_VALUE_SUFFIX],cmap=planet_color_schemas[p], vmin=vmin_array[p], vmax=vmin_array[p])
+                    if color_value == 'value':
+                        sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_area'], c=row[planet_column+PLANET_COLOR_VALUE_SUFFIX],cmap=planet_color_schemas[p], vmin=vmin_array[p], vmax=vmin_array[p])
                     if color_value == 'percentage_max':
-                        sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_size']**2, c=row[planet_column+PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX],cmap=planet_color_schemas[p], vmin=0, vmax=100)
+                        sc_array[p] = ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_area'], c=row[planet_column+PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX],cmap=planet_color_schemas[p], vmin=0, vmax=100)
                 else:
-                    if color_value == 'expression':
-                        ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_size']**2, c=row[planet_column+PLANET_COLOR_VALUE_SUFFIX],cmap=color_schema, vmin=vmin, vmax=vmax)
+                    if color_value == 'value':
+                        ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_area'], c=row[planet_column+PLANET_COLOR_VALUE_SUFFIX],cmap=color_schema, vmin=vmin, vmax=vmax)
                     if color_value == 'percentage_max':
-                        ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_size']**2, c=row[planet_column+PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX],cmap=color_schema, vmin=0, vmax=100)
+                        ax.scatter(secondary_x, secondary_y, s=row[planet_column+'_dot_area'], c=row[planet_column+PLANET_COLOR_PERCENTAGE_MAX_VALUE_SUFFIX],cmap=color_schema, vmin=0, vmax=100)
                 p=p+1
 
     plt.xlim(-0.5,len(x_labels)-0.5)
@@ -513,7 +612,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     cbar_ax = fig.add_axes([1 + 0.25*LEGEND_COLOR_WIDTH*width_per_unit, 0.1, LEGEND_COLOR_WIDTH*width_per_unit, LEGEND_COLOR_HEIGHT*height_per_unit])
 
     cbar = plt.colorbar(sc, cax=cbar_ax, orientation='horizontal', fraction=0.046, pad=0.04)
-    if color_value == 'expression':
+    if color_value == 'value':
         cbar.set_label(COLOR_BAR_TITLE, labelpad=-50)
     if color_value == 'percentage_max':
         cbar.set_label(COLOR_BAR_TITLE_PMV, labelpad=-60)
@@ -534,7 +633,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
             planet_cbar_ax[i] = fig.add_axes([1 + 0.25*LEGEND_COLOR_WIDTH*width_per_unit, 0.1 + cbar_count*5*LEGEND_COLOR_HEIGHT*height_per_unit, LEGEND_COLOR_WIDTH*width_per_unit, LEGEND_COLOR_HEIGHT*height_per_unit])
 
             cbar = plt.colorbar(sc_array[i], cax=planet_cbar_ax[i], orientation='horizontal', fraction=0.046, pad=0.04)
-            if color_value == 'expression':
+            if color_value == 'value':
                 cbar.set_label(planet_columns[i], labelpad=-50)
             if color_value == 'percentage_max':
                 cbar.set_label(planet_columns[i], labelpad=-60)
@@ -552,7 +651,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     #dots_legend
     if mode == 'planet':
         dot_size_ax = fig.add_axes([1 + 0.25*LEGEND_DOT_WIDTH*width_per_unit, 0.1+ cbar_count*5*LEGEND_COLOR_HEIGHT*height_per_unit+ 1.1*LEGEND_PLANET_HEIGHT*height_per_unit, LEGEND_DOT_WIDTH*width_per_unit, LEGEND_DOT_HEIGHT*height_per_unit])
-    if mode == 'mean':
+    if mode == 'aggregate':
         dot_size_ax = fig.add_axes([1 + 0.25*LEGEND_DOT_WIDTH*width_per_unit, 0.1+ cbar_count*5*LEGEND_COLOR_HEIGHT*height_per_unit, LEGEND_DOT_WIDTH*width_per_unit, LEGEND_DOT_HEIGHT*height_per_unit])
 
     values = np.linspace(min_count, max_count, num=5)
@@ -568,13 +667,13 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     for i in range(len(sizes)):
         #size value condition
         if size_value == 'percentage':
-            dot_size_ax.scatter(0, i, s= sizes[i]**2, c=legend_hex_color, alpha=1)
+            dot_size_ax.scatter(0, i, s= sizes[i], c=legend_hex_color, alpha=1)
         if size_value == 'count':
-            dot_size_ax.scatter(-0.25, i, s= sizes[i]**2, c=legend_hex_color, alpha=1)
-            dot_size_ax.scatter(-0.25, i, s=sizes[i]**2, facecolors='none', edgecolors='0',linewidths=LINE_WIDTH)
+            dot_size_ax.scatter(-0.25, i, s= sizes[i], c=legend_hex_color, alpha=1)
+            dot_size_ax.scatter(-0.25, i, s=sizes[i], facecolors='none', edgecolors='0',linewidths=LINE_WIDTH)
             if i == len(sizes)-1:
                 dot_size_ax.annotate(OUTER_CIRCLE_LABEL, 
-                            xy=(-0.25 + DOT_SCALE*sizes[i]/(1.5*np.pi), i), xycoords='data',
+                            xy=(-0.25 + ipd*np.sqrt(sizes[i]/np.pi)/LEGEND_DOT_WIDTH, i), xycoords='data',
                             xytext=(-0.25 + 0.25, i), textcoords='data',
                             arrowprops=dict(arrowstyle="-", color="black", lw=LINE_WIDTH),
                             fontsize=8, ha='left', va='center')
@@ -605,28 +704,36 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     #planet legend
     if mode == 'planet':
         dot_orientation_ax = fig.add_axes([1 + 0.25*LEGEND_PLANET_WIDTH*width_per_unit,0.1+ cbar_count*5*LEGEND_COLOR_HEIGHT*height_per_unit, LEGEND_PLANET_WIDTH*width_per_unit, LEGEND_PLANET_HEIGHT*height_per_unit])
-        size = (MIN_DOT_SIZE+MAX_DOT_SIZE)/2
+        legend_circle_size = (MIN_DOT_SIZE+MAX_DOT_SIZE)/2
+        legend_circle_radius = np.sqrt(legend_circle_size/np.pi)
+        legend_dot_size = 0.75*legend_circle_size
+        legend_dot_radius = np.sqrt(legend_dot_size/np.pi)
 
         #size value condition
         if size_value == 'count':
-            dot_orientation_ax.scatter(0, 0, s=(size*2)**2, facecolors='none', edgecolors='0',linewidths=LINE_WIDTH, alpha=1)
+            dot_orientation_ax.scatter(0, 0, s=legend_circle_size, facecolors='none', edgecolors='0',linewidths=LINE_WIDTH, alpha=1)
 
-        dot_orientation_ax.scatter(0, 0, s=(size*1.5)**2, c=legend_hex_color, alpha=1)
-        dot_orientation_ax.text(0,0, ORIENTATION_LEGEND_CENTER_LABEL, fontsize=8, ha='center', va='center')
+        dot_orientation_ax.scatter(0, 0, s=legend_dot_size, c=legend_hex_color, alpha=1)
+        dot_orientation_ax.annotate(ORIENTATION_LEGEND_CENTER_LABEL, 
+                            xy=(0, 0), xycoords='data',
+                            xytext=(-0.15*PLANET_DIST_SCALER, -0.15*PLANET_DIST_SCALER), textcoords='data',
+                            arrowprops=dict(arrowstyle="-", color="black", lw=LINE_WIDTH),
+                            fontsize=8, va = 'center')
+        # dot_orientation_ax.text(0,0, ORIENTATION_LEGEND_CENTER_LABEL, fontsize=8, ha='center', va='center')
 
         p=0
         for planet_column in planet_columns:
             #test if planet capacity is reached
             if p>5: continue
-            size_factor = (LINE_WIDTH+size)*DOT_SCALE
-            offset_x = size_factor*planet_x[p]
-            offset_y = size_factor*planet_y[p]
+            distance_from_center = PLANET_DIST_SCALER*(LINE_WIDTH+legend_circle_radius+legend_dot_radius)*ipd/LEGEND_PLANET_WIDTH
+            offset_x = distance_from_center*planet_x[p]
+            offset_y = distance_from_center*planet_y[p]
             secondary_x = offset_x
             secondary_y = offset_y
             if planet_color_schemas is not None:
-                dot_orientation_ax.scatter(secondary_x, secondary_y, s=size**2, c=planet_legend_hex_color[p], alpha=1)
+                dot_orientation_ax.scatter(secondary_x, secondary_y, s=legend_dot_size, c=planet_legend_hex_color[p], alpha=1)
             else:
-                dot_orientation_ax.scatter(secondary_x, secondary_y, s=size**2, c=legend_hex_color, alpha=1)
+                dot_orientation_ax.scatter(secondary_x, secondary_y, s=legend_dot_size, c=legend_hex_color, alpha=1)
             dot_orientation_ax.text(1.5*secondary_x, 1.5*secondary_y, planet_column, fontsize=8, **planet_text[p])
             p=p+1
 
