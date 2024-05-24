@@ -93,15 +93,15 @@ def download_db(adata: sc.AnnData,
 
     try:
         database = pd.read_csv(db_path, sep=sep)
-    except FileExistsError:
+    except FileNotFoundError:
         # Check if a LIANA resource
-        if db_path in liana_res.resources.show_resources():
+        if db_path in liana_res.show_resources():
             # get LIANA db
-            database = liana_res.resource.select_resource(db_path)
+            database = liana_res.select_resource(db_path)
             # explode protein complexes interactions into single protein interactions
-            database = liana_res.resource.explode_complexes(database)
+            database = liana_res.explode_complexes(database)
         else:
-            raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.resource.show_resources()}).")
+            raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
 
     # check column names in table
     if ligand_column not in database.columns:
