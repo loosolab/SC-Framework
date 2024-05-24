@@ -16,7 +16,6 @@ import igraph as ig
 import pycirclize
 from tqdm import tqdm
 import warnings
-import scanpy as sc
 import liana.resource as liana_res
 
 from beartype.typing import Optional, Tuple
