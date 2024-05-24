@@ -35,7 +35,8 @@ RUN pip install "/tmp/[all]" && \
     pip install pytest && \
     pip install pytest-cov && \
     pip install pytest-html && \
-    pip install pytest-mock
+    pip install pytest-mock && \
+    pip install pytest-lazy-fixture
 
 # clear tmp
 RUN rm -r /tmp/*
