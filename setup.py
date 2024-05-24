@@ -11,7 +11,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks', 'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize'],  # bbknn requires sk-learn <= 1.2
+                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize', 'liana'],  # bbknn requires sk-learn <= 1.2
                   "velocity": ['scvelo'],
                   "pseudotime": ["scFates"],
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
@@ -66,7 +66,7 @@ setup(
     python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
         'pysam',
-        'matplotlib',
+        'matplotlib<3.9.0',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
