@@ -78,7 +78,11 @@ def adata_inter(adata_db):
 
 # ----- test setup functions ----- #
 
-def test_download_db(adata, db_file):
+@pytest.mark.parametrize('db_path,ligand_column,receptor_column',
+                         [(pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'receptor_gene_symbol'),
+                          ('consensus', 'ligand', 'receptor')
+                         ])
+def test_download_db(adata, db_path, ligand_column, receptor_column):
     """Assert rl database is added into anndata."""
     obj = adata.copy()
 
@@ -87,15 +91,39 @@ def test_download_db(adata, db_file):
 
     # add database
     rl.download_db(adata=obj,
-                   db_path=db_file,
-                   ligand_column='ligand_gene_symbol',
-                   receptor_column='receptor_gene_symbol',
+                   db_path=db_path,
+                   ligand_column=ligand_column,
+                   receptor_column=receptor_column,
                    inplace=True,
                    overwrite=False)
 
     # adata contains database
     assert "receptor-ligand" in obj.uns
     assert "database" in obj.uns["receptor-ligand"]
+
+
+@pytest.mark.parametrize('db_path,ligand_column,receptor_column',
+                         [(pytest.lazy_fixture('db_file'), 'INVALID', 'receptor_gene_symbol'),
+                          (pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'INVALID')
+                          ('INVALID', 'ligand', 'receptor')
+                         ])
+def test_download_db_fail(adata, db_path, ligand_column, receptor_column):
+    """Assert ValueErrors."""
+    obj = adata.copy()
+
+    # adata does not have database
+    assert "receptor-ligand" not in obj.uns
+
+    with pytest.raises(ValueError):
+        rl.download_db(adata=obj,
+                       db_path=db_path,
+                       ligand_column=ligand_column,
+                       receptor_column=receptor_column,
+                       inplace=True,
+                       overwrite=False)
+
+    # adata does not have database
+    assert "receptor-ligand" not in obj.uns
 
 
 def test_interaction_table(adata_db):

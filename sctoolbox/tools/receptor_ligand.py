@@ -15,6 +15,7 @@ import matplotlib.lines as lines
 from sklearn.preprocessing import minmax_scale
 import warnings
 import scanpy as sc
+import liana.resource as liana_res
 
 from beartype.typing import Optional, Tuple
 import numpy.typing as npt
@@ -44,15 +45,18 @@ def download_db(adata: sc.AnnData,
     adata : sc.AnnData
         Analysis object the database will be added to.
     db_path : str
-        Path to database table. A valid database needs a column with receptor gene ids/symbols and ligand gene ids/symbols.
-        Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
-        Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        A valid database needs a column with receptor gene ids/symbols and ligand gene ids/symbols.
+        Either a path to a database table e.g.:
+            - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
+            - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        or the name of a database available in the LIANA package:
+            - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
     ligand_column : str
         Name of the column with ligand gene names.
-        Use 'ligand_gene_symbol' for the urls provided above.
+        Use 'ligand_gene_symbol' for the urls provided above. For LIANA databases use 'ligand'.
     receptor_column : str
         Name of column with receptor gene names.
-        Use 'receptor_gene_symbol' for the urls provided above.
+        Use 'receptor_gene_symbol' for the urls provided above. For LIANA databases use 'receptor'.
     sep : str, default '\t'
         Separator of database table.
     inplace : bool, default False
@@ -75,6 +79,7 @@ def download_db(adata: sc.AnnData,
     ValueError:
         1: If ligand_column is not in database.
         2: If receptor_column is not in database.
+        3: If db_path is neither a file nor a LIANA resource.
     """
 
     # datbase already existing?
@@ -86,7 +91,17 @@ def download_db(adata: sc.AnnData,
         else:
             return adata
 
-    database = pd.read_csv(db_path, sep=sep)
+    try:
+        database = pd.read_csv(db_path, sep=sep)
+    except FileExistsError:
+        # Check if a LIANA resource
+        if db_path in liana_res.resources.show_resources():
+            # get LIANA db
+            database = liana_res.resource.select_resource(db_path)
+            # explode protein complexes interactions into single protein interactions
+            database = liana_res.resource.explode_complexes(database)
+        else:
+            raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.resource.show_resources()}).")
 
     # check column names in table
     if ligand_column not in database.columns:

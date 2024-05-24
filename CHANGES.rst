@@ -1,5 +1,6 @@
 0.8.0 (in progress)
 ----------------
+- ligand-receptor: download_db added support for LIANA resources
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
