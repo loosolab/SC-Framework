@@ -1,6 +1,7 @@
 0.8.0 (in progress)
 ----------------
 - ligand-receptor: download_db added support for LIANA resources
+- revised tsse scoring and fixed matplotlib version conflict (#257)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
