@@ -392,7 +392,7 @@ def add_tsse_score(adata: sc.AnnData,
 
     Returns
     -------
-    sc.AnnData
+    sc.AnnData | Tuple[sc.AnnData, pd.DataFrame]
         AnnData object with added tSSe score
     """
 
