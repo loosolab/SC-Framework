@@ -2,6 +2,9 @@
 ----------------
 - ligand-receptor: download_db added support for LIANA resources
 - revised tsse scoring and fixed matplotlib version conflict (#257)
+- add cyclone (pycirclize based plot) as hairball alternative (#223)
+- remove legacy import structure
+- implement lazy module loading
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^

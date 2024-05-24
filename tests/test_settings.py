@@ -7,7 +7,7 @@ from io import StringIO
 import sys
 
 from sctoolbox.utils.adata import load_h5ad, get_adata_subsets
-from sctoolbox._settings import settings, settings_from_config
+from sctoolbox import settings
 
 adata_path = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 config_path = os.path.join(os.path.dirname(__file__), 'data', "test_config.yaml")
@@ -80,7 +80,7 @@ def test_logfile_verbosity():
 @pytest.mark.parametrize("key, path", [(None, config_path_nokey), ("01", config_path)])
 def test_settings_from_config(key, path):
     """Tests that the function is able to read the config yaml and and applies the settings."""
-    settings_from_config(path, key=key)
+    settings.settings_from_config(path, key=key)
     assert getattr(settings, "overwrite_log")
     assert getattr(settings, "log_file") == "pipeline_output/logs/01_log.txt"
     settings.reset()
@@ -89,5 +89,5 @@ def test_settings_from_config(key, path):
 def test_invalid_key_settings_from_config():
     """Test that apropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
-        settings_from_config(config_path_nokey, key="01")
+        settings.settings_from_config(config_path_nokey, key="01")
     settings.reset()

@@ -1,18 +1,20 @@
 """Tools for a receptor-ligand analysis."""
+import math
+import numpy as np
 import pandas as pd
 from collections import Counter
+from itertools import combinations_with_replacement
 import scipy
-import numpy as np
+from sklearn.preprocessing import minmax_scale
+import scanpy as sc
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import ConnectionPatch, Patch
+import matplotlib.lines as lines
 import seaborn as sns
 import igraph as ig
-from itertools import combinations_with_replacement
-from matplotlib import cm
+import pycirclize
 from tqdm import tqdm
-import matplotlib
-from matplotlib.patches import ConnectionPatch
-import matplotlib.lines as lines
-from sklearn.preprocessing import minmax_scale
 import warnings
 import scanpy as sc
 import liana.resource as liana_res
@@ -371,7 +373,7 @@ def hairball(adata: sc.AnnData,
              additional_nodes: Optional[list[str]] = None,
              hide_edges: Optional[list[Tuple[str, str]]] = None) -> npt.ArrayLike:
     """
-    Generate network graph of interactions between clusters.
+    Generate network graph of interactions between clusters. See cyclone plot for alternative.
 
     Parameters
     ----------
@@ -455,7 +457,7 @@ def hairball(adata: sc.AnnData,
         graph.add_edge(a, b, weight=len(subset))
 
     # set edge colors/ width based on weight
-    colormap = cm.get_cmap('viridis', len(graph.es))
+    colormap = matplotlib.cm.get_cmap('viridis', len(graph.es))
     print(f"Max weight {np.max(np.array(graph.es['weight']))}")
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
     for e in graph.es:
@@ -492,6 +494,317 @@ def hairball(adata: sc.AnnData,
         fig.savefig(f"{settings.figure_dir}/{save}")
 
     return axes
+
+
+@deco.log_anndata
+@beartype
+def cyclone(
+    adata: sc.AnnData,
+    min_perc: int | float,
+    interaction_score: float | int = 0,
+    interaction_perc: Optional[int | float] = None,
+    title: Optional[str] = "Network",
+    color_min: float | int = 0,
+    color_max: Optional[float | int] = None,
+    cbar_label: str = 'Interaction count',
+    colormap: str = 'viridis',
+    sector_text_size: int | float = 10,
+    directional: bool = False,
+    sector_size_is_cluster_size: bool = False,
+    show_genes: bool = True,
+    gene_amount: int = 5,
+    figsize: Tuple[int | float, int | float] = (10, 10),
+    dpi: int | float = 100,
+    save: Optional[str] = None
+) -> matplotlib.figure.Figure:
+    """
+    Generate network graph of interactions between clusters. See the hairball plot as an alternative.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        AnnData object
+    min_perc : int | float
+        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+    interaction_score : float | int, default 0
+        Interaction score must be above this threshold for the interaction to be counted in the graph.
+    interaction_perc : Optional[int | float], default None
+        Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
+    title : str, default 'Network'
+        The plots title.
+    color_min : float, default 0
+        Min value for color range.
+    color_max : Optional[float | int], default None
+        Max value for color range.
+    cbar_label : str, default 'Interaction count'
+        Label above the colorbar.
+    colormap : str, default "viridis"
+        The colormap to be used when plotting.
+    sector_text_size: int | float, default 10
+        The text size for the sector name.
+    directional: bool, defalut False
+        Determines whether to display the interactions as arrows (Ligand -> Receptor).
+    sector_size_is_cluster_size: bool, default False
+        Determines whether the sector's size is equivalent to the coresponding cluster's number of cells.
+    show_genes: bool, default True
+        Determines whether to display the top genes as an additional track.
+    gene_amount: int = 5
+        The amount of genes per receptor and ligand to display on the outer track (displayed genes per sector = gene_amount *2).
+    figsize : Tuple[int | float, int | float], default (10, 10)
+        Figure size
+    dpi : int | float, default 100
+        The resolution of the figure in dots-per-inch.
+    save : str, default None
+        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The Matplotlib figure object containing the plot.
+    """
+
+    # check if data is available
+    _check_interactions(adata)
+
+    # commonly used list
+    cluster_col_list = ["receptor_cluster", "ligand_cluster"]
+
+    # --------------------- filtering data ---------------------------------
+    filtered = get_interactions(anndata=adata,
+                                min_perc=min_perc,
+                                interaction_score=interaction_score,
+                                interaction_perc=interaction_perc)
+
+    # sort data by interaction score for top gene selection
+    if show_genes:
+        filtered.sort_values(by="interaction_score", ascending=False, inplace=True)
+
+    # ------------------- getting important values ----------------------------
+
+    # saves a table of how many times each receptor cluster interacted with each ligand cluster
+    interactions_directed = pd.DataFrame(
+        filtered[cluster_col_list].value_counts(),
+        columns=["count"]
+    )
+
+    interactions_directed.reset_index(inplace=True)
+
+    # Adds the number of interactions for each pair of receptor and ligand
+    # if they should be displayed non directional.
+
+    # e.g.: ligand A interacts with receptor B five times
+    #       and ligand B interacts with receptor A ten times
+    #       therefore A and B interact fifteen times non directional
+    if not directional:
+        interactions_undirected = interactions_directed.copy()
+
+        # OpenAI GPT-4 supported >>>
+        # First, make sure each edge is represented in the same way, by sorting the two ends
+        interactions_undirected[cluster_col_list] = np.sort(
+            interactions_undirected[cluster_col_list].values,
+            axis=1
+        )
+
+        # Then, you can group by the two columns and sum the connections
+        interactions_undirected = interactions_undirected.groupby(cluster_col_list)["count"].sum().reset_index()
+        # <<< OpenAI GPT-4 supported
+
+        interactions = interactions_undirected
+    else:
+        interactions = interactions_directed
+
+    # gets the size of the clusters and saves it in cluster_to_size
+    receptor_cluster_to_size = filtered[["receptor_cluster", "receptor_cluster_size"]]
+    ligand_cluster_to_size = filtered[["ligand_cluster", "ligand_cluster_size"]]
+
+    receptor_cluster_to_size = receptor_cluster_to_size.drop_duplicates()
+    ligand_cluster_to_size = ligand_cluster_to_size.drop_duplicates()
+
+    receptor_cluster_to_size.rename(
+        columns={"receptor_cluster": "cluster", "receptor_cluster_size": "cluster_size"},
+        inplace=True
+    )
+    ligand_cluster_to_size.rename(
+        columns={"ligand_cluster": "cluster", "ligand_cluster_size": "cluster_size"},
+        inplace=True
+    )
+
+    # create a table of cluster sizes
+    cluster_to_size = [receptor_cluster_to_size, ligand_cluster_to_size]
+
+    cluster_to_size = pd.concat(cluster_to_size)
+
+    cluster_to_size.drop_duplicates(inplace=True)
+
+    # get a list of the available clusters
+    avail_clusters = set(filtered["receptor_cluster"].unique()).union(set(filtered["ligand_cluster"].unique()))
+
+    # set up for colormapping
+    colormap_ = matplotlib.colormaps[colormap]
+
+    norm = matplotlib.colors.Normalize(interactions["count"].min(), interactions["count"].max())
+
+    # --------------------------- setting up for the plot -----------------------------
+
+    # saving the cluster types in the sectors dictionary to use in the plot
+    # their size is set to 100 unless their size should be displayed depending on the cluster size
+
+    sectors = {}
+
+    if not sector_size_is_cluster_size:
+        for index in avail_clusters:
+            sectors[index] = 100
+    else:
+        for index in avail_clusters:
+            sectors[index] = cluster_to_size.set_index("cluster").at[index, "cluster_size"]
+
+    # ------------------------ plotting ---------------------------------
+
+    # create initial object with sectors (cell types)
+    circos = pycirclize.Circos(sectors, space=5)
+
+    # creating a from-to-table for a matrix
+    interactions_for_matrix = interactions.copy()
+
+    # set link width to 1 so it can be scaled up later
+    interactions_for_matrix["count"] = 1
+
+    # create the links in pycirclize format
+    matrix = pycirclize.parser.Matrix.parse_fromto_table(interactions_for_matrix)
+    link_list = matrix.to_links()
+
+    # calculates the amount of times sector.name is in the table interactions
+    links_per_sector = {sector.name: (interactions == sector.name).sum().sum() for sector in circos.sectors}
+
+    # adjust the start and end width of each link
+    for _ in range(len(link_list)):
+        # divide sector size by number of links in a sector to get the same width for all links within a sector
+        start_link_width = circos.get_sector(link_list[0][0][0]).size / links_per_sector[link_list[0][0][0]]
+        end_link_width = circos.get_sector(link_list[0][1][0]).size / links_per_sector[link_list[0][1][0]]
+
+        # link structure:
+        # ((start_sector, left_side_of_link, right_side_of_link),
+        #  (end_sector, left_side_of_link, right_side_of_link))
+        # multiply link width (set to 1) with the respective multiplier from above
+        temp = (
+            (link_list[0][0][0],
+             math.floor(link_list[0][0][1] * start_link_width),
+             math.floor(link_list[0][0][2] * start_link_width)),
+            (link_list[0][1][0],
+             math.floor(link_list[0][1][1] * end_link_width),
+             math.floor(link_list[0][1][2] * end_link_width))
+        )
+
+        # remove the first link and add the updated version at the end
+        link_list.pop(0)
+        link_list.append(temp)
+
+    # size of the area where the links will be displayed
+    if show_genes:
+        link_radius = 65
+    else:
+        link_radius = 95
+
+    # add the calculated links to the circos object
+    for link in matrix.to_links():
+        circos.link(
+            *link,
+            color=colormap_(norm(interactions.set_index(cluster_col_list).loc[(link[0][0], link[1][0]), "count"])),
+            r1=link_radius,
+            r2=link_radius,
+            direction=-1 if directional else 0
+        )
+
+    # add the tracks (layers) to the sectors
+    for sector in circos.sectors:
+        # first track (grey bars connected with the links)
+        track = sector.add_track((65, 70)) if show_genes else sector.add_track((95, 100))
+        track.axis(fc="grey")
+        track.text(sector.name, color="black", size=sector_text_size, r=105)
+
+        # shows cluster/ sector size in the center of the sector
+        track.text(f"{cluster_to_size.set_index('cluster').at[sector.name, 'cluster_size']}",
+                   r=67 if show_genes else 97,
+                   size=9,
+                   color="white",
+                   adjust_rotation=True)
+
+        # add top receptor/ ligand gene track
+        if show_genes:
+            track2 = sector.add_track((73, 77))
+
+            # get first x unique receptor/ ligand genes
+            # https://stackoverflow.com/a/17016257/19870975
+            sector_interactions = filtered[filtered["receptor_cluster"] == sector.name]
+            top_receptors = list(dict.fromkeys(sector_interactions["receptor_gene"]))[:gene_amount]
+            top_ligands = list(dict.fromkeys(sector_interactions["ligand_gene"]))[:gene_amount]
+
+            # generates dummy data for the heatmap function to give it a red and a blue half
+            dummy_data = [1] * len(top_receptors) + [2] * len(top_ligands)
+            track2.heatmap(
+                data=dummy_data,
+                rect_kws=dict(ec="black", lw=1, alpha=0.3)
+            )
+
+            # compute x tick positions
+            # half step to add ticks to the middle of each cell
+            half_step = sector.size / len(dummy_data) / 2
+            x_tick_pos = np.linspace(half_step,
+                                     sector.size - half_step,
+                                     len(dummy_data))
+
+            # add gene ticks
+            track2.xticks(
+                x=x_tick_pos,
+                tick_length=2,
+                labels=top_receptors + top_ligands,
+                label_margin=1,
+                label_size=8,
+                label_orientation="vertical"
+            )
+
+    circos.text(title, r=120, deg=0, size=15)
+
+    # legend
+    # legend title
+    circos.text(cbar_label, deg=69, r=137, fontsize=10)
+
+    circos.colorbar(
+        bounds=(1.1, 0.2, 0.02, 0.5),
+        vmin=0 if color_min is None else color_min,
+        vmax=color_max if color_max else interactions.max()["count"],
+        cmap=colormap_
+    )
+
+    patch_handles = [Patch(color="grey", label="Number of cells\nper cluster")]
+
+    # add gene (heatmap) legend
+    if show_genes:
+        patch_handles.extend([Patch(color=(1, 0, 0, 0.3), label="Top ligand genes\nby interaction score"),
+                              Patch(color=(0, 0, 1, 0.3), label="Top receptor genes\nby interaction score")])
+
+    # add directional legend
+    if directional:
+        patch_handles.append(
+            Patch(color=(0, 0, 0, 0), label="Ligand → Receptor")
+        )
+
+    # needed to access ax
+    fig = circos.plotfig(dpi=dpi, figsize=figsize)
+
+    # add custom legend to plot
+    patch_legend = circos.ax.legend(
+        handles=patch_handles,
+        bbox_to_anchor=(1, 1),
+        fontsize=10,
+        handlelength=1
+    )
+    circos.ax.add_artist(patch_legend)
+
+    if save:
+        fig.savefig(f"{settings.figure_dir}/{save}", dpi=dpi)
+
+    return fig
 
 
 @beartype
@@ -789,7 +1102,7 @@ def connectionPlot(adata: sc.AnnData,
 
     # create colorramp
     if line_colors:
-        cmap = cm.get_cmap(line_colors, len(receptors))
+        cmap = matplotlib.cm.get_cmap(line_colors, len(receptors))
         colors = cmap(range(len(receptors)))
     else:
         colors = ["black"] * len(receptors)
@@ -946,7 +1259,7 @@ def get_interactions(anndata: sc.AnnData,
     if save:
         subset.to_csv(f"{settings.table_dir}/{save}", sep='\t', index=False)
 
-    return subset
+    return subset.copy()
 
 
 @beartype

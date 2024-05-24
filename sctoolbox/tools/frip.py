@@ -84,21 +84,21 @@ def calc_frip_scores(adata: sc.AnnData,
 
     # overlap fragments with regions
     logger.info("overlapping bedfiles")
-    if ~utils._bed_is_sorted(fragments):
+    if ~utils.bioutils._bed_is_sorted(fragments):
         # sort fragments
         sorted_fragments = os.path.join(temp_dir, "sorted_fragments.bed")
-        utils._sort_bed(fragments, sorted_fragments)
+        utils.bioutils._sort_bed(fragments, sorted_fragments)
         fragments = sorted_fragments
         # add sorted fragments to tempfiles
         tempfiles.append(sorted_fragments)
 
     # overlap sorted fragments with regions
-    utils._overlap_two_bedfiles(fragments, regions_bed, overlap)
+    utils.bioutils._overlap_two_bedfiles(fragments, regions_bed, overlap)
 
     # read in bedfiles
     logger.info('reading in bedfiles')
-    overlap_list = utils._read_bedfile(overlap)
-    fragments_list = utils._read_bedfile(fragments)
+    overlap_list = utils.bioutils._read_bedfile(overlap)
+    fragments_list = utils.bioutils._read_bedfile(fragments)
 
     logger.info("calculating total number of fragments and overlaps")
     # calculate total number of fragments and overlaps

@@ -3,7 +3,7 @@
 import logging
 
 import pytest
-import sctoolbox.qc_filter as qc
+import sctoolbox.tools.qc_filter as qc
 import scanpy as sc
 import numpy as np
 import os

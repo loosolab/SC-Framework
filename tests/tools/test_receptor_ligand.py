@@ -6,9 +6,10 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import random
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
-import sctoolbox.receptor_ligand as rl
+import sctoolbox.tools.receptor_ligand as rl
 
 
 # ------------------------------ FIXTURES -------------------------------- #
@@ -20,7 +21,7 @@ plt.switch_backend("Agg")
 @pytest.fixture
 def adata():
     """Load and returns an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
 
     obj = sc.read_h5ad(f)
 
@@ -41,7 +42,7 @@ def adata():
 @pytest.fixture
 def db_file():
     """Path to receptor-ligand database."""
-    return os.path.join(os.path.dirname(__file__), 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture
@@ -213,6 +214,19 @@ def test_hairball(adata_inter):
                        show_count=True)
 
     assert isinstance(plot, np.ndarray)
+
+
+def test_cyclone(adata_inter):
+    """Cyclone network plot is functional."""
+    plot = rl.cyclone(adata=adata_inter,
+                      min_perc=70,
+                      interaction_score=0,
+                      directional=True,
+                      sector_size_is_cluster_size=True,
+                      show_genes=True,
+                      title="Test Title")
+
+    assert isinstance(plot, Figure)
 
 
 def test_connectionPlot(adata_inter):
