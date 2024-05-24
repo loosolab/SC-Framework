@@ -80,8 +80,8 @@ def adata_inter(adata_db):
 
 @pytest.mark.parametrize('db_path,ligand_column,receptor_column',
                          [(pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'receptor_gene_symbol'),
-                          ('consensus', 'ligand', 'receptor')
-                         ])
+                          ('consensus', 'ligand', 'receptor')]
+                         )
 def test_download_db(adata, db_path, ligand_column, receptor_column):
     """Assert rl database is added into anndata."""
     obj = adata.copy()
@@ -104,9 +104,9 @@ def test_download_db(adata, db_path, ligand_column, receptor_column):
 
 @pytest.mark.parametrize('db_path,ligand_column,receptor_column',
                          [(pytest.lazy_fixture('db_file'), 'INVALID', 'receptor_gene_symbol'),
-                          (pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'INVALID')
-                          ('INVALID', 'ligand', 'receptor')
-                         ])
+                          (pytest.lazy_fixture('db_file'), 'ligand_gene_symbol', 'INVALID'),
+                          ('INVALID', 'ligand', 'receptor')]
+                         )
 def test_download_db_fail(adata, db_path, ligand_column, receptor_column):
     """Assert ValueErrors."""
     obj = adata.copy()
