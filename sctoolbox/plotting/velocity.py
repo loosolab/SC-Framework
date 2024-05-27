@@ -82,7 +82,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
     mat.index = genes
 
     # z-score normalize per row
-    mat = utils.table_zscore(mat)
+    mat = utils.tables.table_zscore(mat)
 
     # Plot heatmap
     n_genes = len(mat)

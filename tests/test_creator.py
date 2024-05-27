@@ -1,6 +1,6 @@
 """Test functions to download and create experiment folders."""
 
-import sctoolbox.creators as creator
+import sctoolbox.utils.creators as creator
 import pytest
 from glob import glob
 from pathlib import Path

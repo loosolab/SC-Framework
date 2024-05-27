@@ -6,9 +6,10 @@ import pandas as pd
 import numpy as np
 import scanpy as sc
 import random
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
-import sctoolbox.receptor_ligand as rl
+import sctoolbox.tools.receptor_ligand as rl
 
 
 # ------------------------------ FIXTURES -------------------------------- #
@@ -20,7 +21,7 @@ plt.switch_backend("Agg")
 @pytest.fixture
 def adata():
     """Load and returns an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
 
     obj = sc.read_h5ad(f)
 
@@ -41,7 +42,7 @@ def adata():
 @pytest.fixture
 def db_file():
     """Path to receptor-ligand database."""
-    return os.path.join(os.path.dirname(__file__), 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture
@@ -78,7 +79,11 @@ def adata_inter(adata_db):
 
 # ----- test setup functions ----- #
 
-def test_download_db(adata, db_file):
+@pytest.mark.parametrize('db_path,ligand_column,receptor_column',
+                         [(None, 'ligand_gene_symbol', 'receptor_gene_symbol'),
+                          ('consensus', 'ligand', 'receptor')]
+                         )
+def test_download_db(adata, db_path, ligand_column, receptor_column, db_file):
     """Assert rl database is added into anndata."""
     obj = adata.copy()
 
@@ -87,15 +92,39 @@ def test_download_db(adata, db_file):
 
     # add database
     rl.download_db(adata=obj,
-                   db_path=db_file,
-                   ligand_column='ligand_gene_symbol',
-                   receptor_column='receptor_gene_symbol',
+                   db_path=db_path if db_path else db_file,
+                   ligand_column=ligand_column,
+                   receptor_column=receptor_column,
                    inplace=True,
                    overwrite=False)
 
     # adata contains database
     assert "receptor-ligand" in obj.uns
     assert "database" in obj.uns["receptor-ligand"]
+
+
+@pytest.mark.parametrize('db_path,ligand_column,receptor_column',
+                         [(None, 'INVALID', 'receptor_gene_symbol'),
+                          (None, 'ligand_gene_symbol', 'INVALID'),
+                          ('INVALID', 'ligand', 'receptor')]
+                         )
+def test_download_db_fail(adata, db_path, ligand_column, receptor_column, db_file):
+    """Assert ValueErrors."""
+    obj = adata.copy()
+
+    # adata does not have database
+    assert "receptor-ligand" not in obj.uns
+
+    with pytest.raises(ValueError):
+        rl.download_db(adata=obj,
+                       db_path=db_path if db_path else db_file,
+                       ligand_column=ligand_column,
+                       receptor_column=receptor_column,
+                       inplace=True,
+                       overwrite=False)
+
+    # adata does not have database
+    assert "receptor-ligand" not in obj.uns
 
 
 def test_interaction_table(adata_db):
@@ -185,6 +214,19 @@ def test_hairball(adata_inter):
                        show_count=True)
 
     assert isinstance(plot, np.ndarray)
+
+
+def test_cyclone(adata_inter):
+    """Cyclone network plot is functional."""
+    plot = rl.cyclone(adata=adata_inter,
+                      min_perc=70,
+                      interaction_score=0,
+                      directional=True,
+                      sector_size_is_cluster_size=True,
+                      show_genes=True,
+                      title="Test Title")
+
+    assert isinstance(plot, Figure)
 
 
 def test_connectionPlot(adata_inter):

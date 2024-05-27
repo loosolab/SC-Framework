@@ -21,6 +21,6 @@ def fragments():
 
 def test_calc_frip_scores(adata, fragments):
     """Test the calc_frip_scores function."""
-    adata, total_frip = tools.calc_frip_scores(adata, fragments, temp_dir='')
+    adata, total_frip = tools.frip.calc_frip_scores(adata, fragments, temp_dir='')
 
     assert 'frip' in adata.obs.columns

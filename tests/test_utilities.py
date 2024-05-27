@@ -5,7 +5,7 @@ import os
 import numpy as np
 import shutil
 import pandas as pd
-import sctoolbox.utilities as utils
+import sctoolbox.utils as utils
 import subprocess
 import scanpy as sc
 
@@ -81,20 +81,20 @@ arr_floats = np.random.rand(10, 10)
 
 def test_run_cmd_valid():
     """Test if the command is run."""
-    utils.run_cmd("echo hello world")
+    utils.general.run_cmd("echo hello world")
 
 
 def test_run_cmd_invalid():
     """Check that invalid commands raise an error."""
     with pytest.raises(subprocess.CalledProcessError):
-        utils.run_cmd("ecccho hello world")
+        utils.general.run_cmd("ecccho hello world")
 
 
 @pytest.mark.parametrize("arr,boolean", [(arr_ints, True), (arr_ints2, True), (arr_floats, False)])
 def test_is_integer_array(arr, boolean):
     """Get boolean of whether an array is an integer array."""
 
-    result = utils.is_integer_array(arr)
+    result = utils.checker.is_integer_array(arr)
     assert result == boolean
 
 
@@ -102,7 +102,7 @@ def test_clean_flanking_strings():
     """Test if longest common pre- and suffix is removed."""
 
     paths = ["path_a.txt", "path_b.txt", "path_c.txt"]
-    cleaned = utils.clean_flanking_strings(paths)
+    cleaned = utils.general.clean_flanking_strings(paths)
 
     assert cleaned == ["a", "b", "c"]
 
@@ -110,7 +110,7 @@ def test_clean_flanking_strings():
 def test_longest_common_suffix(berries):
     """Test if longest common suffix is found correctly."""
 
-    suffix = utils.longest_common_suffix(berries)
+    suffix = utils.general.longest_common_suffix(berries)
     assert suffix == "berry"
 
 
@@ -122,7 +122,7 @@ def test_create_dir():
         shutil.rmtree("testdir")
 
     # create the dir with the utils function
-    utils.create_dir("testdir")
+    utils.io.create_dir("testdir")
     assert os.path.isdir("testdir")
 
     shutil.rmtree("testdir")  # clean up after tests
@@ -131,7 +131,7 @@ def test_create_dir():
 def test_is_notebook():
     """Test if the function is run in a notebook."""
 
-    boolean = utils._is_notebook()
+    boolean = utils.jupyter._is_notebook()
     assert boolean is False  # testing environment is not notebook
 
 
@@ -139,7 +139,7 @@ def test_is_notebook():
 def test_is_str_numeric(string, expected):
     """Test if a string can be converted to numeric."""
 
-    result = utils.is_str_numeric(string)
+    result = utils.checker.is_str_numeric(string)
 
     assert result == expected
 
@@ -148,28 +148,28 @@ def test_check_module():
     """Test if check_moduel raises an error for a non-existing module."""
 
     with pytest.raises(Exception):
-        utils.check_module("nonexisting_module")
+        utils.checker.check_module("nonexisting_module")
 
 
 def test_remove_prefix():
     """Test if prefix is removed from a string."""
 
     strings = ["abcd", "abce", "abcf"]
-    noprefix = [utils.remove_prefix(s, "abc") for s in strings]
+    noprefix = [utils.general.remove_prefix(s, "abc") for s in strings]
     assert noprefix == ["d", "e", "f"]
 
 
 def test_remove_suffix(berries):
     """Test if suffix is removed from a string."""
 
-    nosuffix = [utils.remove_suffix(s, "berry") for s in berries]
+    nosuffix = [utils.general.remove_suffix(s, "berry") for s in berries]
     assert nosuffix == ["blue", "straw", "black"]
 
 
 def test_split_list(berries):
     """Test if list is split correctly."""
 
-    split = utils.split_list(berries, 2)
+    split = utils.general.split_list(berries, 2)
     assert split == [["blueberry", "blackberry"], ["strawberry"]]
 
 
@@ -177,8 +177,8 @@ def test_read_list_file(berries):
     """Test if read_list_file returns the correct list from a file."""
 
     path = "berries.txt"
-    utils.write_list_file(berries, path)
-    berries_read = utils.read_list_file(path)
+    utils.general.write_list_file(berries, path)
+    berries_read = utils.general.read_list_file(path)
     os.remove(path)  # file no longer needed
 
     assert berries == berries_read
@@ -188,7 +188,7 @@ def test_write_list_file(berries):
     """Test if write_list_file writes a file."""
 
     path = "berries.txt"
-    utils.write_list_file(berries, path)
+    utils.general.write_list_file(berries, path)
 
     assert os.path.isfile(path)
     os.remove(path)  # clean up after tests
@@ -196,7 +196,7 @@ def test_write_list_file(berries):
 
 def test_fill_na(na_dataframe):
     """Test if na values in dataframe are filled correctly."""
-    utils.fill_na(na_dataframe)
+    utils.tables.fill_na(na_dataframe)
     assert not na_dataframe.isna().any().any()
     assert list(na_dataframe.iloc[3, :]) == [0.0, 0.0, '-', False, '', '']
 
@@ -204,7 +204,7 @@ def test_fill_na(na_dataframe):
 def test_get_adata_subsets(adata):
     """Test if adata subsets are returned correctly."""
 
-    subsets = utils.get_adata_subsets(adata, "group")
+    subsets = utils.adata.get_adata_subsets(adata, "group")
 
     for group, sub_adata in subsets.items():
         assert sub_adata.obs["group"][0] == group
@@ -218,7 +218,7 @@ def test_remove_files():
         os.mknod("afile.txt")
 
     files = ["afile.txt", "notfound.txt"]
-    utils.remove_files(files)
+    utils.io.remove_files(files)
 
     assert os.path.isfile("afile.txt") is False
 
@@ -226,7 +226,7 @@ def test_remove_files():
 def test_pseudobulk_table(adata):
     """Test if pseudobulk table is returned correctly."""
 
-    pseudobulk = utils.pseudobulk_table(adata, "group")
+    pseudobulk = utils.bioutils.pseudobulk_table(adata, "group")
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
@@ -236,7 +236,7 @@ def test_save_h5ad(adata):
     """Test if h5ad file is saved correctly."""
 
     path = "test.h5ad"
-    utils.save_h5ad(adata, path)
+    utils.adata.save_h5ad(adata, path)
 
     assert os.path.isfile(path)
     os.remove(path)  # clean up after tests
@@ -247,29 +247,29 @@ def test_get_organism():
 
     # invalid host
     with pytest.raises(ConnectionError):
-        utils.get_organism("ENSE00000000361", host="http://www.ensembl.org/invalid/")
+        utils.bioutils.get_organism("ENSE00000000361", host="http://www.ensembl.org/invalid/")
 
     # invalid id
     with pytest.raises(ValueError):
-        utils.get_organism("invalid_id")
+        utils.bioutils.get_organism("invalid_id")
 
     # valid call
-    assert utils.get_organism("ENSG00000164690") == "Homo_sapiens"
+    assert utils.bioutils.get_organism("ENSG00000164690") == "Homo_sapiens"
 
 
 def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
     """Test if the _bed_is_sorted() function works as expected."""
 
-    assert utils._bed_is_sorted(sorted_fragments)
-    assert ~utils._bed_is_sorted(unsorted_fragments)
+    assert utils.bioutils._bed_is_sorted(sorted_fragments)
+    assert ~utils.bioutils._bed_is_sorted(unsorted_fragments)
 
 
 def test_sort_bed(unsorted_fragments):
     """Test if the sort bedfile functio works."""
     sorted_bedfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'sorted_bedfile.bed')
-    utils._sort_bed(unsorted_fragments, sorted_bedfile)
+    utils.bioutils._sort_bed(unsorted_fragments, sorted_bedfile)
 
-    assert utils._bed_is_sorted(sorted_bedfile)
+    assert utils.bioutils._bed_is_sorted(sorted_bedfile)
 
     # Clean up
     os.remove(sorted_bedfile)
@@ -278,7 +278,7 @@ def test_sort_bed(unsorted_fragments):
 def test_check_marker_lists(adata2, marker_dict):
     """Test that check_marker_lists intersects lists correctly."""
 
-    filtered_marker = utils.check_marker_lists(adata2, marker_dict)
+    filtered_marker = utils.checker.check_marker_lists(adata2, marker_dict)
 
     assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
                                "Celltype B": ['ENSMUSG00000102272']}
@@ -292,7 +292,7 @@ def test_check_marker_lists(adata2, marker_dict):
 def test_identify_columns(na_dataframe, regex, result):
     """Test if identify returns matching columns."""
 
-    assert utils.identify_columns(na_dataframe, regex) == result
+    assert utils.general.identify_columns(na_dataframe, regex) == result
 
 
 @pytest.mark.parametrize("array,mini,maxi", [(np.array([1, 2, 3]), 0, 1),
@@ -300,7 +300,7 @@ def test_identify_columns(na_dataframe, regex, result):
                                              (np.array([[1, 2, 3], [1, 2, 3], [4, 5, 6]]), 1, 5)])
 def test_scale_values(array, mini, maxi):
     """Test that scaled values are in given range."""
-    result = utils.scale_values(array, mini, maxi)
+    result = utils.general.scale_values(array, mini, maxi)
 
     assert len(result) == len(array)
     if len(result.shape) == 1:

@@ -71,7 +71,7 @@ def clear() -> None:
     import platform
 
     if _is_notebook():
-        utils.check_module("IPython")
+        utils.checker.check_module("IPython")
         from IPython.display import clear_output
 
         clear_output(wait=True)
