@@ -240,7 +240,7 @@ def from_quant(path: str,
 @beartype
 def from_single_mtx(mtx: str,
                     barcodes: str,
-                    genes: str,
+                    variables: Optional[str] = None,
                     transpose: bool = True,
                     header: Union[int, list[int], Literal['infer'], None] = 'infer',
                     barcode_index: int = 0,
@@ -256,8 +256,8 @@ def from_single_mtx(mtx: str,
         Path to the mtx file (.mtx)
     barcodes : str
         Path to cell label file (.obs)
-    genes : str
-        Path to gene label file (.var)
+    variables : Optional[str], default None
+        Path to variable label file (.var). E.g. gene labels for RNA or peak labels for ATAC.
     transpose : bool, default True
         Set True to transpose mtx matrix.
     header : Union[int, list[int], Literal['infer'], None], default 'infer'
@@ -293,19 +293,22 @@ def from_single_mtx(mtx: str,
     barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
     barcode_csv.index.names = ['index']
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
-    genes_csv = pd.read_csv(genes, header=header, index_col=genes_index, delimiter=delimiter)
-    genes_csv.index.names = ['index']
-    genes_csv.columns = [str(c) for c in genes_csv.columns]  # convert to string
+
+    if variables:
+        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
+        var_csv.index.names = ['index']
+        var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
     # Test if they are unique
     if not barcode_csv.index.is_unique:
         raise ValueError("Barcode index column does not contain unique values")
-    if not genes_csv.index.is_unique:
+    if not var_csv.index.is_unique:
         raise ValueError("Genes index column does not contain unique values")
 
     # Add tables to anndata object
     adata.obs = barcode_csv
-    adata.var = genes_csv
+    if variables:
+        adata.var = var_csv
 
     # Add filename to .obs
     adata.obs["filename"] = os.path.basename(mtx)
