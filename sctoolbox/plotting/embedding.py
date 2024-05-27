@@ -950,7 +950,8 @@ def compare_embeddings(adata_list: list[sc.AnnData],
 
             _make_square(axes[j, i])
 
-    # fig.tight_layout()
+    fig.tight_layout()
+
     return axes
 
 
