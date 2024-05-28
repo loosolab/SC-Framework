@@ -5,6 +5,7 @@
 - add cyclone (pycirclize based plot) as hairball alternative (#223)
 - remove legacy import structure
 - implement lazy module loading
+- wrapped up native scrublet (#242, #150)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
