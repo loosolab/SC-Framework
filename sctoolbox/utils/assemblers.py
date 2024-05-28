@@ -246,8 +246,7 @@ def from_single_mtx(mtx: str,
                     header: Union[int, list[int], Literal['infer'], None] = 'infer',
                     barcode_index: int = 0,
                     genes_index: int = 0,
-                    delimiter: str = "\t",
-                    **kwargs: Any) -> sc.AnnData:
+                    delimiter: str = "\t") -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -269,8 +268,6 @@ def from_single_mtx(mtx: str,
         Column which contains the gene IDs.
     delimiter : str, default '\t'
         delimiter of genes and barcodes table.
-    **kwargs : Any
-        Contains additional arguments for scanpy.read_mtx method
 
     Returns
     -------
@@ -284,7 +281,7 @@ def from_single_mtx(mtx: str,
     """
 
     # Read mtx file
-    adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
+    adata = sc.read_mtx(filename=mtx, dtype='float32')
 
     # Transpose matrix if necessary
     if transpose:
@@ -323,8 +320,7 @@ def from_mtx(path: str,
              mtx: str = "*_matrix.mtx*",
              barcodes: str = "*_barcodes.tsv*",
              variables: str = "*_genes.tsv*",
-             var_error: bool = True,
-             **kwargs: Any) -> sc.AnnData:
+             var_error: bool = True) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and variables files.
 
@@ -343,8 +339,6 @@ def from_mtx(path: str,
         String for glob to find e.g. gene label files (RNA).
     var_error : bool, default True
         Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
-    **kwargs : Any
-        Contains additional arguments for scanpy.read_mtx method
 
     Returns
     -------
@@ -386,8 +380,7 @@ def from_mtx(path: str,
         adata_objects.append(
             from_single_mtx(m,
                             barcode_file[0],
-                            variable_file[0] if variable_file else None,
-                            **kwargs)
+                            variable_file[0] if variable_file else None)
         )
 
         # add relative path to obs as it could contain e.g. sample information
