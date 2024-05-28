@@ -588,17 +588,16 @@ def run_deseq2(adata: sc.AnnData,
     --------
     sctoolbox.utils.bioutils.pseudobulk_table
     """
+    from pydeseq2.dds import DeseqDataSet
+    from pydeseq2.ds import DeseqStats
 
-    utils.general.setup_R()
-    from diffexpr.py_deseq import py_DESeq2
-
-    # Setup the design formula
+    # Setup the design factors
     if confounders is None:
         confounders = []
     elif not isinstance(confounders, list):
         confounders = [confounders]
 
-    design_formula = "~ " + " + ".join(confounders + [condition_col])
+    design_factors = confounders + [condition_col]
 
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
@@ -606,6 +605,7 @@ def run_deseq2(adata: sc.AnnData,
         if col not in adata.obs.columns:
             raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
 
+        # TODO do we need this?
         # Check that column is valid for R
         pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
         if not re.match(pattern, col):
@@ -619,7 +619,7 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.sort_index(inplace=True)
 
     conditions = sample_df[condition_col].unique()
-    samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
+    #samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
 
     # Build count matrix
     print("Building count matrix")
@@ -627,43 +627,36 @@ def run_deseq2(adata: sc.AnnData,
                                                   percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
     count_table.index.name = "gene"
-    count_table.reset_index(inplace=True)
+    count_table = count_table.transpose()
 
     # Run DEseq2
     print("Running DESeq2")
-    dds = py_DESeq2(count_matrix=count_table,
-                    design_matrix=sample_df,
-                    design_formula=design_formula,
-                    gene_column='gene')
-    dds.run_deseq()
-
-    # Normalizing counts
-    dds.normalized_count()
-    dds.normalized_count_df.drop(columns="gene", inplace=True)
-    dds.normalized_count_df.columns = dds.samplenames
+    dds = DeseqDataSet(counts=count_table, metadata=sample_df, design_factors=design_factors)
+    dds.deseq2()
 
     # Create result table with mean values per condition
-    deseq_table = pd.DataFrame(index=dds.normalized_count_df.index)
+    deseq_table = pd.DataFrame(index=dds.var.index)
 
     for i, condition in enumerate(conditions):
-        samples = samples_per_cond[condition]
-        mean_values = dds.normalized_count_df[samples].mean(axis=1)
+        #samples = samples_per_cond[condition]
+        mean_values = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :].mean(axis=0)
         deseq_table.insert(i, condition + "_mean", mean_values)
 
     # Get results per contrast
     contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
-
-        dds.get_deseq_result(contrast=[condition_col, C2, C1])
-        dds.deseq_result.drop(columns="gene", inplace=True)
+        ds = DeseqStats(dds, contrast=[condition_col, C2, C1])
+        ds.summary()
 
         # Rename and add to deseq_table
-        dds.deseq_result.drop(columns=["lfcSE", "stat"], inplace=True)
-        dds.deseq_result.columns = [C2 + "/" + C1 + "_" + col for col in dds.deseq_result.columns]
-        deseq_table = deseq_table.merge(dds.deseq_result, left_index=True, right_index=True)
+        df = ds.results_df
+        df.drop(columns=["lfcSE", "stat"], inplace=True)
+        df.columns = [C2 + "/" + C1 + "_" + col for col in df.columns]
+        deseq_table = deseq_table.merge(df, left_index=True, right_index=True)
 
     # Add normalized individual sample counts to the back of table
-    deseq_table = deseq_table.merge(dds.normalized_count_df, left_index=True, right_index=True)
+    normalized_counts = pd.DataFrame(dds.layers["normed_counts"], index=dds.obs.index, columns=dds.var.index).transpose()
+    deseq_table = deseq_table.merge(normalized_counts, left_index=True, right_index=True)
 
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
