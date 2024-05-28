@@ -289,7 +289,7 @@ def estimate_doublets(adata: sc.AnnData,
                 sub.uns = {}
                 sub.layers = None
 
-                job = pool.apply_async(_run_scrublet, (sub,), {"threshold": threshold, "verbose": False, **kwargs})
+                job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
                 jobs.append(job)
             pool.close()
 
@@ -346,7 +346,7 @@ def estimate_doublets(adata: sc.AnnData,
 @beartype
 def _run_scrublet(adata: sc.AnnData,
                   use_native: bool = False,
-                  threshold: float = None,
+                  threshold: Optional[float] = None,
                   **kwargs: Any) -> Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]:
     """
     Thread-safe wrapper for running scrublet, which also takes care of catching any warnings.
