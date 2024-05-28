@@ -4,6 +4,7 @@ import scanpy as sc
 import pandas as pd
 import os
 import glob
+from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
@@ -321,10 +322,14 @@ def from_single_mtx(mtx: str,
 def from_mtx(path: str,
              mtx: str = "*_matrix.mtx*",
              barcodes: str = "*_barcodes.tsv*",
-             genes: str = "*_genes.tsv*",
+             variables: str = "*_genes.tsv*",
+             var_error: bool = True,
              **kwargs: Any) -> sc.AnnData:
     """
-    Build an adata object from list of mtx, barcodes and genes files.
+    Build an adata object from list of mtx, barcodes and variables files.
+
+    This function recursively scans trough all subdirectories of the given path for files matching the pattern of the `mtx` parameter.
+    Mtx files accompanied by a file matching the `barcodes` or `variables` pattern will be added to the resulting AnnData as `.obs` and `.var` tables.
 
     Parameters
     ----------
@@ -334,8 +339,10 @@ def from_mtx(path: str,
         String for glob to find matrix files.
     barcodes : str, default '*_barcodes.tsv*'
         String for glob to find barcode files.
-    genes : str, default '*_genes.tsv*'
-        String for glob to find gene label files.
+    variables : str, default '*_genes.tsv*'
+        String for glob to find e.g. gene label files (RNA).
+    var_error : bool, default True
+        Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
     **kwargs : Any
         Contains additional arguments for scanpy.read_mtx method
 
@@ -349,26 +356,44 @@ def from_mtx(path: str,
     ValueError
         If files are not found.
     """
+    # initialize path as path object
+    path = Path(path)
 
-    mtx = glob.glob(os.path.join(path, mtx))
-    barcodes = glob.glob(os.path.join(path, barcodes))
-    genes = glob.glob(os.path.join(path, genes))
+    # recursively find mtx files
+    mtx_files = list(path.rglob(mtx))
 
-    # Check if lists are same length
-    # https://stackoverflow.com/questions/35791051/better-way-to-check-if-all-lists-in-a-list-are-the-same-length
-    it = iter([mtx, barcodes, genes])
-    the_len = len(next(it))
-    if not all(len(list_len) == the_len for list_len in it):
-        raise ValueError("Found different quantitys of mtx, genes, barcode files.\n Please check given suffixes or filenames")
-
-    if not mtx:
-        raise ValueError('No files were found with the given directory and suffixes')
+    if not mtx_files:
+        raise ValueError('No files were found with the given directory and suffixes.')
 
     adata_objects = []
-    for i, m in enumerate(mtx):
-        print(f"Reading files: {i+1} of {len(mtx)} ")
-        adata_objects.append(from_single_mtx(m, barcodes[i], genes[i], **kwargs))
+    for i, m in enumerate(mtx_files):
+        print(f"Reading files: {i+1} of {len(mtx_files)} ")
 
+        # find barcode and variable file in same folder
+        barcode_file = list(m.parents[0].glob(barcodes))
+        if len(barcode_file) > 1:
+            raise ValueError(f'{str(m)} expected one barcode file but found multiple: {[str(bf) for bf in barcode_file]}')
+        elif len(barcode_file) < 1:
+            raise ValueError(f'Missing required barcode file for {str(m)}.')
+
+        variable_file = list(m.parents[0].glob(variables))
+        if len(variable_file) > 1:
+            raise ValueError(f'{str(m)} expected one variable file but found multiple: {[str(vf) for vf in variable_file]}')
+        elif var_error and len(variable_file) < 1:
+            raise ValueError(f'Missing required variable file for {str(m)}.')
+
+        # create adata object
+        adata_objects.append(
+            from_single_mtx(m,
+                            barcode_file[0],
+                            variable_file[0] if variable_file else None,
+                            **kwargs)
+        )
+
+        # add relative path to obs as it could contain e.g. sample information
+        adata_objects[-1].obs["rel_path"] = str(m.parents[0].relative_to(path))
+
+    # create final adata
     if len(adata_objects) > 1:
         adata = adata_objects[0].concatenate(*adata_objects[1:], join="outer")
     else:
