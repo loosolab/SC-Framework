@@ -619,7 +619,6 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.sort_index(inplace=True)
 
     conditions = sample_df[condition_col].unique()
-    #samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
 
     # Build count matrix
     print("Building count matrix")
@@ -638,7 +637,6 @@ def run_deseq2(adata: sc.AnnData,
     deseq_table = pd.DataFrame(index=dds.var.index)
 
     for i, condition in enumerate(conditions):
-        #samples = samples_per_cond[condition]
         mean_values = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :].mean(axis=0)
         deseq_table.insert(i, condition + "_mean", mean_values)
 
