@@ -239,11 +239,11 @@ def from_quant(path: str,
 #####################################################################
 
 @beartype
-def from_single_mtx(mtx: str,
-                    barcodes: str,
-                    variables: Optional[str] = None,
+def from_single_mtx(mtx: Union[str, Path],
+                    barcodes: Union[str, Path],
+                    variables: Optional[Union[str, Path]] = None,
                     transpose: bool = True,
-                    header: Union[int, list[int], Literal['infer'], None] = 'infer',
+                    header: Union[int, list[int], Literal['infer'], None] = None,
                     barcode_index: int = 0,
                     genes_index: int = 0,
                     delimiter: str = "\t") -> sc.AnnData:
@@ -252,15 +252,15 @@ def from_single_mtx(mtx: str,
 
     Parameters
     ----------
-    mtx : str
+    mtx : Union[str, Path]
         Path to the mtx file (.mtx)
-    barcodes : str
+    barcodes : Union[str, Path]
         Path to cell label file (.obs)
-    variables : Optional[str], default None
+    variables : Optional[Union[str, Path]], default None
         Path to variable label file (.var). E.g. gene labels for RNA or peak labels for ATAC.
     transpose : bool, default True
         Set True to transpose mtx matrix.
-    header : Union[int, list[int], Literal['infer'], None], default 'infer'
+    header : Union[int, list[int], Literal['infer'], None], default None
         Set header parameter for reading metadata tables using pandas.read_csv.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
@@ -320,7 +320,8 @@ def from_mtx(path: str,
              mtx: str = "*matrix.mtx*",
              barcodes: str = "*barcodes.tsv*",
              variables: str = "*genes.tsv*",
-             var_error: bool = True) -> sc.AnnData:
+             var_error: bool = True,
+             **kwargs: Any) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and variables files.
 
@@ -339,6 +340,9 @@ def from_mtx(path: str,
         String for glob to find e.g. gene label files (RNA).
     var_error : bool, default True
         Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
+    **kwargs : Any
+        Contains additional arguments for the sctoolbox.utils.assemblers.from_single_mtx method.
+
 
     Returns
     -------
@@ -380,7 +384,8 @@ def from_mtx(path: str,
         adata_objects.append(
             from_single_mtx(m,
                             barcode_file[0],
-                            variable_file[0] if variable_file else None)
+                            variable_file[0] if variable_file else None,
+                            **kwargs)
         )
 
         # add relative path to obs as it could contain e.g. sample information
