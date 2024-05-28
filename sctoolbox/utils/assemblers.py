@@ -317,9 +317,9 @@ def from_single_mtx(mtx: str,
 
 @beartype
 def from_mtx(path: str,
-             mtx: str = "*_matrix.mtx*",
-             barcodes: str = "*_barcodes.tsv*",
-             variables: str = "*_genes.tsv*",
+             mtx: str = "*matrix.mtx*",
+             barcodes: str = "*barcodes.tsv*",
+             variables: str = "*genes.tsv*",
              var_error: bool = True) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and variables files.
@@ -331,11 +331,11 @@ def from_mtx(path: str,
     ----------
     path : str
         Path to data files
-    mtx : str, default '*_matrix.mtx*'
+    mtx : str, default '*matrix.mtx*'
         String for glob to find matrix files.
-    barcodes : str, default '*_barcodes.tsv*'
+    barcodes : str, default '*barcodes.tsv*'
         String for glob to find barcode files.
-    variables : str, default '*_genes.tsv*'
+    variables : str, default '*genes.tsv*'
         String for glob to find e.g. gene label files (RNA).
     var_error : bool, default True
         Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
