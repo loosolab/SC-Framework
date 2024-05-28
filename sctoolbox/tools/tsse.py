@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import sctoolbox.tools as tools
 import sctoolbox.utils as utils
@@ -55,7 +56,7 @@ def write_TSS_bed(gtf: str,
     """
 
     # Unzip, sort and index gtf if necessary
-    gtf, tempfiles = tools._prepare_gtf(gtf, temp_dir)
+    gtf, tempfiles = tools.peak_annotation._prepare_gtf(gtf, temp_dir)
     # Open tabix file
     tabix_obj = pysam.TabixFile(gtf)
     # Create list of TSS
@@ -115,7 +116,7 @@ def overlap_and_aggregate(fragments: str,
     """
     tempfiles = []
     # Check if fragments are sorted
-    if utils._bed_is_sorted(fragments):
+    if utils.bioutils._bed_is_sorted(fragments):
         logger.info("fragments are sorted")
     else:
         logger.info("sorting fragments")
@@ -125,7 +126,7 @@ def overlap_and_aggregate(fragments: str,
         sorted_bedfile = os.path.join(os.path.split(fragments)[0], (file_name + '_sorted.bed'))
         tempfiles.append(sorted_bedfile)
         # sort fragments
-        utils._sort_bed(fragments, sorted_bedfile)
+        utils.bioutils._sort_bed(fragments, sorted_bedfile)
         # sorted fragments to be used for overlap
         fragments = sorted_bedfile
 
@@ -139,7 +140,7 @@ def overlap_and_aggregate(fragments: str,
     # Read in overlap file
     logger.info("opening overlap file")
 
-    overlap_list = utils._read_bedfile(overlap)
+    overlap_list = utils.bioutils._read_bedfile(overlap)
 
     # initialize dictionary
     tSSe_cells = {}
@@ -268,7 +269,8 @@ def tsse_scoring(fragments: str,
                  edge_size_per_base: int = 50,
                  min_bias: float = 0.01,
                  keep_tmp: bool = False,
-                 temp_dir: str = "") -> pd.DataFrame:
+                 temp_dir: str = "",
+                 plot: bool = False) -> pd.DataFrame:
     """
     Calculate the tSSe score for each cell.
 
@@ -294,6 +296,8 @@ def tsse_scoring(fragments: str,
         keep temporary files
     temp_dir : str, default ""
         path to temporary directory
+    plot : bool, default False
+        plot a single aggregate as reference
 
     Returns
     -------
@@ -321,6 +325,9 @@ def tsse_scoring(fragments: str,
     tmp_files.extend(temp)
     # calculate per base tSSe
     tSSe_df = pd.DataFrame.from_dict(tSSe_cells, orient='index', columns=['TSS_agg', 'total_ov'])
+    # Plot a single aggregate as reference
+    if plot:
+        plt.plot(tSSe_df['TSS_agg'].to_numpy()[0])
     # calculate per base tSSe
     per_base_tsse = calc_per_base_tsse(tSSe_df, min_bias=min_bias, edge_size=edge_size_total)
     # calculate global tSSe score
@@ -348,7 +355,9 @@ def add_tsse_score(adata: sc.AnnData,
                    edge_size_per_base: int = 50,
                    min_bias: float = 0.01,
                    keep_tmp: bool = False,
-                   temp_dir: str = "") -> sc.AnnData:
+                   temp_dir: str = "",
+                   plot: bool = False,
+                   return_aggs: bool = False) -> sc.AnnData | Tuple[sc.AnnData, pd.DataFrame]:
     """
     Add the tSSe score to the adata object.
 
@@ -376,10 +385,14 @@ def add_tsse_score(adata: sc.AnnData,
         keep temporary files
     temp_dir : str, default ""
         path to temporary directory
+    plot : bool, default False
+        plot a single aggregate as reference
+    return_aggs : bool, default False
+        return the aggregated fragments
 
     Returns
     -------
-    sc.AnnData
+    sc.AnnData | Tuple[sc.AnnData, pd.DataFrame]
         AnnData object with added tSSe score
     """
 
@@ -393,9 +406,16 @@ def add_tsse_score(adata: sc.AnnData,
                            edge_size_per_base=edge_size_per_base,
                            min_bias=min_bias,
                            keep_tmp=keep_tmp,
-                           temp_dir=temp_dir)
+                           temp_dir=temp_dir,
+                           plot=plot)
 
     # add tSSe score to adata
+    if 'tsse_score' in adata.obs.columns:
+        logger.warning("tsse_score already in adata.obs. Overwriting tsse_score.")
+        adata.obs = adata.obs.drop(columns='tsse_score')
     adata.obs = adata.obs.join(tSSe_df['tsse_score'])
 
-    return adata
+    if return_aggs:
+        return adata, tSSe_df
+    else:
+        return adata
