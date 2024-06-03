@@ -15,8 +15,8 @@ from beartype.typing import Literal
 #############################################################################
 
 @beartype
-def count_greater_than_threshold(group: pd.DataFrame | pd.Series, 
-                                threshold: int | float) -> pd.Series | np.int64:
+def count_greater_than_threshold(group: pd.DataFrame | pd.Series,
+                                 threshold: int | float) -> pd.Series | np.int64:
     """
     Calculates count of values exceeding a given threshold value.
     
@@ -37,10 +37,10 @@ def count_greater_than_threshold(group: pd.DataFrame | pd.Series,
     return threshold_exceedence_count
 
 @beartype
-def calculate_dot_sizes(values: pd.Series | np.ndarray, 
-                        max_value: int | float, 
-                        min_dot_size: int, 
-                        max_dot_size: int, 
+def calculate_dot_sizes(values: pd.Series | np.ndarray,
+                        max_value: int | float,
+                        min_dot_size: int,
+                        max_dot_size: int,
                         use_log_scale: bool = False) -> pd.Series | np.ndarray:
     """
     Calculates the sizes of dots for plotting.
@@ -309,12 +309,14 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
     #check conflicting conditions
     if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
         raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")    
-    if len(obs_columns) != len(obs_thresholds):
+    if obs_thresholds is not None and len(obs_columns) != len(obs_thresholds):
         raise ValueError("obs_columns and obs_thresholds should have the same lengths")
     
     total_columns = [*genes, *obs_columns]
-    total_thresholds = [*([expression_threshold]*len(genes)), *obs_thresholds]
-    
+    if obs_thresholds is not None:
+        total_thresholds = [*([expression_threshold]*len(genes)), *obs_thresholds]
+    else:
+        total_thresholds = [*([expression_threshold]*(len(genes)+len(obs_columns)))]
     #get the genex values and obs values from the adata
     df_all = sc.get.obs_df(adata, [*genes, *obs_columns, x_col, y_col], gene_symbols = gene_symbols, layer = input_layer, use_raw = defaultargs['use_raw'])
     
@@ -367,7 +369,6 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
     for column in total_columns:
         plot_vars[column+'_percentage_exceedance'] = plot_vars[column+'_x']*100/plot_vars['total_count']
         plot_vars[column+'_percentage_max_value'] = plot_vars[column+'_y']*100/np.max(plot_vars[column+'_y'])
-    
     # List of columns to exclude from conversion
     exclude_columns = [x_col, y_col]
     # Convert all other columns to float and fillna
@@ -375,9 +376,9 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
         if col not in exclude_columns:
             plot_vars[col] = pd.to_numeric(plot_vars[col], errors='coerce').astype(float)
             plot_vars[col] = plot_vars[col].fillna(fillna)
-            
+
     return plot_vars
-            
+
 
 #############################################################################
 #                                Plotting                                   #
@@ -425,7 +426,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                         LEGEND_FONT_SIZE: int = 8,
                         COLOR_BAR_TITLE: str = 'Gene Expression',
                         COLOR_BAR_TITLE_PMV: str = 'Percentage of max expression\nobserved for the gene',
-                        cbar_titles_array: list | None = None,
+                        colorbar_label_array: list | None = None,
                         SIZE_LEGEND_TITLE: str = 'Cell Count',
                         SIZE_LEGEND_TITLE_PERCENTAGE: str = 'Percentage cells expressed',
                         OUTER_CIRCLE_LABEL: str = 'Total count',
@@ -533,7 +534,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
         Title of the color bar legend (when color_value == "value"). Note that the planet names in planet_columns are used as the titles for the extra legends by default (when planet_color_schemas != None).
     COLOR_BAR_TITLE_PMV: str, default 'Percentage of max expression\nobserved for the gene'
         Title of the color bar legend (when color_value == "percentage_max").
-    cbar_titles_array: list | None, default = None
+    colorbar_label_array: list | None, default = None
         Give a list of the cbar titles for the planets (when planet_color_schemas != None).
     SIZE_LEGEND_TITLE: str, default 'Cell Count'
         Title for the size legend (when size_value == "count").
@@ -590,9 +591,9 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     if planet_color_schemas is not None:
         if len(planet_color_schemas) != len(planet_columns):
             raise ValueError("planet_columns and planet_color_schemas should have the same lengths")
-    if cbar_titles_array is not None:
-        if len(cbar_titles_array) != len(planet_columns):
-            raise ValueError("planet_columns and cbar_titles_array should have the same lengths")
+    if colorbar_label_array is not None:
+        if len(colorbar_label_array) != len(planet_columns):
+            raise ValueError("planet_columns and colorbar_label_array should have the same lengths")
     if orientation_labels_array is not None:
         if len(orientation_labels_array) != len(planet_columns):
             raise ValueError("planet_columns and orientation_labels_array should have the same lengths")
@@ -726,8 +727,8 @@ def planet_plot_render(plot_vars: pd.DataFrame,
             planet_cbar_ax[i] = fig.add_axes([1+LEGEND_COLOR_X_ALIGNMENT*width_per_unit + 0.25*LEGEND_COLOR_WIDTH*width_per_unit, 0.1+LEGEND_COLOR_Y_ALIGNMENT*height_per_unit + cbar_count*5*LEGEND_COLOR_HEIGHT*height_per_unit, LEGEND_COLOR_WIDTH*width_per_unit, LEGEND_COLOR_HEIGHT*height_per_unit])
             cbar = plt.colorbar(sc_array[i], cax=planet_cbar_ax[i], orientation='horizontal', fraction=0.046, pad=0.04)
             cbar.ax.tick_params(labelsize=LEGEND_FONT_SIZE)
-            if cbar_titles_array is not None:
-                cbar.set_label(cbar_titles_array[i])
+            if colorbar_label_array is not None:
+                cbar.set_label(colorbar_label_array[i])
             else:
                 cbar.set_label(planet_columns[i])
             cmap = getattr(plt.cm, planet_color_schemas[i])
