@@ -798,19 +798,19 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     # create new axis for planet orientation legend.
     # Note that we create a separate plot on this axis to show our legend.
     if mode == 'planet':
-        dot_orientation_ax = fig.add_axes([1+LEGEND_PLANET_X_ALIGNMENT*width_per_unit + 0.25*LEGEND_PLANET_WIDTH*width_per_unit,0.1+LEGEND_PLANET_Y_ALIGNMENT*height_per_unit+ cbar_count*5*LEGEND_COLOR_HEIGHT*height_per_unit, LEGEND_PLANET_WIDTH*width_per_unit, LEGEND_PLANET_HEIGHT*height_per_unit])
-        legend_circle_size = (MIN_DOT_SIZE+MAX_DOT_SIZE)/2      # Define size of the circle
-        legend_circle_radius = np.sqrt(legend_circle_size/np.pi)
-        legend_dot_size = 0.75*legend_circle_size       # Define relative size of the dots
-        legend_dot_radius = np.sqrt(legend_dot_size/np.pi)
+        dot_orientation_ax = fig.add_axes([1 + LEGEND_PLANET_X_ALIGNMENT * width_per_unit + 0.25 * LEGEND_PLANET_WIDTH * width_per_unit, 0.1 + LEGEND_PLANET_Y_ALIGNMENT * height_per_unit + cbar_count * 5 * LEGEND_COLOR_HEIGHT * height_per_unit, LEGEND_PLANET_WIDTH * width_per_unit, LEGEND_PLANET_HEIGHT * height_per_unit])
+        legend_circle_size = (MIN_DOT_SIZE + MAX_DOT_SIZE) / 2      # Define size of the circle
+        legend_circle_radius = np.sqrt(legend_circle_size / np.pi)
+        legend_dot_size = 0.75 * legend_circle_size       # Define relative size of the dots
+        legend_dot_radius = np.sqrt(legend_dot_size / np.pi)
         if size_value == 'count':
-            dot_orientation_ax.scatter(0, 0, s=legend_circle_size, facecolors='none', edgecolors='0',linewidths=LINE_WIDTH, alpha=1)    # draw circle
+            dot_orientation_ax.scatter(0, 0, s=legend_circle_size, facecolors='none', edgecolors='0', linewidths=LINE_WIDTH, alpha=1)    # draw circle
         dot_orientation_ax.scatter(0, 0, s=legend_dot_size, c=legend_hex_color, alpha=1)    # draw center dot
-        p=0
+        p = 0
         for planet_column in planet_columns:
-            distance_from_center = PLANET_DIST_SCALER*(LINE_WIDTH+legend_circle_radius+legend_dot_radius)*ipd   # planet distance formula
-            offset_x = distance_from_center*planet_x[p]
-            offset_y = distance_from_center*planet_y[p]
+            distance_from_center = PLANET_DIST_SCALER * (LINE_WIDTH + legend_circle_radius + legend_dot_radius) * ipd   # planet distance formula
+            offset_x = distance_from_center * planet_x[p]
+            offset_y = distance_from_center * planet_y[p]
             secondary_x = offset_x
             secondary_y = offset_y
             if planet_color_schemas is not None:    # plot planet
@@ -818,29 +818,31 @@ def planet_plot_render(plot_vars: pd.DataFrame,
             else:
                 dot_orientation_ax.scatter(secondary_x, secondary_y, s=legend_dot_size, c=legend_hex_color, alpha=1)
             if orientation_labels_array is not None:    # plot planet label
-                dot_orientation_ax.text(1.5*secondary_x, 1.5*secondary_y, orientation_labels_array[p], fontsize=LEGEND_FONT_SIZE, **planet_text[p])    
+                dot_orientation_ax.text(1.5 * secondary_x, 1.5 * secondary_y, orientation_labels_array[p], fontsize=LEGEND_FONT_SIZE, **planet_text[p])
             else:
-                dot_orientation_ax.text(1.5*secondary_x, 1.5*secondary_y, planet_column, fontsize=LEGEND_FONT_SIZE, **planet_text[p])
-            p=p+1
+                dot_orientation_ax.text(1.5 * secondary_x, 1.5 * secondary_y, planet_column, fontsize=LEGEND_FONT_SIZE, **planet_text[p])
+            p = p + 1
         if p < 6:   # Dynamic annotation for center dot
-            distance_from_center = PLANET_DIST_SCALER*(LINE_WIDTH+legend_circle_radius+legend_dot_radius)*ipd
-            offset_x = distance_from_center*planet_x[p]
-            offset_y = distance_from_center*planet_y[p]
+            distance_from_center = PLANET_DIST_SCALER * (LINE_WIDTH + legend_circle_radius + legend_dot_radius) * ipd
+            offset_x = distance_from_center * planet_x[p]
+            offset_y = distance_from_center * planet_y[p]
             secondary_x = offset_x
             secondary_y = offset_y
-            dot_orientation_ax.annotate(ORIENTATION_LEGEND_CENTER_LABEL, 
-                            xy=(0, 0), xycoords='data',
-                            xytext=(secondary_x, secondary_y), textcoords='data',
-                            arrowprops=dict(arrowstyle="-", color="black", lw=LINE_WIDTH),
-                            fontsize=LEGEND_FONT_SIZE, **planet_text[p])
+            dot_orientation_ax.annotate(ORIENTATION_LEGEND_CENTER_LABEL,
+                                        xy=(0, 0), xycoords='data',
+                                        xytext=(secondary_x, secondary_y),
+                                        textcoords='data',
+                                        arrowprops=dict(arrowstyle="-", color="black", lw=LINE_WIDTH),
+                                        fontsize=LEGEND_FONT_SIZE, **planet_text[p])
         else:
-            center_annotation_position = PLANET_DIST_SCALER*(LINE_WIDTH+5*legend_circle_radius)*ipd
-            dot_orientation_ax.annotate(ORIENTATION_LEGEND_CENTER_LABEL, 
-                                xy=(0, 0), xycoords='data',
-                                xytext=(-center_annotation_position, -center_annotation_position), textcoords='data',
-                                arrowprops=dict(arrowstyle="-", color="black", lw=LINE_WIDTH),
-                                fontsize=LEGEND_FONT_SIZE, va = 'center')
-        
+            center_annotation_position = PLANET_DIST_SCALER * (LINE_WIDTH + 5 * legend_circle_radius) * ipd
+            dot_orientation_ax.annotate(ORIENTATION_LEGEND_CENTER_LABEL,
+                                        xy=(0, 0), xycoords='data',
+                                        xytext=(-center_annotation_position, -center_annotation_position),
+                                        textcoords='data',
+                                        arrowprops=dict(arrowstyle="-", color="black", lw=LINE_WIDTH),
+                                        fontsize=LEGEND_FONT_SIZE, va='center')
+
         # remove everything else from the planet legend axis
         for spine in dot_orientation_ax.spines.values():
             spine.set_visible(False)
