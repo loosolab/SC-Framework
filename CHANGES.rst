@@ -8,6 +8,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- rna/ atac more subset PC description
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
 
 0.7.0 (23-04-24)
