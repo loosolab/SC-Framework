@@ -13,7 +13,7 @@
     - io
     - tools/clustering
     - tools/bam
-    - tools/celltype_annotation
+    - tools/celltype_annotation fix
     - highly_variable
     - tables
     - utils/adata
