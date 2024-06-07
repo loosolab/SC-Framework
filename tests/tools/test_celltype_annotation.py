@@ -4,6 +4,8 @@ import os
 import pytest
 import anndata as ad
 from sctoolbox import celltype_annotation
+import sctoolbox.tools as anno
+import scanpy as sc
 
 # --------------------------- Fixtures ------------------------------ #
 
