@@ -1,25 +1,24 @@
 """Test quality control functions."""
 
-import logging
-
 import pytest
-import sctoolbox.qc_filter as qc
 import scanpy as sc
 import numpy as np
 import os
 import tempfile
 import matplotlib.pyplot as plt
+import logging
+import sctoolbox.qc_filter as qc
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
-
 # --------------------------- Fixtures ------------------------------ #
+
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
 
@@ -106,6 +105,7 @@ def s_file(s_list):
 
 
 # --------------------------- Tests --------------------------------- #
+
 
 @pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1), ("sample", 4)])
 def test_estimate_doublets(adata, groupby, threads):

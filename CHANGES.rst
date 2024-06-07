@@ -14,6 +14,7 @@
     - tools/clustering
     - tools/bam
     - tools/celltype_annotation fix
+    - tools/qc_filter
     - highly_variable
     - tables
     - utils/adata
