@@ -34,3 +34,11 @@ def test_run_scsa(test_adata, column):
     """Test run_scsa success."""
     adata = celltype_annotation.run_scsa(test_adata, species='Mouse', inplace=False, column_added=column)
     assert column in adata.obs.columns
+
+def test_add_cellxgene_annotation(adata_rna):
+    """Test if 'cellxgene' column is added to adata.obs."""
+
+    csv_f = os.path.join(os.path.dirname(__file__), 'data', 'cellxgene_anno.csv')
+    anno.add_cellxgene_annotation(adata_rna, csv_f)
+
+    assert "cellxgene_clusters" in adata_rna.obs.columns
