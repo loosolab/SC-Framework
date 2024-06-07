@@ -31,7 +31,7 @@ def get_pbar(total: int, description: str, **kwargs: Any) -> "tqdm.tqdm":
         A progress bar object.
     """
 
-    if utils._is_notebook() is True:
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm

@@ -53,22 +53,22 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
     if set_index:
         logger.info("formatting index")
-        utils.var_index_from(adata, index_from)
+        utils.checker.var_index_from(adata, index_from)
 
     # Establish columns for coordinates
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
-        utils.check_columns(adata.var,
-                            coordinate_cols,
-                            name="adata.var")  # Check that coordinate_cols are in adata.var)
+        utils.checker.check_columns(adata.var,
+                                    coordinate_cols,
+                                    name="adata.var")  # Check that coordinate_cols are in adata.var)
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")
-    utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
+    utils.checker.format_adata_var(adata, coordinate_cols, coordinate_cols)
 
     # check if the barcode is the index otherwise set it
-    utils.barcode_index(adata)
+    utils.bioutils.barcode_index(adata)
 
     if h5ad_path is not None:
         adata.obs = adata.obs.assign(file=h5ad_path)
@@ -229,7 +229,7 @@ def from_quant(path: str,
     adata = adata_list[0].concatenate(adata_list[1:], join="outer")
 
     # Add information to uns
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
 
     return adata
 
@@ -446,19 +446,19 @@ def convertToAdata(file: str,
     """
 
     # Setup R
-    utils.setup_R(r_home)
+    utils.general.setup_R(r_home)
 
     # Initialize R <-> python interface
-    utils.check_module("anndata2ri")
+    utils.checker.check_module("anndata2ri")
     import anndata2ri
-    utils.check_module("rpy2")
+    utils.checker.check_module("rpy2")
     from rpy2.robjects import r, default_converter, conversion, globalenv
     anndata2ri.activate()
 
     # create rpy2 None to NULL converter
     # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     none_converter = conversion.Converter("None converter")
-    none_converter.py2rpy.register(type(None), utils._none2null)
+    none_converter.py2rpy.register(type(None), utils.general._none2null)
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
@@ -533,7 +533,7 @@ def convertToAdata(file: str,
     adata.var.index = adata.var.index.astype('object')
 
     # Add information to uns
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
     if output:
         # Saving adata.h5ad

@@ -23,9 +23,9 @@ class GenomeTracks():
         :context: close-figs
         :nofigs:
 
-        import sctoolbox.plotting as pl
+        import sctoolbox.plotting.genometracks as plg
 
-        G = pl.GenomeTracks()
+        G = plg.GenomeTracks()
 
         #Add bigwig tracks
         G.add_track("data/tracks/bigwig1.bw", color="red")
@@ -326,7 +326,7 @@ class GenomeTracks():
         if self.output is None:
             raise ValueError("No output file was created. Run GenomeTracks.plot() first.")
 
-        if utils._is_notebook():
+        if utils.jupyter._is_notebook():
             from IPython.display import Image, IFrame, display
 
             if self.output.endswith(".png"):
@@ -393,7 +393,7 @@ class GenomeTracks():
         ini_file = self._write_config(config_file=config_file)
 
         # Build command
-        pgtracks_path = utils.get_binary_path("pyGenomeTracks")
+        pgtracks_path = utils.general.get_binary_path("pyGenomeTracks")
         cmd = f"{pgtracks_path} --tracks {ini_file} --region {region} --outFileName {output} "
 
         # Add additional kwargs
