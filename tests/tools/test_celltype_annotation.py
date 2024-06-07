@@ -5,6 +5,8 @@ import pytest
 import anndata as ad
 from sctoolbox import celltype_annotation
 
+# --------------------------- Fixtures ------------------------------ #
+
 
 @pytest.fixture
 def test_adata():
@@ -12,6 +14,16 @@ def test_adata():
     adata_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'scsa')
     adata = ad.read_h5ad(adata_dir + '/adata_scsa.h5ad')
     return adata
+
+
+@pytest.fixture
+def adata_rna():
+    """Load rna anndata."""
+    adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
+    return sc.read_h5ad(adata_f)
+
+
+# --------------------------- Tests --------------------------------- #
 
 
 def fetch_adata_uns(test_adata):
@@ -43,4 +55,3 @@ def test_add_cellxgene_annotation(adata_rna):
     anno.add_cellxgene_annotation(adata_rna, csv_f)
 
     assert "cellxgene_clusters" in adata_rna.obs.columns
-    
