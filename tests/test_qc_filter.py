@@ -1,7 +1,6 @@
 """Test quality control functions."""
 
 import pytest
-import sctoolbox.qc_filter as qc
 import scanpy as sc
 import numpy as np
 import os
@@ -101,5 +100,3 @@ def s_file(s_list):
             f.writelines([g + "\n" for g in s_list])
 
         yield tmp
-
-
