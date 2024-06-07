@@ -13,6 +13,7 @@
     - io
     - tools/clustering
     - tools/bam
+    - tools/celltype_annotation
     - highly_variable
     - tables
     - utils/adata
