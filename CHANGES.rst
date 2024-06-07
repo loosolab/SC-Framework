@@ -13,6 +13,7 @@
     - io
     - tools/clustering
     - tools/bam
+    - tools/qc_filter
     - highly_variable
     - tables
     - utils/adata
