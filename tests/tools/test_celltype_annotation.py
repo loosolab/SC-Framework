@@ -9,7 +9,7 @@ from sctoolbox import celltype_annotation
 @pytest.fixture
 def test_adata():
     """Load adata."""
-    adata_dir = os.path.join(os.path.dirname(__file__), 'data', 'scsa')
+    adata_dir = os.path.join(os.path.dirname(__file__), '..','data', 'scsa')
     adata = ad.read_h5ad(adata_dir + '/adata_scsa.h5ad')
     return adata
 
