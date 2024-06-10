@@ -64,7 +64,7 @@ def enrichr_marker_genes(adata: sc.AnnData,
         enr_list = list()
 
         # enrichr API
-        for key, deg in degs.items:
+        for key, deg in degs.items():
             if len(deg) > 0:
                 enr = gp.enrichr(list(deg["names"].str.upper()),
                                  gene_sets=gene_sets,
