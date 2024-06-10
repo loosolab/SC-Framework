@@ -25,7 +25,7 @@ def adata():
         return list * (count // len(list)) + list[:(count % len(list))]
 
     obj.obs["cluster"] = repeat_items([f"cluster {i}" for i in range(10)], len(obj))
-    
+
     tools.marker_genes.run_rank_genes(obj, "cluster")
 
     return obj
