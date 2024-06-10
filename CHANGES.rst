@@ -13,6 +13,7 @@
     - io
     - tools/clustering
     - tools/bam
+    - tools/celltype_annotation
     - tools/qc_filter
     - highly_variable
     - tables
