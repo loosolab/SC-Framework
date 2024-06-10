@@ -9,6 +9,7 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
+- Add GSEA notebook (#172)
 
 0.7.0 (23-04-24)
 ----------------
