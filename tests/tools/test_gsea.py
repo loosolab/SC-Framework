@@ -51,15 +51,15 @@ def test_enrichr_marker_genes(adata):
 
 
 def test_fail_enrichr_marker_genes(adata):
-    """Test if invalid marker key is caught by enrichr_marker_genes"""
+    """Test if invalid marker key is caught by enrichr_marker_genes."""
 
     organism = "human"
 
-    ## download a library or read a .gmt file
+    # download a library or read a .gmt file
     go_mf = gp.get_library(name="GO_Biological_Process_2023", organism=organism)
     # list of all genes as background
     flat_list = set([item for sublist in go_mf.values() for item in sublist])
-    
+
     with pytest.raises(KeyError):
         tools.gsea.enrichr_marker_genes(adata,
                                         marker_key="invalid",

@@ -20,8 +20,8 @@ def enrichr_marker_genes(adata: sc.anndata,
     """
     Wrapps enrichr module to use on marker genes per cluster.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     adata : sc.anndata
         Anndata object.
     marker_key: str
