@@ -11,7 +11,7 @@ from beartype import beartype
 
 @deco.log_anndata
 @beartype
-def enrichr_marker_genes(adata: sc.anndata,
+def enrichr_marker_genes(adata: sc.AnnData,
                          marker_key: str,
                          gene_sets: dict[str, list[str]],
                          organism: str,
