@@ -32,20 +32,20 @@ def adata():
 
 
 def test_enrichr_marker_genes(adata):
-    """Test enrichr_marker_genes"""
+    """Test enrichr_marker_genes."""
 
     organism = "human"
 
-    ## download a library or read a .gmt file
+    # download a library or read a .gmt file
     go_mf = gp.get_library(name="GO_Biological_Process_2023", organism=organism)
     # list of all genes as background
     flat_list = set([item for sublist in go_mf.values() for item in sublist])
 
     result = tools.gsea.enrichr_marker_genes(adata,
-                                             marker_key = "rank_genes_cluster_filtered",
-                                             gene_sets = go_mf,
-                                             organism = organism,
-                                             background = flat_list)
+                                             marker_key="rank_genes_cluster_filtered",
+                                             gene_sets=go_mf,
+                                             organism=organism,
+                                             background=flat_list)
 
     assert isinstance(result, pd.DataFrame)
 
@@ -62,7 +62,7 @@ def test_fail_enrichr_marker_genes(adata):
     
     with pytest.raises(KeyError):
         tools.gsea.enrichr_marker_genes(adata,
-                                        marker_key = "invalid",
-                                        gene_sets = go_mf,
-                                        organism = organism,
-                                        background = flat_list)
+                                        marker_key="invalid",
+                                        gene_sets=go_mf,
+                                        organism=organism,
+                                        background=flat_list)

@@ -1,4 +1,4 @@
-"""Module for GSEA analysis"""
+"""Module for GSEA analysis."""
 import pandas as pd
 import gseapy as gp
 import scanpy as sc
@@ -16,11 +16,10 @@ def enrichr_marker_genes(adata: sc.anndata,
                          gene_sets: dict[str, list[str]],
                          organism: str,
                          background: set[str],
-                         pvals_adj_tresh: float = 0.05
-                        ) -> pd.DataFrame:
+                         pvals_adj_tresh: float = 0.05) -> pd.DataFrame:
     """
-    Wrapper for enrichr module to use on marker genes per cluster.
-    
+    Wrapps enrichr module to use on marker genes per cluster.
+
     Parameter
     ---------
     adata : sc.anndata
@@ -29,8 +28,8 @@ def enrichr_marker_genes(adata: sc.anndata,
         Key in adata.uns containing rank gene group tables.
     gene_sets : dict[str, list[str]]
         Dictionary with pathway names as key and gene set as value.
-    organsim : str
-        Source organsim.
+    organism : str
+        Source organism.
     background : set[str]
         Set of background genes.
     pvals_adj_tresh : float
@@ -40,7 +39,7 @@ def enrichr_marker_genes(adata: sc.anndata,
     -------
     pd.DataFrame
         Combined enrichr results.
-        
+
     Raises
     ------
     KeyError:
@@ -52,8 +51,7 @@ def enrichr_marker_genes(adata: sc.anndata,
                                               key=marker_key)
     else:
         raise KeyError("Marker key not found! Please check parameter!")
-    
-    
+
     path_enr = {}
 
     for ct, table in tqdm.tqdm(marker_tables.items()):
@@ -83,4 +81,4 @@ def enrichr_marker_genes(adata: sc.anndata,
         path_enr[ct]["Cluster"] = ct
 
     # Return combined table
-    return(pd.concat(path_enr.values()))
+    return (pd.concat(path_enr.values()))
