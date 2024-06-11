@@ -351,8 +351,11 @@ def from_mtx(path: str,
 
     Raises
     ------
-    ValueError
-        If files are not found.
+    ValueError:
+        1. If mtx files are not found.
+        2. If multiple barcode or variable files were found for one mtx file.
+        3. If the barcode file is missing for mtx file.
+        4. If the variable file is missing for mtx file and var_error is set to True
     """
     # initialize path as path object
     path = Path(path)
