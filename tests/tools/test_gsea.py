@@ -19,8 +19,10 @@ def test_enrichr_marker_genes(adata):
     result = tools.gsea.enrichr_marker_genes(adata,
                                              marker_key="rank_genes_louvain_filtered",
                                              organism="human")
-
+    cols = ['Gene_set', 'Term', 'Overlap', 'P-value', 'Adjusted P-value', 'Odds Ratio', 'Combined Score', 'Genes']
     assert isinstance(result, pd.DataFrame)
+    assert len(result.columns) > 0
+    assert set(cols).issubset(set(result.columns))
 
 
 def test_fail_enrichr_marker_genes(adata):
