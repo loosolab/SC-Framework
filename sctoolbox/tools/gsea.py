@@ -44,6 +44,10 @@ def enrichr_marker_genes(adata: sc.AnnData,
     background : Optional[set[str]], default None
         Set of background genes. Will be automatically determined when library_name or gene_sets is given.
 
+    Notes
+    -----
+    This function only works in combination with the tools.marker_genes.run_rank_genes function.
+
     Returns
     -------
     pd.DataFrame
@@ -64,8 +68,10 @@ def enrichr_marker_genes(adata: sc.AnnData,
         raise KeyError("Marker key not found! Please check parameter!")
 
     if not gene_sets:
+        # A public library is used if gene_set is not given
         gene_sets = gp.get_library(name=library_name, organism=organism)
     if not background:
+        # Generating background if no custom background is given
         background = set([item for sublist in gene_sets.values() for item in sublist])
 
     path_enr = {}
