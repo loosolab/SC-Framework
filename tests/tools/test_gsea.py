@@ -17,7 +17,7 @@ def adata():
 def test_enrichr_marker_genes(adata):
     """Test enrichr_marker_genes."""
     result = tools.gsea.enrichr_marker_genes(adata,
-                                             marker_key="rank_genes_cluster_filtered",
+                                             marker_key="rank_genes_louvain_filtered",
                                              organism="human")
 
     assert isinstance(result, pd.DataFrame)
