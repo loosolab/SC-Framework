@@ -1,10 +1,8 @@
 """Test tools/gsea.py functions."""
 
 import pytest
-import os
 import scanpy as sc
 import sctoolbox.tools as tools
-import gseapy as gp
 import pandas as pd
 
 

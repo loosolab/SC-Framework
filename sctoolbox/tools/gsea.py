@@ -11,6 +11,7 @@ from sctoolbox.tools.marker_genes import get_rank_genes_tables
 from beartype import beartype
 from beartype.typing import Optional
 
+
 @deco.log_anndata
 @beartype
 def enrichr_marker_genes(adata: sc.AnnData,
