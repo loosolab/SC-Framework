@@ -383,6 +383,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
     # ----- .var -----
     clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+    out.var_names_make_unqie()
 
     # ----- .X -----
     # convert .X to sparse matrix if needed
