@@ -300,7 +300,7 @@ def from_single_mtx(mtx: Union[str, Path],
     # Test if they are unique
     if not barcode_csv.index.is_unique:
         raise ValueError("Barcode index column does not contain unique values")
-    if not var_csv.index.is_unique:
+    if variables and not var_csv.index.is_unique:
         raise ValueError("Genes index column does not contain unique values")
 
     # Add tables to anndata object
