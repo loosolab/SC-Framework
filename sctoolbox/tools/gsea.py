@@ -61,7 +61,7 @@ def enrichr_marker_genes(adata: sc.AnnData,
                                               key=marker_key)
     else:
         raise KeyError("Marker key not found! Please check parameter!")
-    
+
     if not gene_sets:
         gene_sets = gp.get_library(name=library_name, organism=organism)
     if not background:
