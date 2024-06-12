@@ -37,9 +37,6 @@ RUN pip install "/tmp/[all]" && \
     pip install pytest-html && \
     pip install pytest-mock
 
-# clear tmp
-RUN rm -r /tmp/*
-
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \
     mkdir .ssh && \
