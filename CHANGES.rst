@@ -6,6 +6,7 @@
 - add cyclone (pycirclize based plot) as hairball alternative (#223)
 - remove legacy import structure
 - implement lazy module loading
+- prepare_for_cellxgene: Account for duplciate var indices
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
