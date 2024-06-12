@@ -952,7 +952,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
             _make_square(axes[j, i])
 
     fig.tight_layout()
-    
+
     for ax in fig.get_axes():
         if hasattr(ax, 'collections'):
             for collection in ax.collections:
