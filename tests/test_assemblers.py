@@ -55,6 +55,34 @@ def test_from_single_starsolo():
     assert isinstance(adata, anndata.AnnData)
 
 
+def test_from_mtx():
+    """Test from_mtx success."""
+
+    # With variable file
+    adata = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'))
+    adata2 = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'),
+                                 variables="*notfound.tsv",
+                                 var_error=False)
+
+    assert isinstance(adata, anndata.AnnData)
+    assert isinstance(adata2, anndata.AnnData)
+
+
+def test_from_mtx_fail():
+    """Test from_mtx fail."""
+
+    with pytest.raises(ValueError):
+        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'),
+                            variables="*notfound.tsv")
+
+    with pytest.raises(ValueError):
+        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'),
+                            barcodes="*notfound.tsv")
+
+    with pytest.raises(ValueError):
+        assemblers.from_mtx("./notfound/")
+
+
 def test_from_single_mtx():
     """Test from_single_mtx success."""
 
@@ -62,6 +90,10 @@ def test_from_single_mtx():
     BARCODES_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'barcodes.tsv')
     GENES_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'genes.tsv')
 
+    # test full adata (matrix, barcodes, genes)
     adata = assemblers.from_single_mtx(MTX_FILENAME, BARCODES_FILENAME, GENES_FILENAME, header=None)
+    assert isinstance(adata, anndata.AnnData)
 
+    # test partial adata (matrix, barcodes)
+    adata = assemblers.from_single_mtx(MTX_FILENAME, BARCODES_FILENAME, header=None)
     assert isinstance(adata, anndata.AnnData)
