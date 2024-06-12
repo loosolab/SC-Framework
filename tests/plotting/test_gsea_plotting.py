@@ -8,15 +8,16 @@ from sctoolbox.plotting import gsea
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
+    """Minimal adata file for testing."""
     return sc.datasets.pbmc68k_reduced()
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def term_table():
+    """Minimal term table for testing."""
     term_table = pd.DataFrame({
         "Term": "Actin Filament Organization (GO:0007015)",
-        "Genes": ["COBL", "WIPF1;SH3KBP1"]
-        })
+        "Genes": ["COBL", "WIPF1;SH3KBP1"]})
     return term_table
 
 
