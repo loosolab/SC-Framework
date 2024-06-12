@@ -5,7 +5,7 @@ import pandas as pd
 import scanpy as sc
 
 from beartype import beartype
-from beartype.typing import Optional, Any
+from beartype.typing import Optional, Any, Literal
 
 from sctoolbox.plotting.general import clustermap_dotplot
 from sctoolbox.utils.bioutils import pseudobulk_table
@@ -19,16 +19,17 @@ def term_dotplot(term: str,
                  adata: sc.AnnData,
                  groupby: str,
                  groups: Optional[list[str] | str] = None,
-                 **kwargs: Any):
+                 hue: Literal["Mean Expression", "Zscore"] = "Zscore",
+                 **kwargs: Any) -> list:
     """
-    PLot mean expression and zscore of cluster for one term/pathway.
+    PLot mean expression and zscore of cluster for one GO-term.
 
     Parameters
     ----------
     term: str
-        Name of term/pathway, e.g 'ATP Metabolic Process (GO:0046034)'
+        Name of GO-term, e.g 'ATP Metabolic Process (GO:0046034)'
     term_table: pd.DataFrame
-        Table of pathway/term enriched genes.
+        Table of GO-term enriched genes.
         Output of sctoolbox.tools.gsea.enrichr_marker_genes().
         The DataFrame needs to contain the columns:
             'Term', 'Genes'
@@ -98,4 +99,4 @@ def term_dotplot(term: str,
     # combine expression and zscores
     comb = long_bulks.merge(long_zscore, on=["Gene", groupby])
 
-    return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue="Zscore", **kwargs)
+    return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
