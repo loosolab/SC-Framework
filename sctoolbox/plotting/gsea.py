@@ -22,7 +22,7 @@ def term_dotplot(term: str,
                  hue: Literal["Mean Expression", "Zscore"] = "Zscore",
                  **kwargs: Any) -> list:
     """
-    PLot mean expression and zscore of cluster for one GO-term.
+    Plot mean expression and zscore of cluster for one GO-term.
 
     Parameters
     ----------
@@ -39,6 +39,8 @@ def term_dotplot(term: str,
         Key from `adata.obs` to group cells by.
     groups: Optional[list[str] | str], default None
         Set subset of group column.
+    hue: Literal["Mean Expression", "Zscore"], default "Zscore"
+        Choose dot coloring.
     **kwargs: Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
