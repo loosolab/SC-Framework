@@ -1,5 +1,6 @@
 0.8.0 (in progress)
 ----------------
+- from_mtx: support more folder structures and variable file now optional (#234, #240)
 - ligand-receptor: download_db added support for LIANA resources
 - revised tsse scoring and fixed matplotlib version conflict (#257)
 - add cyclone (pycirclize based plot) as hairball alternative (#223)
@@ -9,7 +10,9 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- rna/ atac more subset PC description
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
+- rna/atac assembly notebook update from_mtx (#234, #240)
 
 0.7.0 (23-04-24)
 ----------------
