@@ -7,6 +7,7 @@
 - remove legacy import structure
 - implement lazy module loading
 - removed cleanup temp for the selfservice container (#258)
+- prepare_for_cellxgene: Account for duplciate var indices
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
