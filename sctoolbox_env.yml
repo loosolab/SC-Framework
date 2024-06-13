@@ -16,6 +16,7 @@ dependencies:
   - ipykernel # needed to register environment as jupyter kernel
   - pybedtools
   - scvelo>=0.3.1 # highly decreases installation runtime of sc_framework
+  - ipynbname
   - pip  # for installing additional packages
   - pip:
     - scanpro
