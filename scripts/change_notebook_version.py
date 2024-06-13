@@ -16,9 +16,11 @@ def update_version(notebook, ver):
     else:
         old_ver = nb["metadata"]["sc_framework"]["version"]
         if version.parse(old_ver) > version.parse(ver):
-            raise ValueError(f"New version ({ver}) is older than notebook version ({old_ver}).")
+            warnings.warn(f"New version ({ver}) is older than notebook version ({old_ver}). Skipped {notebook}")
+            return
         if version.parse(old_ver) == version.parse(ver):
-            warnings.warn(f"New verison is identical to notebook version. ({ver})")
+            warnings.warn(f"New version is identical to notebook version. ({ver}). Skipped {notebook}")
+            return
         nb["metadata"]["sc_framework"]["version"] = ver
     nbformat.write(nb, notebook)
 
@@ -26,6 +28,7 @@ def update_version(notebook, ver):
 def update_notebooks(repo_path, ver):
     path = Path(repo_path)
     for p in path.glob("**/*.ipynb"):
+        print(p)
         update_version(p, ver)
 
 
