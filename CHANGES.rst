@@ -5,8 +5,10 @@
 - revised tsse scoring and fixed matplotlib version conflict (#257)
 - add cyclone (pycirclize based plot) as hairball alternative (#223)
 - remove legacy import structure
-- implement lazy module loading
-- added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245) 
+- implement lazy module loading 
+- wrapped up native scrublet (#242, #150)
+- prepare_for_cellxgene: Account for duplciate var indices
+- added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
