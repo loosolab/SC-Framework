@@ -9,6 +9,7 @@
 - wrapped up native scrublet (#242, #150)
 - prepare_for_cellxgene: Account for duplciate var indices
 - added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
+- removed cleanup temp for the selfservice container (#258)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
