@@ -2,7 +2,7 @@ FROM condaforge/mambaforge
 
 LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 
-COPY . /tmp/
+COPY . /home/sc_framework/
 COPY scripts /scripts/
 
 # Set the time zone (before installing any packages)
@@ -28,10 +28,10 @@ RUN mamba update -n base mamba && \
     mamba --version
 
 # install enviroment
-RUN mamba env update -n base -f /tmp/sctoolbox_env.yml
+RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
 # install sctoolbox
-RUN pip install "/tmp/[all]" && \
+RUN pip install "/home/sc_framework/[all]" && \
     pip install pytest && \
     pip install pytest-cov && \
     pip install pytest-html && \
