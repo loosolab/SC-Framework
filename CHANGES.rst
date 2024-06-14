@@ -1,4 +1,4 @@
-0.8.0 (in progress)
+0.8.0 (14-06-24)
 ----------------
 - from_mtx: support more folder structures and variable file now optional (#234, #240)
 - ligand-receptor: download_db added support for LIANA resources
