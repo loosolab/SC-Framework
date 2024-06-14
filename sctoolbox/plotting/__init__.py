@@ -8,6 +8,7 @@ __all__ = [
     "embedding",
     "general",
     "genometracks",
+    "gsea",
     "highly_variable",
     "marker_genes",
     "qc_filter",

@@ -14,6 +14,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - rna/ atac more subset PC description
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
+- Add GSEA notebook (#172)
 - rna/atac assembly notebook update from_mtx (#234, #240)
 
 0.7.0 (23-04-24)
