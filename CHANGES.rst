@@ -1,5 +1,25 @@
+0.8.0 (14-06-24)
+----------------
+- from_mtx: support more folder structures and variable file now optional (#234, #240)
+- ligand-receptor: download_db added support for LIANA resources
+- revised tsse scoring and fixed matplotlib version conflict (#257)
+- add cyclone (pycirclize based plot) as hairball alternative (#223)
+- remove legacy import structure
+- implement lazy module loading 
+- wrapped up native scrublet (#242, #150)
+- prepare_for_cellxgene: Account for duplciate var indices
+- added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
+- removed cleanup temp for the selfservice container (#258)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- rna/ atac more subset PC description
+- rna/ atac clustering renamed "recluster" -> "revise cluster"
+- Add GSEA notebook (#172)
+- rna/atac assembly notebook update from_mtx (#234, #240)
+
 0.7.0 (23-04-24)
--------------
+----------------
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
@@ -16,7 +36,7 @@ Changes to notebooks
 - Revise RNA notebook 4 recluster section (#201)
 
 0.6.1 (28-03-24)
--------------
+----------------
 - Fix release pages by renaming the release-pages: job to pages:
 - refactor move clean-orphaned-tags to new stage .post (#229)
 
@@ -40,7 +60,7 @@ Changes to notebooks
 - 05_marker_genes: Complete Overhaul (#181)
 
 0.5 (04-03-24)
--------------
+--------------
 
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)

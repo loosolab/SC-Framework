@@ -3,7 +3,7 @@
 import os
 import pytest
 import anndata as ad
-from sctoolbox import celltype_annotation
+from sctoolbox.tools import celltype_annotation
 
 
 @pytest.fixture
