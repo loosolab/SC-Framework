@@ -11,6 +11,7 @@ from pathlib import Path
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
+import scrublet as scr
 
 from beartype import beartype
 import numpy.typing as npt
@@ -219,7 +220,8 @@ def predict_cell_cycle(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def estimate_doublets(adata: sc.AnnData,
-                      threshold: float = 0.25,
+                      use_native: bool = False,
+                      threshold: Optional[float] = None,
                       inplace: bool = True,
                       plot: bool = True,
                       groupby: Optional[str] = None,
@@ -236,6 +238,8 @@ def estimate_doublets(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to estimate doublets for.
+    use_native : bool, default False
+        If True, uses the native implementation of scrublet.
     threshold : float, default 0.25
         Threshold for doublet detection.
     inplace : bool, default True
@@ -284,7 +288,7 @@ def estimate_doublets(adata: sc.AnnData,
                 sub.uns = {}
                 sub.layers = None
 
-                job = pool.apply_async(_run_scrublet, (sub,), {"threshold": threshold, "verbose": False, **kwargs})
+                job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
                 jobs.append(job)
             pool.close()
 
@@ -295,7 +299,7 @@ def estimate_doublets(adata: sc.AnnData,
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
                 logger.info("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
-                res = _run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)
+                res = _run_scrublet(sub, use_native=use_native, threshold=threshold, verbose=False, **kwargs)
                 results.append(res)
 
         # Collect results for each element in tuples
@@ -340,6 +344,8 @@ def estimate_doublets(adata: sc.AnnData,
 
 @beartype
 def _run_scrublet(adata: sc.AnnData,
+                  use_native: bool = False,
+                  threshold: Optional[float] = None,
                   **kwargs: Any) -> Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]:
     """
     Thread-safe wrapper for running scrublet, which also takes care of catching any warnings.
@@ -348,6 +354,10 @@ def _run_scrublet(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to estimate doublets for.
+    use_native : bool, default False
+        If True, uses the native implementation of scrublet.
+    threshold : float, default 0.25
+        Threshold for doublet detection.
     **kwargs : Any
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
@@ -361,14 +371,22 @@ def _run_scrublet(adata: sc.AnnData,
         warnings.filterwarnings("ignore", category=UserWarning, message="Received a view of an AnnData*")
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute `.obs`*")  # because adata is a view
 
-        # X = adata.X
-        # scrub = scr.Scrublet(X)
-        # doublet_scores, predicted_doublets = scrub.scrub_doublets()
+        if use_native:
+            # Run scrublet with native implementation
+            X = adata.X
+            scrub = scr.Scrublet(X)
+            doublet_scores, predicted_doublets = scrub.scrub_doublets()
 
-        # adata.obs["doublet_score"] = doublet_scores
-        # adata.obs["predicted_doublet"] = predicted_doublets
+            # Apply manual threshold
+            if threshold:
+                predicted_doublets = scrub.call_doublets(threshold=threshold)
 
-        sc.external.pp.scrublet(adata, copy=False, **kwargs)
+            adata.obs["doublet_score"] = doublet_scores
+            adata.obs["predicted_doublet"] = predicted_doublets
+
+            adata.uns['scrublet'] = "scr.Scrublet(X).scrub_doublets()"
+
+        sc.external.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
 

@@ -12,6 +12,7 @@ __all__ = [
     "embedding",
     "frip",
     "gene_correlation",
+    "gsea",
     "highly_variable",
     "insertsize",
     "marker_genes",

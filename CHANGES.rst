@@ -6,13 +6,17 @@
 - add cyclone (pycirclize based plot) as hairball alternative (#223)
 - remove legacy import structure
 - implement lazy module loading
-- removed cleanup temp for the selfservice container (#258)
+- implement lazy module loading 
+- wrapped up native scrublet (#242, #150)
 - prepare_for_cellxgene: Account for duplciate var indices
+- added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
+- removed cleanup temp for the selfservice container (#258)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - rna/ atac more subset PC description
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
+- Add GSEA notebook (#172)
 - rna/atac assembly notebook update from_mtx (#234, #240)
 
 0.7.0 (23-04-24)
