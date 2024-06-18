@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sctoolbox.tools.calc_overlap_fc &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rna-notebooks/index.html">RNA notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">sctoolbox.tools.calc_overlap_fc</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for sctoolbox.tools.calc_overlap_fc</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module to calculate fold change of reads or fragments from a BAM or fragments file that overlap specified regions.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+
+<span class="kn">from</span> <span class="nn">beartype</span> <span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">from</span> <span class="nn">beartype.typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span> <span class="nn">deprecation</span>
+<span class="kn">import</span> <span class="nn">sctoolbox</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">sctoolbox.tools.bam</span> <span class="kn">import</span> <span class="n">create_fragment_file</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils.decorator</span> <span class="k">as</span> <span class="nn">deco</span>
+<span class="kn">from</span> <span class="nn">sctoolbox._settings</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">logger</span>
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_convert_gtf_to_bed</span><span class="p">(</span><span class="n">gtf</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                        <span class="n">out</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="n">temp_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert GTF-file to BED file.</span>
+
+<span class="sd">    Extract &#39;chr&#39;, &#39;start&#39; and &#39;stop&#39; from .gtf file and convert it to sorted BED file.</span>
+<span class="sd">    BED file will be sorted by chromosome name and start position.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gtf : str</span>
+<span class="sd">        Path to .gtf file.</span>
+<span class="sd">    out : Optional[str], default None</span>
+<span class="sd">        Path to save new BED file. If none, the file will be saved in the same folder as tha BAM file.</span>
+<span class="sd">    temp_files : list[str], default []</span>
+<span class="sd">        List of temporary files.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Tuple[str, list[str]]</span>
+<span class="sd">        Path to fragments and temp files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">gtf</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="n">out_unsorted</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">_tmp.bed&#39;</span><span class="p">)</span>
+    <span class="n">out_sorted</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">_sorted.bed&#39;</span><span class="p">)</span>
+
+    <span class="c1"># add temp file to list</span>
+    <span class="n">temp_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sorted</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gtf</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_unsorted</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>  <span class="c1"># convert binary to string</span>
+                <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">):</span>  <span class="c1"># skip if header</span>
+                    <span class="k">continue</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">out_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="c1"># sort gtf</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">_sort_bed</span><span class="p">(</span><span class="n">out_unsorted</span><span class="p">,</span> <span class="n">out_sorted</span><span class="p">)</span>
+
+    <span class="c1"># remove unsorted</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">out_unsorted</span><span class="p">)</span>
+
+    <span class="c1"># return the path to sorted bed</span>
+    <span class="k">return</span> <span class="n">out_sorted</span><span class="p">,</span> <span class="n">temp_files</span>
+
+
+<div class="viewcode-block" id="pct_fragments_in_promoters">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.calc_overlap_fc.pct_fragments_in_promoters">[docs]</a>
+<span class="nd">@deprecation</span><span class="o">.</span><span class="n">deprecated</span><span class="p">(</span><span class="n">deprecated_in</span><span class="o">=</span><span class="s2">&quot;0.4b&quot;</span><span class="p">,</span> <span class="n">removed_in</span><span class="o">=</span><span class="s2">&quot;0.5&quot;</span><span class="p">,</span>
+                        <span class="n">current_version</span><span class="o">=</span><span class="n">sctoolbox</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span>
+                        <span class="n">details</span><span class="o">=</span><span class="s2">&quot;Use the overlap_fragments_in_regions function instead.&quot;</span><span class="p">)</span>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">pct_fragments_in_promoters</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                               <span class="n">gtf_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">bam_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">fragments_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">cb_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">cb_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;CB&#39;</span><span class="p">,</span>
+                               <span class="n">species</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;bos_taurus&#39;</span><span class="p">,</span> <span class="s1">&#39;caenorhabditis_elegans&#39;</span><span class="p">,</span>
+                                                         <span class="s1">&#39;canis_lupus_familiaris&#39;</span><span class="p">,</span> <span class="s1">&#39;danio_rerio&#39;</span><span class="p">,</span>
+                                                         <span class="s1">&#39;drosophila_melanogaster&#39;</span><span class="p">,</span> <span class="s1">&#39;gallus_gallus&#39;</span><span class="p">,</span>
+                                                         <span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="s1">&#39;mus_musculus&#39;</span><span class="p">,</span> <span class="s1">&#39;oryzias_latipes&#39;</span><span class="p">,</span>
+                                                         <span class="s1">&#39;rattus_norvegicus&#39;</span><span class="p">,</span> <span class="s1">&#39;sus_scrofa&#39;</span><span class="p">,</span> <span class="s1">&#39;xenopus_tropicalis&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the fold change of fragments in promoters.</span>
+
+<span class="sd">    This function calculates for each cell, the fold change of fragments in a BAM alignment file</span>
+<span class="sd">    that overlap with a promoter region specified in a GTF file. The results are added to the anndata object</span>
+<span class="sd">    as new column.</span>
+<span class="sd">    This is a wrapper function for fc_fragments_in_regions to use promoters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        The anndata object containig cell barcodes in adata.obs.</span>
+<span class="sd">    gtf_file : str, default None</span>
+<span class="sd">        Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.</span>
+<span class="sd">    bam_file : str, default None</span>
+<span class="sd">        Path to BAM file. If None, a fragments file must be provided in the parameter &#39;fragments_file&#39;.</span>
+<span class="sd">    fragments_file : str, default None</span>
+<span class="sd">        Path to fragments file. If None, a BAM file must be provided in the parameter &#39;bam_file&#39;. The</span>
+<span class="sd">        BAM file will be converted into fragments file.</span>
+<span class="sd">    cb_col : str, default None</span>
+<span class="sd">        The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.</span>
+<span class="sd">    cb_tag : str, default &#39;CB&#39;</span>
+<span class="sd">        The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.</span>
+<span class="sd">    species : str, default None</span>
+<span class="sd">        Name of the species, will only be used if gtf_file is None to use internal GTF files.</span>
+<span class="sd">        Species are {bos_taurus, caenorhabditis_elegans, canis_lupus_familiaris, danio_rerio, drosophila_melanogaster,</span>
+<span class="sd">        gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}</span>
+<span class="sd">    threads : int, default 1</span>
+<span class="sd">        Number of threads for parallelization. Will be used to convert BAM to fragments file.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If no species and no gtf_file is given.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># exit if no gtf file and no species</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">gtf_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">species</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Please provide a GTF file or specify a species!&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">gtf_file</span><span class="p">:</span>
+        <span class="n">promoters_gtf</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="s2">&quot;sctoolbox&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;data/promoters_gtf/</span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">.104.promoters2000.gtf&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">promoters_gtf</span> <span class="o">=</span> <span class="n">gtf_file</span>
+
+    <span class="c1"># call function</span>
+    <span class="n">fc_fragments_in_regions</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span>
+                            <span class="n">regions_file</span><span class="o">=</span><span class="n">promoters_gtf</span><span class="p">,</span>
+                            <span class="n">bam_file</span><span class="o">=</span><span class="n">bam_file</span><span class="p">,</span>
+                            <span class="n">fragments_file</span><span class="o">=</span><span class="n">fragments_file</span><span class="p">,</span>
+                            <span class="n">cb_col</span><span class="o">=</span><span class="n">cb_col</span><span class="p">,</span>
+                            <span class="n">cb_tag</span><span class="o">=</span><span class="n">cb_tag</span><span class="p">,</span>
+                            <span class="n">regions_name</span><span class="o">=</span><span class="s1">&#39;promoters&#39;</span><span class="p">,</span>
+                            <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="fc_fragments_in_regions">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.calc_overlap_fc.fc_fragments_in_regions">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">fc_fragments_in_regions</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                            <span class="n">regions_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                            <span class="n">bam_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">fragments_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">cb_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">cb_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;CB&#39;</span><span class="p">,</span>
+                            <span class="n">regions_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;list&#39;</span><span class="p">,</span>
+                            <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+                            <span class="n">temp_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the fold change of fragments in a region against the background.</span>
+
+<span class="sd">    This function calculates the fold change of fragments overlapping a region against the background for each cell.</span>
+<span class="sd">    The regions are specified in a BED or GTF file and the fragments should be provided by a fragments or BAM file.</span>
+<span class="sd">    The results are added to the anndata object as new column.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        The anndata object containig cell barcodes in adata.obs.</span>
+<span class="sd">    regions_file : str</span>
+<span class="sd">        Path to BED or GTF file containing regions of interest.</span>
+<span class="sd">    bam_file : Optional[str], default None</span>
+<span class="sd">        Path to BAM file. If None, a fragments file must be provided in the parameter &#39;fragments_file&#39;.</span>
+<span class="sd">    fragments_file : Optional[str], default None</span>
+<span class="sd">        Path to fragments file. If None, a BAM file must be provided in the parameter &#39;bam_file&#39;. The</span>
+<span class="sd">        BAM file will be converted into fragments file.</span>
+<span class="sd">    cb_col : Optional[str], default None</span>
+<span class="sd">        The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.</span>
+<span class="sd">    cb_tag : str, default &#39;CB&#39;</span>
+<span class="sd">        The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.</span>
+<span class="sd">    regions_name : str, default &#39;list&#39;</span>
+<span class="sd">        The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns&#39; name</span>
+<span class="sd">        added to the anndata object (e.g. pct_fragments_in_{regions_name}).</span>
+<span class="sd">    threads : int, default 1</span>
+<span class="sd">        Number of threads for parallelization. Will be used to convert BAM to fragments file.</span>
+<span class="sd">    temp_dir : Optional[str], default None</span>
+<span class="sd">        Path to temporary directory. Will use the current working directory by default.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If bam_file and fragment file is not provided.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">temp_dir</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">create_dir</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">bam_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fragments_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either BAM file or fragments file has to be provided!&quot;</span><span class="p">)</span>
+
+    <span class="c1"># check for column in adata.obs where barcodes are</span>
+    <span class="k">if</span> <span class="n">cb_col</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">cb_col</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cb_col</span><span class="si">}</span><span class="s2"> is not in adata.obs!&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+    <span class="n">temp_files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># check if regions file is gtf or bed</span>
+    <span class="n">file_ext</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">regions_file</span><span class="p">)</span><span class="o">.</span><span class="n">suffix</span>
+    <span class="k">if</span> <span class="n">file_ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.gtf&#39;</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Converting GTF to BED...&quot;</span><span class="p">)</span>
+        <span class="c1"># convert gtf to bed with columns chr, start, end</span>
+        <span class="n">bed_file</span><span class="p">,</span> <span class="n">temp_files</span> <span class="o">=</span> <span class="n">_convert_gtf_to_bed</span><span class="p">(</span><span class="n">regions_file</span><span class="p">,</span> <span class="n">temp_files</span><span class="o">=</span><span class="n">temp_files</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">temp_dir</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">file_ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.bed&#39;</span><span class="p">:</span>
+        <span class="n">bed_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">regions_file</span><span class="p">)[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;_sorted.bed&#39;</span>
+        <span class="n">temp_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bed_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">_bed_is_sorted</span><span class="p">(</span><span class="n">regions_file</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sorting BED file...&quot;</span><span class="p">)</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">_sort_bed</span><span class="p">(</span><span class="n">regions_file</span><span class="p">,</span> <span class="n">bed_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bed_file</span> <span class="o">=</span> <span class="n">regions_file</span>
+
+    <span class="c1"># if only bam file is available -&gt; convert to fragments</span>
+    <span class="k">if</span> <span class="n">bam_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fragments_file</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Converting BAM to fragments file! This may take a while...&#39;</span><span class="p">)</span>
+        <span class="n">fragments_file</span> <span class="o">=</span> <span class="n">create_fragment_file</span><span class="p">(</span><span class="n">bam</span><span class="o">=</span><span class="n">bam_file</span><span class="p">,</span>
+                                              <span class="n">barcode_tag</span><span class="o">=</span><span class="n">cb_tag</span><span class="p">,</span>
+                                              <span class="n">outdir</span><span class="o">=</span><span class="n">temp_dir</span><span class="p">,</span>
+                                              <span class="n">nproc</span><span class="o">=</span><span class="n">threads</span><span class="p">)</span>
+        <span class="n">temp_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fragments_file</span><span class="p">)</span>
+
+    <span class="c1"># Check if fragments file is sorted</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">_bed_is_sorted</span><span class="p">(</span><span class="n">fragments_file</span><span class="p">):</span>
+        <span class="c1"># sort fragments file</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Sorting fragments file...&#39;</span><span class="p">)</span>
+        <span class="n">unsorted_fragments_file</span> <span class="o">=</span> <span class="n">fragments_file</span>
+        <span class="n">fragments_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">unsorted_fragments_file</span><span class="p">)[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;_sorted.bed&#39;</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">_sort_bed</span><span class="p">(</span><span class="n">unsorted_fragments_file</span><span class="p">,</span> <span class="n">fragments_file</span><span class="p">)</span>
+
+    <span class="c1"># overlap reads in fragments with promoter regions, return path to overlapped file</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finding overlaps...&#39;</span><span class="p">)</span>
+    <span class="n">overlap_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">,</span> <span class="s1">&#39;overlap_fragments_gtf.bed&#39;</span><span class="p">)</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">_overlap_two_bedfiles</span><span class="p">(</span><span class="n">fragments_file</span><span class="p">,</span> <span class="n">bed_file</span><span class="p">,</span> <span class="n">overlap</span><span class="o">=</span><span class="n">overlap_file</span><span class="p">,</span> <span class="n">wa</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">wb</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">temp_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">overlap_file</span><span class="p">)</span>
+
+    <span class="c1"># read overlap bedfile as dataframe</span>
+    <span class="n">overlap_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">overlap_file</span><span class="p">,</span>
+                             <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span>
+                             <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;chr_f&#39;</span><span class="p">,</span> <span class="s1">&#39;start_f&#39;</span><span class="p">,</span> <span class="s1">&#39;stop_f&#39;</span><span class="p">,</span> <span class="s1">&#39;barcode&#39;</span><span class="p">,</span> <span class="s1">&#39;count&#39;</span><span class="p">,</span> <span class="s1">&#39;chr_g&#39;</span><span class="p">,</span> <span class="s1">&#39;start_g&#39;</span><span class="p">,</span> <span class="s1">&#39;stop_g&#39;</span><span class="p">])</span>
+
+    <span class="c1"># read fragments bedfile as dataframe</span>
+    <span class="n">fragments_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">fragments_file</span><span class="p">,</span>
+                               <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span>
+                               <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                               <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;chr&#39;</span><span class="p">,</span> <span class="s1">&#39;start&#39;</span><span class="p">,</span> <span class="s1">&#39;stop&#39;</span><span class="p">,</span> <span class="s1">&#39;barcode&#39;</span><span class="p">,</span> <span class="s1">&#39;count&#39;</span><span class="p">])</span>
+
+    <span class="c1"># count fragments per cell</span>
+    <span class="n">counts_ov</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">count_fragments_per_cell</span><span class="p">(</span><span class="n">overlap_df</span><span class="p">,</span> <span class="n">barcode_col</span><span class="o">=</span><span class="s1">&#39;barcode&#39;</span><span class="p">,</span> <span class="n">frag_count</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">))</span>  <span class="c1"># count fragments per cell in overlap</span>
+    <span class="n">counts_all</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">count_fragments_per_cell</span><span class="p">(</span><span class="n">fragments_df</span><span class="p">,</span> <span class="n">barcode_col</span><span class="o">=</span><span class="s1">&#39;barcode&#39;</span><span class="p">,</span> <span class="n">frag_count</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">))</span>  <span class="c1"># count fragments per cell in all</span>
+
+    <span class="c1"># merge counts</span>
+    <span class="n">merged_df</span> <span class="o">=</span> <span class="n">counts_ov</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">counts_all</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;outer&#39;</span><span class="p">,</span> <span class="n">lsuffix</span><span class="o">=</span><span class="s1">&#39;_ov&#39;</span><span class="p">,</span> <span class="n">rsuffix</span><span class="o">=</span><span class="s1">&#39;_all&#39;</span><span class="p">)</span>  <span class="c1"># merge outer to keep all cells</span>
+
+    <span class="c1"># calculate fold change</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Calculating fold change...&#39;</span><span class="p">)</span>
+    <span class="n">column_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;fold_change_</span><span class="si">{</span><span class="n">regions_name</span><span class="si">}</span><span class="s1">_fragments&#39;</span>  <span class="c1"># name of the new column</span>
+    <span class="n">merged_df</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged_df</span><span class="p">[</span><span class="s1">&#39;count_ov&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">merged_df</span><span class="p">[</span><span class="s1">&#39;count_all&#39;</span><span class="p">]</span>  <span class="c1"># calculate fold change (Maybe better to use log2 fold change?)</span>
+
+    <span class="c1"># fill NaN with 0 as NaN means no fragments in that cell</span>
+    <span class="n">merged_df</span> <span class="o">=</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># add to adata.obs</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Adding results to adata object...&#39;</span><span class="p">)</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">merged_df</span><span class="p">[</span><span class="n">column_name</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>  <span class="c1"># merge left to keep only cells in adata.obs</span>
+
+    <span class="c1"># clean up temp files</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;cleaning up...&quot;</span><span class="p">)</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">rm_tmp</span><span class="p">(</span><span class="n">temp_dir</span><span class="o">=</span><span class="n">temp_dir</span><span class="p">,</span>
+                 <span class="n">temp_files</span><span class="o">=</span><span class="n">temp_files</span><span class="p">,</span>
+                 <span class="n">rm_dir</span><span class="o">=</span><span class="kc">False</span> <span class="k">if</span> <span class="n">temp_dir</span> <span class="k">else</span> <span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="count_fragments_per_cell">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.calc_overlap_fc.count_fragments_per_cell">[docs]</a>
+<span class="k">def</span> <span class="nf">count_fragments_per_cell</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">barcode_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;barcode&#39;</span><span class="p">,</span> <span class="n">frag_count</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;count&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get counts per cell from a dataframe containing fragments.</span>
+
+<span class="sd">    The dataframe must have a column with cell barcodes and a column with fragment counts.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : pd.DataFrame</span>
+<span class="sd">        The dataframe of a bedfile containing the fragments.</span>
+<span class="sd">    barcode_col : str, default &#39;barcode&#39;</span>
+<span class="sd">        The column name containing the cell barcodes.</span>
+<span class="sd">    frag_count : str, default &#39;count&#39;</span>
+<span class="sd">        The column name containing the fragment counts.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        The dataframe containing the number of fragments per cell.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">fragments_per_cell</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">barcode_col</span><span class="p">)[</span><span class="n">frag_count</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">fragments_per_cell</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,132 @@
+Utils
+=====
+
+.. rubric:: Setup
+
+.. exec_code ::
+
+    import sctoolbox.utilities as utils
+    
+
+------------------------------
+
+
+creators
+--------
+
+
+.. automodule:: sctoolbox.utils.creators
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+checker
+-------
+
+
+.. automodule:: sctoolbox.utils.checker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+bioutils
+--------
+
+
+.. automodule:: sctoolbox.utils.bioutils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+decorator
+---------
+
+
+.. automodule:: sctoolbox.utils.decorator
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+multiprocessing
+---------------
+
+
+.. automodule:: sctoolbox.utils.multiprocessing
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+jupyter
+-------
+
+
+.. automodule:: sctoolbox.utils.jupyter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+tables
+------
+
+
+.. automodule:: sctoolbox.utils.tables
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+adata
+-----
+
+
+.. automodule:: sctoolbox.utils.adata
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+assemblers
+----------
+
+
+.. automodule:: sctoolbox.utils.assemblers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+general
+-------
+
+
+.. automodule:: sctoolbox.utils.general
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+------------------------------
+
+io
+--
+
+
+.. automodule:: sctoolbox.utils.io
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    

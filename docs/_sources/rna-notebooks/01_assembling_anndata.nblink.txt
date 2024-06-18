@@ -1,0 +1,1 @@
+{"path": "../../../rna_analysis/notebooks/01_assembling_anndata.ipynb"}

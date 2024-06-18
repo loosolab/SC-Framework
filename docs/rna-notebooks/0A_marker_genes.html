@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>0A - Marker gene computation and analysis &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="0B - Receptor-Ligand Analysis" href="0B_ligand_receptor.html" />
+    <link rel="prev" title="04 - Embedding and clustering" href="04_clustering.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">RNA notebooks</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_assembling_anndata.html">01 - Assembling or loading anndata object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_QC_filtering.html">02 - QC and filtering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_batch.html">03 - Batch effect correction and comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_clustering.html">04 - Embedding and clustering</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">0A - Marker gene computation and analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1---Description">1 - Description</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2---Loading-packages">2 - Loading packages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3---Loading-adata">3 - Loading adata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4---Automatic-markers-per-cluster-using-rank_genes_groups">4 - Automatic markers per cluster using rank_genes_groups</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#5---Plot-expression">5 - Plot expression</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#5.1---Plot-custom-gene-list">5.1 - Plot custom gene list</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#5.2---Plot-cluster-marker">5.2 - Plot cluster marker</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#6---DEG-between-conditions-per-cluster-using-scanpy-rank-gene-groups">6 - DEG between conditions per cluster using scanpy rank gene groups</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#8---Save-adata">8 - Save adata</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="0B_ligand_receptor.html">0B - Receptor-Ligand Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0C_velocity_analysis.html">0C - Velocity Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">RNA notebooks</a></li>
+      <li class="breadcrumb-item active">0A - Marker gene computation and analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/rna-notebooks/0A_marker_genes.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sctoolbox.utilities</span> <span class="kn">import</span> <span class="n">bgcolor</span>
+</pre></div>
+</div>
+</div>
+<section id="0A---Marker-gene-computation-and-analysis">
+<h1>0A - Marker gene computation and analysis<a class="headerlink" href="#0A---Marker-gene-computation-and-analysis" title="Link to this heading"></a></h1>
+<hr style="border:2px solid black"></hr><section id="1---Description">
+<h2>1 - Description<a class="headerlink" href="#1---Description" title="Link to this heading"></a></h2>
+<p><strong>Note: Requires notebook 04_clustering to be run prior to this notebook.</strong></p>
+<p>Marker genes, also known as differentially expressed genes (DEG), are genes that are predominantly expressed in a single group. This means that the expression of a small amount of genes is sufficient to assign a cell to a cell type, condition, etc. For example the expression of <code class="docutils literal notranslate"><span class="pre">MERTK</span></code>, <code class="docutils literal notranslate"><span class="pre">FCGR3A</span></code>, <code class="docutils literal notranslate"><span class="pre">MRC1</span></code> would identify a cell as a Macrophage. Lists of cell type markers can be found <a class="reference external" href="https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features">here</a>. However, before the
+identification of e.g. cell types computation of potential marker genes is necessary.</p>
+<p>This notebook is aimed at computing lists of potential marker genes for the selected groups/ clusters and reviewing their performance on highlighting said groups. Two different methods are provided for the identification of group marker genes:</p>
+<ul class="simple">
+<li><p>The <a class="reference external" href="https://scanpy.readthedocs.io/en/stable/generated/scanpy.tl.rank_genes_groups.html">rank_genes_groups()</a> method from scanpy.</p></li>
+<li><p><a class="reference external" href="https://doi.org/doi:10.18129/B9.bioc.DESeq2">DESeq2</a> a method originally intended for bulk that will be run by first creating pseudobulks from the given groups.</p></li>
+</ul>
+<hr class="docutils" />
+</section>
+<section id="2---Loading-packages">
+<h2>2 - Loading packages<a class="headerlink" href="#2---Loading-packages" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utilities</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.tools</span> <span class="k">as</span> <span class="nn">tools</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.plotting</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">matplotlib.backends.backend_pdf</span>
+<span class="n">utils</span><span class="o">.</span><span class="n">settings_from_config</span><span class="p">(</span><span class="s2">&quot;config.yaml&quot;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">&quot;0A&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="3---Loading-adata">
+<h2>3 - Loading adata<a class="headerlink" href="#3---Loading-adata" title="Link to this heading"></a></h2>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="n">anndata_file</span> <span class="o">=</span> <span class="s2">&quot;anndata_4.h5ad&quot;</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_h5ad</span><span class="p">(</span><span class="n">anndata_file</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">option_context</span><span class="p">(</span><span class="s2">&quot;display.max.rows&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;display.max.columns&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4---Automatic-markers-per-cluster-using-rank_genes_groups">
+<h2>4 - Automatic markers per cluster using rank_genes_groups<a class="headerlink" href="#4---Automatic-markers-per-cluster-using-rank_genes_groups" title="Link to this heading"></a></h2>
+<hr style="border:2px solid black"></hr><h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># Column names of clustering columns</span>
+<span class="n">clustering_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;leiden_0.1&quot;</span><span class="p">]</span>  <span class="c1"># &quot;leiden_0.2&quot;, &quot;leiden_0.3&quot;, &quot;leiden_0.4&quot;, &quot;leiden_0.5&quot;, &quot;leiden_0.6&quot;, &quot;leiden_0.7&quot;, &quot;leiden_0.8&quot;, &quot;leiden_0.9&quot;</span>
+
+<span class="c1"># Marker genes</span>
+
+<span class="c1"># Method for gene ranking</span>
+<span class="n">ranking_method</span> <span class="o">=</span> <span class="s2">&quot;t-test&quot;</span>
+<span class="c1"># Top X genes to be reported, None for all genes</span>
+<span class="n">n_genes</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># Marker gene filter</span>
+
+<span class="c1"># Minimum fraction of cells in a group that must express a gene to be considered as a marker gene</span>
+<span class="n">min_in_group_fraction</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="c1"># Minimum foldchange (+/-) to be considered as a marker gene</span>
+<span class="n">min_fold_change</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="c1"># Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene</span>
+<span class="n">max_out_group_fraction</span> <span class="o">=</span> <span class="mf">0.8</span>
+
+<span class="c1"># Plotting</span>
+<span class="n">n_genes_markerplot</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">marker_style</span> <span class="o">=</span> <span class="s2">&quot;dots&quot;</span>  <span class="c1"># Either `dots` or `heatmap`.</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">marker_tables</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">clustering</span> <span class="ow">in</span> <span class="n">clustering_cols</span><span class="p">:</span>
+
+    <span class="c1"># Identify markers per cluster (adjust group fraction and fold change to filter genes)</span>
+    <span class="n">tools</span><span class="o">.</span><span class="n">run_rank_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">clustering</span><span class="p">,</span>
+                         <span class="n">min_in_group_fraction</span><span class="o">=</span><span class="n">min_in_group_fraction</span><span class="p">,</span>
+                         <span class="n">min_fold_change</span><span class="o">=</span><span class="n">min_fold_change</span><span class="p">,</span>
+                         <span class="n">max_out_group_fraction</span><span class="o">=</span><span class="n">max_out_group_fraction</span><span class="p">,</span>
+                         <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span>
+                         <span class="n">ranking_method</span><span class="o">=</span><span class="n">ranking_method</span><span class="p">)</span>
+
+    <span class="c1"># Plot dotplot of markers</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_plot</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rank_genes_</span><span class="si">{</span><span class="n">clustering</span><span class="si">}</span><span class="s2">_filtered&quot;</span><span class="p">,</span>
+                           <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes_markerplot</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">marker_style</span><span class="p">,</span>
+                           <span class="n">save</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;marker_genes_</span><span class="si">{</span><span class="n">marker_style</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">clustering</span><span class="si">}</span><span class="s2">.pdf&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Write marker genes to table</span>
+    <span class="n">marker_table</span> <span class="o">=</span> <span class="n">tools</span><span class="o">.</span><span class="n">get_rank_genes_tables</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">out_group_fractions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                               <span class="n">key</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rank_genes_</span><span class="si">{</span><span class="n">clustering</span><span class="si">}</span><span class="s2">_filtered&quot;</span><span class="p">,</span>
+                                               <span class="n">save_excel</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;cluster_marker_genes_</span><span class="si">{</span><span class="n">clustering</span><span class="si">}</span><span class="s2">.xlsx&quot;</span><span class="p">)</span>
+    <span class="n">marker_tables</span><span class="p">[</span><span class="n">clustering</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_table</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="5---Plot-expression">
+<h2>5 - Plot expression<a class="headerlink" href="#5---Plot-expression" title="Link to this heading"></a></h2>
+<hr style="border:2px solid black"></hr><p>This section of the notebook plots the marker gene expression for each selected clustering in the selected embedding scatterplot. There is also an option to specify a custom list of genes to be plotted.</p>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># Column names of clustering columns</span>
+<span class="n">marker_table_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;leiden_0.1&quot;</span><span class="p">]</span>  <span class="c1"># &quot;leiden_0.2&quot;, &quot;leiden_0.3&quot;, &quot;leiden_0.4&quot;, &quot;leiden_0.5&quot;, &quot;leiden_0.6&quot;, &quot;leiden_0.7&quot;, &quot;leiden_0.8&quot;, &quot;leiden_0.9&quot;</span>
+
+<span class="c1"># Top X marker to be plotted</span>
+<span class="n">n_marker</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="c1"># List of genes additionally shown in the embedding.</span>
+<span class="n">custom_gene_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="n">embedding</span> <span class="o">=</span> <span class="s2">&quot;umap&quot;</span>  <span class="c1"># Either umap or tsne</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">embedding</span> <span class="o">==</span> <span class="s2">&quot;umap&quot;</span><span class="p">:</span>
+    <span class="n">pl_method</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">umap</span>
+<span class="k">elif</span> <span class="n">embedding</span> <span class="o">==</span> <span class="s2">&quot;tsne&quot;</span><span class="p">:</span>
+    <span class="n">pl_method</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">tsne</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid embedding set.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<section id="5.1---Plot-custom-gene-list">
+<h3>5.1 - Plot custom gene list<a class="headerlink" href="#5.1---Plot-custom-gene-list" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">custom_gene_list</span><span class="p">:</span>
+    <span class="n">pl_method</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">custom_gene_list</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">sc_colormap</span><span class="p">(),</span> <span class="n">ncols</span><span class="o">=</span><span class="n">n_marker</span><span class="p">)</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">embedding</span><span class="si">}</span><span class="s2">_custom_gene_list_expression.pdf&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="5.2---Plot-cluster-marker">
+<h3>5.2 - Plot cluster marker<a class="headerlink" href="#5.2---Plot-cluster-marker" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">cluster_col</span> <span class="ow">in</span> <span class="n">marker_table_cols</span><span class="p">:</span>
+    <span class="n">pdf</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">backend_pdf</span><span class="o">.</span><span class="n">PdfPages</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utils</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">figure_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">embedding</span><span class="si">}</span><span class="s2">_clustering_</span><span class="si">{</span><span class="n">cluster_col</span><span class="si">}</span><span class="s2">_expression.pdf&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">cluster</span><span class="p">,</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">marker_tables</span><span class="p">[</span><span class="n">cluster_col</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;selection&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">cluster</span> <span class="k">if</span> <span class="n">i</span> <span class="k">else</span> <span class="s2">&quot;NA&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">cluster_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">]</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">&#39;selection_colors&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">&quot;#08bf36&quot;</span><span class="p">,</span> <span class="s2">&quot;#c0c2c4&quot;</span><span class="p">])</span>
+        <span class="n">marker</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;names&quot;</span><span class="p">][:</span><span class="n">n_marker</span><span class="p">])</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;Cluster_</span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">marker</span><span class="p">]</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">embedding</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">basis</span><span class="o">=</span><span class="s2">&quot;X_&quot;</span> <span class="o">+</span> <span class="n">embedding</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span> <span class="p">[</span><span class="s2">&quot;selection&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">marker</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                              <span class="n">ncols</span><span class="o">=</span><span class="n">n_marker</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Highlighted Cluster&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">title</span><span class="p">,</span> <span class="n">return_fig</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">pdf</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+    <span class="n">pdf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+</section>
+<section id="6---DEG-between-conditions-per-cluster-using-scanpy-rank-gene-groups">
+<h2>6 - DEG between conditions per cluster using scanpy rank gene groups<a class="headerlink" href="#6---DEG-between-conditions-per-cluster-using-scanpy-rank-gene-groups" title="Link to this heading"></a></h2>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="n">clustering_col</span> <span class="o">=</span> <span class="s2">&quot;leiden_0.1&quot;</span>
+<span class="n">condition_col</span> <span class="o">=</span> <span class="s2">&quot;chamber&quot;</span>
+
+<span class="c1"># Method for gene ranking</span>
+<span class="n">deg_ranking_method</span> <span class="o">=</span> <span class="s2">&quot;t-test&quot;</span>
+<span class="c1"># Top X genes to be reported, None for all genes</span>
+<span class="n">deg_n_genes</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># Minimum fraction of cells in a group that must express a gene to be considered as a marker gene</span>
+<span class="n">deg_min_in_group_fraction</span> <span class="o">=</span> <span class="mf">0.25</span>
+<span class="c1"># Minimum foldchange (+/-) to be considered as a marker gene</span>
+<span class="n">deg_min_fold_change</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="c1"># Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene</span>
+<span class="n">deg_max_out_group_fraction</span> <span class="o">=</span> <span class="mf">0.8</span>
+
+<span class="c1"># Plotting</span>
+<span class="n">n_genes_deg_plot</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">deg_style</span> <span class="o">=</span> <span class="s2">&quot;dots&quot;</span>  <span class="c1"># Either &#39;dots&#39; or &#39;heatmap&#39;</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">clustering_col</span><span class="p">]):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cluster </span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">adata_sub</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">clustering_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">]</span>
+
+    <span class="c1"># Check if sample count is sufficent</span>
+    <span class="n">value_counts</span> <span class="o">=</span> <span class="n">adata_sub</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">condition_col</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+    <span class="n">insufficient_size</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">value_counts</span><span class="o">.</span><span class="n">index</span> <span class="k">if</span> <span class="n">value_counts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">insufficient_size</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Removed conditions due to insufficent size </span><span class="si">{</span><span class="n">insufficient_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">adata_sub</span> <span class="o">=</span> <span class="n">adata_sub</span><span class="p">[</span><span class="o">~</span><span class="n">adata_sub</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">condition_col</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">insufficient_size</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">adata_sub</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">condition_col</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipped Cluster </span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">continue</span>
+
+    <span class="n">tools</span><span class="o">.</span><span class="n">run_rank_genes</span><span class="p">(</span><span class="n">adata_sub</span><span class="p">,</span> <span class="n">condition_col</span><span class="p">,</span>
+                         <span class="n">min_in_group_fraction</span><span class="o">=</span><span class="n">deg_min_in_group_fraction</span><span class="p">,</span>
+                         <span class="n">min_fold_change</span><span class="o">=</span><span class="n">deg_min_fold_change</span><span class="p">,</span>
+                         <span class="n">max_out_group_fraction</span><span class="o">=</span><span class="n">deg_max_out_group_fraction</span><span class="p">,</span>
+                         <span class="n">n_genes</span><span class="o">=</span><span class="n">deg_n_genes</span><span class="p">,</span>
+                         <span class="n">ranking_method</span><span class="o">=</span><span class="n">deg_ranking_method</span><span class="p">)</span>
+
+    <span class="c1"># Plot dotplot of markers</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_plot</span><span class="p">(</span><span class="n">adata_sub</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rank_genes_</span><span class="si">{</span><span class="n">condition_col</span><span class="si">}</span><span class="s2">_filtered&quot;</span><span class="p">,</span>
+                           <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes_deg_plot</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">deg_style</span><span class="p">,</span>
+                           <span class="n">save</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;DEG_</span><span class="si">{</span><span class="n">deg_style</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">condition_col</span><span class="si">}</span><span class="s2">_cluster_</span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2">.pdf&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Write marker genes to table</span>
+    <span class="n">deg_table</span> <span class="o">=</span> <span class="n">tools</span><span class="o">.</span><span class="n">get_rank_genes_tables</span><span class="p">(</span><span class="n">adata_sub</span><span class="p">,</span> <span class="n">out_group_fractions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                               <span class="n">key</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rank_genes_</span><span class="si">{</span><span class="n">condition_col</span><span class="si">}</span><span class="s2">_filtered&quot;</span><span class="p">,</span>
+                                               <span class="n">save_excel</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;DEG_</span><span class="si">{</span><span class="n">condition_col</span><span class="si">}</span><span class="s2">_cluster_</span><span class="si">{</span><span class="n">cluster</span><span class="si">}</span><span class="s2">.xlsx&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<p>## 7 - Run DEseq2 between conditions/samples</p>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># Adjust which columns to use for DEseq2</span>
+<span class="n">sample_col</span> <span class="o">=</span> <span class="s2">&quot;sample&quot;</span>
+<span class="n">condition_col</span> <span class="o">=</span> <span class="s2">&quot;chamber&quot;</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Normalize raw counts across cells</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># returns a dict</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;raw_norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">]</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;raw_norm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;raw_norm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">ceil</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run DEseq2</span>
+<span class="n">deseq_table</span> <span class="o">=</span> <span class="n">tools</span><span class="o">.</span><span class="n">run_deseq2</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">sample_col</span><span class="p">,</span> <span class="n">condition_col</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;raw_norm&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">deseq_table</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">deseq_table</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">utils</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">table_dir</span><span class="si">}</span><span class="s2">/DEseq_</span><span class="si">{</span><span class="n">sample_col</span><span class="si">}</span><span class="s2">_vs_</span><span class="si">{</span><span class="n">condition_col</span><span class="si">}</span><span class="s2">.xlsx&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="8---Save-adata">
+<h2>8 - Save adata<a class="headerlink" href="#8---Save-adata" title="Link to this heading"></a></h2>
+<p>Fix error when saving filtered rank gene names by removing nan in adata.uns[RANK_GENES_KEY][‘names’]</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;rank_genes&quot;</span><span class="p">):</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">]:</span>
+            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">j</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="n">j</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span><span class="p">])</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">names</span><span class="p">)</span><span class="o">.</span><span class="n">to_records</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">utils</span><span class="o">.</span><span class="n">save_h5ad</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;anndata_5.h5ad&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="04_clustering.html" class="btn btn-neutral float-left" title="04 - Embedding and clustering" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="0B_ligand_receptor.html" class="btn btn-neutral float-right" title="0B - Receptor-Ligand Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

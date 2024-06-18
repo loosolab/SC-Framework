@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>02 - QC and filtering &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="03 - Batch effect correction and comparisons" href="03_batch.html" />
+    <link rel="prev" title="01 - Assembling or loading anndata object" href="01_assembling_anndata.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">RNA notebooks</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_assembling_anndata.html">01 - Assembling or loading anndata object</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">02 - QC and filtering</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1---Description">1 - Description</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2---Setup">2 - Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3---Load-anndata">3 - Load anndata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4---QC-and-filtering">4 - QC and filtering</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#4.1---Show-STARsolo-quality-(optional)">4.1 - Show STARsolo quality (optional)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2---Label-genes">4.2 - Label genes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.3---Calculate-QC-metrics">4.3 - Calculate QC metrics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.4---Calculate-doublet-scores">4.4 - Calculate doublet scores</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.5---Predict-sex-per-sample">4.5 - Predict sex per sample</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.6---Cell-filtering">4.6 - Cell filtering</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.7---Gene-filtering">4.7 - Gene filtering</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#5---Save-filtered-adata">5 - Save filtered adata</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="03_batch.html">03 - Batch effect correction and comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_clustering.html">04 - Embedding and clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0A_marker_genes.html">0A - Marker gene computation and analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0B_ligand_receptor.html">0B - Receptor-Ligand Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0C_velocity_analysis.html">0C - Velocity Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">RNA notebooks</a></li>
+      <li class="breadcrumb-item active">02 - QC and filtering</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/rna-notebooks/02_QC_filtering.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sctoolbox</span>
+<span class="kn">from</span> <span class="nn">sctoolbox.utilities</span> <span class="kn">import</span> <span class="n">bgcolor</span>
+</pre></div>
+</div>
+</div>
+<section id="02---QC-and-filtering">
+<h1>02 - QC and filtering<a class="headerlink" href="#02---QC-and-filtering" title="Link to this heading"></a></h1>
+<hr style="border:2px solid black"></hr><section id="1---Description">
+<h2>1 - Description<a class="headerlink" href="#1---Description" title="Link to this heading"></a></h2>
+<p><strong>Quality control</strong></p>
+<blockquote>
+<div><p>Before analysing the single‐cell gene expression data, we must ensure that all cellular barcode data correspond to viable cells. Cell QC is commonly performed based on three QC covariates: the number of counts per barcode (count depth), the number of genes per barcode, and the fraction of counts from mitochondrial genes per barcode […]. The distributions of these QC covariates are examined for outlier peaks that are filtered out by thresholding […]. These outlier barcodes can correspond
+to dying cells, cells whose membranes are broken, or doublets. For example, barcodes with a low count depth, few detected genes, and a high fraction of mitochondrial counts are indicative of cells whose cytoplasmic mRNA has leaked out through a broken membrane, and thus, only mRNA located in the mitochondria is still conserved […]. In contrast, cells with unexpectedly high counts and a large number of detected genes may represent doublets.</p>
+</div></blockquote>
+<p>SOURCE: <a class="reference external" href="https://doi.org/10.15252/msb.20188746">10.15252/msb.20188746</a></p>
+<hr class="docutils" />
+</section>
+<section id="2---Setup">
+<h2>2 - Setup<a class="headerlink" href="#2---Setup" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sctoolbox.utilities</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.tools.qc_filter</span> <span class="k">as</span> <span class="nn">qc</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.marker_genes</span> <span class="k">as</span> <span class="nn">marker_genes</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.plotting</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="n">utils</span><span class="o">.</span><span class="n">settings_from_config</span><span class="p">(</span><span class="s2">&quot;config.yaml&quot;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">&quot;02&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="3---Load-anndata">
+<h2>3 - Load anndata<a class="headerlink" href="#3---Load-anndata" title="Link to this heading"></a></h2>
+<p>Uses the anndata object written by the previous notebook.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_h5ad</span><span class="p">(</span><span class="s2">&quot;anndata_1.h5ad&quot;</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">option_context</span><span class="p">(</span><span class="s2">&quot;display.max.rows&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;display.max.columns&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4---QC-and-filtering">
+<h2>4 - QC and filtering<a class="headerlink" href="#4---QC-and-filtering" title="Link to this heading"></a></h2>
+<hr style="border:2px solid black"></hr><h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># Set the species of the data</span>
+<span class="n">species</span> <span class="o">=</span> <span class="s2">&quot;human&quot;</span>
+
+<span class="c1"># Set the column in adata.obs containing the biological condition to evaluate</span>
+<span class="n">condition_column</span> <span class="o">=</span> <span class="s2">&quot;sample&quot;</span>
+
+<span class="c1"># Set the column in adata.var containing gene names (or set to None to use adata.var index)</span>
+<span class="n">gene_column</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># Absolute minimum number of genes for pre-selection of cells before QC plotting</span>
+<span class="n">min_genes</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="c1"># Decide whether to remove doublets using scrublet (True) or to skip doublet calculation (False)</span>
+<span class="n">filter_doublets</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">threads</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">doublet_threshold</span> <span class="o">=</span> <span class="mf">0.2</span>
+
+<span class="c1"># Whether to try to predicting the sex of samples using the expression of a female gene</span>
+<span class="n">predict_sex</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">female_gene</span> <span class="o">=</span> <span class="s2">&quot;Xist&quot;</span>  <span class="c1"># name of the gene to use for the sex assignment</span>
+
+<span class="c1"># Decide whether to estimate thresholds individual per condition (False) or globally (True)</span>
+<span class="n">global_threshold</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Removal of gene subsets</span>
+<span class="n">filter_mito</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">filter_ribo</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">filter_gender</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Optional: Plot STARsolo quality if a path is given</span>
+<span class="n">quant_folder</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#Ensure that condition column is a category</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">condition_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">condition_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="4.1---Show-STARsolo-quality-(optional)">
+<h3>4.1 - Show STARsolo quality (optional)<a class="headerlink" href="#4.1---Show-STARsolo-quality-(optional)" title="Link to this heading"></a></h3>
+<p>If the data was mapped using STARsolo, use the parameter to set the path to the STARsolo runs and plot quality measures across runs. The path must be a folder, e.g. “path/to/starsolo_output”, which contains folders per condition e.g. “cond1”, “cond2”, etc.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">quant_folder</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">plot_starsolo_quality</span><span class="p">(</span><span class="n">quant_folder</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="s2">&quot;starsolo_quality.pdf&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">plot_starsolo_UMI</span><span class="p">(</span><span class="n">quant_folder</span><span class="p">,</span> <span class="n">ncol</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="s2">&quot;starsolo_cell_selection.pdf&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4.2---Label-genes">
+<h3>4.2 - Label genes<a class="headerlink" href="#4.2---Label-genes" title="Link to this heading"></a></h3>
+<p>Mark genes on their general association. E.g. mitochondrial.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qc_vars</span> <span class="o">=</span> <span class="n">marker_genes</span><span class="o">.</span><span class="n">label_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">gene_column</span><span class="o">=</span><span class="n">gene_column</span><span class="p">,</span> <span class="n">species</span><span class="o">=</span><span class="n">species</span><span class="p">)</span>
+<span class="n">qc_vars</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4.3---Calculate-QC-metrics">
+<h3>4.3 - Calculate QC metrics<a class="headerlink" href="#4.3---Calculate-QC-metrics" title="Link to this heading"></a></h3>
+<p>Create quality control metrics to filter the data on.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span> <span class="o">=</span> <span class="n">qc</span><span class="o">.</span><span class="n">calculate_qc_metrics</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">qc_vars</span><span class="o">=</span><span class="n">qc_vars</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4.4---Calculate-doublet-scores">
+<h3>4.4 - Calculate doublet scores<a class="headerlink" href="#4.4---Calculate-doublet-scores" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set filter for number of genes before calculating doublets</span>
+<span class="n">n_cells_before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;n_genes&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_genes</span><span class="p">]</span>
+<span class="n">n_cells_after</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Filtered out </span><span class="si">{</span><span class="n">n_cells_before</span><span class="o">-</span><span class="n">n_cells_after</span><span class="si">}</span><span class="s2"> cells which had less than </span><span class="si">{</span><span class="n">min_genes</span><span class="si">}</span><span class="s2"> gene(s) expressed.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">filter_doublets</span><span class="p">:</span>
+
+    <span class="n">qc</span><span class="o">.</span><span class="n">estimate_doublets</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">condition_column</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">doublet_threshold</span><span class="p">)</span>
+
+    <span class="c1">#Remove the duplicates from adata</span>
+    <span class="n">qc</span><span class="o">.</span><span class="n">filter_cells</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;predicted_doublet&quot;</span><span class="p">,</span> <span class="n">remove_bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4.5---Predict-sex-per-sample">
+<h3>4.5 - Predict sex per sample<a class="headerlink" href="#4.5---Predict-sex-per-sample" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">predict_sex</span><span class="p">:</span>
+    <span class="n">qc</span><span class="o">.</span><span class="n">predict_sex</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">condition_column</span><span class="p">,</span> <span class="n">gene_column</span><span class="o">=</span><span class="n">gene_column</span><span class="p">,</span> <span class="n">gene</span><span class="o">=</span><span class="n">female_gene</span><span class="p">,</span>
+                   <span class="n">save</span><span class="o">=</span><span class="s2">&quot;female_prediction.pdf&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="4.6---Cell-filtering">
+<h3>4.6 - Cell filtering<a class="headerlink" href="#4.6---Cell-filtering" title="Link to this heading"></a></h3>
+<hr style="border:1px solid black"></hr><p>Low and high count depth indicates cells with low integrity and doublets, respectively (DOI: 10.15252/msb.20188746).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Choose columns to be used for filtering</span>
+<span class="n">obs_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;n_genes&quot;</span><span class="p">,</span> <span class="s2">&quot;log1p_total_counts&quot;</span><span class="p">]</span>
+<span class="n">obs_columns</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;pct_counts_&quot;</span> <span class="o">+</span> <span class="n">var</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">qc_vars</span> <span class="k">if</span> <span class="n">var</span> <span class="o">!=</span> <span class="s2">&quot;is_gender&quot;</span><span class="p">]</span>
+
+<span class="n">utils</span><span class="o">.</span><span class="n">add_uns_info</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;obs_metrics&quot;</span><span class="p">,</span> <span class="n">obs_columns</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;append&quot;</span><span class="p">)</span>
+<span class="n">obs_columns</span>
+</pre></div>
+</div>
+</div>
+<section id="4.6.1---Estimate-initial-thresholds-automatically">
+<h4>4.6.1 - Estimate initial thresholds automatically<a class="headerlink" href="#4.6.1---Estimate-initial-thresholds-automatically" title="Link to this heading"></a></h4>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">groupby</span> <span class="o">=</span> <span class="n">condition_column</span> <span class="k">if</span> <span class="n">global_threshold</span> <span class="ow">is</span> <span class="kc">False</span> <span class="k">else</span> <span class="kc">None</span>
+<span class="n">initial_thresholds</span> <span class="o">=</span> <span class="n">qc</span><span class="o">.</span><span class="n">automatic_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">obs_columns</span><span class="p">)</span>
+<span class="n">qc</span><span class="o">.</span><span class="n">thresholds_as_table</span><span class="p">(</span><span class="n">initial_thresholds</span><span class="p">)</span> <span class="c1"># show thresholds</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="4.6.2---Customize-thresholds-via-sliders">
+<h4>4.6.2 - Customize thresholds via sliders<a class="headerlink" href="#4.6.2---Customize-thresholds-via-sliders" title="Link to this heading"></a></h4>
+<p>(Rerun cell if plot is not shown)</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> widget
+
+<span class="c1">#Plot violins and sliders</span>
+<span class="n">obs_figure</span><span class="p">,</span> <span class="n">obs_slider_dict</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">quality_violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">obs_columns</span><span class="p">,</span>
+                                            <span class="n">groupby</span><span class="o">=</span><span class="n">condition_column</span><span class="p">,</span>
+                                            <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span>
+                                            <span class="n">thresholds</span><span class="o">=</span><span class="n">initial_thresholds</span><span class="p">,</span>
+                                            <span class="n">global_threshold</span><span class="o">=</span><span class="n">global_threshold</span><span class="p">,</span>
+                                            <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell quality control (before)&quot;</span><span class="p">,</span>
+                                            <span class="n">save</span><span class="o">=</span><span class="s2">&quot;cell_filtering.png&quot;</span><span class="p">)</span>
+<span class="n">obs_figure</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get final thresholds</span>
+<span class="n">final_thresholds</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">get_slider_thresholds</span><span class="p">(</span><span class="n">obs_slider_dict</span><span class="p">)</span>
+<span class="n">qc</span><span class="o">.</span><span class="n">thresholds_as_table</span><span class="p">(</span><span class="n">final_thresholds</span><span class="p">)</span> <span class="c1"># show thresholds</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Show pairwise comparisons of column values w/ thresholds (mean values in case thresholds are grouped)</span>
+<span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>  <span class="c1"># close previous figure</span>
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">final_thresholds</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">mean_thresholds</span> <span class="o">=</span> <span class="n">qc</span><span class="o">.</span><span class="n">get_mean_thresholds</span><span class="p">(</span><span class="n">final_thresholds</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">pairwise_scatter</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="n">obs_columns</span><span class="p">,</span> <span class="n">thresholds</span><span class="o">=</span><span class="n">mean_thresholds</span><span class="p">,</span> <span class="n">save</span><span class="o">=</span><span class="s2">&quot;cell_filtering_scatter.pdf&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="4.6.3---Apply-final-thresholds">
+<h4>4.6.3 - Apply final thresholds<a class="headerlink" href="#4.6.3---Apply-final-thresholds" title="Link to this heading"></a></h4>
+<p>Filter the anndata object based on the thresholds in the threshold table.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qc</span><span class="o">.</span><span class="n">apply_qc_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="n">thresholds</span><span class="o">=</span><span class="n">final_thresholds</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="4.6.4---Show-data-after-filtering">
+<h4>4.6.4 - Show data after filtering<a class="headerlink" href="#4.6.4---Show-data-after-filtering" title="Link to this heading"></a></h4>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="c1">#Plot violins and sliders</span>
+<span class="n">figure</span><span class="p">,</span> <span class="n">slider_dict</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">quality_violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">obs_columns</span><span class="p">,</span>
+                                     <span class="n">groupby</span><span class="o">=</span><span class="n">condition_column</span><span class="p">,</span>
+                                     <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                                     <span class="n">global_threshold</span> <span class="o">=</span> <span class="n">global_threshold</span><span class="p">,</span>
+                                     <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell quality control (after)&quot;</span><span class="p">,</span>
+                                     <span class="n">save</span><span class="o">=</span><span class="s2">&quot;cell_filtering_final.png&quot;</span><span class="p">)</span>
+<span class="n">figure</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+</section>
+<section id="4.7---Gene-filtering">
+<h3>4.7 - Gene filtering<a class="headerlink" href="#4.7---Gene-filtering" title="Link to this heading"></a></h3>
+<hr style="border:1px solid black"></hr><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#Recalculate quality measures for genes</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">qc</span><span class="o">.</span><span class="n">calculate_qc_metrics</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#Remove genes with 0 count</span>
+<span class="n">zero_bool</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;n_cells_by_counts&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span><span class="o">~</span><span class="n">zero_bool</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1">#Choose columns for quality control</span>
+<span class="n">var_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;n_cells_by_counts&quot;</span><span class="p">,</span> <span class="s2">&quot;log1p_mean_counts&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<section id="4.7.1---Customize-thresholds-via-sliders">
+<h4>4.7.1 - Customize thresholds via sliders<a class="headerlink" href="#4.7.1---Customize-thresholds-via-sliders" title="Link to this heading"></a></h4>
+<p>(Rerun cell if plot is not shown)</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> widget
+
+<span class="c1">#Plot violins and sliders</span>
+<span class="n">var_figure</span><span class="p">,</span> <span class="n">var_slider_dict</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">quality_violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">var_columns</span><span class="p">,</span>
+                                            <span class="n">which</span><span class="o">=</span><span class="s2">&quot;var&quot;</span><span class="p">,</span>
+                                            <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Gene quality control (before)&quot;</span><span class="p">,</span>
+                                            <span class="n">save</span><span class="o">=</span><span class="s2">&quot;gene_filtering.png&quot;</span><span class="p">)</span>
+<span class="n">var_figure</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="4.7.2---Apply-gene-filtering">
+<h4>4.7.2 - Apply gene filtering<a class="headerlink" href="#4.7.2---Apply-gene-filtering" title="Link to this heading"></a></h4>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get final thresholds</span>
+<span class="n">final_thresholds</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">get_slider_thresholds</span><span class="p">(</span><span class="n">var_slider_dict</span><span class="p">)</span>
+<span class="n">qc</span><span class="o">.</span><span class="n">thresholds_as_table</span><span class="p">(</span><span class="n">final_thresholds</span><span class="p">)</span> <span class="c1"># show thresholds</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qc</span><span class="o">.</span><span class="n">apply_qc_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="n">thresholds</span><span class="o">=</span><span class="n">final_thresholds</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="4.7.3---Show-data-after-filtering">
+<h4>4.7.3 - Show data after filtering<a class="headerlink" href="#4.7.3---Show-data-after-filtering" title="Link to this heading"></a></h4>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+
+<span class="c1">#Plot violins and sliders</span>
+<span class="n">figure</span><span class="p">,</span> <span class="n">slider_dict</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">quality_violin</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">var_columns</span><span class="p">,</span>
+                                        <span class="n">which</span><span class="o">=</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                                        <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Gene quality control (after)&quot;</span><span class="p">,</span>
+                                        <span class="n">save</span><span class="o">=</span><span class="s2">&quot;gene_filtering_final.png&quot;</span><span class="p">)</span>
+<span class="n">figure</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="4.7.4---Filter-additional-marked-genes">
+<h4>4.7.4 - Filter additional marked genes<a class="headerlink" href="#4.7.4---Filter-additional-marked-genes" title="Link to this heading"></a></h4>
+<p>Remove genes that are labeled as e.g. mitochondrial genes.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#Remove mitochrondrial genes</span>
+<span class="k">if</span> <span class="n">filter_mito</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Removing mitochrondrial genes:&quot;</span><span class="p">)</span>
+    <span class="n">qc</span><span class="o">.</span><span class="n">filter_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;is_mito&quot;</span><span class="p">)</span>
+
+<span class="c1">#Remove ribosomal genes</span>
+<span class="k">if</span> <span class="n">filter_ribo</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Removing ribosomal genes:&quot;</span><span class="p">)</span>
+    <span class="n">qc</span><span class="o">.</span><span class="n">filter_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;is_ribo&quot;</span><span class="p">)</span>
+
+<span class="c1">#Remove gender genes</span>
+<span class="k">if</span> <span class="n">filter_gender</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Removing gender genes:&quot;</span><span class="p">)</span>
+    <span class="n">qc</span><span class="o">.</span><span class="n">filter_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;is_gender&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+</section>
+</section>
+<section id="5---Save-filtered-adata">
+<h2>5 - Save filtered adata<a class="headerlink" href="#5---Save-filtered-adata" title="Link to this heading"></a></h2>
+<p>Store the final results</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#Saving the data</span>
+<span class="n">adata_output</span> <span class="o">=</span> <span class="s2">&quot;anndata_2.h5ad&quot;</span>
+<span class="n">utils</span><span class="o">.</span><span class="n">save_h5ad</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">adata_output</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sctoolbox</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">close_logfile</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="01_assembling_anndata.html" class="btn btn-neutral float-left" title="01 - Assembling or loading anndata object" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="03_batch.html" class="btn btn-neutral float-right" title="03 - Batch effect correction and comparisons" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

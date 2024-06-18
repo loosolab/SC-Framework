@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sctoolbox.tools.marker_genes &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rna-notebooks/index.html">RNA notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">sctoolbox.tools.marker_genes</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for sctoolbox.tools.marker_genes</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Tools for marker gene analyis.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">anndata</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span> <span class="nn">beartype.typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">beartype</span> <span class="kn">import</span> <span class="n">beartype</span>
+
+<span class="kn">import</span> <span class="nn">sctoolbox.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils.decorator</span> <span class="k">as</span> <span class="nn">deco</span>
+<span class="kn">from</span> <span class="nn">sctoolbox._settings</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">logger</span>
+
+
+<div class="viewcode-block" id="get_chromosome_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.get_chromosome_genes">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">get_chromosome_genes</span><span class="p">(</span><span class="n">gtf</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="n">chromosomes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get a list of all genes in the gtf for certain chromosome(s).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gtf : str</span>
+<span class="sd">        Path to the gtf file.</span>
+<span class="sd">    chromosomes : str | list[str]</span>
+<span class="sd">        A chromosome or a list of chromosome names to search for genes in.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list[str]</span>
+<span class="sd">        A list of all genes in the gtf for the given chromosome(s).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function is not directly used by the framework, but is used to create the marker gene lists for &#39;label_genes&#39;.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        If not all given chromosomes are found in the GTF-file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chromosomes</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">chromosomes</span> <span class="o">=</span> <span class="p">[</span><span class="n">chromosomes</span><span class="p">]</span>
+
+    <span class="n">all_chromosomes</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">gene_names</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gtf</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+
+            <span class="n">columns</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">chrom</span> <span class="o">=</span> <span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">all_chromosomes</span><span class="p">[</span><span class="n">chrom</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>  <span class="c1"># save for overview on the chromosomes in the gtf</span>
+
+            <span class="c1"># Save gene name if gene in chromosomes</span>
+            <span class="k">if</span> <span class="n">chrom</span> <span class="ow">in</span> <span class="n">chromosomes</span><span class="p">:</span>
+                <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;gene_name </span><span class="se">\&quot;</span><span class="s2">(.+?)</span><span class="se">\&quot;</span><span class="s2">;&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">m</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">gene_names</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="n">all_chromosomes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">all_chromosomes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="c1"># Check that chromosomes were valid</span>
+    <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span class="n">chromosomes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">chrom</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_chromosomes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Chromosome &#39;</span><span class="si">{</span><span class="n">chrom</span><span class="si">}</span><span class="s2">&#39; not found in gtf file. Available chromosomes are: </span><span class="si">{</span><span class="n">all_chromosomes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Collect final gene list</span>
+    <span class="n">gene_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">gene_names</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">gene_names</span></div>
+
+
+
+<div class="viewcode-block" id="label_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.label_genes">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">label_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                <span class="n">species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">gene_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Label genes as ribosomal, mitochrondrial and gender genes.</span>
+
+<span class="sd">    Gene labels are added inplace.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        The anndata object.</span>
+<span class="sd">    species : str</span>
+<span class="sd">        Name of the species.</span>
+<span class="sd">    gene_column : Optional[str], default None</span>
+<span class="sd">        Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list[str]</span>
+<span class="sd">        List containing the column names added to adata.var.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    sctoolbox.tools.qc_filter.predict_cell_cycle : for cell cycle prediction.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Location of gene lists</span>
+    <span class="n">genelist_dir</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="s2">&quot;sctoolbox&quot;</span><span class="p">,</span> <span class="s2">&quot;data/gene_lists/&quot;</span><span class="p">)</span>
+
+    <span class="n">species</span> <span class="o">=</span> <span class="n">species</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="c1"># Get the full list of genes from adata</span>
+    <span class="k">if</span> <span class="n">gene_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">adata_genes</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">adata_genes</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">gene_column</span><span class="p">]</span>
+
+    <span class="c1"># ------- Annotate genes in adata ------ #</span>
+    <span class="n">var_cols</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># store names of new var columns</span>
+
+    <span class="c1"># Annotate ribosomal genes</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;is_ribo&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata_genes</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s1">&#39;rps&#39;</span><span class="p">,</span> <span class="s1">&#39;rpl&#39;</span><span class="p">))</span>
+    <span class="n">var_cols</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;is_ribo&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Annotate mitochrondrial genes</span>
+    <span class="n">path_mito_genes</span> <span class="o">=</span> <span class="n">genelist_dir</span> <span class="o">+</span> <span class="n">species</span> <span class="o">+</span> <span class="s2">&quot;_mito_genes.txt&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path_mito_genes</span><span class="p">):</span>
+        <span class="n">gene_list</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">read_list_file</span><span class="p">(</span><span class="n">path_mito_genes</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;is_mito&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata_genes</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span>  <span class="c1"># boolean indicator</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;is_mito&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata_genes</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;mt&quot;</span><span class="p">)</span>  <span class="c1"># fall back to mt search</span>
+    <span class="n">var_cols</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;is_mito&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Annotate gender genes</span>
+    <span class="n">path_gender_genes</span> <span class="o">=</span> <span class="n">genelist_dir</span> <span class="o">+</span> <span class="n">species</span> <span class="o">+</span> <span class="s2">&quot;_gender_genes.txt&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path_gender_genes</span><span class="p">):</span>
+        <span class="n">gene_list</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">read_list_file</span><span class="p">(</span><span class="n">path_gender_genes</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="s2">&quot;is_gender&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata_genes</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span>  <span class="c1"># boolean indicator</span>
+        <span class="n">var_cols</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;is_gender&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">available_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">genelist_dir</span> <span class="o">+</span> <span class="s2">&quot;*_gender_genes.txt&quot;</span><span class="p">)</span>
+        <span class="n">available_species</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">clean_flanking_strings</span><span class="p">(</span><span class="n">available_files</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No gender genes available for species &#39;</span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">&#39;. Available species are: </span><span class="si">{</span><span class="n">available_species</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">var_cols</span></div>
+
+
+
+<div class="viewcode-block" id="add_gene_expression">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.add_gene_expression">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">add_gene_expression</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                        <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add values of gene/feature per cell to the adata.obs dataframe.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object containing gene expression/counts.</span>
+<span class="sd">    gene : str</span>
+<span class="sd">        Name of the gene/feature from the adata.var index to be added to adata.obs.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        If gene is not in adata.var.index.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Get expression</span>
+    <span class="k">if</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">gene_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="n">gene</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">[:,</span> <span class="n">gene_idx</span><span class="p">]</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span><span class="o">.</span><span class="n">A1</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">gene</span> <span class="o">+</span> <span class="s2">&quot;_values&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Gene &#39;</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&#39; was not found in adata.var.index&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="c1">############################################################</span>
+<span class="c1">#                 Scanpy rank genes groups                 #</span>
+<span class="c1">############################################################</span>
+
+<div class="viewcode-block" id="run_rank_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.run_rank_genes">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">run_rank_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                   <span class="n">groupby</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">min_in_group_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+                   <span class="n">min_fold_change</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+                   <span class="n">max_out_group_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.8</span><span class="p">,</span>
+                   <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run scanpy rank_genes_groups and filter_rank_genes_groups.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object containing gene expression/counts.</span>
+<span class="sd">    groupby : str</span>
+<span class="sd">        Column by which the cells in adata should be grouped.</span>
+<span class="sd">    min_in_group_fraction : float, default 0.25</span>
+<span class="sd">        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.</span>
+<span class="sd">        Parameter forwarded to scanpy.tl.filter_rank_genes_groups.</span>
+<span class="sd">    min_fold_change : float, default 0.5</span>
+<span class="sd">        Minimum foldchange (+/-) to be considered as a marker gene.</span>
+<span class="sd">        Parameter forwarded to scanpy.tl.filter_rank_genes_groups.</span>
+<span class="sd">    max_out_group_fraction : float, default 0.8</span>
+<span class="sd">        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.</span>
+<span class="sd">        Parameter forwarded to scanpy.tl.filter_rank_genes_groups.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments forwarded to scanpy.tl.rank_genes_groups.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        If number of groups defined by the groupby parameter is &lt; 2.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot;category&quot;</span><span class="p">:</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;log1p&quot;</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">:</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">&#39;log1p&#39;</span><span class="p">][</span><span class="s1">&#39;base&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># hack for scanpy error; see https://github.com/scverse/scanpy/issues/2239#issuecomment-1104178881</span>
+
+    <span class="c1"># Check number of groups in groupby</span>
+    <span class="k">if</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;groupby must contain at least two groups.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Catch ImplicitModificationWarning from scanpy</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="s1">&#39;t-test&#39;</span><span class="p">}</span>  <span class="c1"># prevents warning message &quot;Default of the method has been changed to &#39;t-test&#39; from &#39;t-test_overestim_var&#39;&quot;</span>
+    <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">anndata</span><span class="o">.</span><span class="n">ImplicitModificationWarning</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Trying to modify attribute.*&quot;</span><span class="p">)</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">filter_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span>
+                                   <span class="n">min_in_group_fraction</span><span class="o">=</span><span class="n">min_in_group_fraction</span><span class="p">,</span>
+                                   <span class="n">min_fold_change</span><span class="o">=</span><span class="n">min_fold_change</span><span class="p">,</span>
+                                   <span class="n">max_out_group_fraction</span><span class="o">=</span><span class="n">max_out_group_fraction</span><span class="p">)</span>
+
+    <span class="c1"># Copy rank_genes_groups to rank_genes_&lt;groupby&gt;</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;rank_genes_&quot;</span> <span class="o">+</span> <span class="n">groupby</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;rank_genes_groups&quot;</span><span class="p">]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;rank_genes_&quot;</span> <span class="o">+</span> <span class="n">groupby</span> <span class="o">+</span> <span class="s2">&quot;_filtered&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;rank_genes_groups_filtered&quot;</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="pairwise_rank_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.pairwise_rank_genes">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">pairwise_rank_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                        <span class="n">groupby</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                        <span class="n">foldchange_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="n">min_in_group_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+                        <span class="n">max_out_group_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rank genes pairwise between groups in &#39;groupby&#39;.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object containing expression data.</span>
+<span class="sd">    groupby : str</span>
+<span class="sd">        Key in adata.obs containing groups to be compared.</span>
+<span class="sd">    foldchange_threshold : int | float, default 1</span>
+<span class="sd">        Minimum foldchange (+/-) to be considered as a marker gene.</span>
+<span class="sd">    min_in_group_fraction : float, default 0.25</span>
+<span class="sd">        Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.</span>
+<span class="sd">    max_out_group_fraction : float, default 0.5</span>
+<span class="sd">        Maximum fraction of cells in other groups that must express a gene to be considered as a marker gene.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments to be passed to scanpy.tl.rank_genes_groups.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        Dataframe containinge the pairwise ranked gened between the groups.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">groups</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span>
+    <span class="n">contrasts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># Check that fractions are available</span>
+    <span class="n">use_fractions</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;adata.X contains negative values (potentially transformed counts), &quot;</span>
+                       <span class="s2">&quot;meaning that &#39;min_in_group_fraction&#39; and &#39;max_out_group_fraction&#39; &quot;</span>
+                       <span class="s2">&quot;cannot be used for filtering. These parameters will be ignored. &quot;</span>
+                       <span class="s2">&quot;Consider using raw/normalized data instead.&quot;</span><span class="p">)</span>
+        <span class="n">use_fractions</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Calculate marker genes for each contrast</span>
+    <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">contrast</span> <span class="ow">in</span> <span class="n">contrasts</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculating rank genes for contrast: </span><span class="si">{</span><span class="n">contrast</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Get adata for contrast</span>
+        <span class="n">adata_sub</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">contrast</span><span class="p">)]</span>   <span class="c1"># subset to contrast</span>
+
+        <span class="c1"># Run rank_genes_groups</span>
+        <span class="n">run_rank_genes</span><span class="p">(</span><span class="n">adata_sub</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Get table</span>
+        <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">contrast</span>
+        <span class="n">table_dict</span> <span class="o">=</span> <span class="n">get_rank_genes_tables</span><span class="p">(</span><span class="n">adata_sub</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_group_fractions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># returns dict with each group</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">table_dict</span><span class="p">[</span><span class="n">c1</span><span class="p">]</span>
+
+        <span class="c1"># Reorder columns</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;scores&quot;</span><span class="p">,</span> <span class="s2">&quot;logfoldchanges&quot;</span><span class="p">,</span> <span class="s2">&quot;pvals&quot;</span><span class="p">,</span> <span class="s2">&quot;pvals_adj&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">use_fractions</span><span class="p">:</span>
+            <span class="n">columns</span> <span class="o">+=</span> <span class="p">[</span><span class="n">c1</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">,</span> <span class="n">c2</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">columns</span><span class="p">]</span>  <span class="c1"># reorder columns</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># prevent SettingWithCopyWarning</span>
+
+        <span class="c1"># Calculate up/down genes</span>
+        <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">contrast</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;C1&quot;</span><span class="p">,</span> <span class="s2">&quot;C2&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">use_fractions</span><span class="p">:</span>
+            <span class="n">conditions</span> <span class="o">=</span> <span class="p">[(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">foldchange_threshold</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">c1</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_in_group_fraction</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">c2</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_out_group_fraction</span><span class="p">),</span>  <span class="c1"># up</span>
+                          <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="n">foldchange_threshold</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">c1</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_out_group_fraction</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">c2</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_in_group_fraction</span><span class="p">)]</span>  <span class="c1"># down</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">conditions</span> <span class="o">=</span> <span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">foldchange_threshold</span><span class="p">,</span>  <span class="c1"># up</span>
+                          <span class="n">table</span><span class="p">[</span><span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="n">foldchange_threshold</span><span class="p">]</span>  <span class="c1"># down</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;group&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">conditions</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span> <span class="s2">&quot;NS&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Rename columns</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">contrast</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">col</span> <span class="k">if</span> <span class="s2">&quot;fraction&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">col</span> <span class="k">else</span> <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+
+        <span class="c1"># Add table to list</span>
+        <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+    <span class="c1"># Join individual tables</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">tables</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Move fraction columns to the back</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">merged</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span>
+    <span class="n">fraction_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;_fraction&quot;</span><span class="p">)]</span>  <span class="c1"># might be empty if use_fractions = False</span>
+    <span class="n">first_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fraction_columns</span><span class="p">]</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="p">[</span><span class="n">first_columns</span> <span class="o">+</span> <span class="n">fraction_columns</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">merged</span></div>
+
+
+
+<div class="viewcode-block" id="get_rank_genes_tables">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.get_rank_genes_tables">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">get_rank_genes_tables</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                          <span class="n">key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rank_genes_groups&quot;</span><span class="p">,</span>
+                          <span class="n">n_genes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
+                          <span class="n">out_group_fractions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                          <span class="n">var_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
+                          <span class="n">save_excel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get gene tables containing &quot;rank_genes_groups&quot; genes and information per group (from previously chosen `groupby`).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object containing ranked genes.</span>
+<span class="sd">    key : str, default &quot;rank_genes_groups&quot;</span>
+<span class="sd">        The key in adata.uns to be used for fetching ranked genes.</span>
+<span class="sd">    n_genes : Optional[int], default 200</span>
+<span class="sd">        Number of genes to be included in the tables. If None, all genes are included.</span>
+<span class="sd">    out_group_fractions : bool, default False</span>
+<span class="sd">        If True, the output tables will contain additional columns giving the fraction of genes per group.</span>
+<span class="sd">    var_columns : list[str], default []</span>
+<span class="sd">        List of adata.var columns, which will be added to pandas.DataFrame.</span>
+<span class="sd">    save_excel : Optional[str], default None</span>
+<span class="sd">        The path to a file for writing the marker gene tables as an excel file (with one sheet per group).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, pd.DataFrame]</span>
+<span class="sd">        A dictionary with group names as keys, and marker gene tables (pandas DataFrames) per group as values.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        1. If not all columns given in var_columns are in adata.var.</span>
+<span class="sd">        2. If key cannot be found in adata.uns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Check that all given columns are valid</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">var_columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">var_columns</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">&#39; not found in adata.var.columns.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check that key is in adata.uns</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Key &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; not found in adata.uns. Please use &#39;run_rank_genes&#39; first.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Read structure in .uns to pandas dataframes</span>
+    <span class="n">tables</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="s2">&quot;scores&quot;</span><span class="p">,</span> <span class="s2">&quot;pvals&quot;</span><span class="p">,</span> <span class="s2">&quot;pvals_adj&quot;</span><span class="p">,</span> <span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]:</span>
+        <span class="n">tables</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">col</span><span class="p">])</span>
+
+    <span class="c1"># Transform to one table per group</span>
+    <span class="n">groups</span> <span class="o">=</span> <span class="n">tables</span><span class="p">[</span><span class="s2">&quot;names&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span>
+    <span class="n">group_tables</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">tables</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">tables</span><span class="p">[</span><span class="n">col</span><span class="p">][</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c1"># Subset to n_genes if chosen</span>
+        <span class="k">if</span> <span class="n">n_genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:</span><span class="n">n_genes</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span>
+
+    <span class="c1"># Remove any NaN genes (genes are set to NaN if &#39;filter_rank_genes_groups&#39; was used)</span>
+    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">group_tables</span><span class="p">:</span>
+        <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Get in/out group fraction of expressed genes (only works for .X-values above 0)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># only calculate fractions for raw expression data</span>
+        <span class="n">groupby</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;groupby&quot;</span><span class="p">]</span>
+        <span class="n">n_cells_dict</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>  <span class="c1"># number of cells in groups</span>
+
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+
+            <span class="c1"># Fraction of cells inside group expressing each gene</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="n">group</span><span class="p">]),</span> <span class="p">:]</span><span class="o">.</span><span class="n">X</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">A1</span>  <span class="c1"># sum of cells with expression &gt; 0 for this cluster</span>
+            <span class="n">expressed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">s</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">expressed</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="s2">&quot;n_expr&quot;</span><span class="p">]</span>
+
+            <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">expressed</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+            <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="n">group</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="s2">&quot;n_expr&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">n_cells_dict</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="k">if</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">n_cells_dict</span> <span class="k">else</span> <span class="mi">0</span>
+
+            <span class="c1"># Fraction of cells for individual groups</span>
+            <span class="k">if</span> <span class="n">out_group_fractions</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">compare_group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">compare_group</span> <span class="o">!=</span> <span class="n">group</span><span class="p">:</span>
+                        <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="n">compare_group</span><span class="p">]),</span> <span class="p">:]</span><span class="o">.</span><span class="n">X</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">A1</span>
+                        <span class="n">expressed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>  <span class="c1"># expression per gene for this group</span>
+                        <span class="n">expressed</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">compare_group</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span><span class="p">]</span>
+                        <span class="n">expressed</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">expressed</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">n_cells_dict</span><span class="p">[</span><span class="n">compare_group</span><span class="p">]</span> <span class="k">if</span> <span class="n">compare_group</span> <span class="ow">in</span> <span class="n">n_cells_dict</span> <span class="k">else</span> <span class="mi">0</span>
+
+                        <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">expressed</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Fraction of cells outside group expressing each gene</span>
+            <span class="n">other_groups</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span> <span class="k">if</span> <span class="n">g</span> <span class="o">!=</span> <span class="n">group</span><span class="p">]</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">other_groups</span><span class="p">),</span> <span class="p">:]</span><span class="o">.</span><span class="n">X</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">A1</span>
+            <span class="n">expressed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">s</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">expressed</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="s2">&quot;n_out_expr&quot;</span><span class="p">]</span>
+            <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">expressed</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+
+            <span class="c1"># If there are only two groups, out_group_fraction -&gt; name of the other group</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">out_group_name</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span> <span class="k">if</span> <span class="n">g</span> <span class="o">!=</span> <span class="n">group</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_fraction&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">out_group_name</span> <span class="o">=</span> <span class="s2">&quot;out_group_fraction&quot;</span>
+
+            <span class="n">n_out_group</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">n_cells_dict</span><span class="p">[</span><span class="n">other_group</span><span class="p">]</span> <span class="k">if</span> <span class="n">other_group</span> <span class="ow">in</span> <span class="n">n_cells_dict</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">other_group</span> <span class="ow">in</span> <span class="n">other_groups</span><span class="p">])</span>  <span class="c1"># sum of cells in other groups</span>
+            <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="n">out_group_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="s2">&quot;n_out_expr&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">n_out_group</span>
+            <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;n_expr&quot;</span><span class="p">,</span> <span class="s2">&quot;n_out_expr&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Add additional columns to table</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">var_columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">group_tables</span><span class="p">:</span>
+            <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">var_columns</span><span class="p">],</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+
+    <span class="c1"># If chosen: Save tables to joined excel</span>
+    <span class="k">if</span> <span class="n">save_excel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">save_excel</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;save_excel&#39; must be a string.&quot;</span><span class="p">)</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">full_table_prefix</span> <span class="o">+</span> <span class="n">save_excel</span>
+
+        <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">group_tables</span><span class="p">:</span>
+                <span class="n">table</span> <span class="o">=</span> <span class="n">group_tables</span><span class="p">[</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+                <span class="c1"># Round values of scores/foldchanges</span>
+                <span class="n">table</span><span class="p">[</span><span class="s2">&quot;scores&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;scores&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">table</span><span class="p">[</span><span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;logfoldchanges&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+                <span class="n">table</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">utils</span><span class="o">.</span><span class="n">_sanitize_sheetname</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved marker gene tables to &#39;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">group_tables</span></div>
+
+
+
+<div class="viewcode-block" id="mask_rank_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.mask_rank_genes">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">mask_rank_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                    <span class="n">genes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rank_genes_groups&quot;</span><span class="p">,</span>
+                    <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Mask names with &quot;nan&quot; in .uns[key][&quot;names&quot;] if they are found in given &#39;genes&#39;.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object containing ranked genes.</span>
+<span class="sd">    genes : list[str]</span>
+<span class="sd">        List of genes to be masked.</span>
+<span class="sd">    key : str, default &quot;rank_genes_groups&quot;</span>
+<span class="sd">        The key in adata.uns to be used for fetching ranked genes.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        If True, modifies adata.uns[key][&quot;names&quot;] in place. Otherwise, returns a copy of adata.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        If inplace = True, modifies adata.uns[key][&quot;names&quot;] in place and returns None.</span>
+<span class="sd">        Otherwise, returns a copy of adata.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        If genes is not of type list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Check input</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;genes must be a list of strings.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Mask genes</span>
+    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;rank_genes_groups&quot;</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">][</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">][</span><span class="n">group</span><span class="p">],</span> <span class="n">genes</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;nan&#39;</span><span class="p">),</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;names&quot;</span><span class="p">][</span><span class="n">group</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#                       DEseq2 on pseudobulks                       #</span>
+<span class="c1">#####################################################################</span>
+
+<div class="viewcode-block" id="run_deseq2">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.run_deseq2">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">run_deseq2</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+               <span class="n">sample_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+               <span class="n">condition_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+               <span class="n">confounders</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">layer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">percentile_range</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, &#39;layer&#39; can be used to specify raw counts.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object containing raw counts.</span>
+<span class="sd">    sample_col : str</span>
+<span class="sd">        Column name in adata.obs containing sample names.</span>
+<span class="sd">    condition_col : str</span>
+<span class="sd">        Column name in adata.obs containing condition names to be compared.</span>
+<span class="sd">    confounders : Optional[list[str]], default None</span>
+<span class="sd">        List of additional column names in adata.obs containing confounders to be included in the model.</span>
+<span class="sd">    layer : Optional[str], default None</span>
+<span class="sd">        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)</span>
+<span class="sd">    percentile_range : Tuple[int, int], default (0, 100)</span>
+<span class="sd">        Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation</span>
+<span class="sd">        to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        A dataframe containing the results of the DESeq2 analysis.</span>
+<span class="sd">        Also adds the dataframe to adata.uns[&quot;deseq_result&quot;]</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        1. If any given column name is not found in adata.obs.</span>
+<span class="sd">        2. If any given column name contains characters not compatible with R.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Needs the package &#39;diffexpr&#39; to be installed along with &#39;bioconductor-deseq2&#39; and &#39;rpy2&#39;.</span>
+<span class="sd">    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    sctoolbox.utils.pseudobulk_table</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">utils</span><span class="o">.</span><span class="n">setup_R</span><span class="p">()</span>
+    <span class="kn">from</span> <span class="nn">diffexpr.py_deseq</span> <span class="kn">import</span> <span class="n">py_DESeq2</span>
+
+    <span class="c1"># Setup the design formula</span>
+    <span class="k">if</span> <span class="n">confounders</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">confounders</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">confounders</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">confounders</span> <span class="o">=</span> <span class="p">[</span><span class="n">confounders</span><span class="p">]</span>
+
+    <span class="n">design_formula</span> <span class="o">=</span> <span class="s2">&quot;~ &quot;</span> <span class="o">+</span> <span class="s2">&quot; + &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">confounders</span> <span class="o">+</span> <span class="p">[</span><span class="n">condition_col</span><span class="p">])</span>
+
+    <span class="c1"># Check that sample_col and condition_col are in adata.obs</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">sample_col</span><span class="p">,</span> <span class="n">condition_col</span><span class="p">]</span> <span class="o">+</span> <span class="n">confounders</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">&#39; was not found in adata.obs.columns.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check that column is valid for R</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">&#39; is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: &quot;</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s2">&quot;&#39;A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.&#39;&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="c1"># Build sample_df</span>
+    <span class="n">sample_df</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+    <span class="n">sample_df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">sample_col</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">sample_df</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">conditions</span> <span class="o">=</span> <span class="n">sample_df</span><span class="p">[</span><span class="n">condition_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="n">samples_per_cond</span> <span class="o">=</span> <span class="p">{</span><span class="n">cond</span><span class="p">:</span> <span class="n">sample_df</span><span class="p">[</span><span class="n">sample_df</span><span class="p">[</span><span class="n">condition_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">cond</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="k">for</span> <span class="n">cond</span> <span class="ow">in</span> <span class="n">conditions</span><span class="p">}</span>
+
+    <span class="c1"># Build count matrix</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Building count matrix&quot;</span><span class="p">)</span>
+    <span class="n">count_table</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">pseudobulk_table</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">sample_col</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span>
+                                         <span class="n">percentile_range</span><span class="o">=</span><span class="n">percentile_range</span><span class="p">)</span>
+    <span class="n">count_table</span> <span class="o">=</span> <span class="n">count_table</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># DESeq2 requires integer counts</span>
+    <span class="n">count_table</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;gene&quot;</span>
+    <span class="n">count_table</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Run DEseq2</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Running DESeq2&quot;</span><span class="p">)</span>
+    <span class="n">dds</span> <span class="o">=</span> <span class="n">py_DESeq2</span><span class="p">(</span><span class="n">count_matrix</span><span class="o">=</span><span class="n">count_table</span><span class="p">,</span>
+                    <span class="n">design_matrix</span><span class="o">=</span><span class="n">sample_df</span><span class="p">,</span>
+                    <span class="n">design_formula</span><span class="o">=</span><span class="n">design_formula</span><span class="p">,</span>
+                    <span class="n">gene_column</span><span class="o">=</span><span class="s1">&#39;gene&#39;</span><span class="p">)</span>
+    <span class="n">dds</span><span class="o">.</span><span class="n">run_deseq</span><span class="p">()</span>
+
+    <span class="c1"># Normalizing counts</span>
+    <span class="n">dds</span><span class="o">.</span><span class="n">normalized_count</span><span class="p">()</span>
+    <span class="n">dds</span><span class="o">.</span><span class="n">normalized_count_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">dds</span><span class="o">.</span><span class="n">normalized_count_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">dds</span><span class="o">.</span><span class="n">samplenames</span>
+
+    <span class="c1"># Create result table with mean values per condition</span>
+    <span class="n">deseq_table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">dds</span><span class="o">.</span><span class="n">normalized_count_df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">condition</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">conditions</span><span class="p">):</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">samples_per_cond</span><span class="p">[</span><span class="n">condition</span><span class="p">]</span>
+        <span class="n">mean_values</span> <span class="o">=</span> <span class="n">dds</span><span class="o">.</span><span class="n">normalized_count_df</span><span class="p">[</span><span class="n">samples</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">deseq_table</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">condition</span> <span class="o">+</span> <span class="s2">&quot;_mean&quot;</span><span class="p">,</span> <span class="n">mean_values</span><span class="p">)</span>
+
+    <span class="c1"># Get results per contrast</span>
+    <span class="n">contrasts</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">conditions</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">C1</span><span class="p">,</span> <span class="n">C2</span> <span class="ow">in</span> <span class="n">contrasts</span><span class="p">:</span>
+
+        <span class="n">dds</span><span class="o">.</span><span class="n">get_deseq_result</span><span class="p">(</span><span class="n">contrast</span><span class="o">=</span><span class="p">[</span><span class="n">condition_col</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">C1</span><span class="p">])</span>
+        <span class="n">dds</span><span class="o">.</span><span class="n">deseq_result</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Rename and add to deseq_table</span>
+        <span class="n">dds</span><span class="o">.</span><span class="n">deseq_result</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lfcSE&quot;</span><span class="p">,</span> <span class="s2">&quot;stat&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">dds</span><span class="o">.</span><span class="n">deseq_result</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">C2</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">C1</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dds</span><span class="o">.</span><span class="n">deseq_result</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="n">deseq_table</span> <span class="o">=</span> <span class="n">deseq_table</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">dds</span><span class="o">.</span><span class="n">deseq_result</span><span class="p">,</span> <span class="n">left_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Add normalized individual sample counts to the back of table</span>
+    <span class="n">deseq_table</span> <span class="o">=</span> <span class="n">deseq_table</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">dds</span><span class="o">.</span><span class="n">normalized_count_df</span><span class="p">,</span> <span class="n">left_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Sort by p-value of first contrast</span>
+    <span class="n">C1</span><span class="p">,</span> <span class="n">C2</span> <span class="o">=</span> <span class="n">contrasts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">deseq_table</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="n">C2</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">C1</span> <span class="o">+</span> <span class="s2">&quot;_pvalue&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Add to adata uns</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">add_uns_info</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s2">&quot;deseq_result&quot;</span><span class="p">,</span> <span class="n">deseq_table</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">deseq_table</span></div>
+
+
+
+<div class="viewcode-block" id="score_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.marker_genes.score_genes">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">score_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                <span class="n">gene_set</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                <span class="n">score_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;score&#39;</span><span class="p">,</span>
+                <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Assign a score to each cell depending on the expression of a set of genes. This is a wrapper for scanpy.tl.score_genes.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to score.</span>
+<span class="sd">    gene_set : str | list[str]</span>
+<span class="sd">        A list of genes or path to a file containing a list of genes.</span>
+<span class="sd">        The txt file should have one gene per row.</span>
+<span class="sd">    score_name : str, default &quot;score&quot;</span>
+<span class="sd">        Name of the column in obs table where the score will be added.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        Adds the new column to the original anndata object.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments to be passed to scanpy.tl.score_genes.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        If inplace is False, return a copy of anndata object with the new column in the obs table.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError:</span>
+<span class="sd">        If path given in gene_set does not lead to a file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># check if list is in a file</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gene_set</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="c1"># check if file exists</span>
+        <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">gene_set</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">gene_set</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">gene_set</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s1">&#39;The list was not found!&#39;</span><span class="p">)</span>
+
+    <span class="c1"># scale data</span>
+    <span class="n">sdata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Score the cells</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">score_genes</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="n">gene_list</span><span class="o">=</span><span class="n">gene_set</span><span class="p">,</span> <span class="n">score_name</span><span class="o">=</span><span class="n">score_name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="c1"># add score to adata.obs</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">score_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">score_name</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">adata</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
