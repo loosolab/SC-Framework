@@ -73,7 +73,8 @@ def term_dotplot(term: str,
     # get related genes
     active_genes = list(set(term_table.loc[term_table["Term"] == term]["Genes"].str.split(";").explode()))
 
-    index_name = adata.var.index.name
+    # get index name
+    index_name = "index" if not adata.var.index.name else adata.var.index.name
 
     if not active_genes:
         raise ValueError(f"No genes matching the term '{term}' found in term_table")
