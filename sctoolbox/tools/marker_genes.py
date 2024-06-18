@@ -577,11 +577,10 @@ def run_deseq2(adata: sc.AnnData,
     ------
     ValueError:
         1. If any given column name is not found in adata.obs.
-        2. If any given column name contains characters not compatible with R.
 
     Notes
     -----
-    Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
+    Needs the package 'pydeseq2' to be installed.
     These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
 
     See Also
@@ -604,14 +603,6 @@ def run_deseq2(adata: sc.AnnData,
     for col in cols:
         if col not in adata.obs.columns:
             raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
-
-        # TODO do we need this?
-        # Check that column is valid for R
-        pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
-        if not re.match(pattern, col):
-            s = f"Column '{col}' is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: "
-            s += "'A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.'"
-            raise ValueError(s)
 
     # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
