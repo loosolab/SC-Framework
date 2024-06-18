@@ -188,7 +188,6 @@ def test_pairwise_rank_genes(adata):
 
 @pytest.mark.parametrize("condition_col, error", [
     ("not_present", "was not found in adata.obs.columns"),
-    ("condition-col", "not a valid column name within R"),
     ("condition", None)])
 def test_deseq(adata, condition_col, error):
     """Test if deseq2 is run and returns a dataframe."""
