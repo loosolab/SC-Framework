@@ -65,7 +65,7 @@ def term_dotplot(term: str,
         })
 
         pl.gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
-                             term_table=term_table
+                             term_table=term_table,
                              adata=adata,
                              groupby="louvain")
 
