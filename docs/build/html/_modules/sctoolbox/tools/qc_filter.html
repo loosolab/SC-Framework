@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sctoolbox.tools.qc_filter &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rna-notebooks/index.html">RNA notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">sctoolbox.tools.qc_filter</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for sctoolbox.tools.qc_filter</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Tools for quality control.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">anndata</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">sklearn.mixture</span> <span class="kn">import</span> <span class="n">GaussianMixture</span>
+<span class="kn">from</span> <span class="nn">kneed</span> <span class="kn">import</span> <span class="n">KneeLocator</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">from</span> <span class="nn">beartype</span> <span class="kn">import</span> <span class="n">beartype</span>
+<span class="kn">import</span> <span class="nn">numpy.typing</span> <span class="k">as</span> <span class="nn">npt</span>
+<span class="kn">from</span> <span class="nn">beartype.typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="c1"># import scrublet as scr</span>
+
+<span class="c1"># toolbox functions</span>
+<span class="kn">import</span> <span class="nn">sctoolbox</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">sctoolbox.plotting</span> <span class="kn">import</span> <span class="n">_save_figure</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils.decorator</span> <span class="k">as</span> <span class="nn">deco</span>
+<span class="kn">from</span> <span class="nn">sctoolbox._settings</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">logger</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#                        PRE-CALCULATION OF QC METRICS                        #</span>
+<span class="c1">###############################################################################</span>
+
+<div class="viewcode-block" id="calculate_qc_metrics">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.calculate_qc_metrics">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">calculate_qc_metrics</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                         <span class="n">percent_top</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the qc metrics using `scanpy.pp.calculate_qc_metrics`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object the quality metrics are added to.</span>
+<span class="sd">    percent_top : Optional[list[int]], default None</span>
+<span class="sd">        Which proportions of top genes to cover.</span>
+<span class="sd">    inplace : bool, default False</span>
+<span class="sd">        If the anndata object should be modified in place.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional parameters forwarded to scanpy.pp.calculate_qc_metrics.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        Returns anndata object with added quality metrics to .obs and .var. Returns None if `inplace=True`.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    scanpy.pp.calculate_qc_metrics</span>
+<span class="sd">        https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    .. exec_code::</span>
+
+<span class="sd">        import scanpy as sc</span>
+<span class="sd">        import sctoolbox as sct</span>
+
+<span class="sd">        adata = sc.datasets.pbmc3k()</span>
+<span class="sd">        print(&quot;Columns in .obs before &#39;calculate_qc_metrics&#39;:&quot;, adata.obs.columns.tolist())</span>
+<span class="sd">        sct.tools.calculate_qc_metrics(adata, inplace=True)</span>
+<span class="sd">        print(&quot;Columns in .obs after &#39;calculate_qc_metrics&#39;:&quot;, adata.obs.columns.tolist())</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># add metrics to copy of anndata</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># remove n_genes from metrics before recalculation</span>
+    <span class="n">to_remove</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;n_genes&quot;</span><span class="p">,</span> <span class="s2">&quot;log1p_n_genes&quot;</span><span class="p">,</span> <span class="s2">&quot;n_features&quot;</span><span class="p">,</span> <span class="s2">&quot;log1p_n_features&quot;</span><span class="p">]]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">to_remove</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># compute metrics</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">calculate_qc_metrics</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">,</span> <span class="n">percent_top</span><span class="o">=</span><span class="n">percent_top</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Rename metrics</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;n_genes_by_counts&quot;</span><span class="p">:</span> <span class="s2">&quot;n_genes&quot;</span><span class="p">,</span> <span class="s2">&quot;log1p_n_genes_by_counts&quot;</span><span class="p">:</span> <span class="s2">&quot;log1p_n_genes&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;n_features_by_counts&quot;</span><span class="p">:</span> <span class="s2">&quot;n_features&quot;</span><span class="p">,</span> <span class="s2">&quot;log1p_n_features_by_counts&quot;</span><span class="p">:</span> <span class="s2">&quot;log1p_n_features&quot;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># return modified anndata</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<div class="viewcode-block" id="predict_cell_cycle">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.predict_cell_cycle">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">predict_cell_cycle</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                       <span class="n">species</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                       <span class="n">s_genes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">g2m_genes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Assign a score and a phase to each cell depending on the expression of cell cycle genes.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to predict cell cycle on.</span>
+<span class="sd">    species : Optional[str]</span>
+<span class="sd">        The species of data. Available species are: human, mouse, rat and zebrafish.</span>
+<span class="sd">        If both s_genes and g2m_genes are given, set species=None,</span>
+<span class="sd">        otherwise species is ignored.</span>
+<span class="sd">    s_genes : Optional[str | list[str]], default None</span>
+<span class="sd">        If no species is given or desired species is not supported, you can provide</span>
+<span class="sd">        a list of genes for the S-phase or a txt file containing one gene in each row.</span>
+<span class="sd">        If only s_genes is provided and species is a supported input, the default</span>
+<span class="sd">        g2m_genes list will be used, otherwise the function will not run.</span>
+<span class="sd">    g2m_genes :  Optional[str | list[str]], default None</span>
+<span class="sd">        If no species is given or desired species is not supported, you can provide</span>
+<span class="sd">        a list of genes for the G2M-phase or a txt file containing one gene per row.</span>
+<span class="sd">        If only g2m_genes is provided and species is a supported input, the default</span>
+<span class="sd">        s_genes list will be used, otherwise the function will not run.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        if True, add new columns to the original anndata object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        If inplace is False, return a copy of anndata object with the new column in the obs table.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        1: If s_genes or g2m_genes is not None and not of type list.</span>
+<span class="sd">        2: If no cellcycle genes available for the given species.</span>
+<span class="sd">        3. If given species is not supported and s_genes or g2m_genes are not given.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Check if the given s_genes/g2m_genes are lists/paths/None</span>
+    <span class="n">genes_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;s_genes&quot;</span><span class="p">:</span> <span class="n">s_genes</span><span class="p">,</span> <span class="s2">&quot;g2m_genes&quot;</span><span class="p">:</span> <span class="n">g2m_genes</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">genes</span> <span class="ow">in</span> <span class="n">genes_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># check if s_genes is a file or list</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>  <span class="c1"># check if file exists</span>
+                    <span class="n">genes</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">read_list_file</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The file </span><span class="si">{</span><span class="n">genes</span><span class="si">}</span><span class="s1"> was not found!&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s_genes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                <span class="n">genes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please provide a list of genes or a path to a list of genes to s_genes/g2m_genes! Type of </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Save genes</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;s_genes&quot;</span><span class="p">:</span>
+            <span class="n">s_genes</span> <span class="o">=</span> <span class="n">genes</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;g2m_genes&quot;</span><span class="p">:</span>
+            <span class="n">g2m_genes</span> <span class="o">=</span> <span class="n">genes</span>
+
+    <span class="c1"># if two lists are given, use both and ignore species</span>
+    <span class="k">if</span> <span class="n">s_genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">g2m_genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">species</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># get gene list for species</span>
+    <span class="k">elif</span> <span class="n">species</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">species</span> <span class="o">=</span> <span class="n">species</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="c1"># get path of directory where cell cycles gene lists are saved</span>
+        <span class="n">genelist_dir</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="s2">&quot;sctoolbox&quot;</span><span class="p">,</span> <span class="s2">&quot;data/gene_lists/&quot;</span><span class="p">)</span>
+
+        <span class="c1"># check if given species is available</span>
+        <span class="n">available_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">genelist_dir</span> <span class="o">+</span> <span class="s2">&quot;*_cellcycle_genes.txt&quot;</span><span class="p">)</span>
+        <span class="n">available_species</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">clean_flanking_strings</span><span class="p">(</span><span class="n">available_files</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">species</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_species</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Species was not found in available species!&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;genelist_dir: </span><span class="si">{</span><span class="n">genelist_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;available_files: </span><span class="si">{</span><span class="n">available_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;All files in dir: </span><span class="si">{</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">genelist_dir</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;*&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No cellcycle genes available for species &#39;</span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">&#39;. Available species are: </span><span class="si">{</span><span class="n">available_species</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># get cellcylce genes lists</span>
+        <span class="n">path_cellcycle_genes</span> <span class="o">=</span> <span class="n">genelist_dir</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">_cellcycle_genes.txt&quot;</span>
+        <span class="n">cell_cycle_genes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path_cellcycle_genes</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                       <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">,</span> <span class="s1">&#39;phase&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;gene&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Read </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cell_cycle_genes</span><span class="p">)</span><span class="si">}</span><span class="s2"> cell cycle genes list from file: </span><span class="si">{</span><span class="n">path_cellcycle_genes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># if one list is given as input, get the other list from gene lists dir</span>
+        <span class="k">if</span> <span class="n">s_genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;g2m_genes list is missing! Using default list instead&quot;</span><span class="p">)</span>
+            <span class="n">g2m_genes</span> <span class="o">=</span> <span class="n">cell_cycle_genes</span><span class="p">[</span><span class="n">cell_cycle_genes</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s1">&#39;g2m_genes&#39;</span><span class="p">])]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">g2m_genes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;s_genes list is missing! Using default list instead&quot;</span><span class="p">)</span>
+            <span class="n">s_genes</span> <span class="o">=</span> <span class="n">cell_cycle_genes</span><span class="p">[</span><span class="n">cell_cycle_genes</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s1">&#39;s_genes&#39;</span><span class="p">])]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">s_genes</span> <span class="o">=</span> <span class="n">cell_cycle_genes</span><span class="p">[</span><span class="n">cell_cycle_genes</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s1">&#39;s_genes&#39;</span><span class="p">])]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">g2m_genes</span> <span class="o">=</span> <span class="n">cell_cycle_genes</span><span class="p">[</span><span class="n">cell_cycle_genes</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s1">&#39;g2m_genes&#39;</span><span class="p">])]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Please provide either a supported species or lists of genes!&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Scale the data before scoring</span>
+    <span class="n">sdata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Score the cells by s phase or g2m phase</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">score_genes_cell_cycle</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="n">s_genes</span><span class="o">=</span><span class="n">s_genes</span><span class="p">,</span> <span class="n">g2m_genes</span><span class="o">=</span><span class="n">g2m_genes</span><span class="p">)</span>
+
+    <span class="c1"># add results to adata</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;S_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;S_score&#39;</span><span class="p">]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;G2M_score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;G2M_score&#39;</span><span class="p">]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<div class="viewcode-block" id="estimate_doublets">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.estimate_doublets">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">estimate_doublets</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                      <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+                      <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                      <span class="n">plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                      <span class="n">groupby</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                      <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+                      <span class="n">fill_na</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                      <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Estimate doublet cells using scrublet.</span>
+
+<span class="sd">    Adds additional columns &quot;doublet_score&quot; and &quot;predicted_doublet&quot; in adata.obs,</span>
+<span class="sd">    as well as a &quot;scrublet&quot; key in adata.uns.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to estimate doublets for.</span>
+<span class="sd">    threshold : float, default 0.25</span>
+<span class="sd">        Threshold for doublet detection.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        Whether to estimate doublets inplace or not.</span>
+<span class="sd">    plot : bool, default True</span>
+<span class="sd">        Whether to plot the doublet score distribution.</span>
+<span class="sd">    groupby : Optional[str], default None</span>
+<span class="sd">        Key in adata.obs to use for batching during doublet estimation. If threads &gt; 1,</span>
+<span class="sd">        the adata is split into separate runs across threads. Otherwise each batch is run separately.</span>
+<span class="sd">    threads : int, default 4</span>
+<span class="sd">        Number of threads to use.</span>
+<span class="sd">    fill_na : bool, default True</span>
+<span class="sd">        If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate</span>
+<span class="sd">        a doublet score. Keep in mind that this does not mean that it is no doublet.</span>
+<span class="sd">        By setting this parameter true it is assmuned that it is no doublet.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments are passed to scanpy.external.pp.scrublet.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Groupby should be set if the adata consists of multiple samples, as this improves the doublet estimation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        If inplace is False, the function returns a copy of the adata object.</span>
+<span class="sd">        If inplace is True, the function returns None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">inplace</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Estimate doublets</span>
+    <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="n">all_groups</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">threads</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">threads</span><span class="p">,</span> <span class="n">maxtasksperchild</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># maxtasksperchild to avoid memory leaks</span>
+
+            <span class="c1"># Run scrublet for each sub data</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sending </span><span class="si">{0}</span><span class="s2"> batches to </span><span class="si">{1}</span><span class="s2"> threads&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_groups</span><span class="p">),</span> <span class="n">threads</span><span class="p">))</span>
+            <span class="n">jobs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sub</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span> <span class="o">==</span> <span class="n">group</span><span class="p">]</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">all_groups</span><span class="p">]):</span>
+
+                <span class="c1"># Clean up adata before sending to thread</span>
+                <span class="n">sub</span><span class="o">.</span><span class="n">uns</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">sub</span><span class="o">.</span><span class="n">layers</span> <span class="o">=</span> <span class="kc">None</span>
+
+                <span class="n">job</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">_run_scrublet</span><span class="p">,</span> <span class="p">(</span><span class="n">sub</span><span class="p">,),</span> <span class="p">{</span><span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="n">threshold</span><span class="p">,</span> <span class="s2">&quot;verbose&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">})</span>
+                <span class="n">jobs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+            <span class="n">sctoolbox</span><span class="o">.</span><span class="n">utilities</span><span class="o">.</span><span class="n">monitor_jobs</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="s2">&quot;Scrublet per group&quot;</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">job</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sub</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span> <span class="o">==</span> <span class="n">group</span><span class="p">]</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">all_groups</span><span class="p">]):</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Scrublet per group: </span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_groups</span><span class="p">)))</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">_run_scrublet</span><span class="p">(</span><span class="n">sub</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+        <span class="c1"># Collect results for each element in tuples</span>
+        <span class="n">all_obs</span> <span class="o">=</span> <span class="p">[</span><span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+        <span class="n">all_uns</span> <span class="o">=</span> <span class="p">[</span><span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+
+        <span class="c1"># Merge all simulated scores</span>
+        <span class="n">uns_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="n">threshold</span><span class="p">,</span> <span class="s2">&quot;doublet_scores_sim&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])}</span>
+        <span class="k">for</span> <span class="n">uns</span> <span class="ow">in</span> <span class="n">all_uns</span><span class="p">:</span>
+            <span class="n">uns_dict</span><span class="p">[</span><span class="s2">&quot;doublet_scores_sim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">uns_dict</span><span class="p">[</span><span class="s2">&quot;doublet_scores_sim&quot;</span><span class="p">],</span> <span class="n">uns</span><span class="p">[</span><span class="s2">&quot;doublet_scores_sim&quot;</span><span class="p">]))</span>
+
+        <span class="c1"># Merge all obs tables</span>
+        <span class="n">obs_table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_obs</span><span class="p">)</span>
+        <span class="n">obs_table</span> <span class="o">=</span> <span class="n">obs_table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs_names</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="p">:]</span>  <span class="c1"># Sort obs to match original order</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Run scrublet on adata</span>
+        <span class="n">obs_table</span><span class="p">,</span> <span class="n">uns_dict</span> <span class="o">=</span> <span class="n">_run_scrublet</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Save scores to object</span>
+    <span class="c1"># ImplicitModificationWarning</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;doublet_score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs_table</span><span class="p">[</span><span class="s2">&quot;doublet_score&quot;</span><span class="p">]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;predicted_doublet&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs_table</span><span class="p">[</span><span class="s2">&quot;predicted_doublet&quot;</span><span class="p">]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;scrublet&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">uns_dict</span>
+
+    <span class="k">if</span> <span class="n">fill_na</span><span class="p">:</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;doublet_score&quot;</span><span class="p">,</span> <span class="s2">&quot;predicted_doublet&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">fill_na</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;doublet_score&quot;</span><span class="p">,</span> <span class="s2">&quot;predicted_doublet&quot;</span><span class="p">]],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+    <span class="c1"># Check if all values in colum are of type boolean</span>
+    <span class="k">if</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;predicted_doublet&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="s2">&quot;bool&quot;</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not estimate doublets for every barcode. Columns can contain NAN values.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Plot the distribution of scrublet scores</span>
+    <span class="k">if</span> <span class="n">plot</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">external</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">scrublet_score_distribution</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+    <span class="c1"># Return adata (or None if inplace)</span>
+    <span class="k">if</span> <span class="n">inplace</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_run_scrublet</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                  <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Thread-safe wrapper for running scrublet, which also takes care of catching any warnings.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to estimate doublets for.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments are passed to scanpy.external.pp.scrublet.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]</span>
+<span class="sd">        Tuple containing .obs and .uns[&quot;scrublet&quot;] of the adata object after scrublet.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Received a view of an AnnData*&quot;</span><span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">anndata</span><span class="o">.</span><span class="n">ImplicitModificationWarning</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Trying to modify attribute `.obs`*&quot;</span><span class="p">)</span>  <span class="c1"># because adata is a view</span>
+
+        <span class="c1"># X = adata.X</span>
+        <span class="c1"># scrub = scr.Scrublet(X)</span>
+        <span class="c1"># doublet_scores, predicted_doublets = scrub.scrub_doublets()</span>
+
+        <span class="c1"># adata.obs[&quot;doublet_score&quot;] = doublet_scores</span>
+        <span class="c1"># adata.obs[&quot;predicted_doublet&quot;] = predicted_doublets</span>
+
+        <span class="n">sc</span><span class="o">.</span><span class="n">external</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">scrublet</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;scrublet&quot;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="predict_sex">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.predict_sex">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">predict_sex</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                <span class="n">groupby</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">gene</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Xist&quot;</span><span class="p">,</span>
+                <span class="n">gene_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+                <span class="n">plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">save</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Predict sex based on expression of Xist (or another gene).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        An anndata object to predict sex for.</span>
+<span class="sd">    groupby : str</span>
+<span class="sd">        Column in adata.obs to group by.</span>
+<span class="sd">    gene : str, default &quot;Xist&quot;</span>
+<span class="sd">        Name of a female-specific gene to use for estimating Male/Female split.</span>
+<span class="sd">    gene_column : Optional[str], default None</span>
+<span class="sd">        Name of the column in adata.var that contains the gene names. If not provided, adata.var.index is used.</span>
+<span class="sd">    threshold : float, default 0.3</span>
+<span class="sd">        Threshold for the minimum fraction of cells expressing the gene for the group to be considered &quot;Female&quot;.</span>
+<span class="sd">    plot : bool, default True</span>
+<span class="sd">        Whether to plot the distribution of gene expression per group.</span>
+<span class="sd">    save : Optional[str], default None</span>
+<span class="sd">        If provided, the plot will be saved to this path.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments are passed to scanpy.pl.violin.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    adata.X will be converted to numpy.ndarray if it is of type numpy.matrix.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Normalize data before estimating expression</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Normalizing adata&quot;</span><span class="p">)</span>
+    <span class="n">adata_copy</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># ensure that adata is not changed during normalization</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata_copy</span><span class="p">,</span> <span class="n">target_sum</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata_copy</span><span class="p">)</span>
+
+    <span class="c1"># Get expression of gene per cell</span>
+    <span class="k">if</span> <span class="n">gene_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">gene_names_lower</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">adata_copy</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">gene_names_lower</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">adata_copy</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">gene_column</span><span class="p">]]</span>
+    <span class="n">gene_index</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">gene_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_names_lower</span><span class="p">)</span> <span class="k">if</span> <span class="n">gene_name</span> <span class="o">==</span> <span class="n">gene</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_index</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Selected gene is not present in the data. Prediction is skipped.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># If adata.X is of type matrix convert to ndarray</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">adata_copy</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">):</span>
+        <span class="n">adata_copy</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">adata_copy</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">getA</span><span class="p">()</span>
+
+    <span class="c1"># Try to flatten for adata.X np.ndarray. If not flatten for scipy sparse matrix</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">adata_copy</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;gene_expr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata_copy</span><span class="o">.</span><span class="n">X</span><span class="p">[:,</span> <span class="n">gene_index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">adata_copy</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;gene_expr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata_copy</span><span class="o">.</span><span class="n">X</span><span class="p">[:,</span> <span class="n">gene_index</span><span class="p">]</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span><span class="o">.</span><span class="n">A1</span>
+
+    <span class="c1"># Estimate which samples are male/female</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Estimating male/female per group&quot;</span><span class="p">)</span>
+    <span class="n">assignment</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">group</span><span class="p">,</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">adata_copy</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">groupby</span><span class="p">):</span>
+        <span class="n">n_cells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+        <span class="n">n_expr</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;gene_expr&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">frac</span> <span class="o">=</span> <span class="n">n_expr</span> <span class="o">/</span> <span class="n">n_cells</span>
+        <span class="k">if</span> <span class="n">frac</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="n">assignment</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Female&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">assignment</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Male&quot;</span>
+
+    <span class="c1"># Add assignment to adata.obs</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">assignment</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;predicted_sex&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">&quot;predicted_sex&quot;</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;predicted_sex&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">obs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Plot overview if chosen</span>
+    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Plotting violins&quot;</span><span class="p">)</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="n">n_groups</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">axarr</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                  <span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">)</span> <span class="o">/</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span>
+                                  <span class="n">gridspec_kw</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;width_ratios&#39;</span><span class="p">:</span> <span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">n_groups</span><span class="p">),</span> <span class="n">n_groups</span><span class="p">]})</span>
+
+        <span class="c1"># Plot histogram of all values</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">adata_copy</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;gene_expr&quot;</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;horizontal&quot;</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;grey&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">invert_xaxis</span><span class="p">()</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Normalized </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> expression&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Plot violins per group + color for female cells</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">violin</span><span class="p">(</span><span class="n">adata_copy</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="s2">&quot;gene_expr&quot;</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">jitter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">xlim</span> <span class="o">=</span> <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">groups</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">assignment</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Female&quot;</span><span class="p">:</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;red&quot;</span>
+                <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.3</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">alpha</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">xlim</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Prediction of female groups&quot;</span><span class="p">)</span>
+
+        <span class="n">_save_figure</span><span class="p">(</span><span class="n">save</span><span class="p">)</span></div>
+
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#                      STEP 1: FINDING AUTOMATIC CUTOFFS                      #</span>
+<span class="c1">###############################################################################</span>
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_get_thresholds</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                    <span class="n">max_mixtures</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                    <span class="n">n_std</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+                    <span class="n">plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get automatic min/max thresholds for input data array.</span>
+
+<span class="sd">    The function will fit a gaussian mixture model, and find the threshold</span>
+<span class="sd">    based on the mean and standard deviation of the largest mixture in the model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : npt.ArrayLike</span>
+<span class="sd">        Array of data to find thresholds for.</span>
+<span class="sd">    max_mixtures : int, default 5</span>
+<span class="sd">        Maximum number of gaussian mixtures to fit.</span>
+<span class="sd">    n_std : int | float, default 3</span>
+<span class="sd">        Number of standard deviations from distribution mean to set as min/max thresholds.</span>
+<span class="sd">    plot : bool, default True</span>
+<span class="sd">        If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, float]</span>
+<span class="sd">        Dictionary with min and max thresholds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Get numpy array if input was pandas series or list</span>
+    <span class="n">data_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;Series&quot;</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">values</span>
+    <span class="k">elif</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;list&quot;</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="c1"># Attempt to reshape values</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Fit data with gaussian mixture</span>
+    <span class="n">n_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_mixtures</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>  <span class="c1"># 1-&gt;max mixtures per model</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">n_list</span><span class="p">):</span>
+        <span class="n">models</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">GaussianMixture</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="c1"># Evaluate quality of models</span>
+    <span class="c1"># AIC = [m.aic(data) for m in models]</span>
+    <span class="n">BIC</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">bic</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">models</span><span class="p">]</span>
+
+    <span class="c1"># Choose best number of mixtures</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">kn</span> <span class="o">=</span> <span class="n">KneeLocator</span><span class="p">(</span><span class="n">n_list</span><span class="p">,</span> <span class="n">BIC</span><span class="p">,</span> <span class="n">curve</span><span class="o">=</span><span class="s1">&#39;convex&#39;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;decreasing&#39;</span><span class="p">)</span>
+        <span class="n">M_best</span> <span class="o">=</span> <span class="n">models</span><span class="p">[</span><span class="n">kn</span><span class="o">.</span><span class="n">knee</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>  <span class="c1"># -1 to get index</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="c1"># Knee could not be found; use the normal distribution estimated using one gaussian</span>
+        <span class="n">M_best</span> <span class="o">=</span> <span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Which is the largest component? And what are the mean/variance of this distribution?</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">M_best</span><span class="o">.</span><span class="n">weights_</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+    <span class="n">dist_mean</span> <span class="o">=</span> <span class="n">M_best</span><span class="o">.</span><span class="n">means_</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dist_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">M_best</span><span class="o">.</span><span class="n">covariances_</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Threshold estimation</span>
+    <span class="n">thresholds</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">dist_mean</span> <span class="o">-</span> <span class="n">dist_std</span> <span class="o">*</span> <span class="n">n_std</span><span class="p">,</span>
+                  <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">dist_mean</span> <span class="o">+</span> <span class="n">dist_std</span> <span class="o">*</span> <span class="n">n_std</span><span class="p">}</span>
+
+    <span class="c1"># ------ Plot if chosen -------#</span>
+    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+
+        <span class="n">fig</span><span class="p">,</span> <span class="n">axarr</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">axarr</span> <span class="o">=</span> <span class="n">axarr</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="c1"># Plot distribution of BIC</span>
+        <span class="c1"># plt.plot(n_list, AIC, color=&quot;red&quot;, label=&quot;AIC&quot;)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">n_list</span><span class="p">,</span> <span class="n">BIC</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Number of mixtures&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;BIC&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Plot distribution of gaussian mixtures</span>
+        <span class="n">min_x</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">max_x</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">min_x</span><span class="p">,</span> <span class="n">max_x</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">logprob</span> <span class="o">=</span> <span class="n">M_best</span><span class="o">.</span><span class="n">score_samples</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">responsibilities</span> <span class="o">=</span> <span class="n">M_best</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">pdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logprob</span><span class="p">)</span>
+        <span class="n">pdf_individual</span> <span class="o">=</span> <span class="n">responsibilities</span> <span class="o">*</span> <span class="n">pdf</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Value&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Density&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M_best</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">pdf_individual</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Component </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">w</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">thresholds</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">thresholds</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">)</span>
+        <span class="n">axarr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># locate legend outside of plot</span>
+
+    <span class="k">return</span> <span class="n">thresholds</span>
+
+
+<div class="viewcode-block" id="automatic_thresholds">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.automatic_thresholds">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">automatic_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                         <span class="n">which</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;obs&quot;</span><span class="p">,</span>
+                         <span class="n">groupby</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get automatic thresholds for multiple data columns in adata.obs or adata.var.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to find thresholds for.</span>
+<span class="sd">    which : Literal[&quot;obs&quot;, &quot;var&quot;], default &quot;obs&quot;</span>
+<span class="sd">        Which data to find thresholds for. Either &quot;obs&quot; or &quot;var&quot;.</span>
+<span class="sd">    groupby : Optional[str], default None</span>
+<span class="sd">        Group rows by the column given in &#39;groupby&#39; to find thresholds independently per group</span>
+<span class="sd">    columns : Optional[list[str]], default None</span>
+<span class="sd">        Columns to calculate automatic thresholds for. If None, will take all numeric columns.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, dict[str, Union[float, dict[str, float]]]]</span>
+<span class="sd">        A dict containing thresholds for each data column,</span>
+<span class="sd">        either grouped by groupby or directly containing &quot;min&quot; and &quot;max&quot; per column.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        If which is not set to &#39;obs&#39; or &#39;var&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Find out which data to find thresholds for</span>
+    <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span>
+    <span class="k">elif</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span>
+
+    <span class="c1"># Establish which columns to find thresholds for</span>
+    <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+    <span class="c1"># Check groupby</span>
+    <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">groupby</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+
+    <span class="c1"># Get threshold per data column (and groupby if chosen)</span>
+    <span class="n">thresholds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">_get_thresholds</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># initialize to fill in per group</span>
+            <span class="k">for</span> <span class="n">group</span><span class="p">,</span> <span class="n">subtable</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">groupby</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">subtable</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+                <span class="n">data</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="n">_get_thresholds</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">][</span><span class="n">group</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span>
+
+    <span class="k">return</span> <span class="n">thresholds</span></div>
+
+
+
+<div class="viewcode-block" id="thresholds_as_table">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.thresholds_as_table">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">thresholds_as_table</span><span class="p">(</span><span class="n">threshold_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">]]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Show the threshold dictionary as a table.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    threshold_dict : dict[str, dict[str, float | int | dict[str, int | float]]]</span>
+<span class="sd">        Dictionary with thresholds.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">threshold_dict</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">]:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">),</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)]</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">]:</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">][</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">),</span> <span class="n">threshold_dict</span><span class="p">[</span><span class="n">column</span><span class="p">][</span><span class="n">group</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)]</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+    <span class="c1"># Assemble table</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># df can be empty if no valid thresholds were input</span>
+
+        <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Parameter&quot;</span><span class="p">,</span> <span class="s2">&quot;Group&quot;</span><span class="p">,</span> <span class="s2">&quot;Minimum&quot;</span><span class="p">,</span> <span class="s2">&quot;Maximum&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Remove group column if no thresholds had groups</span>
+        <span class="k">if</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Group&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">&quot;Group&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Remove duplicate rows</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<span class="c1">######################################################################################</span>
+<span class="c1">#                     STEP 2:     DEFINE CUSTOM CUTOFFS                              #</span>
+<span class="c1">######################################################################################</span>
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_validate_minmax</span><span class="p">(</span><span class="n">d</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that the dict &#39;d&#39; contains the keys &#39;min&#39; and &#39;max&#39;.&quot;&quot;&quot;</span>
+
+    <span class="n">allowed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">])</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="n">not_allowed</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span> <span class="o">-</span> <span class="n">allowed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">not_allowed</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Keys </span><span class="si">{0}</span><span class="s2"> not allowed&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">not_allowed</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="validate_threshold_dict">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.validate_threshold_dict">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">validate_threshold_dict</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+                            <span class="n">thresholds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">]]],</span>
+                            <span class="n">groupby</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validate threshold dictionary.</span>
+
+<span class="sd">    Thresholds can be in the format:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        thresholds = {&quot;chrM_percent&quot;: {&quot;min&quot;: 0, &quot;max&quot;: 10},</span>
+<span class="sd">                      &quot;total_reads&quot;: {&quot;min&quot;: 1000}}</span>
+
+<span class="sd">    Or per group in &#39;groupby&#39;:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        thresholds = {&quot;chrM_percent&quot;: {</span>
+<span class="sd">                                &quot;Sample1&quot;: {&quot;min&quot;: 0, &quot;max&quot;: 10},</span>
+<span class="sd">                                &quot;Sample2&quot;: {&quot;max&quot;: 5}</span>
+<span class="sd">                                },</span>
+<span class="sd">                      &quot;total_reads&quot;: {&quot;min&quot;: 1000}}</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table : pd.DataFrame</span>
+<span class="sd">        Table to validate thresholds for.</span>
+<span class="sd">    thresholds : dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]]</span>
+<span class="sd">        Dictionary of thresholds to validate.</span>
+<span class="sd">    groupby : Optional[str], default None</span>
+<span class="sd">        Column for grouping thresholds.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the threshold dict is not valid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span>
+
+    <span class="c1"># Check if all columns in thresholds are available</span>
+    <span class="n">threshold_columns</span> <span class="o">=</span> <span class="n">thresholds</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="n">not_found</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">threshold_columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Column(s) &#39;</span><span class="si">{0}</span><span class="s2">&#39; given in thresholds are not found in table&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">not_found</span><span class="p">))</span>
+
+    <span class="c1"># Check the format of individual column thresholds</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">thresholds</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># expecting one threshold for all cells</span>
+            <span class="n">_validate_minmax</span><span class="p">(</span><span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
+
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># Expecting either one threshold or a threshold for each sample</span>
+
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+                    <span class="n">minmax_dict</span> <span class="o">=</span> <span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
+                    <span class="n">_validate_minmax</span><span class="p">(</span><span class="n">minmax_dict</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>  <span class="c1"># this is a minmax threshold</span>
+                    <span class="n">_validate_minmax</span><span class="p">(</span><span class="n">thresholds</span><span class="p">[</span><span class="n">col</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="get_thresholds_wrapper">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.get_thresholds_wrapper">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">get_thresholds_wrapper</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                           <span class="n">manual_thresholds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                           <span class="n">only_automatic_thresholds</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                           <span class="n">groupby</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">]]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the thresholds for the filtering.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to find QC thresholds for.</span>
+<span class="sd">    manual_thresholds : dict[str, dict[str, Union[float, dict[str, float]]]]</span>
+<span class="sd">        Dictionary containing manually set thresholds</span>
+<span class="sd">    only_automatic_thresholds : bool, default True</span>
+<span class="sd">        If True, only set automatic thresholds.</span>
+<span class="sd">    groupby : Optional[str], default None</span>
+<span class="sd">        Group cells by column in adata.obs.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]</span>
+<span class="sd">        Dictionary containing the thresholds</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">manual_thresholds</span> <span class="o">=</span> <span class="n">get_keys</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">manual_thresholds</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">only_automatic_thresholds</span><span class="p">:</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manual_thresholds</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">thresholds</span> <span class="o">=</span> <span class="n">automatic_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">thresholds</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">groupby</span><span class="p">:</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">current_sample</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">current_sample</span> <span class="o">!=</span> <span class="n">sample</span><span class="p">:</span>
+                    <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="n">current_sample</span> <span class="o">=</span> <span class="n">sample</span>
+        <span class="c1"># thresholds which are not set by the user are set automatically</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">manual_thresholds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;min&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;max&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">auto_thr</span> <span class="o">=</span> <span class="n">automatic_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">)</span>
+                <span class="n">manual_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">auto_thr</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">groupby</span><span class="p">:</span>
+                    <span class="n">thresholds</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">:</span>
+                        <span class="n">thresholds</span><span class="p">[</span><span class="n">sample</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">thresholds</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
+
+                <span class="n">manual_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">thresholds</span>
+
+        <span class="k">return</span> <span class="n">manual_thresholds</span></div>
+
+
+
+<div class="viewcode-block" id="get_keys">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.get_keys">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">get_keys</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+             <span class="n">manual_thresholds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">]]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get threshold dictionary with keys that overlap with adata.obs.columns.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object</span>
+<span class="sd">    manual_thresholds : dict[str, Any]</span>
+<span class="sd">        Dictionary with adata.obs colums as keys.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]</span>
+<span class="sd">        Dictionary with key - adata.obs.column overlap</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">m_thresholds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">legend</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">manual_thresholds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">legend</span><span class="p">:</span>
+            <span class="n">m_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;column: &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39; not found in adata.obs&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">m_thresholds</span></div>
+
+
+
+<div class="viewcode-block" id="get_mean_thresholds">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.get_mean_thresholds">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">get_mean_thresholds</span><span class="p">(</span><span class="n">thresholds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert grouped thresholds to global thresholds by taking the mean across groups.&quot;&quot;&quot;</span>
+
+    <span class="n">global_thresholds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">adict</span> <span class="ow">in</span> <span class="n">thresholds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">global_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">adict</span> <span class="ow">or</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">adict</span><span class="p">:</span>  <span class="c1"># already global threshold</span>
+            <span class="n">global_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">adict</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">min_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">adict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">min_values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">global_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;min&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">min_values</span><span class="p">)</span>
+
+            <span class="n">max_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">adict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">max_values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">global_thresholds</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">max_values</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">global_thresholds</span></div>
+
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#                           STEP 3: APPLYING CUTOFFS                          #</span>
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="apply_qc_thresholds">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.apply_qc_thresholds">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">apply_qc_thresholds</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                        <span class="n">thresholds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                        <span class="n">which</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;obs&quot;</span><span class="p">,</span>
+                        <span class="n">groupby</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply QC thresholds to anndata object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to filter.</span>
+<span class="sd">    thresholds : dict[str, Any]</span>
+<span class="sd">        Dictionary of thresholds to apply.</span>
+<span class="sd">    which : Literal[&quot;obs&quot;, &quot;var&quot;], default &#39;obs&#39;</span>
+<span class="sd">       Which table to filter on. Must be one of &quot;obs&quot; / &quot;var&quot;.</span>
+<span class="sd">    groupby : Optional[str], default None</span>
+<span class="sd">        Column in table to group by.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        Change adata inplace or return a changed copy.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        Anndata object with QC thresholds applied.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        1: If the keys in thresholds do not match with the columns in adata.[which].</span>
+<span class="sd">        2: If grouped thesholds are not found. For example do not contain min and max values.</span>
+<span class="sd">        3: If thresholds do not contain min and max values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span> <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span> <span class="k">else</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span>
+
+    <span class="c1"># Cells or genes? For naming in log prints</span>
+    <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;cells&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;.var features&quot;</span>
+
+    <span class="c1"># Check if all columns are found in adata</span>
+    <span class="n">not_found</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">thresholds</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="s2"> threshold columns were not found in adata and could therefore not be applied. These columns are: </span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">),</span> <span class="n">not_found</span><span class="p">))</span>
+    <span class="n">thresholds</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">thresholds</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">thresholds</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">not_found</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">thresholds</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The thresholds given do not match the columns given in adata.</span><span class="si">{</span><span class="n">which</span><span class="si">}</span><span class="s2">. Please adjust the &#39;which&#39; parameter if needed.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+
+    <span class="c1"># Check that thresholds contain min/max</span>
+    <span class="k">for</span> <span class="n">column</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">thresholds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="s1">&#39;min&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">d</span> <span class="ow">and</span> <span class="s1">&#39;max&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">keys</span> <span class="o">=</span> <span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="n">not_found</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">groups</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">)</span><span class="si">}</span><span class="s2"> groups from thresholds were not found in adata.obs[</span><span class="si">{</span><span class="n">groupby</span><span class="si">}</span><span class="s2">]. These groups are: </span><span class="si">{</span><span class="n">not_found</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error in threshold format: Thresholds must contain min or max per column, or a threshold per group in groupby&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Apply thresholds</span>
+    <span class="k">for</span> <span class="n">column</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">thresholds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="c1"># Update size of table</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span> <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span> <span class="k">else</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span>
+
+        <span class="c1"># Collect boolean array of rows to select of table</span>
+        <span class="n">global_threshold</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># can be overwritten if thresholds are global</span>
+        <span class="n">excluded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">groupby</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">d</span> <span class="ow">or</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+                <span class="n">global_threshold</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+                    <span class="n">minmax_dict</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="n">group</span><span class="p">]</span>
+
+                    <span class="n">group_bool</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span> <span class="o">==</span> <span class="n">group</span>
+
+                    <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">minmax_dict</span><span class="p">:</span>
+                        <span class="n">excluded</span> <span class="o">=</span> <span class="n">excluded</span> <span class="o">|</span> <span class="p">(</span><span class="n">group_bool</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">minmax_dict</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">]))</span>
+
+                    <span class="k">if</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">minmax_dict</span><span class="p">:</span>
+                        <span class="n">excluded</span> <span class="o">=</span> <span class="n">excluded</span> <span class="o">|</span> <span class="p">(</span><span class="n">group_bool</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">minmax_dict</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">global_threshold</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Select using a global threshold</span>
+        <span class="k">if</span> <span class="n">global_threshold</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">minmax_dict</span> <span class="o">=</span> <span class="n">d</span>
+
+            <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">minmax_dict</span><span class="p">:</span>
+                <span class="n">excluded</span> <span class="o">=</span> <span class="n">excluded</span> <span class="o">|</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">minmax_dict</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">])</span>  <span class="c1"># if already excluded, or if excluded by min</span>
+
+            <span class="k">if</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">minmax_dict</span><span class="p">:</span>
+                <span class="n">excluded</span> <span class="o">=</span> <span class="n">excluded</span> <span class="o">|</span> <span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">minmax_dict</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Apply filtering</span>
+        <span class="n">included</span> <span class="o">=</span> <span class="o">~</span><span class="n">excluded</span>
+
+        <span class="k">if</span> <span class="n">inplace</span><span class="p">:</span>
+            <span class="c1"># NOTE: these are privat anndata functions so they might change without warning!</span>
+            <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+                <span class="n">adata</span><span class="o">.</span><span class="n">_inplace_subset_obs</span><span class="p">(</span><span class="n">included</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">adata</span><span class="o">.</span><span class="n">_inplace_subset_var</span><span class="p">(</span><span class="n">included</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+                <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">included</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span> <span class="n">included</span><span class="p">]</span>  <span class="c1"># filter on var</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Filtering based on &#39;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">&#39; from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="n">included</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">inplace</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#                         STEP 4: ADDITIONAL FILTERING                        #</span>
+<span class="c1">###############################################################################</span>
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_filter_object</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                   <span class="nb">filter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                   <span class="n">which</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;obs&quot;</span><span class="p">,</span>
+                   <span class="n">remove_bool</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Decide which element type (genes/cells) we are dealing with</span>
+    <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span>
+        <span class="n">table_name</span> <span class="o">=</span> <span class="s2">&quot;adata.obs&quot;</span>
+        <span class="n">element_name</span> <span class="o">=</span> <span class="s2">&quot;cells&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span>
+        <span class="n">table_name</span> <span class="o">=</span> <span class="s2">&quot;adata.var&quot;</span>
+        <span class="n">element_name</span> <span class="o">=</span> <span class="s2">&quot;genes&quot;</span>
+
+    <span class="n">n_before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+    <span class="c1"># genes is either a string (column in .var table) or a list of genes to remove</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">filter</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">filter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column </span><span class="si">{</span><span class="nb">filter</span><span class="si">}</span><span class="s2"> not found in </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">.columns&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">table</span><span class="p">[</span><span class="nb">filter</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot;bool&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column </span><span class="si">{</span><span class="nb">filter</span><span class="si">}</span><span class="s2"> contains values that are not of type boolean&quot;</span><span class="p">)</span>
+
+        <span class="n">boolean</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="nb">filter</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="k">if</span> <span class="n">remove_bool</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">boolean</span> <span class="o">=</span> <span class="o">~</span><span class="n">boolean</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Check if all genes/cells are found in adata</span>
+        <span class="n">not_found</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">filter</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">not_found</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">element_name</span><span class="si">}</span><span class="s2"> were not found in adata and could therefore not be removed. These genes are: </span><span class="si">{</span><span class="n">not_found</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">boolean</span> <span class="o">=</span> <span class="o">~</span><span class="n">table</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="nb">filter</span><span class="p">)</span>
+
+    <span class="c1"># Remove genes from adata</span>
+    <span class="k">if</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">_inplace_subset_obs</span><span class="p">(</span><span class="n">boolean</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">_inplace_subset_var</span><span class="p">(</span><span class="n">boolean</span><span class="p">)</span>  <span class="c1"># boolean is the included genes</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span><span class="p">:</span>
+            <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">boolean</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span>
+            <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span> <span class="n">boolean</span><span class="p">]</span>
+
+    <span class="n">n_after</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;obs&quot;</span> <span class="k">else</span> <span class="n">adata</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="n">n_before</span> <span class="o">-</span> <span class="n">n_after</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Filtered out </span><span class="si">{</span><span class="n">filtered</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">element_name</span><span class="si">}</span><span class="s2"> from adata. New number of </span><span class="si">{</span><span class="n">element_name</span><span class="si">}</span><span class="s2"> is: </span><span class="si">{</span><span class="n">n_after</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">inplace</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span>
+
+
+<div class="viewcode-block" id="filter_cells">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.filter_cells">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">filter_cells</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                 <span class="n">cells</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                 <span class="n">remove_bool</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove cells from anndata object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object to filter.</span>
+<span class="sd">    cells : str | list[str]</span>
+<span class="sd">        A column in .obs containing boolean indicators or a list of cells to remove from object .obs table.</span>
+<span class="sd">    remove_bool : bool, default True</span>
+<span class="sd">        Is used if genes is a column in .obs table. If True, remove cells that are True. If False, remove cells that are False.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        If True, filter inplace. If False, return filtered adata object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">_filter_object</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">cells</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span> <span class="n">remove_bool</span><span class="o">=</span><span class="n">remove_bool</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="n">inplace</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ret</span></div>
+
+
+
+<div class="viewcode-block" id="filter_genes">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.qc_filter.filter_genes">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">filter_genes</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                 <span class="n">genes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                 <span class="n">remove_bool</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove genes from adata object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Annotated data matrix object to filter</span>
+<span class="sd">    genes : str | list[str]</span>
+<span class="sd">        A column containing boolean indicators or a list of genes to remove from object .var table.</span>
+<span class="sd">    remove_bool : bool, default True</span>
+<span class="sd">        Is used if genes is a column in .var table. If True, remove genes that are True. If False, remove genes that are False.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        If True, filter inplace. If False, return filtered adata object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">_filter_object</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">genes</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="n">remove_bool</span><span class="o">=</span><span class="n">remove_bool</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="n">inplace</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ret</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>01 - Assembling or loading anndata object &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="02 - QC and filtering" href="02_QC_filtering.html" />
+    <link rel="prev" title="RNA notebooks" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">RNA notebooks</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">01 - Assembling or loading anndata object</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1---Description">1 - Description</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#1.-.h5ad-file">1. <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#2.-star-solo-quant-folder">2. star solo quant folder</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.-.mtx,-barcode.tsv,-genes.tsv">3. .mtx, barcode.tsv, genes.tsv</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.-convert-from-R-object">4. convert from R object</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#2---Setup">2 - Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3---Read-in-data">3 - Read in data</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#3.1---Option-1:-Read-from-h5ad">3.1 - Option 1: Read from h5ad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.2---Option-2:-Assemble-from-preprocessing-pipeline-'quant'-folder">3.2 - Option 2: Assemble from preprocessing pipeline ‘quant’ folder</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.3---Option-3:-Create-an-anndata-object-from-.mtx,-barcodes.tsv-and-genes.tsv">3.3 - Option 3: Create an anndata object from .mtx, barcodes.tsv and genes.tsv</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.4---Option-4:-Convert-from-Seurat-to-anndata-object">3.4 - Option 4: Convert from Seurat to anndata object</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#4---Prepare-anndata">4 - Prepare anndata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#5---Saving-the-loaded-anndata-object">5 - Saving the loaded anndata object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="02_QC_filtering.html">02 - QC and filtering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_batch.html">03 - Batch effect correction and comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_clustering.html">04 - Embedding and clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0A_marker_genes.html">0A - Marker gene computation and analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0B_ligand_receptor.html">0B - Receptor-Ligand Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="0C_velocity_analysis.html">0C - Velocity Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">RNA notebooks</a></li>
+      <li class="breadcrumb-item active">01 - Assembling or loading anndata object</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/rna-notebooks/01_assembling_anndata.nblink.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sctoolbox</span>
+<span class="kn">from</span> <span class="nn">sctoolbox.utils</span> <span class="kn">import</span> <span class="n">bgcolor</span>
+</pre></div>
+</div>
+</div>
+<section id="01---Assembling-or-loading-anndata-object">
+<h1>01 - Assembling or loading anndata object<a class="headerlink" href="#01---Assembling-or-loading-anndata-object" title="Link to this heading"></a></h1>
+<hr style="border:2px solid black"></hr><section id="1---Description">
+<h2>1 - Description<a class="headerlink" href="#1---Description" title="Link to this heading"></a></h2>
+<p>This notebook is dedicated to load or create an anndata object. The anndata object is prepared for the following analysis notebooks and finally stored as an <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file. Based on the available data files there are multiple options to create the anndata object.</p>
+<section id="1.-.h5ad-file">
+<h3>1. <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file<a class="headerlink" href="#1.-.h5ad-file" title="Link to this heading"></a></h3>
+<p>Choose this option if you have a <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file. The file could be provided by a preprocessing pipeline, a public dataset or a preceeding analysis.</p>
+</section>
+<section id="2.-star-solo-quant-folder">
+<h3>2. star solo quant folder<a class="headerlink" href="#2.-star-solo-quant-folder" title="Link to this heading"></a></h3>
+<p>This option is intended to assemble anndata object from the standard <a class="reference external" href="https://github.com/alexdobin/STAR/tree/master">star solo</a> output folder (<code class="docutils literal notranslate"><span class="pre">quant/</span></code>). This is done by scaning through the folder structure and using the <code class="docutils literal notranslate"><span class="pre">*_matrix.mtx</span></code>, <code class="docutils literal notranslate"><span class="pre">*_barcodes.tsv</span></code> and <code class="docutils literal notranslate"><span class="pre">*_genes.tsv</span></code> to create an anndata object per sample. The sample anndata objects are finally combined.</p>
+</section>
+<section id="3.-.mtx,-barcode.tsv,-genes.tsv">
+<h3>3. .mtx, barcode.tsv, genes.tsv<a class="headerlink" href="#3.-.mtx,-barcode.tsv,-genes.tsv" title="Link to this heading"></a></h3>
+<p>Choose this option if you have the expression matrix in <code class="docutils literal notranslate"><span class="pre">.mtx</span></code> format, a file containing the barcodes (<code class="docutils literal notranslate"><span class="pre">*_barcodes.tsv</span></code>) and a file containing the genes (<code class="docutils literal notranslate"><span class="pre">*_genes.tsv</span></code>). Use this option for cases with the aforementioned three files available e.g. from a public dataset.</p>
+</section>
+<section id="4.-convert-from-R-object">
+<h3>4. convert from R object<a class="headerlink" href="#4.-convert-from-R-object" title="Link to this heading"></a></h3>
+<p>This option should be used if the data was processed using R. This can either be a <code class="docutils literal notranslate"><span class="pre">.rds</span></code> or <code class="docutils literal notranslate"><span class="pre">.robj</span></code> file.</p>
+<hr class="docutils" />
+</section>
+</section>
+<section id="2---Setup">
+<h2>2 - Setup<a class="headerlink" href="#2---Setup" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sctoolbox.utilities</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.assemblers</span> <span class="k">as</span> <span class="nn">assembler</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.file_converter</span> <span class="k">as</span> <span class="nn">converter</span>
+
+<span class="n">utils</span><span class="o">.</span><span class="n">settings_from_config</span><span class="p">(</span><span class="s2">&quot;config.yaml&quot;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">&quot;01&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="3---Read-in-data">
+<h2>3 - Read in data<a class="headerlink" href="#3---Read-in-data" title="Link to this heading"></a></h2>
+<hr style="border:2px solid black"></hr><h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># For option 1: The path to an existing .h5ad file</span>
+<span class="n">path_h5ad</span> <span class="o">=</span> <span class="s2">&quot;test_data/adata_rna.h5ad&quot;</span>
+
+<span class="c1"># For option 2: Path to a star solo quant directory</span>
+<span class="n">path_quant</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+<span class="c1"># For option 3: Directory containing .mtx, barcodes.tsv and genes.tsv</span>
+<span class="n">path_mtx</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+<span class="c1"># For option 4: This is the path to the Seurat (.rds, .robj) file</span>
+<span class="n">path_rds</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">path_h5ad</span><span class="p">,</span> <span class="n">path_quant</span><span class="p">,</span> <span class="n">path_mtx</span><span class="p">,</span> <span class="n">path_rds</span><span class="p">]))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">del</span> <span class="n">path_h5ad</span><span class="p">,</span> <span class="n">path_quant</span><span class="p">,</span> <span class="n">path_mtx</span><span class="p">,</span> <span class="n">path_rds</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Please set only one of the above variables. Adjust the cell above and re-run.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<section id="3.1---Option-1:-Read-from-h5ad">
+<h3>3.1 - Option 1: Read from h5ad<a class="headerlink" href="#3.1---Option-1:-Read-from-h5ad" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">path_h5ad</span><span class="p">:</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_h5ad</span><span class="p">(</span><span class="n">path_h5ad</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="3.2---Option-2:-Assemble-from-preprocessing-pipeline-'quant'-folder">
+<h3>3.2 - Option 2: Assemble from preprocessing pipeline ‘quant’ folder<a class="headerlink" href="#3.2---Option-2:-Assemble-from-preprocessing-pipeline-'quant'-folder" title="Link to this heading"></a></h3>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># Set up additional sample the information below.</span>
+<span class="c1"># Follows the scheme:</span>
+<span class="c1"># &lt;sample name&gt;:&lt;type&gt;:&lt;value&gt;</span>
+<span class="c1"># E.g.:</span>
+<span class="c1"># sample1:condition:room_air</span>
+<span class="c1"># sample1:timepoint:early</span>
+<span class="c1"># sample2:timepoint:late</span>
+<span class="n">the_10X_yml</span> <span class="o">=</span> <span class="p">[]</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">path_quant</span><span class="p">:</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">assembler</span><span class="o">.</span><span class="n">from_quant</span><span class="p">(</span><span class="n">path_quant</span><span class="p">,</span> <span class="n">the_10X_yml</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="3.3---Option-3:-Create-an-anndata-object-from-.mtx,-barcodes.tsv-and-genes.tsv">
+<h3>3.3 - Option 3: Create an anndata object from .mtx, barcodes.tsv and genes.tsv<a class="headerlink" href="#3.3---Option-3:-Create-an-anndata-object-from-.mtx,-barcodes.tsv-and-genes.tsv" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">path_mtx</span><span class="p">:</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">assembler</span><span class="o">.</span><span class="n">from_mtx</span><span class="p">(</span><span class="n">path_mtx</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="3.4---Option-4:-Convert-from-Seurat-to-anndata-object">
+<h3>3.4 - Option 4: Convert from Seurat to anndata object<a class="headerlink" href="#3.4---Option-4:-Convert-from-Seurat-to-anndata-object" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Converting from Seurat to anndata object</span>
+<span class="k">if</span> <span class="n">path_rds</span><span class="p">:</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">converter</span><span class="o">.</span><span class="n">convertToAdata</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">path_rds</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+</section>
+<section id="4---Prepare-anndata">
+<h2>4 - Prepare anndata<a class="headerlink" href="#4---Prepare-anndata" title="Link to this heading"></a></h2>
+<p>Rename or remove <code class="docutils literal notranslate"><span class="pre">.obs</span></code> and <code class="docutils literal notranslate"><span class="pre">.var</span></code> columns as needed.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">option_context</span><span class="p">(</span><span class="s1">&#39;display.max_rows&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="s1">&#39;display.max_columns&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<h1><center><p>⬐ Fill in input data here ⬎</p>
+</center></h1><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">bgcolor</span> PowderBlue
+
+<span class="c1"># .obs column names that should be deleted</span>
+<span class="n">drop_obs</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c1"># .obs column names that should be changed. E.g. &quot;old_name&quot;: &quot;New Name&quot;</span>
+<span class="n">rename_obs</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1"># .var column names that should be deleted</span>
+<span class="n">drop_var</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c1"># .var column names that should be changed. E.g. &quot;old_name&quot;: &quot;New Name&quot;</span>
+<span class="n">rename_var</span> <span class="o">=</span> <span class="p">{}</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># change obs</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">obs</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">drop_obs</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">obs</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">rename_obs</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># change var</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">var</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">drop_var</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">var</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">rename_var</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># apply changes to adata</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">obs</span> <span class="o">=</span> <span class="n">obs</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">var</span>
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+</section>
+<section id="5---Saving-the-loaded-anndata-object">
+<h2>5 - Saving the loaded anndata object<a class="headerlink" href="#5---Saving-the-loaded-anndata-object" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Overview of loaded adata</span>
+<span class="n">display</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Saving the data</span>
+<span class="n">adata_output</span> <span class="o">=</span> <span class="s2">&quot;anndata_1.h5ad&quot;</span>
+<span class="n">utils</span><span class="o">.</span><span class="n">save_h5ad</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">adata_output</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sctoolbox</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">close_logfile</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="RNA notebooks" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="02_QC_filtering.html" class="btn btn-neutral float-right" title="02 - QC and filtering" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sctoolbox.tools.norm_correct &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rna-notebooks/index.html">RNA notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">sctoolbox.tools.norm_correct</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for sctoolbox.tools.norm_correct</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Normalization and correction tools.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">sparse</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">redirect_stderr</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">scanpy.external</span> <span class="k">as</span> <span class="nn">sce</span>
+
+<span class="kn">from</span> <span class="nn">beartype.typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span> <span class="nn">beartype</span> <span class="kn">import</span> <span class="n">beartype</span>
+
+<span class="kn">import</span> <span class="nn">sctoolbox.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">sctoolbox.tools.dim_reduction</span> <span class="kn">import</span> <span class="n">lsi</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils.decorator</span> <span class="k">as</span> <span class="nn">deco</span>
+<span class="kn">from</span> <span class="nn">sctoolbox._settings</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">logger</span>
+
+<span class="n">batch_methods</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;bbknn&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;combat&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;mnn&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;harmony&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;scanorama&quot;</span><span class="p">]</span>
+
+<span class="c1">#####################################################################</span>
+<span class="c1"># --------------------- Normalization methods --------------------- #</span>
+<span class="c1">#####################################################################</span>
+
+
+<div class="viewcode-block" id="atac_norm">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.atac_norm">[docs]</a>
+<span class="k">def</span> <span class="nf">atac_norm</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize ATAC data - deprecated functionality. Use normalize_adata instead.&quot;&quot;&quot;</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;The function &#39;atac_norm&#39; is deprecated. Use &#39;normalize_adata&#39; instead.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">normalize_adata</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="normalize_adata">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.normalize_adata">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">normalize_adata</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                    <span class="n">exclude_highly_expressed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="n">use_highly_variable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">target_sum</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalize the count matrix and calculate dimension reduction using different methods.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Annotated data matrix.</span>
+<span class="sd">    method : str | list[str]</span>
+<span class="sd">        Normalization method. Either &#39;total&#39; and/or &#39;tfidf&#39;.</span>
+<span class="sd">        - &#39;total&#39;: Performs normalization for total counts, log1p and PCA.</span>
+<span class="sd">        - &#39;tfidf&#39;: Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.</span>
+<span class="sd">    exclude_highly_expressed : bool, default True</span>
+<span class="sd">        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.</span>
+<span class="sd">    use_highly_variable : bool, default False</span>
+<span class="sd">        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.</span>
+<span class="sd">    target_sum : Optional[int], default None</span>
+<span class="sd">        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, sc.AnnData]</span>
+<span class="sd">        Dictionary containing method name as key, and anndata as values.</span>
+<span class="sd">        Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If method is not valid. Needs to be either &#39;total&#39; or &#39;tfidf&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="p">]</span>
+
+    <span class="n">adatas</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">method_str</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>  <span class="c1"># method is a list</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># make sure the original data is not modified</span>
+
+        <span class="k">if</span> <span class="n">method_str</span> <span class="o">==</span> <span class="s2">&quot;total&quot;</span><span class="p">:</span>  <span class="c1"># perform total normalization and pca</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Performing total normalization and PCA...&#39;</span><span class="p">)</span>
+            <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">exclude_highly_expressed</span><span class="o">=</span><span class="n">exclude_highly_expressed</span><span class="p">,</span> <span class="n">target_sum</span><span class="o">=</span><span class="n">target_sum</span><span class="p">)</span>
+            <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+            <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">use_highly_variable</span><span class="o">=</span><span class="n">use_highly_variable</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">method_str</span> <span class="o">==</span> <span class="s2">&quot;tfidf&quot;</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Performing TFIDF and LSI...&#39;</span><span class="p">)</span>
+            <span class="n">tfidf</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+            <span class="n">lsi</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">use_highly_variable</span><span class="o">=</span><span class="n">use_highly_variable</span><span class="p">)</span>  <span class="c1"># corresponds to PCA</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Method &#39;</span><span class="si">{</span><span class="n">method_str</span><span class="si">}</span><span class="s2">&#39; is invalid - must be either &#39;total&#39; or &#39;tfidf&#39;.&quot;</span><span class="p">)</span>
+
+        <span class="n">adatas</span><span class="p">[</span><span class="n">method_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span>
+
+    <span class="k">return</span> <span class="n">adatas</span></div>
+
+
+
+<div class="viewcode-block" id="tfidf">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.tfidf">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">tfidf</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+          <span class="n">log_tf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+          <span class="n">log_idf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+          <span class="n">log_tfidf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+          <span class="n">scale_factor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e4</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).</span>
+
+<span class="sd">    TF: peak counts are normalised by total number of counts per cell.</span>
+<span class="sd">    DF: total number of counts for each peak.</span>
+<span class="sd">    IDF: number of cells divided by DF.</span>
+<span class="sd">    By default, log(TF) * log(IDF) is returned.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : sc.AnnData</span>
+<span class="sd">        AnnData object with peak counts.</span>
+<span class="sd">    log_tf : bool, default True</span>
+<span class="sd">        Log-transform TF term if True.</span>
+<span class="sd">    log_idf : bool, default True</span>
+<span class="sd">        Log-transform IDF term if True.</span>
+<span class="sd">    log_tfidf : bool, default Frue</span>
+<span class="sd">        Log-transform TF*IDF term if True. Can only be used when log_tf and log_idf are False.</span>
+<span class="sd">    scale_factor : int, default 1e4</span>
+<span class="sd">        Scale factor to multiply the TF-IDF matrix by.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Function is from the muon package.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    AttributeError:</span>
+<span class="sd">        log(TF*IDF) requires log(TF) and log(IDF) to be False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">data</span>
+
+    <span class="k">if</span> <span class="n">log_tfidf</span> <span class="ow">and</span> <span class="p">(</span><span class="n">log_tf</span> <span class="ow">or</span> <span class="n">log_idf</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+            <span class="s2">&quot;When returning log(TF*IDF), </span><span class="se">\</span>
+<span class="s2">            applying neither log(TF) nor log(IDF) is possible.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">n_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">n_peaks</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">dia_matrix</span><span class="p">((</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_peaks</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_peaks</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">n_peaks</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+        <span class="c1"># This prevents making TF dense</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">n_peaks</span><span class="p">,</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">n_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span> <span class="o">/</span> <span class="n">n_peaks</span>
+    <span class="k">if</span> <span class="n">scale_factor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">scale_factor</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">scale_factor</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">tf</span> <span class="o">*</span> <span class="n">scale_factor</span>
+    <span class="k">if</span> <span class="n">log_tf</span><span class="p">:</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">tf</span><span class="p">)</span>
+
+    <span class="n">idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">log_idf</span><span class="p">:</span>
+        <span class="n">idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">idf</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">tf</span><span class="p">):</span>
+        <span class="n">idf</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">dia_matrix</span><span class="p">((</span><span class="n">idf</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">idf</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">idf</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+        <span class="n">tf_idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tf</span><span class="p">,</span> <span class="n">idf</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tf_idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">tf</span><span class="p">),</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">idf</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">log_tfidf</span><span class="p">:</span>
+        <span class="n">tf_idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">tf_idf</span><span class="p">)</span>
+
+    <span class="n">adata</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">tf_idf</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="tfidf_normalization">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.tfidf_normalization">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">tfidf_normalization</span><span class="p">(</span><span class="n">matrix</span><span class="p">:</span> <span class="n">sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">,</span>
+                        <span class="n">tf_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="s2">&quot;term_frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;log&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;term_frequency&quot;</span><span class="p">,</span>
+                        <span class="n">idf_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;unary&quot;</span><span class="p">,</span> <span class="s2">&quot;inverse_freq&quot;</span><span class="p">,</span> <span class="s2">&quot;inverse_freq_smooth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;inverse_freq&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform TF-IDF normalization on a sparse matrix.</span>
+
+<span class="sd">    The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    matrix : scipy.sparse matrix</span>
+<span class="sd">        The matrix to be normalized.</span>
+<span class="sd">    tf_type : Literal[&quot;term_frequency&quot;, &quot;log&quot;, &quot;raw&quot;], default &quot;term_frequency&quot;</span>
+<span class="sd">        The type of term frequency to use. Can be either &quot;raw&quot;, &quot;term_frequency&quot; or &quot;log&quot;.</span>
+<span class="sd">    idf_type : Literal[&quot;inverse_freq&quot;, &quot;unary&quot;, &quot;inverse_freq_smooth&quot;], default &quot;inverse_freq&quot;</span>
+<span class="sd">        The type of inverse document frequency to use. Can be either &quot;unary&quot;, &quot;inverse_freq&quot; or &quot;inverse_freq_smooth&quot;.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sparse.csr_matrix</span>
+<span class="sd">        tfidf normalized sparse matrix.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># t - term (peak)</span>
+    <span class="c1"># d - document (cell)</span>
+    <span class="c1"># N - count of corpus (total set of cells)</span>
+
+    <span class="c1"># Normalize matrix to number of found peaks</span>
+    <span class="n">dense</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+    <span class="n">peaks_per_cell</span> <span class="o">=</span> <span class="n">dense</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># i.e. the length of the document(number of words)</span>
+
+    <span class="c1"># Decide on which Term frequency to use:</span>
+    <span class="k">if</span> <span class="n">tf_type</span> <span class="o">==</span> <span class="s2">&quot;raw&quot;</span><span class="p">:</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">dense</span>
+    <span class="k">elif</span> <span class="n">tf_type</span> <span class="o">==</span> <span class="s2">&quot;term_frequency&quot;</span><span class="p">:</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">dense</span> <span class="o">/</span> <span class="n">peaks_per_cell</span>     <span class="c1"># Counts normalized to peaks (words) per cell (document)</span>
+    <span class="k">elif</span> <span class="n">tf_type</span> <span class="o">==</span> <span class="s2">&quot;log&quot;</span><span class="p">:</span>
+        <span class="n">tf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">dense</span><span class="p">)</span>            <span class="c1"># for binary documents, this scales with &quot;raw&quot;</span>
+
+    <span class="c1"># Decide on the Inverse document frequency to use</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">dense</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>     <span class="c1"># number of cells (number of documents)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">dense</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># number of cells carrying each peak (number of documents containing each word)</span>
+
+    <span class="k">if</span> <span class="n">idf_type</span> <span class="o">==</span> <span class="s2">&quot;unary&quot;</span><span class="p">:</span>
+        <span class="n">idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dense</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># shape is number of peaks</span>
+    <span class="k">elif</span> <span class="n">idf_type</span> <span class="o">==</span> <span class="s2">&quot;inverse_freq&quot;</span><span class="p">:</span>
+        <span class="n">idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">N</span> <span class="o">/</span> <span class="n">df</span><span class="p">)</span>    <span class="c1"># each cell has at least one peak (each document has one word), so df is always &gt; 0</span>
+    <span class="k">elif</span> <span class="n">idf_type</span> <span class="o">==</span> <span class="s2">&quot;inverse_freq_smooth&quot;</span><span class="p">:</span>
+        <span class="n">idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">N</span> <span class="o">/</span> <span class="p">(</span><span class="n">df</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># Obtain TF_IDF</span>
+    <span class="n">tf_idf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tf</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">idf</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">tf_idf</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">tf_idf</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tf_idf</span></div>
+
+
+
+<span class="c1">###################################################################################</span>
+<span class="c1"># --------------------------- Batch correction methods -------------------------- #</span>
+<span class="c1">###################################################################################</span>
+
+
+<div class="viewcode-block" id="wrap_corrections">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.wrap_corrections">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">wrap_corrections</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                     <span class="n">batch_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">methods</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">batch_methods</span><span class="p">,</span>
+                                    <span class="nb">list</span><span class="p">[</span><span class="n">batch_methods</span><span class="p">],</span>
+                                    <span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;bbknn&quot;</span><span class="p">,</span> <span class="s2">&quot;mnn&quot;</span><span class="p">],</span>
+                     <span class="n">method_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{})</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate multiple batch corrections for adata using the &#39;batch_correction&#39; function.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        An annotated data matrix object to apply corrections to.</span>
+<span class="sd">    batch_key : str</span>
+<span class="sd">        The column in adata.obs containing batch information.</span>
+<span class="sd">    methods : list[batch_methods] | Callable | batch_methods, default [&quot;bbknn&quot;, &quot;mnn&quot;]</span>
+<span class="sd">        The method(s) to use for batch correction. Options are:</span>
+<span class="sd">        - bbknn</span>
+<span class="sd">        - mnn</span>
+<span class="sd">        - harmony</span>
+<span class="sd">        - scanorama</span>
+<span class="sd">        - combat</span>
+<span class="sd">        Or provide a custom batch correction function. See `batch_correction(method)` for more information.</span>
+<span class="sd">    method_kwargs : dict, default {}</span>
+<span class="sd">        Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict[str, sc.AnnData]</span>
+<span class="sd">        Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If not all methods in methods are valid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Ensure that methods can be looped over</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">methods</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="n">methods</span><span class="p">]</span>
+
+    <span class="c1"># check method_kwargs keys</span>
+    <span class="n">unknown_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">method_kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">methods</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unknown_keys</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown methods in `method_kwargs` keys: </span><span class="si">{</span><span class="n">unknown_keys</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check the existance of packages before running batch_corrections</span>
+    <span class="n">required_packages</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;harmony&quot;</span><span class="p">:</span> <span class="s2">&quot;harmonypy&quot;</span><span class="p">,</span> <span class="s2">&quot;bbknn&quot;</span><span class="p">:</span> <span class="s2">&quot;bbknn&quot;</span><span class="p">,</span> <span class="s2">&quot;scanorama&quot;</span><span class="p">:</span> <span class="s2">&quot;scanorama&quot;</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">required_packages</span><span class="p">:</span>  <span class="c1"># not all packages need external tools</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">redirect_stderr</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>  <span class="c1"># make the output of check_module silent; mnnpy prints ugly warnings</span>
+                <span class="n">utils</span><span class="o">.</span><span class="n">check_module</span><span class="p">(</span><span class="n">required_packages</span><span class="p">[</span><span class="n">method</span><span class="p">])</span>
+
+    <span class="c1"># Collect batch correction per method</span>
+    <span class="n">anndata_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;uncorrected&#39;</span><span class="p">:</span> <span class="n">adata</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">:</span>
+        <span class="n">anndata_dict</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">batch_correction</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">batch_key</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="o">**</span><span class="n">method_kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="p">{}))</span>  <span class="c1"># batch correction returns the corrected adata</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Finished batch correction(s)!&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">anndata_dict</span></div>
+
+
+
+<div class="viewcode-block" id="batch_correction">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.batch_correction">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">batch_correction</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                     <span class="n">batch_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">method</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">batch_methods</span><span class="p">,</span>
+                                   <span class="nb">list</span><span class="p">[</span><span class="n">batch_methods</span><span class="p">],</span>
+                                   <span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;bbknn&quot;</span><span class="p">,</span> <span class="s2">&quot;mnn&quot;</span><span class="p">],</span>
+                     <span class="n">highly_variable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform batch correction on the adata object using the &#39;method&#39; given.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        An annotated data matrix object to apply corrections to.</span>
+<span class="sd">    batch_key : str</span>
+<span class="sd">        The column in adata.obs containing batch information.</span>
+<span class="sd">    method : str or function</span>
+<span class="sd">        Either one of the predefined methods or a custom function for batch correction.</span>
+<span class="sd">        Note: The custom function is expected to accept an anndata object as the first parameter and return the batch corrected anndata.</span>
+
+<span class="sd">        Available methods:</span>
+<span class="sd">            - bbknn</span>
+<span class="sd">            - mnn</span>
+<span class="sd">            - harmony</span>
+<span class="sd">            - scanorama</span>
+<span class="sd">            - combat</span>
+<span class="sd">    highly_variable : bool, default True</span>
+<span class="sd">        Only for method &#39;mnn&#39;. If True, only the highly variable genes (column &#39;highly_variable&#39; in .var) will be used for batch correction.</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments will be forwarded to the method function.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sc.AnnData</span>
+<span class="sd">        A copy of the anndata with applied batch correction.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError:</span>
+<span class="sd">        1. If batch_key column is not in adata.obs</span>
+<span class="sd">        2. If batch correction method is invalid.</span>
+<span class="sd">    KeyError:</span>
+<span class="sd">        If PCA has not been calculated before running bbknn.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running batch correction with &#39;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&#39;...&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check that batch_key is in adata object</span>
+    <span class="k">if</span> <span class="n">batch_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The given batch_key &#39;</span><span class="si">{</span><span class="n">batch_key</span><span class="si">}</span><span class="s2">&#39; is not in adata.obs.columns&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Run batch correction depending on method</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;bbknn&quot;</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">bbknn</span>  <span class="c1"># sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change</span>
+
+        <span class="c1"># Get number of pcs in adata, as bbknn hardcodes n_pcs=50</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">n_pcs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;X_pca&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">&quot;PCA has not been calculated. Please run sc.pp.pca() before running bbknn.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Run bbknn</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">bbknn</span><span class="o">.</span><span class="n">bbknn</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">batch_key</span><span class="o">=</span><span class="n">batch_key</span><span class="p">,</span> <span class="n">n_pcs</span><span class="o">=</span><span class="n">n_pcs</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># bbknn is an alternative to neighbors</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;mnn&quot;</span><span class="p">:</span>
+
+        <span class="n">var_table</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span>  <span class="c1"># var_table before batch correction</span>
+
+        <span class="c1"># split adata on batch_key</span>
+        <span class="n">batch_categories</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">batch_key</span><span class="p">]))</span>
+        <span class="n">adatas</span> <span class="o">=</span> <span class="p">[</span><span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">batch_key</span><span class="p">]</span> <span class="o">==</span> <span class="n">category</span><span class="p">]</span> <span class="k">for</span> <span class="n">category</span> <span class="ow">in</span> <span class="n">batch_categories</span><span class="p">]</span>
+
+        <span class="c1"># Set highly variable genes as var_subset if chosen (and available)</span>
+        <span class="n">var_subset</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">highly_variable</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;highly_variable&quot;</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">var_subset</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">highly_variable</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+
+        <span class="c1"># give individual adatas to mnn_correct</span>
+        <span class="n">corrected_adatas</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sce</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">mnn_correct</span><span class="p">(</span><span class="n">adatas</span><span class="p">,</span> <span class="n">batch_key</span><span class="o">=</span><span class="n">batch_key</span><span class="p">,</span> <span class="n">var_subset</span><span class="o">=</span><span class="n">var_subset</span><span class="p">,</span>
+                                                    <span class="n">batch_categories</span><span class="o">=</span><span class="n">batch_categories</span><span class="p">,</span> <span class="n">do_concatenate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Join corrected adatas</span>
+        <span class="n">corrected_adatas</span> <span class="o">=</span> <span class="n">corrected_adatas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># the output is a dict of list ([adata1, adata2, (...)], )</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">corrected_adatas</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">,</span> <span class="n">uns_merge</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">var_table</span>  <span class="c1"># add var table back into corrected adata</span>
+
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>  <span class="c1"># from the mnnpy github example</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>  <span class="c1"># rerun pca</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;harmony&quot;</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># there is no copy option for harmony</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">batch_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">batch_key</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;str&quot;</span><span class="p">)</span>  <span class="c1"># harmony expects a batch key as string</span>
+
+        <span class="n">sce</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">harmony_integrate</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">batch_key</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;X_pca&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;X_pca_harmony&quot;</span><span class="p">]</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;scanorama&quot;</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># there is no copy option for scanorama</span>
+
+        <span class="c1"># scanorama expect the batch key in a sorted format</span>
+        <span class="c1"># therefore anndata.obs should be sorted based on batch column before this method.</span>
+        <span class="n">original_order</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">batch_key</span><span class="p">]</span><span class="o">.</span><span class="n">argsort</span><span class="p">()]</span>  <span class="c1"># sort the whole adata to make sure obs is the same order as matrix</span>
+
+        <span class="n">sce</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">scanorama_integrate</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">batch_key</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;X_pca&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="s2">&quot;X_scanorama&quot;</span><span class="p">]</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+        <span class="c1"># sort the adata back to the original order</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">original_order</span><span class="p">]</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;combat&quot;</span><span class="p">:</span>
+
+        <span class="n">corrected_mat</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">combat</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">batch_key</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># make sure adata is not modified</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">corrected_mat</span><span class="p">)</span>
+
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="nb">callable</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">method</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Method &#39;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&#39; is not a valid batch correction method.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">adata</span>  <span class="c1"># the corrected adata object</span></div>
+
+
+
+<div class="viewcode-block" id="evaluate_batch_effect">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.evaluate_batch_effect">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">evaluate_batch_effect</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                          <span class="n">batch_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                          <span class="n">obsm_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;X_umap&#39;</span><span class="p">,</span>
+                          <span class="n">col_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;LISI_score&#39;</span><span class="p">,</span>
+                          <span class="n">max_dims</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                          <span class="n">perplexity</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30</span><span class="p">,</span>
+                          <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Evaluate batch effect methods using LISI.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object with PCA and umap/tsne for batch evaluation.</span>
+<span class="sd">    batch_key : str</span>
+<span class="sd">        The column in adata.obs containing batch information.</span>
+<span class="sd">    obsm_key : str, default &#39;X_umap&#39;</span>
+<span class="sd">        The column in adata.obsm containing coordinates.</span>
+<span class="sd">    col_name : str, default &#39;LISI_score&#39;</span>
+<span class="sd">        Column name for storing the LISI score in .obs.</span>
+<span class="sd">    max_dims : int, default 5</span>
+<span class="sd">        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).</span>
+<span class="sd">    perplexity : int, default 30</span>
+<span class="sd">        Perplexity for the LISI score calculation.</span>
+<span class="sd">    inplace : bool, default False</span>
+<span class="sd">        Whether to work inplace on the anndata object.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        if inplace is True, LISI_score is added to adata.obs inplace (returns None), otherwise a copy of the adata is returned.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - LISI score is calculated for each cell and it is between 1-n for a data-frame with n categorical variables.</span>
+<span class="sd">    - indicates the effective number of different categories represented in the local neighborhood of each cell.</span>
+<span class="sd">    - If the cells are well-mixed, then we expect the LISI score to be near n for a data with n batches.</span>
+<span class="sd">    - The higher the LISI score is, the better batch correction method worked to normalize the batch effect and mix the cells from different batches.</span>
+<span class="sd">    - For further information on LISI: https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError:</span>
+<span class="sd">        1. If obsm_key is not in adata.obsm.</span>
+<span class="sd">        2. If batch_key is no column in adata.obs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Load LISI</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">check_module</span><span class="p">(</span><span class="s2">&quot;harmonypy&quot;</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">harmonypy.lisi</span> <span class="kn">import</span> <span class="n">compute_lisi</span>
+
+    <span class="c1"># Handle inplace option</span>
+    <span class="n">adata_m</span> <span class="o">=</span> <span class="n">adata</span> <span class="k">if</span> <span class="n">inplace</span> <span class="k">else</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># checks</span>
+    <span class="k">if</span> <span class="n">obsm_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata_m</span><span class="o">.</span><span class="n">obsm</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;adata.obsm does not contain the obsm key: </span><span class="si">{</span><span class="n">obsm_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">batch_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata_m</span><span class="o">.</span><span class="n">obs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;adata.obs does not contain the batch key: </span><span class="si">{</span><span class="n">batch_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># run LISI on all adata objects</span>
+    <span class="n">obsm_matrix</span> <span class="o">=</span> <span class="n">adata_m</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="n">obsm_key</span><span class="p">][:,</span> <span class="p">:</span><span class="n">max_dims</span><span class="p">]</span>
+    <span class="n">lisi_res</span> <span class="o">=</span> <span class="n">compute_lisi</span><span class="p">(</span><span class="n">obsm_matrix</span><span class="p">,</span> <span class="n">adata_m</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="p">[</span><span class="n">batch_key</span><span class="p">],</span> <span class="n">perplexity</span><span class="o">=</span><span class="n">perplexity</span><span class="p">)</span>
+    <span class="n">adata_m</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">lisi_res</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata_m</span></div>
+
+
+
+<div class="viewcode-block" id="wrap_batch_evaluation">
+<a class="viewcode-back" href="../../../API/tools.html#sctoolbox.tools.norm_correct.wrap_batch_evaluation">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">wrap_batch_evaluation</span><span class="p">(</span><span class="n">adatas</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">],</span>
+                          <span class="n">batch_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                          <span class="n">obsm_keys</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;X_pca&#39;</span><span class="p">,</span> <span class="s1">&#39;X_umap&#39;</span><span class="p">],</span>
+                          <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                          <span class="n">max_dims</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                          <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Evaluate batch correction methods for a dict of anndata objects (using LISI score calculation).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adatas : dict[str, sc.AnnData]</span>
+<span class="sd">        Dict containing an anndata object for each batch correction method as values. Keys are the name of the respective method.</span>
+<span class="sd">        E.g.: {&quot;bbknn&quot;: anndata}</span>
+<span class="sd">    batch_key : str</span>
+<span class="sd">        The column in adata.obs containing batch information.</span>
+<span class="sd">    obsm_keys : str | list[str], default [&#39;X_pca&#39;, &#39;X_umap&#39;]</span>
+<span class="sd">        Key(s) to coordinates on which the score is calculated.</span>
+<span class="sd">    threads : int, default 1</span>
+<span class="sd">        Number of threads to use for parallelization.</span>
+<span class="sd">    max_dims : int, default 5</span>
+<span class="sd">        Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).</span>
+<span class="sd">    inplace : bool, default False</span>
+<span class="sd">        Whether to work inplace on the anndata dict.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[dict[str, sc.AnnData]]</span>
+<span class="sd">        Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">utils</span><span class="o">.</span><span class="n">_is_notebook</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm_notebook</span> <span class="k">as</span> <span class="n">tqdm</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+
+    <span class="c1"># Handle inplace option</span>
+    <span class="n">adatas_m</span> <span class="o">=</span> <span class="n">adatas</span> <span class="k">if</span> <span class="n">inplace</span> <span class="k">else</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">adatas</span><span class="p">)</span>
+
+    <span class="c1"># Ensure that obsm_key can be looped over</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obsm_keys</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">obsm_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">obsm_keys</span><span class="p">]</span>
+
+    <span class="c1"># Evaluate batch effect for every adata</span>
+    <span class="k">if</span> <span class="n">threads</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+
+        <span class="n">pbar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">adatas_m</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">obsm_keys</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Calculation progress &quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">adata</span> <span class="ow">in</span> <span class="n">adatas_m</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">n_cells</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">perplexity</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_cells</span> <span class="o">/</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># adjust perplexity for small datasets</span>
+
+            <span class="k">for</span> <span class="n">obsm</span> <span class="ow">in</span> <span class="n">obsm_keys</span><span class="p">:</span>
+                <span class="n">evaluate_batch_effect</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">batch_key</span><span class="p">,</span> <span class="n">col_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;LISI_score_</span><span class="si">{</span><span class="n">obsm</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">obsm_key</span><span class="o">=</span><span class="n">obsm</span><span class="p">,</span> <span class="n">max_dims</span><span class="o">=</span><span class="n">max_dims</span><span class="p">,</span> <span class="n">perplexity</span><span class="o">=</span><span class="n">perplexity</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">check_module</span><span class="p">(</span><span class="s2">&quot;harmonypy&quot;</span><span class="p">)</span>
+        <span class="kn">from</span> <span class="nn">harmonypy.lisi</span> <span class="kn">import</span> <span class="n">compute_lisi</span>
+
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">threads</span><span class="p">)</span>
+        <span class="n">jobs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">adata</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">adatas_m</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="n">n_cells</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">perplexity</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_cells</span> <span class="o">/</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># adjust perplexity for small datasets</span>
+
+            <span class="k">for</span> <span class="n">obsm_key</span> <span class="ow">in</span> <span class="n">obsm_keys</span><span class="p">:</span>
+                <span class="n">obsm_matrix</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obsm</span><span class="p">[</span><span class="n">obsm_key</span><span class="p">][:,</span> <span class="p">:</span><span class="n">max_dims</span><span class="p">]</span>
+                <span class="n">obs_mat</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[[</span><span class="n">batch_key</span><span class="p">]]</span>
+
+                <span class="n">job</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">compute_lisi</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">obsm_matrix</span><span class="p">,</span> <span class="n">obs_mat</span><span class="p">,</span> <span class="p">[</span><span class="n">batch_key</span><span class="p">],</span> <span class="n">perplexity</span><span class="p">,))</span>
+                <span class="n">jobs</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">obsm_key</span><span class="p">)]</span> <span class="o">=</span> <span class="n">job</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># Monitor all jobs with a pbar</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">monitor_jobs</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="s2">&quot;Calculating LISI scores&quot;</span><span class="p">)</span>  <span class="c1"># waits for all jobs to finish</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+        <span class="c1"># Assign results to adata</span>
+        <span class="k">for</span> <span class="n">adata_i</span><span class="p">,</span> <span class="n">obsm_key</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">:</span>
+            <span class="n">adata</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adatas_m</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="n">adata_i</span><span class="p">]</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;LISI_score_</span><span class="si">{</span><span class="n">obsm_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jobs</span><span class="p">[(</span><span class="n">adata_i</span><span class="p">,</span> <span class="n">obsm_key</span><span class="p">)]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adatas_m</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sctoolbox.utils.bioutils &mdash; SC FRAMEWORK  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/plot_directive.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            SC FRAMEWORK
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../CHANGES.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rna-notebooks/index.html">RNA notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../atac-notebooks/index.html">ATAC notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../general-notebooks/index.html">General notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">sctoolbox API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SC FRAMEWORK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">sctoolbox.utils.bioutils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for sctoolbox.utils.bioutils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Bio related utility functions.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">apybiomart</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">issparse</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pybedtools</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+
+<span class="kn">from</span> <span class="nn">beartype.typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">beartype</span> <span class="kn">import</span> <span class="n">beartype</span>
+
+<span class="kn">import</span> <span class="nn">sctoolbox.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">sctoolbox.utils.decorator</span> <span class="k">as</span> <span class="nn">deco</span>
+
+
+<div class="viewcode-block" id="pseudobulk_table">
+<a class="viewcode-back" href="../../../API/utils.html#sctoolbox.utils.bioutils.pseudobulk_table">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">pseudobulk_table</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                     <span class="n">groupby</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">how</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;sum&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+                     <span class="n">layer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">percentile_range</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+                     <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get a pseudobulk table of values per cluster.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata object with counts in .X.</span>
+<span class="sd">    groupby : str</span>
+<span class="sd">        Column name in adata.obs from which the pseudobulks are created.</span>
+<span class="sd">    how : Literal[&#39;mean&#39;, &#39;sum&#39;], default &#39;mean&#39;</span>
+<span class="sd">        How to calculate the value per group (psuedobulk).</span>
+<span class="sd">    layer : Optional[str], default None</span>
+<span class="sd">        Name of an anndata layer to use instead of `adata.X`.</span>
+<span class="sd">    percentile_range : Tuple[int, int], default (0, 100)</span>
+<span class="sd">        The percentile of cells used to calculate the mean/sum for each feature.</span>
+<span class="sd">        Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.</span>
+<span class="sd">    chunk_size : int, default 1000</span>
+<span class="sd">        If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">groupby_categories</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span>
+
+    <span class="k">if</span> <span class="n">layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span>
+
+    <span class="c1"># Fetch the mean/ sum counts across each category in cluster_by</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">var_names</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">groupby_categories</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">column_i</span><span class="p">,</span> <span class="n">clust</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">groupby_categories</span><span class="p">):</span>
+
+        <span class="n">cluster_values</span> <span class="o">=</span> <span class="n">mat</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="n">clust</span><span class="p">]),</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">percentile_range</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">):</span>  <span class="c1"># uses all cells</span>
+            <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">cluster_values</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">res</span><span class="p">[</span><span class="n">clust</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span><span class="o">.</span><span class="n">A1</span> <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">cluster_values</span><span class="p">)</span> <span class="k">else</span> <span class="n">vals</span>
+            <span class="k">elif</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;sum&quot;</span><span class="p">:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">cluster_values</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">res</span><span class="p">[</span><span class="n">clust</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span><span class="o">.</span><span class="n">A1</span> <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">cluster_values</span><span class="p">)</span> <span class="k">else</span> <span class="n">vals</span>
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="n">n_features</span> <span class="o">=</span> <span class="n">cluster_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># Calculate mean individually per gene/feature</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">):</span>
+
+                <span class="n">chunk_values</span> <span class="o">=</span> <span class="n">cluster_values</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">]</span>
+                <span class="n">chunk_values</span> <span class="o">=</span> <span class="n">chunk_values</span><span class="o">.</span><span class="n">A</span> <span class="k">if</span> <span class="n">issparse</span><span class="p">(</span><span class="n">chunk_values</span><span class="p">)</span> <span class="k">else</span> <span class="n">chunk_values</span>
+                <span class="n">chunk_values</span> <span class="o">=</span> <span class="n">chunk_values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+                <span class="c1"># Calculate the lower and upper limits for each feature</span>
+                <span class="n">limits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">chunk_values</span><span class="p">,</span> <span class="n">percentile_range</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;lower&quot;</span><span class="p">)</span>
+                <span class="n">lower_limits</span> <span class="o">=</span> <span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">upper_limits</span> <span class="o">=</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="c1"># Set values outside the limits to nan and calculate mean/sum</span>
+                <span class="n">bool_filter</span> <span class="o">=</span> <span class="p">(</span><span class="n">chunk_values</span> <span class="o">&lt;</span> <span class="n">lower_limits</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">chunk_values</span> <span class="o">&gt;</span> <span class="n">upper_limits</span><span class="p">)</span>
+                <span class="n">chunk_values</span><span class="p">[</span><span class="n">bool_filter</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+                <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+                    <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">chunk_values</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;sum&quot;</span><span class="p">:</span>
+                    <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">chunk_values</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+                <span class="n">res</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">,</span> <span class="n">column_i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span>
+
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#                        Format adata indexes                       #</span>
+<span class="c1">#####################################################################</span>
+
+<div class="viewcode-block" id="barcode_index">
+<a class="viewcode-back" href="../../../API/utils.html#sctoolbox.utils.bioutils.barcode_index">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">barcode_index</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if the barcode is the index.</span>
+
+<span class="sd">    Will replace the index with `adata.obs[&quot;barcode&quot;]` if index does not contain barcodes.</span>
+
+<span class="sd">    TODO refactor</span>
+<span class="sd">    - name could be more descriptive</span>
+<span class="sd">    - return adata</span>
+<span class="sd">    - inplace parameter</span>
+<span class="sd">    - use logger</span>
+<span class="sd">    ...</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        Anndata to perform check on.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># regex for any barcode</span>
+    <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;([ATCG]{8,16})&#39;</span><span class="p">)</span>
+    <span class="c1"># get first index element</span>
+    <span class="n">first_index</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># check if the first index element is a barcode</span>
+    <span class="k">if</span> <span class="n">regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">first_index</span><span class="p">):</span>
+        <span class="n">index_is_barcode</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">index_is_barcode</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;barcode&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">index_is_barcode</span><span class="p">:</span>
+        <span class="c1"># check if the barcode column is in the obs</span>
+        <span class="k">if</span> <span class="s1">&#39;barcode&#39;</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;setting adata.obs.index = adata.obs[barcode]&#39;</span><span class="p">)</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">obs</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;barcode&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;barcode&quot;</span> <span class="ow">and</span> <span class="n">index_is_barcode</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;setting adata.obs.index.name = barcode&#39;</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;barcode&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;barcodes are already the index&#39;</span><span class="p">)</span></div>
+
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#                  Converting between gene id and name              #</span>
+<span class="c1">#####################################################################</span>
+
+<div class="viewcode-block" id="get_organism">
+<a class="viewcode-back" href="../../../API/utils.html#sctoolbox.utils.bioutils.get_organism">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">get_organism</span><span class="p">(</span><span class="n">ensembl_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;http://www.ensembl.org/id/&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the organism name to the given Ensembl ID.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ensembl_id : str</span>
+<span class="sd">        Any Ensembl ID. E.g. ENSG00000164690</span>
+<span class="sd">    host : str</span>
+<span class="sd">        Ensembl server address.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Organism assigned to the Ensembl ID</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ConnectionError</span>
+<span class="sd">        If there is an unexpected (or no) response from the server.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the returned organism is ambiguous.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># this will redirect</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">host</span><span class="si">}{</span><span class="n">ensembl_id</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ConnectionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Server response: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2"> With link </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">. Is the host/ path correct?&quot;</span><span class="p">)</span>
+
+    <span class="c1"># get redirect url</span>
+    <span class="c1"># e.g. http://www.ensembl.org/Homo_sapiens/Gene/...</span>
+    <span class="c1"># get species name from url</span>
+    <span class="n">species</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="c1"># invalid id</span>
+    <span class="k">if</span> <span class="n">species</span> <span class="o">==</span> <span class="s2">&quot;Multi&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Organism returned as &#39;</span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">&#39; (</span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">).</span><span class="se">\n</span><span class="s2"> Usually due to invalid Ensembl ID. Make sure to use an Ensembl ID as described in http://www.ensembl.org/info/genome/stable_ids/index.html&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">species</span></div>
+
+
+
+<div class="viewcode-block" id="gene_id_to_name">
+<a class="viewcode-back" href="../../../API/utils.html#sctoolbox.utils.bioutils.gene_id_to_name">[docs]</a>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">gene_id_to_name</span><span class="p">(</span><span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">species</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get Ensembl gene names to Ensembl gene id.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ids : list[str]</span>
+<span class="sd">        List of gene ids. Set to `None` to return all ids.</span>
+<span class="sd">    species : str</span>
+<span class="sd">        Species matching the gene ids. Set to `None` for list of available species.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        DataFrame with gene ids and matching gene names.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If provided Ensembl IDs or organism is invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">id</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ENS&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Ensembl IDs detected. A valid ID starts with &#39;ENS&#39;.&quot;</span><span class="p">)</span>
+
+    <span class="n">avail_species</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_gene_ensembl&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">apybiomart</span><span class="o">.</span><span class="n">find_datasets</span><span class="p">()[</span><span class="s2">&quot;Dataset_ID&quot;</span><span class="p">]])</span>
+
+    <span class="k">if</span> <span class="n">species</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">species</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">avail_species</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid species. Available species are: &quot;</span><span class="p">,</span> <span class="n">avail_species</span><span class="p">)</span>
+
+    <span class="n">id_name_mapping</span> <span class="o">=</span> <span class="n">apybiomart</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+        <span class="n">attributes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ensembl_gene_id&quot;</span><span class="p">,</span> <span class="s2">&quot;external_gene_name&quot;</span><span class="p">],</span>
+        <span class="n">dataset</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">_gene_ensembl&quot;</span><span class="p">,</span>
+        <span class="n">filters</span><span class="o">=</span><span class="p">{}</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ids</span><span class="p">:</span>
+        <span class="c1"># subset to given ids</span>
+        <span class="k">return</span> <span class="n">id_name_mapping</span><span class="p">[</span><span class="n">id_name_mapping</span><span class="p">[</span><span class="s2">&quot;Gene stable ID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ids</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">id_name_mapping</span></div>
+
+
+
+<div class="viewcode-block" id="convert_id">
+<a class="viewcode-back" href="../../../API/utils.html#sctoolbox.utils.bioutils.convert_id">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">convert_id</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+               <span class="n">id_col_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">index</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+               <span class="n">name_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Gene name&quot;</span><span class="p">,</span>
+               <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+               <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add gene names to adata.var.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        AnnData with gene ids.</span>
+<span class="sd">    id_col_name : Optional[str], default None</span>
+<span class="sd">        Name of the column in `adata.var` that stores the gene ids.</span>
+<span class="sd">    index : boolean, default False</span>
+<span class="sd">        Use index of `adata.var` instead of column name speciefied in `id_col_name`.</span>
+<span class="sd">    name_col : str, default &quot;Gene name&quot;</span>
+<span class="sd">        Name of the column added to `adata.var`.</span>
+<span class="sd">    species : str, default &quot;auto&quot;</span>
+<span class="sd">        Species of the dataset. On default, species is inferred based on gene ids.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        Whether to modify adata inplace.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        AnnData object with gene names.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If invalid parameter choice or column name not found in adata.var.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">id_col_name</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">index</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either set parameter id_col_name or index.&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">index</span> <span class="ow">and</span> <span class="n">id_col_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid id column name. Name has to be a column found in adata.var.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># get gene ids</span>
+    <span class="k">if</span> <span class="n">index</span><span class="p">:</span>
+        <span class="n">gene_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">gene_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">id_col_name</span><span class="p">])</span>
+
+    <span class="c1"># infer species from gene id</span>
+    <span class="k">if</span> <span class="n">species</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
+        <span class="n">ensid</span> <span class="o">=</span> <span class="n">gene_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">species</span> <span class="o">=</span> <span class="n">get_organism</span><span class="p">(</span><span class="n">ensid</span><span class="p">)</span>
+
+        <span class="c1"># bring into biomart format</span>
+        <span class="c1"># first letter of all words but complete last word e.g. hsapiens, mmusculus</span>
+        <span class="n">spl_name</span> <span class="o">=</span> <span class="n">species</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="n">species</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">spl_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="n">spl_name</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identified species as </span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># get id &lt;-&gt; name table</span>
+    <span class="n">id_name_table</span> <span class="o">=</span> <span class="n">gene_id_to_name</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="n">gene_ids</span><span class="p">,</span> <span class="n">species</span><span class="o">=</span><span class="n">species</span><span class="p">)</span>
+
+    <span class="c1"># create new .var and replace in adata</span>
+    <span class="n">new_var</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+        <span class="n">left</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
+        <span class="n">right</span><span class="o">=</span><span class="n">id_name_table</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Gene stable ID&quot;</span><span class="p">),</span>
+        <span class="n">left_on</span><span class="o">=</span><span class="n">id_col_name</span><span class="p">,</span>
+        <span class="n">left_index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+        <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span>
+    <span class="p">)</span>
+    <span class="n">new_var</span><span class="p">[</span><span class="s2">&quot;Gene name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">new_var</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Gene name&quot;</span><span class="p">:</span> <span class="n">name_col</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">adata</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">new_var</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<div class="viewcode-block" id="unify_genes_column">
+<a class="viewcode-back" href="../../../API/utils.html#sctoolbox.utils.bioutils.unify_genes_column">[docs]</a>
+<span class="nd">@deco</span><span class="o">.</span><span class="n">log_anndata</span>
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">unify_genes_column</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+                       <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">unified_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;unified_names&quot;</span><span class="p">,</span>
+                       <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                       <span class="n">inplace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given an adata.var column with mixed Ensembl IDs and Ensembl names, this function creates a new column where Ensembl IDs are replaced with their respective Ensembl names.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    adata : sc.AnnData</span>
+<span class="sd">        AnnData object</span>
+<span class="sd">    column : str</span>
+<span class="sd">        Column name in adata.var</span>
+<span class="sd">    unified_column : str, default &quot;unified_names&quot;</span>
+<span class="sd">        Defines the column in which unified gene names are saved. Set same as parameter &#39;column&#39; to overwrite original column.</span>
+<span class="sd">    species : str, default &quot;auto&quot;</span>
+<span class="sd">        Species of the dataset. On default, species is inferred based on gene ids.</span>
+<span class="sd">    inplace : bool, default True</span>
+<span class="sd">        Whether to modify adata or return a copy.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optional[sc.AnnData]</span>
+<span class="sd">        AnnData object with modified gene column.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If column name is not found in `adata.var` or no Ensembl IDs in selected column.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid column name. Name has to be a column found in adata.var. Available names are: </span><span class="si">{</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># check for ensembl ids</span>
+    <span class="n">ensids</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="k">if</span> <span class="n">el</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ENS&quot;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ensids</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No Ensembl IDs in adata.var[&#39;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">&#39;] found.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># infer species from gene id</span>
+    <span class="k">if</span> <span class="n">species</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
+        <span class="n">ensid</span> <span class="o">=</span> <span class="n">ensids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">species</span> <span class="o">=</span> <span class="n">get_organism</span><span class="p">(</span><span class="n">ensid</span><span class="p">)</span>
+
+        <span class="c1"># bring into biomart format</span>
+        <span class="c1"># first letter of all words but complete last word e.g. hsapiens, mmusculus</span>
+        <span class="n">spl_name</span> <span class="o">=</span> <span class="n">species</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="n">species</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">spl_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span> <span class="o">+</span> <span class="n">spl_name</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identified species as </span><span class="si">{</span><span class="n">species</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># get id &lt;-&gt; name table</span>
+    <span class="n">id_name_table</span> <span class="o">=</span> <span class="n">gene_id_to_name</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="n">ensids</span><span class="p">,</span> <span class="n">species</span><span class="o">=</span><span class="n">species</span><span class="p">)</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="ow">in</span> <span class="n">id_name_table</span><span class="p">[</span><span class="s1">&#39;Gene stable ID&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># replace gene id with name</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">unified_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">id_name_table</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">id_name_table</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">id_name_table</span><span class="p">[</span><span class="s2">&quot;Gene stable ID&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">row</span><span class="p">[</span><span class="n">column</span><span class="p">]][</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;Gene name&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">unified_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s1"> ensembl gene ids have been replaced with gene names&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inplace</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+
+
+<span class="c1">#####################################################################</span>
+<span class="c1">#                   Check integrity of gtf file                     #</span>
+<span class="c1">#####################################################################</span>
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_gtf_integrity</span><span class="p">(</span><span class="n">gtf</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if the provided file follows the gtf-format.</span>
+
+<span class="sd">    TODO rather return False than raise an error.</span>
+
+<span class="sd">    Checks the following:</span>
+<span class="sd">        - file-ending</span>
+<span class="sd">        - header ##format: gtf</span>
+<span class="sd">        - number of columns == 9</span>
+<span class="sd">        - regex pattern of column 9 matches gtf specific format</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gtf : str</span>
+<span class="sd">        Path to file.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        True if the file is a valid gtf-file.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    argparse.ArgumentTypeError</span>
+<span class="sd">        If the file is not in gtf-format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">regex_header</span> <span class="o">=</span> <span class="s1">&#39;#+.*&#39;</span>
+    <span class="n">regex_format_column</span> <span class="o">=</span> <span class="s1">&#39;#+format: gtf.*&#39;</span>  <span class="c1"># comment can start with one or more &#39;#&#39;</span>
+
+    <span class="c1"># Initialize parameters</span>
+    <span class="n">first_entry</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">format_gtf</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">utils</span><span class="o">.</span><span class="n">_is_gz_file</span><span class="p">(</span><span class="n">gtf</span><span class="p">):</span>
+        <span class="n">fp</span> <span class="o">=</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">gtf</span><span class="p">,</span> <span class="s1">&#39;rt&#39;</span><span class="p">)</span>  <span class="c1"># read text (rt) mode</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fp</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">gtf</span><span class="p">)</span>
+
+    <span class="c1"># Check header (if present) and first entry</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fp</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">regex_header</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">regex_format_column</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+                <span class="c1"># Check if format information in the header matches gtf</span>
+                <span class="n">format_gtf</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">first_entry</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+    <span class="n">fp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>  <span class="c1"># done reading from file</span>
+
+    <span class="c1"># Check if number of columns matches 9</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">first_entry</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">9</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s1">&#39;Number of columns in the gtf file unequal 9&#39;</span><span class="p">)</span>
+
+    <span class="c1"># If there was a header, check that the header matches gtf</span>
+    <span class="k">if</span> <span class="n">header</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">format_gtf</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s1">&#39;Header in gtf file does not match gtf format&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Extract gene_id information from column 9 and check if the format is gtf (not gff)</span>
+    <span class="n">column_9</span> <span class="o">=</span> <span class="n">first_entry</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>
+    <span class="n">column_9_split</span> <span class="o">=</span> <span class="n">column_9</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+    <span class="n">gene_id</span> <span class="o">=</span> <span class="n">column_9_split</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># TODO; it cannot always be assumed that the gene_id is the first entry in column 9</span>
+    <span class="c1"># gtf specific format of the gene_id column (gff3: gene_id=&quot;xxxxx&quot;; gtf: gene_id &quot;xxxxx&quot;)</span>
+    <span class="n">regex_gene_id</span> <span class="o">=</span> <span class="s1">&#39;gene_id &quot;.*&quot;&#39;</span>
+
+    <span class="c1"># check match of the pattern</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">regex_gene_id</span><span class="p">,</span> <span class="n">gene_id</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s1">&#39;gtf file is corrupted&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># the function only returns of no error is raised</span>
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_overlap_two_bedfiles</span><span class="p">(</span><span class="n">bed1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bed2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overlap</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Overlap two bedfiles and writes the overlap to a new bedfile.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bed1 : str</span>
+<span class="sd">        path to bedfile1</span>
+<span class="sd">    bed2 : str</span>
+<span class="sd">        path to bedfile2</span>
+<span class="sd">    overlap : str</span>
+<span class="sd">        path to output bedfile</span>
+<span class="sd">    **kwargs : Any</span>
+<span class="sd">        Additional arguments passed to pybedtools.BedTool.intersect</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure that path to bedtools is set</span>
+    <span class="n">pybedtools</span><span class="o">.</span><span class="n">helpers</span><span class="o">.</span><span class="n">set_bedtools_path</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">_add_path</span><span class="p">())</span>
+    <span class="c1"># Load the bed files using Pybedtools</span>
+    <span class="n">bedfile1</span> <span class="o">=</span> <span class="n">pybedtools</span><span class="o">.</span><span class="n">BedTool</span><span class="p">(</span><span class="n">bed1</span><span class="p">)</span>
+    <span class="n">bedfile2</span> <span class="o">=</span> <span class="n">pybedtools</span><span class="o">.</span><span class="n">BedTool</span><span class="p">(</span><span class="n">bed2</span><span class="p">)</span>
+
+    <span class="c1"># Perform the intersection</span>
+    <span class="c1"># The kwargs can be passed directly to the intersect function</span>
+    <span class="n">intersected</span> <span class="o">=</span> <span class="n">bedfile1</span><span class="o">.</span><span class="n">intersect</span><span class="p">(</span><span class="n">bedfile2</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># Save the output</span>
+    <span class="n">intersected</span><span class="o">.</span><span class="n">saveas</span><span class="p">(</span><span class="n">overlap</span><span class="p">)</span>
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_read_bedfile</span><span class="p">(</span><span class="n">bedfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read in a bedfile and returns a list of the rows.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bedfile : str</span>
+<span class="sd">        path to bedfile</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        list of bedfile rows</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bed_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">bedfile</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">])]</span>
+            <span class="n">bed_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">bed_list</span>
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_bed_is_sorted</span><span class="p">(</span><span class="n">bedfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if a bedfile is sorted by the start position.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bedfile : str</span>
+<span class="sd">        path to bedfile</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        True if bedfile is sorted</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">bedfile</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">previous</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">previous</span> <span class="o">&gt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+            <span class="n">previous</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">counter</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="nd">@beartype</span>
+<span class="k">def</span> <span class="nf">_sort_bed</span><span class="p">(</span><span class="n">bedfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sorted_bedfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sort a bedfile by the start position.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bedfile : str</span>
+<span class="sd">        path to bedfile</span>
+<span class="sd">    sorted_bedfile : str</span>
+<span class="sd">        path to sorted bedfile</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sort_cmd</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;sort -k1,1 -k2,2n </span><span class="si">{</span><span class="n">bedfile</span><span class="si">}</span><span class="s1"> &gt; </span><span class="si">{</span><span class="n">sorted_bedfile</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="n">sort_cmd</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Loosolab.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
