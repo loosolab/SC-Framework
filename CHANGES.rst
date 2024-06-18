@@ -1,3 +1,8 @@
+0.9.0 (in progress)
+-------------------
+- GSEA: Fix library gene-set overlap by converting all gene names to uppercase
+- pl.gsea.term_dotplot: Fix example; Fix index==None bug
+
 0.8.0 (14-06-24)
 ----------------
 - from_mtx: support more folder structures and variable file now optional (#234, #240)
