@@ -1,3 +1,7 @@
+0.9.0 (in progress)
+-------------------
+- expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
+
 0.8.0 (14-06-24)
 ----------------
 - from_mtx: support more folder structures and variable file now optional (#234, #240)
