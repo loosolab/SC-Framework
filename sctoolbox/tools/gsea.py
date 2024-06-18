@@ -77,7 +77,7 @@ def enrichr_marker_genes(adata: sc.AnnData,
         background = set([item for sublist in gene_sets.values() for item in sublist])
 
     # Convert gene sets to upper case
-    gene_sets = {key: list(map(str.upper,value)) for key, value in gene_sets.items()}
+    gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
 
     path_enr = {}
     for ct, table in tqdm.tqdm(marker_tables.items()):
