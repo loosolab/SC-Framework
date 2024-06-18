@@ -47,6 +47,8 @@ def enrichr_marker_genes(adata: sc.AnnData,
     Notes
     -----
     This function only works in combination with the tools.marker_genes.run_rank_genes function.
+    Depending on the organism the genes are saved uppercase or lowercase. Since it does not follow
+    the typically guidelines all genes are converted to uppercase to prevent failed overlaps.
 
     Returns
     -------
@@ -73,6 +75,9 @@ def enrichr_marker_genes(adata: sc.AnnData,
     if not background:
         # Generating background if no custom background is given
         background = set([item for sublist in gene_sets.values() for item in sublist])
+
+    # Convert gene sets to upper case
+    gene_sets = {key: list(map(str.upper,value)) for key, value in gene_sets.items()}
 
     path_enr = {}
     for ct, table in tqdm.tqdm(marker_tables.items()):
