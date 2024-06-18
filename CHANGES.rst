@@ -7,6 +7,7 @@
 - solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
 - added planet_plot for high dimensional anndata plotting (#221)
 - ligand-receptor: connectionPlot new parameters (#255)
+- expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
