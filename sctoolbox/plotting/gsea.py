@@ -44,6 +44,10 @@ def term_dotplot(term: str,
     **kwargs: Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
+    Notes
+    -----
+    All genes will be converted to uppercase for comparison.
+
     Returns
     -------
     list
@@ -72,6 +76,7 @@ def term_dotplot(term: str,
     """
     # get related genes
     active_genes = list(set(term_table.loc[term_table["Term"] == term]["Genes"].str.split(";").explode()))
+    active_genes = list(map(str.upper, active_genes))
 
     # get index name
     index_name = "index" if not adata.var.index.name else adata.var.index.name
