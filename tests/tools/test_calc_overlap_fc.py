@@ -1,3 +1,5 @@
+"""Test functions related to files containing genomic ranges."""
+
 import sctoolbox.tools as tl
 import sctoolbox.utils as ul
 import os
@@ -98,10 +100,10 @@ def test_fc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, region
         fragments_file = fragments
 
     tl.fc_fragments_in_regions(adata,
-                                  regions_file=regions_file,
-                                  bam_file=bam_file,
-                                  fragments_file=fragments_file,
-                                  regions_name='promoters',
-                                  temp_dir=str(tmpdir))
+                               regions_file=regions_file,
+                               bam_file=bam_file,
+                               fragments_file=fragments_file,
+                               regions_name='promoters',
+                               temp_dir=str(tmpdir))
 
     assert 'fold_change_promoters_fragments' in adata.obs.columns
