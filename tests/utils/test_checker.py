@@ -14,7 +14,7 @@ import sctoolbox.utilities as utils
 def snapatac_adata():
     """Return a adata object from SnapATAC."""
 
-    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'snapatac.h5ad')
+    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'snapatac.h5ad')
 
     return sc.read(f)
 
@@ -22,7 +22,7 @@ def snapatac_adata():
 @pytest.fixture
 def adata_atac():
     """Load atac adata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
 
@@ -47,14 +47,14 @@ def adata_atac_invalid(adata_atac):
 @pytest.fixture
 def adata_rna():
     """Load rna adata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture
 def adata2():
     """Load and return an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
 
     return sc.read_h5ad(f)
 
