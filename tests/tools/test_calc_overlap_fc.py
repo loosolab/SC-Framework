@@ -1,11 +1,11 @@
-"""Test functions related to files containing genomic ranges."""
-
-import sctoolbox.tools as tools
-import sctoolbox.utils as utils
+import sctoolbox.tools as tl
+import sctoolbox.utils as ul
 import os
 import pytest
 import anndata as ad
 import pkg_resources
+
+# ---------------------------- FIXTURES -------------------------------- #
 
 
 @pytest.fixture
@@ -61,13 +61,16 @@ def adata():
     return adata
 
 
+# --------------------------- Tests --------------------------------- #
+
+
 @pytest.mark.parametrize("out", [None, 'tmp'])
 def test_convert_gtf_to_bed(tmpdir, gtf, out):
     """Test _convert_gtf_to_bed success."""
     if out:
         out = str(tmpdir)
 
-    sorted_bed, temp = tools._convert_gtf_to_bed(gtf, out=out)
+    sorted_bed, temp = tl._convert_gtf_to_bed(gtf, out=out)
     name = gtf + "_sorted.bed"
 
     if out:
@@ -77,7 +80,7 @@ def test_convert_gtf_to_bed(tmpdir, gtf, out):
 
     assert sorted_bed == expected and os.path.isfile(sorted_bed)
 
-    utils.rm_tmp(temp_files=temp)
+    ul.rm_tmp(temp_files=temp)
 
 
 @pytest.mark.parametrize("regions_file", ['bed', 'gtf'])
@@ -94,7 +97,7 @@ def test_fc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, region
     if fragments_file == 'fragments':
         fragments_file = fragments
 
-    tools.fc_fragments_in_regions(adata,
+    tl.fc_fragments_in_regions(adata,
                                   regions_file=regions_file,
                                   bam_file=bam_file,
                                   fragments_file=fragments_file,
