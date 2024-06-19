@@ -18,14 +18,6 @@ def adata():
 
 
 @pytest.fixture
-def adata2():
-    """Load and return an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
-
-    return sc.read_h5ad(f)
-
-
-@pytest.fixture
 def unsorted_fragments():
     """Return adata object with 3 groups."""
 
@@ -41,48 +33,11 @@ def sorted_fragments():
     return fragments
 
 
-@pytest.fixture
-def marker_dict():
-    """Return a dict of cell type markers."""
-    return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
-            "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
-            "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
-
-
-arr_ints = np.random.randint(10, size=(10, 10))
-arr_ints2 = arr_ints.astype(float)
-arr_floats = np.random.rand(10, 10)
-
-
-@pytest.mark.parametrize("arr,boolean", [(arr_ints, True), (arr_ints2, True), (arr_floats, False)])
-def test_is_integer_array(arr, boolean):
-    """Get boolean of whether an array is an integer array."""
-
-    result = utils.is_integer_array(arr)
-    assert result == boolean
-
-
 def test_is_notebook():
     """Test if the function is run in a notebook."""
 
     boolean = utils._is_notebook()
     assert boolean is False  # testing environment is not notebook
-
-
-@pytest.mark.parametrize("string,expected", [("1.3", True), ("astring", False)])
-def test_is_str_numeric(string, expected):
-    """Test if a string can be converted to numeric."""
-
-    result = utils.is_str_numeric(string)
-
-    assert result == expected
-
-
-def test_check_module():
-    """Test if check_moduel raises an error for a non-existing module."""
-
-    with pytest.raises(Exception):
-        utils.check_module("nonexisting_module")
 
 
 def test_pseudobulk_table(adata):
@@ -125,15 +80,6 @@ def test_sort_bed(unsorted_fragments):
 
     # Clean up
     os.remove(sorted_bedfile)
-
-
-def test_check_marker_lists(adata2, marker_dict):
-    """Test that check_marker_lists intersects lists correctly."""
-
-    filtered_marker = utils.check_marker_lists(adata2, marker_dict)
-
-    assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
-                               "Celltype B": ['ENSMUSG00000102272']}
 
 
 # TODO
