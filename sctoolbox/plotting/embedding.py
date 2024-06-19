@@ -15,6 +15,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.collections import PathCollection
 import plotly as po
 import plotly.graph_objects as go
 
@@ -950,7 +951,17 @@ def compare_embeddings(adata_list: list[sc.AnnData],
 
             _make_square(axes[j, i])
 
-    # fig.tight_layout()
+    fig.tight_layout()
+
+    for ax in fig.get_axes():
+        if hasattr(ax, 'collections'):
+            for collection in ax.collections:
+                if isinstance(collection, PathCollection):
+                    if collection.colorbar is not None:
+                        colorbar = collection.colorbar
+                        bbox = ax.get_position()
+                        colorbar.ax.set_position([bbox.x1 + 0.01, bbox.y0, 0.02, bbox.height])
+
     return axes
 
 
