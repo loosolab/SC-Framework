@@ -10,7 +10,7 @@ A python framework for single cell analysis. It provides a plethora of functions
 # Readthedocs
 The SC framework is accompanied by an extensive documentation where detailed information regarding available notebooks, functions and a multitude of examples can be found. It can be accessed using the following link:
 
-https://loosolab.pages.gwdg.de/software/sc_framework/
+https://loosolab.github.io/SC-Framework/
 
 # Installation
 ## 1. Environment & Package installation
@@ -129,7 +129,7 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 # FAQ
 ### Q: I have an old/ already started analysis. How do I find out what was done or who was responsible?
 
-**A:** The function logging which contains this information, can be accessed using `sctoolbox.utils.get_parameter_table(adata)`. For more information see [here](https://loosolab.pages.gwdg.de/software/sc_framework/API/utils.html#sctoolbox.utils.decorator.get_parameter_table).
+**A:** The function logging which contains this information, can be accessed using `sctoolbox.utils.get_parameter_table(adata)`. For more information see [here](https://loosolab.github.io/SC-Framework/API/utils.html#sctoolbox.utils.decorator.get_parameter_table).
 
 ### Q: My `.h5ad` file is already pre-analyzed. I want to skip some of the analysis notebooks. What do I do?
 
@@ -137,4 +137,4 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 
 ### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
-**A:** We are always happy to help. In order to keep track of every changes, if you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
+**A:** We are always happy to help. In order to keep track of every changes, if you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Issues can be opened [here](https://github.com/loosolab/SC-Framework/issues). Thank you!
