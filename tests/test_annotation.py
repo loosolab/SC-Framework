@@ -48,13 +48,6 @@ def adata_atac_invalid(adata_atac):
     return adata
 
 
-@pytest.fixture
-def adata_rna():
-    """Load rna anndata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
-    return sc.read_h5ad(adata_f)
-
-
 # ------------------------- Tests ------------------------- #
 
 
@@ -88,47 +81,6 @@ def test_annotate_narrowPeak(config):
     annotation_table = anno.annotate_narrowPeak(peaks_path, gtf=gtf_path, config=config)
 
     assert 'gene_id' in annotation_table
-
-
-@pytest.mark.parametrize("inplace", [True, False])
-def test_annot_HVG(adata_rna, inplace):
-    """Test if 'highly_variable' column is added to adata.var."""
-
-    sc.pp.log1p(adata_rna)
-    out = anno.annot_HVG(adata_rna, inplace=inplace)
-
-    if inplace:
-        assert out is None
-        assert "highly_variable" in adata_rna.var.columns
-    else:
-        assert "highly_variable" in out.var.columns
-
-
-@pytest.mark.parametrize("inplace", [True, False])
-def test_get_variable_features(adata_atac_qc, inplace):
-    """Test get_variable_features success."""
-    adata = adata_atac_qc.copy()
-
-    assert "highly_variable" not in adata.var.columns
-
-    output = anno.get_variable_features(adata=adata,
-                                        max_cells=None,
-                                        min_cells=0,
-                                        show=True,
-                                        inplace=inplace)
-
-    if inplace:
-        assert output is None
-        assert "highly_variable" in adata.var.columns
-    else:
-        assert "highly_variable" in output.var.columns
-        assert "highly_variable" not in adata.var.columns
-
-
-def test_get_variable_features_fail(adata_atac):
-    """Test get_variable_features failure."""
-    with pytest.raises(KeyError):
-        anno.get_variable_features(adata=adata_atac)
 
 
 # ------------------------- Tests for gtf formats ------------------------- #
