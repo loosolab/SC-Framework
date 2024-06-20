@@ -9,6 +9,9 @@ import os
 # ------------------------- Fixtures -------------------------#
 
 
+uropa_config = {"queries": [{"distance": [10000, 1000]}]}
+
+
 @pytest.fixture
 def adata_atac():
     """Load atac anndata."""
