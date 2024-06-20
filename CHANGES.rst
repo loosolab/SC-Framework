@@ -20,6 +20,7 @@
     - tables
     - utils/adata
     - utils/general
+    - utils/checker
 
 0.7.0 (23-04-24)
 -------------
