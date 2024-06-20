@@ -15,6 +15,7 @@
     - tools/bam
     - tools/calc_overlap_fc
     - tools/celltype_annotation
+    - tools/peak_annotation
     - tools/qc_filter
     - highly_variable
     - tables

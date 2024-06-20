@@ -1,48 +1,22 @@
-"""Test functions related to annotation."""
+"""Test functions related to peak annotation required by scATAC-seq."""
 
+import argparse
 import pytest
 import sctoolbox.tools as anno
 import scanpy as sc
 import os
 
 
-# ------------------------- Fixtures -------------------------#
+# ------------------------- Fixtures ------------------------- #
+
+uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 
 @pytest.fixture
 def adata_atac():
     """Load atac anndata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
-
-
-# TODO add precalculated qc adata to save runtime
-@pytest.fixture(scope="module")
-def adata_atac_qc():
-    """Add qc to anndata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
-    adata = sc.read_h5ad(adata_f)
-    sc.pp.calculate_qc_metrics(adata, inplace=True)
-
-    return adata
-
-
-@pytest.fixture
-def adata_atac_emptyvar(adata_atac):
-    """Create anndata with empty adata.var."""
-    adata = adata_atac.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
-@pytest.fixture
-def adata_atac_invalid(adata_atac):
-    """Create adata with invalid adata.var index."""
-    adata = adata_atac.copy()
-    adata.var.iloc[0, 1] = 500  # start
-    adata.var.iloc[0, 2] = 100  # end
-    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
-    return adata
 
 
 # ------------------------- Tests ------------------------- #
@@ -55,7 +29,7 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
     """Test annotate_adata success."""
 
     adata_atac.var["distance_to_gene"] = 100  # initialize distance column to test the warning message
-    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'chr4_mm10_genes.gtf')
+    gtf_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'chr4_mm10_genes.gtf')
 
     out = anno.annotate_adata(adata_atac, gtf=gtf_path, threads=threads, inplace=inplace,
                               config=config, best=best, coordinate_cols=coordinate_cols)
@@ -72,22 +46,23 @@ def test_annotate_adata(adata_atac, inplace, threads, config, best, coordinate_c
 def test_annotate_narrowPeak(config):
     """Test annotate_narrowPeak success."""
 
-    gtf_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
-    peaks_path = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'cropped_testing.narrowPeak')
+    gtf_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_genes.gtf')
+    peaks_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'cropped_testing.narrowPeak')
 
     annotation_table = anno.annotate_narrowPeak(peaks_path, gtf=gtf_path, config=config)
 
     assert 'gene_id' in annotation_table
 
-
 # ------------------------- Tests for gtf formats ------------------------- #
-gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf'),
-             "header": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf'),
-             "unsorted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf'),
-             "gtf_gz": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf.gz'),
-             "gtf_missing_col": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_missing_column_gencode.v41.gtf'),
-             "gtf_corrupted": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_corrupted_format_gencode.v41.gtf'),
-             "gff": os.path.join(os.path.dirname(__file__), 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')}
+
+
+gtf_files = {"noheader": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_genes.gtf'),
+             "header": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf'),
+             "unsorted": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf'),
+             "gtf_gz": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gtf.gz'),
+             "gtf_missing_col": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_missing_column_gencode.v41.gtf'),
+             "gtf_corrupted": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_corrupted_format_gencode.v41.gtf'),
+             "gff": os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.gff3')}
 
 
 # indirect test of gtf_integrity as well
