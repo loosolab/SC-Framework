@@ -1,5 +1,7 @@
-0.9.0 (xx-xx-xx)
-----------------
+0.9.0 (in progress)
+-------------------
+- GSEA: Fix library gene-set overlap by converting all gene names to uppercase
+- pl.gsea.term_dotplot: Fix example; Fix index==None bug
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
 
 0.8.0 (14-06-24)
@@ -45,7 +47,7 @@ Changes to notebooks
 - refactor move clean-orphaned-tags to new stage .post (#229)
 
 0.6 (27-03-24)
--------------
+--------------
 - Fix unable to determine R_HOME error (#190)
 - implemented propose_pcs to automatically select PCA components (#187)
 - add correlation barplot to plot_pca_variance
