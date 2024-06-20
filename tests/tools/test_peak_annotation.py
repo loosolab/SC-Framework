@@ -7,7 +7,7 @@ import scanpy as sc
 import os
 
 
-# ------------------------- Fixtures -------------------------#
+# ------------------------- Fixtures ------------------------- #
 
 uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
