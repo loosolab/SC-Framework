@@ -2,6 +2,10 @@
 ----------------
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
 
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- added notebook versioning (#115)
+
 0.8.0 (14-06-24)
 ----------------
 - from_mtx: support more folder structures and variable file now optional (#234, #240)
