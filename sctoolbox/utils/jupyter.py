@@ -79,3 +79,33 @@ def clear() -> None:
         os.system('cls')
     else:
         os.system('clear')
+
+
+def _compare_version(nb_name: str) -> None:
+    """
+    Compare installed sctoolbox version with notebook version.
+
+    Parameters
+    ----------
+    nb_name : str
+        Name of notebook file.
+    """
+
+    import sctoolbox
+    import nbformat
+    import warnings
+    from packaging import version
+
+    nb = nbformat.read(nb_name, as_version=4)
+    if "sc_framework" in nb["metadata"]:
+        if "version" in nb["metadata"]["sc_framework"]:
+            if version.parse(str(nb["metadata"]["sc_framework"]["version"])) < version.parse(sctoolbox.__version__):
+                warnings.warn(f"The Notebook has an older version compared to the installed sctoolbox version "
+                              + f"({nb['metadata']['sc_framework']['version']} < {sctoolbox.__version__})\nSome function might not work!")
+            elif version.parse(str(nb["metadata"]["sc_framework"]["version"])) > version.parse(sctoolbox.__version__):
+                warnings.warn(f"The Notebook has an newer version compared to the installed sctoolbox version "
+                              + "({nb['metadata']['sc_framework']['version']} > {sctoolbox.__version__})\nSome function might not work!")
+        else:
+            warnings.warn("The Notebook seems to have an older version. Some function might not work!")
+    else:
+        warnings.warn("The Notebook seems to have an older version. Some function might not work!")
