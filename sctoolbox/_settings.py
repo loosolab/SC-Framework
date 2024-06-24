@@ -11,7 +11,7 @@ from beartype.typing import Optional
 
 class SctoolboxConfig(object):
     """Config manager for sctoolbox.
-    
+
     Attributes
     ----------
     __frozen : bool
