@@ -14,7 +14,7 @@ class SctoolboxConfig(object):
     
     Attributes
     ----------
-    __frozen : bool, default False
+    __frozen : bool
         If True, disallows new attributes to be added.
     """
 
