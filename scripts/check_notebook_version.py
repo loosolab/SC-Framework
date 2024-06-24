@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 import nbformat
 from packaging import version
+from sctoolbox import _version
 
 
 def check_notebook(nb_path, ver):
@@ -37,13 +38,13 @@ def check_notebook(nb_path, ver):
     print("Notebook and sc_framework versions are matching!")
 
 
-def check_versions(path_list, ver):
+def check_versions(path_list):
     """Loop over all directories and check notebook versions."""
 
     for p in path_list:
         path = Path(p)
         for nb_path in path.glob("**/*.ipynb"):
-            check_notebook(nb_path, ver)
+            check_notebook(nb_path, _version)
 
 
 if __name__ == '__main__':
@@ -52,6 +53,5 @@ if __name__ == '__main__':
         description="Loops recursivly through given directories and checks \
             if the sc_framework version is up to date fore very notebook.")
     parser.add_argument('-n', '--notebook_paths', nargs='+', default=[])
-    parser.add_argument('-v', '--version', type=str, help="New version.")
     args = parser.parse_args()
-    check_versions(args.notebook_paths, args.version)
+    check_versions(args.notebook_paths)
