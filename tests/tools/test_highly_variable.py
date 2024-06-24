@@ -1,18 +1,25 @@
-"""Test functions related to annotation."""
+"""Tests for highly_variable.py."""
 
 import pytest
-import sctoolbox.tools as anno
-import scanpy as sc
 import os
+import scanpy as sc
+import sctoolbox.tools as anno
 
 
 # ------------------------- Fixtures -------------------------#
 
 
 @pytest.fixture
+def adata_rna():
+    """Load rna anndata."""
+    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
+    return sc.read_h5ad(adata_f)
+
+
+@pytest.fixture
 def adata_atac():
     """Load atac anndata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
 
@@ -20,36 +27,11 @@ def adata_atac():
 @pytest.fixture(scope="module")
 def adata_atac_qc():
     """Add qc to anndata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
     adata = sc.read_h5ad(adata_f)
     sc.pp.calculate_qc_metrics(adata, inplace=True)
 
     return adata
-
-
-@pytest.fixture
-def adata_atac_emptyvar(adata_atac):
-    """Create anndata with empty adata.var."""
-    adata = adata_atac.copy()
-    adata.var = adata.var.drop(columns=adata.var.columns)
-    return adata
-
-
-@pytest.fixture
-def adata_atac_invalid(adata_atac):
-    """Create adata with invalid adata.var index."""
-    adata = adata_atac.copy()
-    adata.var.iloc[0, 1] = 500  # start
-    adata.var.iloc[0, 2] = 100  # end
-    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
-    return adata
-
-
-@pytest.fixture
-def adata_rna():
-    """Load rna anndata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
-    return sc.read_h5ad(adata_f)
 
 
 # ------------------------- Tests ------------------------- #
