@@ -6,10 +6,11 @@ import argparse
 from pathlib import Path
 import nbformat
 from packaging import version
-from sctoolbox import _version
+import sys 
+import os
 
 
-def check_notebook(nb_path, ver):
+def check_notebook(nb_path, sc_ver):
     """Check notebook"""
     
     print(f"Checking {nb_path}")
@@ -29,7 +30,6 @@ def check_notebook(nb_path, ver):
 
     # Compare versions
     notebook_ver = version.parse(nb["metadata"]["sc_framework"]["version"])
-    sc_ver = version.parse(ver)
 
     if notebook_ver > sc_ver:
         raise ValueError(f"Notebook version is higher than sc_framework version. ({notebook_ver} > {sc_ver})")
@@ -44,7 +44,7 @@ def check_versions(path_list):
     for p in path_list:
         path = Path(p)
         for nb_path in path.glob("**/*.ipynb"):
-            check_notebook(nb_path, _version)
+            check_notebook(nb_path, version.parse(v.__version__))
 
 
 if __name__ == '__main__':
@@ -52,6 +52,12 @@ if __name__ == '__main__':
         prog="check_notebook_version",
         description="Loops recursivly through given directories and checks \
             if the sc_framework version is up to date fore very notebook.")
-    parser.add_argument('-n', '--notebook_paths', nargs='+', default=[])
+    parser.add_argument('-n', '--notebook_paths', nargs='+', default=[], help="Directories containing .ipynb files")
+    parser.add_argument('-v', '--version', help="Path to sctoolbox directory")
     args = parser.parse_args()
+    
+    # Only import _version.py file
+    sys.path.append(os.path.abspath(args.version))
+    import _version as v
+
     check_versions(args.notebook_paths)
