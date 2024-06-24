@@ -10,7 +10,13 @@ from beartype.typing import Optional
 
 
 class SctoolboxConfig(object):
-    """Config manager for sctoolbox."""
+    """Config manager for sctoolbox.
+
+    Attributes
+    ----------
+    __frozen : bool
+        If True, disallows new attributes to be added.
+    """
 
     __frozen = False
 
