@@ -8,10 +8,10 @@ from pathlib import Path
 from packaging import version
 
 
-def update_version(notebook: str, ver: str, force: bool):
+def update_version(notebook: str, ver: str, force: bool) -> None:
     """
     Update sc_framework version of notebook.
-    
+
     Parameters
     ----------
     notebook : str
@@ -21,6 +21,7 @@ def update_version(notebook: str, ver: str, force: bool):
     force : bool
         Ignore warnings and overwrite notebook version.
     """
+
     nb = nbformat.read(notebook, as_version=4)
     if "sc_framework" not in nb["metadata"]:
         nb["metadata"]["sc_framework"] = dict()
@@ -38,10 +39,10 @@ def update_version(notebook: str, ver: str, force: bool):
     nbformat.write(nb, notebook)
 
 
-def update_notebooks(repo_path: str, ver: str, force: bool):
+def update_notebooks(repo_path: str, ver: str, force: bool) -> None:
     """
     Loops recursivly through given directory and updates the sc_framework version for every notebook.
-    
+
     Parameters
     ----------
     repo_path : str
@@ -51,6 +52,7 @@ def update_notebooks(repo_path: str, ver: str, force: bool):
     force : bool
         Ignore warnings and overwrite notebook version.
     """
+
     path = Path(repo_path)
     for p in path.glob("**/*.ipynb"):
         print(p)
