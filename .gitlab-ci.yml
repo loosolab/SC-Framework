@@ -361,7 +361,7 @@ check-notebook-version:
     default: false
   stage: test
   before_script:
-    pip install nbformat
+    pip install nbformat packaging
   script:
     - python --version
     - python scripts/check_notebook_version.py rna_analysis/notebooks/ atac_analysis/notebooks/ general_notebooks/
