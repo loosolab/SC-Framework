@@ -581,7 +581,7 @@ def run_deseq2(adata: sc.AnnData,
     Notes
     -----
     Needs the package 'pydeseq2' to be installed.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
+    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
 
     See Also
     --------
