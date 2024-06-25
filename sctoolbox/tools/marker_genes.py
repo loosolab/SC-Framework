@@ -635,6 +635,7 @@ def run_deseq2(adata: sc.AnnData,
     # Get results per contrast
     contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
+        logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
         ds = DeseqStats(dds, contrast=[condition_col, C2, C1])
         ds.summary()
 
