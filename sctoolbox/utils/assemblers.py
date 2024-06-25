@@ -50,11 +50,6 @@ def prepare_atac_anndata(adata: sc.AnnData,
         The prepared AnnData object.
 
     """
-
-    if set_index:
-        logger.info("formatting index")
-        utils.checker.var_index_from(adata, index_from)
-
     # Establish columns for coordinates
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
@@ -63,9 +58,14 @@ def prepare_atac_anndata(adata: sc.AnnData,
                                     coordinate_cols,
                                     name="adata.var")  # Check that coordinate_cols are in adata.var)
 
+    # Format index
+    logger.info("formatting index")
+    utils.checker.var_index_from(adata, index_from)  # This checks if the index is available and valid, if not it creates it.
+
     # Format coordinate columns
     logger.info("formatting coordinate columns")
-    utils.checker.format_adata_var(adata, coordinate_cols, coordinate_cols)
+    # This checks if the coordinate columns are available and valid, if not it creates them.
+    utils.checker.format_adata_var(adata, coordinate_cols)
 
     # check if the barcode is the index otherwise set it
     utils.bioutils.barcode_index(adata)

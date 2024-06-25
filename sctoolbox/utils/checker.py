@@ -157,8 +157,7 @@ def is_str_numeric(ans: str) -> bool:
 def var_index_from(adata: sc.AnnData,
                    from_column: Optional[str] = None) -> None:
     """
-    Format adata.var index from specified column or from the index available.
-
+    Format adata.var index from a specified column or multiple coordinate columns.
     This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
     The adata is changed inplace.
 
@@ -169,60 +168,57 @@ def var_index_from(adata: sc.AnnData,
     from_column : Optional[str], default None
         Column name in adata.var to be set as index.
     """
+    # check if index is already in the correct format
+    if not adata.var.index.str.contains(r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+').all():
+        # check if from_column is a single column or a list of columns
+        if isinstance(from_column, str):
+            # get the first entry of the column
+            entry = list(adata.var[from_column])[0]
+            # check the type of the index
+            index_type = get_index_type(entry)
 
-    if from_column is None:
-        entry = adata.var.index[0]
-        index_type = get_index_type(entry)
+            # index can be in the format binary or named
+            if index_type == 'binary':
+                # remove the b' and ' from the string
+                adata.var['name'] = adata.var['name'].str.replace("b'", "")
+                adata.var['name'] = adata.var['name'].str.replace("'", "")
 
-        if index_type == 'snapatac':
-            adata.var['name'] = adata.var['name'].str.replace("b'", "")
-            adata.var['name'] = adata.var['name'].str.replace("'", "")
+                # split the peak column into chromosome start and end
+                adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
+                adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+                # set types
+                adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
+                adata.var['peak_start'] = adata.var['peak_start'].astype(int)
+                adata.var['peak_end'] = adata.var['peak_end'].astype(int)
+                # remove start_end column
+                adata.var.drop('start_end', axis=1, inplace=True)
+                # set index
+                adata.var = adata.var.set_index('name')
 
-            # split the peak column into chromosome start and end
-            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
-            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
-            # set types
-            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
-            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
-            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
-            # remove start_end column
-            adata.var.drop('start_end', axis=1, inplace=True)
+            # index is in the format named
+            elif index_type == "named":
+                # define the pattern to extract the coordinates
+                coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
 
-            adata.var = adata.var.set_index('name')
+                # init empty list to store the new index
+                new_index = []
+                # loop over the column and extract the coordinates
+                for line in adata.var[from_column]:
+                    new_index.append(re.search(coordinate_pattern, line).group(0))
+                adata.var['new_index'] = new_index
+                # set the new index
+                adata.var.set_index('new_index', inplace=True)
 
-        elif index_type == "start_name":
-            coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
-            new_index = []
-            for line in adata.var.index:
-                new_index.append(re.search(coordinate_pattern, line).group(0))
-            adata.var['new_index'] = new_index
-            adata.var.set_index('new_index', inplace=True)
+        else:
+            # get the columns
+            chr_list = adata.var[from_column[0]]
+            start_list = adata.var[from_column[1]]
+            stop_list = adata.var[from_column[2]]
 
-    else:
-        entry = list(adata.var[from_column])[0]
-        index_type = get_index_type(entry)
+            # Combine into the format "chr:start-stop" per row
+            new_index = [f"{chrom}:{start}-{stop}" for chrom, start, stop in zip(chr_list, start_list, stop_list)]
 
-        if index_type == 'snapatac':
-            adata.var['name'] = adata.var['name'].str.replace("b'", "")
-            adata.var['name'] = adata.var['name'].str.replace("'", "")
-
-            # split the peak column into chromosome start and end
-            adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
-            adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
-            # set types
-            adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
-            adata.var['peak_start'] = adata.var['peak_start'].astype(int)
-            adata.var['peak_end'] = adata.var['peak_end'].astype(int)
-            # remove start_end column
-            adata.var.drop('start_end', axis=1, inplace=True)
-
-            adata.var = adata.var.set_index('name')
-
-        elif index_type == "start_name":
-            coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
-            new_index = []
-            for line in adata.var[from_column]:
-                new_index.append(re.search(coordinate_pattern, line).group(0))
+            # Set the new index
             adata.var['new_index'] = new_index
             adata.var.set_index('new_index', inplace=True)
 
@@ -240,16 +236,16 @@ def get_index_type(entry: str) -> Optional[str]:
     Returns
     -------
     Optional[str]
-        The index format. Either 'snapatac', 'start_name' or None for unknown format.
+        The index format. Either 'binary', 'named' or None for unknown format.
     """
 
-    regex_snapatac = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
-    regex_start_name = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
+    regex_binary = r"^b'(chr[0-9]+)+'[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: b'chr1':12324-56757
+    regex_named = r"^.+(chr[0-9]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"  # matches: some_name-chr1:12343-76899
 
-    if re.match(regex_snapatac, entry):
-        return 'snapatac'
-    if re.match(regex_start_name, entry):
-        return 'start_name'
+    if re.match(regex_binary, entry):
+        return 'binary'
+    if re.match(regex_named, entry):
+        return 'named'
 
 
 @beartype
@@ -291,8 +287,7 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def format_adata_var(adata: sc.AnnData,
-                     coordinate_columns: Optional[Iterable[str]] = None,
-                     columns_added: Iterable[str] = ["chr", "start", "end"]) -> None:
+                     coordinate_columns: Iterable[str] = ["chr", "start", "end"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
@@ -309,11 +304,8 @@ def format_adata_var(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object containing features to annotate.
-    coordinate_columns : Optional[Iterable[str][str]], default None
-        List of length 3 for column names in adata.var containing chr, start, end coordinates to check.
-        If None, the index will be formatted.
-    columns_added : Iterable[str], default ['chr', 'start', 'end']
-        List of length 3 for column names in adata.var containing chr, start, end coordinates to add.
+    coordinate_columns : Iterable[str], default ['chr', 'start', 'end']
+        List of length 3 for column names in adata.var containing chr, start, end coordinates.
 
     Raises
     ------
@@ -325,14 +317,13 @@ def format_adata_var(adata: sc.AnnData,
 
     # Test whether the first three columns are in the right format
     format_index = True
-    if coordinate_columns is not None:
-        try:
-            validate_regions(adata, coordinate_columns)
-            format_index = False
-        except KeyError:
-            print("The coordinate columns are not found in adata.var. Trying to format the index.")
-        except ValueError:
-            print("The regions in adata.var are not in the correct format. Trying to format the index.")
+    try:
+        validate_regions(adata, coordinate_columns)
+        format_index = False
+    except KeyError:
+        print("The coordinate columns are not found in adata.var. Trying to format the index.")
+    except ValueError:
+        print("The regions in adata.var are not in the correct format. Trying to format the index.")
 
     # Format index if needed
     if format_index:
@@ -357,15 +348,15 @@ def format_adata_var(adata: sc.AnnData,
             else:
                 raise ValueError("Index does not match the format *_start_stop or *:start-stop. Please check your index.")
 
-        adata.var.drop(columns_added, axis=1,
+        adata.var.drop(coordinate_columns, axis=1,
                        errors='ignore', inplace=True)
 
-        adata.var.insert(0, columns_added[2], peak_end_list)
-        adata.var.insert(0, columns_added[1], peak_start_list)
-        adata.var.insert(0, columns_added[0], peak_chr_list)
+        adata.var.insert(0, coordinate_columns[2], peak_end_list)
+        adata.var.insert(0, coordinate_columns[1], peak_start_list)
+        adata.var.insert(0, coordinate_columns[0], peak_chr_list)
 
         # Check whether the newly added columns are in the right format
-        validate_regions(adata, columns_added)
+        validate_regions(adata, coordinate_columns)
 
 
 @beartype
