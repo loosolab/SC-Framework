@@ -562,7 +562,7 @@ def run_deseq2(adata: sc.AnnData,
     confounders : Optional[list[str]], default None
         List of additional column names in adata.obs containing confounders to be included in the model.
     layer : Optional[str], default None
-        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
+        Name of layer containing raw counts to be used for pyDESeq2. Default is None (use .X for counts)
     percentile_range : Tuple[int, int], default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
