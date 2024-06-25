@@ -18,7 +18,7 @@ class SctoolboxConfig(object):
         If True, disallows new attributes to be added.
     """
 
-    __frozen = False
+    __frozen: bool = False
 
     def __init__(self,
                  figure_dir: str = "",           # Directory to write figures to
