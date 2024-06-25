@@ -99,13 +99,13 @@ def _compare_version(nb_name: str) -> None:
     nb = nbformat.read(nb_name, as_version=4)
     if "sc_framework" in nb["metadata"]:
         if "version" in nb["metadata"]["sc_framework"]:
-            if version.parse(str(nb["metadata"]["sc_framework"]["version"])) < version.parse(sctoolbox.__version__):
-                warnings.warn("The Notebook has an older version compared to the installed sctoolbox version "
-                              + f"({nb['metadata']['sc_framework']['version']} < {sctoolbox.__version__})\nSome function might not work!")
-            elif version.parse(str(nb["metadata"]["sc_framework"]["version"])) > version.parse(sctoolbox.__version__):
-                warnings.warn("The Notebook has an newer version compared to the installed sctoolbox version "
-                              + f"({nb['metadata']['sc_framework']['version']} > {sctoolbox.__version__})\nSome function might not work!")
-        else:
-            warnings.warn("The Notebook seems to have an older version. Some function might not work!")
-    else:
-        warnings.warn("The Notebook seems to have an older version. Some function might not work!")
+            # parse versions
+            nb_ver = version.parse(str(nb["metadata"]["sc_framework"]["version"]))
+            sc_ver = version.parse(sctoolbox.__version__)
+
+            if nb_ver != sc_ver:
+                ver_dif, arrow = "an older", "<" if nb_ver < sc_ver else "a newer", ">"
+                warnings.warn(f"The notebook has {ver_dif} version compared to the installed sctoolbox version ({nb_ver} {arrow} {sc_ver}). Some functions may not work!")
+            return
+
+    warnings.warn("The Notebook seems to be outdated (notebook version: N/A). Some functions may not work! Consider updating.")
