@@ -549,7 +549,7 @@ def run_deseq2(adata: sc.AnnData,
                layer: Optional[str] = None,
                percentile_range: Tuple[int, int] = (0, 100)) -> pd.DataFrame:
     """
-    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
+    Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Parameters
     ----------
