@@ -1,6 +1,5 @@
 """Functions for plotting QC-related figures e.g. number of cells per group and violins."""
 
-from math import ceil
 import pandas as pd
 import copy
 import numpy as np
@@ -16,15 +15,12 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import violinplot, _save_figure
+from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from beartype.typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
 from beartype import beartype
-
-import deprecation
-from sctoolbox import __version__
 
 
 ########################################################################################
@@ -56,7 +52,7 @@ def _read_starsolo_summary(folder: str) -> pd.DataFrame:
         raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
 
     # Read statistics from summary files
-    names = utils.clean_flanking_strings(summary_files)
+    names = utils.general.clean_flanking_strings(summary_files)
     summary_tables = []
     for name, f in zip(names, summary_files):
         star_table = pd.read_csv(f, index_col=0, header=None, names=[name])
@@ -107,7 +103,7 @@ def plot_starsolo_quality(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_quality("data/quant/")
+        pl.qc_filter.plot_starsolo_quality("data/quant/")
     """
 
     # Prepare functions for converting labels
@@ -198,7 +194,7 @@ def plot_starsolo_UMI(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_UMI("data/quant/", ncol=2)
+        pl.qc_filter.plot_starsolo_UMI("data/quant/", ncol=2)
     """
 
     summary_table = _read_starsolo_summary(folder)
@@ -207,7 +203,7 @@ def plot_starsolo_UMI(folder: str,
     if len(umi_files) == 0:
         raise ValueError("No UMI files found in folder. Please check the path and try again.")
 
-    names = utils.clean_flanking_strings(umi_files)
+    names = utils.general.clean_flanking_strings(umi_files)
 
     # Setup plot
     ncol = min(len(names), ncol)
@@ -310,12 +306,12 @@ def n_cells_barplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain")
 
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
@@ -432,11 +428,11 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.group_correlation(adata, "phase", method="spearman", save=None)
+        pl.qc_filter.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
     # Calculate correlation of groups
-    count_table = utils.pseudobulk_table(adata, groupby=groupby)
+    count_table = utils.bioutils.pseudobulk_table(adata, groupby=groupby)
     corr = count_table.corr(numeric_only=False, method=method)
 
     clustermap_kwargs = {"figsize": (4, 4),
@@ -464,80 +460,6 @@ def group_correlation(adata: sc.AnnData,
     _save_figure(save)
 
     return g
-
-
-@deprecation.deprecated(deprecated_in="0.3b", removed_in="0.5",
-                        current_version=__version__,
-                        details="Use the 'sctoolbox.pl.quality_violin' function instead.")
-@deco.log_anndata
-@beartype
-def qc_violins(anndata: sc.AnnData,
-               thresholds: pd.DataFrame,
-               colors: Optional[list[str]] = None,
-               save: Optional[str] = None,
-               ncols: int = 3,
-               figsize: Optional[Tuple[int | float, int | float]] = None,
-               dpi: int = 300):
-    """
-    Grid of violinplots with optional cutoffs.
-
-    Parameters
-    ----------
-    anndata : sc.AnnData
-        Anndata object providing violin data.
-    thresholds : pd.DataFrame
-        Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
-        Note: Row order defines plot order.
-        Structure:
-
-            - index (two columns)
-                - Name of anndata.var or anndata.obs column.
-                - Name of origin. Either "obs" or "var".
-            - 1st column: Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
-            - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
-    colors : Optional[list[str]], default None
-        List of colors for the violins.
-               save: Optional[str] = None,
-    save : str, default None
-        Path and name of file to be saved.
-    ncols : int, default 3
-        Number of violins per row.
-    figsize : Optional[Tuple[int | float, int | float]], default None
-        Size of figure in inches.
-    dpi : int, default 300
-        Dots per inch.
-
-    Raises
-    ------
-    ValueError
-        If threshold table indices are not column names in anndata.obs or anndata.var.
-    """
-    # test if threshold indexes are column names in .obs or .var
-    invalid_index = set(thresholds.index.get_level_values(0)) - set(anndata.obs.columns) - set(anndata.var.columns)
-    if invalid_index:
-        raise ValueError(f"Threshold table indices need to be column names of anndata.obs or anndata.var. Indices not found: {invalid_index}")
-
-    # create subplot grid
-    nrows = ceil(len(thresholds) / ncols)
-    figsize = figsize if figsize is not None else (ncols * 4, nrows * 4)
-
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, dpi=dpi, figsize=figsize, constrained_layout=True)
-    axs = axs.flatten()  # flatten to 1d array per row
-
-    # iterate over threshold rows
-    for ((name, origin), row), ax in zip(thresholds.iterrows(), axs):
-        # find out if in obs or var
-        table = anndata.var if origin == "var" else anndata.obs
-
-        # create violin
-        violinplot(table=table, y=name, hlines=row[0], color_by=row[1], colors=colors, ax=ax, title=f"{origin}: {name}", ylabel=False)
-
-    # delete unused subplots
-    for i in range(len(thresholds), len(axs)):
-        fig.delaxes(axs[i])
-
-    # Save plot
-    _save_figure(save)
 
 
 #####################################################################
@@ -699,14 +621,12 @@ def quality_violin(adata: sc.AnnData,
                    header: Optional[list[str]] = None,
                    color_list: Optional[list[str | Tuple[float | int, float | int, float | int]]] = None,
                    title: Optional[str] = None,
-                   thresholds: Optional[dict[Literal["min", "max"], int | float]] = None,
+                   thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
                    global_threshold: bool = True,
                    interactive: bool = True,
                    save: Optional[str] = None,
                    **kwargs: Any
-                   ) -> Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox],
-                              Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe],
-                                              Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
+                   ) -> Tuple[Any, Dict[str, Any]]:
     """
     Plot quality measurements for cells/features in an anndata object.
 
@@ -732,7 +652,7 @@ def quality_violin(adata: sc.AnnData,
         A list of colors to use for violins. If None, colors are chosen automatically.
     title : Optional[str], default None
         The title of the full plot.
-    thresholds : Optional[dict[Literal["min", "max"], int | float]], default None
+    thresholds : Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]], default None
         Dictionary containing initial min/max thresholds to show in plot.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
@@ -745,7 +665,8 @@ def quality_violin(adata: sc.AnnData,
 
     Returns
     -------
-    Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+    Tuple[Any, Dict[str, Any]]
+        Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
         First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
 
     Raises
@@ -755,7 +676,7 @@ def quality_violin(adata: sc.AnnData,
 
     """
 
-    is_interactive = utils._is_interactive()
+    is_interactive = utils.checker._is_interactive()
 
     # ---------------- Test input and get ready --------------#
 
@@ -961,7 +882,7 @@ def quality_violin(adata: sc.AnnData,
     else:
         figure = fig  # non interactive figure
 
-    return figure, slider_dict
+    return (figure, slider_dict)
 
 
 @beartype

@@ -40,6 +40,7 @@ def atac_norm(*args: Any, **kwargs: Any):
 def normalize_adata(adata: sc.AnnData,
                     method: str | list[str],
                     exclude_highly_expressed: bool = True,
+                    use_highly_variable: bool = False,
                     target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
@@ -54,6 +55,8 @@ def normalize_adata(adata: sc.AnnData,
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
     exclude_highly_expressed : bool, default True
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    use_highly_variable : bool, default False
+        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
     target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
 
@@ -80,12 +83,12 @@ def normalize_adata(adata: sc.AnnData,
             logger.info('Performing total normalization and PCA...')
             sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
             sc.pp.log1p(adata)
-            sc.pp.pca(adata)
+            sc.pp.pca(adata, use_highly_variable=use_highly_variable)
 
         elif method_str == "tfidf":
             logger.info('Performing TFIDF and LSI...')
             tfidf(adata)
-            lsi(adata)  # corresponds to PCA
+            lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
 
         else:
             raise ValueError(f"Method '{method_str}' is invalid - must be either 'total' or 'tfidf'.")
@@ -100,7 +103,7 @@ def tfidf(data: sc.AnnData,
           log_tf: bool = True,
           log_idf: bool = True,
           log_tfidf: bool = False,
-          scale_factor: int = 1e4) -> None:
+          scale_factor: int = int(1e4)) -> None:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
@@ -289,7 +292,7 @@ def wrap_corrections(adata: sc.AnnData,
         if method in required_packages:  # not all packages need external tools
             f = io.StringIO()
             with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
-                utils.check_module(required_packages[method])
+                utils.checker.check_module(required_packages[method])
 
     # Collect batch correction per method
     anndata_dict = {'uncorrected': adata}
@@ -488,7 +491,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
     """
 
     # Load LISI
-    utils.check_module("harmonypy")
+    utils.checker.check_module("harmonypy")
     from harmonypy.lisi import compute_lisi
 
     # Handle inplace option
@@ -542,7 +545,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
 
-    if utils._is_notebook() is True:
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
@@ -566,7 +569,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
                 evaluate_batch_effect(adata, batch_key, col_name=f"LISI_score_{obsm}", obsm_key=obsm, max_dims=max_dims, perplexity=perplexity, inplace=True)
                 pbar.update()
     else:
-        utils.check_module("harmonypy")
+        utils.checker.check_module("harmonypy")
         from harmonypy.lisi import compute_lisi
 
         pool = mp.Pool(threads)
@@ -584,7 +587,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         pool.close()
 
         # Monitor all jobs with a pbar
-        utils.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
+        utils.multiprocessing.monitor_jobs(jobs, "Calculating LISI scores")  # waits for all jobs to finish
         pool.join()
 
         # Assign results to adata

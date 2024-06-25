@@ -164,10 +164,10 @@ def _insertsize_from_bam(bam: str,
     """
 
     # Load modules
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
-    if utils._is_notebook() is True:
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
@@ -283,7 +283,7 @@ def _insertsize_from_fragments(fragments: str,
     """
 
     # Open fragments file
-    if utils._is_gz_file(fragments):
+    if utils.checker._is_gz_file(fragments):
         f = gzip.open(fragments, "rt")
     else:
         f = open(fragments, "r")
@@ -337,16 +337,16 @@ def _insertsize_from_fragments(fragments: str,
 
 
 @beartype
-def _add_fragment(count_dict: dict[str, int],
+def _add_fragment(count_dict: dict[str, dict[str, int | float]],
                   barcode: str,
                   size: int,
-                  count: int = 1) -> dict[str, int]:
+                  count: int = 1) -> dict[str, dict[str, int | float]]:
     """
     Add fragment of size 'size' to count_dict.
 
     Parameters
     ----------
-    count_dict : dict[str, int]
+    count_dict : dict[str, dict[str, int | float]]
         Dictionary containing the counts per insertsize.
     barcode : str
         Barcode of the read.
@@ -357,7 +357,7 @@ def _add_fragment(count_dict: dict[str, int],
 
     Returns
     -------
-    dict[str, int]
+    dict[str, dict[str, int | float]]
         Updated count_dict
     """
 

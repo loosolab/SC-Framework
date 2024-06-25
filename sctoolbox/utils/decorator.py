@@ -8,7 +8,7 @@ import matplotlib
 from beartype.typing import Callable
 from beartype import beartype
 
-import sctoolbox.utils.general as utils
+import sctoolbox.utils as utils
 
 
 @beartype
@@ -63,8 +63,8 @@ def log_anndata(func: Callable) -> Callable:
 
         # log information on run
         d = {}
-        d["timestamp"] = utils.get_datetime()
-        d["user"] = utils.get_user()
+        d["timestamp"] = utils.general.get_datetime()
+        d["user"] = utils.general.get_user()
         d["func"] = funcname
         d["args"] = args_repr
         d["kwargs"] = kwargs_repr

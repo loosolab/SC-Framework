@@ -5,7 +5,7 @@ import scanpy as sc
 import pytest
 from sctoolbox.utils import decorator as deco
 
-import sctoolbox.qc_filter as qc
+import sctoolbox.tools.qc_filter as qc
 import sctoolbox.utils as utils
 
 from sctoolbox._settings import settings
@@ -56,7 +56,7 @@ def test_get_parameter_table(adata):
     qc.calculate_qc_metrics(adata)
     qc.predict_sex(adata, "sample", threshold=0.1)  # threshold is kwargs
 
-    table = utils.get_parameter_table(adata)
+    table = utils.decorator.get_parameter_table(adata)
 
     assert table.shape[0] == 2  # two functions were run
     assert table.loc[1, "kwargs"] == {"threshold": 0.1}  # check if kwargs are correctly stored for predict_sex
@@ -66,16 +66,16 @@ def test_get_parameter_table(adata):
 def test_add_uns_info(adata):
     """Test if add_uns_info works on both string and list keys."""
 
-    utils.add_uns_info(adata, "akey", "info")
+    utils.adata.add_uns_info(adata, "akey", "info")
 
     assert "akey" in adata.uns["sctoolbox"]
     assert adata.uns["sctoolbox"]["akey"] == "info"
 
-    utils.add_uns_info(adata, ["upper", "lower"], "info")
+    utils.adata.add_uns_info(adata, ["upper", "lower"], "info")
     assert "upper" in adata.uns["sctoolbox"]
     assert adata.uns["sctoolbox"]["upper"]["lower"] == "info"
 
-    utils.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
+    utils.adata.add_uns_info(adata, ["upper", "lower"], "info2", how="append")
     assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
 
 

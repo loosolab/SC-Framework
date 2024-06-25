@@ -98,8 +98,8 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
                                                            right_index=True), obs_list)
     merged_adata.obsm = obsm_dict
 
-    utils.fill_na(merged_adata.obs)
-    utils.fill_na(merged_adata.var)
+    utils.tables.fill_na(merged_adata.obs)
+    utils.tables.fill_na(merged_adata.var)
 
     if len(merged_adata.var) <= 50:
         warnings.warn("The adata object contains less than 51 genes/var entries. "

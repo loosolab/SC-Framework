@@ -90,7 +90,7 @@ def get_celltype_assignment(adata: sc.AnnData,
     marker_genes_table = pd.DataFrame(markers)
 
     # Get pseudobulk table
-    table = utils.pseudobulk_table(sub, clustering)
+    table = utils.bioutils.pseudobulk_table(sub, clustering)
     table.index.name = "genes"
     table.reset_index(inplace=True)
 
@@ -347,7 +347,7 @@ def run_scsa(adata: sc.AnnData,
 
     # ---- building the SCSA command ---- #
     results_path = "./scsa_results.txt"
-    utils.create_dir(results_path)  # make sure the full path to results exists
+    utils.io.create_dir(results_path)  # make sure the full path to results exists
 
     scsa_cmd = f"{python_path} {scsa_path} -i {csv} -f {fc} -p {pvalue} -o {results_path} -m txt "
     scsa_cmd += f"--db {marker_db} "
@@ -385,7 +385,7 @@ def run_scsa(adata: sc.AnnData,
 
     # Remove the temporary files
     files = [csv, results_path]
-    utils.remove_files(files)
+    utils.io.remove_files(files)
 
     # Add the annotated celltypes to the anndata-object
     if inplace:

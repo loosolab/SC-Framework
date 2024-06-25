@@ -51,10 +51,31 @@ def recluster(adata: sc.AnnData,
     Raises
     ------
     KeyError:
+        If the given embeding is not in the data.
         1. If the given embedding is not in the data.
         2. If given column is not found in adata.obs
     ValueError:
         If a given cluster is not found in the adata.
+
+    Example
+    ------
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import sctoolbox
+
+        adata = sc.datasets.pbmc68k_reduced()
+        sctoolbox.tools.clustering.recluster(adata, column="louvain", clusters=["1", "5"], task="join", method="leiden", resolution=1.5, plot=True)
+
+    .. plot::
+        :context: close-figs
+
+        import scanpy as sc
+        import sctoolbox
+
+        adata = sc.datasets.pbmc68k_reduced()
+        sctoolbox.tools.clustering.recluster(adata, column="louvain", clusters=["2", "6"], task="split", method="leiden", resolution=1.5, plot=True)
     """
 
     adata_copy = adata.copy()
@@ -90,7 +111,7 @@ def recluster(adata: sc.AnnData,
     elif task == "split":
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
 
-    adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
+    adata.obs[key_added] = utils.tables.rename_categories(adata.obs[key_added])  # rename to start at 1
 
     # --- Plot reclustering before/after --- #
     if plot is True:

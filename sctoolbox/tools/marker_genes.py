@@ -131,7 +131,7 @@ def label_genes(adata: sc.AnnData,
     # Annotate mitochrondrial genes
     path_mito_genes = genelist_dir + species + "_mito_genes.txt"
     if os.path.exists(path_mito_genes):
-        gene_list = utils.read_list_file(path_mito_genes)
+        gene_list = utils.general.read_list_file(path_mito_genes)
         adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
     else:
         adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
@@ -140,12 +140,12 @@ def label_genes(adata: sc.AnnData,
     # Annotate gender genes
     path_gender_genes = genelist_dir + species + "_gender_genes.txt"
     if os.path.exists(path_gender_genes):
-        gene_list = utils.read_list_file(path_gender_genes)
+        gene_list = utils.general.read_list_file(path_gender_genes)
         adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
         var_cols.append("is_gender")
     else:
         available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
+        available_species = utils.general.clean_flanking_strings(available_files)
         logger.warning(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
     return var_cols
@@ -251,7 +251,7 @@ def run_rank_genes(adata: sc.AnnData,
 @beartype
 def pairwise_rank_genes(adata: sc.AnnData,
                         groupby: str,
-                        foldchange_threshold: float = 1,
+                        foldchange_threshold: int | float = 1,
                         min_in_group_fraction: float = 0.25,
                         max_out_group_fraction: float = 0.5,
                         **kwargs: Any
@@ -265,7 +265,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
         Anndata object containing expression data.
     groupby : str
         Key in adata.obs containing groups to be compared.
-    foldchange_threshold : float, default 1
+    foldchange_threshold : int | float, default 1
         Minimum foldchange (+/-) to be considered as a marker gene.
     min_in_group_fraction : float, default 0.25
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
@@ -482,7 +482,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
                 table["scores"] = table["scores"].round(3)
                 table["logfoldchanges"] = table["logfoldchanges"].round(3)
 
-                table.to_excel(writer, sheet_name=utils._sanitize_sheetname(f'{group}'), index=False)
+                table.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{group}'), index=False)
 
         logger.info(f"Saved marker gene tables to '{filename}'")
 
@@ -586,10 +586,10 @@ def run_deseq2(adata: sc.AnnData,
 
     See Also
     --------
-    sctoolbox.utils.pseudobulk_table
+    sctoolbox.utils.bioutils.pseudobulk_table
     """
 
-    utils.setup_R()
+    utils.general.setup_R()
     from diffexpr.py_deseq import py_DESeq2
 
     # Setup the design formula
@@ -623,8 +623,8 @@ def run_deseq2(adata: sc.AnnData,
 
     # Build count matrix
     print("Building count matrix")
-    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                         percentile_range=percentile_range)
+    count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
+                                                  percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
     count_table.index.name = "gene"
     count_table.reset_index(inplace=True)
@@ -670,7 +670,7 @@ def run_deseq2(adata: sc.AnnData,
     deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
 
     # Add to adata uns
-    utils.add_uns_info(adata, "deseq_result", deseq_table)
+    utils.adata.add_uns_info(adata, "deseq_result", deseq_table)
 
     return deseq_table
 

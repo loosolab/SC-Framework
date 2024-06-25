@@ -8,6 +8,7 @@ Welcome to the documentation of the single cell framework!
    CHANGES
    rna-notebooks/index
    atac-notebooks/index
+   general-notebooks/index
    API/index
 
 

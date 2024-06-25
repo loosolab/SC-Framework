@@ -85,7 +85,7 @@ def _add_figure_title(axarr: Iterable[matplotlib.axes.Axes] | matplotlib.axes.Ax
         :context: close-figs
 
         axes = sc.pl.umap(adata, color=["louvain", "condition"], show=False)
-        pl.add_figure_title(axes, "UMAP plots", fontsize=20)
+        pl.general._add_figure_title(axes, "UMAP plots", fontsize=20)
     """
 
     # If only one axes is passed, convert to list
@@ -248,7 +248,7 @@ def clustermap_dotplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        pl.clustermap_dotplot(
+        pl.general.clustermap_dotplot(
             table=table,
             x="bulk_labels",
             y="index",
@@ -522,7 +522,7 @@ def boxplot(dt: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        pl.boxplot(dt, show_median=True, ax=None)
+        pl.general.boxplot(dt, show_median=True, ax=None)
     """
 
     if ax is None:
@@ -611,7 +611,7 @@ def violinplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        pl.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
+        pl.general.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
     """
 
     # check if valid column name
@@ -721,6 +721,34 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     ------
     ValueError
         If number of groups in groups_dict is not 2 or 3.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        venn2_example = { 'Group A': [1, 2, 3, 4],
+                          'Group B': [3, 4, 5, 6]
+                        }
+
+    .. plot::
+        :context: close-figs
+
+        pl.general.plot_venn(venn2_example, "Simple Venn2 plot")
+
+    .. plot::
+        :context: close-figs
+
+        venn3_example = { 'Fruits A': ['Lemon', 'Orange', 'Blueberry', 'Grapefruit'],
+                          'Fruits B': ['Pineapple', 'Mango', 'Banana', 'Papaya', 'Blueberry', 'Strawberry'],
+                          'Fruits C': ['Strawberry', 'Blueberry', 'Raspberry', 'Orange', 'Mango']
+                        }
+
+    .. plot::
+        :context: close-figs
+
+        pl.general.plot_venn(venn3_example, "Simple Venn3 plot")
+
     """
 
     # Extract the lists of items from the dictionary and convert them to sets
@@ -793,7 +821,7 @@ def pairwise_scatter(table: pd.DataFrame,
                       "percent_mito": {"max": 0.03},
                       "S_score": {"max": 0.5}}
 
-        pl.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
+        pl.general.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
     """
 
     if len(columns) < 2:

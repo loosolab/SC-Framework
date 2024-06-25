@@ -1,5 +1,77 @@
+0.9.0 (in progress)
+-------------------
+- GSEA: Fix library gene-set overlap by converting all gene names to uppercase
+- pl.gsea.term_dotplot: Fix example; Fix index==None bug
+- added additional qc metrices for ATAC-seq to the first notebook (#256)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- added notebook versioning (#115)
+
+0.8.0 (14-06-24)
+----------------
+- from_mtx: support more folder structures and variable file now optional (#234, #240)
+- ligand-receptor: download_db added support for LIANA resources
+- revised tsse scoring and fixed matplotlib version conflict (#257)
+- add cyclone (pycirclize based plot) as hairball alternative (#223)
+- remove legacy import structure
+- implement lazy module loading 
+- wrapped up native scrublet (#242, #150)
+- prepare_for_cellxgene: Account for duplciate var indices
+- added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
+- removed cleanup temp for the selfservice container (#258)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- rna/ atac more subset PC description
+- rna/ atac clustering renamed "recluster" -> "revise cluster"
+- Add GSEA notebook (#172)
+- rna/atac assembly notebook update from_mtx (#234, #240)
+
+0.7.0 (23-04-24)
+----------------
+- Added code examples for tools and utils (#140)
+    - recluster 
+    - group_heatmap
+    - plot_venn
+    - in_range
+- Fix notebooks in readthedocs documentation (#220)
+- Removed custom_marker_annotation script
+- Disintegrated FLD scoring and added PEAKQC to setup.py (#233)
+- fixed PCA-var plot not fitting into anndata_overview (#232)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Overhaul RNA & ATAC notebooks structure (includes #207)
+- Revise RNA notebook 4 recluster section (#201)
+
+0.6.1 (28-03-24)
+----------------
+- Fix release pages by renaming the release-pages: job to pages:
+- refactor move clean-orphaned-tags to new stage .post (#229)
+
+0.6 (27-03-24)
+--------------
+- Fix unable to determine R_HOME error (#190)
+- implemented propose_pcs to automatically select PCA components (#187)
+- add correlation barplot to plot_pca_variance
+- created correlation_matrix method by restructuring plot_pca_correlation
+- Fix beartype issue with Lists and Iterables containing Literals (#227)
+- CICD overhaul (#191)
+- fixed notebook version in the env to 6.5.2 (#199, partly #44)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Move proportion_analysis notebooks to general notebooks (#195 and #214)
+- replace scanpy pseudotime with scFates in pseudotime_analysis notebook
+- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
+- rna 03_batch revision (#209, #202, #200, #152)
+- 05_marker_genes: Complete Overhaul (#181)
+
 0.5 (04-03-24)
--------------
+--------------
+
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
@@ -9,6 +81,8 @@
 - anndata_overview: fix issue where colorbars for continuous data was not shown
 - added ability to use highly variable features using the lsi() function (#165)
 - removed deprecated group_heatmap, umap_pub (replaced by gene_expression_heatmap, plot_embedding)
+- add doku page
+- start change log
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -38,7 +112,6 @@ Changes to notebooks
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
 - Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
-
 
 0.3 (30-11-2023)
 ----------------
