@@ -10,9 +10,15 @@ from beartype.typing import Optional
 
 
 class SctoolboxConfig(object):
-    """Config manager for sctoolbox."""
+    """Config manager for sctoolbox.
 
-    __frozen = False
+    Attributes
+    ----------
+    __frozen : bool
+        If True, disallows new attributes to be added.
+    """
+
+    __frozen: bool = False
 
     def __init__(self,
                  figure_dir: str = "",           # Directory to write figures to
