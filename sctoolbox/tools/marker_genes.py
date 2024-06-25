@@ -613,7 +613,7 @@ def run_deseq2(adata: sc.AnnData,
     conditions = sample_df[condition_col].unique()
 
     # Build count matrix
-    print("Building count matrix")
+    logger.debug("Building count matrix")
     count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
                                                   percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
