@@ -104,7 +104,7 @@ def _compare_version(nb_name: str) -> None:
             sc_ver = version.parse(sctoolbox.__version__)
 
             if nb_ver != sc_ver:
-                ver_dif, arrow = "an older", "<" if nb_ver < sc_ver else "a newer", ">"
+                ver_dif, arrow = ("an older", "<") if nb_ver < sc_ver else ("a newer", ">")
                 warnings.warn(f"The notebook has {ver_dif} version compared to the installed sctoolbox version ({nb_ver} {arrow} {sc_ver}). Some functions may not work!")
             return
 
