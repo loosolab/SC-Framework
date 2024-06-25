@@ -11,7 +11,7 @@ def test_compare_versions():
     """Test _compare_version function."""
 
     def change_version(nb_name, version):
-        """Change notebook version inplace"""
+        """Change notebook version inplace."""
         nb = nbformat.read(nb_name, as_version=4)
         nb["metadata"]["sc_framework"] = dict()
         nb["metadata"]["sc_framework"]["version"] = version
@@ -24,7 +24,6 @@ def test_compare_versions():
 
     # Test without sc_framework in metadata
     with pytest.warns(match="The Notebook seems to be outdated"):
-        print(nb_path)
         jupyter._compare_version(nb_path)
 
     # Test with fitting version
