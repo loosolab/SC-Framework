@@ -23,6 +23,7 @@
     - utils/general
     - utils/checker
     - tools/marker_genes
+    - tools/highly_variable
 
 0.7.0 (23-04-24)
 -------------
