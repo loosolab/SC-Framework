@@ -155,7 +155,7 @@ def is_str_numeric(ans: str) -> bool:
 
 @beartype
 def var_index_from(adata: sc.AnnData,
-                   from_column: Optional[str] = None) -> None:
+                   from_column: Optional[list[str], str] - None) -> None:
     """
     Format adata.var index from a specified column or multiple coordinate columns.
     This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
@@ -165,62 +165,115 @@ def var_index_from(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object to reformat.
-    from_column : Optional[str], default None
+    from_column : list[str],str
         Column name in adata.var to be set as index.
     """
     # check if index is already in the correct format
     if not adata.var.index.str.contains(r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+').all():
-        # check if from_column is a single column or a list of columns
-        if isinstance(from_column, str):
-            # get the first entry of the column
-            entry = list(adata.var[from_column])[0]
-            # check the type of the index
-            index_type = get_index_type(entry)
+        # try to format the index from the given column
+        try:
+            if from_column is None:
+                # get the first entry of the column
+                entry = list(adata.var.index)[0]
+                # check the type of the index
+                index_type = get_index_type(entry)
+                # check if the index type is known
+                if index_type is None:
+                    print('Index type is unknown please provide either the index column name,'
+                          'coordinate cols or format the index to chr:start-stop.')
+                # format the index
+                else:
+                    # add a column to store the original index
+                    adata.var['format_index'] = adata.var.index
+                    from_column = 'format_index'
 
-            # index can be in the format binary or named
-            if index_type == 'binary':
-                # remove the b' and ' from the string
-                adata.var['name'] = adata.var['name'].str.replace("b'", "")
-                adata.var['name'] = adata.var['name'].str.replace("'", "")
+                    try:
+                        # format the index
+                        var_index_from_single_col(adata, index_type, from_column)
+                    except Exception as e:
+                        # throw the error
+                        raise Exception(f'Error while formatting the index: {e}')
 
-                # split the peak column into chromosome start and end
-                adata.var[['peak_chr', 'start_end']] = adata.var['name'].str.split(':', expand=True)
-                adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
-                # set types
-                adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
-                adata.var['peak_start'] = adata.var['peak_start'].astype(int)
-                adata.var['peak_end'] = adata.var['peak_end'].astype(int)
-                # remove start_end column
-                adata.var.drop('start_end', axis=1, inplace=True)
-                # set index
-                adata.var = adata.var.set_index('name')
+                    # drop the format_index column
+                    adata.var.drop('format_index')
 
-            # index is in the format named
-            elif index_type == "named":
-                # define the pattern to extract the coordinates
-                coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+            else:
+                # check if from_column is a single column or a list of columns
+                if isinstance(from_column, str):
+                    # get the first entry of the column
+                    entry = list(adata.var[from_column])[0]
+                    # check the type of the index
+                    index_type = get_index_type(entry)
 
-                # init empty list to store the new index
-                new_index = []
-                # loop over the column and extract the coordinates
-                for line in adata.var[from_column]:
-                    new_index.append(re.search(coordinate_pattern, line).group(0))
-                adata.var['new_index'] = new_index
-                # set the new index
-                adata.var.set_index('new_index', inplace=True)
+                    # format the index
+                    var_index_from_single_col(adata, index_type, from_column)
 
-        else:
-            # get the columns
-            chr_list = adata.var[from_column[0]]
-            start_list = adata.var[from_column[1]]
-            stop_list = adata.var[from_column[2]]
+                elif isinstance(from_column, list):
+                    # get the columns
+                    chr_list = adata.var[from_column[0]]
+                    start_list = adata.var[from_column[1]]
+                    stop_list = adata.var[from_column[2]]
 
-            # Combine into the format "chr:start-stop" per row
-            new_index = [f"{chrom}:{start}-{stop}" for chrom, start, stop in zip(chr_list, start_list, stop_list)]
+                    # Combine into the format "chr:start-stop" per row
+                    new_index = [f"{chrom}:{start}-{stop}" for chrom, start, stop in zip(chr_list, start_list, stop_list)]
 
-            # Set the new index
-            adata.var['new_index'] = new_index
-            adata.var.set_index('new_index', inplace=True)
+                    # Set the new index
+                    adata.var['new_index'] = new_index
+                    adata.var.set_index('new_index', inplace=True)
+                else:
+                    raise ValueError("coordinate cols must be a string or a list of strings")
+        except Exception as e:
+            raise Exception(f'Error while formatting the index: {e}')
+    else:
+        print('adata.var.index is already in the correct format.')
+
+
+@beartype
+def var_index_from_single_col(adata: sc.AnnData,
+                              index_type: str,
+                              from_column: str) -> None:
+    """
+    format the index of adata.var from a single column.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The anndata object to reformat.
+    index_type : str
+        The type of the index. Either 'binary' or 'named'.
+    from_column : str
+        Column name in adata.var to be set as index.
+    """
+    if index_type == 'binary':
+        # remove the b' and ' from the string
+        adata.var[from_column] = adata.var[from_column].str.replace("b'", "")
+        adata.var[from_column] = adata.var[from_column].str.replace("'", "")
+
+        # split the peak column into chromosome start and end
+        adata.var[['peak_chr', 'start_end']] = adata.var[from_column].str.split(':', expand=True)
+        adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+        # set types
+        adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
+        adata.var['peak_start'] = adata.var['peak_start'].astype(int)
+        adata.var['peak_end'] = adata.var['peak_end'].astype(int)
+        # remove start_end column
+        adata.var.drop('start_end', axis=1, inplace=True)
+        # set index
+        adata.var = adata.var.set_index(from_column)
+
+    # index is in the format named
+    elif index_type == "named":
+        # define the pattern to extract the coordinates
+        coordinate_pattern = r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+
+        # init empty list to store the new index
+        new_index = []
+        # loop over the column and extract the coordinates
+        for line in adata.var[from_column]:
+            new_index.append(re.search(coordinate_pattern, line).group(0))
+        adata.var['new_index'] = new_index
+        # set the new index
+        adata.var.set_index('new_index', inplace=True)
 
 
 @beartype
@@ -246,6 +299,8 @@ def get_index_type(entry: str) -> Optional[str]:
         return 'binary'
     if re.match(regex_named, entry):
         return 'named'
+    else:
+        return None
 
 
 @beartype
@@ -327,37 +382,39 @@ def format_adata_var(adata: sc.AnnData,
 
     # Format index if needed
     if format_index:
-        print("formatting adata.var index to coordinate columns:")
-        regex = r'[^_:\-]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'  # matches chr_start_end / chr-start-end / chr:start-end and variations
+        try:
+            print("formatting adata.var index to coordinate columns:")
+            regex = r'[^_:\-]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'  # matches chr_start_end / chr-start-end / chr:start-end and variations
 
-        # Prepare lists to insert
-        peak_chr_list = []
-        peak_start_list = []
-        peak_end_list = []
+            # Prepare lists to insert
+            peak_chr_list = []
+            peak_start_list = []
+            peak_end_list = []
 
-        names = adata.var.index
-        for name in names:
-            if re.match(regex, name):  # test if name can be split by regex
+            names = adata.var.index
+            for name in names:
+                if re.match(regex, name):  # test if name can be split by regex
 
-                # split the name into chr, start, end
-                split_name = re.split(r'[\_\:\-]', name)
-                peak_chr_list.append(split_name[0])
-                peak_start_list.append(int(split_name[1]))
-                peak_end_list.append(int(split_name[2]))
+                    # split the name into chr, start, end
+                    split_name = re.split(r'[\_\:\-]', name)
+                    peak_chr_list.append(split_name[0])
+                    peak_start_list.append(int(split_name[1]))
+                    peak_end_list.append(int(split_name[2]))
 
-            else:
-                raise ValueError("Index does not match the format *_start_stop or *:start-stop. Please check your index.")
+                else:
+                    raise ValueError("Index does not match the format *_start_stop or *:start-stop. Please check your index.")
 
-        adata.var.drop(coordinate_columns, axis=1,
-                       errors='ignore', inplace=True)
+            adata.var.drop(coordinate_columns, axis=1,
+                           errors='ignore', inplace=True)
 
-        adata.var.insert(0, coordinate_columns[2], peak_end_list)
-        adata.var.insert(0, coordinate_columns[1], peak_start_list)
-        adata.var.insert(0, coordinate_columns[0], peak_chr_list)
+            adata.var.insert(0, coordinate_columns[2], peak_end_list)
+            adata.var.insert(0, coordinate_columns[1], peak_start_list)
+            adata.var.insert(0, coordinate_columns[0], peak_chr_list)
 
-        # Check whether the newly added columns are in the right format
-        validate_regions(adata, coordinate_columns)
-
+            # Check whether the newly added columns are in the right format
+            validate_regions(adata, coordinate_columns)
+        except Exception as e:
+            print(f"Error while formatting the index: {e}")
 
 @beartype
 def in_range(value: int | float, limits: Tuple[int | float, int | float],

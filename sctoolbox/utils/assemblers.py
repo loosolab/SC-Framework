@@ -22,9 +22,7 @@ logger = settings.logger
 
 @beartype
 def prepare_atac_anndata(adata: sc.AnnData,
-                         set_index: bool = True,
-                         index_from: Optional[str] = None,
-                         coordinate_cols: Optional[list[str]] = None,
+                         coordinate_cols: Optional[list[str], str] = None,
                          h5ad_path: Optional[str] = None) -> sc.AnnData:
     """
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
@@ -35,12 +33,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The AnnData object to be prepared.
-    set_index : bool, default True
-        If True, index will be formatted and can be set by a given column.
-    index_from : Optional[str], default None
-        Column to build the index from.
-    coordinate_cols : Optional[list[str]], default None
-        Location information of the peaks.
+    coordinate_cols : Optional[list[str], str], default None
+        Location information of the peaks. Can be a str or list of str.
     h5ad_path : Optional[str], default None
         Path to the h5ad file.
 
@@ -50,22 +44,23 @@ def prepare_atac_anndata(adata: sc.AnnData,
         The prepared AnnData object.
 
     """
-    # Establish columns for coordinates
-    if coordinate_cols is None:
-        coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
-    else:
-        utils.checker.check_columns(adata.var,
-                                    coordinate_cols,
-                                    name="adata.var")  # Check that coordinate_cols are in adata.var)
-
     # Format index
     logger.info("formatting index")
-    utils.checker.var_index_from(adata, index_from)  # This checks if the index is available and valid, if not it creates it.
+    utils.checker.var_index_from(adata, coordinate_cols)  # This checks if the index is available and valid, if not it creates it.
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")
     # This checks if the coordinate columns are available and valid, if not it creates them.
+
     utils.checker.format_adata_var(adata, coordinate_cols)
+
+    # Establish columns for coordinates
+    if coordinate_cols is None:
+        coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
+
+    utils.checker.check_columns(adata.var,
+                                coordinate_cols,
+                                name="adata.var")  # Check that coordinate_cols are in adata.var)
 
     # check if the barcode is the index otherwise set it
     utils.bioutils.barcode_index(adata)
