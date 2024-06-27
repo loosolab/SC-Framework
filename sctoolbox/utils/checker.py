@@ -11,7 +11,7 @@ import shutil
 import scanpy as sc
 import pandas as pd
 
-from beartype.typing import Optional, Tuple, Any, Iterable
+from beartype.typing import Optional, Tuple, Any, Iterable, Union
 from beartype import beartype
 import numpy.typing as npt
 
@@ -155,7 +155,7 @@ def is_str_numeric(ans: str) -> bool:
 
 @beartype
 def var_index_from(adata: sc.AnnData,
-                   from_column: Optional[list[str], str] - None) -> None:
+                   from_column: Optional[Union[list[str], str]] = None) -> None:
     """
     Format adata.var index from a specified column or multiple coordinate columns.
 
