@@ -61,6 +61,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
     logger.info("formatting coordinate columns")
     # This checks if the coordinate columns are available and valid, if not it creates them.
 
+
     utils.checker.format_adata_var(adata, coordinate_cols)
 
     # Establish columns for coordinates

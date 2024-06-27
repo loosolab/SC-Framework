@@ -305,12 +305,12 @@ def var_index_from_single_col(adata: sc.AnnData,
         adata.var[from_column] = adata.var[from_column].str.replace("'", "")
 
         # split the peak column into chromosome start and end
-        adata.var[['peak_chr', 'start_end']] = adata.var[from_column].str.split(':', expand=True)
-        adata.var[['peak_start', 'peak_end']] = adata.var['start_end'].str.split('-', expand=True)
+        adata.var[['chr', 'start_end']] = adata.var[from_column].str.split(':', expand=True)
+        adata.var[['start', 'stop']] = adata.var['start_end'].str.split('-', expand=True)
         # set types
-        adata.var['peak_chr'] = adata.var['peak_chr'].astype(str)
-        adata.var['peak_start'] = adata.var['peak_start'].astype(int)
-        adata.var['peak_end'] = adata.var['peak_end'].astype(int)
+        adata.var['chr'] = adata.var['chr'].astype(str)
+        adata.var['start'] = adata.var['start'].astype(int)
+        adata.var['stop'] = adata.var['stop'].astype(int)
         # remove start_end column
         adata.var.drop('start_end', axis=1, inplace=True)
         # set index
@@ -360,7 +360,8 @@ def get_index_type(entry: str) -> Optional[str]:
 
 @beartype
 def validate_regions(adata: sc.AnnData,
-                     coordinate_columns: Iterable[str]) -> None:
+                     coordinate_columns: Iterable[str],
+                     verbose:bool = True) -> bool:
     """
     Check if the regions in adata.var are valid.
 
@@ -370,6 +371,13 @@ def validate_regions(adata: sc.AnnData,
         AnnData object containing the regions to be checked.
     coordinate_columns : Iterable[str]
         List of length 3 for column names in adata.var containing chr, start, end coordinates.
+    verbose : bool, default True
+        If True, print out the invalid regions.
+
+    Returns
+    -------
+    bool
+        True if all regions are valid.
 
     Raises
     ------
@@ -392,7 +400,10 @@ def validate_regions(adata: sc.AnnData,
                 valid = True  # if all tests passed, the line is valid
 
         if valid is False:
-            raise ValueError("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
+            if verbose:
+                logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
+
+    return valid
 
 
 @beartype
@@ -428,8 +439,8 @@ def format_adata_var(adata: sc.AnnData,
     # Test whether the first three columns are in the right format
     format_index = True
     try:
-        validate_regions(adata, coordinate_columns)
-        format_index = False
+        if not validate_regions(adata, coordinate_columns):
+            format_index = False
     except KeyError:
         print("The coordinate columns are not found in adata.var. Trying to format the index.")
     except ValueError:
@@ -467,7 +478,8 @@ def format_adata_var(adata: sc.AnnData,
             adata.var.insert(0, coordinate_columns[0], peak_chr_list)
 
             # Check whether the newly added columns are in the right format
-            validate_regions(adata, coordinate_columns)
+            if validate_regions(adata, coordinate_columns):
+                logger.info('coordinate columns are in the correct format.')
         except Exception as e:
             print(f"Error while formatting the index: {e}")
 

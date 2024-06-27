@@ -16,6 +16,7 @@ def snapatac_adata():
 
     return sc.read(f)
 
+
 @pytest.fixture
 def atac_adata():
     """Return a adata object from ATAC-seq."""
@@ -31,7 +32,7 @@ def test_in_range():
 
 
 def test_var_index_from_single_col(snapatac_adata):
-
+    """Test if var_index_from_single_col works correctly."""
     ch.var_index_from_single_col(snapatac_adata,
                                  index_type='binary',
                                  from_column='name')
@@ -48,7 +49,6 @@ def test_var_index_from_single_col(snapatac_adata):
 
 def test_var_index_from(snapatac_adata, atac_adata):
     """Test if var_index_from works correctly."""
-
     adata = atac_adata.copy()
     # add string to var index
     adata.var.index = 'name_' + adata.var.index
@@ -87,6 +87,13 @@ def test_var_index_from(snapatac_adata, atac_adata):
 
     # check if the first var index is in the correct format
     assert bool(re.fullmatch(coordinate_pattern, snapatac_adata.var.index[0])) is True
+
+
+def test_validate_regions(atac_adata):
+    """Test if validate_regions works correctly."""
+
+    assert ch.validate_regions(atac_adata, coordinate_columns=['chr', 'start', 'stop'])
+    assert not ch.validate_regions(atac_adata, coordinate_columns=['chr', 'stop', 'start'], verbose=False)
 
 
 def test_get_index_type(snapatac_adata):
