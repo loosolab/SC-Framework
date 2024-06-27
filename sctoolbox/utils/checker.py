@@ -158,6 +158,7 @@ def var_index_from(adata: sc.AnnData,
                    from_column: Optional[list[str], str] - None) -> None:
     """
     Format adata.var index from a specified column or multiple coordinate columns.
+
     This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
     The adata is changed inplace.
 
@@ -167,6 +168,13 @@ def var_index_from(adata: sc.AnnData,
         The anndata object to reformat.
     from_column : list[str],str
         Column name in adata.var to be set as index.
+
+    Raises
+    ------
+    ValueError
+        If the index cannot be formatted.
+    Exception
+        If an error occurs while formatting the index.
     """
     # check if index is already in the correct format
     if not adata.var.index.str.contains(r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+').all():
@@ -233,7 +241,7 @@ def var_index_from_single_col(adata: sc.AnnData,
                               index_type: str,
                               from_column: str) -> None:
     """
-    format the index of adata.var from a single column.
+    Format the index of adata.var from a single column.
 
     Parameters
     ----------
@@ -415,6 +423,7 @@ def format_adata_var(adata: sc.AnnData,
             validate_regions(adata, coordinate_columns)
         except Exception as e:
             print(f"Error while formatting the index: {e}")
+
 
 @beartype
 def in_range(value: int | float, limits: Tuple[int | float, int | float],
