@@ -16,37 +16,86 @@ def snapatac_adata():
 
     return sc.read(f)
 
+@pytest.fixture
+def atac_adata():
+    """Return a adata object from ATAC-seq."""
+
+    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+
+    return sc.read(f)
+
 
 def test_in_range():
     """Test if int is in given range."""
     assert ch.in_range(value=100, limits=(1, 1000))
 
 
-def test_var_index_from(snapatac_adata):
-    """Test if var_index_from works correctly."""
-    # execute the function
-    ch.var_index_from(snapatac_adata, 'name')
+def test_var_index_from_single_col(snapatac_adata):
+
+    ch.var_index_from_single_col(snapatac_adata,
+                                 index_type='binary',
+                                 from_column='name')
 
     # regex pattern to match the var coordinate
     coordinate_pattern = re.compile(r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+")
+
     # match the first var index
     match = coordinate_pattern.match(snapatac_adata.var.index[0])
+
     # check if the match is not None
     assert match is not None
 
-    # check if coordinate cols are added
-    assert 'peak_chr' in snapatac_adata.var.columns
-    assert 'peak_start' in snapatac_adata.var.columns
-    assert 'peak_end' in snapatac_adata.var.columns
+
+def test_var_index_from(snapatac_adata, atac_adata):
+    """Test if var_index_from works correctly."""
+
+    adata = atac_adata.copy()
+    # add string to var index
+    adata.var.index = 'name_' + adata.var.index
+
+    # test if the function formats the var index correctly
+    ch.var_index_from(adata)
+
+    # regex pattern to match the var coordinate
+    coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
+
+    # check if the first var index is in the correct format
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+
+    # prepare adata for the next test, add a column to var
+    adata.var['index_copy'] = 'name_' + adata.var.index
+    adata.var = adata.var.reset_index(drop=True)
+
+    # test if the function formats the var index correctly
+    ch.var_index_from(adata, coordinate_cols='index_copy')
+
+    # check if the first var index is in the correct format
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+
+    # prepare adata for the next test
+    adata.var = adata.var.reset_index(drop=True)
+    adata.var.pop('index_copy')
+
+    # test if the function formats the var index correctly from the coordinate columns
+    ch.var_index_from(adata, coordinate_cols=['chr', 'start', 'stop'])
+
+    # check if the first var index is in the correct format
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+
+    # test if the function formats binary index correctly
+    ch.var_index_from(snapatac_adata, coordinate_cols='name')
+
+    # check if the first var index is in the correct format
+    assert bool(re.fullmatch(coordinate_pattern, snapatac_adata.var.index[0])) is True
 
 
 def test_get_index_type(snapatac_adata):
     """Test if get_index_type works correctly."""
-    snapatac_index = "b'chr1':12324-56757"
+    binary_index = "b'chr1':12324-56757"
     start_with_name_index = "some_name-chr1:12343-76899 "
 
-    assert ch.get_index_type(snapatac_index) == 'snapatac'
-    assert ch.get_index_type(start_with_name_index) == 'start_name'
+    assert ch.get_index_type(binary_index) == 'binary'
+    assert ch.get_index_type(start_with_name_index) == 'named'
 
 
 def test_add_path():

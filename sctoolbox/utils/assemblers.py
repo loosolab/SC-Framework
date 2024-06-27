@@ -23,7 +23,9 @@ logger = settings.logger
 @beartype
 def prepare_atac_anndata(adata: sc.AnnData,
                          coordinate_cols: Optional[Union[list[str], str]] = None,
-                         h5ad_path: Optional[str] = None) -> sc.AnnData:
+                         h5ad_path: Optional[str] = None,
+                         remove_var_index_prefix: bool = True,
+                         keep_original_index: bool = False) -> sc.AnnData:
     """
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
 
@@ -37,6 +39,10 @@ def prepare_atac_anndata(adata: sc.AnnData,
         Location information of the peaks. Can be a str or list of str.
     h5ad_path : Optional[str], default None
         Path to the h5ad file.
+    remove_var_index_prefix : bool, default True
+        If True, the prefix of the index will be removed.
+    keep_original_index : bool, default False
+        If True, the original index will be kept.
 
     Returns
     -------
@@ -46,7 +52,10 @@ def prepare_atac_anndata(adata: sc.AnnData,
     """
     # Format index
     logger.info("formatting index")
-    utils.checker.var_index_from(adata, coordinate_cols)  # This checks if the index is available and valid, if not it creates it.
+    utils.checker.var_index_from(adata,
+                                 coordinate_cols=coordinate_cols,
+                                 remove_var_index_prefix=remove_var_index_prefix,
+                                 keep_original_index=keep_original_index)  # This checks if the index is available and valid, if not it creates it.
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")

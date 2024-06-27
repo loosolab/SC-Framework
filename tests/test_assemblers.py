@@ -20,7 +20,7 @@ def snapatac_adata():
 def test_prepare_atac_anndata(snapatac_adata):
     """Test prepare_atac_anndata success."""
     f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'snapatac.h5ad')
-    adata = assemblers.prepare_atac_anndata(snapatac_adata, index_from='name', h5ad_path=f)
+    adata = assemblers.prepare_atac_anndata(snapatac_adata, coordinate_cols='name', h5ad_path=f)
 
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
