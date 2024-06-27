@@ -22,7 +22,7 @@ logger = settings.logger
 
 @beartype
 def prepare_atac_anndata(adata: sc.AnnData,
-                         coordinate_cols: Optional[list[str], str] = None,
+                         coordinate_cols: Optional[Union[list[str], str]] = None,
                          h5ad_path: Optional[str] = None) -> sc.AnnData:
     """
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
