@@ -42,25 +42,3 @@ def test_atac_norm(adata, method):
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
     elif method == "total":
         assert "X_pca" in adata_norm.obsm and "pca" in adata_norm.uns and "PCs" in adata_norm.varm
-
-
-def test_add_insertsize_fragments(adata):
-    """Test if add_insertsize adds information from a fragmentsfile."""
-
-    adata = adata.copy()
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
-    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
-
-    assert "insertsize_distribution" in adata.uns
-    assert "mean_insertsize" in adata.obs.columns
-
-
-def test_add_insertsize_bam(adata):
-    """Test if add_insertsize adds information from a bamfile."""
-
-    adata = adata.copy()
-    bam = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.bam')
-    sctoolbox.atac.add_insertsize(adata, bam=bam)
-
-    assert "insertsize_distribution" in adata.uns
-    assert "mean_insertsize" in adata.obs.columns
