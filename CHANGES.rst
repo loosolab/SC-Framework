@@ -24,6 +24,7 @@
     - utils/checker
     - tools/highly_variable
     - tools/insertsize
+    - utils/creators
 
 0.7.0 (23-04-24)
 -------------
