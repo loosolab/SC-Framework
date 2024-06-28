@@ -105,6 +105,18 @@ def test_get_index_type(snapatac_adata):
     assert ch.get_index_type(start_with_name_index) == 'named'
 
 
+def test_check_columns(atac_adata):
+    """Test if check_columns works correctly."""
+    assert ch.check_columns(atac_adata.var, ['chr', 'start', 'stop'], error=False)
+    assert ch.check_columns(atac_adata.var, 'chr', error=False)
+
+    with pytest.raises(KeyError):
+        ch.check_columns(atac_adata.var, ['chr', 'start', 'stop', 'name'], error=True)
+
+    with pytest.raises(KeyError):
+        ch.check_columns(atac_adata.var, 'name', error=True)
+
+
 def test_add_path():
     """Test if _add_path adds the path correctly."""
     python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable

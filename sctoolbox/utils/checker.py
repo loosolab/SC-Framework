@@ -549,7 +549,7 @@ def is_integer_array(arr: npt.ArrayLike) -> bool:
 
 @beartype
 def check_columns(df: pd.DataFrame,
-                  columns: Iterable[str],
+                  columns: Union[Iterable[str], str],
                   error: bool = True,
                   name: str = "dataframe") -> Optional[bool]:
     """
@@ -561,8 +561,8 @@ def check_columns(df: pd.DataFrame,
     ----------
     df : pd.DataFrame
         A pandas dataframe to check.
-    columns : Iterable[str]
-        A list of column names to check for within `df`.
+    columns : Union[Iterable[str], str]
+        A list of column names or name to check for within `df`.
     error : bool, default True
         If True raise errror if not all columns are found.
         If False return true or false
@@ -580,9 +580,14 @@ def check_columns(df: pd.DataFrame,
     KeyError
         If any of the columns are not in 'df' and error is set to True.
     """
+    # check if columns is a string
+    if isinstance(columns, str):
+        columns = [columns]
 
+    # get the columns of the dataframe
     df_columns = df.columns
 
+    # check if the columns are in the dataframe
     not_found = []
     for column in columns:  # for each column to be checked
         if column is not None:
