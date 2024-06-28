@@ -157,6 +157,7 @@ def test_format_adata_var(fixture, expected, request):
 
     adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
     adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
+
     if isinstance(expected, type):
         with pytest.raises(expected):
             ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
