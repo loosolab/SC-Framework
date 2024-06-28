@@ -84,7 +84,7 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
 def test_from_single_starsolo():
     """Test from_single_starsolo success."""
 
-    SOLO_DIR = os.path.join(os.path.dirname(__file__), 'data', 'solo')
+    SOLO_DIR = os.path.join(os.path.dirname(__file__), '../data', 'solo')
     adata = assemblers.from_single_starsolo(SOLO_DIR, dtype="filtered", header=None)
 
     assert isinstance(adata, anndata.AnnData)
@@ -94,8 +94,8 @@ def test_from_mtx():
     """Test from_mtx success."""
 
     # With variable file
-    adata = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'))
-    adata2 = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'),
+    adata = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'))
+    adata2 = assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'),
                                  variables="*notfound.tsv",
                                  var_error=False)
 
@@ -107,11 +107,11 @@ def test_from_mtx_fail():
     """Test from_mtx fail."""
 
     with pytest.raises(ValueError):
-        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'),
+        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'),
                             variables="*notfound.tsv")
 
     with pytest.raises(ValueError):
-        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered'),
+        assemblers.from_mtx(os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered'),
                             barcodes="*notfound.tsv")
 
     with pytest.raises(ValueError):
@@ -121,9 +121,9 @@ def test_from_mtx_fail():
 def test_from_single_mtx():
     """Test from_single_mtx success."""
 
-    MTX_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'matrix.mtx')
-    BARCODES_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'barcodes.tsv')
-    GENES_FILENAME = os.path.join(os.path.dirname(__file__), 'data', 'solo', 'Gene', 'filtered', 'genes.tsv')
+    MTX_FILENAME = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered', 'matrix.mtx')
+    BARCODES_FILENAME = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered', 'barcodes.tsv')
+    GENES_FILENAME = os.path.join(os.path.dirname(__file__), '../data', 'solo', 'Gene', 'filtered', 'genes.tsv')
 
     # test full adata (matrix, barcodes, genes)
     adata = assemblers.from_single_mtx(MTX_FILENAME, BARCODES_FILENAME, GENES_FILENAME, header=None)
