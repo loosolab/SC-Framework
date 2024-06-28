@@ -1,7 +1,6 @@
 """Test functions to assemble adata objects."""
 
 import os
-import numpy as np
 import re
 import anndata
 import pytest
@@ -13,7 +12,7 @@ import scanpy as sc
 def snapatac_adata():
     """Return a adata object from SnapATAC."""
 
-    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'snapatac.h5ad')
+    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'snapatac.h5ad')
 
     return sc.read(f)
 
@@ -22,7 +21,7 @@ def snapatac_adata():
 def atac_adata():
     """Return a adata object from ATAC-seq."""
 
-    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
 
     return sc.read(f)
 
@@ -52,15 +51,14 @@ def adata_rna():
     return sc.read_h5ad(adata_f)
 
 
-
 @pytest.mark.parametrize("fixture, expected, coordinate_cols",
-                         [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
-                         ("adata_atac_emptyvar", False, ["chr", "start", "stop"]),
-                         # expects var tables to be changed
-                         ("adata_rna", Exception, ["chr", "start", "stop"]),
-                         # expects a valueerror due to missing columns
-                         ("adata_atac_invalid", False, ["chr", "start", "stop"]),
-                         ("snapatac_adata", True, 'name')])  # expects a valueerror due to format of columns
+                        [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
+                        ("adata_atac_emptyvar", False, ["chr", "start", "stop"]),
+                        # expects var tables to be changed
+                        ("adata_rna", Exception, ["chr", "start", "stop"]),
+                        # expects a valueerror due to missing columns
+                        ("adata_atac_invalid", False, ["chr", "start", "stop"]),
+                        ("snapatac_adata", True, 'name')])  # expects a valueerror due to format of columns
 def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     """Test prepare_atac_anndata success."""
 

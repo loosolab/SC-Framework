@@ -136,13 +136,14 @@ def test_check_columns(atac_adata, adata_atac_invalid):
     assert ch.check_columns(atac_adata.var, ['chr', 'start', 'stop'], error=False)
     assert ch.check_columns(atac_adata.var, 'chr', error=False)
 
-    assert ch.validate_regions(adata_atac_invalid, ['chr', 'start', 'stop']) == False
+    assert ch.validate_regions(adata_atac_invalid, ['chr', 'start', 'stop']) is False
 
     with pytest.raises(KeyError):
         ch.check_columns(atac_adata.var, ['chr', 'start', 'stop', 'name'], error=True)
 
     with pytest.raises(KeyError):
         ch.check_columns(atac_adata.var, 'name', error=True)
+
 
 @pytest.mark.parametrize("fixture, expected", [("atac_adata", True),  # expects var tables to be unchanged
                                                ("adata_atac_emptyvar", False),

@@ -361,7 +361,7 @@ def get_index_type(entry: str) -> Optional[str]:
 @beartype
 def validate_regions(adata: sc.AnnData,
                      coordinate_columns: Iterable[str],
-                     verbose:bool = True) -> bool:
+                     verbose: bool = True) -> bool:
     """
     Check if the regions in adata.var are valid.
 
@@ -378,11 +378,6 @@ def validate_regions(adata: sc.AnnData,
     -------
     bool
         True if all regions are valid.
-
-    Raises
-    ------
-    ValueError
-        If invalid regions are detected.
     """
 
     # Test whether the first three columns are in the right format

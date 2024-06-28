@@ -3,9 +3,6 @@
 import pytest
 import os
 import scanpy as sc
-import numpy as np
-
-import sctoolbox.utils as utils
 import sctoolbox.tools as tools
 
 
