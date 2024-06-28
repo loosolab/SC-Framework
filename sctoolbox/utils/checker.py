@@ -388,20 +388,22 @@ def validate_regions(adata: sc.AnnData,
     # Test whether the first three columns are in the right format
     chr, start, end = coordinate_columns
 
+    valid = False
     # Test if coordinate columns are in adata.var
-    utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var")
+    if utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var", error=False):
 
-    # Test whether the first three columns are in the right format
-    for _, line in adata.var.to_dict(orient="index").items():
-        valid = False
+        # Test whether the first three columns are in the right format
+        for _, line in adata.var.to_dict(orient="index").items():
+            valid = False
 
-        if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
-            if line[start] <= line[end]:  # start must be smaller than end
-                valid = True  # if all tests passed, the line is valid
+            if isinstance(line[chr], str) and isinstance(line[start], int) and isinstance(line[end], int):
+                if line[start] <= line[end]:  # start must be smaller than end
+                    valid = True  # if all tests passed, the line is valid
 
-        if valid is False:
-            if verbose:
-                logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
+            if valid is False:
+                if verbose:
+                    logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
+                    return valid
 
     return valid
 
@@ -438,14 +440,13 @@ def format_adata_var(adata: sc.AnnData,
 
     # Test whether the first three columns are in the right format
     format_index = True
-    try:
-        if not validate_regions(adata, coordinate_columns):
-            format_index = False
-    except KeyError:
-        print("The coordinate columns are not found in adata.var. Trying to format the index.")
-    except ValueError:
-        print("The regions in adata.var are not in the correct format. Trying to format the index.")
+    if not isinstance(coordinate_columns, list):
+        coordinate_columns = ['chr', 'start', 'end']
+        raise ValueError("coordinate_columns must be a list of length 3. Trying to format the index.")
 
+    else:
+        if validate_regions(adata, coordinate_columns):
+            format_index = False
     # Format index if needed
     if format_index:
         try:
@@ -481,7 +482,7 @@ def format_adata_var(adata: sc.AnnData,
             if validate_regions(adata, coordinate_columns):
                 logger.info('coordinate columns are in the correct format.')
         except Exception as e:
-            print(f"Error while formatting the index: {e}")
+            raise Exception(f"Error while formatting the index: {e}")
 
 
 @beartype

@@ -3,6 +3,7 @@
 import pytest
 import sctoolbox.utils.checker as ch
 import scanpy as sc
+import numpy as np
 import os
 import re
 import sys
@@ -24,6 +25,31 @@ def atac_adata():
     f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
 
     return sc.read(f)
+
+
+@pytest.fixture
+def adata_atac_emptyvar(atac_adata):
+    """Create adata with empty adata.var."""
+    adata = atac_adata.copy()
+    adata.var = adata.var.drop(columns=adata.var.columns)
+    return adata
+
+
+@pytest.fixture
+def adata_atac_invalid(atac_adata):
+    """Create adata with invalid index."""
+    adata = atac_adata.copy()
+    adata.var.iloc[0, 1] = 500  # start
+    adata.var.iloc[0, 2] = 100  # end
+    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
+    return adata
+
+
+@pytest.fixture
+def adata_rna():
+    """Load rna adata."""
+    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
+    return sc.read_h5ad(adata_f)
 
 
 def test_in_range():
@@ -105,16 +131,40 @@ def test_get_index_type(snapatac_adata):
     assert ch.get_index_type(start_with_name_index) == 'named'
 
 
-def test_check_columns(atac_adata):
+def test_check_columns(atac_adata, adata_atac_invalid):
     """Test if check_columns works correctly."""
     assert ch.check_columns(atac_adata.var, ['chr', 'start', 'stop'], error=False)
     assert ch.check_columns(atac_adata.var, 'chr', error=False)
+
+    assert ch.validate_regions(adata_atac_invalid, ['chr', 'start', 'stop']) == False
 
     with pytest.raises(KeyError):
         ch.check_columns(atac_adata.var, ['chr', 'start', 'stop', 'name'], error=True)
 
     with pytest.raises(KeyError):
         ch.check_columns(atac_adata.var, 'name', error=True)
+
+@pytest.mark.parametrize("fixture, expected", [("atac_adata", True),  # expects var tables to be unchanged
+                                               ("adata_atac_emptyvar", False),
+                                               # expects var tables to be changed
+                                               ("adata_rna", Exception),
+                                               # expects a valueerror due to missing columns
+                                               ("adata_atac_invalid",
+                                                Exception)])  # expects a valueerror due to format of columns
+def test_format_adata_var(fixture, expected, request):
+    """Test whether adata regions can be formatted (or raise an error if not)."""
+
+    adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
+    adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
+    if isinstance(expected, type):
+        with pytest.raises(expected):
+            ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+
+    else:
+        ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+
+        assert np.array_equal(adata_orig.var.values,
+                              adata_cp.var.values) == expected  # check if the original adata was changed or not
 
 
 def test_add_path():
