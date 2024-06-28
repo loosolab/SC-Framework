@@ -47,7 +47,7 @@ def adata_atac_invalid(atac_adata):
 @pytest.fixture
 def adata_rna():
     """Load rna adata."""
-    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
+    adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
 
