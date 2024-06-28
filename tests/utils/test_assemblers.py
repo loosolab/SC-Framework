@@ -52,13 +52,13 @@ def adata_rna():
 
 
 @pytest.mark.parametrize("fixture, expected, coordinate_cols",
-                        [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
-                        ("adata_atac_emptyvar", False, ["chr", "start", "stop"]),
-                        # expects var tables to be changed
-                        ("adata_rna", Exception, ["chr", "start", "stop"]),
-                        # expects a valueerror due to missing columns
-                        ("adata_atac_invalid", False, ["chr", "start", "stop"]),
-                        ("snapatac_adata", True, 'name')])  # expects a valueerror due to format of columns
+                         [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
+                          ("adata_atac_emptyvar", False, ["chr", "start", "stop"]),
+                          # expects var tables to be changed
+                          ("adata_rna", Exception, ["chr", "start", "stop"]),
+                          # expects a valueerror due to missing columns
+                          ("adata_atac_invalid", False, ["chr", "start", "stop"]),
+                          ("snapatac_adata", True, 'name')])  # expects a valueerror due to format of columns
 def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     """Test prepare_atac_anndata success."""
 
