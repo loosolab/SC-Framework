@@ -1,6 +1,7 @@
 """Test functions to assemble adata objects."""
 
 import os
+import numpy as np
 import re
 import anndata
 import pytest
@@ -17,33 +18,69 @@ def snapatac_adata():
     return sc.read(f)
 
 
-def test_prepare_atac_anndata(snapatac_adata):
+@pytest.fixture
+def atac_adata():
+    """Return a adata object from ATAC-seq."""
+
+    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+
+    return sc.read(f)
+
+
+@pytest.fixture
+def adata_atac_emptyvar(atac_adata):
+    """Create adata with empty adata.var."""
+    adata = atac_adata.copy()
+    adata.var = adata.var.drop(columns=adata.var.columns)
+    return adata
+
+
+@pytest.fixture
+def adata_atac_invalid(atac_adata):
+    """Create adata with invalid index."""
+    adata = atac_adata.copy()
+    adata.var.iloc[0, 1] = 500  # start
+    adata.var.iloc[0, 2] = 100  # end
+    adata.var.reset_index(inplace=True, drop=True)  # remove chromosome-start-stop index
+    return adata
+
+
+@pytest.fixture
+def adata_rna():
+    """Load rna adata."""
+    adata_f = os.path.join(os.path.dirname(__file__), 'data', 'adata.h5ad')
+    return sc.read_h5ad(adata_f)
+
+
+
+@pytest.mark.parametrize("fixture, expected, coordinate_cols",
+                         [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
+                         ("adata_atac_emptyvar", False, ["chr", "start", "stop"]),
+                         # expects var tables to be changed
+                         ("adata_rna", Exception, ["chr", "start", "stop"]),
+                         # expects a valueerror due to missing columns
+                         ("adata_atac_invalid", False, ["chr", "start", "stop"]),
+                         ("snapatac_adata", True, 'name')])  # expects a valueerror due to format of columns
+def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     """Test prepare_atac_anndata success."""
-    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'snapatac.h5ad')
-    adata = assemblers.prepare_atac_anndata(snapatac_adata, coordinate_cols='name', h5ad_path=f)
 
-    regex = re.compile(r'([ATCG]{8,16})')
-    # get first index element
-    first_index = adata.obs.index[0]
-    # check if the first index element is a barcode
-    match = regex.match(first_index)
-    # assert match is None
-    assert match is not None
+    adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
+    adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
 
-    # regex pattern to match the var coordinate
-    coordinate_pattern = re.compile(r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+")
-    # match the first var index
-    match = coordinate_pattern.match(adata.var.index[0])
-    # check if the match is not None
-    assert match is not None
+    expected_coordinates = ['chr', 'start', 'stop']
+    index_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
 
-    # check if coordinate cols are added
-    assert 'peak_chr' in adata.var.columns
-    assert 'peak_start' in adata.var.columns
-    assert 'peak_end' in adata.var.columns
+    if isinstance(expected, type):
+        with pytest.raises(expected):
+            assemblers.prepare_atac_anndata(adata_cp, coordinate_cols=coordinate_cols)
 
-    # check if the h5ad file path is saved
-    assert adata.obs['file'][0] == f
+    else:
+        assemblers.prepare_atac_anndata(adata_cp, coordinate_cols=coordinate_cols)
+        # check for the existance of the coordinate columns ['chr','start','stop'] in the var table
+        assert adata_cp.var.columns.isin(expected_coordinates).all()
+
+        # check if the first var index is in the correct format
+        assert bool(re.fullmatch(index_pattern, adata_cp.var.index[0])) is True
 
 
 def test_from_single_starsolo():

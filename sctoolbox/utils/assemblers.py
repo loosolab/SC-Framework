@@ -70,13 +70,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
     # This checks if the coordinate columns are available and valid, if not it creates them.
 
     # Establish columns for coordinates
-    if coordinate_cols is None and adata.var.shape[1] >= 3:
-        coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
-        if not utils.checker.validate_regions(adata, coordinate_cols):
-            logger.info("Set standard coordinate columns")
-            coordinate_cols = ['chr', 'start', 'stop']
-        else:
-            logger.info("Using first three columns as coordinates")
+    if coordinate_cols is None:
+        coordinate_cols = ['chr', 'start', 'stop']
 
     # Format coordinate columns
     utils.checker.format_adata_var(adata, coordinate_cols)

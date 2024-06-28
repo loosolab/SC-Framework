@@ -410,7 +410,7 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def format_adata_var(adata: sc.AnnData,
-                     coordinate_columns: Iterable[str] = ["chr", "start", "end"]) -> None:
+                     coordinate_columns: Iterable[str] = ["chr", "start", "stop"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
@@ -441,8 +441,8 @@ def format_adata_var(adata: sc.AnnData,
     # Test whether the first three columns are in the right format
     format_index = True
     if not isinstance(coordinate_columns, list):
-        coordinate_columns = ['chr', 'start', 'end']
-        raise ValueError("coordinate_columns must be a list of length 3. Trying to format the index.")
+        coordinate_columns = ['chr', 'start', 'stop']
+        print("coordinate_columns must be a list of length 3. Trying to format the index.")
 
     else:
         if validate_regions(adata, coordinate_columns):
