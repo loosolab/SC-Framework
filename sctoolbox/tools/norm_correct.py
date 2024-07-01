@@ -7,6 +7,7 @@ import copy
 import multiprocessing as mp
 import scanpy as sc
 import scanpy.external as sce
+from scipy.sparse import issparse
 
 from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype
@@ -425,9 +426,16 @@ def batch_correction(adata: sc.AnnData,
 
     elif method == "combat":
 
+        adata = adata.copy()  # make sure adata is not modified
+        # check if adata.X is sparse
+        if issparse(adata.X):
+            # convert to dense matrix
+            adata.X = adata.X.todense()
+
+        # run combat
         corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
 
-        adata = adata.copy()  # make sure adata is not modified
+        # convert back to sparse matrix
         adata.X = sparse.csr_matrix(corrected_mat)
 
         sc.pp.pca(adata)
