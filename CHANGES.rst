@@ -1,6 +1,7 @@
 0.9.0 (xx-xx-xx)
 ----------------
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
+- Pin ipywidget version to > 8.0.0 to fix label
 
 0.8.0 (14-06-24)
 ----------------
