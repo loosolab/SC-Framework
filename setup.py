@@ -69,7 +69,7 @@ setup(
         'pysam',
         'matplotlib<3.9.0',
         'matplotlib_venn',
-        'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
+        'scanpy<=1.10.1',  # 'colorbar_loc' not available before 1.9
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
