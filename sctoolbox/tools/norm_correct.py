@@ -427,16 +427,14 @@ def batch_correction(adata: sc.AnnData,
     elif method == "combat":
 
         adata = adata.copy()  # make sure adata is not modified
-        # check if adata.X is sparse
-        if issparse(adata.X):
-            # convert to dense matrix
-            adata.X = adata.X.todense()
-
-        # run combat
-        corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
-
-        # convert back to sparse matrix
-        adata.X = sparse.csr_matrix(corrected_mat)
+        # spike in the former scipy ".A" property (modifies the scipy class!)
+        setattr(adata.X.__class__, "A", property(lambda self: self.toarray()))
+        try:
+            # run combat
+            corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
+        finally:
+            # remove the property
+            delattr(adata.X.__class__, "A")
 
         sc.pp.pca(adata)
         sc.pp.neighbors(adata)
