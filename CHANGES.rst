@@ -24,6 +24,7 @@
     - utils/checker
     - tools/highly_variable
     - tools/multiomics
+    - tools/insertsize
 
 0.7.0 (23-04-24)
 -------------
