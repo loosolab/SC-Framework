@@ -8,15 +8,6 @@ import shutil
 from unittest.mock import patch, Mock
 
 
-def test_setup_experiment():
-    """Test experiment setup function."""
-    dirs = ['raw', 'preprocessing', 'Analysis']
-    creator.setup_experiment("./tmp/exp1", dirs=dirs)
-    f = glob("./tmp/exp1/*/")
-    shutil.rmtree("./tmp/")
-    assert set([Path(file).name for file in f]) == set(dirs)
-
-
 def test_gitlab_download():
     """Test gitlab download."""
     def side_effect(search):
@@ -50,6 +41,15 @@ def test_gitlab_download():
             missing_file.unlink()
         if result_file.parent.exists():
             result_file.parent.rmdir()
+
+
+def test_setup_experiment():
+    """Test experiment setup function."""
+    dirs = ['raw', 'preprocessing', 'Analysis']
+    creator.setup_experiment("./tmp/exp1", dirs=dirs)
+    f = glob("./tmp/exp1/*/")
+    shutil.rmtree("./tmp/")
+    assert set([Path(file).name for file in f]) == set(dirs)
 
 
 @pytest.mark.parametrize("starts,regex", [(1, '[0]*[1-9]?[1-9].*.ipynb'), (5, '[0]*[1-9]?[5-9].*.ipynb'),
