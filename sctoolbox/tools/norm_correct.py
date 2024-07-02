@@ -7,7 +7,6 @@ import copy
 import multiprocessing as mp
 import scanpy as sc
 import scanpy.external as sce
-from scipy.sparse import issparse
 
 from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype

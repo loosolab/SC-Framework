@@ -11,7 +11,7 @@ import shutil
 import scanpy as sc
 import pandas as pd
 
-from beartype.typing import Optional, Tuple, Any, Iterable, Union
+from beartype.typing import Optional, Tuple, Any, Iterable, Union, Literal
 from beartype import beartype
 import numpy.typing as npt
 
@@ -157,7 +157,7 @@ def is_str_numeric(ans: str) -> bool:
 def var_index_from(adata: sc.AnnData,
                    coordinate_cols: Optional[Union[list[str], str]] = None,
                    remove_var_index_prefix: bool = True,
-                   keep_original_index: bool = False) -> None:
+                   keep_original_index: Optional[str] = None) -> None:
     """
     Format adata.var index from a specified column or multiple coordinate columns.
 
@@ -168,86 +168,87 @@ def var_index_from(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object to reformat.
-    coordinate_cols : list[str],str
-        Column name in adata.var to be set as index.
+    coordinate_cols : Optional[str | list[str]], default None
+        Column name(s) in adata.var to be set as index.
+        If multiple columns are given they are pasted together in the format "chr:start-stop".
         If None, the first column of adata.var is used.
     remove_var_index_prefix : bool, default True
         If True, the prefix 'chr' is removed from the index.
-    keep_original_index : bool, default False
+    keep_original_index : Optional[str], default None
         If True, the original index is kept in adata.var.
 
     Raises
     ------
     ValueError
         If the index cannot be formatted.
-    Exception
-        If an error occurs while formatting the index.
+    KeyError
+        If the column name is not found in adata.var.
     """
+
     # check if index is already in the correct format
     adata.var.index = adata.var.index.astype(str)
     if not adata.var.index.str.contains(r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+').all():
         # try to format the index from the given column
-        try:
-            if coordinate_cols is None:
-                # get the first entry of the column
-                entry = list(adata.var.index)[0]
-                # check the type of the index
-                index_type = get_index_type(entry)
-                # check if the index type is known
-                if index_type is None:
-                    print('Index type is unknown please provide either the index column name, '
-                          'coordinate cols or format the index to chr:start-stop.')
-                # format the index
-                else:
-                    coordinate_cols = 'original_index'
-                    # add a column to store the original index
-                    adata.var[coordinate_cols] = adata.var.index
-
-                    try:
-                        # format the index
-                        var_index_from_single_col(adata, index_type, coordinate_cols)
-                    except Exception as e:
-                        # throw the error
-                        raise Exception(f'Error while formatting the index: {e}')
-
-                    # drop the format_index column
-                    if not keep_original_index:
-                        adata.var.pop(coordinate_cols)
-
+        if coordinate_cols is None:
+            # get the first entry of the column
+            entry = list(adata.var.index)[0]
+            # check the type of the index
+            index_type = get_index_type(entry)
+            # check if the index type is known
+            if index_type is None:
+                logger.error('Index type is unknown please provide either the index column name, '
+                             'coordinate cols or format the index to chr:start-stop.')
+                raise ValueError
+            # format the index
             else:
-                # check if from_column is a single column or a list of columns
-                if isinstance(coordinate_cols, str):
-                    logger.info("formatting index from single column.")
-                    # get the first entry of the column
-                    entry = list(adata.var[coordinate_cols])[0]
-                    # check the type of the index
-                    index_type = get_index_type(entry)
-                    logger.info(f'Index type: {index_type}')
+                coordinate_cols = 'original_index'
+                # add a column to store the original index
+                adata.var[coordinate_cols] = adata.var.index
 
+                try:
                     # format the index
                     var_index_from_single_col(adata, index_type, coordinate_cols)
+                except KeyError as e:
+                    # throw the error
+                    raise KeyError(f'Error while formatting the index: {e}')
 
-                elif isinstance(coordinate_cols, list):
+                if keep_original_index:
+                    adata.var[keep_original_index] = adata.var[coordinate_cols]
 
-                    if len(coordinate_cols) != 3:
-                        raise ValueError("coordinate cols must be a list of 3 strings, for single column use a string")
-                    # get the columns
-                    else:
-                        logger.info('formatting adata.var index from coordinate columns.')
-                        chr_list = adata.var[coordinate_cols[0]]
-                        start_list = adata.var[coordinate_cols[1]]
-                        stop_list = adata.var[coordinate_cols[2]]
+                adata.var.pop(coordinate_cols)
 
-                        # Combine into the format "chr:start-stop" per row
-                        new_index = [f"{chrom}:{start}-{stop}" for chrom, start, stop in zip(chr_list, start_list, stop_list)]
+        else:
+            # check if from_column is a single column or a list of columns
+            if isinstance(coordinate_cols, str):
+                logger.info("formatting index from single column.")
+                # get the first entry of the column
+                entry = list(adata.var[coordinate_cols])[0]
+                # check the type of the index
+                index_type = get_index_type(entry)
+                logger.info(f'Index type: {index_type}')
 
-                        # Set the new index
-                        adata.var['new_index'] = new_index
-                        adata.var.set_index('new_index', inplace=True)
+                # format the index
+                var_index_from_single_col(adata, index_type, coordinate_cols)
+
+            elif isinstance(coordinate_cols, list):
+
+                if len(coordinate_cols) != 3:
+                    raise ValueError("coordinate cols must be a list of 3 strings, for single column use a string")
+                # get the columns
                 else:
-                    raise ValueError("coordinate cols must be a string or a list of strings")
-        except Exception as e:
-            raise Exception(f'Error while formatting the index: {e}')
+                    logger.info('formatting adata.var index from coordinate columns.')
+                    chr_list = adata.var[coordinate_cols[0]]
+                    start_list = adata.var[coordinate_cols[1]]
+                    stop_list = adata.var[coordinate_cols[2]]
+
+                    # Combine into the format "chr:start-stop" per row
+                    new_index = [f"{chrom}:{start}-{stop}" for chrom, start, stop in zip(chr_list, start_list, stop_list)]
+
+                    # Set the new index
+                    adata.var['new_index'] = new_index
+                    adata.var.set_index('new_index', inplace=True)
+            else:
+                raise ValueError("coordinate cols must be a string or a list of strings")
     else:
         # check if the prefix should be removed from the var. index
         if remove_var_index_prefix:
@@ -271,13 +272,14 @@ def var_index_from(adata: sc.AnnData,
                     try:
                         # format the index
                         var_index_from_single_col(adata, index_type, coordinate_cols)
-                    except Exception as e:
+                    except KeyError as e:
                         # throw the error
-                        raise Exception(f'Error while formatting the index: {e}')
+                        raise KeyError(f'Error while formatting the index: {e}')
 
-                    # drop the format_index column
-                    if not keep_original_index:
-                        adata.var.pop(coordinate_cols)
+                    if keep_original_index:
+                        adata.var[keep_original_index] = adata.var[coordinate_cols]
+
+                    adata.var.pop(coordinate_cols)
 
         else:
             logger.info('adata.var.index is already in the correct format.')
@@ -285,7 +287,7 @@ def var_index_from(adata: sc.AnnData,
 
 @beartype
 def var_index_from_single_col(adata: sc.AnnData,
-                              index_type: str,
+                              index_type: Literal['binary', 'named'],
                               from_column: str) -> None:
     """
     Format the index of adata.var from a single column.
@@ -354,8 +356,7 @@ def get_index_type(entry: str) -> Optional[str]:
         return 'binary'
     if re.match(regex_named, entry):
         return 'named'
-    else:
-        return None
+    return None
 
 
 @beartype

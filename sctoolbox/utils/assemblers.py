@@ -36,7 +36,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
     adata : sc.AnnData
         The AnnData object to be prepared.
     coordinate_cols : Optional[list[str], str], default None
-        Location information of the peaks. Can be a str or list of str.
+        Location information of the peaks. Will use the selected information as `adata.var.index`, or build them from the index.
+        Either one or more column names from `adata.var` or `None`. Location information is typically in the format of [chr, start, end].
     h5ad_path : Optional[str], default None
         Path to the h5ad file.
     remove_var_index_prefix : bool, default True
@@ -50,13 +51,13 @@ def prepare_atac_anndata(adata: sc.AnnData,
         The prepared AnnData object.
 
     """
-    if coordinate_cols is not None:
+    if coordinate_cols:
         if not utils.checker.check_columns(adata.var,
                                            coordinate_cols,
                                            error=False,
                                            name="adata.var"):  # Check that coordinate_cols are in adata.var)
-            logger.info('Coordinate columns not found in adata.var')
-            coordinate_cols = None
+            logger.error('Coordinate columns not found in adata.var')
+            raise KeyError
 
     # Format index
     logger.info("formatting index")
