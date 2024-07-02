@@ -601,8 +601,8 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     vmin = np.min(plot_vars[DOT_COLOR_VALUE_COLUMN])
     vmax = np.max(plot_vars[DOT_COLOR_VALUE_COLUMN])
     if mode == "planet" and planet_color_schemas is None:
-        vmin = np.min(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]])
-        vmax = np.max(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]])
+        vmin = np.min(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]].values)
+        vmax = np.max(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]].values)
     if planet_color_schemas is not None:
         vmin_array = np.min(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]], axis=0)
         vmax_array = np.max(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]], axis=0)
