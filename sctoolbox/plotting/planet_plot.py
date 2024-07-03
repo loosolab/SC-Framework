@@ -77,147 +77,9 @@ def calculate_dot_sizes(values: pd.Series | np.ndarray,
 #                             Pre-processing                                #
 #############################################################################
 
+
 @beartype
 def planet_plot_anndata_preprocess(adata: sc.AnnData,
-                                   x_col: str,
-                                   y_col: str,
-                                   genes: list | str,
-                                   gene_symbols: str | None = None,
-                                   x_col_subset: list | None = None,
-                                   y_col_subset: list | None = None,
-                                   input_layer: str | None = None,
-                                   fillna: int | float = 0.0,
-                                   expression_threshold: int | float = 0.0,
-                                   layer_value_aggregator: str = "mean",
-                                   gene_count_aggregator: str = "median",
-                                   gene_expression_aggregator: str = "median",
-                                   **kwargs) -> pd.DataFrame:
-    """
-    Preprocess the annData object for the planet plot.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        The input AnnData object.
-    x_col : str
-        Name of the obs column of the AnnData to be shown on the x-axis of the plot.
-    y_col : str
-        Name of the obs column of the AnnData to be shown on the y-axis of the plot.
-    genes : list | str
-        List of genes to be to consider for plotting and aggregation.
-    gene_symbols : str | None, default None
-        Name of the var column of the AnnData object used for the gene names. If set None, the index of AnnData.var is used.
-    x_col_subset: list | None, default None
-        To plot a specific subset of the entries in x_col instead of all the entries.
-    y_col_subset: list | None, default None
-        To plot a specific subset of the entries in y_col instead of all the entries.
-    input_layer: str | None, default None
-        Layer of the AnnData object to be considered for the gene expression values.
-    fillna: int | float, default 0.0
-        Value to fill up the NaN values that are created during aggregation.
-    expression_threshold: int | float, default 0.0
-        The threshold value to calculate the threshold exceedence count. This count is then used to calculate the size of the dots.
-    layer_value_aggregator : str, default  "mean"
-        A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values in the input_layer for the corresponding gene.
-    gene_count_aggregator : str, default "median"
-        A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values for multiple genes into a single value which is used to calculate the size of the center dot.
-        Apart from the standard numpy aggregators there is 'expression_weighted_count' option to calculate a expression weighted mean of the counts.
-        eg. id c1, c2, e1 and e2 are the counts and expressions of 2 genes, then expression_weighted_count = (c1*e1+c2*e2)/(e1+e2).
-        This is used to reduce the disparity between the size and the color of the center dots.
-    gene_expression_aggregator : str, default "median"
-        A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values for multiple genes into a single value which is used to calculate the color of the center dot.
-        Apart from the standard numpy aggregators there is 'count_weighted_expression' option to calculate a count weighted mean of the expressions.
-        eg. id c1, c2, e1 and e2 are the counts and expressions of 2 genes, then count_weighted_expression = (e1*c1+e2*c2)/(c1+c2).
-        This is used to reduce the disparity between the size and the color of the center dots.
-        Note that 'count_weighted_expression' cannot be used as gene_expression_aggregator when 'expression_weighted_count' is used as gene_count_aggregator!
-    **kwargs : Any
-        Additional keyword arguments are passed to :func:`scanpy.get.obs_df`.
-
-    Returns
-    -------
-    plot_vars : pd.DataFrame
-        A dataframe containing all the parameters to be plotted.
-
-    Raises
-    ------
-    KeyError (?)
-        If the given method is not found in adata.obsm.
-    ValueError (?)
-        If the 'components' given is larger than the number of components in the embedding.
-
-    """
-    # initialize use_raw=False
-    defaultargs = {
-        "use_raw": False
-    }
-    defaultargs.update(kwargs)
-
-    if isinstance(genes, str):  # convert to array if string
-        genes = [genes]
-    # check conflicting condition
-    if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
-        raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")
-
-    # get the genex values and obs values from the adata
-    df_all = sc.get.obs_df(adata, [*genes, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
-
-    # get the count from the adata
-    df_counts = sc.get.obs_df(adata, [x_col, y_col])
-    df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
-
-    # get the count of observations exceeding threshold per gene per given clcuster
-    df_exceedance_counts = df_all.groupby([x_col, y_col]).apply(lambda x: count_greater_than_threshold(x[genes], expression_threshold)).reset_index()
-
-    # get aggregate expression values per gene per given cluster
-    df_aggregate_values = df_all.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
-
-    # merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
-    plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])
-    plot_vars = pd.merge(plot_vars, df_aggregate_values, on=[x_col, y_col])
-
-    # perform subsetting
-    if x_col_subset is not None:
-        plot_vars = plot_vars[plot_vars[x_col].isin(x_col_subset)].reset_index(drop=True)
-        plot_vars[x_col] = plot_vars[x_col].cat.remove_unused_categories()
-    if y_col_subset is not None:
-        plot_vars = plot_vars[plot_vars[y_col].isin(y_col_subset)].reset_index(drop=True)
-        plot_vars[y_col] = plot_vars[y_col].cat.remove_unused_categories()
-
-    # calculate aggregates of all the given genes for the center dot
-    cols_count = [col + '_x' for col in genes]
-    cols_expression = [col + '_y' for col in genes]
-    if gene_count_aggregator == "expression_weighted_count":
-        plot_vars['agg_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col2] for col2 in cols_expression)
-    else:
-        plot_vars['agg_count'] = plot_vars[cols_count].agg(gene_count_aggregator, axis=1)
-
-    if gene_count_aggregator == "count_weighted_expression":
-        plot_vars['agg_expression'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col1] for col1 in cols_count)
-    else:
-        plot_vars['agg_expression'] = plot_vars[cols_expression].agg(gene_expression_aggregator, axis=1)
-
-    # percentage exceedance for the center dot size, when size_value = 'percentage'
-    plot_vars['percentage_exceedance'] = plot_vars['agg_count'] * 100 / plot_vars['total_count']
-    # percentage max value for the center dot color, when color_value = 'percentage_max'
-    plot_vars['percentage_max_value'] = plot_vars['agg_expression'] * 100 / np.max(plot_vars['agg_expression'])
-    # calculate percentage exceedance and percentage max value observed for each gene
-    for gene in genes:
-        plot_vars[gene + '_percentage_exceedance'] = plot_vars[gene + '_x'] * 100 / plot_vars['total_count']
-        plot_vars[gene + '_percentage_max_value'] = plot_vars[gene + '_y'] * 100 / np.max(plot_vars[gene + '_y'])
-
-    # List of columns to exclude from conversion
-    exclude_columns = [x_col, y_col]
-    # Convert all other columns to float and fillna
-    for col in plot_vars.columns:
-        if col not in exclude_columns:
-            plot_vars[col] = pd.to_numeric(plot_vars[col], errors='coerce').astype(float)
-            plot_vars[col] = plot_vars[col].fillna(fillna)
-
-    return plot_vars
-
-
-@beartype
-def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
                                             x_col: str,
                                             y_col: str,
                                             genes: list | str,
@@ -308,34 +170,48 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
     if isinstance(genes, str):  # convert to array if string
         genes = [genes]
     # check conflicting conditions
+    # expression_weighted_counts and count_weighted_expressions cannot be used simultaneously
     if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
         raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")
     if obs_thresholds is not None and len(obs_columns) != len(obs_thresholds):
         raise ValueError("obs_columns and obs_thresholds should have the same lengths")
 
-    total_columns = [*genes, *obs_columns]
-    if obs_thresholds is not None:
-        total_thresholds = [*([expression_threshold] * len(genes)), *obs_thresholds]
-    else:
-        total_thresholds = [*([expression_threshold] * (len(genes) + len(obs_columns)))]
+    # all_columns consists of the columns to be extracted from the adata object into the dataframe. These include the genes as well as obs columns.
+    all_columns = genes
+    # all_thresholds is an array containing the expression thresholds for the genes as well as thresholds for the individual obs columns. len(all_thresholds) == len(all_columns)
+    all_thresholds = [*([expression_threshold] * len(genes))]
+    
+    if obs_columns is not None:
+        # Creating arrays of length len(genes)+len(obs_columns)
+        all_columns = [*genes, *obs_columns]
+        if obs_thresholds is not None:
+            all_thresholds = [*([expression_threshold] * len(genes)), *obs_thresholds]
+        else:
+            # If no obs_thresholds are passed, then use expression_threshold as threshold for obs_columns
+            all_thresholds = [*([expression_threshold] * (len(genes) + len(obs_columns)))]
+
     # get the genex values and obs values from the adata
-    df_all = sc.get.obs_df(adata, [*genes, *obs_columns, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
+    df_values = sc.get.obs_df(adata, [*all_columns, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
 
     # get the count from the adata
     df_counts = sc.get.obs_df(adata, [x_col, y_col])
     df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
 
     # get the count of the obs exceeding the threshold per cluster for genes as well as other obs columns
-    df_exceedance_counts = df_all.groupby([x_col, y_col]).apply(lambda x: pd.Series({total_columns[i]: count_greater_than_threshold(x[total_columns[i]], total_thresholds[i]) for i in range(len(total_columns))})).reset_index()
+    # here x is an entry in the groupby object corresponding to each (x_col, y_col) group. Now, for each x we have a dataframe containing the df_values entries corresponding to the group. Now, in this dataframe of x, for each column in the all_columns, we count the number of entries exceeding the given threshold for that column.
+    df_exceedance_counts = df_values.groupby([x_col, y_col]).apply(lambda x: pd.Series({all_columns[i]: count_greater_than_threshold(x[all_columns[i]], all_thresholds[i]) for i in range(len(all_columns))})).reset_index()
 
     # get aggregate values per cluster for genes as well as other obs columns
     if obs_aggregator_array is not None and len(obs_aggregator_array) != len(obs_columns):
         raise ValueError("obs_columns and obs_aggregator_array should have the same lengths or obs_aggregator_array should not be passed")
     elif obs_aggregator_array is None:
-        df_aggregate_values = df_all.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
+        # use the layer_value_aggregator for obs
+        df_aggregate_values = df_values.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
     else:
+        # create an aggregator array with length len(genes)+len(obs_columns)
         full_aggregator_array = [*([layer_value_aggregator] * len(genes)), *obs_aggregator_array]
-        df_aggregate_values = df_all.groupby([x_col, y_col]).agg({total_columns[i]: full_aggregator_array[i] for i in range(len(total_columns))}).reset_index()
+        # apply the individual given aggregator for each of the column in the all_columns array
+        df_aggregate_values = df_values.groupby([x_col, y_col]).agg({all_columns[i]: full_aggregator_array[i] for i in range(len(all_columns))}).reset_index()
 
     # merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
     plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])
@@ -350,24 +226,26 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
         plot_vars[y_col] = plot_vars[y_col].cat.remove_unused_categories()
 
     # calculate aggregates of all the given genes for the center dot
-    cols_count = [col + '_x' for col in genes]
-    cols_expression = [col + '_y' for col in genes]
+    gene_count_columns = [col + '_x' for col in genes]
+    gene_expressions_columns = [col + '_y' for col in genes]
     if gene_count_aggregator == "expression_weighted_count":
-        plot_vars['agg_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col2] for col2 in cols_expression)
+        # implementing the formula mentioned for expression_weighted_count, here zip is used to create (count, expression) pair for each
+        plot_vars['agg_count'] = sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expressions_columns)) / sum(plot_vars[expression] for expression in gene_expressions_columns)
     else:
-        plot_vars['agg_count'] = plot_vars[cols_count].agg(gene_count_aggregator, axis=1)
+        # using the given gene_count_aggregator
+        plot_vars['agg_count'] = plot_vars[gene_count_columns].agg(gene_count_aggregator, axis=1)
 
     if gene_count_aggregator == "count_weighted_expression":
-        plot_vars['agg_expression'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col1] for col1 in cols_count)
+        plot_vars['agg_expression'] = sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expressions_columns)) / sum(plot_vars[count] for count in gene_count_columns)
     else:
-        plot_vars['agg_expression'] = plot_vars[cols_expression].agg(gene_expression_aggregator, axis=1)
+        plot_vars['agg_expression'] = plot_vars[gene_expressions_columns].agg(gene_expression_aggregator, axis=1)
 
     # percentage exceedance for the center dot size, when size_value = 'percentage'
     plot_vars['percentage_exceedance'] = plot_vars['agg_count'] * 100 / plot_vars['total_count']
     # percentage max value for the center dot color, when color_value = 'percentage_max'
     plot_vars['percentage_max_value'] = plot_vars['agg_expression'] * 100 / np.max(plot_vars['agg_expression'])
     # calculate percentage exceedance and percentage max value observed for each obs column and gene
-    for column in total_columns:
+    for column in all_columns:
         plot_vars[column + '_percentage_exceedance'] = plot_vars[column + '_x'] * 100 / plot_vars['total_count']
         plot_vars[column + '_percentage_max_value'] = plot_vars[column + '_y'] * 100 / np.max(plot_vars[column + '_y'])
     # List of columns to exclude from conversion
