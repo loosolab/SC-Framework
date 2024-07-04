@@ -10,7 +10,7 @@ import scanpy as sc
 
 @pytest.fixture
 def named_var_adata():
-    """Return a adata object from SnapATAC."""
+    """Return a adata object with a prefix attached to the .var index."""
 
     f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_named_var.h5ad')
 
@@ -53,9 +53,9 @@ def adata_rna():
 
 @pytest.mark.parametrize("fixture, expected, coordinate_cols",
                          [("atac_adata", True, ["chr", "start", "stop"]),  # expects var tables to be unchanged
-                          ("adata_atac_emptyvar", False, ["chr", "start", "stop"]),
+                          ("adata_atac_emptyvar", KeyError, ["chr", "start", "stop"]),
                           # expects var tables to be changed
-                          ("adata_rna", Exception, ["chr", "start", "stop"]),
+                          ("adata_rna", KeyError, ["chr", "start", "stop"]),
                           # expects a valueerror due to missing columns
                           ("adata_atac_invalid", False, ["chr", "start", "stop"]),
                           ("named_var_adata", True, 'coordinate_col')])  # expects a valueerror due to format of columns
@@ -75,7 +75,7 @@ def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     else:
         assemblers.prepare_atac_anndata(adata_cp, coordinate_cols=coordinate_cols)
         # check for the existance of the coordinate columns ['chr','start','stop'] in the var table
-        assert adata_cp.var.columns.isin(expected_coordinates).all()
+        assert all(item in adata_cp.var.columns for item in expected_coordinates)
 
         # check if the first var index is in the correct format
         assert bool(re.fullmatch(index_pattern, adata_cp.var.index[0])) is True

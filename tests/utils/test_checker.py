@@ -11,7 +11,7 @@ import sys
 
 @pytest.fixture
 def named_var_adata():
-    """Return a adata object from SnapATAC."""
+    """Return a adata object with a prefix attached to the .var index."""
 
     f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_named_var.h5ad')
 
@@ -73,12 +73,26 @@ def test_var_index_from_single_col(named_var_adata):
     assert match is not None
 
 
+def test_var_index_from_coordinate_cols(atac_adata):
+
+    # regex pattern to match the var coordinate
+    coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
+
+    adata = atac_adata.copy()
+    adata.var = adata.var.reset_index(drop=True)
+
+    # test if the function formats the var index correctly from the coordinate columns
+    ch.var_index_from(adata, coordinate_cols=['chr', 'start', 'stop'])
+
+    # check if the first var index is in the correct format
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+
+
 def test_var_index_from(atac_adata):
     """Test if var_index_from works correctly."""
     adata = atac_adata.copy()
     # add string to var index
     adata.var.index = 'name_' + adata.var.index
-
     # test if the function formats the var index correctly
     ch.var_index_from(adata)
 
@@ -94,16 +108,6 @@ def test_var_index_from(atac_adata):
 
     # test if the function formats the var index correctly
     ch.var_index_from(adata, coordinate_cols='index_copy')
-
-    # check if the first var index is in the correct format
-    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
-
-    # prepare adata for the next test
-    adata.var = adata.var.reset_index(drop=True)
-    adata.var.pop('index_copy')
-
-    # test if the function formats the var index correctly from the coordinate columns
-    ch.var_index_from(adata, coordinate_cols=['chr', 'start', 'stop'])
 
     # check if the first var index is in the correct format
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True

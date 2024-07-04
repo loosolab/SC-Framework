@@ -25,7 +25,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
                          coordinate_cols: Optional[Union[list[str], str]] = None,
                          h5ad_path: Optional[str] = None,
                          remove_var_index_prefix: bool = True,
-                         keep_original_index: bool = False,
+                         keep_original_index: Optional[str] = None,
                          coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
     """
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
