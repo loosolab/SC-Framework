@@ -355,7 +355,7 @@ def validate_regions(adata: sc.AnnData,
     adata : sc.AnnData
         AnnData object containing the regions to be checked.
     coordinate_columns : Iterable[str]
-        List of length 3 for column names in adata.var containing chr, start, end coordinates.
+        List of length 3 for column names in adata.var containing chr, start, end coordinates (in this order).
 
     Returns
     -------
