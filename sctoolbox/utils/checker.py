@@ -419,14 +419,14 @@ def format_adata_var(adata: sc.AnnData,
     format_index = True
     if not isinstance(coordinate_columns, list):
         coordinate_columns = ['chr', 'start', 'stop']
-        print("coordinate_columns must be a list of length 3. Trying to format the index.")
+        logger.info("coordinate_columns must be a list of length 3. Trying to format the index.")
 
-    else:
-        if validate_regions(adata, coordinate_columns):
-            format_index = False
+    # Check if the columns are already in the right format and if they are in the adata.var
+    if validate_regions(adata, coordinate_columns):
+        format_index = False
     # Format index if needed
     if format_index:
-        print("formatting adata.var index to coordinate columns:")
+        logger.info("formatting adata.var index to coordinate columns:")
         regex = r'[^_:\-]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'  # matches chr_start_end / chr-start-end / chr:start-end and variations
 
         # Prepare lists to insert
@@ -489,7 +489,7 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
 
         limit = (0.5, 1)
         value = 0.5
-        print(utils.checker.in_range(value=value, limits=limit, include_limits=True))
+        logger.info(utils.checker.in_range(value=value, limits=limit, include_limits=True))
 
     This will return 'True'; the value is in between the limits including the limits.
     """

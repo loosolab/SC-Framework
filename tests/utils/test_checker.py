@@ -70,7 +70,7 @@ def test_var_index_from_single_col(named_var_adata):
     match = coordinate_pattern.match(named_var_adata.var.index[0])
 
     # check if the match is not None
-    assert match is not None
+    assert match
 
 
 def test_var_index_from_coordinate_cols(atac_adata):
@@ -85,7 +85,7 @@ def test_var_index_from_coordinate_cols(atac_adata):
     ch.var_index_from(adata, coordinate_cols=['chr', 'start', 'stop'])
 
     # check if the first var index is in the correct format
-    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
 
 def test_var_index_from(atac_adata):
@@ -100,7 +100,7 @@ def test_var_index_from(atac_adata):
     coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
 
     # check if the first var index is in the correct format
-    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
     # prepare adata for the next test, add a column to var
     adata.var['index_copy'] = 'name_' + adata.var.index
@@ -110,14 +110,14 @@ def test_var_index_from(atac_adata):
     ch.var_index_from(adata, coordinate_cols='index_copy')
 
     # check if the first var index is in the correct format
-    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0])) is True
+    assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
-
-def test_validate_regions(atac_adata):
+@pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'stop'], True),  # expects var tables to be unchanged
+                                                          (['chr', 'stop', 'start'], False)])  # expects a valueerror due to format of columns
+def test_validate_regions(atac_adata, coordinate_columns, expected):
     """Test if validate_regions works correctly."""
 
-    assert ch.validate_regions(atac_adata, coordinate_columns=['chr', 'start', 'stop'])
-    assert not ch.validate_regions(atac_adata, coordinate_columns=['chr', 'stop', 'start'], verbose=False)
+    assert ch.validate_regions(atac_adata, coordinate_columns=coordinate_columns) == expected
 
 
 def test_get_index_type():

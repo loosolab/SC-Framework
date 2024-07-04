@@ -382,7 +382,7 @@ def from_mtx(path: str,
 
     adata_objects = []
     for i, m in enumerate(mtx_files):
-        print(f"Reading files: {i+1} of {len(mtx_files)} ")
+        logger.info(f"Reading files: {i+1} of {len(mtx_files)} ")
 
         # find barcode and variable file in same folder
         barcode_file = list(m.parents[0].glob(barcodes))
