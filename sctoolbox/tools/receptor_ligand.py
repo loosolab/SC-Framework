@@ -980,7 +980,8 @@ def connectionPlot(adata: sc.AnnData,
                    filter: Optional[str] = None,
                    lw_multiplier: int | float = 2,
                    wspace: float = 0.4,
-                   line_colors: Optional[str] = "rainbow") -> npt.ArrayLike:
+                   line_colors: Optional[str] = "rainbow",
+                   dot_colors: str = "flare") -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -1027,7 +1028,9 @@ def connectionPlot(adata: sc.AnnData,
     wspace : float, default 0.4
         Width between plots. Fraction of total width.
     line_colors : Optional[str], default 'rainbow'
-        Name of colormap used to color lines. All lines are black if None.
+        Name of the colormap used to color lines. All lines are black if None.
+    dot_colors : str, default 'flare'
+        Name of the colormap used to color the dots.
 
     Returns
     -------
@@ -1073,6 +1076,7 @@ def connectionPlot(adata: sc.AnnData,
                              x=receptor_cluster_col,
                              hue=receptor_hue,
                              size=receptor_size,
+                             palette=dot_colors,
                              ax=axs[0])
 
     r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor", axisbelow=True)
@@ -1085,6 +1089,7 @@ def connectionPlot(adata: sc.AnnData,
                              x=ligand_cluster_col,
                              hue=ligand_hue,
                              size=ligand_size,
+                             palette=dot_colors,
                              ax=axs[1])
 
     axs[1].yaxis.tick_right()
