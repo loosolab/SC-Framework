@@ -27,7 +27,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
                          remove_var_index_prefix: bool = True,
                          keep_original_index: Optional[str] = None,
                          coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
-    """
+    r"""
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
 
     This includes formatting the index, formatting the coordinate columns, and setting the barcode as the index.
@@ -45,7 +45,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
         If True, the prefix of the index will be removed.
     keep_original_index : bool, default False
         If True, the original index will be kept.
-    coordinate_regex : str, default r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+    coordinate_regex : str, default "chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
         Regular expression to check if the index is in the correct format.
 
     Returns
@@ -53,6 +53,10 @@ def prepare_atac_anndata(adata: sc.AnnData,
     sc.AnnData
         The prepared AnnData object.
 
+    Raises
+    ------
+    KeyError
+        If coordinate columns are not found in adata.var.
     """
     if coordinate_cols:
         if not utils.checker.check_columns(adata.var,

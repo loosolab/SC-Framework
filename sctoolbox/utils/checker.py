@@ -159,7 +159,7 @@ def var_index_from(adata: sc.AnnData,
                    remove_var_index_prefix: bool = True,
                    keep_original_index: Optional[str] = None,
                    coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> None:
-    """
+    r"""
     Format adata.var index from a specified column or multiple coordinate columns.
 
     This formats the index of adata.var according to the pattern ["chr", "start", "stop"].
@@ -293,7 +293,7 @@ def var_index_from_single_col(adata: sc.AnnData,
                               index_type: Literal["prefix"],
                               from_column: str,
                               coordinate_pattern: str =  r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+') -> None:
-    """
+    r"""
     Format the index of adata.var from a single column.
 
     Parameters

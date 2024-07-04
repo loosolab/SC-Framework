@@ -74,7 +74,7 @@ def test_var_index_from_single_col(named_var_adata):
 
 
 def test_var_index_from_coordinate_cols(atac_adata):
-
+    """Test if var_index_from works correctly with coordinate columns."""
     # regex pattern to match the var coordinate
     coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
 
@@ -111,6 +111,7 @@ def test_var_index_from(atac_adata):
 
     # check if the first var index is in the correct format
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
+
 
 @pytest.mark.parametrize("coordinate_columns, expected", [(['chr', 'start', 'stop'], True),  # expects var tables to be unchanged
                                                           (['chr', 'stop', 'start'], False)])  # expects a valueerror due to format of columns
