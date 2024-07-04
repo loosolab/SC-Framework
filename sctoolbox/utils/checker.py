@@ -292,7 +292,7 @@ def var_index_from(adata: sc.AnnData,
 def var_index_from_single_col(adata: sc.AnnData,
                               index_type: Literal["prefix"],
                               from_column: str,
-                              coordinate_pattern: str =  r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+') -> None:
+                              coordinate_pattern: str = r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+') -> None:
     r"""
     Format the index of adata.var from a single column.
 
