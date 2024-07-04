@@ -25,7 +25,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
                          coordinate_cols: Optional[Union[list[str], str]] = None,
                          h5ad_path: Optional[str] = None,
                          remove_var_index_prefix: bool = True,
-                         keep_original_index: bool = False) -> sc.AnnData:
+                         keep_original_index: bool = False,
+                         coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
     """
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
 
@@ -44,6 +45,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
         If True, the prefix of the index will be removed.
     keep_original_index : bool, default False
         If True, the original index will be kept.
+    coordinate_regex : str, default r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+        Regular expression to check if the index is in the correct format.
 
     Returns
     -------
@@ -64,7 +67,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
     utils.checker.var_index_from(adata,
                                  coordinate_cols=coordinate_cols,
                                  remove_var_index_prefix=remove_var_index_prefix,
-                                 keep_original_index=keep_original_index)  # This checks if the index is available and valid, if not it creates it.
+                                 keep_original_index=keep_original_index,
+                                 coordinate_regex=coordinate_regex)  # This checks if the index is available and valid, if not it creates it.
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")

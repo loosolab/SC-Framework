@@ -9,10 +9,10 @@ import scanpy as sc
 
 
 @pytest.fixture
-def snapatac_adata():
+def named_var_adata():
     """Return a adata object from SnapATAC."""
 
-    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'snapatac.h5ad')
+    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_named_var.h5ad')
 
     return sc.read(f)
 
@@ -58,7 +58,7 @@ def adata_rna():
                           ("adata_rna", Exception, ["chr", "start", "stop"]),
                           # expects a valueerror due to missing columns
                           ("adata_atac_invalid", False, ["chr", "start", "stop"]),
-                          ("snapatac_adata", True, 'name')])  # expects a valueerror due to format of columns
+                          ("named_var_adata", True, 'coordinate_col')])  # expects a valueerror due to format of columns
 def test_prepare_atac_anndata(fixture, expected, coordinate_cols, request):
     """Test prepare_atac_anndata success."""
 
