@@ -267,21 +267,22 @@ def var_index_from(adata: sc.AnnData,
                                 'coordinate cols or format the index to chr:start-stop.')
                     # format the index
                 else:
-                    coordinate_cols = 'original_index'
+                    if keep_original_index is None:
+                        copy_idx = 'original_index'
                     # add a column to store the original index
-                    adata.var[coordinate_cols] = adata.var.index
+                    adata.var[copy_idx] = adata.var.index
 
                     try:
                         # format the index
-                        var_index_from_single_col(adata, index_type, coordinate_cols)
+                        var_index_from_single_col(adata, index_type, copy_idx)
                     except KeyError as e:
                         # throw the error
                         raise KeyError(f'Error while formatting the index: {e}')
 
                     if keep_original_index:
-                        adata.var[keep_original_index] = adata.var[coordinate_cols]
+                        adata.var[keep_original_index] = adata.var[copy_idx]
 
-                    adata.var.pop(coordinate_cols)
+                    adata.var.pop(copy_idx)
 
         else:
             logger.info('adata.var.index is already in the correct format.')
@@ -289,7 +290,7 @@ def var_index_from(adata: sc.AnnData,
 
 @beartype
 def var_index_from_single_col(adata: sc.AnnData,
-                              index_type: str,
+                              index_type: Literal["prefix"],
                               from_column: str,
                               coordinate_pattern: str =  r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+') -> None:
     """
@@ -345,8 +346,7 @@ def get_index_type(entry: str, regex: str) -> Optional[str]:
 
 @beartype
 def validate_regions(adata: sc.AnnData,
-                     coordinate_columns: Iterable[str],
-                     verbose: bool = True) -> bool:
+                     coordinate_columns: Iterable[str]) -> bool:
     """
     Check if the regions in adata.var are valid.
 
@@ -356,8 +356,6 @@ def validate_regions(adata: sc.AnnData,
         AnnData object containing the regions to be checked.
     coordinate_columns : Iterable[str]
         List of length 3 for column names in adata.var containing chr, start, end coordinates.
-    verbose : bool, default True
-        If True, print out the invalid regions.
 
     Returns
     -------
@@ -381,9 +379,8 @@ def validate_regions(adata: sc.AnnData,
                     valid = True  # if all tests passed, the line is valid
 
             if valid is False:
-                if verbose:
-                    logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
-                    return valid
+                logger.info("The region {0}:{1}-{2} is not a valid genome region. Please check the format of columns: {3}".format(line[chr], line[start], line[end], coordinate_columns))
+                return valid
 
     return valid
 
