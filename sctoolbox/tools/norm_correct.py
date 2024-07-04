@@ -431,6 +431,7 @@ def batch_correction(adata: sc.AnnData,
         try:
             # run combat
             corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
+            adata.X = sparse.csr_matrix(corrected_mat)
         finally:
             # remove the property
             delattr(adata.X.__class__, "A")
