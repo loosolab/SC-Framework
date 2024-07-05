@@ -982,7 +982,8 @@ def connectionPlot(adata: sc.AnnData,
                    dot_size: Tuple[int | float, int | float] = (10, 100),
                    wspace: float = 0.4,
                    line_colors: Optional[str] = "rainbow",
-                   dot_colors: str = "flare") -> npt.ArrayLike:
+                   dot_colors: str = "flare",
+                   col_order: Optional[list[str]] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -1034,6 +1035,8 @@ def connectionPlot(adata: sc.AnnData,
         Name of the colormap used to color lines. All lines are black if None.
     dot_colors : str, default 'flare'
         Name of the colormap used to color the dots.
+    col_order : Optional[list[str]], default None
+        Defines the order of data displayed on the x-axis in both plots. Leave None to order alphabetically.
 
     Returns
     -------
@@ -1063,6 +1066,14 @@ def connectionPlot(adata: sc.AnnData,
     if filter:
         data.query(filter, inplace=True)
 
+    # add x-axis ticks (column) by adding dummy data
+    if col_order:
+        # create a custom sort function
+        sorting_dict = {c: i for i, c in enumerate(col_order)}
+        sort_fun = lambda x: x.map(sorting_dict)
+    else:
+        sort_fun = None
+
     # restrict interactions to certain clusters
     if restrict_to:
         data = data[data[receptor_cluster_col].isin(restrict_to) & data[ligand_cluster_col].isin(restrict_to)]
@@ -1074,7 +1085,7 @@ def connectionPlot(adata: sc.AnnData,
     fig.suptitle(title)
 
     # receptor plot
-    r_plot = sns.scatterplot(data=data,
+    r_plot = sns.scatterplot(data=data.sort_values(by=receptor_cluster_col, key=sort_fun),
                              y=receptor_col,
                              x=receptor_cluster_col,
                              hue=receptor_hue,
@@ -1088,7 +1099,7 @@ def connectionPlot(adata: sc.AnnData,
     axs[0].grid(alpha=0.8)
 
     # ligand plot
-    l_plot = sns.scatterplot(data=data,
+    l_plot = sns.scatterplot(data=data.sort_values(by=ligand_cluster_col, key=sort_fun),
                              y=ligand_col,
                              x=ligand_cluster_col,
                              hue=ligand_hue,
