@@ -313,7 +313,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
                        orientation_labels_array: list | None = None,
-                       save: str | None = None):
+                       save: str | None = None) -> np.ndarray:
     r"""
     Render the planet plot on the basis of the preprocessed data.
 
@@ -431,6 +431,11 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     save : Optional[str], default None
         Filename to save the figure.
 
+    Returns
+    -------
+    np.ndarray
+        2D numpy array of axis objects
+
     Raises
     ------
     KeyError (?)
@@ -530,6 +535,8 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     fig, ax = plt.subplots(figsize=(w, h))
     plt.xticks(ticks=range(len(x_categories)), labels=x_categories, rotation='vertical')
     plt.yticks(ticks=range(len(y_categories)), labels=y_categories)
+    # Create and array of axises to return.
+    axarr = []
 
     # ---- Center dot and circle scatter ---- #
     if size_value == 'count':   # draw circle
@@ -576,6 +583,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     if y_label is None:
         y_label = y_col
     ax.set_ylabel(y_label)
+    axarr.append(ax)
 
     # ---- Dot colour legend (primary) ---- #
     # create new axis for color bar
@@ -590,6 +598,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     legend_color_value = 0.7    # use 70% value for the dot size and planet legend
     legend_color = cmap(legend_color_value)
     legend_hex_color = rgb2hex(legend_color)    # get the hex value
+    axarr.append(cbar_ax)
 
     # ---- Planet colour legends for multiple color schemas ---- #
     cbar_count = 1    # initialize color bar count
@@ -609,6 +618,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
             legend_color = cmap(legend_color_value)
             planet_legend_hex_color[i] = rgb2hex(legend_color)
             cbar_count += 1
+            axarr.append(planet_cbar_ax[i])
 
     # ---- Dot size legend ---- #
     # create new axis for dot size legend.
@@ -667,6 +677,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     if size_value == 'percentage':
         dot_size_ax.tick_params(axis='y', which='major', pad=-55, length=0)
         dot_size_ax.set_title(SIZE_LEGEND_TITLE_PERCENTAGE, fontsize=10)
+    axarr.append(dot_size_ax)
 
     # ---- Planet orientation legend ---- #
     # create new axis for planet orientation legend.
@@ -730,6 +741,9 @@ def planet_plot_render(plot_vars: pd.DataFrame,
         dot_orientation_ax.margins(x=0.9, y=0.9)
         dot_orientation_ax.set_aspect('equal')
         dot_orientation_ax.set_title(ORIENTATION_LEGEND_TITLE, fontsize=10, y=0.9)
+        axarr.append(dot_orientation_ax)
 
     # Save figure
     _save_figure(save)
+    
+    return axarr
