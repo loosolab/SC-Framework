@@ -1177,10 +1177,15 @@ def connectionPlot(adata: sc.AnnData,
 
         # add to current legend
         handles, _ = axs[1].get_legend_handles_labels()
-        axs[1].legend(handles=handles + line_list, bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
+        axs[1].legend(handles=handles + line_list,
+                      bbox_to_anchor=(2, 1, 0, 0),
+                      loc='upper left',
+                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
     else:
         # set ligand plot legend position
-        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
+        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0),
+                      loc='upper left',
+                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
 
     if save:
         plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')
