@@ -15,21 +15,21 @@ from beartype.typing import Literal
 #############################################################################
 
 @beartype
-def count_greater_than_threshold(group: pd.DataFrame | pd.Series,
-                                 threshold: int | float) -> pd.Series | np.int64:
+def count_greater_than_threshold(group: pd.Series,
+                                 threshold: int | float) ->  np.int64:
     """
     Calculate count of values exceeding a given threshold value.
 
     Parameters
     ----------
-    group : pd.DataFrame | pd.Series
+    group : pd.Series
         A dataframe or a series to apply the threshold condition over.
     threshold : int | float
         The threshold value to be used.
 
     Returns
     -------
-    threshold_exceedence_count : pd.Series | np.int64
+    threshold_exceedence_count : np.int64
         Returns pd.Series type output when input for group is a pd.DataFrame type and a np.int64 when input for group is a pd.Series type.
 
     """
@@ -38,11 +38,12 @@ def count_greater_than_threshold(group: pd.DataFrame | pd.Series,
 
 
 @beartype
-def calculate_dot_sizes(values: pd.Series | np.ndarray,
+def calculate_dot_sizes(values: np.ndarray,
+                        min_value: int | float,
                         max_value: int | float,
                         min_dot_size: int,
                         max_dot_size: int,
-                        use_log_scale: bool = False) -> pd.Series | np.ndarray:
+                        use_log_scale: bool = False) -> np.ndarray:
     """
     Calculate the sizes of dots for plotting.
 
@@ -61,16 +62,66 @@ def calculate_dot_sizes(values: pd.Series | np.ndarray,
 
     Returns
     -------
-    sizes : pd.Series | np.ndarray
+    sizes : np.ndarray
         Returns a series or an array containing the sizes for the dots depending upon the input type for values.
 
     """
     if use_log_scale:
         values = np.log1p(values)
+        min_value = np.log1p(min_value)
         max_value = np.log1p(max_value)
-    fraction_count = values / max_value
+    if min_value == max_value:
+        return np.full(len(values), min_dot_size)
+    fraction_count = (values-min_value) / (max_value-min_value)
+    if min_dot_size == max_dot_size:
+        return np.full(len(values), min_dot_size)
     sizes = fraction_count * (max_dot_size - min_dot_size) + min_dot_size
     return sizes
+
+
+@beartype
+def genes_aggregator(plot_vars: pd.DataFrame,
+                     gene_count_columns: list,
+                     gene_expression_columns: list,
+                     aggregator: str,
+                     to_aggregate: Literal["count", "expression"]) -> pd.Series:
+    """
+    Aggregate genes for the center dot.
+
+    Parameters
+    ----------
+    plot_vars : pd.DataFrame
+        A dataframe containing the gene count and gene expression columns.
+    gene_count_columns : list
+        A list of the column names for gene count.
+    gene_expression_columns : list
+        A list of the column names for gene expression.
+    aggregator : str
+        eg. "mean" , "median", "count_weighted_expression"
+    to_aggregate : Literal["count", "expression"]
+        Use "count" to aggregate gene counts and use "expression" to aggregate gene expressions.
+
+    Returns
+    -------
+    pd.Series
+        Returns a pandas series containing the the aggregate value.
+
+    """
+    if to_aggregate == "count":
+        if aggregator == "expression_weighted_count":
+            # implementing the formula mentioned for expression_weighted_count, here zip is used to create (count, expression) pair for each gene
+            return sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expression_columns)) / sum(plot_vars[expression] for expression in gene_expression_columns)
+        else:
+            # using the given gene_count_aggregator
+            return plot_vars[gene_count_columns].agg(aggregator, axis=1)
+    if to_aggregate == "expression":
+        if aggregator == "count_weighted_expression":
+            return sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expression_columns)) / sum(plot_vars[count] for count in gene_count_columns)
+        else:
+            # using the given gene_expression_aggregator
+            return plot_vars[gene_expression_columns].agg(aggregator, axis=1)
+
+
 
 
 #############################################################################
@@ -80,22 +131,22 @@ def calculate_dot_sizes(values: pd.Series | np.ndarray,
 
 @beartype
 def planet_plot_anndata_preprocess(adata: sc.AnnData,
-                                            x_col: str,
-                                            y_col: str,
-                                            genes: list | str,
-                                            gene_symbols: str | None = None,
-                                            x_col_subset: list | None = None,
-                                            y_col_subset: list | None = None,
-                                            input_layer: str | None = None,
-                                            fillna: int | float = 0.0,
-                                            expression_threshold: int | float = 0.0,
-                                            obs_columns: list | None = None,
-                                            obs_thresholds: list | None = None,
-                                            obs_aggregator_array: list | None = None,
-                                            layer_value_aggregator: str = "mean",
-                                            gene_count_aggregator: str = "median",
-                                            gene_expression_aggregator: str = "median",
-                                            **kwargs) -> pd.DataFrame:
+                                    x_col: str,
+                                    y_col: str,
+                                    genes: list | str,
+                                    gene_symbols: str | None = None,
+                                    x_col_subset: list | None = None,
+                                    y_col_subset: list | None = None,
+                                    input_layer: str | None = None,
+                                    fillna: int | float = 0.0,
+                                    expression_threshold: int | float = 0.0,
+                                    obs_columns: list | None = None,
+                                    obs_thresholds: list | None = None,
+                                    obs_aggregator_array: list | None = None,
+                                    layer_value_aggregator: str = "mean",
+                                    gene_count_aggregator: str = "median",
+                                    gene_expression_aggregator: str = "median",
+                                    **kwargs) -> pd.DataFrame:
     """
     Preprocess data to use obs columns other than genes for the dots.
 
@@ -227,18 +278,9 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
 
     # calculate aggregates of all the given genes for the center dot
     gene_count_columns = [col + '_x' for col in genes]
-    gene_expressions_columns = [col + '_y' for col in genes]
-    if gene_count_aggregator == "expression_weighted_count":
-        # implementing the formula mentioned for expression_weighted_count, here zip is used to create (count, expression) pair for each
-        plot_vars['agg_count'] = sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expressions_columns)) / sum(plot_vars[expression] for expression in gene_expressions_columns)
-    else:
-        # using the given gene_count_aggregator
-        plot_vars['agg_count'] = plot_vars[gene_count_columns].agg(gene_count_aggregator, axis=1)
-
-    if gene_count_aggregator == "count_weighted_expression":
-        plot_vars['agg_expression'] = sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expressions_columns)) / sum(plot_vars[count] for count in gene_count_columns)
-    else:
-        plot_vars['agg_expression'] = plot_vars[gene_expressions_columns].agg(gene_expression_aggregator, axis=1)
+    gene_expression_columns = [col + '_y' for col in genes]
+    plot_vars['agg_count'] = genes_aggregator(plot_vars, gene_count_columns, gene_expression_columns, gene_count_aggregator, "count")
+    plot_vars['agg_expression'] = genes_aggregator(plot_vars, gene_count_columns, gene_expression_columns, gene_expression_aggregator, "expression")
 
     # percentage exceedance for the center dot size, when size_value = 'percentage'
     plot_vars['percentage_exceedance'] = plot_vars['agg_count'] * 100 / plot_vars['total_count']
@@ -313,7 +355,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
                        orientation_labels_array: list | None = None,
-                       save: str | None = None) -> np.ndarray:
+                       save: str | None = None) -> list:
     r"""
     Render the planet plot on the basis of the preprocessed data.
 
@@ -503,20 +545,20 @@ def planet_plot_render(plot_vars: pd.DataFrame,
 
     # ---- Dot size calculation ---- #
     if size_value == 'count':
-        plot_vars['outer_area'] = calculate_dot_sizes(plot_vars[OUTER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['outer_area'] = calculate_dot_sizes(plot_vars[OUTER_SIZE_COUNT_COLUMN].values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
         plot_vars['outer_radius'] = np.sqrt(plot_vars['outer_area'] / np.pi)
-        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_COUNT_COLUMN].values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
         plot_vars['inner_radius'] = np.sqrt(plot_vars['inner_area'] / np.pi)
         if mode == 'planet':
             for planet_column in planet_columns:
-                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_COUNT_SUFFIX], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_COUNT_SUFFIX].values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
                 plot_vars[planet_column + '_dot_radius'] = np.sqrt(plot_vars[planet_column + '_dot_area'] / np.pi)
     if size_value == 'percentage':
-        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_PERCENTAGE_COLUMN], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_PERCENTAGE_COLUMN].values, 0, 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
         plot_vars['inner_radius'] = np.sqrt(plot_vars['inner_area'] / np.pi)
         if mode == 'planet':
             for planet_column in planet_columns:
-                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_PERCENTAGE_SUFFIX], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_PERCENTAGE_SUFFIX].values, 0, 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
                 plot_vars[planet_column + '_dot_radius'] = np.sqrt(plot_vars[planet_column + '_dot_area'] / np.pi)
 
     # figure size calculation
@@ -604,7 +646,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     cbar_count = 1    # initialize color bar count
     planet_cbar_ax = {}     # array for the axises of the planet specific colorbars
     planet_legend_hex_color = {}    # array to store the 70% hex value for the planet legend.
-    if planet_color_schemas is not None:
+    if (mode == 'planet') and planet_color_schemas is not None:
         for i in range(len(sc_array)):
             planet_cbar_ax[i] = fig.add_axes([1 + LEGEND_COLOR_X_ALIGNMENT * width_per_unit + 0.25 * LEGEND_COLOR_WIDTH * width_per_unit, 0.1 + LEGEND_COLOR_Y_ALIGNMENT * height_per_unit + cbar_count * 5 * LEGEND_COLOR_HEIGHT * height_per_unit, LEGEND_COLOR_WIDTH * width_per_unit, LEGEND_COLOR_HEIGHT * height_per_unit])
             cbar = plt.colorbar(sc_array[i], cax=planet_cbar_ax[i], orientation='horizontal', fraction=0.046, pad=0.04)
@@ -640,7 +682,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
         if size_value == 'count':
             labels = np.linspace(min_count, max_count, num=5).astype(int)
 
-    sizes = calculate_dot_sizes(values, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)   # dot sizes for the legend
+    sizes = calculate_dot_sizes(values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)   # dot sizes for the legend
     for i in range(len(sizes)):
         if size_value == 'percentage':
             dot_size_ax.scatter(0, i, s=sizes[i], c=legend_hex_color, alpha=1)
