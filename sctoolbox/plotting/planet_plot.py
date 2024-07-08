@@ -494,7 +494,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
         color_schema = "viridis"
 
     #### Dotplot like plot
-    
+
     .. plot::
         :context: close-figs
 
@@ -516,7 +516,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                               use_log_scale = False,
                               planet_columns = selected_genes,
                               color_schema = color_schema)
-    
+
     Here you only see the percentage of cells expressed in the cluster.
 
     #### Use "count" as size_value
@@ -529,11 +529,11 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 y_col,
                                 mode = "aggregate",
                                 size_value = "count",
-                                color_value = "value", 
+                                color_value = "value",
                                 use_log_scale = False,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
-    
+
     Here you see also the count of cells in the cluster. It can be noted that different clusters have different count.
 
     #### Planet mode
@@ -551,12 +551,12 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 use_log_scale = False,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
-    
+
     #### Use "percentage_max" as color_value
     The gene expressions in the last plot have become similar coloured, this is because including the individual gene expressions has greatly increased the range of gene expressions.
     In order to be able to do a better comparative analysis across the clusters for different genes.
     We set the color value to percentage_max, where the expression value for the dot (center or planet) is calculated as a percentage of the maximum expression of that dot across all the clusters.
-    
+
     .. plot::
         :context: close-figs
 
@@ -569,11 +569,11 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 use_log_scale = False,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
-    
+
     #### Set use_log_scale to True
     As some clusters have a relatively very small size compared to others, it is hard to get an estimate of the difference in count across different clusters.
     We can use log scale to shift the distribution a bit to get a better view and may be able to filter out insignificant values.
-    
+
     .. plot::
         :context: close-figs
 
@@ -586,7 +586,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 use_log_scale = True,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
-    
+
     #### Plot obs_columns
     But filtering cannot be done solely on the basis of cell count, we have many scoring metrics stored in the obs column.
     You can pass the obs columns and get the aggregate values to plot them as planets.
@@ -613,11 +613,11 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 planet_columns = ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
                                 color_schema = color_schema,
                                 planet_color_schemas=[ "coolwarm", "cividis", "gray", "twilight", "Accent"])
-    
+
     #### Obs columns with individual thresholds
     Ofcoarse, we do not need to use the default threshold that we use for the gene expression also for the obs columns.
     We can pass a list of custom thresholds corresponding to each obs column.
-    
+
     .. plot::
         :context: close-figs
 
@@ -641,7 +641,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 planet_columns =  ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
                                 color_schema = color_schema,
                                 planet_color_schemas=[ "coolwarm", "cividis", "gray", "twilight", "Accent"])
-    
+
     #### Switching percent_mito aggregator to 'median'
     We can also pass custom aggregators corresponding to obs columns. Upon switching to median, the range of percent_mito is reduced and as a result it is easier to filter out the good quality clusters.
     We also modify the colorbar labels to show that now the median is displayed. There is a range of arguments customize all the labels in the plot.
@@ -672,7 +672,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 planet_color_schemas=["coolwarm", "cividis", "gray", "twilight", "Accent"],
                                 colorbar_label_array = ["n_genes (median)" , "percent_mito (median)", "n_counts (median)", "S_score (median)", "G2M_score (median)"]
                                 )
-    
+
     #### Column subsetting
     Since we may not be interested in all the clusters present in the plot, we use y_col_subset, to only a subset for our plotting.
 
@@ -702,7 +702,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 planet_color_schemas=["coolwarm", "cividis", "gray", "twilight", "Accent"],
                                 colorbar_label_array = ["n_genes (median)" , "percent_mito (median)", "n_counts (median)", "S_score (median)", "G2M_score (median)"]
                                 )
-    
+
     We can use the same df for gene expression plot
 
     .. plot::
@@ -717,10 +717,10 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 use_log_scale = False,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema)
-    
+
     #### Figure size adjustment
     Ther two parameters FIG_SIZE_SCALER and PLANET_DIST_SCALER can be tuned to adjust the figure size and planet distance in order to achieve a perfect looking plot.
-    
+
     Saving space, reducing plot size, FIG_SIZE_SCALER=1.5 from 2 (default)
 
     .. plot::
@@ -736,7 +736,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 planet_columns = selected_genes,
                                 color_schema = color_schema,
                                 FIG_SIZE_SCALER=1.6)
-    
+
     Planets messed up, not problem! adjust the PLANET_DIST_SCALER
 
     .. plot::
@@ -778,7 +778,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                                 LEGEND_PLANET_WIDTH=1.5,
                                 LEGEND_PLANET_HEIGHT=1.5
                                 )
-    
+
     .. plot::
         :context: close-figs
 
