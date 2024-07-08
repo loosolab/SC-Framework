@@ -1075,6 +1075,7 @@ def connectionPlot(adata: sc.AnnData,
     if xlabel_order:
         # create a custom sort function
         sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
+
         def sort_fun(x):
             return x.map(sorting_dict)
     else:
