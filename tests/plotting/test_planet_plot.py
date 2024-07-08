@@ -61,7 +61,7 @@ def adata():
                           (pd.Series([-1, -0.5, 0.1, 1]), -0.7, 3)])
 def test_count_greater_than_threshold(group, threshold, output):
     """Test greater than threshold."""
-    threshold_exceedence_count = pp.count_greater_than_threshold(group, threshold)
+    threshold_exceedence_count = pp._count_greater_than_threshold(group, threshold)
     assert threshold_exceedence_count == output
 
 
@@ -72,7 +72,7 @@ def test_count_greater_than_threshold(group, threshold, output):
                           (np.array([10, 100, 1000, 10000]), 10, 10, 1, 4, True, np.array([1, 1, 1, 1]))])
 def test_calculate_dot_sizes(values, min_value, max_value, min_dot_size, max_dot_size, use_log_scale, expected_output):
     """Test greater than threshold for linear and log cases."""
-    sizes = pp.calculate_dot_sizes(values, min_value, max_value, min_dot_size, max_dot_size, use_log_scale)
+    sizes = pp._calculate_dot_sizes(values, min_value, max_value, min_dot_size, max_dot_size, use_log_scale)
     for i, value in enumerate(expected_output):
         # here we use ceiling function because using log1p instead of log causes a small skew at smaller values where the user should not ideally use log scale.
         # eg. because of log1p, the size of 1.976386 instead of 2 is calculate for the value 100.
@@ -95,7 +95,7 @@ def test_genes_aggregator(aggregator, to_aggregate, expected_output):
         'exp3': [0.3]
     }
     df = pd.DataFrame(mock_data)
-    agg_val = pp.genes_aggregator(df,
+    agg_val = pp._genes_aggregator(df,
                                   ["count1", "count2", "count3"],
                                   ["exp1", "exp2", "exp3"],
                                   aggregator,
