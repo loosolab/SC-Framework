@@ -1,3 +1,11 @@
+0.9.0 (in progress)
+----------------
+- ligand-receptor: connectionPlot new parameters (#255)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- rna/ligand-receptor update to use new connectionPlot parameters
+
 0.8.0 (14-06-24)
 ----------------
 - from_mtx: support more folder structures and variable file now optional (#234, #240)
