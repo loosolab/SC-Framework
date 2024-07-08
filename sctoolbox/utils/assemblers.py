@@ -62,7 +62,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
     """
     if coordinate_cols:
         if isinstance(coordinate_cols, list):
-            if len(list) != 3:
+            if len(coordinate_cols) != 3:
                 logger.error("Coordinate columns must be a list of 3 elements. e.g. ['chr', 'start', 'end'] or a single string with all coordinates.")
                 raise ValueError
 
