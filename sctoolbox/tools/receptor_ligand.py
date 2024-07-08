@@ -977,13 +977,15 @@ def connectionPlot(adata: sc.AnnData,
                    ligand_hue: str = "ligand_score",
                    ligand_size: str = "ligand_percent",
                    ligand_genes: Optional[list[str]] = None,
+                   # additional plot params
                    filter: Optional[str] = None,
                    lw_multiplier: int | float = 2,
                    dot_size: Tuple[int | float, int | float] = (10, 100),
                    wspace: float = 0.4,
                    line_colors: Optional[str] = "rainbow",
                    dot_colors: str = "flare",
-                   col_order: Optional[list[str]] = None) -> npt.ArrayLike:
+                   col_order: Optional[list[str]] = None,
+                   alpha_range: Optional[Tuple[int | float, int | float]] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -1037,6 +1039,9 @@ def connectionPlot(adata: sc.AnnData,
         Name of the colormap used to color the dots.
     col_order : Optional[list[str]], default None
         Defines the order of data displayed on the x-axis in both plots. Leave None to order alphabetically.
+    alpha_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `connection_alpha` legend. Values outside this range will be set to the min or max value.
+        Minimum is mapped to transparent (alpha=0) and maximum to opaque (alpha=1). Will use the min and max values of the data by default (None).
 
     Returns
     -------
@@ -1129,8 +1134,23 @@ def connectionPlot(adata: sc.AnnData,
 
     # scale connection score column between 0-1 to be used as alpha values
     if connection_alpha:
+        # set custom min and max values
+        if alpha_range:
+            def alpha_sorter(x):
+                """Set values outside of range to min or max."""
+                if x < alpha_range[0]:
+                    return alpha_range[0]
+                elif x > alpha_range[1]:
+                    return alpha_range[1]
+                return x
+            # add min and max in case they are not present in the data
+            alpha_values = list(alpha_range) + [alpha_sorter(val) for val in data[connection_alpha]]
+        else:
+            alpha_values = data[connection_alpha].tolist()
+
         # note: minmax_scale sometimes produces values >1. Looks like a rounding error (1.000000000002).
-        data["alpha"] = minmax_scale(data[connection_alpha], feature_range=(0, 1))
+        # end bracket removes added alpha_range if needed
+        data["alpha"] = minmax_scale(alpha_values, feature_range=(0, 1))[2 if alpha_range else 0:]
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
     else:
@@ -1180,7 +1200,7 @@ def connectionPlot(adata: sc.AnnData,
     # create legend for connection lines
     if connection_alpha:
         step_num = 5
-        s_steps, a_steps = np.linspace(min(data[connection_alpha]), max(data[connection_alpha]), step_num), np.linspace(0, 1, step_num)
+        s_steps, a_steps = np.linspace(min(alpha_values), max(alpha_values), step_num), np.linspace(0, 1, step_num)
 
         # create proxy actors https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#proxy-legend-handles
         line_list = [lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)]
