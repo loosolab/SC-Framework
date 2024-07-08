@@ -420,6 +420,10 @@ def format_adata_var(adata: sc.AnnData,
     if not isinstance(coordinate_columns, list):
         coordinate_columns = ['chr', 'start', 'stop']
         logger.info("No column names supplied falling back to default names ['chr', 'start', 'stop']")
+    elif isinstance(coordinate_columns, list) and len(coordinate_columns) != 3:
+        raise ValueError("coordinate_columns must be a list of length 3 containing the column names for chr, start, stop.")
+    else:
+        logger.info("coordinate columns are: {0}")
 
     # Check if the columns are already in the right format and if they are in the adata.var
     if validate_regions(adata, coordinate_columns):
