@@ -37,14 +37,16 @@ def prepare_atac_anndata(adata: sc.AnnData,
     adata : sc.AnnData
         The AnnData object to be prepared.
     coordinate_cols : Optional[list[str], str], default None
-        Location information of the peaks. Will use the selected information as `adata.var.index`, or build them from the index.
-        Either one or more column names from `adata.var` or `None`. Location information is typically in the format of [chr, start, end].
+        Parameter ensures location info is in adata.var and adata.var.index and formatted correctly.
+        1. A list of 3 adata.var column names e.g. ['chr', 'start', 'end'] that will be used to create the index.
+        2. A string (adata.var column name) that contains all three coordinates to create the index.
+        3. And if None, the coordinates will be created from the index.
     h5ad_path : Optional[str], default None
         Path to the h5ad file.
     remove_var_index_prefix : bool, default True
         If True, the prefix of the index will be removed.
     keep_original_index : bool, default False
-        If True, the original index will be kept.
+        If not None, the original index will be kept in adata.obs by the name provided.
     coordinate_regex : str, default "chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
         Regular expression to check if the index is in the correct format.
 
@@ -59,6 +61,11 @@ def prepare_atac_anndata(adata: sc.AnnData,
         If coordinate columns are not found in adata.var.
     """
     if coordinate_cols:
+        if isinstance(coordinate_cols, list):
+            if len(list) != 3:
+                logger.error("Coordinate columns must be a list of 3 elements. e.g. ['chr', 'start', 'end'] or a single string with all coordinates.")
+                raise ValueError
+
         if not utils.checker.check_columns(adata.var,
                                            coordinate_cols,
                                            error=False,

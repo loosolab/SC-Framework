@@ -176,7 +176,7 @@ def var_index_from(adata: sc.AnnData,
     remove_var_index_prefix : bool, default True
         If True, the prefix 'chr' is removed from the index.
     keep_original_index : Optional[str], default None
-        If True, the original index is kept in adata.var.
+        If not None, the original index is stored in a new column with the given name.
     coordinate_regex : str, default r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'
         Regex pattern to match the coordinate format.
 
@@ -419,7 +419,7 @@ def format_adata_var(adata: sc.AnnData,
     format_index = True
     if not isinstance(coordinate_columns, list):
         coordinate_columns = ['chr', 'start', 'stop']
-        logger.info("coordinate_columns must be a list of length 3. Trying to format the index.")
+        logger.info("No column names supplied falling back to default names ['chr', 'start', 'stop']")
 
     # Check if the columns are already in the right format and if they are in the adata.var
     if validate_regions(adata, coordinate_columns):

@@ -426,6 +426,7 @@ def batch_correction(adata: sc.AnnData,
     elif method == "combat":
 
         adata = adata.copy()  # make sure adata is not modified
+        # TODO: remove this when the issue is fixed in scanpy
         # spike in the former scipy ".A" property (modifies the scipy class!)
         setattr(adata.X.__class__, "A", property(lambda self: self.toarray()))
         try:
