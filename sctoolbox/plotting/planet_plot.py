@@ -16,7 +16,7 @@ from beartype.typing import Literal
 
 @beartype
 def count_greater_than_threshold(group: pd.Series,
-                                 threshold: int | float) ->  np.int64:
+                                 threshold: int | float) -> np.int64:
     """
     Calculate count of values exceeding a given threshold value.
 
@@ -51,6 +51,8 @@ def calculate_dot_sizes(values: np.ndarray,
     ----------
     values : pd.Series | np.ndarray
         A series or an array containing the values to be plotted.
+    min_value : int | float
+        The smallest value observed to correspond to the min_dot_size.
     max_value : int | float
         The biggest value observed to correspond to the max_dot_size.
     min_dot_size : int
@@ -72,7 +74,7 @@ def calculate_dot_sizes(values: np.ndarray,
         max_value = np.log1p(max_value)
     if min_value == max_value:
         return np.full(len(values), min_dot_size)
-    fraction_count = (values-min_value) / (max_value-min_value)
+    fraction_count = (values - min_value) / (max_value - min_value)
     if min_dot_size == max_dot_size:
         return np.full(len(values), min_dot_size)
     sizes = fraction_count * (max_dot_size - min_dot_size) + min_dot_size
@@ -122,31 +124,28 @@ def genes_aggregator(plot_vars: pd.DataFrame,
             return plot_vars[gene_expression_columns].agg(aggregator, axis=1)
 
 
-
-
 #############################################################################
 #                             Pre-processing                                #
 #############################################################################
 
-
 @beartype
 def planet_plot_anndata_preprocess(adata: sc.AnnData,
-                                    x_col: str,
-                                    y_col: str,
-                                    genes: list | str,
-                                    gene_symbols: str | None = None,
-                                    x_col_subset: list | None = None,
-                                    y_col_subset: list | None = None,
-                                    input_layer: str | None = None,
-                                    fillna: int | float = 0.0,
-                                    expression_threshold: int | float = 0.0,
-                                    obs_columns: list | None = None,
-                                    obs_thresholds: list | None = None,
-                                    obs_aggregator_array: list | None = None,
-                                    layer_value_aggregator: str = "mean",
-                                    gene_count_aggregator: str = "median",
-                                    gene_expression_aggregator: str = "median",
-                                    **kwargs) -> pd.DataFrame:
+                                   x_col: str,
+                                   y_col: str,
+                                   genes: list | str,
+                                   gene_symbols: str | None = None,
+                                   x_col_subset: list | None = None,
+                                   y_col_subset: list | None = None,
+                                   input_layer: str | None = None,
+                                   fillna: int | float = 0.0,
+                                   expression_threshold: int | float = 0.0,
+                                   obs_columns: list | None = None,
+                                   obs_thresholds: list | None = None,
+                                   obs_aggregator_array: list | None = None,
+                                   layer_value_aggregator: str = "mean",
+                                   gene_count_aggregator: str = "median",
+                                   gene_expression_aggregator: str = "median",
+                                   **kwargs) -> pd.DataFrame:
     """
     Preprocess data to use obs columns other than genes for the dots.
 
@@ -206,10 +205,8 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError (?)
-        If the given method is not found in adata.obsm.
-    ValueError (?)
-        If the 'components' given is larger than the number of components in the embedding.
+    ValueError
+        If the given is invalid.
 
     """
     # initialize use_raw=False
@@ -475,24 +472,49 @@ def planet_plot_render(plot_vars: pd.DataFrame,
 
     Returns
     -------
-    np.ndarray
-        2D numpy array of axis objects
+    list
+        A list of axis objects.
 
     Raises
     ------
-    KeyError (?)
-        If the given method is not found in adata.obsm.
-    ValueError (?)
-        If the 'components' given is larger than the number of components in the embedding.
+    ValueError
+        If the given is invalid.
 
     Examples
     --------
     .. plot::
         :context: close-figs
 
-        plot_vars = pl.planet_plot_anndata_preprocess(adata, x_col="bulk_labels", y_col="phase", genes=["SSU72","S100B","ITGB2"])
-        pl.planet_plot_render(plot_vars, x_col="bulk_labels", y_col="phase", mode="planet")
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        marker_genes = ["MNDA", "TNFRSF4", "CD8B", "HSD17B11", "GOLGA7", "LGALS3"]
+        obs_cols = ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"]
+        x_col = "phase"
+        y_col = "bulk_labels"
+        expression_threshold = 0
+        color_schema = "viridis"
 
+    .. plot::
+        :context: close-figs
+
+        plot_vars = pl.planet_plot_anndata_preprocess(adata,
+                                                      x_col,
+                                                      y_col,
+                                                      genes = marker_genes,
+                                                      obs_columns=obs_cols,
+                                                      layer_value_aggregator = "mean",
+                                                      gene_count_aggregator = "median",
+                                                      gene_expression_aggregator = "median",
+                                                      )
+        pl.planet_plot_render(plot_vars,
+                              x_col,
+                              y_col,
+                              mode = "aggregate",
+                              size_value = "percentage",
+                              color_value = "value",
+                              use_log_scale = False,
+                              planet_columns = marker_genes,
+                              color_schema = color_schema)
     """
 
     # ---- Initialization parameters ---- #
@@ -787,5 +809,5 @@ def planet_plot_render(plot_vars: pd.DataFrame,
 
     # Save figure
     _save_figure(save)
-    
+
     return axarr
