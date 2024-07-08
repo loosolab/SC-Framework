@@ -85,7 +85,7 @@ def _add_figure_title(axarr: Iterable[matplotlib.axes.Axes] | matplotlib.axes.Ax
         :context: close-figs
 
         axes = sc.pl.umap(adata, color=["louvain", "condition"], show=False)
-        pl.add_figure_title(axes, "UMAP plots", fontsize=20)
+        pl.general._add_figure_title(axes, "UMAP plots", fontsize=20)
     """
 
     # If only one axes is passed, convert to list
@@ -248,7 +248,7 @@ def clustermap_dotplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        pl.clustermap_dotplot(
+        pl.general.clustermap_dotplot(
             table=table,
             x="bulk_labels",
             y="index",
@@ -522,7 +522,7 @@ def boxplot(dt: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        pl.boxplot(dt, show_median=True, ax=None)
+        pl.general.boxplot(dt, show_median=True, ax=None)
     """
 
     if ax is None:
@@ -611,7 +611,7 @@ def violinplot(table: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        pl.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
+        pl.general.violinplot(table, "age", color_by="class", hlines=None, colors=None, ax=None, title=None, ylabel=True)
     """
 
     # check if valid column name
@@ -734,7 +734,7 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     .. plot::
         :context: close-figs
 
-        pl.plot_venn(venn2_example, "Simple Venn2 plot")
+        pl.general.plot_venn(venn2_example, "Simple Venn2 plot")
 
     .. plot::
         :context: close-figs
@@ -747,7 +747,7 @@ def plot_venn(groups_dict: dict[str, list[Any]],
     .. plot::
         :context: close-figs
 
-        pl.plot_venn(venn3_example, "Simple Venn3 plot")
+        pl.general.plot_venn(venn3_example, "Simple Venn3 plot")
 
     """
 
@@ -821,7 +821,7 @@ def pairwise_scatter(table: pd.DataFrame,
                       "percent_mito": {"max": 0.03},
                       "S_score": {"max": 0.5}}
 
-        pl.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
+        pl.general.pairwise_scatter(adata.obs, columns, thresholds=thresholds)
     """
 
     if len(columns) < 2:

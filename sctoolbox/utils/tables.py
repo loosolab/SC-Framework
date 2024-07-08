@@ -105,7 +105,7 @@ def _sanitize_sheetname(s: str,
         Valid excel sheetname
     """
 
-    return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
+    return utils.general.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
 @beartype

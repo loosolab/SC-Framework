@@ -15,21 +15,21 @@ from beartype.typing import Literal
 #############################################################################
 
 @beartype
-def count_greater_than_threshold(group: pd.DataFrame | pd.Series,
-                                 threshold: int | float) -> pd.Series | np.int64:
+def count_greater_than_threshold(group: pd.Series,
+                                 threshold: int | float) -> np.int64:
     """
     Calculate count of values exceeding a given threshold value.
 
     Parameters
     ----------
-    group : pd.DataFrame | pd.Series
+    group : pd.Series
         A dataframe or a series to apply the threshold condition over.
     threshold : int | float
         The threshold value to be used.
 
     Returns
     -------
-    threshold_exceedence_count : pd.Series | np.int64
+    threshold_exceedence_count : np.int64
         Returns pd.Series type output when input for group is a pd.DataFrame type and a np.int64 when input for group is a pd.Series type.
 
     """
@@ -38,11 +38,12 @@ def count_greater_than_threshold(group: pd.DataFrame | pd.Series,
 
 
 @beartype
-def calculate_dot_sizes(values: pd.Series | np.ndarray,
+def calculate_dot_sizes(values: np.ndarray,
+                        min_value: int | float,
                         max_value: int | float,
                         min_dot_size: int,
                         max_dot_size: int,
-                        use_log_scale: bool = False) -> pd.Series | np.ndarray:
+                        use_log_scale: bool = False) -> np.ndarray:
     """
     Calculate the sizes of dots for plotting.
 
@@ -50,6 +51,8 @@ def calculate_dot_sizes(values: pd.Series | np.ndarray,
     ----------
     values : pd.Series | np.ndarray
         A series or an array containing the values to be plotted.
+    min_value : int | float
+        The smallest value observed to correspond to the min_dot_size.
     max_value : int | float
         The biggest value observed to correspond to the max_dot_size.
     min_dot_size : int
@@ -61,16 +64,64 @@ def calculate_dot_sizes(values: pd.Series | np.ndarray,
 
     Returns
     -------
-    sizes : pd.Series | np.ndarray
+    sizes : np.ndarray
         Returns a series or an array containing the sizes for the dots depending upon the input type for values.
 
     """
     if use_log_scale:
         values = np.log1p(values)
+        min_value = np.log1p(min_value)
         max_value = np.log1p(max_value)
-    fraction_count = values / max_value
+    if min_value == max_value:
+        return np.full(len(values), min_dot_size)
+    fraction_count = (values - min_value) / (max_value - min_value)
+    if min_dot_size == max_dot_size:
+        return np.full(len(values), min_dot_size)
     sizes = fraction_count * (max_dot_size - min_dot_size) + min_dot_size
     return sizes
+
+
+@beartype
+def genes_aggregator(plot_vars: pd.DataFrame,
+                     gene_count_columns: list,
+                     gene_expression_columns: list,
+                     aggregator: str,
+                     to_aggregate: Literal["count", "expression"]) -> pd.Series:
+    """
+    Aggregate genes for the center dot.
+
+    Parameters
+    ----------
+    plot_vars : pd.DataFrame
+        A dataframe containing the gene count and gene expression columns.
+    gene_count_columns : list
+        A list of the column names for gene count.
+    gene_expression_columns : list
+        A list of the column names for gene expression.
+    aggregator : str
+        eg. "mean" , "median", "count_weighted_expression"
+    to_aggregate : Literal["count", "expression"]
+        Use "count" to aggregate gene counts and use "expression" to aggregate gene expressions.
+
+    Returns
+    -------
+    pd.Series
+        Returns a pandas series containing the the aggregate value.
+
+    """
+    if to_aggregate == "count":
+        if aggregator == "expression_weighted_count":
+            # implementing the formula mentioned for expression_weighted_count, here zip is used to create (count, expression) pair for each gene
+            return sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expression_columns)) / sum(plot_vars[expression] for expression in gene_expression_columns)
+        else:
+            # using the given gene_count_aggregator
+            return plot_vars[gene_count_columns].agg(aggregator, axis=1)
+    if to_aggregate == "expression":
+        if aggregator == "count_weighted_expression":
+            return sum(plot_vars[count] * plot_vars[expression] for count, expression in zip(gene_count_columns, gene_expression_columns)) / sum(plot_vars[count] for count in gene_count_columns)
+        else:
+            # using the given gene_expression_aggregator
+            return plot_vars[gene_expression_columns].agg(aggregator, axis=1)
 
 
 #############################################################################
@@ -88,152 +139,13 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
                                    input_layer: str | None = None,
                                    fillna: int | float = 0.0,
                                    expression_threshold: int | float = 0.0,
+                                   obs_columns: list | None = None,
+                                   obs_thresholds: list | None = None,
+                                   obs_aggregator_array: list | None = None,
                                    layer_value_aggregator: str = "mean",
                                    gene_count_aggregator: str = "median",
                                    gene_expression_aggregator: str = "median",
                                    **kwargs) -> pd.DataFrame:
-    """
-    Preprocess the annData object for the planet plot.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        The input AnnData object.
-    x_col : str
-        Name of the obs column of the AnnData to be shown on the x-axis of the plot.
-    y_col : str
-        Name of the obs column of the AnnData to be shown on the y-axis of the plot.
-    genes : list | str
-        List of genes to be to consider for plotting and aggregation.
-    gene_symbols : str | None, default None
-        Name of the var column of the AnnData object used for the gene names. If set None, the index of AnnData.var is used.
-    x_col_subset: list | None, default None
-        To plot a specific subset of the entries in x_col instead of all the entries.
-    y_col_subset: list | None, default None
-        To plot a specific subset of the entries in y_col instead of all the entries.
-    input_layer: str | None, default None
-        Layer of the AnnData object to be considered for the gene expression values.
-    fillna: int | float, default 0.0
-        Value to fill up the NaN values that are created during aggregation.
-    expression_threshold: int | float, default 0.0
-        The threshold value to calculate the threshold exceedence count. This count is then used to calculate the size of the dots.
-    layer_value_aggregator : str, default  "mean"
-        A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values in the input_layer for the corresponding gene.
-    gene_count_aggregator : str, default "median"
-        A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values for multiple genes into a single value which is used to calculate the size of the center dot.
-        Apart from the standard numpy aggregators there is 'expression_weighted_count' option to calculate a expression weighted mean of the counts.
-        eg. id c1, c2, e1 and e2 are the counts and expressions of 2 genes, then expression_weighted_count = (c1*e1+c2*e2)/(e1+e2).
-        This is used to reduce the disparity between the size and the color of the center dots.
-    gene_expression_aggregator : str, default "median"
-        A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values for multiple genes into a single value which is used to calculate the color of the center dot.
-        Apart from the standard numpy aggregators there is 'count_weighted_expression' option to calculate a count weighted mean of the expressions.
-        eg. id c1, c2, e1 and e2 are the counts and expressions of 2 genes, then count_weighted_expression = (e1*c1+e2*c2)/(c1+c2).
-        This is used to reduce the disparity between the size and the color of the center dots.
-        Note that 'count_weighted_expression' cannot be used as gene_expression_aggregator when 'expression_weighted_count' is used as gene_count_aggregator!
-    **kwargs : Any
-        Additional keyword arguments are passed to :func:`scanpy.get.obs_df`.
-
-    Returns
-    -------
-    plot_vars : pd.DataFrame
-        A dataframe containing all the parameters to be plotted.
-
-    Raises
-    ------
-    KeyError (?)
-        If the given method is not found in adata.obsm.
-    ValueError (?)
-        If the 'components' given is larger than the number of components in the embedding.
-
-    """
-    # initialize use_raw=False
-    defaultargs = {
-        "use_raw": False
-    }
-    defaultargs.update(kwargs)
-
-    if isinstance(genes, str):  # convert to array if string
-        genes = [genes]
-    # check conflicting condition
-    if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
-        raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")
-
-    # get the genex values and obs values from the adata
-    df_all = sc.get.obs_df(adata, [*genes, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
-
-    # get the count from the adata
-    df_counts = sc.get.obs_df(adata, [x_col, y_col])
-    df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
-
-    # get the count of observations exceeding threshold per gene per given clcuster
-    df_exceedance_counts = df_all.groupby([x_col, y_col]).apply(lambda x: count_greater_than_threshold(x[genes], expression_threshold)).reset_index()
-
-    # get aggregate expression values per gene per given cluster
-    df_aggregate_values = df_all.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
-
-    # merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
-    plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])
-    plot_vars = pd.merge(plot_vars, df_aggregate_values, on=[x_col, y_col])
-
-    # perform subsetting
-    if x_col_subset is not None:
-        plot_vars = plot_vars[plot_vars[x_col].isin(x_col_subset)].reset_index(drop=True)
-        plot_vars[x_col] = plot_vars[x_col].cat.remove_unused_categories()
-    if y_col_subset is not None:
-        plot_vars = plot_vars[plot_vars[y_col].isin(y_col_subset)].reset_index(drop=True)
-        plot_vars[y_col] = plot_vars[y_col].cat.remove_unused_categories()
-
-    # calculate aggregates of all the given genes for the center dot
-    cols_count = [col + '_x' for col in genes]
-    cols_expression = [col + '_y' for col in genes]
-    if gene_count_aggregator == "expression_weighted_count":
-        plot_vars['agg_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col2] for col2 in cols_expression)
-    else:
-        plot_vars['agg_count'] = plot_vars[cols_count].agg(gene_count_aggregator, axis=1)
-
-    if gene_count_aggregator == "count_weighted_expression":
-        plot_vars['agg_expression'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col1] for col1 in cols_count)
-    else:
-        plot_vars['agg_expression'] = plot_vars[cols_expression].agg(gene_expression_aggregator, axis=1)
-
-    # percentage exceedance for the center dot size, when size_value = 'percentage'
-    plot_vars['percentage_exceedance'] = plot_vars['agg_count'] * 100 / plot_vars['total_count']
-    # percentage max value for the center dot color, when color_value = 'percentage_max'
-    plot_vars['percentage_max_value'] = plot_vars['agg_expression'] * 100 / np.max(plot_vars['agg_expression'])
-    # calculate percentage exceedance and percentage max value observed for each gene
-    for gene in genes:
-        plot_vars[gene + '_percentage_exceedance'] = plot_vars[gene + '_x'] * 100 / plot_vars['total_count']
-        plot_vars[gene + '_percentage_max_value'] = plot_vars[gene + '_y'] * 100 / np.max(plot_vars[gene + '_y'])
-
-    # List of columns to exclude from conversion
-    exclude_columns = [x_col, y_col]
-    # Convert all other columns to float and fillna
-    for col in plot_vars.columns:
-        if col not in exclude_columns:
-            plot_vars[col] = pd.to_numeric(plot_vars[col], errors='coerce').astype(float)
-            plot_vars[col] = plot_vars[col].fillna(fillna)
-
-    return plot_vars
-
-
-@beartype
-def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
-                                            x_col: str,
-                                            y_col: str,
-                                            genes: list | str,
-                                            gene_symbols: str | None = None,
-                                            x_col_subset: list | None = None,
-                                            y_col_subset: list | None = None,
-                                            input_layer: str | None = None,
-                                            fillna: int | float = 0.0,
-                                            expression_threshold: int | float = 0.0,
-                                            obs_columns: list | None = None,
-                                            obs_thresholds: list | None = None,
-                                            obs_aggregator_array: list | None = None,
-                                            layer_value_aggregator: str = "mean",
-                                            gene_count_aggregator: str = "median",
-                                            gene_expression_aggregator: str = "median",
-                                            **kwargs) -> pd.DataFrame:
     """
     Preprocess data to use obs columns other than genes for the dots.
 
@@ -293,10 +205,8 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError (?)
-        If the given method is not found in adata.obsm.
-    ValueError (?)
-        If the 'components' given is larger than the number of components in the embedding.
+    ValueError
+        If the given is invalid.
 
     """
     # initialize use_raw=False
@@ -308,34 +218,48 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
     if isinstance(genes, str):  # convert to array if string
         genes = [genes]
     # check conflicting conditions
+    # expression_weighted_counts and count_weighted_expressions cannot be used simultaneously
     if gene_count_aggregator == "expression_weighted_count" and gene_expression_aggregator == "count_weighted_expression":
         raise ValueError("'gene_count_aggregator' cannot be set to 'expression_weighted_count' when 'gene_expression_aggregator' is set to 'count_weighted_expression'")
     if obs_thresholds is not None and len(obs_columns) != len(obs_thresholds):
         raise ValueError("obs_columns and obs_thresholds should have the same lengths")
 
-    total_columns = [*genes, *obs_columns]
-    if obs_thresholds is not None:
-        total_thresholds = [*([expression_threshold] * len(genes)), *obs_thresholds]
-    else:
-        total_thresholds = [*([expression_threshold] * (len(genes) + len(obs_columns)))]
+    # all_columns consists of the columns to be extracted from the adata object into the dataframe. These include the genes as well as obs columns.
+    all_columns = genes
+    # all_thresholds is an array containing the expression thresholds for the genes as well as thresholds for the individual obs columns. len(all_thresholds) == len(all_columns)
+    all_thresholds = [*([expression_threshold] * len(genes))]
+
+    if obs_columns is not None:
+        # Creating arrays of length len(genes)+len(obs_columns)
+        all_columns = [*genes, *obs_columns]
+        if obs_thresholds is not None:
+            all_thresholds = [*([expression_threshold] * len(genes)), *obs_thresholds]
+        else:
+            # If no obs_thresholds are passed, then use expression_threshold as threshold for obs_columns
+            all_thresholds = [*([expression_threshold] * (len(genes) + len(obs_columns)))]
+
     # get the genex values and obs values from the adata
-    df_all = sc.get.obs_df(adata, [*genes, *obs_columns, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
+    df_values = sc.get.obs_df(adata, [*all_columns, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
 
     # get the count from the adata
     df_counts = sc.get.obs_df(adata, [x_col, y_col])
     df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
 
     # get the count of the obs exceeding the threshold per cluster for genes as well as other obs columns
-    df_exceedance_counts = df_all.groupby([x_col, y_col]).apply(lambda x: pd.Series({total_columns[i]: count_greater_than_threshold(x[total_columns[i]], total_thresholds[i]) for i in range(len(total_columns))})).reset_index()
+    # here x is an entry in the groupby object corresponding to each (x_col, y_col) group. Now, for each x we have a dataframe containing the df_values entries corresponding to the group. Now, in this dataframe of x, for each column in the all_columns, we count the number of entries exceeding the given threshold for that column.
+    df_exceedance_counts = df_values.groupby([x_col, y_col]).apply(lambda x: pd.Series({all_columns[i]: count_greater_than_threshold(x[all_columns[i]], all_thresholds[i]) for i in range(len(all_columns))})).reset_index()
 
     # get aggregate values per cluster for genes as well as other obs columns
     if obs_aggregator_array is not None and len(obs_aggregator_array) != len(obs_columns):
         raise ValueError("obs_columns and obs_aggregator_array should have the same lengths or obs_aggregator_array should not be passed")
     elif obs_aggregator_array is None:
-        df_aggregate_values = df_all.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
+        # use the layer_value_aggregator for obs
+        df_aggregate_values = df_values.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
     else:
+        # create an aggregator array with length len(genes)+len(obs_columns)
         full_aggregator_array = [*([layer_value_aggregator] * len(genes)), *obs_aggregator_array]
-        df_aggregate_values = df_all.groupby([x_col, y_col]).agg({total_columns[i]: full_aggregator_array[i] for i in range(len(total_columns))}).reset_index()
+        # apply the individual given aggregator for each of the column in the all_columns array
+        df_aggregate_values = df_values.groupby([x_col, y_col]).agg({all_columns[i]: full_aggregator_array[i] for i in range(len(all_columns))}).reset_index()
 
     # merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
     plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])
@@ -350,24 +274,17 @@ def planet_plot_anndata_preprocess_advanced(adata: sc.AnnData,
         plot_vars[y_col] = plot_vars[y_col].cat.remove_unused_categories()
 
     # calculate aggregates of all the given genes for the center dot
-    cols_count = [col + '_x' for col in genes]
-    cols_expression = [col + '_y' for col in genes]
-    if gene_count_aggregator == "expression_weighted_count":
-        plot_vars['agg_count'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col2] for col2 in cols_expression)
-    else:
-        plot_vars['agg_count'] = plot_vars[cols_count].agg(gene_count_aggregator, axis=1)
-
-    if gene_count_aggregator == "count_weighted_expression":
-        plot_vars['agg_expression'] = sum(plot_vars[col1] * plot_vars[col2] for col1, col2 in zip(cols_count, cols_expression)) / sum(plot_vars[col1] for col1 in cols_count)
-    else:
-        plot_vars['agg_expression'] = plot_vars[cols_expression].agg(gene_expression_aggregator, axis=1)
+    gene_count_columns = [col + '_x' for col in genes]
+    gene_expression_columns = [col + '_y' for col in genes]
+    plot_vars['agg_count'] = genes_aggregator(plot_vars, gene_count_columns, gene_expression_columns, gene_count_aggregator, "count")
+    plot_vars['agg_expression'] = genes_aggregator(plot_vars, gene_count_columns, gene_expression_columns, gene_expression_aggregator, "expression")
 
     # percentage exceedance for the center dot size, when size_value = 'percentage'
     plot_vars['percentage_exceedance'] = plot_vars['agg_count'] * 100 / plot_vars['total_count']
     # percentage max value for the center dot color, when color_value = 'percentage_max'
     plot_vars['percentage_max_value'] = plot_vars['agg_expression'] * 100 / np.max(plot_vars['agg_expression'])
     # calculate percentage exceedance and percentage max value observed for each obs column and gene
-    for column in total_columns:
+    for column in all_columns:
         plot_vars[column + '_percentage_exceedance'] = plot_vars[column + '_x'] * 100 / plot_vars['total_count']
         plot_vars[column + '_percentage_max_value'] = plot_vars[column + '_y'] * 100 / np.max(plot_vars[column + '_y'])
     # List of columns to exclude from conversion
@@ -435,7 +352,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
                        orientation_labels_array: list | None = None,
-                       save: str | None = None):
+                       save: str | None = None) -> list:
     r"""
     Render the planet plot on the basis of the preprocessed data.
 
@@ -553,21 +470,339 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     save : Optional[str], default None
         Filename to save the figure.
 
+    Returns
+    -------
+    list
+        A list of axis objects.
+
     Raises
     ------
-    KeyError (?)
-        If the given method is not found in adata.obsm.
-    ValueError (?)
-        If the 'components' given is larger than the number of components in the embedding.
+    ValueError
+        If the given is invalid.
 
     Examples
     --------
     .. plot::
         :context: close-figs
 
-        plot_vars = pl.planet_plot_anndata_preprocess(adata, x_col="bulk_labels", y_col="phase", genes=["SSU72","S100B","ITGB2"])
-        pl.planet_plot_render(plot_vars, x_col="bulk_labels", y_col="phase", mode="planet")
+        import scanpy as sc
+        adata = sc.datasets.pbmc68k_reduced()
+        selected_genes = ["MNDA", "TNFRSF4", "CD8B", "HSD17B11", "GOLGA7", "LGALS3"]
+        x_col = "phase"
+        y_col = "bulk_labels"
+        expression_threshold = 0
+        color_schema = "viridis"
 
+    Dotplot like plot.
+
+    .. plot::
+        :context: close-figs
+
+        plot_vars = pl.planet_plot.planet_plot_anndata_preprocess(adata,
+                                                      x_col,
+                                                      y_col,
+                                                      genes = selected_genes,
+                                                      obs_columns=obs_cols,
+                                                      layer_value_aggregator = "mean",
+                                                      gene_count_aggregator = "median",
+                                                      gene_expression_aggregator = "median",
+                                                      )
+        pl.planet_plot.planet_plot_render(plot_vars,
+                              x_col,
+                              y_col,
+                              mode = "aggregate",
+                              size_value = "percentage",
+                              color_value = "value",
+                              use_log_scale = False,
+                              planet_columns = selected_genes,
+                              color_schema = color_schema)
+
+    Here you only see the percentage of cells expressed in the cluster.
+
+    Using "count" as size_value.
+
+    .. plot::
+        :context: close-figs
+
+        pl.planet_plot.planet_plot_render(plot_vars,
+                                x_col,
+                                y_col,
+                                mode = "aggregate",
+                                size_value = "count",
+                                color_value = "value",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema)
+
+    Here you see also the count of cells in the cluster. It can be noted that different clusters have different count.
+
+    Planet mode:
+    In order to see the individual contributions of the genes to the aggregate, we use the planet mode.
+
+    .. plot::
+        :context: close-figs
+
+        pl.planet_plot.planet_plot_render(plot_vars,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "value",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema)
+
+    The gene expressions in the last plot have become similar coloured, this is because including the individual gene expressions has greatly increased the range of gene expressions.
+    In order to be able to do a better comparative analysis across the clusters for different genes.
+    We set the color value to percentage_max, where the expression value for the dot (center or planet) is calculated as a percentage of the maximum expression of that dot across all the clusters.
+
+    .. plot::
+        :context: close-figs
+
+        # Using "percentage_max" as color_value.
+        pl.planet_plot.planet_plot_render(plot_vars,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema)
+
+    As some clusters have a relatively very small size compared to others, it is hard to get an estimate of the difference in count across different clusters.
+    We can use log scale to shift the distribution a bit to get a better view and may be able to filter out insignificant values.
+
+    .. plot::
+        :context: close-figs
+
+        # Set use_log_scale to True
+        pl.planet_plot.planet_plot_render(plot_vars,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = True,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema)
+
+    Plotting obs_columns:
+    We have many scoring metrics stored in the obs column.
+    You can pass the obs columns and get the aggregate values to plot them as planets.
+
+    .. plot::
+        :context: close-figs
+
+        plot_vars_2 = pl.planet_plot.planet_plot_anndata_preprocess(adata,
+                                                        x_col,
+                                                        y_col,
+                                                        genes = selected_genes,
+                                                        obs_columns=["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                                        layer_value_aggregator = "mean",
+                                                        gene_count_aggregator = "median",
+                                                        gene_expression_aggregator = "median",
+                                                    )
+        pl.planet_plot.planet_plot_render(plot_vars_2,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "value",
+                                use_log_scale = False,
+                                planet_columns = ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                color_schema = color_schema,
+                                planet_color_schemas=[ "coolwarm", "cividis", "gray", "twilight", "Accent"])
+
+    Ofcoarse, we do not need to use the default threshold that we use for the gene expression also for the obs columns.
+    We can pass a list of custom thresholds corresponding to each obs column.
+
+    .. plot::
+        :context: close-figs
+
+        plot_vars_3 = pl.planet_plot.planet_plot_anndata_preprocess(adata,
+                                                        x_col,
+                                                        y_col,
+                                                        genes = selected_genes,
+                                                        obs_columns=["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                                        obs_thresholds=[0, 0.1 ,0, 500, 0],
+                                                        layer_value_aggregator = "mean",
+                                                        gene_count_aggregator = "median",
+                                                        gene_expression_aggregator = "median",
+                                                    )
+        pl.planet_plot.planet_plot_render(plot_vars_3,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "value",
+                                use_log_scale = False,
+                                planet_columns =  ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                color_schema = color_schema,
+                                planet_color_schemas=[ "coolwarm", "cividis", "gray", "twilight", "Accent"])
+
+    We can also pass custom aggregators corresponding to obs columns. Upon switching to median, the range of percent_mito is reduced and as a result it is easier to filter out the good quality clusters.
+    We also modify the colorbar labels to show that now the median is displayed. There is a range of arguments customize all the labels in the plot.
+
+    .. plot::
+        :context: close-figs
+
+        # Switching percent_mito aggregator to 'median'
+        plot_vars_4 = pl.planet_plot.planet_plot_anndata_preprocess(adata,
+                                                        x_col,
+                                                        y_col,
+                                                        genes = selected_genes,
+                                                        obs_columns= ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                                        obs_aggregator_array=['median','median','median', 'median', 'median'],
+                                                        obs_thresholds=[0, 0.1 ,0, 500, 0],
+                                                        layer_value_aggregator = "mean",
+                                                        gene_count_aggregator = "median",
+                                                        gene_expression_aggregator = "median",
+                                                    )
+        pl.planet_plot.planet_plot_render(plot_vars_4,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "value",
+                                use_log_scale = False,
+                                planet_columns = ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                color_schema = color_schema,
+                                planet_color_schemas=["coolwarm", "cividis", "gray", "twilight", "Accent"],
+                                colorbar_label_array = ["n_genes (median)" , "percent_mito (median)", "n_counts (median)", "S_score (median)", "G2M_score (median)"]
+                                )
+
+    Column subsetting:
+    Since we may not be interested in all the clusters present in the plot, we use y_col_subset, to only a subset for our plotting.
+
+    .. plot::
+        :context: close-figs
+
+        plot_vars_5 = pl.planet_plot.planet_plot_anndata_preprocess(adata,
+                                                        x_col,
+                                                        y_col,
+                                                        y_col_subset=["CD14+ Monocyte", "CD8+ Cytotoxic T", "CD8+/CD45RA+ Naive Cytotoxic"],
+                                                        genes = selected_genes,
+                                                        obs_columns= ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                                        obs_aggregator_array=['median','median','median', 'median', 'median'],
+                                                        obs_thresholds=[0, 0.1 ,0, 500, 0],
+                                                        layer_value_aggregator = "mean",
+                                                        gene_count_aggregator = "median",
+                                                        gene_expression_aggregator = "median")
+        pl.planet_plot.planet_plot_render(plot_vars_5,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "value",
+                                use_log_scale = False,
+                                planet_columns = ["n_genes", "percent_mito", "n_counts", "S_score", "G2M_score"],
+                                color_schema = color_schema,
+                                planet_color_schemas=["coolwarm", "cividis", "gray", "twilight", "Accent"],
+                                colorbar_label_array = ["n_genes (median)" , "percent_mito (median)", "n_counts (median)", "S_score (median)", "G2M_score (median)"]
+                                )
+
+    We can use the same df for gene expression plot.
+
+    .. plot::
+        :context: close-figs
+
+        pl.planet_plot.planet_plot_render(plot_vars_5,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema)
+
+    Figure size adjustment:
+    Ther two parameters FIG_SIZE_SCALER and PLANET_DIST_SCALER can be tuned to adjust the figure size and planet distance in order to achieve a perfect looking plot.
+
+    Saving space, reducing plot size, FIG_SIZE_SCALER=1.5 from 2 (default).
+
+    .. plot::
+        :context: close-figs
+
+        pl.planet_plot.planet_plot_render(plot_vars_5,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema,
+                                FIG_SIZE_SCALER=1.6)
+
+    Planets messed up, not problem! adjust the PLANET_DIST_SCALER.
+
+    .. plot::
+        :context: close-figs
+
+        pl.planet_plot.planet_plot_render(plot_vars_5,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema,
+                                FIG_SIZE_SCALER=1.6,
+                                PLANET_DIST_SCALER=1.9)
+
+    Legend Adjustment:
+    There is a great range of parameters to tune size and alignment of the legends individually.
+
+    .. plot::
+        :context: close-figs
+
+        # Adjust legend sizes
+        pl.planet_plot.planet_plot_render(plot_vars_5,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema,
+                                FIG_SIZE_SCALER=1.6,
+                                PLANET_DIST_SCALER=1.9,
+                                LEGEND_COLOR_WIDTH=1.5,
+                                LEGEND_DOT_WIDTH=1.5,
+                                LEGEND_DOT_HEIGHT=1.5,
+                                LEGEND_PLANET_WIDTH=1.5,
+                                LEGEND_PLANET_HEIGHT=1.5
+                                )
+
+    .. plot::
+        :context: close-figs
+
+        # Make it even more compact, adjust legend alignments!
+        pl.planet_plot.planet_plot_render(plot_vars_5,
+                                x_col,
+                                y_col,
+                                mode = "planet",
+                                size_value = "count",
+                                color_value = "percentage_max",
+                                use_log_scale = False,
+                                planet_columns = selected_genes,
+                                color_schema = color_schema,
+                                FIG_SIZE_SCALER=1.6,
+                                PLANET_DIST_SCALER=1.9,
+                                LEGEND_COLOR_WIDTH=1.5,
+                                LEGEND_DOT_WIDTH=1.5,
+                                LEGEND_DOT_HEIGHT=1.5,
+                                LEGEND_PLANET_WIDTH=1.5,
+                                LEGEND_PLANET_HEIGHT=1.5,
+                                LEGEND_COLOR_X_ALIGNMENT=-2.5,
+                                LEGEND_COLOR_Y_ALIGNMENT=3,
+                                LEGEND_DOT_Y_ALIGNMENT=-1.5,
+                                LEGEND_PLANET_Y_ALIGNMENT=-1.5
+                                )
     """
 
     # ---- Initialization parameters ---- #
@@ -601,8 +836,8 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     vmin = np.min(plot_vars[DOT_COLOR_VALUE_COLUMN])
     vmax = np.max(plot_vars[DOT_COLOR_VALUE_COLUMN])
     if mode == "planet" and planet_color_schemas is None:
-        vmin = np.min(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]])
-        vmax = np.max(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]])
+        vmin = np.min(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]].values)
+        vmax = np.max(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]].values)
     if planet_color_schemas is not None:
         vmin_array = np.min(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]], axis=0)
         vmax_array = np.max(plot_vars[[planet_column + PLANET_COLOR_VALUE_SUFFIX for planet_column in planet_columns]], axis=0)
@@ -620,20 +855,20 @@ def planet_plot_render(plot_vars: pd.DataFrame,
 
     # ---- Dot size calculation ---- #
     if size_value == 'count':
-        plot_vars['outer_area'] = calculate_dot_sizes(plot_vars[OUTER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['outer_area'] = calculate_dot_sizes(plot_vars[OUTER_SIZE_COUNT_COLUMN].values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
         plot_vars['outer_radius'] = np.sqrt(plot_vars['outer_area'] / np.pi)
-        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_COUNT_COLUMN], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_COUNT_COLUMN].values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
         plot_vars['inner_radius'] = np.sqrt(plot_vars['inner_area'] / np.pi)
         if mode == 'planet':
             for planet_column in planet_columns:
-                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_COUNT_SUFFIX], max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_COUNT_SUFFIX].values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
                 plot_vars[planet_column + '_dot_radius'] = np.sqrt(plot_vars[planet_column + '_dot_area'] / np.pi)
     if size_value == 'percentage':
-        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_PERCENTAGE_COLUMN], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+        plot_vars['inner_area'] = calculate_dot_sizes(plot_vars[INNER_SIZE_PERCENTAGE_COLUMN].values, 0, 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
         plot_vars['inner_radius'] = np.sqrt(plot_vars['inner_area'] / np.pi)
         if mode == 'planet':
             for planet_column in planet_columns:
-                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_PERCENTAGE_SUFFIX], 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
+                plot_vars[planet_column + '_dot_area'] = calculate_dot_sizes(plot_vars[planet_column + PLANET_SIZE_PERCENTAGE_SUFFIX].values, 0, 100, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)
                 plot_vars[planet_column + '_dot_radius'] = np.sqrt(plot_vars[planet_column + '_dot_area'] / np.pi)
 
     # figure size calculation
@@ -652,6 +887,8 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     fig, ax = plt.subplots(figsize=(w, h))
     plt.xticks(ticks=range(len(x_categories)), labels=x_categories, rotation='vertical')
     plt.yticks(ticks=range(len(y_categories)), labels=y_categories)
+    # Create and array of axises to return.
+    axarr = []
 
     # ---- Center dot and circle scatter ---- #
     if size_value == 'count':   # draw circle
@@ -698,6 +935,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     if y_label is None:
         y_label = y_col
     ax.set_ylabel(y_label)
+    axarr.append(ax)
 
     # ---- Dot colour legend (primary) ---- #
     # create new axis for color bar
@@ -712,12 +950,13 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     legend_color_value = 0.7    # use 70% value for the dot size and planet legend
     legend_color = cmap(legend_color_value)
     legend_hex_color = rgb2hex(legend_color)    # get the hex value
+    axarr.append(cbar_ax)
 
     # ---- Planet colour legends for multiple color schemas ---- #
     cbar_count = 1    # initialize color bar count
     planet_cbar_ax = {}     # array for the axises of the planet specific colorbars
     planet_legend_hex_color = {}    # array to store the 70% hex value for the planet legend.
-    if planet_color_schemas is not None:
+    if (mode == 'planet') and planet_color_schemas is not None:
         for i in range(len(sc_array)):
             planet_cbar_ax[i] = fig.add_axes([1 + LEGEND_COLOR_X_ALIGNMENT * width_per_unit + 0.25 * LEGEND_COLOR_WIDTH * width_per_unit, 0.1 + LEGEND_COLOR_Y_ALIGNMENT * height_per_unit + cbar_count * 5 * LEGEND_COLOR_HEIGHT * height_per_unit, LEGEND_COLOR_WIDTH * width_per_unit, LEGEND_COLOR_HEIGHT * height_per_unit])
             cbar = plt.colorbar(sc_array[i], cax=planet_cbar_ax[i], orientation='horizontal', fraction=0.046, pad=0.04)
@@ -731,6 +970,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
             legend_color = cmap(legend_color_value)
             planet_legend_hex_color[i] = rgb2hex(legend_color)
             cbar_count += 1
+            axarr.append(planet_cbar_ax[i])
 
     # ---- Dot size legend ---- #
     # create new axis for dot size legend.
@@ -752,7 +992,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
         if size_value == 'count':
             labels = np.linspace(min_count, max_count, num=5).astype(int)
 
-    sizes = calculate_dot_sizes(values, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)   # dot sizes for the legend
+    sizes = calculate_dot_sizes(values, min_count, max_count, MIN_DOT_SIZE, MAX_DOT_SIZE, use_log_scale)   # dot sizes for the legend
     for i in range(len(sizes)):
         if size_value == 'percentage':
             dot_size_ax.scatter(0, i, s=sizes[i], c=legend_hex_color, alpha=1)
@@ -789,6 +1029,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     if size_value == 'percentage':
         dot_size_ax.tick_params(axis='y', which='major', pad=-55, length=0)
         dot_size_ax.set_title(SIZE_LEGEND_TITLE_PERCENTAGE, fontsize=10)
+    axarr.append(dot_size_ax)
 
     # ---- Planet orientation legend ---- #
     # create new axis for planet orientation legend.
@@ -852,6 +1093,9 @@ def planet_plot_render(plot_vars: pd.DataFrame,
         dot_orientation_ax.margins(x=0.9, y=0.9)
         dot_orientation_ax.set_aspect('equal')
         dot_orientation_ax.set_title(ORIENTATION_LEGEND_TITLE, fontsize=10, y=0.9)
+        axarr.append(dot_orientation_ax)
 
     # Save figure
     _save_figure(save)
+
+    return axarr

@@ -11,9 +11,10 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks', 'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph'],  # bbknn requires sk-learn <= 1.2
+                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize', 'liana'],  # bbknn requires sk-learn <= 1.2
                   "velocity": ['scvelo'],
                   "pseudotime": ["scFates"],
+                  "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
                   "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
                   }
@@ -23,7 +24,7 @@ extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.v
 
 def find_version(f: str) -> str:
     """
-    Get package version from file.
+    Get package version from version file.
 
     Parameters
     ----------
@@ -63,10 +64,10 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3.9,<3.11',  # dict type hints as we use it require python 3.9; pybedtools is not compatible with python 3.11
+    python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
         'pysam',
-        'matplotlib',
+        'matplotlib<3.9.0',
         'matplotlib_venn',
         'scanpy>=1.9',  # 'colorbar_loc' not available before 1.9
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
@@ -95,7 +96,7 @@ setup(
         'pyyaml',
         'deprecation',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
-        'pybedtools',
+        'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
         'packaging'
     ],
     include_package_data=True,
