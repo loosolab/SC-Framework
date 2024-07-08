@@ -86,20 +86,19 @@ def test_calculate_dot_sizes(values, min_value, max_value, min_dot_size, max_dot
                           ("count_weighted_expression", "expression", 0.233)])
 def test_genes_aggregator(aggregator, to_aggregate, expected_output):
     """Test genes aggregator for different cases."""
-    mock_data = {
-        'count1': [1],
-        'count2': [2],
-        'count3': [3],
-        'exp1': [0.1],
-        'exp2': [0.2],
-        'exp3': [0.3]
-    }
+    mock_data = {'count1': [1],
+                 'count2': [2],
+                 'count3': [3],
+                 'exp1': [0.1],
+                 'exp2': [0.2],
+                 'exp3': [0.3]}
+
     df = pd.DataFrame(mock_data)
     agg_val = pp._genes_aggregator(df,
-                                  ["count1", "count2", "count3"],
-                                  ["exp1", "exp2", "exp3"],
-                                  aggregator,
-                                  to_aggregate)
+                                   ["count1", "count2", "count3"],
+                                   ["exp1", "exp2", "exp3"],
+                                   aggregator,
+                                   to_aggregate)
     # since we know it returns a single aggregate value
     agg_val = agg_val.values[0]
     assert np.isclose(agg_val, expected_output, rtol=0.01)
