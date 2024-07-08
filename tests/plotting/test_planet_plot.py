@@ -106,7 +106,7 @@ def test_genes_aggregator(aggregator, to_aggregate, expected_output):
 
 
 def test_planet_plot_anndata_preprocess(adata):
-    """ Test planet plot preprocess for the given adata."""
+    """Test planet plot preprocess for the given adata."""
     x_col = "category1"
     y_col = "category2"
     input_layer = "test_layer"
@@ -157,7 +157,7 @@ def test_planet_plot_render(adata,
                             output_size_value,
                             output_color_value,
                             output_schemas):
-    """ Test planet plot render for the given adata."""
+    """Test planet plot render for the given adata."""
     x_col = "category1"
     y_col = "category2"
     input_layer = "test_layer"
