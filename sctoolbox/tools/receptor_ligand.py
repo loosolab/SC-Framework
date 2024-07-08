@@ -984,7 +984,7 @@ def connectionPlot(adata: sc.AnnData,
                    wspace: float = 0.4,
                    line_colors: Optional[str] = "rainbow",
                    dot_colors: str = "flare",
-                   col_order: Optional[list[str]] = None,
+                   xlabel_order: Optional[list[str]] = None,
                    alpha_range: Optional[Tuple[int | float, int | float]] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
@@ -1037,7 +1037,7 @@ def connectionPlot(adata: sc.AnnData,
         Name of the colormap used to color lines. All lines are black if None.
     dot_colors : str, default 'flare'
         Name of the colormap used to color the dots.
-    col_order : Optional[list[str]], default None
+    xlabel_order : Optional[list[str]], default None
         Defines the order of data displayed on the x-axis in both plots. Leave None to order alphabetically.
     alpha_range : Optional[Tuple[int | float, int | float]], default None
         Sets the minimum and maximum value for the `connection_alpha` legend. Values outside this range will be set to the min or max value.
@@ -1072,9 +1072,9 @@ def connectionPlot(adata: sc.AnnData,
         data.query(filter, inplace=True)
 
     # add x-axis ticks (column) by adding dummy data
-    if col_order:
+    if xlabel_order:
         # create a custom sort function
-        sorting_dict = {c: i for i, c in enumerate(col_order)}
+        sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
         def sort_fun(x):
             return x.map(sorting_dict)
     else:
