@@ -3,6 +3,7 @@
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
+- solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
