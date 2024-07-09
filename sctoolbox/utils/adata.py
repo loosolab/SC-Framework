@@ -444,15 +444,16 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
 
     # manually combine var table, then add it to the adata
     var = pd.concat(
-        [a.var for a in adatas],
+        [a.var for a in (adatas.values() if isinstance(adatas, Mapping) else adatas)],
         join="outer"
     )
 
     # remove duplicates
     # temporarily set index as column to use this as column for duplicate removal
-    # TODO will raise an error if there happens to be a column with the same name as the index
     ind_name = var.index.name
-    var = var.reset_index().drop_duplicates(subset=ind_name).set_index(ind_name)
+    tmp_name = "_".join(var.columns) + "_" if len(var.columns) else "index"  # create a name that is not present in the var columns
+    var = var.reset_index(names=tmp_name).drop_duplicates(subset=ind_name).set_index(tmp_name)
+    var.index.name = ind_name  # revert to the original index name
 
     # add the var table to the adata while ensuring the correct order
     adata.var = var.loc[adata.var_names]
