@@ -7,7 +7,6 @@ import re
 import scanpy as sc
 import numpy as np
 import sctoolbox.utils.checker as ch
-import sctoolbox.utilities as utils
 
 
 @pytest.fixture
@@ -71,7 +70,7 @@ def test_check_module():
     """Test if check_moduel raises an error for a non-existing module."""
 
     with pytest.raises(Exception):
-        utils.check_module("nonexisting_module")
+        ch.check_module("nonexisting_module")
 
 
 def test_add_path():
@@ -92,7 +91,7 @@ def test_add_path():
 def test_is_str_numeric(string, expected):
     """Test if a string can be converted to numeric."""
 
-    result = utils.is_str_numeric(string)
+    result = ch.is_str_numeric(string)
 
     assert result == expected
 
@@ -135,10 +134,10 @@ def test_format_adata_var(fixture, expected, request):
     adata_cp = adata_orig.copy()  # make a copy to avoid changing the fixture
     if isinstance(expected, type):
         with pytest.raises(expected):
-            utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+            ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
 
     else:
-        utils.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
+        ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"], columns_added=["chr", "start", "end"])
 
         assert np.array_equal(adata_orig.var.values, adata_cp.var.values) == expected  # check if the original adata was changed or not
 
@@ -157,14 +156,14 @@ arr_floats = np.random.rand(10, 10)
 def test_is_integer_array(arr, boolean):
     """Get boolean of whether an array is an integer array."""
 
-    result = utils.is_integer_array(arr)
+    result = ch.is_integer_array(arr)
     assert result == boolean
 
 
 def test_check_marker_lists(adata2, marker_dict):
     """Test that check_marker_lists intersects lists correctly."""
 
-    filtered_marker = utils.check_marker_lists(adata2, marker_dict)
+    filtered_marker = ch.check_marker_lists(adata2, marker_dict)
 
     assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
                                "Celltype B": ['ENSMUSG00000102272']}

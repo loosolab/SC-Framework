@@ -2,7 +2,7 @@
 
 import pytest
 import sctoolbox.plotting as pl
-import sctoolbox.atac
+import sctoolbox.tools.insertsize as insertsize
 import os
 import scanpy as sc
 import shutil
@@ -167,7 +167,7 @@ def test_insertsize_plotting(atac_adata):
 
     adata = atac_adata.copy()
     fragments = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac_fragments.bed')
-    sctoolbox.atac.add_insertsize(adata, fragments=fragments)
+    insertsize.add_insertsize(adata, fragments=fragments)
 
     ax = pl.plot_insertsize(adata)
 
