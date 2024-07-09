@@ -547,7 +547,9 @@ def run_deseq2(adata: sc.AnnData,
                condition_col: str,
                confounders: Optional[list[str]] = None,
                layer: Optional[str] = None,
-               percentile_range: Tuple[int, int] = (0, 100)) -> pd.DataFrame:
+               percentile_range: Tuple[int, int] = (0, 100),
+               min_count: int = 0,
+               threads: Optional[int] = None) -> pd.DataFrame:
     """
     Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
@@ -566,6 +568,10 @@ def run_deseq2(adata: sc.AnnData,
     percentile_range : Tuple[int, int], default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
+    min_count : int
+        The minimum count of peaks a feature should have to be used. Default is 0, which means all features are used.
+    threads : Optional[int]
+        The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
 
     Returns
     -------
@@ -575,7 +581,7 @@ def run_deseq2(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    KeyError:
         1. If any given column name is not found in adata.obs.
 
     Notes
@@ -590,6 +596,10 @@ def run_deseq2(adata: sc.AnnData,
     utils.check_module("pydeseq2")
     from pydeseq2.dds import DeseqDataSet
     from pydeseq2.ds import DeseqStats
+    from pydeseq2.default_inference import DefaultInference
+
+    if threads is None:
+        threads = settings.threads
 
     # Setup the design factors
     if confounders is None:
@@ -601,9 +611,11 @@ def run_deseq2(adata: sc.AnnData,
 
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
-    for col in cols:
-        if col not in adata.obs.columns:
-            raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
+    utils.checker.check_columns(adata.obs, cols, error=True)
+
+    # filter features
+    layer_data = adata.layers[layer] if layer is not None else adata.X
+    adata = adata[:, layer_data.sum(axis=0) >= min_count]
 
     # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
@@ -617,12 +629,19 @@ def run_deseq2(adata: sc.AnnData,
     count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
                                                   percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
-    count_table.index.name = "gene"
+    print(count_table)
+
+    # running sanity checks
+    for col in sample_df.index:
+        # no negative values
+        if np.any(count_table[col] < 0):
+            print(f"Warning: negative value in count_table for column '{col}'")
+
     count_table = count_table.transpose()
 
     # Run DEseq2
     print("Running DESeq2")
-    dds = DeseqDataSet(counts=count_table, metadata=sample_df, design_factors=design_factors)
+    dds = DeseqDataSet(counts=count_table, metadata=sample_df, design_factors=design_factors, n_cpus=threads)
     dds.deseq2()
 
     # Create result table with mean values per condition
@@ -636,7 +655,7 @@ def run_deseq2(adata: sc.AnnData,
     contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
         logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
-        ds = DeseqStats(dds, contrast=[condition_col, C2, C1])
+        ds = DeseqStats(dds, contrast=[condition_col, C2, C1], inference = DefaultInference(n_cpus=threads))
         ds.summary()
 
         # Rename and add to deseq_table
