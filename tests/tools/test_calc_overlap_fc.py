@@ -72,7 +72,7 @@ def test_convert_gtf_to_bed(tmpdir, gtf, out):
     if out:
         out = str(tmpdir)
 
-    sorted_bed, temp = tools.calc_overlap_fc._convert_gtf_to_bed(gtf, out=out)
+    sorted_bed, temp = tl.calc_overlap_fc._convert_gtf_to_bed(gtf, out=out)
     name = gtf + "_sorted.bed"
 
     if out:
@@ -100,10 +100,10 @@ def testfc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, regions
         fragments_file = fragments
 
     tl.calc_overlap_fc.fc_fragments_in_regions(adata,
-                                                  regions_file=regions_file,
-                                                  bam_file=bam_file,
-                                                  fragments_file=fragments_file,
-                                                  regions_name='promoters',
-                                                  temp_dir=str(tmpdir))
+                                               regions_file=regions_file,
+                                               bam_file=bam_file,
+                                               fragments_file=fragments_file,
+                                               regions_name='promoters',
+                                               temp_dir=str(tmpdir))
 
     assert 'fold_change_promoters_fragments' in adata.obs.columns

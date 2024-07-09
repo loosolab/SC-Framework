@@ -3,10 +3,7 @@
 import pytest
 import os
 import numpy as np
-import shutil
-import pandas as pd
 import sctoolbox.utils as utils
-import subprocess
 import scanpy as sc
 
 

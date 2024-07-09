@@ -3,14 +3,12 @@
 import pytest
 import os
 import shutil
-import sctoolbox.tools.bam as stb
 import glob
 import logging
 import scanpy as sc
 import random
 import re
 
-import sctoolbox.bam
 import sctoolbox.tools as tools
 import sctoolbox.tools.bam as stb
 
@@ -123,20 +121,6 @@ def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
     assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
 
 
-def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.tools.bam.open_bam
-    """Test open_bam success."""
-
-    assert type(bam_handle).__name__ == "AlignmentFile"
-
-
-def test_get_bam_reads(bam_handle):
-    """Test get_bam_reads success."""
-
-    total = stb.get_bam_reads(bam_handle)
-
-    assert total == 10000
-
-
 @pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
 def test_split_bam_clusters(bam_handle, bam_file, adata, parallel, sort_bams, index_bams):
     """Test split_bam_clusters success."""
@@ -182,7 +166,7 @@ def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.ope
 def test_get_bam_reads(bam_handle):
     """Test get_bam_reads success."""
 
-    total = sctoolbox.bam.get_bam_reads(bam_handle)
+    total = stb.get_bam_reads(bam_handle)
 
     assert total == 10000
 
@@ -193,7 +177,7 @@ def test_bam_to_bigwig():
     bigwig_out = "mm10_atac.bw"
 
     bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
-    bigwig_f = sctoolbox.bam.bam_to_bigwig(bam_f, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
+    bigwig_f = stb.bam_to_bigwig(bam_f, output=bigwig_out, bgtobw_path="scripts/bedGraphToBigWig")  # tests are run from root
 
     assert os.path.exists(bigwig_f)
 
@@ -212,7 +196,7 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
         barcode_tag = None
 
     bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
-    fragments_f = sctoolbox.bam.create_fragment_file(bam=bam_f, nproc=1, outdir=outdir,
+    fragments_f = stb.create_fragment_file(bam=bam_f, nproc=1, outdir=outdir,
                                                      barcode_tag=barcode_tag, barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
                                                      index=True)  # requires bgzip and tabix
 
