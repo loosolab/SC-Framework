@@ -7,8 +7,9 @@ from collections import OrderedDict
 import scipy
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
+import pandas as pd
 
-from beartype.typing import Optional, Any
+from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
@@ -418,3 +419,42 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
     if not inplace:
         return out
+
+
+@beartype
+def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], label: Optional[str]="batch") -> sc.AnnData:
+    """
+    Concatenate several anndata objects by appending cells.
+    Essentially `sc.concat(adatas, join="outer", axis=0)` but retains adata.var information.
+
+    Parameters
+    ----------
+    adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+        A combination of AnnData objects to concatenate. Forwarded to the `adatas` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat).
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+
+    Return
+    ------
+    sc.AnnData:
+        Returns the combined AnnData object.
+    """
+    # create adata
+    adata = sc.concat(adatas, join="outer", axis=0, label=label)
+
+    # manually combine var table, then add it to the adata
+    var = pd.concat(
+        [a.var for a in adatas],
+        join="outer"
+    )
+
+    # remove duplicates
+    # temporarily set index as column to use this as column for duplicate removal
+    # TODO will raise an error if there happens to be a column with the same name as the index
+    ind_name = var.index.name
+    var = var.reset_index().drop_duplicates(subset=ind_name).set_index(ind_name)
+
+    # add the var table to the adata while ensuring the correct order
+    adata.var = var.loc[adata.var_names]
+
+    return adata
