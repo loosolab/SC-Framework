@@ -194,7 +194,7 @@ def test_deseq(adata, condition_col, error):
 
     # test if error is raised
     if isinstance(error, str):
-        with pytest.raises(ValueError, match=error):
+        with pytest.raises(KeyError, match=error):
             mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
 
     else:  # should run without exceptions
