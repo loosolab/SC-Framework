@@ -21,6 +21,7 @@
     - utils/general
     - utils/checker
     - tools/highly_variable
+    - tools/multiomics
     - tools/insertsize
     - utils/creators
 

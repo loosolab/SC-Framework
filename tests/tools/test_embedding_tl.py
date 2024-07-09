@@ -4,7 +4,6 @@ import pytest
 import scanpy as sc
 
 import sctoolbox.tools.embedding as ste
-import sctoolbox.analyser as an
 
 # -----------------------------------------------------------------------------
 # ---------------------------------- Fixtures ---------------------------------
@@ -71,7 +70,7 @@ def test_wrap_umap(adata):
         if "X_umap" in adata.obsm:
             del adata.obsm["X_umap"]
 
-    an.wrap_umap(adata_dict.values())
+    ste.wrap_umap(adata_dict.values())
 
     for adata in adata_dict.values():
         assert "X_umap" in adata.obsm

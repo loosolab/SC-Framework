@@ -6,7 +6,7 @@ import scipy
 import os
 import numpy as np
 
-import sctoolbox.utilities as utils
+import sctoolbox.utils.adata as utils
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests

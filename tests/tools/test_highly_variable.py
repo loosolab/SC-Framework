@@ -3,7 +3,7 @@
 import pytest
 import os
 import scanpy as sc
-import sctoolbox.tools as anno
+import sctoolbox.tools.highly_variable as hv
 
 
 # ------------------------- Fixtures -------------------------#
@@ -42,7 +42,7 @@ def test_annot_HVG(adata_rna, inplace):
     """Test if 'highly_variable' column is added to adata.var."""
 
     sc.pp.log1p(adata_rna)
-    out = anno.annot_HVG(adata_rna, inplace=inplace)
+    out = hv.annot_HVG(adata_rna, inplace=inplace)
 
     if inplace:
         assert out is None
@@ -58,11 +58,11 @@ def test_get_variable_features(adata_atac_qc, inplace):
 
     assert "highly_variable" not in adata.var.columns
 
-    output = anno.get_variable_features(adata=adata,
-                                        max_cells=None,
-                                        min_cells=0,
-                                        show=True,
-                                        inplace=inplace)
+    output = hv.get_variable_features(adata=adata,
+                                      max_cells=None,
+                                      min_cells=0,
+                                      show=True,
+                                      inplace=inplace)
 
     if inplace:
         assert output is None
@@ -75,4 +75,4 @@ def test_get_variable_features(adata_atac_qc, inplace):
 def test_get_variable_features_fail(adata_atac):
     """Test get_variable_features failure."""
     with pytest.raises(KeyError):
-        anno.get_variable_features(adata=adata_atac)
+        hv.get_variable_features(adata=adata_atac)

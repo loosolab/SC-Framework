@@ -1,7 +1,7 @@
 """Test plotting functions."""
 
 import pytest
-import sctoolbox.plotting as pl
+import sctoolbox.plotting.marker_genes as pl
 import scanpy as sc
 import os
 import pandas as pd

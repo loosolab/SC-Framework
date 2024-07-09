@@ -2,7 +2,7 @@
 
 import argparse
 import pytest
-import sctoolbox.tools as anno
+import sctoolbox.tools.peak_annotation as anno
 import scanpy as sc
 import os
 
