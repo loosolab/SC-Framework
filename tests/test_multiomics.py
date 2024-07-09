@@ -6,7 +6,7 @@ import anndata
 import scanpy as sc
 import numpy as np
 
-import sctoolbox.multiomics as multi
+import sctoolbox.tools.multiomics as multi
 
 
 @pytest.fixture

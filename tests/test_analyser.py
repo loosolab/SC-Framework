@@ -3,8 +3,11 @@
 import pytest
 import scanpy as sc
 import os
-import sctoolbox.analyser as an
-import sctoolbox.utilities as utils
+import numpy as np
+import pandas as pd
+
+import sctoolbox.tools as tools
+import sctoolbox.utils as utils
 
 
 @pytest.fixture(scope="session")
@@ -45,16 +48,16 @@ def adata_batch_dict(adata):
 @pytest.mark.parametrize("method", ["total", "tfidf"])
 def test_normalize_adata(adata, method):
     """Test that data was normalized."""
-    result_dict = an.normalize_adata(adata, method=method)
+    result_dict = tools.norm_correct.normalize_adata(adata, method=method)
     adata = result_dict[method]
     mat = adata.X.todense()
 
-    assert not utils.is_integer_array(mat)
+    assert not utils.checker.is_integer_array(mat)
 
 
 def test_evaluate_batch_effect(adata):
     """Test if AnnData containing LISI column in .obs is returned."""
-    ad = an.evaluate_batch_effect(adata, 'batch')
+    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
 
     ad_type = type(ad).__name__
     assert ad_type == "AnnData"
@@ -65,7 +68,7 @@ def test_evaluate_batch_effect(adata):
 def test_batch_correction(adata, method):
     """Test if batch correction returns an anndata."""
 
-    adata_corrected = an.batch_correction(adata, batch_key="batch", method=method)
+    adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
     adata_type = type(adata_corrected).__name__
     assert adata_type == "AnnData"
 
@@ -74,7 +77,7 @@ def test_wrap_corrections(adata):
     """Test if wrapper returns a dict, and that the keys contains the given methods."""
 
     methods = ["mnn", "scanorama"]  # two fastest methods
-    adata_dict = an.wrap_corrections(adata, batch_key="batch", methods=methods)
+    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods)
 
     assert isinstance(adata_dict, dict)
 
@@ -86,15 +89,15 @@ def test_wrap_corrections(adata):
 def test_evaluate_batch_effect_keyerror(adata, key):
     """Test evaluate_batch_effect failure."""
     with pytest.raises(KeyError, match="adata.obsm .*"):
-        an.evaluate_batch_effect(adata, batch_key='batch', obsm_key=key)
+        tools.norm_correct.evaluate_batch_effect(adata, batch_key='batch', obsm_key=key)
 
     with pytest.raises(KeyError, match="adata.obs .*"):
-        an.evaluate_batch_effect(adata, batch_key=key)
+        tools.norm_correct.evaluate_batch_effect(adata, batch_key=key)
 
 
 def test_wrap_batch_evaluation(adata_batch_dict):
     """Test if DataFrame containing LISI column in .obs is returned."""
-    adata_dict = an.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
+    adata_dict = tools.norm_correct.wrap_batch_evaluation(adata_batch_dict, 'batch', inplace=False)
     adata_dict_type = type(adata_dict).__name__
     adata_type = type(adata_dict['adata']).__name__
 

@@ -22,7 +22,7 @@ def violin_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
     **kwargs : Any
         Keyword arguments to be passed to matplotlib.pyplot.violinplot.
     """
-    utils.check_columns(adata.var, ['highly_variable', 'n_cells_by_counts'])
+    utils.checker.check_columns(adata.var, ['highly_variable', 'n_cells_by_counts'])
     # get the number of cells per highly variable feature
     hvf_var = adata.var[adata.var['highly_variable']]  # 'highly_variable' is a boolean column
     n_cells = hvf_var['n_cells_by_counts']
@@ -49,7 +49,7 @@ def scatter_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
     **kwargs : Any
         Keyword arguments to be passed to matplotlib.pyplot.scatter.
     """
-    utils.check_columns(adata.var, ['variability_score', 'n_cells'])
+    utils.checker.check_columns(adata.var, ['variability_score', 'n_cells'])
     variabilities = adata.var[['variability_score', 'n_cells']]
     fig, ax = plt.subplots()
     ax.scatter(variabilities['n_cells'], variabilities['variability_score'], **kwargs)

@@ -34,12 +34,12 @@ def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> 
 
     jobs = []
     for i, adata in enumerate(adatas):
-        adata_minimal = utils.get_minimal_adata(adata)
+        adata_minimal = utils.adata.get_minimal_adata(adata)
         job = pool.apply_async(sc.tl.umap, args=(adata_minimal, ), kwds=kwargs)
         jobs.append(job)
     pool.close()
 
-    utils.monitor_jobs(jobs, "Computing UMAPs ")
+    utils.multiprocessing.monitor_jobs(jobs, "Computing UMAPs ")
     pool.join()
 
     # Get results and add to adatas
@@ -114,7 +114,7 @@ def correlation_matrix(adata: sc.AnnData,
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
         numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
     else:
-        utils.check_columns(table, columns)
+        utils.checker.check_columns(table, columns)
         numeric_columns = columns
 
     # Get table of pcs and columns
