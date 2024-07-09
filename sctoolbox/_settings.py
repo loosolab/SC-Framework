@@ -16,6 +16,35 @@ class SctoolboxConfig(object):
     ----------
     __frozen : bool
         If True, disallows new attributes to be added.
+
+    Parameters
+    ----------
+    figure_dir : str, default ""
+        Directory to write figures to.
+    figure_prefix : str, default ""
+        Prefix for all figures to write (within figure_dir).
+    table_dir : str, default ""
+        Directory to write tables to.
+    table_prefix : str, default ""
+        Prefix for all tables to write (within table_dir).
+    adata_input_dir : str, default ""
+        Directory to read adata objects from.
+    adata_input_prefix : str, default ""
+        Prefix for all adata objects to read (within adata_input_dir).
+    adata_output_dir : str, default ""
+        Directory to write adata objects to.
+    adata_output_prefix : str, default ""
+        Prefix for all adata objects to write (within adata_output_dir).
+    threads : int, default 4
+        Default number of threads to use when multiprocessing is available.
+    create_dirs : bool, default True
+        Create output directories if they do not exist.
+    verbosity : int, default 1
+        Logging verbosity: 0 = error, 1 = info, 2 = debug.
+    log_file : str, default None
+        Path to log file.
+    overwrite_log : bool, default False
+        Overwrite log file if it already exists; default is to append.
     """
 
     __frozen: bool = False
