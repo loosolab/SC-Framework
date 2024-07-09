@@ -1,7 +1,7 @@
 """Tests for clustering plotting functions."""
 
 import pytest
-import sctoolbox.plotting as pl
+import sctoolbox.plotting.clustering as pl
 import scanpy as sc
 import os
 import numpy as np

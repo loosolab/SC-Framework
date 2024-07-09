@@ -9,7 +9,6 @@ import scanpy as sc
 import random
 import re
 
-import sctoolbox.tools as tools
 import sctoolbox.tools.bam as stb
 
 
@@ -66,7 +65,7 @@ def adata_atac_emptyvar(adata_atac):
 
 def test_bam_adata_ov(adata_atac, bam_file):
     """Test bam_adata_ov success."""
-    hitrate = tools.bam_adata_ov(adata_atac, bam_file, cb_tag='CB')
+    hitrate = stb.bam_adata_ov(adata_atac, bam_file, cb_tag='CB')
     assert hitrate >= 0.10
 
 

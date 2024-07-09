@@ -1,7 +1,7 @@
 """Test qc_filter plotting function."""
 
 import pytest
-import sctoolbox.plotting as pl
+import sctoolbox.plotting.qc_filter as pl
 import sctoolbox.tools.insertsize as insertsize
 import os
 import scanpy as sc

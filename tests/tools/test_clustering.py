@@ -1,7 +1,7 @@
 """Test clustering functions."""
 
 import numpy as np
-import sctoolbox.tools as tl
+import sctoolbox.tools.clustering as tl
 import pytest
 import scanpy as sc
 import anndata
