@@ -137,17 +137,17 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
                                    x_col_subset: list | None = None,
                                    y_col_subset: list | None = None,
                                    input_layer: str | None = None,
-                                   fillna: int | float = 0.0,
                                    expression_threshold: int | float = 0.0,
-                                   obs_columns: list | None = None,
-                                   obs_thresholds: list | None = None,
-                                   obs_aggregator_array: list | None = None,
                                    layer_value_aggregator: str = "mean",
                                    gene_count_aggregator: str = "median",
                                    gene_expression_aggregator: str = "median",
+                                   fillna: int | float = 0.0,
+                                   obs_columns: list | None = None,
+                                   obs_thresholds: list | None = None,
+                                   obs_aggregator_array: list | None = None,
                                    **kwargs) -> pd.DataFrame:
     """
-    Preprocess data to use obs columns other than genes for the dots.
+    Preprocess data from an anndata object and returns a dataframe for the planet_plot_render function.
 
     Parameters
     ----------
@@ -166,22 +166,9 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
     y_col_subset: list | None, default None
         To plot a specific subset of the entries in y_col instead of all the entries.
     input_layer: str | None, default None
-        Layer of the AnnData object to be considered for the gene expression values.
-    fillna: int | float, default 0.0
-        Value to fill up the NaN values that are created during aggregation.
+        Layer of the AnnData object to be considered for the gene expression values. If None, then the index of AnnData.var is used.
     expression_threshold: int | float, default 0.0
         The threshold value to calculate the threshold exceedence count. This count is then used to calculate the size of the dots.
-    obs_columns: list | None, default None
-        The obs columns of the AnnData object to be additionaly considered for aggregation.
-        Note that these values must have numeric values!
-    obs_thresholds: list | None, default None
-        A corresponding list of threshold values for the obs_columns.
-        Make sure that len(obs_thresholds) == len(obs_columns).
-        If this argument is not passed then expression_threshold is used instead.
-    obs_aggregator_array: list | None, default None
-        A list of standard numpy aggregators (eg. 'mean', 'median', etc.) to aggregate the values mentioned in the obs_columns.
-        Make sure that len(obs_aggregator_array) == len(obs_columns).
-        If this argument is not passed then layer_value_aggregator is used instead.
     layer_value_aggregator : str, default  "mean"
         A standard numpy aggregator (eg. 'mean', 'median', etc.) to aggregate the values in the input_layer for the corresponding gene.
     gene_count_aggregator : str, default "median"
@@ -195,6 +182,19 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
         eg. id c1, c2, e1 and e2 are the counts and expressions of 2 genes, then count_weighted_expression = (e1*c1+e2*c2)/(c1+c2).
         This is used to reduce the disparity between the size and the color of the center dots.
         Note that 'count_weighted_expression' cannot be used as gene_expression_aggregator when 'expression_weighted_count' is used as gene_count_aggregator!
+    fillna: int | float, default 0.0
+        Value to fill up the NaN values that are created during aggregation.
+    obs_columns: list | None, default None
+        The obs columns of the AnnData object to be additionaly considered for aggregation.
+        Note that these values must have numeric values!
+    obs_thresholds: list | None, default None
+        A corresponding list of threshold values for the obs_columns.
+        Make sure that len(obs_thresholds) == len(obs_columns).
+        If this argument is not passed then expression_threshold is used instead.
+    obs_aggregator_array: list | None, default None
+        A list of standard numpy aggregators (eg. 'mean', 'median', etc.) to aggregate the values mentioned in the obs_columns.
+        Make sure that len(obs_aggregator_array) == len(obs_columns).
+        If this argument is not passed then layer_value_aggregator is used instead.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.get.obs_df`.
 
@@ -209,6 +209,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
         If the given is invalid.
 
     """
+
     # initialize use_raw=False
     defaultargs = {
         "use_raw": False
