@@ -149,7 +149,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
     """
     Preprocess data from an anndata object and return a dataframe for the planet_plot_render function.
 
-    This function calculates dotsizes percentages and statistics of the expression, as well as adata.obs columns provided by the user. To render the plot from this dataframe call planet_plot_render() subsequently.
+    This function calculates dotsizes, percentages and statistics of the expression, as well as adata.obs columns provided by the user. To render the plot from this dataframe call planet_plot_render() subsequently.
 
     Parameters
     ----------
