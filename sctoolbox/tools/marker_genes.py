@@ -629,13 +629,12 @@ def run_deseq2(adata: sc.AnnData,
     count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
                                                   percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
-    print(count_table)
 
     # running sanity checks
     for col in sample_df.index:
         # no negative values
         if np.any(count_table[col] < 0):
-            print(f"Warning: negative value in count_table for column '{col}'")
+            logger.warn(f"Warning: negative value in count_table for column '{col}'")
 
     count_table = count_table.transpose()
 
