@@ -88,7 +88,7 @@ def test_var_index_from_coordinate_cols(atac_adata):
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
 
-def test_var_index_from(atac_adata):
+def test_var_column_to_index(atac_adata):
     """Test if var_index_from works correctly."""
     adata = atac_adata.copy()
     # add string to var index
@@ -126,7 +126,7 @@ def test_get_index_type():
     start_with_name_index = "some_name-chr1:12343-76899 "
     regex = r"(chr[0-9XYM])+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
 
-    assert ch.get_index_type(start_with_name_index, regex) == 'prefix'
+    assert ch._get_index_type(start_with_name_index, regex) == 'prefix'
 
 
 def test_check_columns(atac_adata, adata_atac_invalid):
@@ -150,7 +150,7 @@ def test_check_columns(atac_adata, adata_atac_invalid):
                                                # expects a valueerror due to missing columns
                                                ("adata_atac_invalid",
                                                 ValueError)])  # expects a valueerror due to format of columns
-def test_format_adata_var(fixture, expected, request):
+def test_var_index_to_column(fixture, expected, request):
     """Test whether adata regions can be formatted (or raise an error if not)."""
 
     adata_orig = request.getfixturevalue(fixture)  # fix for using fixtures in parametrize
@@ -158,10 +158,10 @@ def test_format_adata_var(fixture, expected, request):
 
     if isinstance(expected, type):
         with pytest.raises(expected):
-            ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+            ch.var_index_to_column(adata_cp, coordinate_columns=["chr", "start", "stop"])
 
     else:
-        ch.format_adata_var(adata_cp, coordinate_columns=["chr", "start", "stop"])
+        ch.var_index_to_column(adata_cp, coordinate_columns=["chr", "start", "stop"])
 
         assert np.array_equal(adata_orig.var.values,
                               adata_cp.var.values) == expected  # check if the original adata was changed or not

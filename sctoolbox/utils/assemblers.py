@@ -90,7 +90,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
         coordinate_cols = ['chr', 'start', 'stop']
 
     # Format coordinate columns
-    utils.checker.format_adata_var(adata, coordinate_cols)
+    utils.checker.var_index_to_column(adata, coordinate_cols)
 
     # check if the barcode is the index otherwise set it
     utils.bioutils.barcode_index(adata)

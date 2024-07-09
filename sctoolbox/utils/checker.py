@@ -154,11 +154,11 @@ def is_str_numeric(ans: str) -> bool:
 
 
 @beartype
-def var_index_from(adata: sc.AnnData,
-                   coordinate_cols: Optional[Union[list[str], str]] = None,
-                   remove_var_index_prefix: bool = True,
-                   keep_original_index: Optional[str] = None,
-                   coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> None:
+def var_column_to_index(adata: sc.AnnData,
+                        coordinate_cols: Optional[Union[list[str], str]] = None,
+                        remove_var_index_prefix: bool = True,
+                        keep_original_index: Optional[str] = None,
+                        coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> None:
     r"""
     Format adata.var index from a specified column or multiple coordinate columns.
 
@@ -195,7 +195,7 @@ def var_index_from(adata: sc.AnnData,
             # get the first entry of the column
             entry = list(adata.var.index)[0]
             # check the type of the index
-            index_type = get_index_type(entry, coordinate_regex)
+            index_type = _get_index_type(entry, coordinate_regex)
             # check if the index type is known
             if index_type is None:
                 logger.error('Index type is unknown please provide either the index column name, '
@@ -209,7 +209,7 @@ def var_index_from(adata: sc.AnnData,
 
                 try:
                     # format the index
-                    var_index_from_single_col(adata, index_type, coordinate_cols)
+                    _var_index_from_single_col(adata, index_type, coordinate_cols)
                 except KeyError as e:
                     # throw the error
                     raise KeyError(f'Error while formatting the index: {e}')
@@ -226,11 +226,11 @@ def var_index_from(adata: sc.AnnData,
                 # get the first entry of the column
                 entry = list(adata.var[coordinate_cols])[0]
                 # check the type of the index
-                index_type = get_index_type(entry, coordinate_regex)
+                index_type = _get_index_type(entry, coordinate_regex)
                 logger.info(f'Index type: {index_type}')
 
                 # format the index
-                var_index_from_single_col(adata, index_type, coordinate_cols)
+                _var_index_from_single_col(adata, index_type, coordinate_cols)
 
             elif isinstance(coordinate_cols, list):
 
@@ -260,7 +260,7 @@ def var_index_from(adata: sc.AnnData,
                 logger.info('removing prefix from the var. index.')
 
                 # get the type of the index
-                index_type = get_index_type(adata.var.index[0], coordinate_regex)
+                index_type = _get_index_type(adata.var.index[0], coordinate_regex)
 
                 if index_type is None:
                     logger.info('Index type is unknown, please provide either the index column name, '
@@ -274,7 +274,7 @@ def var_index_from(adata: sc.AnnData,
 
                     try:
                         # format the index
-                        var_index_from_single_col(adata, index_type, copy_idx)
+                        _var_index_from_single_col(adata, index_type, copy_idx)
                     except KeyError as e:
                         # throw the error
                         raise KeyError(f'Error while formatting the index: {e}')
@@ -289,10 +289,10 @@ def var_index_from(adata: sc.AnnData,
 
 
 @beartype
-def var_index_from_single_col(adata: sc.AnnData,
-                              index_type: Literal["prefix"],
-                              from_column: str,
-                              coordinate_pattern: str = r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+') -> None:
+def _var_index_from_single_col(adata: sc.AnnData,
+                               index_type: Literal["prefix"],
+                               from_column: str,
+                               coordinate_pattern: str = r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+') -> None:
     r"""
     Format the index of adata.var from a single column.
 
@@ -321,7 +321,7 @@ def var_index_from_single_col(adata: sc.AnnData,
 
 
 @beartype
-def get_index_type(entry: str, regex: str) -> Optional[str]:
+def _get_index_type(entry: str, regex: str) -> Optional[str]:
     """
     Check the format of the index by regex.
 
@@ -386,8 +386,8 @@ def validate_regions(adata: sc.AnnData,
 
 
 @beartype
-def format_adata_var(adata: sc.AnnData,
-                     coordinate_columns: Iterable[str] = ["chr", "start", "stop"]) -> None:
+def var_index_to_column(adata: sc.AnnData,
+                        coordinate_columns: Iterable[str] = ["chr", "start", "stop"]) -> None:
     """
     Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
 
