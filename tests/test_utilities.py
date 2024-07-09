@@ -3,7 +3,10 @@
 import pytest
 import os
 import numpy as np
-import sctoolbox.utilities as utils
+import shutil
+import pandas as pd
+import sctoolbox.utils as utils
+import subprocess
 import scanpy as sc
 
 
@@ -36,14 +39,14 @@ def sorted_fragments():
 def test_is_notebook():
     """Test if the function is run in a notebook."""
 
-    boolean = utils._is_notebook()
+    boolean = utils.jupyter._is_notebook()
     assert boolean is False  # testing environment is not notebook
 
 
 def test_pseudobulk_table(adata):
     """Test if pseudobulk table is returned correctly."""
 
-    pseudobulk = utils.pseudobulk_table(adata, "group")
+    pseudobulk = utils.bioutils.pseudobulk_table(adata, "group")
 
     assert pseudobulk.shape[0] == adata.shape[0]
     assert pseudobulk.shape[1] == 3  # number of groups
@@ -54,29 +57,29 @@ def test_get_organism():
 
     # invalid host
     with pytest.raises(ConnectionError):
-        utils.get_organism("ENSE00000000361", host="http://www.ensembl.org/invalid/")
+        utils.bioutils.get_organism("ENSE00000000361", host="http://www.ensembl.org/invalid/")
 
     # invalid id
     with pytest.raises(ValueError):
-        utils.get_organism("invalid_id")
+        utils.bioutils.get_organism("invalid_id")
 
     # valid call
-    assert utils.get_organism("ENSG00000164690") == "Homo_sapiens"
+    assert utils.bioutils.get_organism("ENSG00000164690") == "Homo_sapiens"
 
 
 def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
     """Test if the _bed_is_sorted() function works as expected."""
 
-    assert utils._bed_is_sorted(sorted_fragments)
-    assert ~utils._bed_is_sorted(unsorted_fragments)
+    assert utils.bioutils._bed_is_sorted(sorted_fragments)
+    assert ~utils.bioutils._bed_is_sorted(unsorted_fragments)
 
 
 def test_sort_bed(unsorted_fragments):
     """Test if the sort bedfile functio works."""
     sorted_bedfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'sorted_bedfile.bed')
-    utils._sort_bed(unsorted_fragments, sorted_bedfile)
+    utils.bioutils._sort_bed(unsorted_fragments, sorted_bedfile)
 
-    assert utils._bed_is_sorted(sorted_bedfile)
+    assert utils.bioutils._bed_is_sorted(sorted_bedfile)
 
     # Clean up
     os.remove(sorted_bedfile)

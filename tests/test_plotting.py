@@ -56,9 +56,9 @@ def adata():
 def test_search_clustering_parameters(adata, method):
     """Test if search_clustering_parameters returns an array of axes."""
 
-    axarr = pl.search_clustering_parameters(adata, method=method,
-                                            resolution_range=(0.1, 0.31, 0.1),
-                                            ncols=2)
+    axarr = pl.clustering.search_clustering_parameters(adata, method=method,
+                                                       resolution_range=(0.1, 0.31, 0.1),
+                                                       ncols=2)
     assert type(axarr).__name__ == "ndarray"
     assert axarr.shape == (2, 2)
 
@@ -66,33 +66,33 @@ def test_search_clustering_parameters(adata, method):
 def test_wrong_embeding_search_clustering_parameters(adata):
     """Test if search_cluster_parameters raises error."""
     with pytest.raises(KeyError):
-        pl.search_clustering_parameters(adata, embedding="Invalid")
+        pl.clustering.search_clustering_parameters(adata, embedding="Invalid")
 
 
 def test_search_clustering_parameters_errors(adata):
     """Test if search_clustering_parameters raises error."""
 
     with pytest.raises(ValueError):
-        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
-                                        method="leiden")
+        pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.2, 0.3),
+                                                   method="leiden")
 
 
 def test_search_clustering_parameters_beartype(adata):
     """Test if beartype checks for tuple length."""
 
     with pytest.raises(BeartypeCallHintParamViolation):
-        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
-                                        method="leiden")
+        pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1, 0.3),
+                                                   method="leiden")
 
     with pytest.raises(BeartypeCallHintParamViolation):
-        pl.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
-                                        method="unknown")
+        pl.clustering.search_clustering_parameters(adata, resolution_range=(0.1, 0.3, 0.1),
+                                                   method="unknown")
 
 
 def test_group_expression_boxplot(adata):
     """Test if group_expression_boxplot returns a plot."""
     gene_list = adata.var_names.tolist()[:10]
-    ax = pl.group_expression_boxplot(adata, gene_list, groupby="condition")
+    ax = pl.marker_genes.group_expression_boxplot(adata, gene_list, groupby="condition")
     ax_type = type(ax).__name__
 
     # depending on matplotlib version, it can be either AxesSubplot or Axes
@@ -103,8 +103,8 @@ def test_group_correlation(adata):
     """Test if plot is written to pdf."""
 
     # Run group correlation
-    pl.group_correlation(adata, groupby="condition",
-                         save="group_correlation.pdf")
+    pl.qc_filter.group_correlation(adata, groupby="condition",
+                                   save="group_correlation.pdf")
 
     # Assert creation of file
     assert os.path.isfile("group_correlation.pdf")
@@ -116,8 +116,8 @@ def test_group_correlation(adata):
 def test_n_cells_barplot(adata, groupby, add_labels):
     """Test n_cells_barplot success."""
 
-    axarr = pl.n_cells_barplot(adata, "clustering", groupby=groupby,
-                               add_labels=add_labels)
+    axarr = pl.qc_filter.n_cells_barplot(adata, "clustering", groupby=groupby,
+                                         add_labels=add_labels)
 
     if groupby is None:
         assert len(axarr) == 1
@@ -132,8 +132,8 @@ def test_marker_gene_clustering(adata, show_umap):
     marker_dict = {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
                    "Celltype B": ['ENSMUSG00000102272']}
 
-    axes_list = pl.marker_gene_clustering(adata, "condition",
-                                          marker_dict, show_umap=show_umap)
+    axes_list = pl.clustering.marker_gene_clustering(adata, "condition",
+                                                     marker_dict, show_umap=show_umap)
     assert isinstance(axes_list, list)
     ax_type = type(axes_list[0]).__name__
     assert ax_type.startswith("Axes")

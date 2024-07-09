@@ -71,9 +71,9 @@ def write_TOBIAS_config(out_path: str,
     # Remove any common prefix and suffix from names
     if names is None:
         prefix = os.path.commonprefix(bams)
-        suffix = utils.longest_common_suffix(bams)
-        names = [utils.remove_prefix(s, prefix) for s in bams]
-        names = [utils.remove_suffix(s, suffix) for s in names]
+        suffix = utils.general.longest_common_suffix(bams)
+        names = [utils.general.remove_prefix(s, prefix) for s in bams]
+        names = [utils.general.remove_suffix(s, suffix) for s in names]
 
     # Start building yaml
     data = {}

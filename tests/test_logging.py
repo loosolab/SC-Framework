@@ -5,7 +5,7 @@ import scanpy as sc
 import pytest
 from sctoolbox.utils import decorator as deco
 
-import sctoolbox.qc_filter as qc
+import sctoolbox.tools.qc_filter as qc
 import sctoolbox.utils as utils
 
 from sctoolbox._settings import settings
@@ -56,7 +56,7 @@ def test_get_parameter_table(adata):
     qc.calculate_qc_metrics(adata)
     qc.predict_sex(adata, "sample", threshold=0.1)  # threshold is kwargs
 
-    table = utils.get_parameter_table(adata)
+    table = utils.decorator.get_parameter_table(adata)
 
     assert table.shape[0] == 2  # two functions were run
     assert table.loc[1, "kwargs"] == {"threshold": 0.1}  # check if kwargs are correctly stored for predict_sex

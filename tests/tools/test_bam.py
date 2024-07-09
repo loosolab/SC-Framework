@@ -3,6 +3,7 @@
 import pytest
 import os
 import shutil
+import sctoolbox.tools.bam as stb
 import glob
 import logging
 import scanpy as sc
@@ -23,7 +24,7 @@ def bam_file():
 @pytest.fixture
 def bam_handle(bam_file):
     """Fixture for a bam file handle."""
-    handle = sctoolbox.bam.open_bam(bam_file, "rb")
+    handle = stb.open_bam(bam_file, "rb")
 
     return handle
 
@@ -122,19 +123,33 @@ def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
     assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
 
 
+def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.tools.bam.open_bam
+    """Test open_bam success."""
+
+    assert type(bam_handle).__name__ == "AlignmentFile"
+
+
+def test_get_bam_reads(bam_handle):
+    """Test get_bam_reads success."""
+
+    total = stb.get_bam_reads(bam_handle)
+
+    assert total == 10000
+
+
 @pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
 def test_split_bam_clusters(bam_handle, bam_file, adata, parallel, sort_bams, index_bams):
     """Test split_bam_clusters success."""
     # Get input reads
-    n_reads_input = sctoolbox.bam.get_bam_reads(bam_handle)
+    n_reads_input = stb.get_bam_reads(bam_handle)
 
     # Split bam
-    sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata.obs["Sample"])) + 1)
+    stb.split_bam_clusters(adata, bam_file, groupby="Sample", parallel=parallel, sort_bams=sort_bams, index_bams=index_bams, writer_threads=len(set(adata.obs["Sample"])) + 1)
 
     # Check if the bam file is split and the right size
     output_bams = glob.glob("split_Sample*.bam")
-    handles = [sctoolbox.bam.open_bam(f, "rb") for f in output_bams]
-    n_reads_output = sum([sctoolbox.bam.get_bam_reads(handle) for handle in handles])
+    handles = [stb.open_bam(f, "rb") for f in output_bams]
+    n_reads_output = sum([stb.get_bam_reads(handle) for handle in handles])
 
     assert n_reads_input == n_reads_output  # this is true because all groups are represented in the bam
 
@@ -147,15 +162,15 @@ def test_failure_split_bam_clusters(bam_file, adata):
     """Test split_bam_clusters failure."""
     # test groupby
     with pytest.raises(ValueError):
-        sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="SOME_NONEXISTENT_COLUMN_NAME")
+        stb.split_bam_clusters(adata, bam_file, groupby="SOME_NONEXISTENT_COLUMN_NAME")
 
     # test barcode_col
     with pytest.raises(ValueError):
-        sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", barcode_col="SOME_NONEXISTENT_TAG")
+        stb.split_bam_clusters(adata, bam_file, groupby="Sample", barcode_col="SOME_NONEXISTENT_TAG")
 
     # test sort_bam/index_bam
     with pytest.raises(ValueError):
-        sctoolbox.bam.split_bam_clusters(adata, bam_file, groupby="Sample", sort_bams=False, index_bams=True)
+        stb.split_bam_clusters(adata, bam_file, groupby="Sample", sort_bams=False, index_bams=True)
 
 
 def test_open_bam(bam_handle):  # this is indirectly a test of sctoolbox.bam.open_bam
@@ -219,7 +234,7 @@ def test_create_fragment_file_multiprocessing():
 
     n_fragments = []
     for nproc in [1, 4]:
-        fragments_f = sctoolbox.bam.create_fragment_file(bam=bam_f, nproc=nproc, barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
+        fragments_f = stb.create_fragment_file(bam=bam_f, nproc=nproc, barcode_tag=None, barcode_regex="[^.]*")  # homo_sapiens_liver has the barcode in the read name
         n_fragments.append(len(open(fragments_f).readlines()))
 
     assert len(set(n_fragments)) == 1
