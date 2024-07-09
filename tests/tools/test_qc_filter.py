@@ -8,7 +8,6 @@ import os
 import tempfile
 import matplotlib.pyplot as plt
 import logging
-import sctoolbox.qc_filter as qc
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")

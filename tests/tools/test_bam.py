@@ -196,9 +196,12 @@ def test_create_fragment_file(bam_name, outdir, barcode_regex):
         barcode_tag = None
 
     bam_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', bam_name + ".bam")
-    fragments_f = stb.create_fragment_file(bam=bam_f, nproc=1, outdir=outdir,
-                                                     barcode_tag=barcode_tag, barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
-                                                     index=True)  # requires bgzip and tabix
+    fragments_f = stb.create_fragment_file(bam=bam_f,
+                                           nproc=1,
+                                           outdir=outdir,
+                                           barcode_tag=barcode_tag,
+                                           barcode_regex=barcode_regex,  # homo_sapiens_liver has the barcode in the read name
+                                           index=True)  # requires bgzip and tabix
 
     outdir_fmt = os.path.dirname(bam_f) if outdir is None else outdir
     expected = os.path.join(outdir_fmt, bam_name + "_fragments.tsv")

@@ -1,2 +1,1 @@
 """Tools test init."""
-
