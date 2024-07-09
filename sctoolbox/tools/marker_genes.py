@@ -593,7 +593,7 @@ def run_deseq2(adata: sc.AnnData,
     --------
     sctoolbox.utils.bioutils.pseudobulk_table
     """
-    utils.check_module("pydeseq2")
+    utils.checker.check_module("pydeseq2")
     from pydeseq2.dds import DeseqDataSet
     from pydeseq2.ds import DeseqStats
     from pydeseq2.default_inference import DefaultInference
