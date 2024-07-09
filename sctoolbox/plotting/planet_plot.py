@@ -147,8 +147,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
                                    obs_aggregator_array: list | None = None,
                                    **kwargs) -> pd.DataFrame:
     """
-    Preprocess data from an anndata object and returns a dataframe containing all the necessary columns to be passed into the planet_plot_render function for rendering of the planet plot.
-    If necessary, custom preprocessing can be done and this step can be skipped.
+    Preprocess data from an anndata object and returns a dataframe for the planet_plot_render function.
 
     Parameters
     ----------
@@ -210,6 +209,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
         If the given is invalid.
 
     """
+
     # initialize use_raw=False
     defaultargs = {
         "use_raw": False
