@@ -1,11 +1,15 @@
-"""Test analysis functions."""
+"""Test norm correct functions."""
 
 import pytest
-import scanpy as sc
 import os
-
+import scanpy as sc
+import numpy as np
+import anndata as ad
 import sctoolbox.tools as tools
 import sctoolbox.utils as utils
+
+
+# ------------------------- Fixtures -------------------------#
 
 
 @pytest.fixture(scope="session")
@@ -22,14 +26,20 @@ def adata():
 
 
 @pytest.fixture
-def adata_no_pca(adata):
-    """Adata without PCA."""
-    anndata = adata.copy()
+def adata_mm10():
+    """Fixture for an AnnData object."""
+    adata_mm10 = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+    return adata_mm10
 
-    # remove pca
-    anndata.uns.pop("pca")
 
-    return anndata
+# adapted from muon package
+@pytest.fixture
+def tfidf_x():
+    """Create anndata with random expression."""
+    np.random.seed(2020)
+    x = np.abs(np.random.normal(size=(4, 5)))
+    adata_X = ad.AnnData(x)
+    return adata_X
 
 
 @pytest.fixture
@@ -40,7 +50,17 @@ def adata_batch_dict(adata):
     return {'adata': anndata_batch_dict}
 
 
-# ------------------------------ TESTS -------------------------------- #
+# ------------------------- Tests ------------------------- #
+
+@pytest.mark.parametrize("method", ["tfidf", "total"])
+def test_atac_norm(adata_mm10, method):
+    """Test atac_norm success."""
+    adata_norm = tools.norm_correct.atac_norm(adata_mm10, method=method)[method]  # return from function is a dict
+
+    if method == "tfidf":
+        assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
+    elif method == "total":
+        assert "X_pca" in adata_norm.obsm and "pca" in adata_norm.uns and "PCs" in adata_norm.varm
 
 
 @pytest.mark.parametrize("method", ["total", "tfidf"])
@@ -53,22 +73,12 @@ def test_normalize_adata(adata, method):
     assert not utils.checker.is_integer_array(mat)
 
 
-def test_evaluate_batch_effect(adata):
-    """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
-
-    ad_type = type(ad).__name__
-    assert ad_type == "AnnData"
-    assert "LISI_score" in ad.obs
-
-
-@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
-def test_batch_correction(adata, method):
-    """Test if batch correction returns an anndata."""
-
-    adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
-    adata_type = type(adata_corrected).__name__
-    assert adata_type == "AnnData"
+# adapted from muon package
+def test_tfidf(tfidf_x):
+    """Test tfidt success."""
+    tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True)
+    assert str("%.3f" % tfidf_x.X[0, 0]) == "4.659"
+    assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
 
 
 def test_wrap_corrections(adata):
@@ -81,6 +91,24 @@ def test_wrap_corrections(adata):
 
     keys = set(adata_dict.keys())
     assert len(set(methods) - keys) == 0
+
+
+@pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])
+def test_batch_correction(adata, method):
+    """Test if batch correction returns an anndata."""
+
+    adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
+    adata_type = type(adata_corrected).__name__
+    assert adata_type == "AnnData"
+
+
+def test_evaluate_batch_effect(adata):
+    """Test if AnnData containing LISI column in .obs is returned."""
+    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
+
+    ad_type = type(ad).__name__
+    assert ad_type == "AnnData"
+    assert "LISI_score" in ad.obs
 
 
 @pytest.mark.parametrize("key", ["a", "b"])
