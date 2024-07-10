@@ -452,7 +452,7 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
     # temporarily set index as column to use this as column for duplicate removal
     ind_name = var.index.name
     tmp_name = "_".join(var.columns) + "_" if len(var.columns) else "index"  # create a name that is not present in the var columns
-    var = var.reset_index(names=tmp_name).drop_duplicates(subset=ind_name).set_index(tmp_name)
+    var = var.reset_index(names=tmp_name).drop_duplicates(subset=tmp_name).set_index(tmp_name)
     var.index.name = ind_name  # revert to the original index name
 
     # add the var table to the adata while ensuring the correct order
