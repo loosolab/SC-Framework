@@ -352,6 +352,23 @@ notebooks:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
 
+# In addition to CHANGES.rst and the _version.py file the notebook version for every notebook
+# must be changed in merge requests to main in order to make a new version
+check-notebook-version:
+  image: python:3.10-alpine3.19
+  needs: [check-version]
+  inherit:
+    default: false
+  stage: test
+  before_script:
+    pip install nbformat packaging
+  script:
+    - python --version
+    - python scripts/check_notebook_version.py -n rna_analysis/notebooks/ atac_analysis/notebooks/ general_notebooks/ -v sctoolbox
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
+
+
 # ############################################################################################################################################################
 # ######################################################### Build and deploy documentation ###################################################################
 # ############################################################################################################################################################
@@ -500,4 +517,3 @@ cleanup-orphan-tags:
       done
   rules:
     - if: $CI_COMMIT_BRANCH == "main"  # only for commits to main
-    
