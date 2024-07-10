@@ -2,11 +2,11 @@
 
 import pytest
 import scanpy as sc
-import scipy
 
 import sctoolbox.utils.adata as ad
 
 # --------------------------- Fixtures ------------------------------ #
+
 
 @pytest.fixture
 def adata1():
@@ -20,6 +20,7 @@ def adata2():
     return sc.datasets.pbmc3k_processed()
 
 # --------------------------- Tests --------------------------------- #
+
 
 @pytest.mark.parametrize("adatas,label", [(["adata1", "adata2"], "list"), ({"a": "adata1", "b": "adata2"}, "dict")])
 def test_concadata(adatas, label, request):

@@ -422,9 +422,10 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
 
 @beartype
-def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], label: Optional[str]="batch") -> sc.AnnData:
+def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], label: Optional[str] = "batch") -> sc.AnnData:
     """
     Concatenate several anndata objects by appending cells.
+
     Essentially `sc.concat(adatas, join="outer", axis=0)` but retains adata.var information.
 
     Parameters
@@ -434,9 +435,9 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
     label: Optional[str], default "batch"
         Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
 
-    Return
-    ------
-    sc.AnnData:
+    Returns
+    -------
+    sc.AnnData
         Returns the combined AnnData object.
     """
     # create adata

@@ -77,7 +77,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]):
+def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.Anndata:
     """
     Load one or more .h5ad files.
 
@@ -91,7 +91,7 @@ def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnD
 
     Returns
     -------
-    sc.AnnData:
+    sc.AnnData
         The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
     """
     if isinstance(h5ad_file, str):
