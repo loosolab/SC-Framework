@@ -1071,7 +1071,6 @@ def connectionPlot(adata: sc.AnnData,
     if filter:
         data.query(filter, inplace=True)
 
-    # add x-axis ticks (column) by adding dummy data
     if xlabel_order:
         # create a custom sort function
         sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
@@ -1099,6 +1098,7 @@ def connectionPlot(adata: sc.AnnData,
                              size=receptor_size,
                              palette=dot_colors,
                              sizes=dot_size,
+                             legend="brief",
                              ax=axs[0])
 
     r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor", axisbelow=True)
@@ -1113,6 +1113,7 @@ def connectionPlot(adata: sc.AnnData,
                              size=ligand_size,
                              palette=dot_colors,
                              sizes=dot_size,
+                             legend="brief",
                              ax=axs[1])
 
     axs[1].yaxis.tick_right()
