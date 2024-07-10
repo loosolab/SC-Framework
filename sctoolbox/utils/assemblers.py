@@ -96,12 +96,12 @@ def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnD
     """
     if isinstance(h5ad_file, str):
         return sc.read_h5ad(filename=h5ad_file)
-    elif isinstance(h5ad_file, Collection):
+    elif isinstance(h5ad_file, Mapping):
         # load then combine anndata objects
-        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
     else:
         # load then combine anndata objects
-        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file})
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
 
 
 #####################################################################
