@@ -30,8 +30,6 @@ def test_concadata(adatas, label, request):
     elif isinstance(adatas, dict):
         adatas = {k: request.getfixturevalue(v) for k, v in adatas.items()}
 
-    print(adatas)
-
     total_obs = sum(a.shape[0] for a in (adatas if label == "list" else adatas.values()))
     total_var = len({v for a in (adatas if label == "list" else adatas.values()) for v in a.var.index})
 
