@@ -28,7 +28,7 @@ def adata():
 @pytest.fixture
 def adata_mm10():
     """Fixture for an AnnData object."""
-    adata_mm10 = sc.read_h5ad(os.path.dirname(os.path.join(os.path.dirname(__file__)), 'data', 'atac', 'mm10_atac.h5ad'))
+    adata_mm10 = sc.read_h5ad(os.path.join(os.path.dirname(__file__)), 'data', 'atac', 'mm10_atac.h5ad')
     return adata_mm10
 
 
