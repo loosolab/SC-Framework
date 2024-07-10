@@ -77,7 +77,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.Anndata:
+def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
