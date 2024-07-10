@@ -24,6 +24,8 @@
     - tools/multiomics
     - tools/insertsize
     - utils/creators
+    - tools/norm_correct
+    - utils/decorator
 
 
 0.9.0 (in progress)
