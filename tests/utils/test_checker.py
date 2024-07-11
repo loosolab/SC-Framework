@@ -60,8 +60,8 @@ def test_in_range():
 def test_var_index_from_single_col(named_var_adata):
     """Test if var_index_from_single_col works correctly."""
     ch._var_index_from_single_col(named_var_adata,
-                                 index_type='prefix',
-                                 from_column='coordinate_col')
+                                  index_type='prefix',
+                                  from_column='coordinate_col')
 
     # regex pattern to match the var coordinate
     coordinate_pattern = re.compile(r"(chr[0-9XYM]+)+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+")
