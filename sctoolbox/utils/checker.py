@@ -307,6 +307,7 @@ def _var_index_from_single_col(adata: sc.AnnData,
     coordinate_pattern : str, default r'chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'
         Regex pattern to match the coordinate format.
     """
+    # TODO index_type is restricted to be a single value -> redundant
     # index is in the format prefix
     if index_type == "prefix":
 
