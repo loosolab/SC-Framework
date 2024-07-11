@@ -59,7 +59,7 @@ def test_in_range():
 
 def test_var_index_from_single_col(named_var_adata):
     """Test if var_index_from_single_col works correctly."""
-    ch.var_index_from_single_col(named_var_adata,
+    ch._var_index_from_single_col(named_var_adata,
                                  index_type='prefix',
                                  from_column='coordinate_col')
 
@@ -73,8 +73,8 @@ def test_var_index_from_single_col(named_var_adata):
     assert match
 
 
-def test_var_index_from_coordinate_cols(atac_adata):
-    """Test if var_index_from works correctly with coordinate columns."""
+def test_var_column_to_index_coordinate_cols(atac_adata):
+    """Test if var_column_to_index works correctly with coordinate columns."""
     # regex pattern to match the var coordinate
     coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
 
@@ -82,19 +82,19 @@ def test_var_index_from_coordinate_cols(atac_adata):
     adata.var = adata.var.reset_index(drop=True)
 
     # test if the function formats the var index correctly from the coordinate columns
-    ch.var_index_from(adata, coordinate_cols=['chr', 'start', 'stop'])
+    ch.var_column_to_index(adata, coordinate_cols=['chr', 'start', 'stop'])
 
     # check if the first var index is in the correct format
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))
 
 
 def test_var_column_to_index(atac_adata):
-    """Test if var_index_from works correctly."""
+    """Test if var_column_to_index works correctly."""
     adata = atac_adata.copy()
     # add string to var index
     adata.var.index = 'name_' + adata.var.index
     # test if the function formats the var index correctly
-    ch.var_index_from(adata)
+    ch.var_column_to_index(adata)
 
     # regex pattern to match the var coordinate
     coordinate_pattern = r"^(chr[0-9XYM]+)[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+$"
@@ -107,7 +107,7 @@ def test_var_column_to_index(atac_adata):
     adata.var = adata.var.reset_index(drop=True)
 
     # test if the function formats the var index correctly
-    ch.var_index_from(adata, coordinate_cols='index_copy')
+    ch.var_column_to_index(adata, coordinate_cols='index_copy')
 
     # check if the first var index is in the correct format
     assert bool(re.fullmatch(coordinate_pattern, adata.var.index[0]))

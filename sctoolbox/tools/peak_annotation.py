@@ -125,7 +125,7 @@ def annotate_adata(adata: sc.AnnData,
         utils.checker.check_columns(adata.var, coordinate_cols, name="coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
-    utils.checker.format_adata_var(adata, coordinate_cols)  # will raise an error if not valid or try to convert from index
+    utils.checker.var_index_to_column(adata, coordinate_cols)  # will raise an error if not valid or try to convert from index
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
