@@ -171,7 +171,7 @@ def var_column_to_index(adata: sc.AnnData,
         The anndata object to reformat.
     coordinate_cols : Optional[str | list[str]], default None
         Column name(s) in adata.var to be set as index.
-        If multiple columns are given they are pasted together in the format "chr:start-stop".
+        If multiple columns are given they are pasted together in the format "chr:start-stop" (requires three columns).
         If None, the first column of adata.var is used.
     remove_var_index_prefix : bool, default True
         If True, the prefix 'chr' is removed from the index.
@@ -192,13 +192,13 @@ def var_column_to_index(adata: sc.AnnData,
     if not adata.var.index.str.contains(coordinate_regex).all():
         # try to format the index from the given column
         if coordinate_cols is None:
-            # get the first entry of the column
+            # get the first index
             entry = list(adata.var.index)[0]
             # check the type of the index
             index_type = _get_index_type(entry, coordinate_regex)
             # check if the index type is known
             if index_type is None:
-                logger.error('Index type is unknown please provide either the index column name, '
+                logger.error(f'Index type ({entry}) is unknown please provide either the index column name, '
                              'coordinate cols or format the index to chr:start-stop.')
                 raise ValueError
             # format the index
@@ -263,7 +263,7 @@ def var_column_to_index(adata: sc.AnnData,
                 index_type = _get_index_type(adata.var.index[0], coordinate_regex)
 
                 if index_type is None:
-                    logger.info('Index type is unknown, please provide either the index column name, '
+                    logger.info(f'Index type ({adata.var.index[0]}) is unknown, please provide either the index column name, '
                                 'coordinate cols or format the index to chr:start-stop.')
                     # format the index
                 else:
