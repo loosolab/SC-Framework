@@ -391,15 +391,15 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def var_index_to_column(adata: sc.AnnData,
-                        coordinate_columns: Iterable[str] = ["chr", "start", "stop"]) -> None:
+                        coordinate_columns: Iterable[str] = ["chr", "start", "end"]) -> None:
     """
-    Format the index of adata.var and adds peak_chr, peak_start, peak_end columns to adata.var if needed.
+    Format the index of adata.var and adds peak location columns (chr, start, end) to adata.var if needed.
 
     If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
     If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
-    "*[_:-]start[_:-]stop"
+    "*[_:-]start[_:-]end"
 
-    If the index can be formatted, the formatted columns (columns_added) will be added.
+    If the index can be formatted, the formatted columns (coordinate_columns) will be added.
     If the index cannot be formatted, an error will be raised.
 
     NOTE: adata object is changed inplace.
@@ -419,22 +419,22 @@ def var_index_to_column(adata: sc.AnnData,
         If regions are of incorrect format.
     """
 
-    # Test whether the first three columns are in the right format
+    # Test whether the three columns are in the right format
     format_index = True
     if not isinstance(coordinate_columns, list):
-        coordinate_columns = ['chr', 'start', 'stop']
-        logger.info("No column names supplied falling back to default names ['chr', 'start', 'stop']")
+        coordinate_columns = ['chr', 'start', 'end']
+        logger.info("No column names supplied falling back to default names ['chr', 'start', 'end']")
     elif isinstance(coordinate_columns, list) and len(coordinate_columns) != 3:
-        raise ValueError("coordinate_columns must be a list of length 3 containing the column names for chr, start, stop.")
+        raise ValueError("The coordinate_columns must be a list of length 3 containing the column names for chr, start, end.")
     else:
-        logger.info("coordinate columns are: {0}")
+        logger.info(f"The coordinate columns are: {coordinate_columns}")
 
     # Check if the columns are already in the right format and if they are in the adata.var
     if validate_regions(adata, coordinate_columns):
         format_index = False
     # Format index if needed
     if format_index:
-        logger.info("formatting adata.var index to coordinate columns:")
+        logger.info("Formatting the adata.var index to coordinate columns:")
         regex = r'[^_:\-]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+'  # matches chr_start_end / chr-start-end / chr:start-end and variations
 
         # Prepare lists to insert
@@ -442,8 +442,7 @@ def var_index_to_column(adata: sc.AnnData,
         peak_start_list = []
         peak_end_list = []
 
-        names = adata.var.index
-        for name in names:
+        for name in adata.var.index:
             if re.match(regex, name):  # test if name can be split by regex
 
                 # split the name into chr, start, end
@@ -464,7 +463,7 @@ def var_index_to_column(adata: sc.AnnData,
 
         # Check whether the newly added columns are in the right format
         if validate_regions(adata, coordinate_columns):
-            logger.info('coordinate columns are in the correct format.')
+            logger.info('The newly added coordinate columns are in the correct format.')
 
 
 @beartype
