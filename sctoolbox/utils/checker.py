@@ -338,6 +338,7 @@ def _get_index_type(entry: str, regex: str) -> Optional[str]:
     Optional[str]
         The index format.
     """
+    # TODO we need to rethink this function. All it does is: Does pattern match? -> Yes, No
     regex_prefix = r"^.+" + regex  # matches: some_name-chr1:12343-76899
 
     if re.match(regex_prefix, entry):
@@ -350,6 +351,8 @@ def validate_regions(adata: sc.AnnData,
                      coordinate_columns: Iterable[str]) -> bool:
     """
     Check if the regions in adata.var are valid.
+
+    Tests if start <= end.
 
     Parameters
     ----------
@@ -364,14 +367,14 @@ def validate_regions(adata: sc.AnnData,
         True if all regions are valid.
     """
 
-    # Test whether the first three columns are in the right format
+    # Test whether the three columns are in the right format
     chr, start, end = coordinate_columns
 
     valid = False
     # Test if coordinate columns are in adata.var
     if utils.checker.check_columns(adata.var, coordinate_columns, name="adata.var", error=False):
 
-        # Test whether the first three columns are in the right format
+        # Test whether the three columns are in the right format
         for _, line in adata.var.to_dict(orient="index").items():
             valid = False
 
