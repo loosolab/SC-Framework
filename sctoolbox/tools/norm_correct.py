@@ -426,16 +426,8 @@ def batch_correction(adata: sc.AnnData,
     elif method == "combat":
 
         adata = adata.copy()  # make sure adata is not modified
-        # TODO: remove this when the issue is fixed in scanpy
-        # spike in the former scipy ".A" property (modifies the scipy class!)
-        setattr(adata.X.__class__, "A", property(lambda self: self.toarray()))
-        try:
-            # run combat
-            corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
-            adata.X = sparse.csr_matrix(corrected_mat)
-        finally:
-            # remove the property
-            delattr(adata.X.__class__, "A")
+        # run combat
+        sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
         sc.pp.pca(adata)
         sc.pp.neighbors(adata)
