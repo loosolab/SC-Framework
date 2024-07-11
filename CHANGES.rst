@@ -5,6 +5,7 @@
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
 - solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
 - added planet_plot for high dimensional anndata plotting (#221)
+- ligand-receptor: connectionPlot new parameters (#255)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
