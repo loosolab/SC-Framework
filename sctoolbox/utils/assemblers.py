@@ -44,7 +44,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
     h5ad_path : Optional[str], default None
         Path to the h5ad file.
     remove_var_index_prefix : bool, default True
-        If True, the prefix of the index will be removed.
+        If True, the prefix ("chr") of the index will be removed.
     keep_original_index : bool, default False
         If not None, the original index will be kept in adata.obs by the name provided.
     coordinate_regex : str, default "chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
@@ -75,11 +75,12 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
     # Format index
     logger.info("formatting index")
-    utils.checker.var_index_from(adata,
-                                 coordinate_cols=coordinate_cols,
-                                 remove_var_index_prefix=remove_var_index_prefix,
-                                 keep_original_index=keep_original_index,
-                                 coordinate_regex=coordinate_regex)  # This checks if the index is available and valid, if not it creates it.
+    # This checks if the index is available and valid, if not it creates it.
+    utils.checker.var_column_to_index(adata,
+                                      coordinate_cols=coordinate_cols,
+                                      remove_var_index_prefix=remove_var_index_prefix,
+                                      keep_original_index=keep_original_index,
+                                      coordinate_regex=coordinate_regex)
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")
