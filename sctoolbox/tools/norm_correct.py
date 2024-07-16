@@ -65,11 +65,6 @@ def normalize_adata(adata: sc.AnnData,
     Union[dict[str, sc.AnnData], sc.AnnData]
         Annotated data matrix with normalized count matrix and PCA/LSI calculated.
         If method is a list, a dictionary with the method as key and the corresponding anndata object as value is returned.
-
-    Raises
-    ------
-    ValueError
-        If method is not valid. Needs to be either 'total' or 'tfidf'.
     """
 
     if isinstance(method, str):
@@ -96,7 +91,7 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
                              method: str,
                              exclude_highly_expressed: bool = True,
                              use_highly_variable: bool = False,
-                             target_sum: Optional[int] = None):
+                             target_sum: Optional[int] = None) -> sc.AnnData:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -117,6 +112,11 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
     -------
     sc.AnnData
         Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+
+    Raises
+    ------
+    ValueError
+        If method is not 'total' or 'tfidf'.
     """
     adata = adata.copy()  # make sure the original data is not modified
 
