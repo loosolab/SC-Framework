@@ -65,7 +65,6 @@ class SctoolboxConfig(object):
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
                  ):
-        """Initialize settings."""
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
 
