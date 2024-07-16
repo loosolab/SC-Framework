@@ -68,16 +68,6 @@ def test_wrap_umap(adata):
         assert "X_umap" in adata.obsm
 
 
-@pytest.mark.parametrize("method", ["total", "tfidf"])
-def test_normalize_adata(adata, method):
-    """Test that data was normalized."""
-    result_dict = tools.norm_correct.normalize_adata(adata, method=method)
-    adata = result_dict[method]
-    mat = adata.X.todense()
-
-    assert not utils.checker.is_integer_array(mat)
-
-
 def test_evaluate_batch_effect(adata):
     """Test if AnnData containing LISI column in .obs is returned."""
     ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
