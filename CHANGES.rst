@@ -5,6 +5,7 @@
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
 - solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
 - added planet_plot for high dimensional anndata plotting (#221)
+- restructured atac notebook 3 (normalization and batch correction) (#278)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
