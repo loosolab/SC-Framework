@@ -7,7 +7,6 @@ import sctoolbox.tools as tools
 import sctoolbox.utils as utils
 
 
-
 # ------------------------- Fixtures -------------------------#
 
 
@@ -49,4 +48,3 @@ def test_normalize_adata(adata, method):
         assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
     elif method == "total":
         assert "X_pca" in adata.obsm and "pca" in adata.uns and "PCs" in adata.varm
-
