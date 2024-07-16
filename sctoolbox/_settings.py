@@ -15,7 +15,7 @@ class SctoolboxConfig(object):
 
     Attributes
     ----------
-    __frozen : bool
+    frozen : bool
         If True, disallows new attributes to be added.
 
     Parameters
@@ -48,7 +48,7 @@ class SctoolboxConfig(object):
         Overwrite log file if it already exists; default is to append, default False.
     """
 
-    __frozen: bool = False
+    frozen: bool = False
 
     def __init__(self,
                  figure_dir: str = "",           # Directory to write figures to
@@ -79,18 +79,18 @@ class SctoolboxConfig(object):
         self.__init__()
 
     def _freeze(self):
-        """Set __frozen to True, disallowing new attributes to be added."""
-        self.__frozen = True
+        """Set frozen to True, disallowing new attributes to be added."""
+        self.frozen = True
 
     def __setattr__(self, key, value):
         """Set attribute if it exists in __init__ and is of the correct type."""
 
-        if self.__frozen and not hasattr(self, key):
+        if self.frozen and not hasattr(self, key):
             valid_parameters = [key for key in self.__dict__ if not key.startswith("_")]
             raise ValueError(f"'{key}' is not a valid setting for sctoolbox. Parameter options are: {valid_parameters}")
 
         # Validate parameter types
-        if "__frozen" in key:  # allow __frozen to be set without checking
+        if "frozen" in key:  # allow frozen to be set without checking
             pass
         elif key == "_logger":
             pass  # allow logger to be set without checking
