@@ -44,6 +44,10 @@ def term_dotplot(term: str,
     **kwargs: Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
+    Notes
+    -----
+    All genes will be converted to uppercase for comparison.
+
     Returns
     -------
     list
@@ -65,15 +69,17 @@ def term_dotplot(term: str,
         })
 
         pl.gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
-                             term_table=term_table
+                             term_table=term_table,
                              adata=adata,
                              groupby="louvain")
 
     """
     # get related genes
     active_genes = list(set(term_table.loc[term_table["Term"] == term]["Genes"].str.split(";").explode()))
+    active_genes = list(map(str.upper, active_genes))
 
-    index_name = adata.var.index.name
+    # get index name
+    index_name = "index" if not adata.var.index.name else adata.var.index.name
 
     if not active_genes:
         raise ValueError(f"No genes matching the term '{term}' found in term_table")
