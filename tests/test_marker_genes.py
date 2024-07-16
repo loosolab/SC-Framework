@@ -186,15 +186,15 @@ def test_pairwise_rank_genes(adata):
     assert isinstance(output, pd.DataFrame)
 
 
-@pytest.mark.parametrize("condition_col, error", [
-    ("not_present", "Columns \'[\'not_present\']\' are not found in dataframe."),
+@pytest.mark.parametrize("condition_col, error_regex", [
+    ("not_present", "Columns \'\[\'not_present\'\]\' are not found in dataframe.*"),
     ("condition", None)])
-def test_deseq(adata, condition_col, error):
+def test_deseq(adata, condition_col, error_regex):
     """Test if deseq2 is run and returns a dataframe."""
 
     # test if error is raised
-    if isinstance(error, str):
-        with pytest.raises(KeyError, match=error):
+    if isinstance(error_regex, str):
+        with pytest.raises(KeyError, match=error_regex):
             mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
 
     else:  # should run without exceptions
