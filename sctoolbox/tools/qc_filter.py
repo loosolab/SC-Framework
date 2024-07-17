@@ -4,6 +4,7 @@ import pandas as pd
 import scanpy as sc
 import multiprocessing as mp
 import warnings
+import time
 import anndata
 import pkg_resources
 import glob
@@ -12,6 +13,8 @@ from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import scrublet as scr
+from scar import model, setup_anndata
+from scipy.sparse import csr_matrix
 
 from beartype import beartype
 import numpy.typing as npt
@@ -1170,3 +1173,87 @@ def filter_genes(adata: sc.AnnData,
     ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
 
     return ret
+
+
+def denoise_data(adata: sc.AnnData,
+                 adata_raw: sc.AnnData,
+                 feature_type: Literal['Gene Expression', 'Peaks', 'CRISPR Guide Capture', 'Multiplexing Capture', None] = 'Gene Expression',
+                 epochs: int = 150,
+                 prob: float = 0.995,
+                 save: Optional[str] = None,
+                 verbose: bool = False) -> sc.AnnData:
+    """
+    Use scAR and raw feature count matrix to remove ambient RNA counts
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to denoise
+    adata_raw : sc.AnnData
+        Raw anndata object with all droplets
+    feature_type : Literal["Gene Expression", "Peaks", "CRISPR Guide Capture", "Multiplexing Capture"], default "Gene Expression"
+        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, all features are calculated
+    epochs : int, default 150
+        Number of iterations to train the model
+    prob : float, default 0.995
+        Probability of a gene to contain ambient RNA
+    save : Optional[str], default None
+        Path to save the knee plot
+    verbose : bool, default False
+
+    Returns
+    -------
+    sc.AnnData
+        Denoised anndata object
+    """
+
+    import warnings
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning)
+
+    FEATURES = {
+        'Gene Expression': 'mRNA',
+        'Peaks': 'ATAC',
+        'CRISPR Guide Capture': 'sgRNA',
+        'Multiplexing Capture': 'CMO',
+    }
+    
+    adata_raw.var['feature_types'] = feature_type
+    adata.var['feature_types'] = feature_type
+
+    logger.info('Setting up adata...')
+    start_time = time.time()
+    setup_anndata(
+        adata=adata,
+        raw_adata=adata_raw,
+        prob=prob,
+        kneeplot=True,
+        feature_type=feature_type,
+        verbose=verbose
+    )
+
+    _save_figure(save)
+
+    end_time = time.time() - start_time
+    logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
+
+    logger.info('Training model to remove ambient RNA...')
+
+    scar = model(raw_count=adata,
+                  feature_type=FEATURES[feature_type],
+                  sparsity=0.9,
+                  device='auto' # Both cpu and cuda are supported.
+                 )
+
+    scar.train(epochs=epochs,
+                batch_size=64,
+                verbose=verbose
+               )
+
+    # After training, we can infer the native true signal
+    scar.inference(batch_size=256)
+
+    adata_denoised = adata.copy()
+    adata_denoised.X = csr_matrix(scar.native_counts, dtype=np.float32)
+
+    return adata_denoised
