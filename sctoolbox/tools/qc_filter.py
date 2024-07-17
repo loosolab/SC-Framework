@@ -1217,7 +1217,7 @@ def denoise_data(adata: sc.AnnData,
         'CRISPR Guide Capture': 'sgRNA',
         'Multiplexing Capture': 'CMO',
     }
-    
+
     adata_raw.var['feature_types'] = feature_type
     adata.var['feature_types'] = feature_type
 
@@ -1240,15 +1240,14 @@ def denoise_data(adata: sc.AnnData,
     logger.info('Training model to remove ambient RNA...')
 
     scar = model(raw_count=adata,
-                  feature_type=FEATURES[feature_type],
-                  sparsity=0.9,
-                  device='auto' # Both cpu and cuda are supported.
+                 feature_type=FEATURES[feature_type],
+                 sparsity=0.9,
+                 device='auto'  # Both cpu and cuda are supported.
                  )
 
     scar.train(epochs=epochs,
-                batch_size=64,
-                verbose=verbose
-               )
+               batch_size=64,
+               verbose=verbose)
 
     # After training, we can infer the native true signal
     scar.inference(batch_size=256)
