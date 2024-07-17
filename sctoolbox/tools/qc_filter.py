@@ -1183,7 +1183,7 @@ def denoise_data(adata: sc.AnnData,
                  save: Optional[str] = None,
                  verbose: bool = False) -> sc.AnnData:
     """
-    Use scAR and raw feature count matrix to remove ambient RNA counts
+    Use scAR and raw feature count matrix to remove ambient RNA counts.
 
     Parameters
     ----------
