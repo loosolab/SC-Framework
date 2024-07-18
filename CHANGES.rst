@@ -1,5 +1,6 @@
 0.9.0 (in progress)
 -------------------
+- added kwargs and check for quant folder in assemblers.from_quant
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
@@ -11,6 +12,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- added header parameter to option 2 in notebook 01_assembling_anndata
 - added notebook versioning (#115)
 
 0.8.0 (14-06-24)
