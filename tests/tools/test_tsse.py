@@ -9,36 +9,36 @@ import os
 @pytest.fixture
 def adata():
     """Fixture for an AnnData object."""
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
 
 @pytest.fixture
 def fragments():
     """Fixture for a fragments object."""
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
+    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_fragments.bed')
     return fragments
 
 
 @pytest.fixture
 def gtf():
     """Fixture for a gtf object."""
-    gtf = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes.gtf')
+    gtf = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes.gtf')
     return gtf
 
 
 @pytest.fixture
 def tss_file():
     """Fixture for a tss_file object."""
-    tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_tss.bed')
+    tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_tss.bed')
     return tss_file
 
 
 def test_write_TSS(gtf):
     """Test write_TSS function."""
     # Build temporary TSS file path
-    temp_dir = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-    tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes_tss.bed')
+    temp_dir = os.path.join(os.path.dirname(__file__), '../data', 'atac')
+    tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes_tss.bed')
     # Write TSS file
     tss_list, tempfiles = tools.tsse.write_TSS_bed(gtf, tss_file, temp_dir=temp_dir)
     # Add tss_file to tempfiles
@@ -63,9 +63,9 @@ def test_write_TSS(gtf):
 def test_overlap_and_aggregate(gtf, fragments):
     """Test overlap_and_aggregate function."""
     # Build temporary TSS file path
-    temp_dir = tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac')
-    tss_file = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_genes_tss.bed')
-    overlap = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'overlap.bed')
+    temp_dir = tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac')
+    tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes_tss.bed')
+    overlap = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'overlap.bed')
 
     tempfiles = [tss_file, overlap]
     # Write TSS file

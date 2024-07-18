@@ -28,6 +28,7 @@
     - utils/decorator
     - utils/assemblers
     - utils/bioutils
+    - tools/tsse
 
 
 0.9.0 (in progress)
