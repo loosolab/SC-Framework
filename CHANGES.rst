@@ -24,6 +24,7 @@
     - tools/multiomics
     - tools/insertsize
     - utils/creators
+    - utils/assemblers
 
 
 0.9.0 (in progress)
