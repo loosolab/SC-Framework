@@ -77,7 +77,7 @@ setup(
         'kneed',
         'qnorm',
         'plotly',
-        'scipy',
+        'scipy<1.14',  # scAR throws error for versions > 1.14 due to deprecated csr_matrix.A property
         'statsmodels',
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
