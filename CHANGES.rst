@@ -29,6 +29,7 @@
     - utils/assemblers
     - utils/bioutils
     - tools/tsse
+    - tools/frip
 
 
 0.9.0 (in progress)

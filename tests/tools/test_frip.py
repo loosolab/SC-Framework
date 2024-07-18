@@ -8,14 +8,14 @@ import sctoolbox.tools as tools
 @pytest.fixture
 def adata():
     """Fixture for an AnnData object."""
-    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad'))
+    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
 
 @pytest.fixture
 def fragments():
     """Fixture for a fragments object."""
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
+    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
     return fragments
 
 
