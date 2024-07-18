@@ -130,7 +130,7 @@ def barcode_index(adata: sc.AnnData) -> None:
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
-    first_index = adata.obs.index[0]
+    first_index = str(adata.obs.index[0])
     # check if the first index element is a barcode
     if regex.match(first_index):
         index_is_barcode = True
