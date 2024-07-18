@@ -16,7 +16,8 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
                   # Diffexpr is currently restricted to a specific commit to avoid dependency issues with the latest version
-                  "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"]  # rpy2 must be installed before diffexpr
+                  "deseq2": ["rpy2", "diffexp @ git+https://github.com/wckdouglas/diffexpr.git@0bc0ba5e42712bfc2be17971aa838bcd7b27a785#egg=diffexp"],  # rpy2 must be installed before diffexpr
+                  "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
                   }
 
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements

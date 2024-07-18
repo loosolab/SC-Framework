@@ -17,6 +17,5 @@ dependencies:
   - pybedtools
   - scvelo>=0.3.1 # highly decreases installation runtime of sc_framework
   - pip  # for installing additional packages
-  - scar
   # - pip:
   # - scanpro  # Due to a version conflict with scanpy excluded, include this after the bugfix again
