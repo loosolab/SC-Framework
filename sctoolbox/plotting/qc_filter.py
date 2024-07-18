@@ -860,9 +860,7 @@ def quality_violin(adata: sc.AnnData,
     # Assemble accordion with different measures
     if is_interactive:
 
-        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
-        for i in range(len(columns)):
-            accordion.set_title(i, columns[i])
+        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None, titles=columns)
 
         fig.canvas.header_visible = False
         fig.canvas.toolbar_visible = False
