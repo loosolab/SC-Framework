@@ -18,4 +18,4 @@ dependencies:
   - scvelo>=0.3.1 # highly decreases installation runtime of sc_framework
   - pip  # for installing additional packages
   - pip:
-    - scanpro
+    - scanpro>=0.3.1  # scnapro < 0.3.1 needs statannotations which causes versioning issues
