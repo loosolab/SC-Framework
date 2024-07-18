@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from beartype.typing import Optional, Union, Literal, Any
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -100,6 +100,34 @@ def prepare_atac_anndata(adata: sc.AnnData,
         adata.obs = adata.obs.assign(file=h5ad_path)
 
     return adata
+
+
+@beartype
+def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.AnnData:
+    """
+    Load one or more .h5ad files.
+
+    Multiple .h5ad files will be combined with a "batch" column added to adata.obs.
+
+    Parameters
+    ----------
+    h5ad_file : Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+        Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
+        In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+
+    Returns
+    -------
+    sc.AnnData
+        The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
+    """
+    if isinstance(h5ad_file, str):
+        return sc.read_h5ad(filename=h5ad_file)
+    elif isinstance(h5ad_file, Mapping):
+        # load then combine anndata objects
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+    else:
+        # load then combine anndata objects
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
 
 
 #####################################################################
@@ -427,23 +455,7 @@ def from_mtx(path: str,
 
     # create final adata
     if len(adata_objects) > 1:
-        adata = sc.concat(adata_objects, join="outer", label="batch")
-
-        # manually combine var table, then add it to the final adata
-        var = pd.concat(
-            [a.var for a in adata_objects],
-            join="outer"
-        )
-
-        # remove duplicates
-        # temporarily set index as column to use this as column for duplicate removal
-        # TODO will raise an error if there happens to be a column with the same name as the index
-        ind_name = var.index.name
-        var = var.reset_index().drop_duplicates(subset=ind_name).set_index(ind_name)
-
-        # add the var table to the adata while ensuring the correct order
-        adata.var = var.loc[adata.var_names]
-
+        adata = utils.adata.concadata(adata_objects)
     else:
         adata = adata_objects[0]
 
