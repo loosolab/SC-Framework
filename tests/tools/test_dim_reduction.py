@@ -4,6 +4,8 @@ import pytest
 import sctoolbox.tools.dim_reduction as std
 
 import scanpy as sc
+import numpy as np
+import os
 
 # -----------------------------------------------------------------------------
 # ---------------------------------- Fixtures ---------------------------------
@@ -22,18 +24,32 @@ def adata_pca():
     return sc.datasets.pbmc3k_processed()
 
 
+@pytest.fixture
+def adata():
+    """Fixture for an AnnData object."""
+    adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'anndata_2.h5ad'))
+    return adata
+
+
 # -----------------------------------------------------------------------------
 # ----------------------------------- Tests -----------------------------------
 # -----------------------------------------------------------------------------
 
 # ------------------------------------ lsi ------------------------------------
 
-def test_lsi(adata_no_pca):
+def test_lsi(adata):
     """Test lsi success."""
-    adata = adata_no_pca.copy()
+    adata_ori = adata.copy()
 
-    std.lsi(adata)
-    assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
+    std.lsi(adata_ori, use_highly_variable=True)
+    assert "X_lsi" in adata_ori.obsm and "lsi" in adata_ori.uns and "LSI" in adata_ori.varm
+    assert np.sum(adata_ori.varm['LSI'][~adata_ori.var['highly_variable']]) == 0
+    assert np.sum(adata_ori.varm['LSI'][adata_ori.var['highly_variable']]) != 0
+
+    std.lsi(data=adata, use_highly_variable=False)
+
+    assert np.sum(adata.varm['LSI'][~adata.var['highly_variable']]) != 0
+    assert np.sum(adata.varm['LSI'][adata.var['highly_variable']]) != 0
 
 
 # --------------------------------- define_PC ---------------------------------
