@@ -30,6 +30,7 @@
     - utils/bioutils
     - tools/tsse
     - tools/frip
+    - tools/jupyter
 
 
 0.9.0 (in progress)
