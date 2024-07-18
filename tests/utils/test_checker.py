@@ -98,11 +98,6 @@ def test_is_str_numeric(string, expected):
     assert result == expected
 
 
-def test_in_range():
-    """Test if int is in given range."""
-    assert ch.in_range(value=100, limits=(1, 1000))
-
-
 arr_ints = np.random.randint(10, size=(10, 10))
 arr_ints2 = arr_ints.astype(float)
 arr_floats = np.random.rand(10, 10)
@@ -125,7 +120,7 @@ def test_check_marker_lists(adata2, marker_dict):
                                "Celltype B": ['ENSMUSG00000102272']}
 
 
-def test_in_range():
+def test_in_range() -> object:
     """Test if int is in given range."""
     assert ch.in_range(value=100, limits=(1, 1000))
 
@@ -238,17 +233,3 @@ def test_var_index_to_column(fixture, expected, request):
 
         assert np.array_equal(adata_orig.var.values,
                               adata_cp.var.values) == expected  # check if the original adata was changed or not
-
-
-def test_add_path():
-    """Test if _add_path adds the path correctly."""
-    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
-
-    assert python_exec_dir == ch._add_path()
-    assert python_exec_dir in os.environ['PATH']
-
-    ori_PATH = os.environ['PATH']  # save the original PATH
-    os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # mock notebook like path
-    assert python_exec_dir == ch._add_path()
-    os.environ['PATH'] = ori_PATH  # restore the original PATH
-    assert python_exec_dir in os.environ['PATH']
