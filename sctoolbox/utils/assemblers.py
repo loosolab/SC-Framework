@@ -206,7 +206,9 @@ def from_quant(path: str,
         If `use_samples` contains not existing names.
     """
 
-    # TODO: test that quant folder is existing
+    # Test that quant folder exists
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The path to the quant folder does not exist: {path}")
 
     # Collect configuration into a dictionary
     config_dict = {}
