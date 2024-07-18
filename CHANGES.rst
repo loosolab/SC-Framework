@@ -1,6 +1,6 @@
 0.9.0 (in progress)
 -------------------
-- Add denoising using scAR to QC notebook
+- Add denoising function using scAR to QC notebook
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
