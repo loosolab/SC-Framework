@@ -27,6 +27,7 @@
     - tools/norm_correct
     - utils/decorator
     - utils/assemblers
+    - utils/bioutils
 
 
 0.9.0 (in progress)
