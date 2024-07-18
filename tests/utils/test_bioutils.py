@@ -23,7 +23,7 @@ def adata_mock():
 def adata():
     """Return a adata object from SnapATAC."""
 
-    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac.h5ad')
+    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
 
     return sc.read(f)
 
@@ -32,7 +32,7 @@ def adata():
 def bedfile():
     """Return a bedfile."""
 
-    f = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
+    f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
 
     return f
 
@@ -41,7 +41,7 @@ def bedfile():
 def unsorted_fragments():
     """Return adata object with 3 groups."""
 
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_atac_fragments.bed')
+    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_fragments.bed')
     return fragments
 
 
@@ -49,7 +49,7 @@ def unsorted_fragments():
 def sorted_fragments():
     """Return adata object with 3 groups."""
 
-    fragments = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'mm10_sorted_fragments.bed')
+    fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
     return fragments
 
 
@@ -136,7 +136,7 @@ def test_bed_is_sorted(unsorted_fragments, sorted_fragments):
 
 def test_sort_bed(unsorted_fragments):
     """Test if the sort bedfile functio works."""
-    sorted_bedfile = os.path.join(os.path.dirname(__file__), 'data', 'atac', 'sorted_bedfile.bed')
+    sorted_bedfile = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'sorted_bedfile.bed')
     utils.bioutils._sort_bed(unsorted_fragments, sorted_bedfile)
 
     assert utils.bioutils._bed_is_sorted(sorted_bedfile)
