@@ -175,7 +175,8 @@ def from_single_starsolo(path: str,
 def from_quant(path: str,
                configuration: list = [],
                use_samples: Optional[list] = None,
-               dtype: Literal["raw", "filtered"] = "filtered") -> sc.AnnData:
+               dtype: Literal["raw", "filtered"] = "filtered",
+               **kwargs: Any) -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
@@ -191,6 +192,8 @@ def from_quant(path: str,
         List of samples to use. If None, all samples will be used.
     dtype : Literal["raw", "filtered"], default 'filtered'
         The type of Solo data to choose.
+    **kwargs : Any
+        Contains additional arguments for the sctoolbox.utils.assemblers.from_single_starsolo method.
 
     Returns
     -------
@@ -236,7 +239,7 @@ def from_quant(path: str,
 
         logger.info(f"Assembling sample '{sample_name}'")
         solo_dir = os.path.join(sample_dir, "solo")
-        adata = from_single_starsolo(solo_dir, dtype=dtype)
+        adata = from_single_starsolo(solo_dir, dtype=dtype, **kwargs)
 
         # Make barcode index unique
         adata.obs.index = adata.obs.index + "-" + sample_name
