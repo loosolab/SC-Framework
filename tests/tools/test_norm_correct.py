@@ -98,8 +98,10 @@ def test_batch_correction(adata, method):
     """Test if batch correction returns an anndata."""
 
     adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
-    adata_type = type(adata_corrected).__name__
-    assert adata_type == "AnnData"
+    assert isinstance(adata_corrected, sc.AnnData)
+    # assert the returned adata is a different object
+    # this is a workaround to test if the original adata was modified
+    assert adata is not adata_corrected
 
 
 def test_evaluate_batch_effect(adata):
