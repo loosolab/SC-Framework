@@ -43,6 +43,7 @@ def test_compare_versions():
     # Delete test notebook
     os.remove(nb_path)
 
+
 def test_is_notebook():
     """Test if the function is run in a notebook."""
 
