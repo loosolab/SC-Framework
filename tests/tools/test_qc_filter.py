@@ -12,7 +12,7 @@ plt.switch_backend("Agg")
 
 # Define the test function
 def test_denoise_data(mocker):
-    """Test denoise_data"""
+    """Test denoise_data."""
 
     # Mock the AnnData objects
     adata = sc.AnnData(np.random.rand(100, 10))
