@@ -10,12 +10,42 @@ from beartype.typing import Optional
 
 
 class SctoolboxConfig(object):
-    """Config manager for sctoolbox.
+    """
+    Config manager for sctoolbox.
 
     Attributes
     ----------
     __frozen : bool
         If True, disallows new attributes to be added.
+
+    Parameters
+    ----------
+    figure_dir : str
+        Directory to write figures to, default "".
+    figure_prefix : str
+        Prefix for all figures to write (within figure_dir), default "".
+    table_dir : str
+        Directory to write tables to, default "".
+    table_prefix : str
+        Prefix for all tables to write (within table_dir), default "".
+    adata_input_dir : str
+        Directory to read adata objects from, default "".
+    adata_input_prefix : str
+        Prefix for all adata objects to read (within adata_input_dir), default "".
+    adata_output_dir : str
+        Directory to write adata objects to, default "".
+    adata_output_prefix : str
+        Prefix for all adata objects to write (within adata_output_dir), default "".
+    threads : int
+        Default number of threads to use when multiprocessing is available, default 4.
+    create_dirs : bool
+        Create output directories if they do not exist, default True.
+    verbosity : int
+        Logging verbosity: 0 = error, 1 = info, 2 = debug, default 1.
+    log_file : str
+        Path to log file, default None.
+    overwrite_log : bool
+        Overwrite log file if it already exists; default is to append, default False.
     """
 
     __frozen: bool = False
@@ -35,7 +65,6 @@ class SctoolboxConfig(object):
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
                  ):
-        """Initialize settings."""
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
 
@@ -226,39 +255,38 @@ class SctoolboxConfig(object):
         """Return logger object."""
         return self._logger
 
+    @beartype
+    def settings_from_config(self: object, config_file: str, key: Optional[str] = None):
+        """
+        Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 
-@beartype
-def settings_from_config(config_file: str, key: Optional[str] = None):
-    """
-    Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
+        Parameters
+        ----------
+        config_file : str
+            Path to the config file.
+        key : Optional[str], default None
+            If given, get settings for a specific key.
 
-    Parameters
-    ----------
-    config_file : str
-        Path to the config file.
-    key : Optional[str], default None
-        If given, get settings for a specific key.
+        Raises
+        ------
+        KeyError
+            If key is not found in config file.
+        """
 
-    Raises
-    ------
-    KeyError
-        If key is not found in config file.
-    """
+        # Read yaml file
+        with open(config_file, "r") as f:
+            config_dict = yaml.safe_load(f)
 
-    # Read yaml file
-    with open(config_file, "r") as f:
-        config_dict = yaml.safe_load(f)
+        if key is not None:
+            try:
+                config_dict = config_dict[key]
+            except KeyError:
+                raise KeyError(f"Key {key} not found in config file {config_file}")
 
-    if key is not None:
-        try:
-            config_dict = config_dict[key]
-        except KeyError:
-            raise KeyError(f"Key {key} not found in config file {config_file}")
-
-    # Set settings
-    preferred_order = ["overwrite_log", "log_file"]  # set overwrite_log before log_file to prevent "log file already exists" warning
-    for key, value in sorted(config_dict.items(), key=lambda x: preferred_order.index(x[0]) if x[0] in preferred_order else 999):
-        setattr(settings, key, value)
+        # Set settings
+        preferred_order = ["overwrite_log", "log_file"]  # set overwrite_log before log_file to prevent "log file already exists" warning
+        for key, value in sorted(config_dict.items(), key=lambda x: preferred_order.index(x[0]) if x[0] in preferred_order else 999):
+            setattr(settings, key, value)
 
 
 settings = SctoolboxConfig()

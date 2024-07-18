@@ -1,7 +1,7 @@
 """Test plotting/highly_variable functions."""
 
 import pytest
-import sctoolbox.plotting as pl
+import sctoolbox.plotting.highly_variable as pl
 import scanpy as sc
 import os
 import numpy as np

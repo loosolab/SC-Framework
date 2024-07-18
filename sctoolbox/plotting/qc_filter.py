@@ -52,7 +52,7 @@ def _read_starsolo_summary(folder: str) -> pd.DataFrame:
         raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
 
     # Read statistics from summary files
-    names = utils.clean_flanking_strings(summary_files)
+    names = utils.general.clean_flanking_strings(summary_files)
     summary_tables = []
     for name, f in zip(names, summary_files):
         star_table = pd.read_csv(f, index_col=0, header=None, names=[name])
@@ -103,7 +103,7 @@ def plot_starsolo_quality(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_quality("data/quant/")
+        pl.qc_filter.plot_starsolo_quality("data/quant/")
     """
 
     # Prepare functions for converting labels
@@ -194,7 +194,7 @@ def plot_starsolo_UMI(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_UMI("data/quant/", ncol=2)
+        pl.qc_filter.plot_starsolo_UMI("data/quant/", ncol=2)
     """
 
     summary_table = _read_starsolo_summary(folder)
@@ -203,7 +203,7 @@ def plot_starsolo_UMI(folder: str,
     if len(umi_files) == 0:
         raise ValueError("No UMI files found in folder. Please check the path and try again.")
 
-    names = utils.clean_flanking_strings(umi_files)
+    names = utils.general.clean_flanking_strings(umi_files)
 
     # Setup plot
     ncol = min(len(names), ncol)
@@ -306,12 +306,12 @@ def n_cells_barplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain")
 
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
@@ -428,11 +428,11 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.group_correlation(adata, "phase", method="spearman", save=None)
+        pl.qc_filter.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
     # Calculate correlation of groups
-    count_table = utils.pseudobulk_table(adata, groupby=groupby)
+    count_table = utils.bioutils.pseudobulk_table(adata, groupby=groupby)
     corr = count_table.corr(numeric_only=False, method=method)
 
     clustermap_kwargs = {"figsize": (4, 4),
@@ -676,7 +676,7 @@ def quality_violin(adata: sc.AnnData,
 
     """
 
-    is_interactive = utils._is_interactive()
+    is_interactive = utils.checker._is_interactive()
 
     # ---------------- Test input and get ready --------------#
 
@@ -860,9 +860,7 @@ def quality_violin(adata: sc.AnnData,
     # Assemble accordion with different measures
     if is_interactive:
 
-        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
-        for i in range(len(columns)):
-            accordion.set_title(i, columns[i])
+        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None, titles=columns)
 
         fig.canvas.header_visible = False
         fig.canvas.toolbar_visible = False

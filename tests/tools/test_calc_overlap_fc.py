@@ -72,7 +72,7 @@ def test_convert_gtf_to_bed(tmpdir, gtf, out):
     if out:
         out = str(tmpdir)
 
-    sorted_bed, temp = tl._convert_gtf_to_bed(gtf, out=out)
+    sorted_bed, temp = tl.calc_overlap_fc._convert_gtf_to_bed(gtf, out=out)
     name = gtf + "_sorted.bed"
 
     if out:
@@ -82,12 +82,12 @@ def test_convert_gtf_to_bed(tmpdir, gtf, out):
 
     assert sorted_bed == expected and os.path.isfile(sorted_bed)
 
-    ul.rm_tmp(temp_files=temp)
+    ul.io.rm_tmp(temp_files=temp)
 
 
 @pytest.mark.parametrize("regions_file", ['bed', 'gtf'])
 @pytest.mark.parametrize("bam_file,fragments_file", [('bam', None), (None, 'fragments')])
-def test_fc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
+def testfc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, regions_file, bam_file, fragments_file):
     """Test fc_fragments_in_regions function for run completion."""
     if regions_file == 'bed':
         regions_file = bed
@@ -99,11 +99,11 @@ def test_fc_fragments_in_regions(tmpdir, adata, bed, gtf, bam, fragments, region
     if fragments_file == 'fragments':
         fragments_file = fragments
 
-    tl.fc_fragments_in_regions(adata,
-                               regions_file=regions_file,
-                               bam_file=bam_file,
-                               fragments_file=fragments_file,
-                               regions_name='promoters',
-                               temp_dir=str(tmpdir))
+    tl.calc_overlap_fc.fc_fragments_in_regions(adata,
+                                               regions_file=regions_file,
+                                               bam_file=bam_file,
+                                               fragments_file=fragments_file,
+                                               regions_name='promoters',
+                                               temp_dir=str(tmpdir))
 
     assert 'fold_change_promoters_fragments' in adata.obs.columns

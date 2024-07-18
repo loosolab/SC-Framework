@@ -5,7 +5,7 @@ import os
 import scanpy as sc
 import numpy as np
 import pandas as pd
-import sctoolbox.marker_genes as mg
+import sctoolbox.tools.marker_genes as mg
 
 
 # ---------------------------- FIXTURES -------------------------------- #

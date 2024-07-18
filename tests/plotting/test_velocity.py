@@ -1,7 +1,7 @@
 """Tests for Velocity plotting functions."""
 
 import pytest
-import sctoolbox.plotting as pl
+import sctoolbox.plotting.velocity as pl
 import scanpy as sc
 import os
 import numpy as np

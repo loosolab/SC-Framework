@@ -66,7 +66,7 @@ def recluster(adata: sc.AnnData,
         import sctoolbox
 
         adata = sc.datasets.pbmc68k_reduced()
-        sctoolbox.tools.recluster(adata, column="louvain", clusters=["1", "5"], task="join", method="leiden", resolution=1.5, plot=True)
+        sctoolbox.tools.clustering.recluster(adata, column="louvain", clusters=["1", "5"], task="join", method="leiden", resolution=1.5, plot=True)
 
     .. plot::
         :context: close-figs
@@ -75,7 +75,7 @@ def recluster(adata: sc.AnnData,
         import sctoolbox
 
         adata = sc.datasets.pbmc68k_reduced()
-        sctoolbox.tools.recluster(adata, column="louvain", clusters=["2", "6"], task="split", method="leiden", resolution=1.5, plot=True)
+        sctoolbox.tools.clustering.recluster(adata, column="louvain", clusters=["2", "6"], task="split", method="leiden", resolution=1.5, plot=True)
     """
 
     adata_copy = adata.copy()
@@ -111,7 +111,7 @@ def recluster(adata: sc.AnnData,
     elif task == "split":
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
 
-    adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
+    adata.obs[key_added] = utils.tables.rename_categories(adata.obs[key_added])  # rename to start at 1
 
     # --- Plot reclustering before/after --- #
     if plot is True:

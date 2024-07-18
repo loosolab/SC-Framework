@@ -86,10 +86,10 @@ def annotate_adata(adata: sc.AnnData,
     """
 
     # Make temporary directory if needed
-    utils.create_dir(temp_dir)
+    utils.io.create_dir(temp_dir)
 
     # Check that packages are installed
-    utils.check_module("uropa")  # will raise an error if not installed
+    utils.checker.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
 
     # TODO: Check input types
@@ -122,10 +122,10 @@ def annotate_adata(adata: sc.AnnData,
     if coordinate_cols is None:
         coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
     else:
-        utils.check_columns(adata.var, coordinate_cols, name="coordinate_cols")  # Check that coordinate_cols are in adata.var)
+        utils.checker.check_columns(adata.var, coordinate_cols, name="coordinate_cols")  # Check that coordinate_cols are in adata.var)
 
     # Test the coordinate columns
-    utils.format_adata_var(adata, coordinate_cols, coordinate_cols)  # will raise an error if not valid or try to convert from index
+    utils.checker.var_index_to_column(adata, coordinate_cols)  # will raise an error if not valid or try to convert from index
 
     # Convert regions to dict for uropa
     idx2name = {i: name for i, name in enumerate(regions.index)}
@@ -187,7 +187,7 @@ def annotate_adata(adata: sc.AnnData,
 
     # Remove temporary directory
     if remove_temp:
-        utils.rm_tmp(temp_dir, tempfiles)
+        utils.io.rm_tmp(temp_dir, tempfiles)
 
     if inplace is False:
         return adata  # else returns None
@@ -230,10 +230,10 @@ def annotate_narrowPeak(filepath: str,
     """
 
     # Make temporary directory
-    utils.create_dir(temp_dir)
+    utils.io.create_dir(temp_dir)
 
     # Check that packages are installed
-    utils.check_module("uropa")  # will raise an error if not installed
+    utils.checker.check_module("uropa")  # will raise an error if not installed
     import uropa.utils
 
     # Establish configuration dict
@@ -264,7 +264,7 @@ def annotate_narrowPeak(filepath: str,
 
     # Remove temporary directory
     if remove_temp:
-        utils.rm_tmp(temp_dir, tempfiles)
+        utils.io.rm_tmp(temp_dir, tempfiles)
 
     return annotation_table
 
@@ -330,12 +330,12 @@ def _prepare_gtf(gtf: str,
         3: If GTF-file could not be read. For example, due to an invalid format.
     """
 
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     # input_gtf = gtf
     # Check integrity of the gtf file
-    utils._gtf_integrity(gtf)  # will raise an error if gtf is not valid
+    utils.bioutils._gtf_integrity(gtf)  # will raise an error if gtf is not valid
 
     tempfiles = []
 
@@ -355,7 +355,7 @@ def _prepare_gtf(gtf: str,
             logger.info("- Index of gtf not found - trying to index gtf")
 
             # First check if gtf was already gzipped
-            if not utils._is_gz_file(gtf):
+            if not utils.checker._is_gz_file(gtf):
                 base = os.path.basename(gtf)
                 gtf_gz = os.path.join(temp_dir, base + ".gz")
                 pysam.tabix_compress(gtf, gtf_gz, force=True)
@@ -372,12 +372,12 @@ def _prepare_gtf(gtf: str,
                 logger.info("- Indexing failed - the GTF is probably unsorted")
 
                 # Start by uncompressing file if file is gz
-                is_gz = utils._is_gz_file(gtf)
+                is_gz = utils.checker._is_gz_file(gtf)
                 if is_gz:
                     gtf_uncompressed = os.path.join(temp_dir, "uncompressed.gtf")
                     logger.info(f"- Uncompressing {gtf} to: {gtf_uncompressed}")
                     try:
-                        utils.gunzip_file(gtf, gtf_uncompressed)
+                        utils.checker.gunzip_file(gtf, gtf_uncompressed)
                     except Exception:
                         raise ValueError("Could not uncompress gtf file to sort. Please ensure that the input gtf is sorted.")
                     gtf = gtf_uncompressed

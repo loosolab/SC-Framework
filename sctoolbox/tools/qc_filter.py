@@ -11,6 +11,7 @@ from pathlib import Path
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
+import scrublet as scr
 
 from beartype import beartype
 import numpy.typing as npt
@@ -18,9 +19,8 @@ from beartype.typing import Optional, Tuple, Union, Any, Literal
 # import scrublet as scr
 
 # toolbox functions
-import sctoolbox
 import sctoolbox.utils as utils
-from sctoolbox.plotting import _save_figure
+from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -69,7 +69,7 @@ def calculate_qc_metrics(adata: sc.AnnData,
 
         adata = sc.datasets.pbmc3k()
         print("Columns in .obs before 'calculate_qc_metrics':", adata.obs.columns.tolist())
-        sct.tools.calculate_qc_metrics(adata, inplace=True)
+        sct.tools.qc_filter.calculate_qc_metrics(adata, inplace=True)
         print("Columns in .obs after 'calculate_qc_metrics':", adata.obs.columns.tolist())
     """
 
@@ -147,7 +147,7 @@ def predict_cell_cycle(adata: sc.AnnData,
             # check if s_genes is a file or list
             if isinstance(genes, str):
                 if Path(genes).is_file():  # check if file exists
-                    genes = utils.read_list_file(genes)
+                    genes = utils.general.read_list_file(genes)
                 else:
                     raise FileNotFoundError(f'The file {genes} was not found!')
             elif isinstance(s_genes, np.ndarray):
@@ -174,7 +174,7 @@ def predict_cell_cycle(adata: sc.AnnData,
 
         # check if given species is available
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
+        available_species = utils.general.clean_flanking_strings(available_files)
         if species not in available_species:
             logger.debug("Species was not found in available species!")
             logger.debug(f"genelist_dir: {genelist_dir}")
@@ -220,7 +220,8 @@ def predict_cell_cycle(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def estimate_doublets(adata: sc.AnnData,
-                      threshold: float = 0.25,
+                      use_native: bool = False,
+                      threshold: Optional[float] = None,
                       inplace: bool = True,
                       plot: bool = True,
                       groupby: Optional[str] = None,
@@ -237,6 +238,8 @@ def estimate_doublets(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to estimate doublets for.
+    use_native : bool, default False
+        If True, uses the native implementation of scrublet.
     threshold : float, default 0.25
         Threshold for doublet detection.
     inplace : bool, default True
@@ -285,18 +288,18 @@ def estimate_doublets(adata: sc.AnnData,
                 sub.uns = {}
                 sub.layers = None
 
-                job = pool.apply_async(_run_scrublet, (sub,), {"threshold": threshold, "verbose": False, **kwargs})
+                job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
                 jobs.append(job)
             pool.close()
 
-            sctoolbox.utilities.monitor_jobs(jobs, "Scrublet per group")
+            utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
             results = [job.get() for job in jobs]
 
         else:
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
                 logger.info("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
-                res = _run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)
+                res = _run_scrublet(sub, use_native=use_native, threshold=threshold, verbose=False, **kwargs)
                 results.append(res)
 
         # Collect results for each element in tuples
@@ -324,7 +327,7 @@ def estimate_doublets(adata: sc.AnnData,
 
     if fill_na:
         adata.obs[["doublet_score", "predicted_doublet"]] = (
-            utils.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
+            utils.tables.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
 
     # Check if all values in colum are of type boolean
     if adata.obs["predicted_doublet"].dtype != "bool":
@@ -341,6 +344,8 @@ def estimate_doublets(adata: sc.AnnData,
 
 @beartype
 def _run_scrublet(adata: sc.AnnData,
+                  use_native: bool = False,
+                  threshold: Optional[float] = None,
                   **kwargs: Any) -> Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]:
     """
     Thread-safe wrapper for running scrublet, which also takes care of catching any warnings.
@@ -349,6 +354,10 @@ def _run_scrublet(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to estimate doublets for.
+    use_native : bool, default False
+        If True, uses the native implementation of scrublet.
+    threshold : float, default 0.25
+        Threshold for doublet detection.
     **kwargs : Any
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
@@ -362,14 +371,22 @@ def _run_scrublet(adata: sc.AnnData,
         warnings.filterwarnings("ignore", category=UserWarning, message="Received a view of an AnnData*")
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute `.obs`*")  # because adata is a view
 
-        # X = adata.X
-        # scrub = scr.Scrublet(X)
-        # doublet_scores, predicted_doublets = scrub.scrub_doublets()
+        if use_native:
+            # Run scrublet with native implementation
+            X = adata.X
+            scrub = scr.Scrublet(X)
+            doublet_scores, predicted_doublets = scrub.scrub_doublets()
 
-        # adata.obs["doublet_score"] = doublet_scores
-        # adata.obs["predicted_doublet"] = predicted_doublets
+            # Apply manual threshold
+            if threshold:
+                predicted_doublets = scrub.call_doublets(threshold=threshold)
 
-        sc.external.pp.scrublet(adata, copy=False, **kwargs)
+            adata.obs["doublet_score"] = doublet_scores
+            adata.obs["predicted_doublet"] = predicted_doublets
+
+            adata.uns['scrublet'] = "scr.Scrublet(X).scrub_doublets()"
+
+        sc.external.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
 

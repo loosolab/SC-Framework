@@ -1,1 +1,1 @@
-"""Test init."""
+"""Plotting tests init."""
