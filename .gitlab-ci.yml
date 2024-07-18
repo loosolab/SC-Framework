@@ -199,7 +199,7 @@ lint:
     - pip install flake8
     - pip install pydoclint>=0.1.7
     - pip install flake8-docstrings  # adds pydocstyle to flake
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301,DOC105 -sdpca --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
+    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301,DOC105 -sdpca true --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
