@@ -16,7 +16,6 @@ import scrublet as scr
 from beartype import beartype
 import numpy.typing as npt
 from beartype.typing import Optional, Tuple, Union, Any, Literal
-# import scrublet as scr
 
 # toolbox functions
 import sctoolbox.utils as utils
@@ -516,15 +515,17 @@ def predict_sex(adata: sc.AnnData,
 ###############################################################################
 
 @beartype
-def _get_thresholds(data: npt.ArrayLike,
-                    max_mixtures: int = 5,
-                    n_std: int | float = 3,
-                    plot: bool = True) -> dict[str, float]:
+def gmm_threshold(data: npt.ArrayLike,
+                  max_mixtures: int = 5,
+                  n_std: int | float = 3,
+                  plot: bool = True) -> dict[str, float]:
     """
     Get automatic min/max thresholds for input data array.
 
     The function will fit a gaussian mixture model, and find the threshold
     based on the mean and standard deviation of the largest mixture in the model.
+
+    The number of mixtures aka components is estimated using the BIC criterion. 
 
     Parameters
     ----------
@@ -566,11 +567,15 @@ def _get_thresholds(data: npt.ArrayLike,
     # Choose best number of mixtures
     try:
         kn = KneeLocator(n_list, BIC, curve='convex', direction='decreasing')
-        M_best = models[kn.knee - 1]  # -1 to get index
+        # store selected mixtures
+        selected = kn.knee
+        M_best = models[selected - 1]  # -1 to get index
 
     except Exception:
         # Knee could not be found; use the normal distribution estimated using one gaussian
         M_best = models[0]
+        # store selected mixtures
+        selected = 1
 
     # Which is the largest component? And what are the mean/variance of this distribution?
     weights = M_best.weights_
@@ -593,6 +598,8 @@ def _get_thresholds(data: npt.ArrayLike,
         axarr[0].plot(n_list, BIC, color="blue")
         axarr[0].set_xlabel("Number of mixtures")
         axarr[0].set_ylabel("BIC")
+
+        axarr[0].axvline(selected, color="red", linestyle="--", label="Selected mixtures")
 
         # Plot distribution of gaussian mixtures
         min_x = min(data)
@@ -670,7 +677,7 @@ def automatic_thresholds(adata: sc.AnnData,
         if groupby is None:
             data = table[col].values
             data[np.isnan(data)] = 0
-            d = _get_thresholds(data, plot=False)
+            d = gmm_threshold(data, plot=False)
             thresholds[col] = d
 
         else:
@@ -678,7 +685,7 @@ def automatic_thresholds(adata: sc.AnnData,
             for group, subtable in table.groupby(groupby):
                 data = subtable[col].values
                 data[np.isnan(data)] = 0
-                d = _get_thresholds(data, plot=False)
+                d = gmm_threshold(data, plot=False)
                 thresholds[col][group] = d
 
     return thresholds
