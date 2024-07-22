@@ -12,6 +12,7 @@ from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import scrublet as scr
+import scipy.stats as stats
 
 from beartype import beartype
 import numpy.typing as npt
@@ -518,7 +519,7 @@ def predict_sex(adata: sc.AnnData,
 def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
                   n_std: int | float = 3,
-                  plot: bool = True) -> dict[str, float]:
+                  plot: bool = False) -> dict[str, float]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -535,7 +536,7 @@ def gmm_threshold(data: npt.ArrayLike,
         Maximum number of gaussian mixtures to fit.
     n_std : int | float, default 3
         Number of standard deviations from distribution mean to set as min/max thresholds.
-    plot : bool, default True
+    plot : bool, default False
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
 
     Returns
@@ -622,6 +623,55 @@ def gmm_threshold(data: npt.ArrayLike,
         axarr[1].legend(bbox_to_anchor=(1.05, 1), loc=2)  # locate legend outside of plot
 
     return thresholds
+
+
+@beartype
+def mad_treshold(data: npt.ArrayLike,
+                 min_n: Union[int, float] = 3,
+                 max_n: Union[int, float] = 3,
+                 plot: bool = False) -> dict[str, float]:
+    """
+    Compute an automatic threshold using the median absolute deviation (MAD).
+
+    The threshold is calcualted as median(data) -/+ MAD * n.
+
+    Parameters
+    ----------
+    data : npt.ArrayLike
+        Array of data to find thresholds for.
+    min_n : int | float, default 3
+        Number of MADs from distribution median to set as min thresholds.
+    max_n : int | float, default 3
+        Number of MADs from distribution median to set as max thresholds.
+    plot : bool, default False
+        If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
+
+    Returns
+    -------
+    dict[str, float]
+        Dictionary with min and max thresholds.
+    """
+    median = np.median(data)
+    MAD = stats.median_abs_deviation(data)
+
+    result = {"min": median - MAD * min_n,
+              "max": median + MAD * max_n}
+
+    if plot:
+        _, ax = plt.subplots(figsize=(7, 3), constrained_layout=True)
+
+        ax.hist(data, density=True)
+        ax.set_xlabel("Value")
+        ax.set_ylabel("Density")
+
+        ml1 = ax.axvline(result["min"], color="red", linestyle="--")
+        ml2 = ax.axvline(result["max"], color="red", linestyle="--")
+        medl = ax.axvline(median, color="grey", linestyle="--")
+        ax.legend((medl, ml1, ml2),
+                  (f"Median ({median:.2f})", f"Min. MAD ({result['min']:.2f})", f"Max. MAD ({result['max']:.2f})"),
+                  bbox_to_anchor=(1.05, 1), loc=2)  # locate legend outside of plot
+
+    return result
 
 
 @beartype
