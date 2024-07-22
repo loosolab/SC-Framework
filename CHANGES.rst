@@ -9,6 +9,7 @@
 - added planet_plot for high dimensional anndata plotting (#221)
 - implemented concadata, from_h5ad to load and combine from multiple .h5ad files (#224)
 - ligand-receptor: connectionPlot new parameters (#255)
+- pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
