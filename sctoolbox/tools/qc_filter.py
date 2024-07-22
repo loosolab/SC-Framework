@@ -16,7 +16,7 @@ import scipy.stats as stats
 
 from beartype import beartype
 import numpy.typing as npt
-from beartype.typing import Optional, Tuple, Union, Any, Literal
+from beartype.typing import Optional, Tuple, Union, Any, Literal, Callable
 
 # toolbox functions
 import sctoolbox.utils as utils
@@ -679,7 +679,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          which: Literal["obs", "var"] = "obs",
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
-                         FUN: callable = gmm_threshold,
+                         FUN: Callable = gmm_threshold,
                          FUN_kwargs: Any = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
