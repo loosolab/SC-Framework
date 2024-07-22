@@ -6,6 +6,7 @@ import itertools
 import scipy
 import re
 import numpy as np
+import warnings
 
 from beartype.typing import Iterable, Any, Literal, Optional, Tuple
 from beartype import beartype
@@ -53,7 +54,7 @@ def correlation_matrix(adata: sc.AnnData,
                        which: Literal["obs", "var"] = "obs",
                        basis: str = "pca",
                        n_components: Optional[int] = None,
-                       columns: Optional[list[str]] = None,
+                       ignore: Optional[list[str]] = None,
                        method: Literal["spearmanr", "pearsonr"] = "spearmanr") -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Compute a matrix of correlation values between an embedding and given columns.
@@ -68,8 +69,9 @@ def correlation_matrix(adata: sc.AnnData,
         Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
     n_components : int, default None
         Number of components to use for the correlation.
-    columns : Optional[list[str]], default None
-        List of columns to use for the correlation. If None, all numeric columns are used.
+    ignore : Optional[list[str]], default None
+        List of column names to ignore for correlation. By default (None) all numeric columns are used.
+        All non numeric columns are ignored by default and cannot be used for correlation. 
     method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
 
@@ -110,12 +112,15 @@ def correlation_matrix(adata: sc.AnnData,
         raise ValueError(s)
 
     # Get columns
-    if columns is None:
-        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-        numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
-    else:
-        utils.checker.check_columns(table, columns)
-        numeric_columns = columns
+    numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+    numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
+
+    if ignore:
+        ignore_s, numeric_columns_s = set(ignore), set(numeric_columns)
+        invalid_ignore = list(ignore_s - numeric_columns_s)
+        if invalid_ignore:
+            warnings.warn(f"Ignore columns {invalid_ignore} not present in table {which}.")
+        numeric_columns = list(numeric_columns_s - ignore_s)
 
     # Get table of pcs and columns
     n_components = min(n_components, mat.shape[1]) if n_components else mat.shape[1]  # make sure we don't exceed the number of pcs available

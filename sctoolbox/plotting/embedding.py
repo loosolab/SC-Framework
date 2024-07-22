@@ -1462,6 +1462,7 @@ def plot_pca_variance(adata: sc.AnnData,
                       corr_plot: Optional[Literal["spearmanr", "pearsonr"]] = None,
                       corr_on: Literal["obs", "var"] = "obs",
                       corr_thresh: Optional[float] = None,
+                      ignore: Optional[list[str]] = None,
                       ax: Optional[matplotlib.axes.Axes] = None,
                       save: Optional[str] = None,
                       sel_col: str = "grey",
@@ -1489,6 +1490,9 @@ def plot_pca_variance(adata: sc.AnnData,
         Calculate correlation on either observations (adata.obs) or variables (adata.var).
     corr_thresh : Optional[float], default None
         Enables a red threshold line in the lower plot.
+    ignore : Optional[list[str]], default None
+        List of column names to ignore for correlation. By default (None) all numeric columns are used.
+        All non numeric columns are ignored by default and cannot be used for correlation. 
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
@@ -1541,7 +1545,7 @@ def plot_pca_variance(adata: sc.AnnData,
                                                           which=corr_on,
                                                           basis=method,
                                                           n_components=n_pcs,
-                                                          columns=None,
+                                                          ignore=ignore,
                                                           method=corr_plot)
 
         abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
@@ -1659,7 +1663,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                          which: Literal["obs", "var"] = "obs",
                          basis: str = "pca",
                          n_components: int = 10,
-                         columns: Optional[list[str]] = None,
+                         ignore: Optional[list[str]] = None,
                          pvalue_threshold: float = 0.01,
                          method: Literal["spearmanr", "pearsonr"] = "spearmanr",
                          plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
@@ -1680,8 +1684,9 @@ def plot_pca_correlation(adata: sc.AnnData,
         Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
     n_components : int, default 10
         Number of components to use for the correlation.
-    columns : Optional[list[str]], default None
-        List of columns to use for the correlation. If None, all numeric columns are used.
+    ignore : Optional[list[str]], default None
+        List of column names to ignore for correlation. By default (None) all numeric columns are used.
+        All non numeric columns are ignored by default and cannot be used for correlation. 
     pvalue_threshold : float, default 0.01
         Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
     method : Literal["spearmanr", "pearson"], default "spearmanr"
@@ -1721,7 +1726,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                                                             which=which,
                                                             basis=basis,
                                                             n_components=n_components,
-                                                            columns=columns,
+                                                            ignore=ignore,
                                                             method=method)
 
     # decide which values should be shown
