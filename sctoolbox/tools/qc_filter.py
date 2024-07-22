@@ -678,7 +678,9 @@ def mad_treshold(data: npt.ArrayLike,
 def automatic_thresholds(adata: sc.AnnData,
                          which: Literal["obs", "var"] = "obs",
                          groupby: Optional[str] = None,
-                         columns: Optional[list[str]] = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+                         columns: Optional[list[str]] = None,
+                         FUN: callable = gmm_threshold,
+                         FUN_kwargs: Any = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -692,6 +694,11 @@ def automatic_thresholds(adata: sc.AnnData,
         Group rows by the column given in 'groupby' to find thresholds independently per group
     columns : Optional[list[str]], default None
         Columns to calculate automatic thresholds for. If None, will take all numeric columns.
+    FUN : callable, default gmm_threshold
+        A filter function. The function is expected to accept an array of values and to return a dict with thresholds: {"min": 0, "max": 1}.
+        Available functions: gmm_threshold, mad_threshold.
+    FUN_kwargs : Any
+        Additional kwargs forwarded to the filter function.
 
     Returns
     -------
@@ -727,7 +734,7 @@ def automatic_thresholds(adata: sc.AnnData,
         if groupby is None:
             data = table[col].values
             data[np.isnan(data)] = 0
-            d = gmm_threshold(data, plot=False)
+            d = FUN(data, **FUN_kwargs)
             thresholds[col] = d
 
         else:
@@ -735,7 +742,7 @@ def automatic_thresholds(adata: sc.AnnData,
             for group, subtable in table.groupby(groupby):
                 data = subtable[col].values
                 data[np.isnan(data)] = 0
-                d = gmm_threshold(data, plot=False)
+                d = FUN(data, **FUN_kwargs)
                 thresholds[col][group] = d
 
     return thresholds
