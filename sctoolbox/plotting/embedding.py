@@ -1492,7 +1492,7 @@ def plot_pca_variance(adata: sc.AnnData,
         Enables a red threshold line in the lower plot.
     ignore : Optional[list[str]], default None
         List of column names to ignore for correlation. By default (None) all numeric columns are used.
-        All non numeric columns are ignored by default and cannot be used for correlation. 
+        All non numeric columns are ignored by default and cannot be used for correlation.
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
@@ -1686,7 +1686,7 @@ def plot_pca_correlation(adata: sc.AnnData,
         Number of components to use for the correlation.
     ignore : Optional[list[str]], default None
         List of column names to ignore for correlation. By default (None) all numeric columns are used.
-        All non numeric columns are ignored by default and cannot be used for correlation. 
+        All non numeric columns are ignored by default and cannot be used for correlation.
     pvalue_threshold : float, default 0.01
         Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
     method : Literal["spearmanr", "pearson"], default "spearmanr"

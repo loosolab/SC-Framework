@@ -71,7 +71,7 @@ def correlation_matrix(adata: sc.AnnData,
         Number of components to use for the correlation.
     ignore : Optional[list[str]], default None
         List of column names to ignore for correlation. By default (None) all numeric columns are used.
-        All non numeric columns are ignored by default and cannot be used for correlation. 
+        All non numeric columns are ignored by default and cannot be used for correlation.
     method : Literal["spearmanr", "pearson"], default "spearmanr"
         Method to use for correlation. Must be either "pearsonr" or "spearmanr".
 
