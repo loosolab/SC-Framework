@@ -112,8 +112,7 @@ def correlation_matrix(adata: sc.AnnData,
         raise ValueError(s)
 
     # Get columns
-    numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-    numeric_columns = table.select_dtypes(include=numerics).columns.tolist()
+    numeric_columns = table.select_dtypes(include='number').columns.tolist()
 
     if ignore:
         ignore_s, numeric_columns_s = set(ignore), set(numeric_columns)
