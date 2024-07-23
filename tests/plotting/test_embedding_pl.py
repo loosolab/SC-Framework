@@ -417,4 +417,4 @@ def test_plot_pca_correlation_fail(adata, kwargs):
     """Test that an exception is raised upon error."""
 
     with pytest.raises((BeartypeCallHintParamViolation, KeyError, ValueError)):
-        pl.embedding.plot_pca_correlation(adata, **kwargs)
+        pl.plot_pca_correlation(adata, **kwargs)
