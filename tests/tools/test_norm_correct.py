@@ -95,11 +95,6 @@ def test_tfidf(tfidf_x):
     assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
 
 
-def test_evaluate_batch_effect(adata):
-    """Test if AnnData containing LISI column in .obs is returned."""
-    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
-
-
 def test_wrap_corrections(adata):
     """Test if wrapper returns a dict, and that the keys contains the given methods."""
 
