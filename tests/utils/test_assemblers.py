@@ -7,6 +7,20 @@ import pytest
 import sctoolbox.utils.assemblers as assemblers
 import scanpy as sc
 
+# --------------------------- Fixtures ------------------------------ #
+
+
+@pytest.fixture()
+def h5ad_file1():
+    """Return path to h5ad file."""
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
+
+
+@pytest.fixture()
+def h5ad_file2():
+    """Return path to h5ad file."""
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'scsa', 'adata_scsa.h5ad')
+
 
 @pytest.fixture
 def named_var_adata():
@@ -49,6 +63,26 @@ def adata_rna():
     """Load rna adata."""
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
+
+# --------------------------- Tests --------------------------------- #
+
+
+@pytest.mark.parametrize("files", [
+    "h5ad_file1",
+    ["h5ad_file1", "h5ad_file2"],
+    {"a": "h5ad_file1", "b": "h5ad_file2"}
+])
+def test_from_h5ad(files, request):
+    """Test the from_h5ad function."""
+    # enable fixture in parametrize https://engineeringfordatascience.com/posts/pytest_fixtures_with_parameterize/
+    if isinstance(files, list):
+        files = [request.getfixturevalue(f) for f in files]
+    elif isinstance(files, dict):
+        files = {k: request.getfixturevalue(v) for k, v in files.items()}
+    else:
+        files = request.getfixturevalue(files)
+
+    assert isinstance(assemblers.from_h5ad(files), sc.AnnData)
 
 
 @pytest.mark.parametrize("fixture, expected, coordinate_cols",
