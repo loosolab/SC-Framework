@@ -82,7 +82,7 @@ setup(
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
         'ipympl',
-        'ipywidgets<=7.7.5',  # later versions cause problems in some cases for interactive plots
+        'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
         'leidenalg',
         'louvain',

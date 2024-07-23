@@ -458,10 +458,9 @@ def batch_correction(adata: sc.AnnData,
 
     elif method == "combat":
 
-        corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
-
         adata = adata.copy()  # make sure adata is not modified
-        adata.X = sparse.csr_matrix(corrected_mat)
+        # run combat
+        sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
         sc.pp.pca(adata)
         sc.pp.neighbors(adata)

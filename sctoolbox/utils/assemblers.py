@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from beartype.typing import Optional, Union, Literal, Any
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -22,11 +22,12 @@ logger = settings.logger
 
 @beartype
 def prepare_atac_anndata(adata: sc.AnnData,
-                         set_index: bool = True,
-                         index_from: Optional[str] = None,
-                         coordinate_cols: Optional[list[str]] = None,
-                         h5ad_path: Optional[str] = None) -> sc.AnnData:
-    """
+                         coordinate_cols: Optional[Union[list[str], str]] = None,
+                         h5ad_path: Optional[str] = None,
+                         remove_var_index_prefix: bool = True,
+                         keep_original_index: Optional[str] = None,
+                         coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
+    r"""
     Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
 
     This includes formatting the index, formatting the coordinate columns, and setting the barcode as the index.
@@ -35,37 +36,62 @@ def prepare_atac_anndata(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The AnnData object to be prepared.
-    set_index : bool, default True
-        If True, index will be formatted and can be set by a given column.
-    index_from : Optional[str], default None
-        Column to build the index from.
-    coordinate_cols : Optional[list[str]], default None
-        Location information of the peaks.
+    coordinate_cols : Optional[list[str], str], default None
+        Parameter ensures location info is in adata.var and adata.var.index and formatted correctly.
+        1. A list of 3 adata.var column names e.g. ['chr', 'start', 'end'] that will be used to create the index.
+        2. A string (adata.var column name) that contains all three coordinates to create the index.
+        3. And if None, the coordinates will be created from the index.
     h5ad_path : Optional[str], default None
         Path to the h5ad file.
+    remove_var_index_prefix : bool, default True
+        If True, the prefix ("chr") of the index will be removed.
+    keep_original_index : Optional[str], default None
+        If not None, the original index will be kept in adata.obs by the name provided.
+    coordinate_regex : str, default "chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+        Regular expression to check if the index is in the correct format.
 
     Returns
     -------
     sc.AnnData
         The prepared AnnData object.
 
+    Raises
+    ------
+    KeyError
+        If coordinate columns are not found in adata.var.
     """
+    if coordinate_cols:
+        if isinstance(coordinate_cols, list):
+            if len(coordinate_cols) != 3:
+                logger.error("Coordinate columns must be a list of 3 elements. e.g. ['chr', 'start', 'end'] or a single string with all coordinates.")
+                raise ValueError
 
-    if set_index:
-        logger.info("formatting index")
-        utils.checker.var_index_from(adata, index_from)
+        if not utils.checker.check_columns(adata.var,
+                                           coordinate_cols,
+                                           error=False,
+                                           name="adata.var"):  # Check that coordinate_cols are in adata.var)
+            logger.error('Coordinate columns not found in adata.var')
+            raise KeyError
 
-    # Establish columns for coordinates
-    if coordinate_cols is None:
-        coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
-    else:
-        utils.checker.check_columns(adata.var,
-                                    coordinate_cols,
-                                    name="adata.var")  # Check that coordinate_cols are in adata.var)
+    # Format index
+    logger.info("formatting index")
+    # This checks if the index is available and valid, if not it creates it.
+    utils.checker.var_column_to_index(adata,
+                                      coordinate_cols=coordinate_cols,
+                                      remove_var_index_prefix=remove_var_index_prefix,
+                                      keep_original_index=keep_original_index,
+                                      coordinate_regex=coordinate_regex)
 
     # Format coordinate columns
     logger.info("formatting coordinate columns")
-    utils.checker.format_adata_var(adata, coordinate_cols, coordinate_cols)
+    # This checks if the coordinate columns are available and valid, if not it creates them.
+
+    # Establish columns for coordinates
+    if coordinate_cols is None:
+        coordinate_cols = ['chr', 'start', 'stop']
+
+    # Format coordinate columns
+    utils.checker.var_index_to_column(adata, coordinate_cols)
 
     # check if the barcode is the index otherwise set it
     utils.bioutils.barcode_index(adata)
@@ -74,6 +100,34 @@ def prepare_atac_anndata(adata: sc.AnnData,
         adata.obs = adata.obs.assign(file=h5ad_path)
 
     return adata
+
+
+@beartype
+def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.AnnData:
+    """
+    Load one or more .h5ad files.
+
+    Multiple .h5ad files will be combined with a "batch" column added to adata.obs.
+
+    Parameters
+    ----------
+    h5ad_file : Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+        Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
+        In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+
+    Returns
+    -------
+    sc.AnnData
+        The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
+    """
+    if isinstance(h5ad_file, str):
+        return sc.read_h5ad(filename=h5ad_file)
+    elif isinstance(h5ad_file, Mapping):
+        # load then combine anndata objects
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+    else:
+        # load then combine anndata objects
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
 
 
 #####################################################################
@@ -368,7 +422,7 @@ def from_mtx(path: str,
 
     adata_objects = []
     for i, m in enumerate(mtx_files):
-        print(f"Reading files: {i+1} of {len(mtx_files)} ")
+        logger.info(f"Reading files: {i+1} of {len(mtx_files)} ")
 
         # find barcode and variable file in same folder
         barcode_file = list(m.parents[0].glob(barcodes))
@@ -396,23 +450,7 @@ def from_mtx(path: str,
 
     # create final adata
     if len(adata_objects) > 1:
-        adata = sc.concat(adata_objects, join="outer", label="batch")
-
-        # manually combine var table, then add it to the final adata
-        var = pd.concat(
-            [a.var for a in adata_objects],
-            join="outer"
-        )
-
-        # remove duplicates
-        # temporarily set index as column to use this as column for duplicate removal
-        # TODO will raise an error if there happens to be a column with the same name as the index
-        ind_name = var.index.name
-        var = var.reset_index().drop_duplicates(subset=ind_name).set_index(ind_name)
-
-        # add the var table to the adata while ensuring the correct order
-        adata.var = var.loc[adata.var_names]
-
+        adata = utils.adata.concadata(adata_objects)
     else:
         adata = adata_objects[0]
 
