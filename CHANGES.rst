@@ -16,6 +16,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
+- restructured atac notebook 3 (normalization and batch correction) (#278)
 
 0.8.0 (14-06-24)
 ----------------
