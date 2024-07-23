@@ -38,7 +38,7 @@ def atac_norm(*args: Any, **kwargs: Any):
 @deco.log_anndata
 @beartype
 def normalize_adata(adata: sc.AnnData,
-                    method: str | list[str],
+                    method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
                     target_sum: Optional[int] = None) -> Union[dict[str, sc.AnnData], sc.AnnData]:
@@ -49,7 +49,7 @@ def normalize_adata(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
-    method : str | list[str]
+    method : Literal["total", "tfidf"] | list[Literal["total", "tfidf"]]
         Normalization method. Either 'total' and/or 'tfidf'.
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
@@ -87,8 +87,10 @@ def normalize_adata(adata: sc.AnnData,
         return adatas
 
 
+@deco.log_anndata
+@beartype
 def normalize_and_dim_reduct(adata: sc.AnnData,
-                             method: str,
+                             method: Literal["total", "tfidf"],
                              exclude_highly_expressed: bool = True,
                              use_highly_variable: bool = False,
                              target_sum: Optional[int] = None) -> sc.AnnData:
@@ -99,7 +101,7 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
-    method : str
+    method : Literal["total", "tfidf"],
         The normalization method. Either 'total' or 'tfidf'.
     exclude_highly_expressed : bool, default True
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
@@ -112,11 +114,6 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
     -------
     sc.AnnData
         Annotated data matrix with normalized count matrix and PCA/LSI calculated.
-
-    Raises
-    ------
-    ValueError
-        If method is not 'total' or 'tfidf'.
     """
     adata = adata.copy()  # make sure the original data is not modified
 
@@ -130,9 +127,6 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
         logger.info('Performing TFIDF and LSI...')
         tfidf(adata)
         lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
-
-    else:
-        raise ValueError(f"Method '{method}' is invalid - must be either 'total' or 'tfidf'.")
 
     return adata
 
