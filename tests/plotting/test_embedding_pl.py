@@ -419,4 +419,3 @@ def test_plot_pca_correlation_fail(adata, kwargs):
 
     with pytest.raises((BeartypeCallHintParamViolation, KeyError, ValueError)):
         pl.plot_pca_correlation(adata, **kwargs)
-
