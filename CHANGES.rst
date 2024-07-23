@@ -31,6 +31,7 @@
     - tools/tsse
     - tools/frip
     - tools/jupyter
+    - overall cleanup
 
 
 0.9.0 (in progress)
