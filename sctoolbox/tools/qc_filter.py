@@ -1205,6 +1205,13 @@ def denoise_data(adata: sc.AnnData,
     -------
     sc.AnnData
         Denoised anndata object
+
+    Raises
+    ------
+    ValueError
+        When feature_type is None and adata.var does not have column 'feature_types'.
+    ValueError
+        When feature_type is None and features in adata.var['feature_types'] are not supported.
     """
 
     import warnings
@@ -1234,25 +1241,19 @@ def denoise_data(adata: sc.AnnData,
         adata.var['feature_types'] = feature_type
 
     logger.info('Setting up adata...')
-    # TODO: remove this when the issue is fixed in scAR
-    # spike in the former scipy ".A" property (modifies the scipy class!)
-    setattr(adata.X.__class__, "A", property(lambda self: self.toarray()))
-    try:
-        start_time = time.time()
-        setup_anndata(
-            adata=adata,
-            raw_adata=adata_raw,
-            prob=prob,
-            kneeplot=True,
-            feature_type=feature_type,
-            verbose=verbose
-        )
+    start_time = time.time()
+    setup_anndata(
+        adata=adata,
+        raw_adata=adata_raw,
+        prob=prob,
+        kneeplot=True,
+        feature_type=feature_type,
+        verbose=verbose
+    )
 
-        _save_figure(save)
-    finally:
-        # remove the property
-        delattr(adata.X.__class__, "A")
-        end_time = time.time() - start_time
+    _save_figure(save)
+
+    end_time = time.time() - start_time
 
     logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
 
