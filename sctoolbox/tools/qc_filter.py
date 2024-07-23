@@ -1192,7 +1192,7 @@ def denoise_data(adata: sc.AnnData,
     adata_raw : sc.AnnData
         Raw anndata object with all droplets
     feature_type : Literal["Gene Expression", "Peaks", "CRISPR Guide Capture", "Multiplexing Capture"], default "Gene Expression"
-        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, all features are calculated
+        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, the values found in column adata.var['feature_types'] are used.
     epochs : int, default 150
         Number of iterations to train the model
     prob : float, default 0.995
@@ -1218,27 +1218,45 @@ def denoise_data(adata: sc.AnnData,
         'Multiplexing Capture': 'CMO',
     }
 
-    adata_raw.var['feature_types'] = feature_type
-    adata.var['feature_types'] = feature_type
+    if feature_type is None:
+        # check if column "feature_types" is in adata.var
+        if 'feature_types' not in adata.var.columns:
+            raise ValueError(f"'feature_types' column is missing from adata.var! Please specify the feature type manually in parameter <feature_type>.\nAvailable feature_type: {list(FEATURES.keys())}")
+        else:
+            # check if the feature types in column are supported
+            features = adata.var['feature_types'].unique()
+            check = all(x in FEATURES.keys() for x in features)
+            if not check:
+                not_supported = set(features) - set(FEATURES.keys())
+                raise ValueError(f"{list(not_supported)} features are not supported! Supported features are: {list(FEATURES.keys())}")
+    else:
+        adata_raw.var['feature_types'] = feature_type
+        adata.var['feature_types'] = feature_type
 
     logger.info('Setting up adata...')
-    start_time = time.time()
-    setup_anndata(
-        adata=adata,
-        raw_adata=adata_raw,
-        prob=prob,
-        kneeplot=True,
-        feature_type=feature_type,
-        verbose=verbose
-    )
+    # TODO: remove this when the issue is fixed in scAR
+    # spike in the former scipy ".A" property (modifies the scipy class!)
+    setattr(adata.X.__class__, "A", property(lambda self: self.toarray()))
+    try:
+        start_time = time.time()
+        setup_anndata(
+            adata=adata,
+            raw_adata=adata_raw,
+            prob=prob,
+            kneeplot=True,
+            feature_type=feature_type,
+            verbose=verbose
+        )
 
-    _save_figure(save)
+        _save_figure(save)
+    finally:
+        # remove the property
+        delattr(adata.X.__class__, "A")
+        end_time = time.time() - start_time
 
-    end_time = time.time() - start_time
     logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
 
     logger.info('Training model to remove ambient RNA...')
-
     scar = model(raw_count=adata,
                  feature_type=FEATURES[feature_type],
                  sparsity=0.9,
