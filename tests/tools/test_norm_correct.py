@@ -55,7 +55,7 @@ def adata_batch_dict(adata):
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_atac_norm(adata_mm10, method):
     """Test atac_norm success."""
-    adata_norm = tools.norm_correct.atac_norm(adata_mm10, method=method)[method]  # return from function is a dict
+    adata_norm = tools.norm_correct.atac_norm(adata_mm10, method=method)  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
