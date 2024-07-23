@@ -1,39 +1,3 @@
-- TEST CLEANUP (#215)
-    - gene_correlation
-    - marker_genes
-    - tobias
-    - embedding tools
-    - genometracks
-    - plotting/clustering
-    - velocity
-    - plotting/test_qc_filter
-    - general
-    - io
-    - tools/clustering
-    - tools/bam
-    - tools/calc_overlap_fc
-    - tools/celltype_annotation
-    - tools/peak_annotation
-    - tools/qc_filter
-    - highly_variable
-    - tables
-    - utils/adata
-    - utils/general
-    - utils/checker
-    - tools/highly_variable
-    - tools/multiomics
-    - tools/insertsize
-    - utils/creators
-    - tools/norm_correct
-    - utils/decorator
-    - utils/assemblers
-    - utils/bioutils
-    - tools/tsse
-    - tools/frip
-    - tools/jupyter
-    - overall cleanup
-
-
 0.9.0 (in progress)
 -------------------
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
@@ -47,6 +11,7 @@
 - ligand-receptor: connectionPlot new parameters (#255)
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
+- refactored unit testing by the test_cleanup merge (#215)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -72,7 +37,6 @@ Changes to notebooks
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
 - Add GSEA notebook (#172)
 - rna/atac assembly notebook update from_mtx (#234, #240)
->>>>>>> origin/dev
 
 0.7.0 (23-04-24)
 ----------------
@@ -97,13 +61,7 @@ Changes to notebooks
 - refactor move clean-orphaned-tags to new stage .post (#229)
 
 0.6 (27-03-24)
-<<<<<<< HEAD
--------------
-- TEST CLEANUP
-    - embedding
-=======
 --------------
->>>>>>> origin/dev
 - Fix unable to determine R_HOME error (#190)
 - implemented propose_pcs to automatically select PCA components (#187)
 - add correlation barplot to plot_pca_variance
