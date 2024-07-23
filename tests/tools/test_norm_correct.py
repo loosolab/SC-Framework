@@ -63,14 +63,28 @@ def test_atac_norm(adata_mm10, method):
         assert "X_pca" in adata_norm.obsm and "pca" in adata_norm.uns and "PCs" in adata_norm.varm
 
 
-@pytest.mark.parametrize("method", ["total", "tfidf"])
+@pytest.mark.parametrize("method", [["total", "tfidf"], "total", "tfidf"])
 def test_normalize_adata(adata, method):
     """Test that data was normalized."""
-    result_dict = tools.norm_correct.normalize_adata(adata, method=method)
-    adata = result_dict[method]
-    mat = adata.X.todense()
+    # Execute function
+    result = tools.norm_correct.normalize_adata(adata, method=method)
+    # If method is a list, get the first element of the resulting dictionary
+    if isinstance(method, list):
+        method = method[0]
+        adata = result[method]
+    # If method is a string, get the resulting anndata object
+    elif isinstance(method, str):
+        adata = result
 
+    # Check if the data was normalized
+    mat = adata.X.todense()
+    # Check if the data is a float array
     assert not utils.checker.is_integer_array(mat)
+    # Check if the data is dimensionally reduced
+    if method == "tfidf":
+        assert "X_lsi" in adata.obsm and "lsi" in adata.uns and "LSI" in adata.varm
+    elif method == "total":
+        assert "X_pca" in adata.obsm and "pca" in adata.uns and "PCs" in adata.varm
 
 
 # adapted from muon package
@@ -79,6 +93,11 @@ def test_tfidf(tfidf_x):
     tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True)
     assert str("%.3f" % tfidf_x.X[0, 0]) == "4.659"
     assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
+
+
+def test_evaluate_batch_effect(adata):
+    """Test if AnnData containing LISI column in .obs is returned."""
+    ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
 
 
 def test_wrap_corrections(adata):
