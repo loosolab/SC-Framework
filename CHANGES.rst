@@ -12,6 +12,7 @@
 - ligand-receptor: connectionPlot new parameters (#255)
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - Fix minor docstring/example issues.
+- added labels for the tsse aggregation plot (#271)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
