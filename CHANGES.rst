@@ -13,6 +13,7 @@
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
 - Fix minor docstring/example issues.
+- Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored unit testing by the test_cleanup merge (#215)
 
 Changes to notebooks
