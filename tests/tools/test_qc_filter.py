@@ -19,7 +19,7 @@ plt.switch_backend("Agg")
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
-    f = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
+    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
 
@@ -105,6 +105,12 @@ def s_file(s_list):
         yield tmp
 
 
+@pytest.fixture(scope="session")
+def norm_dist():
+    """Return a normal distribution."""
+    return np.random.normal(size=1000)
+
+
 # --------------------------- Tests --------------------------------- #
 
 @pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1), ("sample", 4)])
@@ -117,11 +123,16 @@ def test_estimate_doublets(adata, groupby, threads):
     assert "doublet_score" in adata.obs.columns
 
 
-def test_get_thresholds():
-    """Test whether min/max threshold can be found for a normal distribution."""
-    data_arr = np.random.normal(size=1000)
+def test_gmm_threshold(norm_dist):
+    """Test whether min/max threshold can be found using a gaussian mixture model."""
+    threshold = qc.gmm_threshold(norm_dist, plot=True)
 
-    threshold = qc._get_thresholds(data_arr)
+    assert "min" in threshold and "max" in threshold
+
+
+def test_mad_threshold(norm_dist):
+    """Test if thresholds can be found using the MAD score."""
+    threshold = qc.mad_treshold(norm_dist, plot=True)
 
     assert "min" in threshold and "max" in threshold
 
@@ -129,13 +140,18 @@ def test_get_thresholds():
 @pytest.mark.parametrize("groupby", [None, "group"])
 @pytest.mark.parametrize("columns", [None, ["qc_variable1", "qc_variable2"]])
 @pytest.mark.parametrize("which", ["obs", "var"])
-def test_automatic_thresholds(adata, which, columns, groupby):
+@pytest.mark.parametrize("fun", [qc.gmm_threshold, qc.mad_treshold, lambda arr: {"min": -1, "max": 1}])
+def test_automatic_thresholds(adata, which, columns, groupby, fun):
     """Test whether automatic thresholds are successfully calculated and added to the threshold dict."""
-    thresholds = qc.automatic_thresholds(adata, which=which, columns=columns, groupby=groupby)
-    threshold_keys = sorted(thresholds.keys())
+    thresholds = qc.automatic_thresholds(adata, which=which, columns=columns, groupby=groupby, FUN=fun)
 
     if columns:
+        # assert output only contains selected columns
+        threshold_keys = sorted(thresholds.keys())
         assert threshold_keys == columns
+    else:
+        # assert output contains all numeric columns
+        assert len(thresholds) == len(getattr(adata, which).select_dtypes("number").columns)
 
 
 def test_automatic_thresholds_failure(adata):
