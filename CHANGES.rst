@@ -11,12 +11,14 @@
 - ligand-receptor: connectionPlot new parameters (#255)
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
+- Fix minor docstring/example issues.
 - refactored unit testing by the test_cleanup merge (#215)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
+- restructured atac notebook 3 (normalization and batch correction) (#278)
 
 0.8.0 (14-06-24)
 ----------------
