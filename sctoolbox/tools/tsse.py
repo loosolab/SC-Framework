@@ -327,7 +327,11 @@ def tsse_scoring(fragments: str,
     tSSe_df = pd.DataFrame.from_dict(tSSe_cells, orient='index', columns=['TSS_agg', 'total_ov'])
     # Plot a single aggregate as reference
     if plot:
-        plt.plot(tSSe_df['TSS_agg'].to_numpy()[0])
+        # Get the data
+        data = plt.plot(tSSe_df['TSS_agg'].to_numpy()[0])
+
+        plot_tsse_aggregate(data, negativ_shift, positiv_shift)
+
     # calculate per base tSSe
     per_base_tsse = calc_per_base_tsse(tSSe_df, min_bias=min_bias, edge_size=edge_size_total)
     # calculate global tSSe score
@@ -342,6 +346,37 @@ def tsse_scoring(fragments: str,
             os.remove(tmp_file)
 
     return tSSe_df
+
+
+@beartype
+def plot_tsse_aggregate(data: npt.ArrayLike,
+                        negative_shift: int,
+                        positive_shift: int) -> None:
+    """
+    Plot the aggregate of the TSSe score.
+
+    Parameters
+    ----------
+    data : npt.ArrayLike
+        numpy array with the TSSe score
+    negative_shift : int
+        negative_shift
+    positive_shift : int
+        positive_shift
+
+    Returns
+    -------
+    None
+    """
+
+    x_values = range(-negative_shift, positive_shift)
+
+    plt.plot(x_values, data)
+    plt.xlabel('Position relative to TSS (bp)')
+    plt.ylabel('Enrichment')
+    plt.title('Transcription Start Site Enrichment')
+
+    plt.show()
 
 
 @deco.log_anndata
