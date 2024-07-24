@@ -87,66 +87,6 @@ def test_label_genes(adata, species, gene_column):
         assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender and cellcycle are not added
 
 
-def test_get_rank_genes_tables(adata):
-    """Test if rank gene tables are created and saved to excel file."""
-
-    sc.tl.rank_genes_groups(adata, groupby="condition")
-
-    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx")
-
-    assert len(tables) == 3
-    assert os.path.exists("rank_genes.xlsx")
-
-    os.remove("rank_genes.xlsx")
-
-
-@pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str
-def test_get_rank_genes_tables_errors(adata, kwargs):
-    """Test if get_rank_gene_tables raises errors."""
-
-    sc.tl.rank_genes_groups(adata, groupby="condition")
-
-    with pytest.raises(ValueError):
-        mg.get_rank_genes_tables(adata, out_group_fractions=True, **kwargs)
-
-
-def test_mask_rank_genes(adata):
-    """Test if genes are masked in adata.uns['rank_genes_groups']."""
-
-    sc.tl.rank_genes_groups(adata, groupby="condition")
-
-    genes = adata.var.index.tolist()[:10]
-    mg.mask_rank_genes(adata, genes)
-    tables = mg.get_rank_genes_tables(adata)
-
-    for key in tables:
-        table_names = tables[key]["names"].tolist()
-        assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
-
-
-@pytest.mark.parametrize(
-    "score_name, gene_set, inplace",
-    [
-        ("test1", "gene_set", False),
-        ("test2", os.path.join(os.path.dirname(__file__), '../data', 'test_score_genes.txt'), True)
-    ],
-    indirect=["gene_set"]
-)
-def test_score_genes(adata_score, score_name, gene_set, inplace):
-    """Test if genes are scored and added to adata.obs."""
-
-    assert score_name not in adata_score.obs.columns
-
-    out = mg.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
-
-    if inplace:
-        assert out is None
-        assert score_name in adata_score.obs.columns
-    else:
-        assert score_name not in adata_score.obs.columns
-        assert score_name in out.obs.columns
-
-
 def test_add_gene_expression(adata):
     """Test add_gene_expression success and failure."""
     gene = adata.var.index[0]
@@ -186,11 +126,48 @@ def test_pairwise_rank_genes(adata):
     assert isinstance(output, pd.DataFrame)
 
 
+def test_get_rank_genes_tables(adata):
+    """Test if rank gene tables are created and saved to excel file."""
+
+    sc.tl.rank_genes_groups(adata, groupby="condition")
+
+    tables = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx")
+
+    assert len(tables) == 3
+    assert os.path.exists("rank_genes.xlsx")
+
+    os.remove("rank_genes.xlsx")
+
+
+@pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str
+def test_get_rank_genes_tables_errors(adata, kwargs):
+    """Test if get_rank_gene_tables raises errors."""
+
+    sc.tl.rank_genes_groups(adata, groupby="condition")
+
+    with pytest.raises(ValueError):
+        mg.get_rank_genes_tables(adata, out_group_fractions=True, **kwargs)
+
+
+def test_mask_rank_genes(adata):
+    """Test if genes are masked in adata.uns['rank_genes_groups']."""
+
+    sc.tl.rank_genes_groups(adata, groupby="condition")
+
+    genes = adata.var.index.tolist()[:10]
+    mg.mask_rank_genes(adata, genes)
+    tables = mg.get_rank_genes_tables(adata)
+
+    for key in tables:
+        table_names = tables[key]["names"].tolist()
+        assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
+
+
 @pytest.mark.parametrize("condition_col, error", [
     ("not_present", "was not found in adata.obs.columns"),
     ("condition-col", "not a valid column name within R"),
     ("condition", None)])
-def test_deseq(adata, condition_col, error):
+def test_run_deseq2(adata, condition_col, error):
     """Test if deseq2 is run and returns a dataframe."""
 
     # test if error is raised
@@ -202,3 +179,26 @@ def test_deseq(adata, condition_col, error):
         df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
 
         assert isinstance(df, pd.DataFrame)
+
+
+@pytest.mark.parametrize(
+    "score_name, gene_set, inplace",
+    [
+        ("test1", "gene_set", False),
+        ("test2", os.path.join(os.path.dirname(__file__), 'data', 'test_score_genes.txt'), True)
+    ],
+    indirect=["gene_set"]
+)
+def test_score_genes(adata_score, score_name, gene_set, inplace):
+    """Test if genes are scored and added to adata.obs."""
+
+    assert score_name not in adata_score.obs.columns
+
+    out = mg.score_genes(adata_score, gene_set, score_name=score_name, inplace=inplace)
+
+    if inplace:
+        assert out is None
+        assert score_name in adata_score.obs.columns
+    else:
+        assert score_name not in adata_score.obs.columns
+        assert score_name in out.obs.columns
