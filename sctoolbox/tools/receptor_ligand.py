@@ -48,10 +48,10 @@ def download_db(adata: sc.AnnData,
     db_path : str
         A valid database needs a column with receptor gene ids/symbols and ligand gene ids/symbols.
         Either a path to a database table e.g.:
-            - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
-            - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
+        - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
         or the name of a database available in the LIANA package:
-            - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
+        - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
     ligand_column : str
         Name of the column with ligand gene names.
         Use 'ligand_gene_symbol' for the urls provided above. For LIANA databases use 'ligand'.

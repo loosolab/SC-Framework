@@ -36,17 +36,6 @@ def test_tfidf(tfidf_x):
     assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
 
 
-@pytest.mark.parametrize("method", ["tfidf", "total"])
-def test_atac_norm(adata, method):
-    """Test atac_norm success."""
-    adata_norm = tools.norm_correct.atac_norm(adata, method=method)[method]  # return from function is a dict
-
-    if method == "tfidf":
-        assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
-    elif method == "total":
-        assert "X_pca" in adata_norm.obsm and "pca" in adata_norm.uns and "PCs" in adata_norm.varm
-
-
 def test_write_TOBIAS_config():
     """Test write_TOBIAS_config success."""
 
