@@ -19,7 +19,6 @@ plt.switch_backend("Agg")
 # ------------------------------ FIXTURES --------------------------------- #
 
 
-
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""

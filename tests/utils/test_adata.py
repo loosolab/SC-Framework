@@ -8,7 +8,9 @@ import numpy as np
 
 import sctoolbox.utils.adata as utils
 
+
 # --------------------------- Fixtures ------------------------------ #
+
 
 @pytest.fixture
 def adata1():
