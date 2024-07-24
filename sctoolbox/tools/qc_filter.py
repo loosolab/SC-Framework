@@ -680,7 +680,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         FUN_kwargs: Any = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+                         **FUN_kwargs: Any) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -696,8 +696,8 @@ def automatic_thresholds(adata: sc.AnnData,
         Columns to calculate automatic thresholds for. If None, will take all numeric columns.
     FUN : callable, default gmm_threshold
         A filter function. The function is expected to accept an array of values and to return a dict with thresholds: {"min": 0, "max": 1}.
-        Available functions: gmm_threshold, mad_threshold.
-    FUN_kwargs : Any
+        Available functions: sctoolbox.tools.qc_filter.gmm_threshold, sctoolbox.tools.qc_filter.mad_threshold.
+    **FUN_kwargs : Any
         Additional kwargs forwarded to the filter function.
 
     Returns
