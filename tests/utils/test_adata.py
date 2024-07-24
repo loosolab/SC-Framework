@@ -8,6 +8,7 @@ import numpy as np
 
 import sctoolbox.utils.adata as utils
 
+# --------------------------- Fixtures ------------------------------ #
 
 @pytest.fixture
 def adata1():
@@ -29,6 +30,9 @@ def adata():
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
     return adata
+
+
+# --------------------------- Tests ------------------------------ #
 
 
 def test_get_adata_subsets(adata):
