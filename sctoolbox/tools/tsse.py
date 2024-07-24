@@ -328,7 +328,7 @@ def tsse_scoring(fragments: str,
     # Plot a single aggregate as reference
     if plot:
         # Get the data
-        data = plt.plot(tSSe_df['TSS_agg'].to_numpy()[0])
+        data = tSSe_df['TSS_agg'].to_numpy()[0]
 
         plot_tsse_aggregate(data, negativ_shift, positiv_shift)
 
