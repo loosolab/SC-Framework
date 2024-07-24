@@ -26,22 +26,21 @@ def term_dotplot(term: str,
 
     Parameters
     ----------
-    term: str
+    term : str
         Name of GO-term, e.g 'ATP Metabolic Process (GO:0046034)'
-    term_table: pd.DataFrame
+    term_table : pd.DataFrame
         Table of GO-term enriched genes.
         Output of sctoolbox.tools.gsea.enrichr_marker_genes().
-        The DataFrame needs to contain the columns:
-            'Term', 'Genes'
-    adata: sc.AnnData
+        The DataFrame needs to contain the columns: 'Term', 'Genes'
+    adata : sc.AnnData
         Anndata object.
-    groupby: str
+    groupby : str
         Key from `adata.obs` to group cells by.
-    groups: Optional[list[str] | str], default None
+    groups : Optional[list[str] | str], default None
         Set subset of group column.
-    hue: Literal["Mean Expression", "Zscore"], default "Zscore"
+    hue : Literal["Mean Expression", "Zscore"], default "Zscore"
         Choose dot coloring.
-    **kwargs: Any
+    **kwargs : Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
     Notes
@@ -62,6 +61,11 @@ def term_dotplot(term: str,
     --------
     .. plot::
         :context: close-figs
+
+        # --- hide: start ---
+        import pandas as pd
+        import sctoolbox.plotting as pl
+        # --- hide: stop ---
 
         term_table = pd.DataFrame({
             "Term": "Actin Filament Organization (GO:0007015)",

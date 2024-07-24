@@ -412,8 +412,7 @@ def test_plot_pca_correlation(adata, kwargs):
 @pytest.mark.parametrize("kwargs", [{"basis": "umap", "which": "var"},  # var is only available for pca coordinates
                                     {"basis": "invalid"},
                                     {"method": "invalid"},
-                                    {"which": "invalid"},
-                                    {"columns": ["invalid", "columns"]}])
+                                    {"which": "invalid"}])
 def test_plot_pca_correlation_fail(adata, kwargs):
     """Test that an exception is raised upon error."""
 

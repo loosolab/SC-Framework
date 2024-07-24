@@ -41,11 +41,18 @@
 - revised prepare_atac_anndata (#267)
 - solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
 - added planet_plot for high dimensional anndata plotting (#221)
+- implemented concadata, from_h5ad to load and combine from multiple .h5ad files (#224)
 - ligand-receptor: connectionPlot new parameters (#255)
+- pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
+- restructured atac notebook 3 (normalization and batch correction) (#278)
+- Fix minor docstring/example issues.
+- refactored unit testing by the test_cleanup merge (#215)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - added notebook versioning (#115)
+- added load from multiple h5ad files to assembly notebooks (#224)
+- restructured atac notebook 3 (normalization and batch correction) (#278)
 
 0.8.0 (14-06-24)
 ----------------
@@ -66,7 +73,6 @@ Changes to notebooks
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
 - Add GSEA notebook (#172)
 - rna/atac assembly notebook update from_mtx (#234, #240)
->>>>>>> origin/dev
 
 0.7.0 (23-04-24)
 ----------------
@@ -91,13 +97,7 @@ Changes to notebooks
 - refactor move clean-orphaned-tags to new stage .post (#229)
 
 0.6 (27-03-24)
-<<<<<<< HEAD
--------------
-- TEST CLEANUP
-    - embedding
-=======
 --------------
->>>>>>> origin/dev
 - Fix unable to determine R_HOME error (#190)
 - implemented propose_pcs to automatically select PCA components (#187)
 - add correlation barplot to plot_pca_variance

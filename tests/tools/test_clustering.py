@@ -34,6 +34,34 @@ def clust_adata():
     return sc.datasets.pbmc3k_processed()
 
 
+def test_recluster_exceptions(clust_adata):
+    """Test recluster failure."""
+
+    # invalid column name
+    with pytest.raises(KeyError):
+        tl.recluster(adata=clust_adata,
+                     column="INVALID",
+                     clusters="B cells",
+                     task="join",
+                     method="leiden",
+                     resolution=1,
+                     key_added=None,
+                     plot=True,
+                     embedding="X_umap")
+
+    # invalid cluster name
+    with pytest.raises(ValueError):
+        tl.recluster(adata=clust_adata,
+                     column="louvain",
+                     clusters="INVALID",
+                     task="join",
+                     method="leiden",
+                     resolution=1,
+                     key_added=None,
+                     plot=True,
+                     embedding="X_umap")
+
+
 def test_recluster(clust_adata):
     """Test recluster success."""
     # join monocytes clusters
