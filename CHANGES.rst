@@ -14,7 +14,7 @@
 - restructured atac notebook 3 (normalization and batch correction) (#278)
 - Fix minor docstring/example issues.
 - Fix Notebook pipeline unable to fetch some archives (#284)
-- refactored unit testing by the test_cleanup merge (#215)
+- refactored CICD unit testing by the test_cleanup merge (#215)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
