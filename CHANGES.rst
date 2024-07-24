@@ -1,5 +1,6 @@
 0.9.0 (in progress)
 -------------------
+- added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
 - added additional qc metrices for ATAC-seq to the first notebook (#256)
@@ -11,10 +12,12 @@
 - ligand-receptor: connectionPlot new parameters (#255)
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - Fix minor docstring/example issues.
+- Fix Notebook pipeline unable to fetch some archives (#284)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - improvments in description and structure of atac and general notebooks (#144)
+- added header parameter to option 2 in notebook 01_assembling_anndata (#280)
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
