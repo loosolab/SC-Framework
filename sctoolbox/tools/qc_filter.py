@@ -694,7 +694,7 @@ def automatic_thresholds(adata: sc.AnnData,
         Group rows by the column given in 'groupby' to find thresholds independently per group
     columns : Optional[list[str]], default None
         Columns to calculate automatic thresholds for. If None, will take all numeric columns.
-    FUN : callable, default gmm_threshold
+    FUN : Callable, default gmm_threshold
         A filter function. The function is expected to accept an array of values and to return a dict with thresholds: {"min": 0, "max": 1}.
         Available functions: sctoolbox.tools.qc_filter.gmm_threshold, sctoolbox.tools.qc_filter.mad_threshold.
     **FUN_kwargs : Any
