@@ -5,6 +5,9 @@ import os
 import sctoolbox.tools as tools
 
 
+# ----------------------------- FIXTURES ------------------------------- #
+
+
 @pytest.fixture
 def adata():
     """Fixture for an AnnData object."""
