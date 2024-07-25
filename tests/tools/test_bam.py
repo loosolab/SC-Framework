@@ -66,6 +66,9 @@ def adata_atac_emptyvar(adata_atac):
     return adata
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
 def test_bam_adata_ov(adata_atac, bam_file):
     """Test bam_adata_ov success."""
     hitrate = stb.bam_adata_ov(adata_atac, bam_file, cb_tag='CB')
