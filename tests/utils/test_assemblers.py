@@ -7,7 +7,8 @@ import pytest
 import sctoolbox.utils.assemblers as assemblers
 import scanpy as sc
 
-# --------------------------- Fixtures ------------------------------ #
+
+# --------------------------- FIXTURES ------------------------------ #
 
 
 @pytest.fixture()
@@ -64,7 +65,8 @@ def adata_rna():
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
-# --------------------------- Tests --------------------------------- #
+
+# --------------------------- TESTS --------------------------------- #
 
 
 @pytest.mark.parametrize("files", [
