@@ -70,7 +70,6 @@ def tmp_file():
 
 
 # ------------------------------ TESTS --------------------------------- #
-
 def test_sc_colormap():
     """Test whether sc_colormap returns a colormap."""
 
