@@ -37,6 +37,9 @@ def clust_adata():
     return sc.datasets.pbmc3k_processed()
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
 def test_recluster_exceptions(clust_adata):
     """Test recluster failure."""
 
