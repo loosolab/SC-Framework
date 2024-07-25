@@ -96,6 +96,9 @@ def atac_adata():
     return adata
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
 @pytest.mark.parametrize("order", [None, ["KO-2", "KO-1", "Ctrl-2", "Ctrl-1"]])
 def test_plot_starsolo_quality(order):
     """Test plot_starsolo_quality success."""
