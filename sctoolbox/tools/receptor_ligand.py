@@ -48,10 +48,10 @@ def download_db(adata: sc.AnnData,
     db_path : str
         A valid database needs a column with receptor gene ids/symbols and ligand gene ids/symbols.
         Either a path to a database table e.g.:
-            - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
-            - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
+        - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
         or the name of a database available in the LIANA package:
-            - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
+        - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
     ligand_column : str
         Name of the column with ligand gene names.
         Use 'ligand_gene_symbol' for the urls provided above. For LIANA databases use 'ligand'.
@@ -977,10 +977,15 @@ def connectionPlot(adata: sc.AnnData,
                    ligand_hue: str = "ligand_score",
                    ligand_size: str = "ligand_percent",
                    ligand_genes: Optional[list[str]] = None,
+                   # additional plot params
                    filter: Optional[str] = None,
                    lw_multiplier: int | float = 2,
+                   dot_size: Tuple[int | float, int | float] = (10, 100),
                    wspace: float = 0.4,
-                   line_colors: Optional[str] = "rainbow") -> npt.ArrayLike:
+                   line_colors: Optional[str] = "rainbow",
+                   dot_colors: str = "flare",
+                   xlabel_order: Optional[list[str]] = None,
+                   alpha_range: Optional[Tuple[int | float, int | float]] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -1024,10 +1029,19 @@ def connectionPlot(adata: sc.AnnData,
         Conditions to filter the interaction table on. E.g. 'column_name > 5 & other_column < 2'. Forwarded to pandas.DataFrame.query.
     lw_multiplier : int | float, default 2
         Linewidth multiplier.
+    dot_size : Tuple[int | float, int | float], default (1, 10)
+        Minimum and maximum size of the displayed dots.
     wspace : float, default 0.4
         Width between plots. Fraction of total width.
     line_colors : Optional[str], default 'rainbow'
-        Name of colormap used to color lines. All lines are black if None.
+        Name of the colormap used to color lines. All lines are black if None.
+    dot_colors : str, default 'flare'
+        Name of the colormap used to color the dots.
+    xlabel_order : Optional[list[str]], default None
+        Defines the order of data displayed on the x-axis in both plots. Leave None to order alphabetically.
+    alpha_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `connection_alpha` legend. Values outside this range will be set to the min or max value.
+        Minimum is mapped to transparent (alpha=0) and maximum to opaque (alpha=1). Will use the min and max values of the data by default (None).
 
     Returns
     -------
@@ -1057,6 +1071,15 @@ def connectionPlot(adata: sc.AnnData,
     if filter:
         data.query(filter, inplace=True)
 
+    if xlabel_order:
+        # create a custom sort function
+        sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
+
+        def sort_fun(x):
+            return x.map(sorting_dict)
+    else:
+        sort_fun = None
+
     # restrict interactions to certain clusters
     if restrict_to:
         data = data[data[receptor_cluster_col].isin(restrict_to) & data[ligand_cluster_col].isin(restrict_to)]
@@ -1068,11 +1091,14 @@ def connectionPlot(adata: sc.AnnData,
     fig.suptitle(title)
 
     # receptor plot
-    r_plot = sns.scatterplot(data=data,
+    r_plot = sns.scatterplot(data=data.sort_values(by=receptor_cluster_col, key=sort_fun),
                              y=receptor_col,
                              x=receptor_cluster_col,
                              hue=receptor_hue,
                              size=receptor_size,
+                             palette=dot_colors,
+                             sizes=dot_size,
+                             legend="brief",
                              ax=axs[0])
 
     r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor", axisbelow=True)
@@ -1080,11 +1106,14 @@ def connectionPlot(adata: sc.AnnData,
     axs[0].grid(alpha=0.8)
 
     # ligand plot
-    l_plot = sns.scatterplot(data=data,
+    l_plot = sns.scatterplot(data=data.sort_values(by=ligand_cluster_col, key=sort_fun),
                              y=ligand_col,
                              x=ligand_cluster_col,
                              hue=ligand_hue,
                              size=ligand_size,
+                             palette=dot_colors,
+                             sizes=dot_size,
+                             legend="brief",
                              ax=axs[1])
 
     axs[1].yaxis.tick_right()
@@ -1108,8 +1137,23 @@ def connectionPlot(adata: sc.AnnData,
 
     # scale connection score column between 0-1 to be used as alpha values
     if connection_alpha:
+        # set custom min and max values
+        if alpha_range:
+            def alpha_sorter(x):
+                """Set values outside of range to min or max."""
+                if x < alpha_range[0]:
+                    return alpha_range[0]
+                elif x > alpha_range[1]:
+                    return alpha_range[1]
+                return x
+            # add min and max in case they are not present in the data
+            alpha_values = list(alpha_range) + [alpha_sorter(val) for val in data[connection_alpha]]
+        else:
+            alpha_values = data[connection_alpha].tolist()
+
         # note: minmax_scale sometimes produces values >1. Looks like a rounding error (1.000000000002).
-        data["alpha"] = minmax_scale(data[connection_alpha], feature_range=(0, 1))
+        # end bracket removes added alpha_range if needed
+        data["alpha"] = minmax_scale(alpha_values, feature_range=(0, 1))[2 if alpha_range else 0:]
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
     else:
@@ -1159,7 +1203,7 @@ def connectionPlot(adata: sc.AnnData,
     # create legend for connection lines
     if connection_alpha:
         step_num = 5
-        s_steps, a_steps = np.linspace(min(data[connection_alpha]), max(data[connection_alpha]), step_num), np.linspace(0, 1, step_num)
+        s_steps, a_steps = np.linspace(min(alpha_values), max(alpha_values), step_num), np.linspace(0, 1, step_num)
 
         # create proxy actors https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#proxy-legend-handles
         line_list = [lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)]
@@ -1167,10 +1211,15 @@ def connectionPlot(adata: sc.AnnData,
 
         # add to current legend
         handles, _ = axs[1].get_legend_handles_labels()
-        axs[1].legend(handles=handles + line_list, bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
+        axs[1].legend(handles=handles + line_list,
+                      bbox_to_anchor=(2, 1, 0, 0),
+                      loc='upper left',
+                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
     else:
         # set ligand plot legend position
-        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0), loc='upper left')
+        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0),
+                      loc='upper left',
+                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
 
     if save:
         plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')

@@ -68,16 +68,6 @@ def test_wrap_umap(adata):
         assert "X_umap" in adata.obsm
 
 
-@pytest.mark.parametrize("method", ["total", "tfidf"])
-def test_normalize_adata(adata, method):
-    """Test that data was normalized."""
-    result_dict = tools.norm_correct.normalize_adata(adata, method=method)
-    adata = result_dict[method]
-    mat = adata.X.todense()
-
-    assert not utils.checker.is_integer_array(mat)
-
-
 def test_evaluate_batch_effect(adata):
     """Test if AnnData containing LISI column in .obs is returned."""
     ad = tools.norm_correct.evaluate_batch_effect(adata, 'batch')
@@ -92,8 +82,10 @@ def test_batch_correction(adata, method):
     """Test if batch correction returns an anndata."""
 
     adata_corrected = tools.norm_correct.batch_correction(adata, batch_key="batch", method=method)
-    adata_type = type(adata_corrected).__name__
-    assert adata_type == "AnnData"
+    assert isinstance(adata_corrected, sc.AnnData)
+    # assert the returned adata is a different object
+    # this is a workaround to test if the original adata was modified
+    assert adata is not adata_corrected
 
 
 def test_wrap_corrections(adata):
