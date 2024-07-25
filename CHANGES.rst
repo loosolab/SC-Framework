@@ -15,6 +15,7 @@
 - Fix minor docstring/example issues.
 - Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored CICD unit testing by the test_cleanup merge (#215)
+- Add inplace parameter to tfidf function (#277)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
