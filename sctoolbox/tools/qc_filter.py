@@ -526,7 +526,7 @@ def gmm_threshold(data: npt.ArrayLike,
     The function will fit a gaussian mixture model, and find the threshold
     based on the mean and standard deviation of the largest mixture in the model.
 
-    The number of mixtures aka components is estimated using the BIC criterion. 
+    The number of mixtures aka components is estimated using the BIC criterion.
 
     Parameters
     ----------
