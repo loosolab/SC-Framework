@@ -6,6 +6,9 @@ import os
 import scanpy as sc
 
 
+# ------------------------- FIXTURES -------------------------#
+
+
 @pytest.fixture
 def adata():
     """Fixture for an AnnData object."""

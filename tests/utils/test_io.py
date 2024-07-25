@@ -6,6 +6,9 @@ import pathlib
 import shutil
 
 
+# --------------------------- TESTS --------------------------------- #
+
+
 def test_create_dir():
     """Test if the directory is created."""
 

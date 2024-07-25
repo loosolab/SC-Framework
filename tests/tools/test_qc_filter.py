@@ -12,7 +12,8 @@ import logging
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
-# --------------------------- Fixtures ------------------------------ #
+
+# --------------------------- FIXTURES ------------------------------ #
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
@@ -104,7 +105,8 @@ def s_file(s_list):
         yield tmp
 
 
-# --------------------------- Tests --------------------------------- #
+# --------------------------- TESTS --------------------------------- #
+
 
 # TODO: test with more threads ("sample", 4) (excluded as it runs forever)
 @pytest.mark.parametrize("groupby,threads", [(None, 1), ("sample", 1)])

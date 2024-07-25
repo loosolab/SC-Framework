@@ -6,7 +6,7 @@ import scanpy as sc
 import sctoolbox.tools.highly_variable as hv
 
 
-# ------------------------- Fixtures -------------------------#
+# ------------------------- FIXTURES -------------------------#
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def adata_atac_qc():
     return adata
 
 
-# ------------------------- Tests ------------------------- #
+# ------------------------- TESTS ------------------------- #
 
 
 @pytest.mark.parametrize("inplace", [True, False])

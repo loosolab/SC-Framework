@@ -7,6 +7,8 @@ import scanpy as sc
 
 from sctoolbox.utils.adata import get_adata_subsets
 from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref_vs_all, compare_two_conditons
+
+
 # ---------------------------- FIXTURES -------------------------------- #
 
 
@@ -25,6 +27,7 @@ def adata():
     adata.var_names_make_unique()
 
     return adata
+
 
 # ------------------------------ TESTS --------------------------------- #
 

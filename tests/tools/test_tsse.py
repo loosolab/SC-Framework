@@ -6,6 +6,9 @@ import sctoolbox.tools as tools
 import os
 
 
+# ------------------------------ FIXTURES -------------------------------- #
+
+
 @pytest.fixture
 def adata():
     """Fixture for an AnnData object."""
@@ -32,6 +35,9 @@ def tss_file():
     """Fixture for a tss_file object."""
     tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_tss.bed')
     return tss_file
+
+
+# ------------------------------ TESTS --------------------------------- #
 
 
 def test_write_TSS(gtf):

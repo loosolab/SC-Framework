@@ -7,7 +7,8 @@ import scanpy as sc
 import os
 
 
-# ------------------------- Fixtures ------------------------- #
+# ------------------------- FIXTURES ------------------------- #
+
 
 uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
@@ -19,7 +20,7 @@ def adata_atac():
     return sc.read_h5ad(adata_f)
 
 
-# ------------------------- Tests ------------------------- #
+# ------------------------- TESTS ------------------------- #
 
 
 @pytest.mark.parametrize("inplace, threads, config, best, coordinate_cols",

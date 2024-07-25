@@ -7,6 +7,9 @@ from sctoolbox.utils import jupyter
 from sctoolbox import __version__ as sc_version
 
 
+# --------------------------- TESTS --------------------------------- #
+
+
 def test_compare_versions():
     """Test _compare_version function."""
 

@@ -8,6 +8,9 @@ import pandas as pd
 import sctoolbox.utils.general as general
 
 
+# --------------------------- FIXTURES ------------------------------ #
+
+
 @pytest.fixture
 def berries():
     """Return list of berries."""
@@ -28,6 +31,9 @@ def na_dataframe():
     df['category_str'] = df['category_str'].astype('category')
     df['category_num'] = df['category_num'].astype('category')
     return df
+
+
+# --------------------------- TESTS --------------------------------- #
 
 
 def test_run_cmd_valid():

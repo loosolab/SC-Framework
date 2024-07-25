@@ -8,6 +8,9 @@ import shutil
 from unittest.mock import patch, Mock
 
 
+# --------------------------- TESTS --------------------------------- #
+
+
 def test_gitlab_download():
     """Test gitlab download."""
     def side_effect(search):

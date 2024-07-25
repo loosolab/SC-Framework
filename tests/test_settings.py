@@ -9,9 +9,16 @@ import sys
 from sctoolbox.utils.adata import load_h5ad, get_adata_subsets
 from sctoolbox import settings
 
+
+# --------------------------- FIXTURES ------------------------------ #
+
+
 adata_path = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 config_path = os.path.join(os.path.dirname(__file__), 'data', "test_config.yaml")
 config_path_nokey = os.path.join(os.path.dirname(__file__), 'data', "test_config_nokey.yaml")
+
+
+# --------------------------- TESTS --------------------------------- #
 
 
 @pytest.mark.parametrize("key, value",

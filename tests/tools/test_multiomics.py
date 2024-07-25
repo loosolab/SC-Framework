@@ -9,6 +9,9 @@ import numpy as np
 import sctoolbox.tools.multiomics as multi
 
 
+# ------------------------- FIXTURES -------------------------#
+
+
 @pytest.fixture
 def adata():
     """Load and returns an anndata object."""
@@ -24,6 +27,9 @@ def adata2(adata):
     adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(200, 50))
     adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(200, 3))
     return adata2
+
+
+# ------------------------------ TESTS --------------------------------- #
 
 
 def test_merge_anndata(adata, adata2):

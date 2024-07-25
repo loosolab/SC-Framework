@@ -9,7 +9,7 @@ import numpy as np
 import sctoolbox.utils.adata as utils
 
 
-# --------------------------- Fixtures ------------------------------ #
+# --------------------------- FIXTURES ------------------------------ #
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def adata():
     return adata
 
 
-# --------------------------- Tests ------------------------------ #
+# --------------------------- TESTS ------------------------------ #
 
 
 def test_get_adata_subsets(adata):

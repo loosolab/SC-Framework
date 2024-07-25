@@ -9,6 +9,9 @@ import re
 import sys
 
 
+# --------------------------- FIXTURES ------------------------------ #
+
+
 @pytest.fixture
 def named_var_adata():
     """Return a adata object with a prefix attached to the .var index."""
@@ -66,6 +69,9 @@ def marker_dict():
     return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
             "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
             "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
+
+
+# --------------------------- TESTS --------------------------------- #
 
 
 def test_check_module():

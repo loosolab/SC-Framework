@@ -6,7 +6,8 @@ import anndata as ad
 from sctoolbox.tools import celltype_annotation
 import scanpy as sc
 
-# --------------------------- Fixtures ------------------------------ #
+
+# --------------------------- FIXTURES ------------------------------ #
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def adata_rna():
     return sc.read_h5ad(adata_f)
 
 
-# --------------------------- Tests --------------------------------- #
+# --------------------------- TESTS --------------------------------- #
 
 
 def fetch_adata_uns(test_adata):

@@ -7,6 +7,9 @@ import os
 import numpy as np
 
 
+# ------------------------------ FIXTURES --------------------------------- #
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Load and returns an anndata object."""
@@ -37,6 +40,9 @@ def adata():
     # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
+
+
+# ------------------------------ TESTS --------------------------------- #
 
 
 @pytest.mark.parametrize("sortby, title, figsize, layer",

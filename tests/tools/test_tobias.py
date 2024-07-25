@@ -4,6 +4,9 @@ import sctoolbox.tools.tobias as tobias
 import yaml
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
 def test_write_TOBIAS_config():
     """Test write_TOBIAS_config success."""
 

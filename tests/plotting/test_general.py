@@ -72,6 +72,7 @@ def venn_dict():
 
 # ------------------------------ TESTS --------------------------------- #
 
+
 @pytest.mark.parametrize("color", [["clustering", "condition"], "clustering"])
 def test_add_figure_title_axis(adata, color):
     """Test if function _add_figure_title runs with axis object(s) as input."""

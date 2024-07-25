@@ -6,6 +6,9 @@ import pandas as pd
 import sctoolbox.utils.tables as tables
 
 
+# --------------------------- FIXTURES ------------------------------ #
+
+
 @pytest.fixture
 def na_dataframe():
     """Return DataFrame with columns of multiple types containing NA."""
@@ -20,6 +23,9 @@ def na_dataframe():
     df['category_str'] = df['category_str'].astype('category')
     df['category_num'] = df['category_num'].astype('category')
     return df
+
+
+# --------------------------- TESTS --------------------------------- #
 
 
 def test_rename_categories():

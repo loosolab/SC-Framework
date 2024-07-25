@@ -9,6 +9,9 @@ import re
 import shutil
 
 
+# --------------------------- FIXTURES ------------------------------ #
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata_mock():
     """Return adata object with 3 groups."""
@@ -51,6 +54,9 @@ def sorted_fragments():
 
     fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
     return fragments
+
+
+# --------------------------- TESTS --------------------------------- #
 
 
 def test_pseudobulk_table(adata_mock):

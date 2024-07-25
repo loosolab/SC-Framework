@@ -5,6 +5,9 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
+# --------------------------- TESTS --------------------------------- #
+
+
 def test_user_logging():
     """Test is logfile is correctly overwritten."""
 

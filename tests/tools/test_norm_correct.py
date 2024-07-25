@@ -52,6 +52,7 @@ def adata_batch_dict(adata):
 
 # ------------------------- Tests ------------------------- #
 
+
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_atac_norm(adata_mm10, method):
     """Test atac_norm success."""
