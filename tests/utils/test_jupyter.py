@@ -7,6 +7,9 @@ from sctoolbox.utils import jupyter
 from sctoolbox import __version__ as sc_version
 
 
+# --------------------------- TESTS --------------------------------- #
+
+
 def test_compare_versions():
     """Test _compare_version function."""
 
@@ -42,3 +45,10 @@ def test_compare_versions():
 
     # Delete test notebook
     os.remove(nb_path)
+
+
+def test_is_notebook():
+    """Test if the function is run in a notebook."""
+
+    boolean = jupyter._is_notebook()
+    assert boolean is False  # testing environment is not notebook
