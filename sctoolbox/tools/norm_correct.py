@@ -145,7 +145,6 @@ def tfidf(anndata: sc.AnnData,
           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
-    This function overwrites the .X matrix.
 
     TF: peak counts are normalised by total number of counts per cell.
     DF: total number of counts for each peak.
@@ -154,7 +153,7 @@ def tfidf(anndata: sc.AnnData,
 
     Parameters
     ----------
-    data : sc.AnnData
+    anndata : sc.AnnData
         AnnData object with peak counts.
     log_tf : bool, default True
         Log-transform TF term if True.
@@ -170,6 +169,7 @@ def tfidf(anndata: sc.AnnData,
     Notes
     -----
     Function is from the muon package.
+    This function overwrites the .X matrix.
 
     Raises
     ------
@@ -217,7 +217,7 @@ def tfidf(anndata: sc.AnnData,
         tf_idf = np.log1p(tf_idf)
 
     adata.X = np.nan_to_num(tf_idf, 0)
-    
+
     if not inplace:
         return adata
 
