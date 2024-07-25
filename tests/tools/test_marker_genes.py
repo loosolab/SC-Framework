@@ -51,6 +51,7 @@ def gene_set(adata_score):
 
 # ------------------------------ TESTS --------------------------------- #
 
+
 def test_get_chromosome_genes():
     """Test if get_chromosome_genes get the right genes from the gtf."""
 
