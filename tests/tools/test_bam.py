@@ -12,6 +12,9 @@ import re
 import sctoolbox.tools.bam as stb
 
 
+# ----------------------------- FIXTURES ------------------------------- #
+
+
 @pytest.fixture
 def bam_file():
     """Fixture pointing to test bam."""
