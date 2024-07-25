@@ -15,7 +15,9 @@ import ipywidgets as widgets
 
 from beartype.roar import BeartypeCallHintParamViolation
 
+
 # ------------------------------ FIXTURES --------------------------------- #
+
 
 quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
