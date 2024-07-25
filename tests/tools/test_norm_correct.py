@@ -91,7 +91,7 @@ def test_normalize_adata(adata, method):
 # adapted from muon package
 def test_tfidf(tfidf_x):
     """Test tfidf success."""
-    tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True)
+    tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True, inplace=True)
     assert str("%.3f" % tfidf_x.X[0, 0]) == "4.659"
     assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
 
