@@ -519,7 +519,7 @@ def predict_sex(adata: sc.AnnData,
 def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
                   n_std: int | float = 3,
-                  plot: bool = False) -> dict[str, float]:
+                  plot: bool = False) -> dict[str, float | int]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -629,7 +629,7 @@ def gmm_threshold(data: npt.ArrayLike,
 def mad_treshold(data: npt.ArrayLike,
                  min_n: Union[int, float] = 3,
                  max_n: Union[int, float] = 3,
-                 plot: bool = False) -> dict[str, float]:
+                 plot: bool = False) -> dict[str, float | int]:
     """
     Compute an automatic threshold using the median absolute deviation (MAD).
 
@@ -680,7 +680,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         **FUN_kwargs: Any) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+                         **FUN_kwargs: Any) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
