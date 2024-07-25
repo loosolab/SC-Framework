@@ -541,7 +541,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, float]
+    dict[str, float | int]
         Dictionary with min and max thresholds.
     """
 
@@ -648,7 +648,7 @@ def mad_treshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, float]
+    dict[str, float | int]
         Dictionary with min and max thresholds.
     """
     median = np.median(data)
@@ -702,7 +702,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
+    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
