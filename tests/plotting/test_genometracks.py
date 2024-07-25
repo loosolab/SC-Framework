@@ -10,6 +10,9 @@ plt.switch_backend("Agg")
 tracks_folder = os.path.join(os.path.dirname(__file__), '../data', 'tracks')
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
 def test_genometracks():
     """Test genometracks plotting."""
 
