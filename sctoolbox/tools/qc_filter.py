@@ -518,13 +518,15 @@ def predict_sex(adata: sc.AnnData,
 @beartype
 def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
-                  n_std: int | float = 3,
+                  min_n: int | float = 3,
+                  max_n: int | float = 3,
                   plot: bool = False) -> dict[str, float | int]:
     """
     Get automatic min/max thresholds for input data array.
 
     The function will fit a gaussian mixture model, and find the threshold
-    based on the mean and standard deviation of the largest mixture in the model.
+    based on the mean and standard deviation (SD) of the largest mixture in the model.
+    The threshold is calculates as mean(largest component) +/- SD * n.
 
     The number of mixtures aka components is estimated using the BIC criterion.
 
@@ -534,8 +536,10 @@ def gmm_threshold(data: npt.ArrayLike,
         Array of data to find thresholds for.
     max_mixtures : int, default 5
         Maximum number of gaussian mixtures to fit.
-    n_std : int | float, default 3
-        Number of standard deviations from distribution mean to set as min/max thresholds.
+    min_n : int | float, default 3
+        Number of SDs from largest component mean to set as min threshold.
+    max_n : int | float, default 3
+        Number of SDs from largest component mean to set as max threshold.
     plot : bool, default False
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
 
@@ -585,8 +589,8 @@ def gmm_threshold(data: npt.ArrayLike,
     dist_std = np.sqrt(M_best.covariances_[i][0][0])
 
     # Threshold estimation
-    thresholds = {"min": dist_mean - dist_std * n_std,
-                  "max": dist_mean + dist_std * n_std}
+    thresholds = {"min": dist_mean - dist_std * min_n,
+                  "max": dist_mean + dist_std * max_n}
 
     # ------ Plot if chosen -------#
     if plot:
@@ -640,9 +644,9 @@ def mad_treshold(data: npt.ArrayLike,
     data : npt.ArrayLike
         Array of data to find thresholds for.
     min_n : int | float, default 3
-        Number of MADs from distribution median to set as min thresholds.
+        Number of MADs from distribution median to set as min threshold.
     max_n : int | float, default 3
-        Number of MADs from distribution median to set as max thresholds.
+        Number of MADs from distribution median to set as max threshold.
     plot : bool, default False
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
 
@@ -680,7 +684,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         **FUN_kwargs: Any) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
+                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -697,8 +701,8 @@ def automatic_thresholds(adata: sc.AnnData,
     FUN : Callable, default gmm_threshold
         A filter function. The function is expected to accept an array of values and to return a dict with thresholds: {"min": 0, "max": 1}.
         Available functions: sctoolbox.tools.qc_filter.gmm_threshold, sctoolbox.tools.qc_filter.mad_threshold.
-    **FUN_kwargs : Any
-        Additional kwargs forwarded to the filter function.
+    FUN_kwargs : dict
+        Dict of additional kwargs forwarded to the filter function.
 
     Returns
     -------
