@@ -89,17 +89,18 @@ def normalize_adata(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def normalize_and_dim_reduct(adata: sc.AnnData,
+def normalize_and_dim_reduct(anndata: sc.AnnData,
                              method: Literal["total", "tfidf"],
                              exclude_highly_expressed: bool = True,
                              use_highly_variable: bool = False,
-                             target_sum: Optional[int] = None) -> sc.AnnData:
+                             target_sum: Optional[int] = None,
+                             inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
     Parameters
     ----------
-    adata : sc.AnnData
+    anndata : sc.AnnData
         Annotated data matrix.
     method : Literal["total", "tfidf"],
         The normalization method. Either 'total' or 'tfidf'.
@@ -109,13 +110,16 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
     target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+    inplace : bool, default False
+        If True, change the anndata object inplace. Otherwise return changed anndata object.
 
     Returns
     -------
-    sc.AnnData
+    Optional[sc.AnnData]
         Annotated data matrix with normalized count matrix and PCA/LSI calculated.
     """
-    adata = adata.copy()  # make sure the original data is not modified
+
+    adata = anndata if inplace else anndata.copy()
 
     if method == "total":  # perform total normalization and pca
         logger.info('Performing total normalization and PCA...')
@@ -125,20 +129,23 @@ def normalize_and_dim_reduct(adata: sc.AnnData,
 
     elif method == "tfidf":
         logger.info('Performing TFIDF and LSI...')
-        tfidf(adata)
+        tfidf(adata, inplace=True)
         lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
 
-    return adata
+    if not inplace:
+        return adata
 
 
 @beartype
-def tfidf(data: sc.AnnData,
+def tfidf(anndata: sc.AnnData,
           log_tf: bool = True,
           log_idf: bool = True,
           log_tfidf: bool = False,
-          scale_factor: int = int(1e4)) -> None:
+          scale_factor: int = int(1e4),
+          inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
+    This function overwrites the .X matrix.
 
     TF: peak counts are normalised by total number of counts per cell.
     DF: total number of counts for each peak.
@@ -157,6 +164,8 @@ def tfidf(data: sc.AnnData,
         Log-transform TF*IDF term if True. Can only be used when log_tf and log_idf are False.
     scale_factor : int, default 1e4
         Scale factor to multiply the TF-IDF matrix by.
+    inplace : bool, default False
+        If True, change the anndata object inplace. Otherwise return changed anndata object.
 
     Notes
     -----
@@ -166,9 +175,14 @@ def tfidf(data: sc.AnnData,
     ------
     AttributeError:
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        TF-IDF normalized anndata object.
     """
 
-    adata = data
+    adata = anndata if inplace else anndata.copy()
 
     if log_tfidf and (log_tf or log_idf):
         raise AttributeError(
@@ -203,68 +217,9 @@ def tfidf(data: sc.AnnData,
         tf_idf = np.log1p(tf_idf)
 
     adata.X = np.nan_to_num(tf_idf, 0)
-
-
-@beartype
-def tfidf_normalization(matrix: sparse.spmatrix,
-                        tf_type: Literal["raw", "term_frequency", "log"] = "term_frequency",
-                        idf_type: Literal["unary", "inverse_freq", "inverse_freq_smooth"] = "inverse_freq") -> sparse.csr_matrix:
-    """
-    Perform TF-IDF normalization on a sparse matrix.
-
-    The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.
-
-    Parameters
-    ----------
-    matrix : scipy.sparse matrix
-        The matrix to be normalized.
-    tf_type : Literal["term_frequency", "log", "raw"], default "term_frequency"
-        The type of term frequency to use. Can be either "raw", "term_frequency" or "log".
-    idf_type : Literal["inverse_freq", "unary", "inverse_freq_smooth"], default "inverse_freq"
-        The type of inverse document frequency to use. Can be either "unary", "inverse_freq" or "inverse_freq_smooth".
-
-    Returns
-    -------
-    sparse.csr_matrix
-        tfidf normalized sparse matrix.
-
-    Notes
-    -----
-    This function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
-    """
-
-    # t - term (peak)
-    # d - document (cell)
-    # N - count of corpus (total set of cells)
-
-    # Normalize matrix to number of found peaks
-    dense = matrix.todense()
-    peaks_per_cell = dense.sum(axis=1)  # i.e. the length of the document(number of words)
-
-    # Decide on which Term frequency to use:
-    if tf_type == "raw":
-        tf = dense
-    elif tf_type == "term_frequency":
-        tf = dense / peaks_per_cell     # Counts normalized to peaks (words) per cell (document)
-    elif tf_type == "log":
-        tf = np.log1p(dense)            # for binary documents, this scales with "raw"
-
-    # Decide on the Inverse document frequency to use
-    N = dense.shape[0]     # number of cells (number of documents)
-    df = dense.sum(axis=0)  # number of cells carrying each peak (number of documents containing each word)
-
-    if idf_type == "unary":
-        idf = np.ones(dense.shape[1])  # shape is number of peaks
-    elif idf_type == "inverse_freq":
-        idf = np.log(N / df)    # each cell has at least one peak (each document has one word), so df is always > 0
-    elif idf_type == "inverse_freq_smooth":
-        idf = np.log(N / (df + 1)) + 1
-
-    # Obtain TF_IDF
-    tf_idf = np.array(tf) * np.array(idf).squeeze()
-    tf_idf = sparse.csr_matrix(tf_idf)
-
-    return tf_idf
+    
+    if not inplace:
+        return adata
 
 
 ###################################################################################
