@@ -9,6 +9,9 @@ import pandas as pd
 from scipy import sparse
 
 
+# ----------------------------- FIXTURES ------------------------------- #
+
+
 @pytest.fixture
 def equal_adata():
     """Build a mock anndata object with equally distributed features."""
