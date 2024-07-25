@@ -69,6 +69,7 @@ def pairwise_ranked_genes_nosig():
 
 # ------------------------------ TESTS --------------------------------- #
 
+
 @pytest.mark.parametrize("dendrogram,genes,key,swap_axes",
                          [(True, ['ENSMUSG00000102851',
                                   'ENSMUSG00000102272',
