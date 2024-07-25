@@ -8,6 +8,7 @@ import sys
 
 from sctoolbox.utils.adata import load_h5ad, get_adata_subsets
 from sctoolbox import settings
+logger = settings.logger
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -98,3 +99,25 @@ def test_invalid_key_settings_from_config():
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
         settings.settings_from_config(config_path_nokey, key="01")
     settings.reset()
+
+
+def test_user_logging():
+    """Test is logfile is correctly overwritten."""
+
+    settings.log_file = "test.log"
+    logger.info("test_info")
+    assert "test_info" in open(settings.log_file).read()
+
+    # Set again to the same file
+    settings.log_file = "test.log"
+    logger.info("test_info2")
+    content = open(settings.log_file).read()
+    assert "test_info" in content  # check that the first log is still there
+    assert "test_info2" in content
+
+    # Set to overwrite the file
+    settings.overwrite_log = True
+    logger.info("test_info3")
+    content = open(settings.log_file).read()
+    assert "test_info2" not in content  # previous log was overwritten
+    assert "test_info3" in content      # new log is there
