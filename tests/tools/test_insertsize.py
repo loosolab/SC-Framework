@@ -13,6 +13,9 @@ def adata():
     return adata
 
 
+# ------------------------------ TESTS --------------------------------- #
+
+
 def test_add_insertsize_fragments(adata):
     """Test if add_insertsize adds information from a fragmentsfile."""
 
