@@ -15,9 +15,11 @@
 - Fix minor docstring/example issues.
 - Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored CICD unit testing by the test_cleanup merge (#215)
+- add MAD filtering as alternative to gaussian-mixture model (#261)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- add option to chose filter method in rna/qc notebook
 - added header parameter to option 2 in notebook 01_assembling_anndata (#280)
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
