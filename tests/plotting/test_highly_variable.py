@@ -48,6 +48,7 @@ def adata():
 
 # ------------------------------ TESTS --------------------------------- #
 
+
 def test_violin_HVF_distribution(adata):
     """Test violin_HVF_distribution."""
     adata_HVF = adata.copy()
