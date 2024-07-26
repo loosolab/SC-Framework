@@ -19,6 +19,9 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+# path to the internal gene lists (gender, cellcycle, mito, ...)
+_GENELIST_LOC = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
+
 
 @beartype
 def get_chromosome_genes(gtf: str,
@@ -110,9 +113,6 @@ def label_genes(adata: sc.AnnData,
     sctoolbox.tools.qc_filter.predict_cell_cycle : for cell cycle prediction.
     """
 
-    # Location of gene lists
-    genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
-
     species = species.lower()
 
     # Get the full list of genes from adata
@@ -129,7 +129,7 @@ def label_genes(adata: sc.AnnData,
     var_cols.append("is_ribo")
 
     # Annotate mitochrondrial genes
-    path_mito_genes = genelist_dir + species + "_mito_genes.txt"
+    path_mito_genes = _GENELIST_LOC + species + "_mito_genes.txt"
     if os.path.exists(path_mito_genes):
         gene_list = utils.general.read_list_file(path_mito_genes)
         adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
@@ -138,13 +138,13 @@ def label_genes(adata: sc.AnnData,
     var_cols.append("is_mito")
 
     # Annotate gender genes
-    path_gender_genes = genelist_dir + species + "_gender_genes.txt"
+    path_gender_genes = _GENELIST_LOC + species + "_gender_genes.txt"
     if os.path.exists(path_gender_genes):
         gene_list = utils.general.read_list_file(path_gender_genes)
         adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
         var_cols.append("is_gender")
     else:
-        available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
+        available_files = glob.glob(_GENELIST_LOC + "*_gender_genes.txt")
         available_species = utils.general.clean_flanking_strings(available_files)
         logger.warning(f"No gender genes available for species '{species}'. Available species are: {available_species}")
 
