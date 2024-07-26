@@ -38,10 +38,10 @@ def atac_norm(*args: Any, **kwargs: Any):
 @deco.log_anndata
 @beartype
 def normalize_adata(adata: sc.AnnData,
-                    method: str | list[str],
+                    method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
-                    target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
+                    target_sum: Optional[int] = None) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -49,7 +49,7 @@ def normalize_adata(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
-    method : str | list[str]
+    method : Literal["total", "tfidf"] | list[Literal["total", "tfidf"]]
         Normalization method. Either 'total' and/or 'tfidf'.
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
@@ -62,40 +62,73 @@ def normalize_adata(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, sc.AnnData]
-        Dictionary containing method name as key, and anndata as values.
-        Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
-
-    Raises
-    ------
-    ValueError
-        If method is not valid. Needs to be either 'total' or 'tfidf'.
+    Union[dict[str, sc.AnnData], sc.AnnData]
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+        If method is a list, a dictionary with the method as key and the corresponding anndata object as value is returned.
     """
 
     if isinstance(method, str):
-        method = [method]
+        return normalize_and_dim_reduct(adata=adata,
+                                        method=method,
+                                        exclude_highly_expressed=exclude_highly_expressed,
+                                        use_highly_variable=use_highly_variable,
+                                        target_sum=target_sum)
 
-    adatas = {}
-    for method_str in method:  # method is a list
-        adata = adata.copy()  # make sure the original data is not modified
+    elif isinstance(method, list):
+        adatas = {}
+        for method_str in method:  # method is a list
 
-        if method_str == "total":  # perform total normalization and pca
-            logger.info('Performing total normalization and PCA...')
-            sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
-            sc.pp.log1p(adata)
-            sc.pp.pca(adata, use_highly_variable=use_highly_variable)
+            adatas[method_str] = normalize_and_dim_reduct(adata=adata,
+                                                          method=method_str,
+                                                          exclude_highly_expressed=exclude_highly_expressed,
+                                                          use_highly_variable=use_highly_variable,
+                                                          target_sum=target_sum)
 
-        elif method_str == "tfidf":
-            logger.info('Performing TFIDF and LSI...')
-            tfidf(adata)
-            lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
+        return adatas
 
-        else:
-            raise ValueError(f"Method '{method_str}' is invalid - must be either 'total' or 'tfidf'.")
 
-        adatas[method_str] = adata
+@deco.log_anndata
+@beartype
+def normalize_and_dim_reduct(adata: sc.AnnData,
+                             method: Literal["total", "tfidf"],
+                             exclude_highly_expressed: bool = True,
+                             use_highly_variable: bool = False,
+                             target_sum: Optional[int] = None) -> sc.AnnData:
+    """
+    Normalize the count matrix and calculate dimension reduction using different methods.
 
-    return adatas
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix.
+    method : Literal["total", "tfidf"],
+        The normalization method. Either 'total' or 'tfidf'.
+    exclude_highly_expressed : bool, default True
+        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    use_highly_variable : bool, default False
+        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
+    target_sum : Optional[int], default None
+        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+
+    Returns
+    -------
+    sc.AnnData
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+    """
+    adata = adata.copy()  # make sure the original data is not modified
+
+    if method == "total":  # perform total normalization and pca
+        logger.info('Performing total normalization and PCA...')
+        sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
+        sc.pp.log1p(adata)
+        sc.pp.pca(adata, use_highly_variable=use_highly_variable)
+
+    elif method == "tfidf":
+        logger.info('Performing TFIDF and LSI...')
+        tfidf(adata)
+        lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
+
+    return adata
 
 
 @beartype
