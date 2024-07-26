@@ -15,6 +15,7 @@
 - Fix minor docstring/example issues.
 - Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored CICD unit testing by the test_cleanup merge (#215)
+- label_genes now accepts custom genelists (#38)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
