@@ -68,7 +68,7 @@ def normalize_adata(adata: sc.AnnData,
     """
 
     if isinstance(method, str):
-        return normalize_and_dim_reduct(adata=adata,
+        return normalize_and_dim_reduct(anndata=adata,
                                         method=method,
                                         exclude_highly_expressed=exclude_highly_expressed,
                                         use_highly_variable=use_highly_variable,
@@ -78,7 +78,7 @@ def normalize_adata(adata: sc.AnnData,
         adatas = {}
         for method_str in method:  # method is a list
 
-            adatas[method_str] = normalize_and_dim_reduct(adata=adata,
+            adatas[method_str] = normalize_and_dim_reduct(anndata=adata,
                                                           method=method_str,
                                                           exclude_highly_expressed=exclude_highly_expressed,
                                                           use_highly_variable=use_highly_variable,
