@@ -116,14 +116,14 @@ def test_tsse_scoring(fragments, gtf):
 
     tSSe_df = tools.tsse.tsse_scoring(fragments,
                                       gtf,
-                                      negativ_shift = 2000,
-                                      positiv_shift = 2000,
-                                      edge_size_total = 100,
-                                      edge_size_per_base = 50,
-                                      min_bias = 0.01,
-                                      keep_tmp = False,
-                                      temp_dir = "",
-                                      plot = False)
+                                      negativ_shift=2000,
+                                      positiv_shift=2000,
+                                      edge_size_total=100,
+                                      edge_size_per_base=50,
+                                      min_bias=0.01,
+                                      keep_tmp=False,
+                                      temp_dir="",
+                                      plot=False)
 
     assert all(tSSe_df.columns.isin(['TSS_agg', 'total_ov', 'tsse_score']))
     assert isinstance(tSSe_df['TSS_agg'][0], np.ndarray)
