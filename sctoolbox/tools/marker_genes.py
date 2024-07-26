@@ -90,13 +90,13 @@ def label_genes(adata: sc.AnnData,
                 species: Optional[str] = None,
                 gene_column: Optional[str] = None,
                 # mitochondiral args
-                m_genes: Optional[list[str], str, Literal["internal"]] = "internal",
+                m_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 m_regex: Optional[str] = "^mt",
                 # ribosomal args
-                r_genes: Optional[list[str], str, Literal["internal"]] = "internal",
+                r_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 r_regex: Optional[str] = "^rps|rpl",
                 # gender args
-                g_genes: Optional[list[str], str, Literal["internal"]] = "internal",
+                g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 g_regex: Optional[str] = None) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
@@ -181,7 +181,7 @@ def label_genes(adata: sc.AnnData,
         # create list of boolean indicators
         bool_label = _annotate(genes=adata_genes, labeler=genelist, regex=regex, kind=kind)
 
-        if bool_label:
+        if not bool_label is None:
             adata.var[f"is_{kind}"] = bool_label
             var_cols.append(f"is_{kind}")
 

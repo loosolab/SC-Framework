@@ -67,25 +67,30 @@ def test_get_chromosome_genes():
     assert genes_chr11 == ["DGAT2"]
 
 
-@pytest.mark.parametrize("species, gene_column", [("mouse", None),
-                                                  ("unicorn", "gene")])
-def test_label_genes(adata, species, gene_column):
-    """Test of genes are labeled in adata.var."""
+@pytest.mark.parametrize("m_genes, r_genes, g_genes", [("internal", None, None),
+                                                       (None, "internal", None),
+                                                       (None, None, "internal")])
+def test_label_genes_failure(adata, m_genes, r_genes, g_genes):
+    """Test label_genes fails on incorrect parameter combination."""
+    with pytest.raises(ValueError):
+        mg.label_genes(adata, species=None, m_genes=m_genes, r_genes=r_genes, g_genes=g_genes)
 
-    if species is None:
-        with pytest.raises(ValueError):
-            mg.label_genes(adata, species=species)  # no species given, and it cannot be found in infoprocess
 
-    else:
-        mg.label_genes(adata, gene_column=gene_column, species=species)
-
+@pytest.mark.parametrize("species, m_genes, r_genes, g_genes", [("mouse", "internal", "internal", "internal"),
+                                                                (None, ["mt-Tf", "mt-Rnr1", "mt-Tv"], None, None),
+                                                                (None, None, str(mg._GENELIST_LOC/"mouse_ribo_genes.txt"), None),])
+def test_label_genes(adata, species, m_genes, r_genes, g_genes):
+    """Test label_genes success."""
     added_columns = ["is_ribo", "is_mito", "is_gender"]
-    missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
+    assert not any(c in added_columns for c in adata.var.columns)
+
+    mg.label_genes(adata, species=species, m_genes=m_genes, r_genes=r_genes, g_genes=g_genes)
 
     if species == "mouse":
+        missing = set(added_columns) - set(adata.var.columns)  # test that columns were added
         assert len(missing) == 0
     else:
-        assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender and cellcycle are not added
+        assert "is_mito" in adata.var.columns and "is_ribo" in adata.var.columns  # is_gender is not added
 
 
 def test_add_gene_expression(adata):
