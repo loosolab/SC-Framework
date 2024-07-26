@@ -78,7 +78,7 @@ def test_label_genes_failure(adata, m_genes, r_genes, g_genes):
 
 @pytest.mark.parametrize("species, m_genes, r_genes, g_genes", [("mouse", "internal", "internal", "internal"),
                                                                 (None, ["mt-Tf", "mt-Rnr1", "mt-Tv"], None, None),
-                                                                (None, None, str(mg._GENELIST_LOC/"mouse_ribo_genes.txt"), None),])
+                                                                (None, None, str(mg._GENELIST_LOC / "mouse_ribo_genes.txt"), None),])
 def test_label_genes(adata, species, m_genes, r_genes, g_genes):
     """Test label_genes success."""
     added_columns = ["is_ribo", "is_mito", "is_gender"]

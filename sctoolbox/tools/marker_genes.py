@@ -1,5 +1,5 @@
 """Tools for marker gene analyis."""
-import os
+
 import re
 import glob
 import pkg_resources
@@ -176,12 +176,12 @@ def label_genes(adata: sc.AnnData,
         elif isinstance(labeler, list):
             genelist = labeler
         else:
-            genelist = None #  to trigger regex
+            genelist = None  # to trigger regex
 
         # create list of boolean indicators
         bool_label = _annotate(genes=adata_genes, labeler=genelist, regex=regex, kind=kind)
 
-        if not bool_label is None:
+        if bool_label is not None:
             adata.var[f"is_{kind}"] = bool_label
             var_cols.append(f"is_{kind}")
 
@@ -190,7 +190,7 @@ def label_genes(adata: sc.AnnData,
 
 def _annotate(genes: pd.Series, labeler: Optional[list[str]], regex: Optional[str], kind: str) -> pd.Series:
     """
-    Creates a boolean list that shows whether a gene is contained in 'labeler' or matches the regex.
+    Create a boolean list that shows whether a gene is contained in 'labeler' or matches the regex.
 
     Parameters
     ----------
