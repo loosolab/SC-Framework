@@ -757,6 +757,7 @@ def plot_group_embeddings(adata: sc.AnnData,
         Name of the column in adata.obs to group by.
     col : Optional[str], default None
         Set color for grouped plots. Using groupby if set to None.
+        Set if numerical values should be shown, e.g. density. Set to None for categorical values.
     embedding : Literal["umap", "tsne", "pca"], default "umap"
         Embedding to plot. Must be one of "umap", "tsne", "pca".
     ncols : int, default 4
