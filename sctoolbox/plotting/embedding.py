@@ -803,7 +803,7 @@ def plot_group_embeddings(adata: sc.AnnData,
         ax = axes_list[i]
 
         if col:
-            adata.obs["color"] = np.where(adata.obs[groupby] == group,adata.obs[col], np.nan)
+            adata.obs["color"] = np.where(adata.obs[groupby] == group, adata.obs[col], np.nan)
             color = "color"
         else:
             color = groupby
