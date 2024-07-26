@@ -11,7 +11,11 @@
 - implemented concadata, from_h5ad to load and combine from multiple .h5ad files (#224)
 - ligand-receptor: connectionPlot new parameters (#255)
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
+- restructured atac notebook 3 (normalization and batch correction) (#278)
 - Fix minor docstring/example issues.
+- added labels for the tsse aggregation plot (#271)
+- Fix Notebook pipeline unable to fetch some archives (#284)
+- refactored CICD unit testing by the test_cleanup merge (#215)
 - added labels for the tsse aggregation plot (#271)
 
 Changes to notebooks

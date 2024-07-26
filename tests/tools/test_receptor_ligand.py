@@ -14,6 +14,7 @@ import sctoolbox.tools.receptor_ligand as rl
 
 # ------------------------------ FIXTURES -------------------------------- #
 
+
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
@@ -76,6 +77,7 @@ def adata_inter(adata_db):
 
 
 # ------------------------------ TESTS -------------------------------- #
+
 
 # ----- test setup functions ----- #
 

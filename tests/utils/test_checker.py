@@ -9,6 +9,9 @@ import re
 import sys
 
 
+# --------------------------- FIXTURES ------------------------------ #
+
+
 @pytest.fixture
 def named_var_adata():
     """Return a adata object with a prefix attached to the .var index."""
@@ -52,7 +55,78 @@ def adata_rna():
     return sc.read_h5ad(adata_f)
 
 
-def test_in_range():
+@pytest.fixture
+def adata2():
+    """Load and return an anndata object."""
+    f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
+
+    return sc.read_h5ad(f)
+
+
+@pytest.fixture
+def marker_dict():
+    """Return a dict of cell type markers."""
+    return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+            "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
+            "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}
+
+
+# --------------------------- TESTS --------------------------------- #
+
+
+def test_check_module():
+    """Test if check_moduel raises an error for a non-existing module."""
+
+    with pytest.raises(Exception):
+        ch.check_module("nonexisting_module")
+
+
+def test_add_path():
+    """Test if _add_path adds the path correctly."""
+    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
+
+    assert python_exec_dir == ch._add_path()
+    assert python_exec_dir in os.environ['PATH']
+
+    ori_PATH = os.environ['PATH']  # save the original PATH
+    os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # mock notebook like path
+    assert python_exec_dir == ch._add_path()
+    os.environ['PATH'] = ori_PATH  # restore the original PATH
+    assert python_exec_dir in os.environ['PATH']
+
+
+@pytest.mark.parametrize("string,expected", [("1.3", True), ("astring", False)])
+def test_is_str_numeric(string, expected):
+    """Test if a string can be converted to numeric."""
+
+    result = ch.is_str_numeric(string)
+
+    assert result == expected
+
+
+arr_ints = np.random.randint(10, size=(10, 10))
+arr_ints2 = arr_ints.astype(float)
+arr_floats = np.random.rand(10, 10)
+
+
+@pytest.mark.parametrize("arr,boolean", [(arr_ints, True), (arr_ints2, True), (arr_floats, False)])
+def test_is_integer_array(arr, boolean):
+    """Get boolean of whether an array is an integer array."""
+
+    result = ch.is_integer_array(arr)
+    assert result == boolean
+
+
+def test_check_marker_lists(adata2, marker_dict):
+    """Test that check_marker_lists intersects lists correctly."""
+
+    filtered_marker = ch.check_marker_lists(adata2, marker_dict)
+
+    assert filtered_marker == {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
+                               "Celltype B": ['ENSMUSG00000102272']}
+
+
+def test_in_range() -> object:
     """Test if int is in given range."""
     assert ch.in_range(value=100, limits=(1, 1000))
 
@@ -165,17 +239,3 @@ def test_var_index_to_column(fixture, expected, request):
 
         assert np.array_equal(adata_orig.var.values,
                               adata_cp.var.values) == expected  # check if the original adata was changed or not
-
-
-def test_add_path():
-    """Test if _add_path adds the path correctly."""
-    python_exec_dir = os.path.dirname(sys.executable)  # get path to python executable
-
-    assert python_exec_dir == ch._add_path()
-    assert python_exec_dir in os.environ['PATH']
-
-    ori_PATH = os.environ['PATH']  # save the original PATH
-    os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # mock notebook like path
-    assert python_exec_dir == ch._add_path()
-    os.environ['PATH'] = ori_PATH  # restore the original PATH
-    assert python_exec_dir in os.environ['PATH']
