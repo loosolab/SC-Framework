@@ -528,7 +528,7 @@ def gmm_threshold(data: npt.ArrayLike,
     based on the mean and standard deviation (SD) of the largest mixture in the model.
     The threshold is calculates as mean(largest component) +/- SD * n.
 
-    The number of mixtures aka components is estimated using the BIC criterion.
+    The number of mixtures aka components is estimated using the Bayesian information criterion (BIC) criterion.
 
     Parameters
     ----------
