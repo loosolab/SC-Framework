@@ -142,7 +142,8 @@ def tfidf(anndata: sc.AnnData,
           log_idf: bool = True,
           log_tfidf: bool = False,
           scale_factor: int = int(1e4),
-          inplace: bool = False) -> Optional[sc.AnnData]:
+          inplace: bool = False,
+          layer: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
@@ -165,6 +166,8 @@ def tfidf(anndata: sc.AnnData,
         Scale factor to multiply the TF-IDF matrix by.
     inplace : bool, default False
         If True, change the anndata object inplace. Otherwise return changed anndata object.
+    layer : Optional[str], default None
+        Perform tfidf on given layer. If None tfidf is run on adata.X.
 
     Notes
     -----
@@ -183,6 +186,7 @@ def tfidf(anndata: sc.AnnData,
     """
 
     adata = anndata if inplace else anndata.copy()
+    matrix = adata.layers[layer] if layer else adata.X
 
     if log_tfidf and (log_tf or log_idf):
         raise AttributeError(
@@ -190,20 +194,20 @@ def tfidf(anndata: sc.AnnData,
             applying neither log(TF) nor log(IDF) is possible."
         )
 
-    if sparse.issparse(adata.X):
-        n_peaks = np.asarray(adata.X.sum(axis=1)).reshape(-1)
+    if sparse.issparse(matrix):
+        n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1)
         n_peaks = sparse.dia_matrix((1.0 / n_peaks, 0), shape=(n_peaks.size, n_peaks.size))
         # This prevents making TF dense
-        tf = np.dot(n_peaks, adata.X)
+        tf = np.dot(n_peaks, matrix)
     else:
-        n_peaks = np.asarray(adata.X.sum(axis=1)).reshape(-1, 1)
-        tf = adata.X / n_peaks
+        n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1, 1)
+        tf = matrix / n_peaks
     if scale_factor is not None and scale_factor != 0 and scale_factor != 1:
         tf = tf * scale_factor
     if log_tf:
         tf = np.log1p(tf)
 
-    idf = np.asarray(adata.shape[0] / adata.X.sum(axis=0)).reshape(-1)
+    idf = np.asarray(adata.shape[0] / matrix.sum(axis=0)).reshape(-1)
     if log_idf:
         idf = np.log1p(idf)
 
@@ -216,7 +220,10 @@ def tfidf(anndata: sc.AnnData,
     if log_tfidf:
         tf_idf = np.log1p(tf_idf)
 
-    adata.X = np.nan_to_num(tf_idf, 0)
+    if layer:
+        adata.layers[layer] = np.nan_to_num(tf_idf, 0)
+    else:
+        adata.X = np.nan_to_num(tf_idf, 0)
 
     if not inplace:
         return adata
