@@ -134,7 +134,7 @@ def test_gmm_threshold(norm_dist):
 
 def test_mad_threshold(norm_dist):
     """Test if thresholds can be found using the MAD score."""
-    threshold = qc.mad_treshold(norm_dist, plot=True)
+    threshold = qc.mad_threshold(norm_dist, plot=True)
 
     assert "min" in threshold and "max" in threshold
 
@@ -142,7 +142,7 @@ def test_mad_threshold(norm_dist):
 @pytest.mark.parametrize("groupby", [None, "group"])
 @pytest.mark.parametrize("columns", [None, ["qc_variable1", "qc_variable2"]])
 @pytest.mark.parametrize("which", ["obs", "var"])
-@pytest.mark.parametrize("fun", [qc.gmm_threshold, qc.mad_treshold, lambda arr: {"min": -1, "max": 1}])
+@pytest.mark.parametrize("fun", [qc.gmm_threshold, qc.mad_threshold, lambda arr: {"min": -1, "max": 1}])
 def test_automatic_thresholds(adata, which, columns, groupby, fun):
     """Test whether automatic thresholds are successfully calculated and added to the threshold dict."""
     thresholds = qc.automatic_thresholds(adata, which=which, columns=columns, groupby=groupby, FUN=fun)
