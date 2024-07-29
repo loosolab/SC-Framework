@@ -123,7 +123,7 @@ def test_tsse_scoring(fragments, gtf):
                                       min_bias=0.01,
                                       keep_tmp=False,
                                       temp_dir="",
-                                      plot=False)
+                                      plot=True)
 
     assert all(tSSe_df.columns.isin(['TSS_agg', 'total_ov', 'tsse_score']))
     assert isinstance(tSSe_df['TSS_agg'][0], np.ndarray)
