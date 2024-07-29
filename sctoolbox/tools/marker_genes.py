@@ -10,6 +10,7 @@ import itertools
 import warnings
 import anndata
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 from beartype.typing import Optional, Tuple, Any, Literal
 from beartype import beartype
@@ -89,6 +90,7 @@ def get_chromosome_genes(gtf: str,
 def label_genes(adata: sc.AnnData,
                 species: Optional[str] = None,
                 gene_column: Optional[str] = None,
+                plot: bool = True,
                 # mitochondiral args
                 m_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 m_regex: Optional[str] = "^mt",
@@ -111,6 +113,8 @@ def label_genes(adata: sc.AnnData,
         Name of the species. Mandatory if any of 'm_genes', 'r_genes' or 'g_genes' is set to 'internal' otherwise unused.
     gene_column : Optional[str], default None
         Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
+    plot : bool, default True
+        Enables barplot.
     m_genes : Optional[list[str], str, Literal["internal"]], default "internal"
         Either a list of mitochondrial genes, a file containing one mitochondrial gene name per line or 'internal' to use an sctoolbox provided list.
     m_regex : Optional[str], default "^mt"
@@ -159,7 +163,8 @@ def label_genes(adata: sc.AnnData,
         if labeler == "internal":
             available_species = utils.general.clean_flanking_strings(glob.glob(str(_GENELIST_LOC / f"*_{kind}_genes.txt")))
             if species not in available_species:
-                logger.warning(f"No {kind} genes available for species '{species}'. Available species are: {available_species}")
+                avail_str = f" Available species are: {available_species}"
+                logger.warning(f"No {kind} genes available for species '{species}'." + (avail_str if available_species else ""))
                 logger.warning("Falling back to regex...")
 
                 genelist = None
@@ -184,6 +189,36 @@ def label_genes(adata: sc.AnnData,
         if bool_label is not None:
             adata.var[f"is_{kind}"] = bool_label
             var_cols.append(f"is_{kind}")
+
+    if plot and var_cols:
+        _, axarr = plt.subplots(1, 2, figsize=(10, 3))
+
+        # get the number of assigned genes per category (absolute and percent)
+        abs_height = [adata.var[col].sum() for col in var_cols]
+        per_height = [v / len(adata.var) * 100 for v in abs_height]
+
+        # absolute
+        rects = axarr[0].bar(x=var_cols, height=abs_height)
+        axarr[0].bar_label(rects, labels=abs_height, padding=3)
+        axarr[0].set_title("Number of genes")
+        axarr[0].tick_params(axis="x", rotation=45)
+        axarr[0].set(ylim=(0, len(adata.var)))
+        # add text box
+        axarr[0].text(x=.975,
+                      y=.95,
+                      s=f"Total genes: {len(adata.var)}",
+                      transform=axarr[0].transAxes,
+                      va="top",
+                      ha="right",
+                      bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
+                      )
+
+        # percent
+        rects = axarr[1].bar(x=var_cols, height=per_height)
+        axarr[1].bar_label(rects, labels=[f"{p:.2f} %" for p in per_height], padding=3)
+        axarr[1].set_title("Percentage of genes")
+        axarr[1].tick_params(axis="x", rotation=45)
+        axarr[1].set(ylim=(0, 100))
 
     return var_cols
 
