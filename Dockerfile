@@ -27,6 +27,10 @@ RUN apt-get install bedtools && \
 RUN mamba update -n base mamba && \
     mamba --version
 
+# Workaround for https://github.com/pypa/setuptools/issues/4519
+RUN echo "setuptool<72.0.0" > /home/contraint.txt && \
+    export PIP_CONSTRAINT=/home/contraint.txt
+
 # install enviroment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
