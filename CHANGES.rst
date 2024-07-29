@@ -16,7 +16,6 @@
 - added labels for the tsse aggregation plot (#271)
 - Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored CICD unit testing by the test_cleanup merge (#215)
-- added labels for the tsse aggregation plot (#271)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
