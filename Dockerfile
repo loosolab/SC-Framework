@@ -35,7 +35,7 @@ RUN echo "setuptools<72.0.0" > /home/contraint.txt && \
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
 # Workaround for https://github.com/pypa/setuptools/issues/4519
-RUN pip install setuptools<72.0.0
+RUN pip install "setuptools<72.0.0"
 
 # install sctoolbox
 RUN pip install "/home/sc_framework/[all]" && \
