@@ -171,7 +171,7 @@ def label_genes(adata: sc.AnnData,
             except FileNotFoundError:
                 logger.warning(f"File {labeler} not found.")
                 logger.warning("Falling back to regex...")
-                
+
                 genelist = None
         elif isinstance(labeler, list):
             genelist = labeler
