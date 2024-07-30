@@ -741,6 +741,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 @beartype
 def plot_group_embeddings(adata: sc.AnnData,
                           groupby: str,
+                          col: Optional[str] = None,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
                           save: Optional[str] = None,
@@ -754,6 +755,9 @@ def plot_group_embeddings(adata: sc.AnnData,
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.
+    col : Optional[str], default None
+        Set color for grouped plots. Using groupby if set to None.
+        Set if numerical values should be shown, e.g. density. Set to None for categorical values.
     embedding : Literal["umap", "tsne", "pca"], default "umap"
         Embedding to plot. Must be one of "umap", "tsne", "pca".
     ncols : int, default 4
@@ -776,6 +780,8 @@ def plot_group_embeddings(adata: sc.AnnData,
         pl.embedding.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
     """
 
+    adata = adata.copy()
+
     # Get categories
     groups = adata.obs[groupby].astype("category").cat.categories
     n_groups = len(groups)
@@ -796,6 +802,12 @@ def plot_group_embeddings(adata: sc.AnnData,
 
         ax = axes_list[i]
 
+        if col:
+            adata.obs["color"] = np.where(adata.obs[groupby] == group, adata.obs[col], np.nan)
+            color = "color"
+        else:
+            color = groupby
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning, message="Categorical.replace is deprecated")
             warnings.filterwarnings("ignore", category=FutureWarning, message="In a future version of pandas")
@@ -803,11 +815,11 @@ def plot_group_embeddings(adata: sc.AnnData,
 
             # Plot individual embedding
             if embedding == "umap":
-                sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
+                sc.pl.umap(adata, color=color, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
             elif embedding == "tsne":
-                sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
+                sc.pl.tsne(adata, color=color, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
             elif embedding == "pca":
-                sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
+                sc.pl.pca(adata, color=color, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
 
         ax.set_title(group)
 
