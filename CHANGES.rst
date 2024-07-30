@@ -25,6 +25,7 @@ Changes to notebooks
 - restructured atac notebook 3 (normalization and batch correction) (#278)
 - RNA: Notebook 4: Added density plotting for categorical qc columns.
 - RNA: Notebook 4: Replaced sc.pl.embedding from scanpy with pl.embedding.plot_embedding from sctoolbox
+- Cleanup internal notebook structure
 
 0.8.0 (14-06-24)
 ----------------
