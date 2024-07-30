@@ -631,9 +631,9 @@ def gmm_threshold(data: npt.ArrayLike,
 
 @beartype
 def mad_threshold(data: npt.ArrayLike,
-                 min_n: Union[int, float] = 3,
-                 max_n: Union[int, float] = 3,
-                 plot: bool = False) -> dict[str, float | int]:
+                  min_n: Union[int, float] = 3,
+                  max_n: Union[int, float] = 3,
+                  plot: bool = False) -> dict[str, float | int]:
     """
     Compute an automatic threshold using the median absolute deviation (MAD).
 
