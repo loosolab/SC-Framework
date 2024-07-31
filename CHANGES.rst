@@ -13,9 +13,12 @@
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
 - Fix minor docstring/example issues.
+- added labels for the tsse aggregation plot (#271)
 - Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored CICD unit testing by the test_cleanup merge (#215)
 - label_genes now accepts custom genelists (#38)
+- Add inplace parameter to tfidf function (#277)
+- Update plot_group_embeddings() to also take numerical values, e.g. density
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -23,6 +26,9 @@ Changes to notebooks
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
+- RNA: Notebook 4: Added density plotting for categorical qc columns.
+- RNA: Notebook 4: Replaced sc.pl.embedding from scanpy with pl.embedding.plot_embedding from sctoolbox
+- Cleanup internal notebook structure
 
 0.8.0 (14-06-24)
 ----------------
