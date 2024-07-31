@@ -243,6 +243,10 @@ def _annotate(genes: pd.Series, labeler: Optional[list[str]], regex: Optional[st
     """
     logger.info(f"Annotating {kind} genes...")
     if labeler:
+        # handle elements which are in the labeler list but not in the genes list
+        not_found = [l for l in labeler if l not in genes]
+        if not_found:
+            logger.warning(f"Following genes are not present in the dataset. Please check for typos. {not_found}")
         return genes.isin(labeler)
     elif regex:
         return genes.str.match(regex, case=False)
