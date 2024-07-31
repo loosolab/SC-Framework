@@ -91,9 +91,14 @@ def test_normalize_adata(adata, method):
 # adapted from muon package
 def test_tfidf(tfidf_x):
     """Test tfidf success."""
-    tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True)
-    assert str("%.3f" % tfidf_x.X[0, 0]) == "4.659"
-    assert str("%.3f" % tfidf_x.X[3, 0]) == "4.770"
+    tfidf_x_corrected = tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True, inplace=False)
+    assert str("%.3f" % tfidf_x_corrected.X[0, 0]) == "4.659"
+    assert str("%.3f" % tfidf_x_corrected.X[3, 0]) == "4.770"
+
+    tfidf_x.layers["test"] = tfidf_x.X
+    tools.norm_correct.tfidf(tfidf_x, log_tf=True, log_idf=True, inplace=True, layer="test")
+    assert str("%.3f" % tfidf_x.layers["test"][0, 0]) == "4.659"
+    assert str("%.3f" % tfidf_x.layers["test"][3, 0]) == "4.770"
 
 
 def test_wrap_corrections(adata):

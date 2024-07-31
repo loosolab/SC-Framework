@@ -109,3 +109,23 @@ def test_add_tsse_score(adata, fragments, gtf):
                                       keep_tmp=False,
                                       temp_dir="")
     assert 'tsse_score' in adata.obs.columns
+
+
+def test_tsse_scoring(fragments, gtf):
+    """Test the tsse_scoring function."""
+
+    tSSe_df = tools.tsse.tsse_scoring(fragments,
+                                      gtf,
+                                      negativ_shift=2000,
+                                      positiv_shift=2000,
+                                      edge_size_total=100,
+                                      edge_size_per_base=50,
+                                      min_bias=0.01,
+                                      keep_tmp=False,
+                                      temp_dir="",
+                                      plot=True)
+
+    assert all(tSSe_df.columns.isin(['TSS_agg', 'total_ov', 'tsse_score']))
+    assert isinstance(tSSe_df['TSS_agg'][0], np.ndarray)
+    assert isinstance(tSSe_df['total_ov'][0], np.int64)
+    assert isinstance(tSSe_df['tsse_score'][0], np.float64)
