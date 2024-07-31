@@ -16,7 +16,10 @@ import scipy.stats as stats
 
 from beartype import beartype
 import numpy.typing as npt
-from beartype.typing import Optional, Tuple, Union, Any, Literal, Callable
+from beartype.typing import Optional, Tuple, Union, Any, Literal, Callable, Dict
+
+# frequently used typing
+__number = Union[int, float]
 
 # toolbox functions
 import sctoolbox.utils as utils
@@ -518,9 +521,9 @@ def predict_sex(adata: sc.AnnData,
 @beartype
 def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
-                  min_n: int | float = 3,
-                  max_n: int | float = 3,
-                  plot: bool = False) -> dict[str, float | int]:
+                  min_n: __number = 3,
+                  max_n: __number = 3,
+                  plot: bool = False) -> dict[str, __number]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -631,9 +634,9 @@ def gmm_threshold(data: npt.ArrayLike,
 
 @beartype
 def mad_threshold(data: npt.ArrayLike,
-                  min_n: Union[int, float] = 3,
-                  max_n: Union[int, float] = 3,
-                  plot: bool = False) -> dict[str, float | int]:
+                  min_n: __number = 3,
+                  max_n: __number = 3,
+                  plot: bool = False) -> dict[str, __number]:
     """
     Compute an automatic threshold using the median absolute deviation (MAD).
 
@@ -684,7 +687,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
+                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[__number, dict[str, __number]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -753,7 +756,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, float | int | dict[str, int | float]]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, __number | dict[str, __number]]]) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
@@ -812,7 +815,7 @@ def _validate_minmax(d: dict) -> None:
 
 @beartype
 def validate_threshold_dict(table: pd.DataFrame,
-                            thresholds: dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]],
+                            thresholds: dict[str, dict[str, __number] | dict[str, dict[str, __number]]],
                             groupby: Optional[str] = None) -> None:
     """
     Validate threshold dictionary.
@@ -874,21 +877,33 @@ def validate_threshold_dict(table: pd.DataFrame,
                     _validate_minmax(thresholds[col])
 
 
+# setup types
+__min_max = Literal["min", "max"]
+__threshold = Dict[__min_max, __number]
+
 @deco.log_anndata
 @beartype
-def get_thresholds_wrapper(adata: sc.AnnData,
-                           manual_thresholds: dict,
+def get_thresholds(adata: sc.AnnData,
+                           manual_thresholds: Dict[str, Union[__threshold, Dict[str, __threshold]]],
                            only_automatic_thresholds: bool = True,
-                           groupby: Optional[str] = None) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
+                           groupby: Optional[str] = None) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
     """
-    Get the thresholds for the filtering.
+    Prepare threholds for filtering.
+
+    This function receives a dictionary of filter metrics. Depending on availability thresholds are either predefined in the dict or filled in with automatic thresholds.
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object to find QC thresholds for.
-    manual_thresholds : dict[str, dict[str, Union[float, dict[str, float]]]]
-        Dictionary containing manually set thresholds
+    manual_thresholds : Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
+        Dictionary containing manually set thresholds.
+        Formatted as:
+        {
+            <metric_name>: None |
+                           {'min': <val>, 'max': <val>} |
+                           {<cond_A>: {'min': <val>, 'max': <val>}, <cond_B>: {'min': <val>, 'max': <val>}, ...}
+        }
     only_automatic_thresholds : bool, default True
         If True, only set automatic thresholds.
     groupby : Optional[str], default None
@@ -896,32 +911,45 @@ def get_thresholds_wrapper(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
+    Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
         Dictionary containing the thresholds
     """
-    manual_thresholds = get_keys(adata, manual_thresholds)
+    # remove keys not present in the adata
+    manual_thresholds = _match_columns(adata=adata, d=manual_thresholds)
 
+    # overwrite everything with automatic thresholds
     if only_automatic_thresholds:
         keys = list(manual_thresholds.keys())
         thresholds = automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
+
         return thresholds
     else:
-        if groupby:
-            samples = []
-            current_sample = None
-            for sample in adata.obs[groupby]:
-                if current_sample != sample:
-                    samples.append(sample)
-                    current_sample = sample
+        # keep manual thresholds; create automatic thresholds for missing values
+
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
+            if groupby:
+                # create one threshold (lower and upper) per group
+                # if given a global threshold will be applied to each group
+                # otherwise will fill missing values with generated automatic thresholds
+                groups = set(adata.obs[groupby])
+
+                # identify and store global threshold
+                global_thresh = value if "min" in value or "max" in value else None
+                
+                    
+            else:
+                # create one global threshold per metric
+                # missing values are filled using automatic threshold
+            
             if value['min'] is None or value['max'] is None:
                 auto_thr = automatic_thresholds(adata, which="obs", columns=[key], groupby=groupby)
                 manual_thresholds[key] = auto_thr[key]
             else:
+                # create a threshold per group
                 if groupby:
                     thresholds = {}
-                    for sample in samples:
+                    for sample in set(adata.obs[groupby]):
                         thresholds[sample] = value
                 else:
                     thresholds = {key: value}
@@ -932,33 +960,39 @@ def get_thresholds_wrapper(adata: sc.AnnData,
 
 
 @beartype
-def get_keys(adata: sc.AnnData,
-             manual_thresholds: dict[str, Any]) -> dict[str, dict[str, Union[float | int, dict[str, float | int]]]]:
+def _match_columns(adata: sc.AnnData,
+               d: dict,
+               which: Literal["obs", "var"] = "obs"
+               ) -> dict:
     """
-    Get threshold dictionary with keys that overlap with adata.obs.columns.
+    Remove dictionary entries where the key does not match a column name of either .var or .obs.
+
+    Will give a warning for entries without a matching key.
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object
-    manual_thresholds : dict[str, Any]
+    which : Literal["obs", "var"], default "obs"
+        Wether to check adata.obs or adata.var columns.
+    manual_thresholds : dict
         Dictionary with adata.obs colums as keys.
 
     Returns
     -------
-    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
-        Dictionary with key - adata.obs.column overlap
+    dict
+        Same dictionary as the input (d) but without entries where the key did not match a column in either .obs or .var.
     """
+    d_out = {}
 
-    m_thresholds = {}
-    legend = adata.obs.columns
-    for key, value in manual_thresholds.items():
-        if key in legend:
-            m_thresholds[key] = value
+    col_names = getattr(adata, which).columns
+    for key, value in d.items():
+        if key in col_names:
+            d_out[key] = value
         else:
             logger.info('column: ' + key + ' not found in adata.obs')
 
-    return m_thresholds
+    return d_out
 
 
 @beartype
