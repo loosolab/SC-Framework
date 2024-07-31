@@ -165,7 +165,7 @@ def label_genes(adata: sc.AnnData,
             if species not in available_species:
                 avail_str = f" Available species are: {available_species}"
                 logger.warning(f"No {kind} genes available for species '{species}'." + (avail_str if available_species else ""))
-                logger.warning("Falling back to regex...")
+                logger.warning(f"Falling back to regex '{regex}'...")
 
                 genelist = None
             else:
@@ -175,7 +175,7 @@ def label_genes(adata: sc.AnnData,
                 genelist = utils.general.read_list_file(labeler)
             except FileNotFoundError:
                 logger.warning(f"File {labeler} not found.")
-                logger.warning("Falling back to regex...")
+                logger.warning(f"Falling back to regex '{regex}'...")
 
                 genelist = None
         elif isinstance(labeler, list):
