@@ -191,34 +191,32 @@ def label_genes(adata: sc.AnnData,
             var_cols.append(f"is_{kind}")
 
     if plot and var_cols:
-        _, axarr = plt.subplots(1, 2, figsize=(10, 3))
+        _, ax = plt.subplots(figsize=(5, 3))
 
         # get the number of assigned genes per category (absolute and percent)
         abs_height = [adata.var[col].sum() for col in var_cols]
         per_height = [v / len(adata.var) * 100 for v in abs_height]
 
         # absolute
-        rects = axarr[0].bar(x=var_cols, height=abs_height)
-        axarr[0].bar_label(rects, labels=abs_height, padding=3)
-        axarr[0].set_title("Number of genes")
-        axarr[0].tick_params(axis="x", rotation=45)
-        axarr[0].set(ylim=(0, len(adata.var)))
+        rects = ax.bar(x=var_cols, height=abs_height)
+        ax.bar_label(rects, labels=[f"{a} ({p:.2f} %)" for a, p in zip(abs_height, per_height)], padding=3)
+        ax.set_title("Number of genes")
+        ax.tick_params(axis="x", rotation=45)
+        ax.set(ylim=(0, len(adata.var)), ylabel="count")
+        # create secondary y-axis
+        secax = ax.secondary_yaxis("right",
+                                   functions=(lambda x: x / len(adata.var) * 100,  # translates count -> percentage
+                                              lambda x: x * len(adata.var) / 100))  # translates percentage -> count
+        secax.set_ylabel("percentage [%]")
         # add text box
-        axarr[0].text(x=.975,
-                      y=.95,
-                      s=f"Total genes: {len(adata.var)}",
-                      transform=axarr[0].transAxes,
-                      va="top",
-                      ha="right",
-                      bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
-                      )
-
-        # percent
-        rects = axarr[1].bar(x=var_cols, height=per_height)
-        axarr[1].bar_label(rects, labels=[f"{p:.2f} %" for p in per_height], padding=3)
-        axarr[1].set_title("Percentage of genes")
-        axarr[1].tick_params(axis="x", rotation=45)
-        axarr[1].set(ylim=(0, 100))
+        ax.text(x=.975,
+                y=.95,
+                s=f"Total genes: {len(adata.var)}",
+                transform=ax.transAxes,
+                va="top",
+                ha="right",
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
+                )
 
     return var_cols
 
