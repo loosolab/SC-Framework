@@ -884,19 +884,22 @@ __threshold = Dict[__min_max, __number]
 @deco.log_anndata
 @beartype
 def get_thresholds(adata: sc.AnnData,
-                           manual_thresholds: Dict[str, Union[__threshold, Dict[str, __threshold]]],
-                           only_automatic_thresholds: bool = True,
-                           groupby: Optional[str] = None) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
+                   manual_thresholds: Dict[str, Union[None, __threshold, Dict[str, __threshold]]],
+                   which: Literal["obs", "var"] = "obs",
+                   groupby: Optional[str] = None,
+                   use_stored: bool = True,
+                   only_automatic_thresholds: bool = False) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
     """
     Prepare threholds for filtering.
 
     This function receives a dictionary of filter metrics. Depending on availability thresholds are either predefined in the dict or filled in with automatic thresholds.
+    Metrics that are not present within the anndata object are removed with a warning.
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object to find QC thresholds for.
-    manual_thresholds : Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
+    manual_thresholds : Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
         Dictionary containing manually set thresholds.
         Formatted as:
         {
@@ -904,10 +907,14 @@ def get_thresholds(adata: sc.AnnData,
                            {'min': <val>, 'max': <val>} |
                            {<cond_A>: {'min': <val>, 'max': <val>}, <cond_B>: {'min': <val>, 'max': <val>}, ...}
         }
-    only_automatic_thresholds : bool, default True
-        If True, only set automatic thresholds.
+    which : Literal["obs", "var"], default "obs"
+        Which data to find thresholds for. Either "obs" or "var".
     groupby : Optional[str], default None
         Group cells by column in adata.obs.
+    use_stored : bool, default True
+        Checks the adata for predefined/ already used thresholds and uses them instead of the manual thresholds.
+    only_automatic_thresholds : bool, default True
+        If True, only set automatic thresholds.
 
     Returns
     -------
@@ -915,21 +922,19 @@ def get_thresholds(adata: sc.AnnData,
         Dictionary containing the thresholds
     """
     # remove keys not present in the adata
-    manual_thresholds = _match_columns(adata=adata, d=manual_thresholds)
+    manual_thresholds = _match_columns(adata=adata, d=manual_thresholds, which=which)
 
     metric_names = list(manual_thresholds.keys())
 
+    # calculate automatic thresholds for everything
+    auto_thr = automatic_thresholds(adata, which=which, columns=metric_names, groupby=groupby)
+
     # overwrite everything with automatic thresholds
     if only_automatic_thresholds:
-        thresholds = automatic_thresholds(adata, which="obs", columns=metric_names, groupby=groupby)
-
-        return thresholds
+        return auto_thr
     else:
         # keep manual thresholds; use automatic thresholds for missing values
         thresholds = {}
-
-        # calculate automatic thresholds for everything
-        auto_thr = automatic_thresholds(adata, which="obs", columns=metric_names, groupby=groupby)
 
         # thresholds which are not set by the user are set automatically
         for key, value in manual_thresholds.items():
