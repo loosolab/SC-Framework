@@ -888,7 +888,8 @@ def get_thresholds(adata: sc.AnnData,
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
                    use_stored: bool = True,
-                   only_automatic_thresholds: bool = False) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
+                   only_automatic_thresholds: bool = False,
+                   **kwargs: Any) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
     """
     Prepare threholds for filtering.
 
@@ -915,6 +916,8 @@ def get_thresholds(adata: sc.AnnData,
         Checks the adata for predefined/ already used thresholds and uses them instead of the manual thresholds.
     only_automatic_thresholds : bool, default True
         If True, only set automatic thresholds.
+    kwargs : Any
+        Forwarded to sctoolbox.tools.qc_filter.automatic_thresholds.
 
     Returns
     -------
@@ -927,7 +930,7 @@ def get_thresholds(adata: sc.AnnData,
     metric_names = list(manual_thresholds.keys())
 
     # calculate automatic thresholds for everything
-    auto_thr = automatic_thresholds(adata, which=which, columns=metric_names, groupby=groupby)
+    auto_thr = automatic_thresholds(adata, which=which, columns=metric_names, groupby=groupby, **kwargs)
 
     # overwrite everything with automatic thresholds
     if only_automatic_thresholds:
@@ -1008,7 +1011,7 @@ def _match_columns(adata: sc.AnnData,
         if key in col_names:
             d_out[key] = value
         else:
-            logger.info('column: ' + key + ' not found in adata.obs')
+            logger.info(f'column: {key} not found in adata.{which}')
 
     return d_out
 
@@ -1043,9 +1046,8 @@ def get_mean_thresholds(thresholds: dict[str, Any]) -> dict[str, Any]:
 @deco.log_anndata
 @beartype
 def apply_qc_thresholds(adata: sc.AnnData,
-                        thresholds: dict[str, Any],
+                        thresholds: Dict[str, Union[__threshold, Dict[str, __threshold]]],
                         which: Literal["obs", "var"] = "obs",
-                        groupby: Optional[str] = None,
                         inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Apply QC thresholds to anndata object.
@@ -1054,12 +1056,10 @@ def apply_qc_thresholds(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to filter.
-    thresholds : dict[str, Any]
+    thresholds : Dict[str, Union[__threshold, Dict[str, __threshold]]]
         Dictionary of thresholds to apply.
     which : Literal["obs", "var"], default 'obs'
        Which table to filter on. Must be one of "obs" / "var".
-    groupby : Optional[str], default None
-        Column in table to group by.
     inplace : bool, default True
         Change adata inplace or return a changed copy.
 
@@ -1072,11 +1072,9 @@ def apply_qc_thresholds(adata: sc.AnnData,
     ------
     ValueError:
         1: If the keys in thresholds do not match with the columns in adata.[which].
-        2: If grouped thesholds are not found. For example do not contain min and max values.
-        3: If thresholds do not contain min and max values.
     """
-
-    table = adata.obs if which == "obs" else adata.var
+    # get the table which contains the filter metrics
+    table = getattr(adata, which)
 
     # Cells or genes? For naming in log prints
     if which == "obs":
@@ -1085,85 +1083,41 @@ def apply_qc_thresholds(adata: sc.AnnData,
         name = ".var features"
 
     # Check if all columns are found in adata
-    not_found = list(set(thresholds) - set(table.columns))
-    if len(not_found) > 0:
-        logger.info("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
-    thresholds = {k: thresholds[k] for k in thresholds if k not in not_found}
+    thresholds = _match_columns(adata, thresholds, which=which)
 
     if len(thresholds) == 0:
         raise ValueError(f"The thresholds given do not match the columns given in adata.{which}. Please adjust the 'which' parameter if needed.")
 
-    if groupby is not None:
-        groups = table[groupby].unique()
+    # create a boolean filter per metric
+    inclusion_bools = []  # a list of lists that represents the filters of all metrics
+    for metric, _dict in thresholds.items():
+        # global filtering
+        if "min" in _dict or "max" in _dict:
+            # create one filter list per threshold then combine
+            # allows setting only a single bound
+            tmp_bool = []
+            for bound, val in _dict.items():
+                tmp_bool.append(
+                    table[metric] >= val if bound == "min" else table[metric] <= val
+                )
 
-    # Check that thresholds contain min/max
-    for column, d in thresholds.items():
-        if 'min' not in d and 'max' not in d:
-            if groupby is not None:
-                keys = d.keys()
-                not_found = list(set(keys) - set(groups))
-                if len(not_found) > 0:
-                    raise ValueError(f"{len(not_found)} groups from thresholds were not found in adata.obs[{groupby}]. These groups are: {not_found}")
-
-            else:
-                raise ValueError("Error in threshold format: Thresholds must contain min or max per column, or a threshold per group in groupby")
-
-    # Apply thresholds
-    for column, d in thresholds.items():
-
-        # Update size of table
-        table = adata.obs if which == "obs" else adata.var
-
-        # Collect boolean array of rows to select of table
-        global_threshold = False  # can be overwritten if thresholds are global
-        excluded = np.array([False] * len(table))
-        if groupby is not None:
-            if "min" in d or "max" in d:
-                global_threshold = True
-
-            else:
-                for group in d:
-                    minmax_dict = d[group]
-
-                    group_bool = table[groupby] == group
-
-                    if "min" in minmax_dict:
-                        excluded = excluded | (group_bool & (table[column] < minmax_dict["min"]))
-
-                    if "max" in minmax_dict:
-                        excluded = excluded | (group_bool & (table[column] > minmax_dict["max"]))
         else:
-            global_threshold = True
+            # group based filtering
+            tmp_bool = []
+            for _, grp_dict in _dict.items():
+                for bound, val in grp_dict.items():
+                    tmp_bool.append(
+                    table[metric] >= val if bound == "min" else table[metric] <= val
+                )
 
-        # Select using a global threshold
-        if global_threshold is True:
-            minmax_dict = d
+        # create an union of the collected boolean threshold lists
+        inclusion_bools[metric] = [all(*row) for row in zip(*tmp_bool)]
 
-            if "min" in minmax_dict:
-                excluded = excluded | (table[column] < minmax_dict["min"])  # if already excluded, or if excluded by min
+    # create an union from the boolean filters of all metrics
+    include = [all(*row) for row in zip(*inclusion_bools)]
 
-            if "max" in minmax_dict:
-                excluded = excluded | (table[column] > minmax_dict["max"])
-
-        # Apply filtering
-        included = ~excluded
-
-        if inplace:
-            # NOTE: these are privat anndata functions so they might change without warning!
-            if which == "obs":
-                adata._inplace_subset_obs(included)
-            else:
-                adata._inplace_subset_var(included)
-        else:
-            if which == "obs":
-                adata = adata[included]
-            else:
-                adata = adata[:, included]  # filter on var
-
-        logger.info(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
-
-    if inplace is False:
-        return adata
+    # apply the filter
+    return _filter_object(adata=adata, filter=include, which=which, remove_bool=False, inplace=inplace)
 
 
 ###############################################################################
