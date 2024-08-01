@@ -16,6 +16,7 @@
 - added labels for the tsse aggregation plot (#271)
 - Fix Notebook pipeline unable to fetch some archives (#284)
 - refactored CICD unit testing by the test_cleanup merge (#215)
+- label_genes now accepts custom genelists (#38)
 - Add inplace parameter to tfidf function (#277)
 - Update plot_group_embeddings() to also take numerical values, e.g. density
 
