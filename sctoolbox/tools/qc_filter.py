@@ -951,10 +951,12 @@ def get_thresholds(adata: sc.AnnData,
                 for grp in groups:
                     grp_thresh = {}
 
-                    # use global bound if given else use automatic bound
+                    # use global or group bound if given else use automatic bound
                     for bound in ["min", "max"]:
                         if bound in global_thresh:
                             grp_thresh[bound] = global_thresh[bound]
+                        elif grp in manual_thresholds[key] and bound in manual_thresholds[key][grp]:
+                            grp_thresh[bound] = manual_thresholds[key][grp][bound]
                         else:
                             grp_thresh[bound] = auto_thr[key][grp][bound]
 
