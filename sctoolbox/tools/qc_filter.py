@@ -1257,7 +1257,7 @@ def denoise_data(adata: sc.AnnData,
 
     logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
 
-    logger.info('Training model to remove ambient RNA...')
+    logger.info('Training model to remove ambient signal...')
     scar = model(raw_count=adata,
                  feature_type=FEATURES[feature_type],
                  sparsity=0.9,
