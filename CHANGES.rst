@@ -1,5 +1,6 @@
 0.9.0 (in progress)
 -------------------
+- Added denoising function using scAR to QC notebook
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
