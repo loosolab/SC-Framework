@@ -23,6 +23,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- improvments in description and structure of atac and general notebooks (#144)
 - added header parameter to option 2 in notebook 01_assembling_anndata (#280)
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
