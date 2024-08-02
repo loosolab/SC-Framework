@@ -264,6 +264,32 @@ def test_filter_object_fail(adata):
         qc._filter_object(adata, filter=[True])
 
 
+@pytest.mark.parametrize("invert", [True, False])
+def test_filter_genes(adata, invert):
+    """Test filter_genes"""
+    # randomly select 10% genes
+    to_filter = adata.var.sample(frac=0.1).index.tolist()
+
+    filtered = qc.filter_genes(adata=adata, genes=to_filter, invert=invert, inplace=False)
+
+    # invert = True -> values should be removed
+    # invert = False -> values should be kept
+    assert all([i in filtered.var.index is invert for i in to_filter])
+
+
+@pytest.mark.parametrize("invert", [True, False])
+def test_filter_cells(adata, invert):
+    """Test filter_cells"""
+    # randomly select 10% cells
+    to_filter = adata.obs.sample(frac=0.1).index.tolist()
+
+    filtered = qc.filter_cells(adata=adata, cells=to_filter, invert=invert, inplace=False)
+
+    # invert = True -> values should be removed
+    # invert = False -> values should be kept
+    assert all([i in filtered.obs.index is invert for i in to_filter])
+
+
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
 def test_predict_sex(caplog, adata, threshold):
     """Test if predict_sex warns on invalid gene and succeeds."""
