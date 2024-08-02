@@ -1,4 +1,4 @@
-0.9.0 (in progress)
+0.9.0 (02-08-24)
 -------------------
 - Added denoising function using scAR to QC notebook
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
