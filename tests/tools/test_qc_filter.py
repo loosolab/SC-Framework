@@ -27,6 +27,10 @@ def adata():
     adata.obs["group"] = np.random.choice(["grp1", "grp2", "grp3"], size=len(adata))
     adata.var["group"] = np.random.choice(["grp1", "grp2", "grp3"], size=len(adata.var))
 
+    # add random boolean
+    adata.obs["is_bool"] = np.random.choice([True, False], size=len(adata))
+    adata.var["is_bool"] = np.random.choice([True, False], size=len(adata.var))
+
     # Add fake qc variables to anndata
     n1 = int(adata.shape[0] * 0.8)
     n2 = adata.shape[0] - n1
@@ -192,6 +196,11 @@ def test_validate_threshold_dict_invalid(adata, invalid_threshold_dict):
         qc.validate_threshold_dict(adata.obs, invalid_threshold_dict)
 
 
+def test_get_thresholds():
+    """Test the get_thresholds function."""
+    pass
+
+
 def test_filter_genes(adata):
     """Test whether genes were filtered out based on a boolean column."""
     adata_c = adata.copy()
@@ -212,25 +221,47 @@ def test_filter_cells(adata):
     assert adata.shape[0] == n_false
 
 
-@pytest.mark.parametrize("which, to_filter", [("obs", ["AAACCCACAGCCTATA", "AAACCCACAGGGCTTC"]),
-                                              ("var", ["ENSMUSG00000051951", "ENSMUSG00000102851"])])
-def test_filter_object(adata, which, to_filter):
+@pytest.mark.parametrize("invert", [True, False])
+@pytest.mark.parametrize("which", ["obs", "var"])
+@pytest.mark.parametrize("filter_type", ["str", "list[str]", "list[bool]"])
+def test_filter_object(adata, which, invert, filter_type):
     """Test whether cells/genes are filtered based on a list of cells/genes."""
     adata = adata.copy()  # copy adata to avoid inplace changes
-    qc._filter_object(adata, to_filter, which=which)
-    table = adata.obs if which == "obs" else adata.var
-    assert all([i not in table.index for i in to_filter])
+    table = getattr(adata, which)
+
+    if filter_type == "str":
+        to_filter = "is_bool"  # refers to a boolean column
+        entries = table[to_filter].index.tolist()
+    elif filter_type == "list[str]":
+        # randomly select 10% of indices to filter
+        to_filter = table.sample(frac=0.1).index.tolist()
+        entries = to_filter
+    elif filter_type == "list[bool]":
+        # create a random boolean list
+        to_filter = np.random.choice([True, False], size=len(table)).tolist()
+        entries = table[to_filter].index.tolist()
+
+
+    qc._filter_object(adata, to_filter, which=which, invert=invert)
+
+    # invert = True -> values should be removed
+    # invert = False -> values should be kept
+    assert all([i in table.index is not invert for i in entries])
 
 
 def test_filter_object_fail(adata):
     """Test whether invalid input raises the correct errors."""
     adata = adata.copy()
     adata.obs["notbool"] = np.random.choice(a=[False, True, np.nan], size=adata.shape[0])
+
     with pytest.raises(ValueError, match="Column notbool contains values that are not of type boolean"):
         qc._filter_object(adata, "notbool", which="obs")
 
     with pytest.raises(ValueError, match="Column invalid not found"):
         qc._filter_object(adata, "invalid", which="obs")
+
+    with pytest.raises(ValueError, match="Filter and AnnData dimensions differ!"):
+        qc._filter_object(adata, filter=[True])
 
 
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
