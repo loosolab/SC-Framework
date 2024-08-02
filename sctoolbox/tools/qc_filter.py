@@ -1098,7 +1098,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
             tmp_bool = []
             for bound, val in _dict.items():
                 tmp_bool.append(
-                    table[metric] >= val if bound == "min" else table[metric] <= val
+                    list(table[metric] >= val if bound == "min" else table[metric] <= val)
                 )
 
         else:
@@ -1107,14 +1107,14 @@ def apply_qc_thresholds(adata: sc.AnnData,
             for _, grp_dict in _dict.items():
                 for bound, val in grp_dict.items():
                     tmp_bool.append(
-                    table[metric] >= val if bound == "min" else table[metric] <= val
-                )
+                        list(table[metric] >= val if bound == "min" else table[metric] <= val)
+                    )
 
         # create an union of the collected boolean threshold lists
-        inclusion_bools[metric] = [all(*row) for row in zip(*tmp_bool)]
+        inclusion_bools.append([all(row) for row in zip(*tmp_bool)])
 
     # create an union from the boolean filters of all metrics
-    include = [all(*row) for row in zip(*inclusion_bools)]
+    include = [all(row) for row in zip(*inclusion_bools)]
 
     # apply the filter
     return _filter_object(adata=adata, filter=include, which=which, invert=False, inplace=inplace)
@@ -1196,7 +1196,7 @@ def _filter_object(adata: sc.AnnData,
         if len(filter) != len(table):
             raise ValueError(f"Filter and AnnData dimensions differ! The filter list is of length {len(filter)} whereas AnnData.{which} is of length {len(table)}. Please ensure that the filter is of the same length as the AnnData.")
 
-        boolean = np.Array(filter)
+        boolean = np.array(filter)
 
     # invert the array
     if invert:
