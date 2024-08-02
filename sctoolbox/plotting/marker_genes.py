@@ -85,7 +85,7 @@ def rank_genes_plot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.marker_genes.rank_genes_plot(adata, genes={"group1": adata.var.index[:10], "group2": adata.var.index[10:20]}, groupby="bulk_labels")
+        pl.marker_genes.rank_genes_plot(adata, genes={"group1": list(adata.var.index[:10]), "group2": list(adata.var.index[10:20])}, groupby="bulk_labels")
     """
 
     # Key is not needed if genes are specified

@@ -38,10 +38,10 @@ def atac_norm(*args: Any, **kwargs: Any):
 @deco.log_anndata
 @beartype
 def normalize_adata(adata: sc.AnnData,
-                    method: str | list[str],
+                    method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
-                    target_sum: Optional[int] = None) -> dict[str, sc.AnnData]:
+                    target_sum: Optional[int] = None) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -49,7 +49,7 @@ def normalize_adata(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Annotated data matrix.
-    method : str | list[str]
+    method : Literal["total", "tfidf"] | list[Literal["total", "tfidf"]]
         Normalization method. Either 'total' and/or 'tfidf'.
         - 'total': Performs normalization for total counts, log1p and PCA.
         - 'tfidf': Performs TFIDF normalization and LSI (corresponds to PCA). This method is often used for scATAC-seq data.
@@ -62,48 +62,88 @@ def normalize_adata(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, sc.AnnData]
-        Dictionary containing method name as key, and anndata as values.
-        Each anndata is the annotated data matrix with normalized count matrix and PCA/LSI calculated.
-
-    Raises
-    ------
-    ValueError
-        If method is not valid. Needs to be either 'total' or 'tfidf'.
+    Union[dict[str, sc.AnnData], sc.AnnData]
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+        If method is a list, a dictionary with the method as key and the corresponding anndata object as value is returned.
     """
 
     if isinstance(method, str):
-        method = [method]
+        return normalize_and_dim_reduct(anndata=adata,
+                                        method=method,
+                                        exclude_highly_expressed=exclude_highly_expressed,
+                                        use_highly_variable=use_highly_variable,
+                                        target_sum=target_sum)
 
-    adatas = {}
-    for method_str in method:  # method is a list
-        adata = adata.copy()  # make sure the original data is not modified
+    elif isinstance(method, list):
+        adatas = {}
+        for method_str in method:  # method is a list
 
-        if method_str == "total":  # perform total normalization and pca
-            logger.info('Performing total normalization and PCA...')
-            sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
-            sc.pp.log1p(adata)
-            sc.pp.pca(adata, use_highly_variable=use_highly_variable)
+            adatas[method_str] = normalize_and_dim_reduct(anndata=adata,
+                                                          method=method_str,
+                                                          exclude_highly_expressed=exclude_highly_expressed,
+                                                          use_highly_variable=use_highly_variable,
+                                                          target_sum=target_sum)
 
-        elif method_str == "tfidf":
-            logger.info('Performing TFIDF and LSI...')
-            tfidf(adata)
-            lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
+        return adatas
 
-        else:
-            raise ValueError(f"Method '{method_str}' is invalid - must be either 'total' or 'tfidf'.")
 
-        adatas[method_str] = adata
+@deco.log_anndata
+@beartype
+def normalize_and_dim_reduct(anndata: sc.AnnData,
+                             method: Literal["total", "tfidf"],
+                             exclude_highly_expressed: bool = True,
+                             use_highly_variable: bool = False,
+                             target_sum: Optional[int] = None,
+                             inplace: bool = False) -> Optional[sc.AnnData]:
+    """
+    Normalize the count matrix and calculate dimension reduction using different methods.
 
-    return adatas
+    Parameters
+    ----------
+    anndata : sc.AnnData
+        Annotated data matrix.
+    method : Literal["total", "tfidf"],
+        The normalization method. Either 'total' or 'tfidf'.
+    exclude_highly_expressed : bool, default True
+        Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
+    use_highly_variable : bool, default False
+        Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
+    target_sum : Optional[int], default None
+        Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+    inplace : bool, default False
+        If True, change the anndata object inplace. Otherwise return changed anndata object.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Annotated data matrix with normalized count matrix and PCA/LSI calculated.
+    """
+
+    adata = anndata if inplace else anndata.copy()
+
+    if method == "total":  # perform total normalization and pca
+        logger.info('Performing total normalization and PCA...')
+        sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
+        sc.pp.log1p(adata)
+        sc.pp.pca(adata, use_highly_variable=use_highly_variable)
+
+    elif method == "tfidf":
+        logger.info('Performing TFIDF and LSI...')
+        tfidf(adata, inplace=True)
+        lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
+
+    if not inplace:
+        return adata
 
 
 @beartype
-def tfidf(data: sc.AnnData,
+def tfidf(anndata: sc.AnnData,
           log_tf: bool = True,
           log_idf: bool = True,
           log_tfidf: bool = False,
-          scale_factor: int = int(1e4)) -> None:
+          scale_factor: int = int(1e4),
+          inplace: bool = False,
+          layer: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Transform peak counts with TF-IDF (Term Frequency - Inverse Document Frequency).
 
@@ -114,7 +154,7 @@ def tfidf(data: sc.AnnData,
 
     Parameters
     ----------
-    data : sc.AnnData
+    anndata : sc.AnnData
         AnnData object with peak counts.
     log_tf : bool, default True
         Log-transform TF term if True.
@@ -124,18 +164,29 @@ def tfidf(data: sc.AnnData,
         Log-transform TF*IDF term if True. Can only be used when log_tf and log_idf are False.
     scale_factor : int, default 1e4
         Scale factor to multiply the TF-IDF matrix by.
+    inplace : bool, default False
+        If True, change the anndata object inplace. Otherwise return changed anndata object.
+    layer : Optional[str], default None
+        Perform tfidf on given layer. If None tfidf is run on adata.X.
 
     Notes
     -----
     Function is from the muon package.
+    This function overwrites the .X matrix.
 
     Raises
     ------
     AttributeError:
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        TF-IDF normalized anndata object.
     """
 
-    adata = data
+    adata = anndata if inplace else anndata.copy()
+    matrix = adata.layers[layer] if layer else adata.X
 
     if log_tfidf and (log_tf or log_idf):
         raise AttributeError(
@@ -143,20 +194,20 @@ def tfidf(data: sc.AnnData,
             applying neither log(TF) nor log(IDF) is possible."
         )
 
-    if sparse.issparse(adata.X):
-        n_peaks = np.asarray(adata.X.sum(axis=1)).reshape(-1)
+    if sparse.issparse(matrix):
+        n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1)
         n_peaks = sparse.dia_matrix((1.0 / n_peaks, 0), shape=(n_peaks.size, n_peaks.size))
         # This prevents making TF dense
-        tf = np.dot(n_peaks, adata.X)
+        tf = np.dot(n_peaks, matrix)
     else:
-        n_peaks = np.asarray(adata.X.sum(axis=1)).reshape(-1, 1)
-        tf = adata.X / n_peaks
+        n_peaks = np.asarray(matrix.sum(axis=1)).reshape(-1, 1)
+        tf = matrix / n_peaks
     if scale_factor is not None and scale_factor != 0 and scale_factor != 1:
         tf = tf * scale_factor
     if log_tf:
         tf = np.log1p(tf)
 
-    idf = np.asarray(adata.shape[0] / adata.X.sum(axis=0)).reshape(-1)
+    idf = np.asarray(adata.shape[0] / matrix.sum(axis=0)).reshape(-1)
     if log_idf:
         idf = np.log1p(idf)
 
@@ -169,69 +220,13 @@ def tfidf(data: sc.AnnData,
     if log_tfidf:
         tf_idf = np.log1p(tf_idf)
 
-    adata.X = np.nan_to_num(tf_idf, 0)
+    if layer:
+        adata.layers[layer] = np.nan_to_num(tf_idf, 0)
+    else:
+        adata.X = np.nan_to_num(tf_idf, 0)
 
-
-@beartype
-def tfidf_normalization(matrix: sparse.spmatrix,
-                        tf_type: Literal["raw", "term_frequency", "log"] = "term_frequency",
-                        idf_type: Literal["unary", "inverse_freq", "inverse_freq_smooth"] = "inverse_freq") -> sparse.csr_matrix:
-    """
-    Perform TF-IDF normalization on a sparse matrix.
-
-    The different variants of the term frequency and inverse document frequency are obtained from https://en.wikipedia.org/wiki/Tf-idf.
-
-    Parameters
-    ----------
-    matrix : scipy.sparse matrix
-        The matrix to be normalized.
-    tf_type : Literal["term_frequency", "log", "raw"], default "term_frequency"
-        The type of term frequency to use. Can be either "raw", "term_frequency" or "log".
-    idf_type : Literal["inverse_freq", "unary", "inverse_freq_smooth"], default "inverse_freq"
-        The type of inverse document frequency to use. Can be either "unary", "inverse_freq" or "inverse_freq_smooth".
-
-    Returns
-    -------
-    sparse.csr_matrix
-        tfidf normalized sparse matrix.
-
-    Notes
-    -----
-    This function requires a lot of memory. Another option is to use the ac.pp.tfidf of the muon package.
-    """
-
-    # t - term (peak)
-    # d - document (cell)
-    # N - count of corpus (total set of cells)
-
-    # Normalize matrix to number of found peaks
-    dense = matrix.todense()
-    peaks_per_cell = dense.sum(axis=1)  # i.e. the length of the document(number of words)
-
-    # Decide on which Term frequency to use:
-    if tf_type == "raw":
-        tf = dense
-    elif tf_type == "term_frequency":
-        tf = dense / peaks_per_cell     # Counts normalized to peaks (words) per cell (document)
-    elif tf_type == "log":
-        tf = np.log1p(dense)            # for binary documents, this scales with "raw"
-
-    # Decide on the Inverse document frequency to use
-    N = dense.shape[0]     # number of cells (number of documents)
-    df = dense.sum(axis=0)  # number of cells carrying each peak (number of documents containing each word)
-
-    if idf_type == "unary":
-        idf = np.ones(dense.shape[1])  # shape is number of peaks
-    elif idf_type == "inverse_freq":
-        idf = np.log(N / df)    # each cell has at least one peak (each document has one word), so df is always > 0
-    elif idf_type == "inverse_freq_smooth":
-        idf = np.log(N / (df + 1)) + 1
-
-    # Obtain TF_IDF
-    tf_idf = np.array(tf) * np.array(idf).squeeze()
-    tf_idf = sparse.csr_matrix(tf_idf)
-
-    return tf_idf
+    if not inplace:
+        return adata
 
 
 ###################################################################################
@@ -425,10 +420,9 @@ def batch_correction(adata: sc.AnnData,
 
     elif method == "combat":
 
-        corrected_mat = sc.pp.combat(adata, key=batch_key, inplace=False, **kwargs)
-
         adata = adata.copy()  # make sure adata is not modified
-        adata.X = sparse.csr_matrix(corrected_mat)
+        # run combat
+        sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
         sc.pp.pca(adata)
         sc.pp.neighbors(adata)

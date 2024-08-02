@@ -130,7 +130,7 @@ def barcode_index(adata: sc.AnnData) -> None:
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
-    first_index = adata.obs.index[0]
+    first_index = str(adata.obs.index[0])
     # check if the first index element is a barcode
     if regex.match(first_index):
         index_is_barcode = True
@@ -198,6 +198,7 @@ def get_organism(ensembl_id: str,
     return species
 
 
+# TODO: add unit test
 @beartype
 def gene_id_to_name(ids: list[str], species: str) -> pd.DataFrame:
     """
@@ -242,6 +243,7 @@ def gene_id_to_name(ids: list[str], species: str) -> pd.DataFrame:
     return id_name_mapping
 
 
+# TODO: add unit test, currently no usage
 @deco.log_anndata
 @beartype
 def convert_id(adata: sc.AnnData,
@@ -408,6 +410,7 @@ def unify_genes_column(adata: sc.AnnData,
 #                   Check integrity of gtf file                     #
 #####################################################################
 
+# TODO: add unit test
 @beartype
 def _gtf_integrity(gtf: str) -> bool:
     """
