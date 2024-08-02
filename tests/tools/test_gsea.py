@@ -6,12 +6,19 @@ import sctoolbox.tools as tools
 import pandas as pd
 
 
+# ---------------------------- FIXTURES -------------------------------- #
+
+
 @pytest.fixture
 def adata():
     """Return clustered dataset with ranked genes."""
     obj = sc.datasets.pbmc3k_processed()
     tools.marker_genes.run_rank_genes(obj, "louvain")
+
     return obj
+
+
+# ------------------------------ TESTS --------------------------------- #
 
 
 def test_enrichr_marker_genes(adata):

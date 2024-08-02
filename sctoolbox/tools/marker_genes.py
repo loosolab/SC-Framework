@@ -1,5 +1,5 @@
 """Tools for marker gene analyis."""
-import os
+
 import re
 import glob
 import pkg_resources
@@ -10,14 +10,18 @@ import itertools
 import warnings
 import anndata
 from pathlib import Path
+import matplotlib.pyplot as plt
 
-from beartype.typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any, Literal
 from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
+
+# path to the internal gene lists (gender, cellcycle, mito, ...)
+_GENELIST_LOC = Path(pkg_resources.resource_filename("sctoolbox", "data/gene_lists/"))
 
 
 @beartype
@@ -84,8 +88,18 @@ def get_chromosome_genes(gtf: str,
 @deco.log_anndata
 @beartype
 def label_genes(adata: sc.AnnData,
-                species: str,
-                gene_column: Optional[str] = None) -> list[str]:
+                species: Optional[str] = None,
+                gene_column: Optional[str] = None,
+                plot: bool = True,
+                # mitochondiral args
+                m_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                m_regex: Optional[str] = "^mt",
+                # ribosomal args
+                r_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                r_regex: Optional[str] = "^rps|rpl",
+                # gender args
+                g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                g_regex: Optional[str] = None) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
 
@@ -95,10 +109,29 @@ def label_genes(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object.
-    species : str
-        Name of the species.
+    species : Optional[str]
+        Name of the species. Mandatory if any of 'm_genes', 'r_genes' or 'g_genes' is set to 'internal' otherwise unused.
     gene_column : Optional[str], default None
         Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
+    plot : bool, default True
+        Enables barplot.
+    m_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of mitochondrial genes, a file containing one mitochondrial gene name per line or 'internal' to use an sctoolbox provided list.
+    m_regex : Optional[str], default "^mt"
+        A regex to identify mitochondrial genes if 'm_genes' is not available or failing.
+    r_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of ribosomal genes, a file containing one ribosomal gene name per line or 'internal' to use an sctoolbox provided list.
+    r_regex : Optional[str], default "^rps|rpl"
+        A regex to identify ribosomal genes if 'r_genes' is not available or failing.
+    g_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of gender genes, a file containing one gender gene name per line or 'internal' to use an sctoolbox provided list.
+    g_regex : Optional[str]
+        A regex to identify gender genes if 'g_genes' is not available or failing.
+
+    Raises
+    ------
+    ValueError
+        If 'species' parameter is missing despite having any of 'm_genes', 'r_genes', 'g_genes' set to 'internal'.
 
     Returns
     -------
@@ -109,11 +142,10 @@ def label_genes(adata: sc.AnnData,
     --------
     sctoolbox.tools.qc_filter.predict_cell_cycle : for cell cycle prediction.
     """
-
-    # Location of gene lists
-    genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
-
-    species = species.lower()
+    if species:
+        species = species.lower()
+    elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal":
+        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes' and 'g_genes' to not be 'internal'.")
 
     # Get the full list of genes from adata
     if gene_column is None:
@@ -124,31 +156,101 @@ def label_genes(adata: sc.AnnData,
     # ------- Annotate genes in adata ------ #
     var_cols = []  # store names of new var columns
 
-    # Annotate ribosomal genes
-    adata.var["is_ribo"] = adata_genes.str.lower().str.startswith(('rps', 'rpl'))
-    var_cols.append("is_ribo")
+    for kind, labeler, regex in [("mito", m_genes, m_regex),
+                                 ("ribo", r_genes, r_regex),
+                                 ("gender", g_genes, g_regex)]:
+        # prepare genelist if needed
+        if labeler == "internal":
+            available_species = utils.general.clean_flanking_strings(glob.glob(str(_GENELIST_LOC / f"*_{kind}_genes.txt")))
+            if species not in available_species:
+                avail_str = f" Available species are: {available_species}"
+                logger.warning(f"No {kind} genes available for species '{species}'." + (avail_str if available_species else ""))
+                logger.warning(f"Falling back to regex '{regex}'...")
 
-    # Annotate mitochrondrial genes
-    path_mito_genes = genelist_dir + species + "_mito_genes.txt"
-    if os.path.exists(path_mito_genes):
-        gene_list = utils.general.read_list_file(path_mito_genes)
-        adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
-    else:
-        adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
-    var_cols.append("is_mito")
+                genelist = None
+            else:
+                genelist = utils.general.read_list_file(str(_GENELIST_LOC / f"{species}_{kind}_genes.txt"))
+        elif isinstance(labeler, str):
+            try:
+                genelist = utils.general.read_list_file(labeler)
+            except FileNotFoundError:
+                logger.warning(f"File {labeler} not found.")
+                logger.warning(f"Falling back to regex '{regex}'...")
 
-    # Annotate gender genes
-    path_gender_genes = genelist_dir + species + "_gender_genes.txt"
-    if os.path.exists(path_gender_genes):
-        gene_list = utils.general.read_list_file(path_gender_genes)
-        adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
-        var_cols.append("is_gender")
-    else:
-        available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
-        available_species = utils.general.clean_flanking_strings(available_files)
-        logger.warning(f"No gender genes available for species '{species}'. Available species are: {available_species}")
+                genelist = None
+        elif isinstance(labeler, list):
+            genelist = labeler
+        else:
+            genelist = None  # to trigger regex
+
+        # create list of boolean indicators
+        bool_label = _annotate(genes=adata_genes, labeler=genelist, regex=regex, kind=kind)
+
+        if bool_label is not None:
+            adata.var[f"is_{kind}"] = bool_label
+            var_cols.append(f"is_{kind}")
+
+    if plot and var_cols:
+        _, ax = plt.subplots(figsize=(5, 3))
+
+        # get the number of assigned genes per category (absolute and percent)
+        abs_height = [adata.var[col].sum() for col in var_cols]
+        per_height = [v / len(adata.var) * 100 for v in abs_height]
+
+        # absolute
+        rects = ax.bar(x=var_cols, height=abs_height)
+        ax.bar_label(rects, labels=[f"{a} ({p:.2f} %)" for a, p in zip(abs_height, per_height)], padding=3)
+        ax.set_title("Number of genes")
+        ax.tick_params(axis="x", rotation=45)
+        ax.set(ylim=(0, len(adata.var)), ylabel="count")
+        # create secondary y-axis
+        secax = ax.secondary_yaxis("right",
+                                   functions=(lambda x: x / len(adata.var) * 100,  # translates count -> percentage
+                                              lambda x: x * len(adata.var) / 100))  # translates percentage -> count
+        secax.set_ylabel("percentage [%]")
+        # add text box
+        ax.text(x=.975,
+                y=.95,
+                s=f"Total genes: {len(adata.var)}",
+                transform=ax.transAxes,
+                va="top",
+                ha="right",
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
+                )
 
     return var_cols
+
+
+def _annotate(genes: pd.Series, labeler: Optional[list[str]], regex: Optional[str], kind: str) -> pd.Series:
+    """
+    Create a boolean list that shows whether a gene is contained in 'labeler' or matches the regex.
+
+    Parameters
+    ----------
+    genes : pd.Series
+        A list of genes that are matched to 'labeler' or if not available 'regex'.
+    labeler : Optional[list[str]]
+        A second list the first is checked against. If not given uses regex matching instead.
+    regex : Optional[str]
+        A regex pattern used to match genes. Only used if labeler = None.
+    kind : str
+        Name of the genes that are annotated. E.g. mito
+
+    Returns
+    -------
+    pd.Series
+        A boolean list of len(genes). True denotes 'genes' that matched either the regex or where contained in the labeler list.
+    """
+    logger.info(f"Annotating {kind} genes...")
+    if labeler:
+        # handle elements which are in the labeler list but not in the genes list
+        not_found = [lab for lab in labeler if lab not in genes]
+        if not_found:
+            logger.warning(f"Following genes are not present in the dataset. Please check for typos. {not_found}")
+        return genes.isin(labeler)
+    elif regex:
+        return genes.str.match(regex, case=False)
+    logger.warn("Neither genelist nor regex available. Skipping...")
 
 
 @deco.log_anndata
