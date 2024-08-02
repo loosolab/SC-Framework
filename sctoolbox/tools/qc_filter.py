@@ -1117,7 +1117,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
     include = [all(*row) for row in zip(*inclusion_bools)]
 
     # apply the filter
-    return _filter_object(adata=adata, filter=include, which=which, remove_bool=False, inplace=inplace)
+    return _filter_object(adata=adata, filter=include, which=which, invert=False, inplace=inplace)
 
 
 ###############################################################################
@@ -1126,50 +1126,88 @@ def apply_qc_thresholds(adata: sc.AnnData,
 
 @beartype
 def _filter_object(adata: sc.AnnData,
-                   filter: str | list[str],
+                   filter: str | list[str] | list[bool],
                    which: Literal["obs", "var"] = "obs",
-                   remove_bool: bool = True,
+                   invert: bool = False,
                    inplace: bool = True) -> Optional[sc.AnnData]:
-    """Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes."""
+    """
+    Filter an adata object based on a filter.
+    on either obs (cells) or var (genes). Is called by filter_cells and filter_genes.
 
-    # Decide which element type (genes/cells) we are dealing with
-    if which == "obs":
-        table = adata.obs
-        table_name = "adata.obs"
-        element_name = "cells"
-    else:
-        table = adata.var
-        table_name = "adata.var"
-        element_name = "genes"
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The anndata object to filter.
+    filter : str | list[str] | list[bool]
+        The filter that will be applied to the anndata. Either
+            - a name corresponding to a .var or .obs column (the column has to contain boolean values),
+            - a list of indices to keep or
+            - a list of boolean values.
+        Anything that evaluates to True will be kept.
+    which : Literal["obs", "var"], default "obs"
+        Filter observations (cells) or variables (genes, peaks, etc.).
+    invert : bool, default True
+        Invert the filter.
+    inplace : bool, default True
+        Whether to update the anndata object inplace.
+
+    Raises
+    ------
+    ValueError
+        - Filter is a non existent column name or not of type boolean.
+        - The boolean filter length is unequal to the appropriate AnnData dimension.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The filtered anndata object.
+    """
+    table = getattr(adata, which)
 
     n_before = len(table)
 
-    # genes is either a string (column in .var table) or a list of genes to remove
+    # generate filter array
     if isinstance(filter, str):
+        # filter based on a boolean column
+
         if filter not in table.columns:
-            raise ValueError(f"Column {filter} not found in {table_name}.columns")
+            raise ValueError(f"Column {filter} not found in adata.{which}.")
 
         if table[filter].dtype.name != "bool":
-            raise ValueError(f"Column {filter} contains values that are not of type boolean")
+            raise ValueError(f"Column {filter} contains values that are not of type boolean.")
 
+        # get a boolean numpy array
         boolean = table[filter].values
-        if remove_bool is True:
-            boolean = ~boolean
+
+    elif isinstance(filter[0], str):  # parameter is restricted to list[str] and list[bool] so it is sufficient to check the first element
+        # filter based on a list of indices
+
+        # Check if all indices are found in the adata
+        not_found = list(set(filter) - set(table.index))
+        if not_found:
+            logger.info(f"Detected {len(not_found)} filter indices not present in the AnnData object. The following elements are not present and therefore ignored: {not_found}.")
+
+        boolean = table.index.isin(filter)
 
     else:
-        # Check if all genes/cells are found in adata
-        not_found = list(set(filter) - set(table.index))
-        if len(not_found) > 0:
-            logger.info(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
+        # filter based on a boolean list
 
-        boolean = ~table.index.isin(filter)
+        # check the dimensions
+        if len(filter) != len(table):
+            raise ValueError(f"Filter and AnnData dimensions differ! The filter list is of length {len(filter)} whereas AnnData.{which} is of length {len(table)}. Please ensure that the filter is of the same length as the AnnData.")
+
+        boolean = np.Array(filter)
+
+    # invert the array
+    if invert:
+        boolean = ~boolean
 
     # Remove genes from adata
     if inplace:
         if which == "obs":
             adata._inplace_subset_obs(boolean)
         elif which == "var":
-            adata._inplace_subset_var(boolean)  # boolean is the included genes
+            adata._inplace_subset_var(boolean)
     else:
         if which == "obs":
             adata = adata[boolean]
@@ -1178,9 +1216,9 @@ def _filter_object(adata: sc.AnnData,
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    logger.info(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
+    logger.info(f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after}).")
 
-    if inplace is False:
+    if not inplace:
         return adata
 
 
@@ -1188,38 +1226,36 @@ def _filter_object(adata: sc.AnnData,
 @beartype
 def filter_cells(adata: sc.AnnData,
                  cells: str | list[str],
-                 remove_bool: bool = True,
+                 invert: bool = False,
                  inplace: bool = True) -> Optional[sc.AnnData]:
     """
-    Remove cells from anndata object.
+    Remove cells from the AnnData object.
 
     Parameters
     ----------
     adata : sc.AnnData
-        Anndata object to filter.
+        The AnnData object to filter.
     cells : str | list[str]
-        A column in .obs containing boolean indicators or a list of cells to remove from object .obs table.
-    remove_bool : bool, default True
-        Is used if genes is a column in .obs table. If True, remove cells that are True. If False, remove cells that are False.
+        A column in .obs containing boolean indicators or a list of cell indices. The given selection will be removed.
+    invert : bool, default False
+        Invert the cell selection. If True will keep selected cells.
     inplace : bool, default True
         If True, filter inplace. If False, return filtered adata object.
 
     Returns
     -------
     Optional[sc.AnnData]
-        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
+        If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    ret = _filter_object(adata, cells, which="obs", remove_bool=remove_bool, inplace=inplace)
-
-    return ret
+    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace)
 
 
 @deco.log_anndata
 @beartype
 def filter_genes(adata: sc.AnnData,
                  genes: str | list[str],
-                 remove_bool: bool = True,
+                 invert: bool = False,
                  inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Remove genes from adata object.
@@ -1227,20 +1263,18 @@ def filter_genes(adata: sc.AnnData,
     Parameters
     ----------
     adata : sc.AnnData
-        Annotated data matrix object to filter
+        The AnnData object to filter.
     genes : str | list[str]
-        A column containing boolean indicators or a list of genes to remove from object .var table.
-    remove_bool : bool, default True
-        Is used if genes is a column in .var table. If True, remove genes that are True. If False, remove genes that are False.
+        A column in .var containing boolean indicators or a list of gene indices. The given selection will be removed.
+    invert : bool, default False
+        Invert the cell selection. If True will keep selected cells.
     inplace : bool, default True
         If True, filter inplace. If False, return filtered adata object.
 
     Returns
     -------
     Optional[sc.AnnData]
-        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
+        If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
-
-    return ret
+    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace)
