@@ -222,11 +222,11 @@ def test_filter_cells(adata):
 
 
 @pytest.mark.parametrize("invert", [True, False])
-@pytest.mark.parametrize("which", ["obs", "var"])
+@pytest.mark.parametrize("which, inplace", [("obs", True), ("var", False)])
 @pytest.mark.parametrize("filter_type", ["str", "list[str]", "list[bool]"])
-def test_filter_object(adata, which, invert, filter_type):
+def test_filter_object(adata, which, inplace, invert, filter_type):
     """Test whether cells/genes are filtered based on a list of cells/genes."""
-    adata = adata.copy()  # copy adata to avoid inplace changes
+    adata_copy = adata.copy()  # copy adata to avoid inplace changes
     table = getattr(adata, which)
 
     if filter_type == "str":
@@ -241,12 +241,18 @@ def test_filter_object(adata, which, invert, filter_type):
         to_filter = np.random.choice([True, False], size=len(table)).tolist()
         entries = table[to_filter].index.tolist()
 
+    out = qc._filter_object(adata_copy, to_filter, which=which, invert=invert, inplace=inplace)
 
-    qc._filter_object(adata, to_filter, which=which, invert=invert)
+    filtered_table = getattr(adata_copy if inplace else out, which)
 
     # invert = True -> values should be removed
     # invert = False -> values should be kept
-    assert all([i in table.index is not invert for i in entries])
+    assert all([(i in filtered_table.index) is not invert for i in entries])
+
+    if inplace:
+        assert adata_copy.shape != adata.shape
+    else:
+        assert out.shape != adata_copy.shape
 
 
 def test_filter_object_fail(adata):
@@ -272,9 +278,9 @@ def test_filter_genes(adata, invert):
 
     filtered = qc.filter_genes(adata=adata, genes=to_filter, invert=invert, inplace=False)
 
-    # invert = True -> values should be removed
-    # invert = False -> values should be kept
-    assert all([i in filtered.var.index is invert for i in to_filter])
+    # invert = True -> values should be kept
+    # invert = False -> values should be removed
+    assert all([(i in filtered.var.index) is invert for i in to_filter])
 
 
 @pytest.mark.parametrize("invert", [True, False])
@@ -285,9 +291,9 @@ def test_filter_cells(adata, invert):
 
     filtered = qc.filter_cells(adata=adata, cells=to_filter, invert=invert, inplace=False)
 
-    # invert = True -> values should be removed
-    # invert = False -> values should be kept
-    assert all([i in filtered.obs.index is invert for i in to_filter])
+    # invert = True -> values should be kep
+    # invert = False -> values should be removed
+    assert all([(i in filtered.obs.index) is invert for i in to_filter])
 
 
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
