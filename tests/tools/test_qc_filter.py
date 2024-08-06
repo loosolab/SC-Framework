@@ -201,26 +201,6 @@ def test_get_thresholds():
     pass
 
 
-def test_filter_genes(adata):
-    """Test whether genes were filtered out based on a boolean column."""
-    adata_c = adata.copy()
-    adata_c.var["gene_bool"] = np.random.choice(a=[False, True], size=adata_c.shape[1])
-    n_false = sum(~adata_c.var["gene_bool"])
-    qc.filter_genes(adata_c, "gene_bool", inplace=True)  # removes all genes with boolean True
-
-    assert adata_c.shape[1] == n_false
-
-
-def test_filter_cells(adata):
-    """Test whether cells were filtered out based on a boolean column."""
-    adata = adata.copy()  # copy adata to avoid inplace changes
-    adata.obs["cell_bool"] = np.random.choice(a=[False, True], size=adata.shape[0])
-    n_false = sum(~adata.obs["cell_bool"])
-    qc.filter_cells(adata, "cell_bool", inplace=True)  # removes all genes with boolean True
-
-    assert adata.shape[0] == n_false
-
-
 @pytest.mark.parametrize("invert", [True, False])
 @pytest.mark.parametrize("which, inplace", [("obs", True), ("var", False)])
 @pytest.mark.parametrize("filter_type", ["str", "list[str]", "list[bool]"])
@@ -231,7 +211,7 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
 
     if filter_type == "str":
         to_filter = "is_bool"  # refers to a boolean column
-        entries = table[to_filter].index.tolist()
+        entries = table[table[to_filter]].index.tolist()
     elif filter_type == "list[str]":
         # randomly select 10% of indices to filter
         to_filter = table.sample(frac=0.1).index.tolist()
