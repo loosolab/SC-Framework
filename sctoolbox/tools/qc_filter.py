@@ -1048,7 +1048,8 @@ def get_mean_thresholds(thresholds: dict[str, Any]) -> dict[str, Any]:
 def apply_qc_thresholds(adata: sc.AnnData,
                         thresholds: Dict[str, Union[__threshold, Dict[str, __threshold]]],
                         which: Literal["obs", "var"] = "obs",
-                        inplace: bool = True) -> Optional[sc.AnnData]:
+                        inplace: bool = True,
+                        overwrite: bool = False) -> Optional[sc.AnnData]:
     """
     Apply QC thresholds to anndata object.
 
@@ -1062,6 +1063,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
        Which table to filter on. Must be one of "obs" / "var".
     inplace : bool, default True
         Change adata inplace or return a changed copy.
+    overwrite : bool, default False
+        Set to overwrite previously applied filters.
 
     Returns
     -------
@@ -1071,16 +1074,21 @@ def apply_qc_thresholds(adata: sc.AnnData,
     Raises
     ------
     ValueError:
-        1: If the keys in thresholds do not match with the columns in adata.[which].
+        1: If the keys in thresholds do not match with the columns in adata.<which>.
+    RuntimeError:
+        Raised if a previous filtering is detected in adata.uns['sctoolbox']['report']['filter'][<which>] and overwrite = False.
     """
+    # check if the adata is already filtered
+    try:
+        adata.uns["sctoolbox"]["report"]["filter"][which]
+        previous_filter = True
+    except KeyError:
+        previous_filter = False
+    if not overwrite and previous_filter:
+        raise RuntimeError(f"The anndata object appears to be filtered already. Set `overwrite=True` to apply the filtering on top.")
+
     # get the table which contains the filter metrics
     table = getattr(adata, which)
-
-    # Cells or genes? For naming in log prints
-    if which == "obs":
-        name = "cells"
-    else:
-        name = ".var features"
 
     # Check if all columns are found in adata
     thresholds = _match_columns(adata, thresholds, which=which)
@@ -1117,7 +1125,17 @@ def apply_qc_thresholds(adata: sc.AnnData,
     include = [all(row) for row in zip(*inclusion_bools)]
 
     # apply the filter
-    return _filter_object(adata=adata, filter=include, which=which, invert=False, inplace=inplace)
+    out = _filter_object(adata=adata, filter=include, which=which, invert=False, inplace=inplace)
+
+    # store thresholds and statistics
+    utils.adata.add_uns_info(adata=adata if inplace else out,
+                             key=["report", "filter", which],
+                             value={
+                                 "before": len(table),
+                                 "after": len(adata.obs) if inplace else len(out.obs),
+                                 "thresholds": thresholds})
+
+    return out
 
 
 ###############################################################################
