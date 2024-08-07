@@ -4,6 +4,7 @@ import pandas as pd
 import scanpy as sc
 import multiprocessing as mp
 import warnings
+import time
 import anndata
 import pkg_resources
 import glob
@@ -13,6 +14,8 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import scrublet as scr
 import scipy.stats as stats
+from scar import model, setup_anndata
+from scipy.sparse import csr_matrix
 
 from beartype import beartype
 import numpy.typing as npt
@@ -1296,3 +1299,105 @@ def filter_genes(adata: sc.AnnData,
     """
 
     return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace)
+
+
+def denoise_data(adata: sc.AnnData,
+                 adata_raw: sc.AnnData,
+                 feature_type: Literal['Gene Expression', 'Peaks', 'CRISPR Guide Capture', 'Multiplexing Capture', None] = 'Gene Expression',
+                 epochs: int = 150,
+                 prob: float = 0.995,
+                 save: Optional[str] = None,
+                 verbose: bool = False) -> sc.AnnData:
+    """
+    Use scAR and the raw feature counts to remove ambient RNA.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to denoise
+    adata_raw : sc.AnnData
+        Raw anndata object with all droplets
+    feature_type : Literal["Gene Expression", "Peaks", "CRISPR Guide Capture", "Multiplexing Capture"], default "Gene Expression"
+        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, the values found in column adata.var['feature_types'] are used.
+    epochs : int, default 150
+        Number of iterations to train the model
+    prob : float, default 0.995
+        Probability of a gene to contain ambient RNA
+    save : Optional[str], default None
+        Path to save the knee plot
+    verbose : bool, default False
+
+    Returns
+    -------
+    sc.AnnData
+        Denoised anndata object
+
+    Raises
+    ------
+    ValueError
+        When feature_type is None and adata.var does not have column 'feature_types'.
+    ValueError
+        When feature_type is None and features in adata.var['feature_types'] are not supported.
+    """
+
+    import warnings
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning)
+
+    FEATURES = {
+        'Gene Expression': 'mRNA',
+        'Peaks': 'ATAC',
+        'CRISPR Guide Capture': 'sgRNA',
+        'Multiplexing Capture': 'CMO',
+    }
+
+    if feature_type is None:
+        # check if column "feature_types" is in adata.var
+        if 'feature_types' not in adata.var.columns:
+            raise ValueError(f"'feature_types' column is missing from adata.var! Please specify the feature type manually in parameter <feature_type>.\nAvailable feature_type: {list(FEATURES.keys())}")
+        else:
+            # check if the feature types in column are supported
+            features = adata.var['feature_types'].unique()
+            check = all(x in FEATURES.keys() for x in features)
+            if not check:
+                not_supported = set(features) - set(FEATURES.keys())
+                raise ValueError(f"{list(not_supported)} features are not supported! Supported features are: {list(FEATURES.keys())}")
+    else:
+        adata_raw.var['feature_types'] = feature_type
+        adata.var['feature_types'] = feature_type
+
+    logger.info('Setting up adata...')
+    start_time = time.time()
+    setup_anndata(
+        adata=adata,
+        raw_adata=adata_raw,
+        prob=prob,
+        kneeplot=True,
+        feature_type=feature_type,
+        verbose=verbose
+    )
+
+    _save_figure(save)
+
+    end_time = time.time() - start_time
+
+    logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
+
+    logger.info('Training model to remove ambient signal...')
+    scar = model(raw_count=adata,
+                 feature_type=FEATURES[feature_type],
+                 sparsity=0.9,
+                 device='auto'  # Both cpu and cuda are supported.
+                 )
+
+    scar.train(epochs=epochs,
+               batch_size=64,
+               verbose=verbose)
+
+    # After training, we can infer the native true signal
+    scar.inference(batch_size=256)
+
+    adata_denoised = adata.copy()
+    adata_denoised.X = csr_matrix(scar.native_counts, dtype=np.float32)
+
+    return adata_denoised
