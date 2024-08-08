@@ -1202,7 +1202,9 @@ def _filter_object(adata: sc.AnnData,
             previous_filter = False
 
         if not overwrite and previous_filter:
-            raise RuntimeError("The anndata object appears to be filtered already. Set `overwrite=True` to apply the filtering on top.")
+            raise RuntimeError("The anndata object appears to be filtered. Set `overwrite=True` to apply the filtering on top.")
+        elif overwrite and previous_filter:
+            logger.warning("Applying filter on top of previous filter.")
 
     table = getattr(adata, which)
 
@@ -1403,18 +1405,19 @@ def denoise_data(adata: sc.AnnData,
     """
     report_path = ["sctoolbox", "report", "filter", "denoise"]
     # check for previous denoising
-    if not overwrite:
-        tmp = adata.uns
-        previous_filter = True
-        for key in report_path:
-            if key in tmp:
-                tmp = tmp[key]
-            else:
-                previous_filter = False
-                break
+    tmp = adata.uns
+    previous_filter = True
+    for key in report_path:
+        if key in tmp:
+            tmp = tmp[key]
+        else:
+            previous_filter = False
+            break
 
-        if previous_filter:
-            raise RuntimeError("The anndata object appears to be filtered already. Set `overwrite=True` to apply the filtering on top.")
+    if not overwrite and previous_filter:
+        raise RuntimeError("The anndata object appears to be denoised. Set `overwrite=True` to apply the denoising on top.")
+    elif overwrite and previous_filter:
+        logger.warning("Applying denoising on top of previous denoising.")
 
     import warnings
     warnings.filterwarnings("ignore", category=FutureWarning)
