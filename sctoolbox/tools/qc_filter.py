@@ -1169,7 +1169,7 @@ def _filter_object(adata: sc.AnnData,
     value : Optional[Dict], default None
         The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
-        Set to overwrite already existing reports.
+        Set to apply filter on top of existing filter.
 
     Raises
     ------
@@ -1303,7 +1303,7 @@ def filter_cells(adata: sc.AnnData,
     value : Optional[Dict], default None
         The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
-        Set to overwrite already existing reports.
+        Set to apply filter on top of existing filter.
 
     Returns
     -------
@@ -1344,7 +1344,7 @@ def filter_genes(adata: sc.AnnData,
     value : Optional[Dict], default None
         The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
-        Set to overwrite already existing reports.
+        Set to apply filter on top of existing filter.
 
     Returns
     -------
@@ -1355,13 +1355,16 @@ def filter_genes(adata: sc.AnnData,
     return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, key=key, value=value, overwrite=overwrite)
 
 
+@deco.log_anndata
+@beartype
 def denoise_data(adata: sc.AnnData,
                  adata_raw: sc.AnnData,
                  feature_type: Literal['Gene Expression', 'Peaks', 'CRISPR Guide Capture', 'Multiplexing Capture', None] = 'Gene Expression',
                  epochs: int = 150,
                  prob: float = 0.995,
                  save: Optional[str] = None,
-                 verbose: bool = False) -> sc.AnnData:
+                 verbose: bool = False,
+                 overwrite : bool = False) -> sc.AnnData:
     """
     Use scAR and the raw feature counts to remove ambient RNA.
 
@@ -1380,6 +1383,9 @@ def denoise_data(adata: sc.AnnData,
     save : Optional[str], default None
         Path to save the knee plot
     verbose : bool, default False
+        Enable scAR status messages.
+    overwrite : bool, default False
+        Set to perform denoising on top of existing denoising.
 
     Returns
     -------
@@ -1392,7 +1398,23 @@ def denoise_data(adata: sc.AnnData,
         When feature_type is None and adata.var does not have column 'feature_types'.
     ValueError
         When feature_type is None and features in adata.var['feature_types'] are not supported.
+    RuntimeError
+        Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
     """
+    report_path = ["sctoolbox", "report", "filter", "denoise"]
+    # check for previous denoising
+    if not overwrite:
+        tmp = adata.uns
+        previous_filter = True
+        for key in report_path:
+            if key in tmp:
+                tmp = tmp[key]
+            else:
+                previous_filter = False
+                break
+
+        if previous_filter:
+            raise RuntimeError("The anndata object appears to be filtered already. Set `overwrite=True` to apply the filtering on top.")
 
     import warnings
     warnings.filterwarnings("ignore", category=FutureWarning)
@@ -1453,5 +1475,10 @@ def denoise_data(adata: sc.AnnData,
 
     adata_denoised = adata.copy()
     adata_denoised.X = csr_matrix(scar.native_counts, dtype=np.float32)
+
+    # add report to adata
+    utils.adata.add_uns_info(adata=adata_denoised,
+                             key=report_path[1:],
+                             value=True)
 
     return adata_denoised
