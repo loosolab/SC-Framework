@@ -13,11 +13,12 @@ from sctoolbox.tools.marker_genes import get_rank_genes_tables
 from beartype import beartype
 from beartype.typing import Optional, Literal, Any
 
+
 @deprecation.deprecated(deprecated_in="0.10", removed_in="1.0",
                         current_version=sctoolbox.__version__,
                         details="enrichr_marker_genes() is replaced by gene_set_enrichment().")
 def enrichr_marker_genes(adata, **kwargs):
-    """Wrapper to support older gsea notebook versions."""
+    """Run enrichr method to support older gsea notebook versions."""
     return gene_set_enrichment(adata, method="enrichr", **kwargs)
 
 
@@ -34,7 +35,7 @@ def gene_set_enrichment(adata: sc.AnnData,
                         **kwargs: Any
                         ) -> pd.DataFrame:
     """
-    Wrapps enrichr module to use on marker genes per cluster.
+    Run gene set enrichment on marker genes.
 
     Parameters
     ----------
@@ -59,6 +60,7 @@ def gene_set_enrichment(adata: sc.AnnData,
         Only needed for enrichr.
     **kwargs : Any
         Additional parameters forwarded to gseapy.prerank().
+
     Notes
     -----
     This function only works in combination with the tools.marker_genes.run_rank_genes function.
@@ -118,7 +120,7 @@ def gene_set_enrichment(adata: sc.AnnData,
                     enr.res2d['UP_DW'] = key
                     enr_list.append(enr.res2d)
                 elif method == "prerank":
-                    
+
                     # Set default kwargs
                     defaultKwargs = {"threads": 4,
                                      "min_size": 5,
@@ -127,8 +129,8 @@ def gene_set_enrichment(adata: sc.AnnData,
                                      "outdir": None,
                                      "seed": 6,
                                      "verbose": True}
-                    kwargs = { **defaultKwargs, **kwargs }
-                    
+                    kwargs = {**defaultKwargs, **kwargs}
+
                     deg["names"] = deg["names"].str.upper()
                     enr = gp.prerank(rnk=deg[["names", "scores"]],
                                      gene_sets=gene_sets,
