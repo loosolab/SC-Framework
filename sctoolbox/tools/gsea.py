@@ -4,12 +4,21 @@ import gseapy as gp
 import scanpy as sc
 import tqdm
 import warnings
+import deprecation
 
+import sctoolbox
 import sctoolbox.utils.decorator as deco
 from sctoolbox.tools.marker_genes import get_rank_genes_tables
 
 from beartype import beartype
-from beartype.typing import Optional, Literal
+from beartype.typing import Optional, Literal, Any
+
+@deprecation.deprecated(deprecated_in="0.10", removed_in="1.0",
+                        current_version=sctoolbox.__version__,
+                        details="enrichr_marker_genes() is replaced by gene_set_enrichment().")
+def enrichr_marker_genes(adata, **kwargs):
+    """Wrapper to support older gsea notebook versions."""
+    return gene_set_enrichment(adata, method="enrichr", **kwargs)
 
 
 @deco.log_anndata
@@ -21,7 +30,8 @@ def gene_set_enrichment(adata: sc.AnnData,
                         pvals_adj_tresh: float = 0.05,
                         library_name: str = "GO_Biological_Process_2023",
                         gene_sets: Optional[dict[str, list[str]]] = None,
-                        background: Optional[set[str]] = None
+                        background: Optional[set[str]] = None,
+                        **kwargs: Any
                         ) -> pd.DataFrame:
     """
     Wrapps enrichr module to use on marker genes per cluster.
@@ -47,7 +57,8 @@ def gene_set_enrichment(adata: sc.AnnData,
     background : Optional[set[str]], default None
         Set of background genes. Will be automatically determined when library_name or gene_sets is given.
         Only needed for enrichr.
-
+    **kwargs : Any
+        Additional parameters forwarded to gseapy.prerank().
     Notes
     -----
     This function only works in combination with the tools.marker_genes.run_rank_genes function.
@@ -107,16 +118,21 @@ def gene_set_enrichment(adata: sc.AnnData,
                     enr.res2d['UP_DW'] = key
                     enr_list.append(enr.res2d)
                 elif method == "prerank":
+                    
+                    # Set default kwargs
+                    defaultKwargs = {"threads": 4,
+                                     "min_size": 5,
+                                     "max_size": 1000,
+                                     "permutation_num": 1000,
+                                     "outdir": None,
+                                     "seed": 6,
+                                     "verbose": True}
+                    kwargs = { **defaultKwargs, **kwargs }
+                    
                     deg["names"] = deg["names"].str.upper()
                     enr = gp.prerank(rnk=deg[["names", "scores"]],
                                      gene_sets=gene_sets,
-                                     threads=4,
-                                     min_size=5,
-                                     max_size=1000,
-                                     permutation_num=1000,
-                                     outdir=None,
-                                     seed=6,
-                                     verbose=True)
+                                     **kwargs)
                     enr.res2d['UP_DW'] = key
                     enr_list.append(enr.res2d)
 
