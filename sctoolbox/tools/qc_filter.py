@@ -1138,7 +1138,7 @@ def _filter_object(adata: sc.AnnData,
                    invert: bool = False,
                    inplace: bool = True,
                    key: Optional[str | list[str]] = None,
-                   value: Dict = {},
+                   value: Optional[Dict] = None,
                    overwrite: bool = False
                    ) -> Optional[sc.AnnData]:
     """
@@ -1166,7 +1166,7 @@ def _filter_object(adata: sc.AnnData,
         Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
         A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
         If the given key already exists a RuntimeError is raised unless `overwrite=True`.
-    value : Dict, default {}
+    value : Optional[Dict], default None
         The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to overwrite already existing reports.
@@ -1185,6 +1185,9 @@ def _filter_object(adata: sc.AnnData,
         The filtered anndata object.
     """
     if key:
+        if value is None:
+            value = {}
+
         if isinstance(key, str):
             key = [key]
         # check if the adata is already filtered
@@ -1277,7 +1280,7 @@ def filter_cells(adata: sc.AnnData,
                  invert: bool = False,
                  inplace: bool = True,
                  key: Optional[str | list[str]] = None,
-                 value: Dict = {},
+                 value: Optional[Dict] = None,
                  overwrite: bool = False) -> Optional[sc.AnnData]:
     """
     Remove cells from the AnnData object.
@@ -1297,7 +1300,7 @@ def filter_cells(adata: sc.AnnData,
         Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
         A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
         If the given key already exists a RuntimeError is raised unless `overwrite=True`.
-    value : Dict, default {}
+    value : Optional[Dict], default None
         The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to overwrite already existing reports.
@@ -1318,7 +1321,7 @@ def filter_genes(adata: sc.AnnData,
                  invert: bool = False,
                  inplace: bool = True,
                  key: Optional[str | list[str]] = None,
-                 value: Dict = {},
+                 value: Optional[Dict] = None,
                  overwrite: bool = False) -> Optional[sc.AnnData]:
     """
     Remove genes from adata object.
@@ -1338,7 +1341,7 @@ def filter_genes(adata: sc.AnnData,
         Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
         A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
         If the given key already exists a RuntimeError is raised unless `overwrite=True`.
-    value : Dict, default {}
+    value : Optional[Dict], default None
         The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to overwrite already existing reports.
