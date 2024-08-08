@@ -1,4 +1,4 @@
-0.10.0 (in progess)
+0.10.0 (in progress)
 -------------------
 - Rename enrichr_marker_genes to gene_set_enrichment and add prerank as possible method.
 
