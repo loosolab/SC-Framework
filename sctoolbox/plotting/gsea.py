@@ -198,6 +198,7 @@ def gsea_network(enr_res: pd.DataFrame,
                                 width=list(map(lambda x: x*10, edge_weight)),
                                 edge_color='#CDDBD4')
             # Save figure
-            _save_figure(f"{cluster}_{save}")
+            save = f"{cluster}_{save}" if save else None
+            _save_figure(save)
         except:
             warnings.warn(f"Could not build network for cluster {cluster}")
