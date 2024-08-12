@@ -167,11 +167,19 @@ def gsea_network(enr_res: pd.DataFrame,
     save : Optional[str], default None
         Filename suffix to save the figure.
         The cluster name is added as prefix to the name.
+
+    Raises
+    ------
+    ValueError
+        If no cluster with valied pathways are found.
     """
 
     # Get cluster with enrichted pathways after filtering
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
     valid_cluster = list(nodes.Cluster.unique())
+
+    if len(valid_cluster) == 0:
+        raise ValueError("No cluster with enrichted pathways found.")
 
     # Plot setup
     num_clust = len(valid_cluster)
