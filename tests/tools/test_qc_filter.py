@@ -2,6 +2,7 @@
 
 import pytest
 import sctoolbox.tools.qc_filter as qc
+import sctoolbox.utils.adata as utils
 import scanpy as sc
 import numpy as np
 import os
@@ -232,12 +233,14 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
 
     if inplace:
         assert adata_copy.shape != adata.shape
+        assert utils.in_uns(adata_copy, ["sctoolbox", "report", "qc", which])
     else:
         assert out.shape != adata_copy.shape
+        assert utils.in_uns(out, ["sctoolbox", "report", "qc", which])
 
 
 def test_filter_object_fail(adata):
-    """Test whether invalid input raises the correct errors."""
+    """Test whether invalid input or prefiltered data raises the correct errors."""
     adata = adata.copy()
     adata.obs["notbool"] = np.random.choice(a=[False, True, np.nan], size=adata.shape[0])
 
@@ -249,6 +252,11 @@ def test_filter_object_fail(adata):
 
     with pytest.raises(ValueError, match="Filter and AnnData dimensions differ!"):
         qc._filter_object(adata, filter=[True])
+
+
+    with pytest.raises(RuntimeError, match="The anndata object appears to be filtered."):
+        utils.add_uns_info(adata, key=["report", "qc", "obs", "test"], value="mock filter")
+        qc._filter_object(adata, filter="is_bool", which="obs", name="test", overwrite=False)
 
 
 @pytest.mark.parametrize("invert", [True, False])
@@ -374,6 +382,14 @@ def test_denoise_data(mocker):
     # Assertions
     assert isinstance(result, sc.AnnData)
     assert result.X.shape == adata.X.shape
+    assert utils.in_uns(result, ["sctoolbox", "report", "qc", "denoise"])
 
     # Ensure the logger methods were called
     assert mock_logger.info.call_count == 3
+
+    with pytest.raises(RuntimeError, match="The anndata object appears to be denoised."):
+        qc.denoise_data(result, adata_raw, feature_type='Gene Expression', epochs=10, prob=0.99, save=None, verbose=False, overwrite=False)
+
+    # overwrite denoising
+    qc.denoise_data(result, adata_raw, feature_type='Gene Expression', epochs=10, prob=0.99, save=None, verbose=False, overwrite=True)
+    assert "Applying denoising on top of previous denoising." in mock_logger.warning.call_args[0][0]
