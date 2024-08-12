@@ -31,6 +31,8 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+# path in adata.uns that holds the reports
+_uns_report_path = ["sctoolbox", "report", "qc"]
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
@@ -1122,7 +1124,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
                           which=which,
                           invert=False,
                           inplace=inplace,
-                          key="threshold",
+                          name="threshold",
                           value=thresholds,
                           overwrite=overwrite)
 
@@ -1137,7 +1139,7 @@ def _filter_object(adata: sc.AnnData,
                    which: Literal["obs", "var"] = "obs",
                    invert: bool = False,
                    inplace: bool = True,
-                   key: Optional[str | list[str]] = None,
+                   name: Optional[str | list[str]] = None,
                    value: Optional[Dict] = None,
                    overwrite: bool = False
                    ) -> Optional[sc.AnnData]:
@@ -1161,13 +1163,13 @@ def _filter_object(adata: sc.AnnData,
         Invert the filter.
     inplace : bool, default True
         Whether to update the anndata object inplace.
-    key : Optional[str | list[str]], default None
-        Name of the applied filter
+    name : Optional[str | list[str]], default None
+        Name of the applied filter.
         Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
         A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
-        If the given key already exists a RuntimeError is raised unless `overwrite=True`.
+        If the given name already exists a RuntimeError is raised unless `overwrite=True`.
     value : Optional[Dict], default None
-        The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
+        The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
 
@@ -1184,22 +1186,15 @@ def _filter_object(adata: sc.AnnData,
     Optional[sc.AnnData]
         The filtered anndata object.
     """
-    if key:
+    report_path = _uns_report_path + [which]
+    if name:
         if value is None:
             value = {}
 
-        if isinstance(key, str):
-            key = [key]
+        if isinstance(name, str):
+            name = [name]
         # check if the adata is already filtered
-        try:
-            # raises error if key doesn't exist
-            tmp = adata.uns["sctoolbox"]["report"]["filter"][which]
-            for k in key:
-                tmp = tmp[k]
-
-            previous_filter = True
-        except KeyError:
-            previous_filter = False
+        previous_filter = utils.adata.in_uns(adata, report_path)
 
         if not overwrite and previous_filter:
             raise RuntimeError("The anndata object appears to be filtered. Set `overwrite=True` to apply the filtering on top.")
@@ -1263,12 +1258,12 @@ def _filter_object(adata: sc.AnnData,
     logger.info(f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after}).")
 
     # store thresholds and statistics
-    if key:
+    if name:
         value["before"] = n_before
         value["after"] = n_after
 
         utils.adata.add_uns_info(adata=adata,
-                                 key=["report", "filter", which] + key,
+                                 key=report_path[1:] + name,
                                  value=value)
 
     if not inplace:
@@ -1281,7 +1276,7 @@ def filter_cells(adata: sc.AnnData,
                  cells: str | list[str],
                  invert: bool = False,
                  inplace: bool = True,
-                 key: Optional[str | list[str]] = None,
+                 name: Optional[str | list[str]] = None,
                  value: Optional[Dict] = None,
                  overwrite: bool = False) -> Optional[sc.AnnData]:
     """
@@ -1297,13 +1292,13 @@ def filter_cells(adata: sc.AnnData,
         Invert the cell selection. If True will keep selected cells.
     inplace : bool, default True
         If True, filter inplace. If False, return filtered adata object.
-    key : Optional[str | list[tr]], default None
+    name : Optional[str | list[tr]], default None
         Name of the applied filter.
         Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
         A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
         If the given key already exists a RuntimeError is raised unless `overwrite=True`.
     value : Optional[Dict], default None
-        The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
+        The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
 
@@ -1313,7 +1308,7 @@ def filter_cells(adata: sc.AnnData,
         If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, key=key, value=value, overwrite=overwrite)
+    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
 
 
 @deco.log_anndata
@@ -1322,7 +1317,7 @@ def filter_genes(adata: sc.AnnData,
                  genes: str | list[str],
                  invert: bool = False,
                  inplace: bool = True,
-                 key: Optional[str | list[str]] = None,
+                 name: Optional[str | list[str]] = None,
                  value: Optional[Dict] = None,
                  overwrite: bool = False) -> Optional[sc.AnnData]:
     """
@@ -1338,13 +1333,13 @@ def filter_genes(adata: sc.AnnData,
         Invert the cell selection. If True will keep selected cells.
     inplace : bool, default True
         If True, filter inplace. If False, return filtered adata object.
-    key : Optional[str | list[tr]], default None
+    name : Optional[str | list[tr]], default None
         Name of the applied filter.
         Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
         A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
         If the given key already exists a RuntimeError is raised unless `overwrite=True`.
     value : Optional[Dict], default None
-        The value that will be assigned to key. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
+        The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
 
@@ -1354,7 +1349,7 @@ def filter_genes(adata: sc.AnnData,
         If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, key=key, value=value, overwrite=overwrite)
+    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
 
 
 @deco.log_anndata
@@ -1403,16 +1398,9 @@ def denoise_data(adata: sc.AnnData,
     RuntimeError
         Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
     """
-    report_path = ["sctoolbox", "report", "filter", "denoise"]
+    report_path = _uns_report_path + ["denoise"]
     # check for previous denoising
-    tmp = adata.uns
-    previous_filter = True
-    for key in report_path:
-        if key in tmp:
-            tmp = tmp[key]
-        else:
-            previous_filter = False
-            break
+    previous_filter = utils.adata.in_uns(adata, report_path)
 
     if not overwrite and previous_filter:
         raise RuntimeError("The anndata object appears to be denoised. Set `overwrite=True` to apply the denoising on top.")
