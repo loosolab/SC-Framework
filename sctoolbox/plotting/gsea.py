@@ -7,9 +7,10 @@ import scanpy as sc
 import warnings
 from gseapy import enrichment_map
 import networkx as nx
+import numpy as np
 
 from beartype import beartype
-from beartype.typing import Optional, Any, Literal
+from beartype.typing import Optional, Any, Literal, Tuple
 
 from sctoolbox.plotting.general import clustermap_dotplot, _save_figure
 from sctoolbox.utils.bioutils import pseudobulk_table
@@ -126,13 +127,15 @@ def term_dotplot(term: str,
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
 
 
+@beartype
 def gsea_network(enr_res: pd.DataFrame,
                  clust_col: str = "Cluster",
                  sig_col: Literal["Adjusted P-value", "P-value", "FDR q-val", "NOM p-val"] = "Adjusted P-value",
                  cutoff: int | float = 0.05,
                  scale: int | float = 1,
                  resolution: int | float = 0.35,
-                 figsize: tuple(int | float, int | float) = (10, 10),
+                 figsize: Optional[Tuple[int | float, int | float]] = None,
+                 ncols: int = 3,
                  save: Optional[str] = None,
                  ) -> None:
     """
@@ -157,48 +160,77 @@ def gsea_network(enr_res: pd.DataFrame,
     resolution : int | float, 0.35
         The compactness of the spiral layout returned.
         Lower values result in more compressed spiral layouts.
-    figsize : tuple(int | float, int | float), default (10, 10)
-        Set size of figure
+    figsize : Optional[Tuple[int | float, int | float]], default None
+        Set size of figure, if None uses default settings: (8 * ncols, 6 * nrows)
+    ncols :  int, default 3,
+        Set number of columns for plot.
     save : Optional[str], default None
         Filename suffix to save the figure.
         The cluster name is added as prefix to the name.
     """
 
-    for cluster in enr_res[clust_col].unique():
+    # Get cluster with enrichted pathways after filtering
+    nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
+    valid_cluster = list(nodes.Cluster.unique())
+
+    # Plot setup
+    num_clust = len(valid_cluster)
+    ncols = min(ncols, num_clust)
+    nrows = int(np.ceil(num_clust/ncols))
+    figsize = figsize if figsize else (8 * ncols, 6 * nrows)
+    fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
+    axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
+    axes = axarr.flatten()
+
+    for i, cluster in enumerate(valid_cluster):
+        # Create cluster subset
         tmp = enr_res[enr_res[clust_col] == cluster]
-        try:
-            nodes, edges = enrichment_map(tmp, column=sig_col, cutoff=cutoff)
+        
+        # Calculate enrichment map
+        nodes, edges = enrichment_map(tmp, column=sig_col, cutoff=cutoff)
 
-            # build graph
-            G = nx.from_pandas_edgelist(edges,
-                                        source='src_idx',
-                                        target='targ_idx',
-                                        edge_attr=['jaccard_coef', 'overlap_coef', 'overlap_genes'])
-            fig, ax = plt.subplots(figsize=figsize)
+        # build graph
+        G = nx.from_pandas_edgelist(edges,
+                                    source='src_idx',
+                                    target='targ_idx',
+                                    edge_attr=['jaccard_coef', 'overlap_coef', 'overlap_genes'])
 
-            # init node cooridnates
-            pos=nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
+        # init node cooridnates
+        pos=nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
 
-            # draw node
-            nx.draw_networkx_nodes(G,
+        # draw node
+        nx.draw_networkx_nodes(G,
+                               pos=pos,
+                               cmap=plt.cm.RdYlBu,
+                               node_color=list(nodes.NES),
+                               node_size=list(nodes.Hits_ratio *500),
+                               ax=axes[i],
+                               label="a")
+        # draw node label
+        nx.draw_networkx_labels(G,
                                 pos=pos,
-                                cmap=plt.cm.RdYlBu,
-                                node_color=list(nodes.NES),
-                                node_size=list(nodes.Hits_ratio *500),
-                                label="a")
-            # draw node label
-            nx.draw_networkx_labels(G,
-                                    pos=pos,
-                                    labels=nodes.Term.to_dict(),
-                                    font_size=10, clip_on=False)
-            # draw edge
-            edge_weight = nx.get_edge_attributes(G, 'jaccard_coef').values()
-            nx.draw_networkx_edges(G,
-                                pos=pos,
-                                width=list(map(lambda x: x*10, edge_weight)),
-                                edge_color='#CDDBD4')
-            # Save figure
-            save = f"{cluster}_{save}" if save else None
-            _save_figure(save)
-        except:
-            warnings.warn(f"Could not build network for cluster {cluster}")
+                                labels=nodes.Term.to_dict(),
+                                font_size=10,
+                                ax=axes[i],
+                                clip_on=False)
+        # draw edge
+        edge_weight = nx.get_edge_attributes(G, 'jaccard_coef').values()
+        nx.draw_networkx_edges(G,
+                               pos=pos,
+                               width=list(map(lambda x: x*10, edge_weight)),
+                               ax=axes[i],
+                               edge_color='#CDDBD4') 
+
+        # Set title to subplots
+        axes[i].title.set_text(cluster)
+
+    # Hide plots not filled in
+    for ax in axes[num_clust:]:
+        ax.axis('off')
+
+    # Add title
+    fig.suptitle("Network of enrichted Pathways per Cluster")
+
+    fig.tight_layout()
+    _save_figure(save)
