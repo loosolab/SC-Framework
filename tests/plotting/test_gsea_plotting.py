@@ -26,7 +26,7 @@ def term_table():
 
 @pytest.fixture()
 def term_table_clustered():
-    """Clustered term table"""
+    """Clustered term table."""
     term_table = pd.DataFrame({
         "Term": ["Myofibril Assembly (GO:0030239)", "Actomyosin Structure Organization (GO:0031032)", "Sarcomere Organization (GO:0045214)",
                  "Regulation Of GTPase Activity (GO:0043087)", "Positive Regulation Of Gene Expression", "Regulation Of Angiogenesis (GO:0045765)"],
