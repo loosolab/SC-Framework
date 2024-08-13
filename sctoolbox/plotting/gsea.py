@@ -3,8 +3,9 @@
 import scipy.stats as stats
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scanpy as sc
-import warnings
 from gseapy import enrichment_map
 import networkx as nx
 import numpy as np
@@ -177,6 +178,7 @@ def gsea_network(enr_res: pd.DataFrame,
     # Get cluster with enrichted pathways after filtering
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
     valid_cluster = list(nodes.Cluster.unique())
+    min_NES, max_NES = min(list(nodes.NES)), max(list(nodes.NES))
 
     if len(valid_cluster) == 0:
         raise ValueError("No cluster with enrichted pathways found.")
@@ -184,17 +186,19 @@ def gsea_network(enr_res: pd.DataFrame,
     # Plot setup
     num_clust = len(valid_cluster)
     ncols = min(ncols, num_clust)
-    nrows = int(np.ceil(num_clust/ncols))
+    nrows = int(np.ceil(num_clust / ncols))
     figsize = figsize if figsize else (8 * ncols, 6 * nrows)
     fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
     axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
     axes = axarr.flatten()
 
+    node_sizes = list()
+    width_sizes = list()
     for i, cluster in enumerate(valid_cluster):
         # Create cluster subset
         tmp = enr_res[enr_res[clust_col] == cluster]
-        
+
         # Calculate enrichment map
         nodes, edges = enrichment_map(tmp, column=sig_col, cutoff=cutoff)
 
@@ -208,13 +212,17 @@ def gsea_network(enr_res: pd.DataFrame,
         pos=nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
 
         # draw node
-        nx.draw_networkx_nodes(G,
-                               pos=pos,
-                               cmap=plt.cm.RdYlBu,
-                               node_color=list(nodes.NES),
-                               node_size=list(nodes.Hits_ratio *500),
-                               ax=axes[i],
-                               label="a")
+        n = nx.draw_networkx_nodes(G,
+                                   pos=pos,
+                                   cmap=plt.cm.RdYlBu,
+                                   node_color=list(nodes.NES),
+                                   node_size=list(nodes.Hits_ratio * 500),
+                                   vmin=min_NES,
+                                   vmax=max_NES,
+                                   linewidths=0,
+                                   ax=axes[i],
+                                   label=nodes.Term)
+
         # draw node label
         nx.draw_networkx_labels(G,
                                 pos=pos,
@@ -222,6 +230,7 @@ def gsea_network(enr_res: pd.DataFrame,
                                 font_size=10,
                                 ax=axes[i],
                                 clip_on=False)
+
         # draw edge
         edge_weight = nx.get_edge_attributes(G, 'jaccard_coef').values()
         nx.draw_networkx_edges(G,
@@ -230,15 +239,48 @@ def gsea_network(enr_res: pd.DataFrame,
                                ax=axes[i],
                                edge_color='#CDDBD4') 
 
-        # Set title to subplots
+        # Set subplot title
         axes[i].title.set_text(cluster)
+
+        # Draw colorbar
+        # https://stackoverflow.com/questions/32462881/add-colorbar-to-existing-axis
+        divider = make_axes_locatable(axes[i])
+        cax = divider.append_axes('bottom', size='5%', pad=0)
+        fig.colorbar(n, cax=cax, orientation='horizontal')
+
+        # Get sizes for legend
+        node_sizes += list(nodes.Hits_ratio)
+        width_sizes += list(map(lambda x: x*10, edge_weight))
 
     # Hide plots not filled in
     for ax in axes[num_clust:]:
         ax.axis('off')
 
-    # Add title
-    fig.suptitle("Network of enrichted Pathways per Cluster")
+     # Add title
+    fig.suptitle("Network of enrichted Pathways per Cluster", fontsize=20)
+
+    # ---------------------------- legend -------------------------------------
+    step_num=5
+
+    # Edge legend
+    s_steps = np.linspace(min(width_sizes), max(width_sizes), step_num)
+    line_list = [Line2D([], [], color='black', alpha=1, linewidth=s, label=f"{np.round(s / 10, 2)}") for s in s_steps]
+    line_list.insert(0, Line2D([], [], alpha=0, label="Shared significant genes\nbetween Pathways"))
+
+    # Node size legend
+    # Note The markersize does not fit 100% to the actial scatter size.
+    # The *20 scaling is an approximation.
+    line_list.append(Line2D([], [], alpha=0, label="Ratio of \nPathway Genes in Cluster"))
+    s_steps = np.linspace(min(node_sizes), max(node_sizes), step_num)
+    line_list += [Line2D([], [], color='black', alpha=1, linewidth=0, markersize=s * 20, marker="o", label=f"{np.round(s, 2)}") for s in s_steps]
+
+    fig.legend(handles=line_list,
+               bbox_to_anchor=(1, 0.5, 0, 0),
+               fontsize=15,
+               labelspacing = 1,
+               loc='center left')
+
+    # ---------------------------- save figure --------------------------------
 
     fig.tight_layout()
     _save_figure(save)
