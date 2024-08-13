@@ -978,8 +978,7 @@ def get_thresholds(adata: sc.AnnData,
 
         if groupby:
             # create one threshold (lower and upper) per group in metric
-            # if given the global threshold will be applied to each group
-            # otherwise will fill missing values with generated automatic thresholds
+            # will fill missing values with generated automatic thresholds
             groups = set(adata.obs[groupby])
 
             metric_threshold = {}
@@ -988,7 +987,7 @@ def get_thresholds(adata: sc.AnnData,
 
                 # use global or group bound if given else use automatic bound
                 for bound in ["min", "max"]:
-                    if bound in current_thresh:
+                    if bound in current_thresh and current_thresh[bound] is not None:
                         grp_thresh[bound] = current_thresh[bound]
                     elif (isinstance(manual_thresholds[key], dict)
                           and grp in manual_thresholds[key]
