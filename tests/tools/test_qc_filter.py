@@ -198,22 +198,67 @@ def test_validate_threshold_dict_invalid(adata, invalid_threshold_dict):
         qc.validate_threshold_dict(adata.obs, invalid_threshold_dict)
 
 
+@pytest.mark.parametrize("groupby", ["group", None])
 @pytest.mark.parametrize("which", ["obs", "var"])
-#@pytest.mark.parametrize("manual_thresholds, which, groupby, ignore_stored, only_automatic", )
-def test_get_thresholds(adata, which):#, manual_thresholds, which, groupby, ignore_stored, only_automatic):
+def test_get_thresholds(adata, which, groupby):
     """Test the get_thresholds function."""
     manual_thresholds = {
         "qc_variable1": None,
         "qc_variable2": {"min": None, "max": 1}
     }
 
+    # number of expected filter metrics
+    n = sum(k in getattr(adata, which).columns for k in manual_thresholds.keys())
+
+    np.random.seed(42)
     result = qc.get_thresholds(adata=adata,
                                manual_thresholds=manual_thresholds,
-                               which=which)#,
-                               #groupby=groupby,
+                               which=which,
+                               groupby=groupby)
                                #ignore_stored=ignore_stored,
                                #only_automatic=only_automatic)
-    pass
+
+    # assert correct number of metrics
+    assert n == len(result)
+
+    # assert all 'None' are replaced with numbers
+    for v in result.values():
+        assert isinstance(v, dict)
+
+        for sup_v in v.values():  # either a dict of thresholds or for groupby a dict containing dicts
+            if isinstance(sup_v, dict):
+                for bot_v in sup_v.values():  # check groupby thresholds
+                    assert bot_v is not None
+            else:
+                assert v is not None
+
+    # test if stored thresholds are returned
+    mock_thresh = {"qc_variable2": {"min": -10, "max": 10}}
+    utils.add_uns_info(adata, key=qc._uns_report_path[1:] + [which], value=mock_thresh)
+
+    stored = qc.get_thresholds(adata=adata,
+                               manual_thresholds=manual_thresholds,
+                               which=which,
+                               groupby=groupby)
+    assert stored == mock_thresh
+
+    # test if stored are ignored
+    np.random.seed(42)
+    result2 = qc.get_thresholds(adata=adata,
+                                manual_thresholds=manual_thresholds,
+                                which=which,
+                                groupby=groupby,
+                                ignore_stored=True)
+    assert result == result2 and stored != result2
+
+    # test if only automatic are used
+    np.random.seed(42)
+    auto = qc.get_thresholds(adata=adata,
+                             manual_thresholds=manual_thresholds,
+                             which=which,
+                             groupby=groupby,
+                             only_automatic=True)
+    assert auto != result and auto != stored
 
 
 @pytest.mark.parametrize("which", ["obs", "var"])
