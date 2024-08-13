@@ -898,12 +898,13 @@ def get_thresholds(adata: sc.AnnData,
                    only_automatic: bool = False,
                    **kwargs: Any) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
     """
-    Prepare threholds for filtering.
+    Prepare thresholds for filtering.
 
     Thresholds are optained from three different sources per default in the following order:
       1. stored within the adata from a previous filtering
       2. given through the 'manual_thresholds' parameter
-      3. generated in this function
+      3. generated in this function (automatic thresholds)
+    The function will exclusively use stored thresholds and ignore the other sources if stored thresholds are available.
 
     Parameters
     ----------
@@ -931,7 +932,7 @@ def get_thresholds(adata: sc.AnnData,
     Warnings/ Notes
     ---------------
     - Metrics that are not present within the anndata object are removed with a warning.
-    - Will give a warning if a threshold is stored within the adata and given as a manual threshold (unless ignore_stored=True).
+    - Will give a warning if threshold stored within the adata are detected (unless ignore_stored=True).
 
     Returns
     -------
@@ -949,49 +950,68 @@ def get_thresholds(adata: sc.AnnData,
     # overwrite everything with automatic thresholds
     if only_automatic:
         return auto_thr
-    else:
-        # keep manual thresholds; use automatic thresholds for missing values
-        thresholds = {}
 
-        # thresholds which are not set by the user are set automatically
-        for key, value in manual_thresholds.items():
-            # identify and store global threshold
-            global_thresh = value if "min" in value or "max" in value else None
+    # fetch and return thresholds stored within the adata
+    if utils.adata.in_uns(adata=adata, key=_uns_report_path + [which]):
+        stored = None
+        for name in _uns_report_path + [which]:
+            stored = stored[name] if stored else adata.uns[name]
 
-            if groupby:
-                # create one threshold (lower and upper) per group in metric
-                # if given the global threshold will be applied to each group
-                # otherwise will fill missing values with generated automatic thresholds
-                groups = set(adata.obs[groupby])
+        if stored:
+            logger.warning('Found previously applied thresholds within the adata.')
+            if not ignore_stored:
+                logger.warning('Using thresholds stored within the adata set "ignore_stored=True" to use manual and/or automatic thresholds.')
+                return stored
 
-                metric_threshold = {}
-                for grp in groups:
-                    grp_thresh = {}
+    # keep manual thresholds; use automatic thresholds for missing values
+    thresholds = {}
 
-                    # use global or group bound if given else use automatic bound
-                    for bound in ["min", "max"]:
-                        if bound in global_thresh:
-                            grp_thresh[bound] = global_thresh[bound]
-                        elif grp in manual_thresholds[key] and bound in manual_thresholds[key][grp]:
-                            grp_thresh[bound] = manual_thresholds[key][grp][bound]
-                        else:
-                            grp_thresh[bound] = auto_thr[key][grp][bound]
+    # thresholds which are not set by the user are set automatically
+    for key, value in manual_thresholds.items():
+        print(key, value)
+        # identify and temporary store threshold (missing values will be filled in below)
+        if value is None:
+            current_thresh = {}
+        else:
+            current_thresh = value
+        # global_thresh = value if value is not None and "min" in value or "max" in value else {}
 
-                    metric_threshold[grp] = grp_thresh
-                thresholds[key] = metric_threshold
-            else:
-                # create one global threshold per metric
-                # missing values are filled using the automatic threshold
+        if groupby:
+            # create one threshold (lower and upper) per group in metric
+            # if given the global threshold will be applied to each group
+            # otherwise will fill missing values with generated automatic thresholds
+            groups = set(adata.obs[groupby])
 
-                metric_threshold = {}
+            metric_threshold = {}
+            for grp in groups:
+                grp_thresh = {}
+
+                # use global or group bound if given else use automatic bound
                 for bound in ["min", "max"]:
-                    if bound in global_thresh:
-                        metric_threshold[bound] = global_thresh[bound]
+                    if bound in current_thresh:
+                        grp_thresh[bound] = current_thresh[bound]
+                    elif (isinstance(manual_thresholds[key], dict)
+                          and grp in manual_thresholds[key]
+                          and bound in manual_thresholds[key][grp]):
+                        grp_thresh[bound] = manual_thresholds[key][grp][bound]
                     else:
-                        metric_threshold[bound] = auto_thr[key][bound]
-                thresholds[key] = metric_threshold
+                        grp_thresh[bound] = auto_thr[key][grp][bound]
 
-        return thresholds
+                metric_threshold[grp] = grp_thresh
+            thresholds[key] = metric_threshold
+        else:
+            # create one global threshold per metric
+            # missing values are filled using the automatic threshold
+
+            metric_threshold = {}
+            for bound in ["min", "max"]:
+                if bound in current_thresh and current_thresh[bound] is not None:
+                    metric_threshold[bound] = current_thresh[bound]
+                else:
+                    metric_threshold[bound] = auto_thr[key][bound]
+            thresholds[key] = metric_threshold
+
+    return thresholds
 
 
 @beartype
