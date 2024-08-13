@@ -23,6 +23,7 @@ from beartype.typing import Optional, Tuple, Union, Any, Literal, Callable, Dict
 
 # frequently used typing
 __number = Union[int, float]
+__number_opt = Union[int, float, None]
 
 # toolbox functions
 import sctoolbox.utils as utils
@@ -885,49 +886,57 @@ def validate_threshold_dict(table: pd.DataFrame,
 # setup types
 __min_max = Literal["min", "max"]
 __threshold = Dict[__min_max, __number]
+__threshold_opt = Dict[__min_max, __number_opt]
 
 @deco.log_anndata
 @beartype
 def get_thresholds(adata: sc.AnnData,
-                   manual_thresholds: Dict[str, Union[None, __threshold, Dict[str, __threshold]]],
+                   manual_thresholds: Dict[str, Union[None, __threshold_opt, Dict[str, __threshold_opt]]],
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
-                   use_stored: bool = True,
-                   only_automatic_thresholds: bool = False,
+                   ignore_stored: bool = False,
+                   only_automatic: bool = False,
                    **kwargs: Any) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
     """
     Prepare threholds for filtering.
 
-    This function receives a dictionary of filter metrics. Depending on availability thresholds are either predefined in the dict or filled in with automatic thresholds.
-    Metrics that are not present within the anndata object are removed with a warning.
+    Thresholds are optained from three different sources per default in the following order:
+      1. stored within the adata from a previous filtering
+      2. given through the 'manual_thresholds' parameter
+      3. generated in this function
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object to find QC thresholds for.
-    manual_thresholds : Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
+    manual_thresholds : Dict[str, Union[None, Dict[Literal["min", "max"], Optional[Union[int, float]]], Dict[str, Dict[Literal["min", "max"], Optional[Union[int, float]]]]]]
         Dictionary containing manually set thresholds.
         Formatted as:
         {
             <metric_name>: None |
-                           {'min': <val>, 'max': <val>} |
-                           {<cond_A>: {'min': <val>, 'max': <val>}, <cond_B>: {'min': <val>, 'max': <val>}, ...}
+                           {'min': <val> | None, 'max': <val> | None} |
+                           {<cond_A>: {'min': <val> | None, 'max': <val> | None}, <cond_B>: {'min': <val> | None, 'max': <val> | None}, ...}
         }
     which : Literal["obs", "var"], default "obs"
         Which data to find thresholds for. Either "obs" or "var".
     groupby : Optional[str], default None
         Group cells by column in adata.obs.
-    use_stored : bool, default True
-        Checks the adata for predefined/ already used thresholds and uses them instead of the manual thresholds.
-    only_automatic_thresholds : bool, default True
-        If True, only set automatic thresholds.
+    ignore_stored : bool, default False
+        Set to ignore predefined/ already used thresholds within the adata.
+    only_automatic : bool, default False
+        If True, overwrite everything with automatic thresholds.
     kwargs : Any
         Forwarded to sctoolbox.tools.qc_filter.automatic_thresholds.
+
+    Warnings/ Notes
+    ---------------
+    - Metrics that are not present within the anndata object are removed with a warning.
+    - Will give a warning if a threshold is stored within the adata and given as a manual threshold (unless ignore_stored=True).
 
     Returns
     -------
     Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
-        Dictionary containing the thresholds
+        A dictionary containing the thresholds.
     """
     # remove keys not present in the adata
     manual_thresholds = _match_columns(adata=adata, d=manual_thresholds, which=which)
@@ -938,7 +947,7 @@ def get_thresholds(adata: sc.AnnData,
     auto_thr = automatic_thresholds(adata, which=which, columns=metric_names, groupby=groupby, **kwargs)
 
     # overwrite everything with automatic thresholds
-    if only_automatic_thresholds:
+    if only_automatic:
         return auto_thr
     else:
         # keep manual thresholds; use automatic thresholds for missing values
@@ -1016,7 +1025,7 @@ def _match_columns(adata: sc.AnnData,
         if key in col_names:
             d_out[key] = value
         else:
-            logger.info(f'column: {key} not found in adata.{which}')
+            logger.warning(f'column {key} not found in adata.{which}')
 
     return d_out
 
@@ -1062,7 +1071,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to filter.
-    thresholds : Dict[str, Union[__threshold, Dict[str, __threshold]]]
+    thresholds : Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
         Dictionary of thresholds to apply.
     which : Literal["obs", "var"], default 'obs'
        Which table to filter on. Must be one of "obs" / "var".
