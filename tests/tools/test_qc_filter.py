@@ -198,9 +198,39 @@ def test_validate_threshold_dict_invalid(adata, invalid_threshold_dict):
         qc.validate_threshold_dict(adata.obs, invalid_threshold_dict)
 
 
-def test_get_thresholds():
+@pytest.mark.parametrize("which", ["obs", "var"])
+#@pytest.mark.parametrize("manual_thresholds, which, groupby, ignore_stored, only_automatic", )
+def test_get_thresholds(adata, which):#, manual_thresholds, which, groupby, ignore_stored, only_automatic):
     """Test the get_thresholds function."""
+    manual_thresholds = {
+        "qc_variable1": None,
+        "qc_variable2": {"min": None, "max": 1}
+    }
+
+    result = qc.get_thresholds(adata=adata,
+                               manual_thresholds=manual_thresholds,
+                               which=which)#,
+                               #groupby=groupby,
+                               #ignore_stored=ignore_stored,
+                               #only_automatic=only_automatic)
     pass
+
+
+@pytest.mark.parametrize("which", ["obs", "var"])
+def test_match_columns(adata, which, caplog):
+    """Test _match_columns."""
+    cols = getattr(adata, which).columns
+    # collect valid column names
+    test_dict = {key: None for key in cols}
+    # add an invalid name
+    test_dict["invalid"] = "placeholder"
+
+    result = qc._match_columns(adata=adata, d=test_dict, which=which)
+
+    assert len(cols) == len(result)
+    assert all(c in result for c in cols)
+    assert "invalid" not in result
+    assert caplog.record_tuples[-1] == ('sctoolbox', logging.WARNING, f'column invalid not found in adata.{which}')
 
 
 @pytest.mark.parametrize("invert", [True, False])
