@@ -209,7 +209,7 @@ def gsea_network(enr_res: pd.DataFrame,
                                     edge_attr=['jaccard_coef', 'overlap_coef', 'overlap_genes'])
 
         # init node cooridnates
-        pos=nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
+        pos = nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
 
         # draw node
         n = nx.draw_networkx_nodes(G,
@@ -233,11 +233,12 @@ def gsea_network(enr_res: pd.DataFrame,
 
         # draw edge
         edge_weight = nx.get_edge_attributes(G, 'jaccard_coef').values()
+        edge_width = list(map(lambda x: x * 10, edge_weight))
         nx.draw_networkx_edges(G,
                                pos=pos,
-                               width=list(map(lambda x: x*10, edge_weight)),
+                               width=edge_width,
                                ax=axes[i],
-                               edge_color='#CDDBD4') 
+                               edge_color='#CDDBD4')
 
         # Set subplot title
         axes[i].title.set_text(cluster)
@@ -250,17 +251,17 @@ def gsea_network(enr_res: pd.DataFrame,
 
         # Get sizes for legend
         node_sizes += list(nodes.Hits_ratio)
-        width_sizes += list(map(lambda x: x*10, edge_weight))
+        width_sizes += edge_width
 
     # Hide plots not filled in
     for ax in axes[num_clust:]:
         ax.axis('off')
 
-     # Add title
+    # Add title
     fig.suptitle("Network of enrichted Pathways per Cluster", fontsize=20)
 
     # ---------------------------- legend -------------------------------------
-    step_num=5
+    step_num = 5
 
     # Edge legend
     s_steps = np.linspace(min(width_sizes), max(width_sizes), step_num)
@@ -277,7 +278,7 @@ def gsea_network(enr_res: pd.DataFrame,
     fig.legend(handles=line_list,
                bbox_to_anchor=(1, 0.5, 0, 0),
                fontsize=15,
-               labelspacing = 1,
+               labelspacing=1,
                loc='center left')
 
     # ---------------------------- save figure --------------------------------
