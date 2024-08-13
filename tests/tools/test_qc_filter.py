@@ -202,6 +202,8 @@ def test_validate_threshold_dict_invalid(adata, invalid_threshold_dict):
 @pytest.mark.parametrize("which", ["obs", "var"])
 def test_get_thresholds(adata, which, groupby):
     """Test the get_thresholds function."""
+    adata = adata.copy()
+
     manual_thresholds = {
         "qc_variable1": None,
         "qc_variable2": {"min": None, "max": 1}
