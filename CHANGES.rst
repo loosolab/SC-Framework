@@ -1,3 +1,10 @@
+0.10.0 (in progess)
+-------------------
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- Revise annotation notebook (#269)
+
 0.9.0 (02-08-24)
 -------------------
 - Added denoising function using scAR to QC notebook
