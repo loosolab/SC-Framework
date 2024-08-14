@@ -130,6 +130,7 @@ def term_dotplot(term: str,
 
 @beartype
 def gsea_network(enr_res: pd.DataFrame,
+                 score_col: str,
                  clust_col: str = "Cluster",
                  sig_col: Literal["Adjusted P-value", "P-value", "FDR q-val", "NOM p-val"] = "Adjusted P-value",
                  cutoff: int | float = 0.05,
@@ -142,7 +143,7 @@ def gsea_network(enr_res: pd.DataFrame,
     """
     Plot GO network per cluster.
 
-    Node size corresponds to the percentage of gene overlap in a certain term of interest.
+    Node size corresponds to the percentage of marker genes of the term available in the cluster.
     Colour of the node corresponds to the significance of the enriched terms.
     Edge size corresponds to the number of genes that overlap between the two connected nodes.
 
@@ -150,6 +151,8 @@ def gsea_network(enr_res: pd.DataFrame,
     ----------
     enr_res : pd.DataFrame
         Dataframe containing 2D gsea results.
+    score_col : str,
+        Name of enrichment scoring column.
     clust_col : str, default 'Cluster'
         Column name of cluster annotation in enr_res.
     sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'Adjusted P-value'
@@ -178,7 +181,7 @@ def gsea_network(enr_res: pd.DataFrame,
     # Get cluster with enrichted pathways after filtering
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
     valid_cluster = list(nodes.Cluster.unique())
-    min_NES, max_NES = min(list(nodes.NES)), max(list(nodes.NES))
+    min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
 
     if len(valid_cluster) == 0:
         raise ValueError("No cluster with enrichted pathways found.")
@@ -215,7 +218,7 @@ def gsea_network(enr_res: pd.DataFrame,
         n = nx.draw_networkx_nodes(G,
                                    pos=pos,
                                    cmap=plt.cm.RdYlBu,
-                                   node_color=list(nodes.NES),
+                                   node_color=list(nodes[score_col]),
                                    node_size=list(nodes.Hits_ratio * 500),
                                    vmin=min_NES,
                                    vmax=max_NES,
@@ -247,7 +250,7 @@ def gsea_network(enr_res: pd.DataFrame,
         # https://stackoverflow.com/questions/32462881/add-colorbar-to-existing-axis
         divider = make_axes_locatable(axes[i])
         cax = divider.append_axes('bottom', size='5%', pad=0)
-        fig.colorbar(n, cax=cax, orientation='horizontal')
+        fig.colorbar(n, cax=cax, orientation='horizontal', label=score_col)
 
         # Get sizes for legend
         node_sizes += list(nodes.Hits_ratio)
