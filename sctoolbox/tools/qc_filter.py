@@ -1221,7 +1221,7 @@ def _filter_object(adata: sc.AnnData,
         if isinstance(name, str):
             name = [name]
         # check if the adata is already filtered
-        previous_filter = utils.adata.in_uns(adata, report_path)
+        previous_filter = utils.adata.in_uns(adata, report_path + name)
 
         if not overwrite and previous_filter:
             raise RuntimeError("The anndata object appears to be filtered. Set `overwrite=True` to apply the filtering on top.")
