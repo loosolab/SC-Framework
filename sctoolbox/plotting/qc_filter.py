@@ -762,7 +762,8 @@ def quality_violin(adata: sc.AnnData,
         slider_dict[column] = {}
 
         # Plot data from table
-        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0, **kwargs)
+        sns.violinplot(data=table, x=groupby, hue=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0, legend=False, **kwargs)
+        ax.set_xticks(ax.get_xticks())  # get rid of userwarning https://stackoverflow.com/a/68794383/19870975
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
         ax.set_xlabel("")
