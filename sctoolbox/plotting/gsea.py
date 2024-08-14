@@ -13,7 +13,7 @@ import numpy as np
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal, Tuple
 
-from sctoolbox.plotting.general import clustermap_dotplot, _save_figure
+from sctoolbox.plotting.general import clustermap_dotplot, _save_figure, check_columns
 from sctoolbox.utils.bioutils import pseudobulk_table
 import sctoolbox.utils.decorator as deco
 
@@ -130,7 +130,7 @@ def term_dotplot(term: str,
 
 @beartype
 def gsea_network(enr_res: pd.DataFrame,
-                 score_col: str,
+                 score_col: str = "NES",
                  clust_col: str = "Cluster",
                  sig_col: Literal["Adjusted P-value", "P-value", "FDR q-val", "NOM p-val"] = "Adjusted P-value",
                  cutoff: int | float = 0.05,
@@ -151,7 +151,7 @@ def gsea_network(enr_res: pd.DataFrame,
     ----------
     enr_res : pd.DataFrame
         Dataframe containing 2D gsea results.
-    score_col : str,
+    score_col : str, default 'NES'
         Name of enrichment scoring column.
     clust_col : str, default 'Cluster'
         Column name of cluster annotation in enr_res.
@@ -177,6 +177,7 @@ def gsea_network(enr_res: pd.DataFrame,
     ValueError
         If no cluster with valied pathways are found.
     """
+    check_columns(enr_res, columns=[score_col, clust_col, sig_col])
 
     # Get cluster with enrichted pathways after filtering
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
