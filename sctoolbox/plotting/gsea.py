@@ -13,8 +13,9 @@ import numpy as np
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal, Tuple
 
-from sctoolbox.plotting.general import clustermap_dotplot, _save_figure, check_columns
+from sctoolbox.plotting.general import clustermap_dotplot, _save_figure
 from sctoolbox.utils.bioutils import pseudobulk_table
+from sctoolbox.utils.checker import check_columns
 import sctoolbox.utils.decorator as deco
 
 
