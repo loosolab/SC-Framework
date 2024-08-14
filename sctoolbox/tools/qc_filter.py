@@ -952,9 +952,9 @@ def get_thresholds(adata: sc.AnnData,
         return auto_thr
 
     # fetch and return thresholds stored within the adata
-    if utils.adata.in_uns(adata=adata, key=_uns_report_path + [which]):
+    if utils.adata.in_uns(adata=adata, key=_uns_report_path + [which, "threshold"]):
         stored = None
-        for name in _uns_report_path + [which]:
+        for name in _uns_report_path + [which, "threshold"]:
             stored = stored[name] if stored else adata.uns[name]
 
         if stored:
@@ -968,7 +968,6 @@ def get_thresholds(adata: sc.AnnData,
 
     # thresholds which are not set by the user are set automatically
     for key, value in manual_thresholds.items():
-        print(key, value)
         # identify and temporary store threshold (missing values will be filled in below)
         if value is None:
             current_thresh = {}
