@@ -217,8 +217,6 @@ def test_get_thresholds(adata, which, groupby):
                                manual_thresholds=manual_thresholds,
                                which=which,
                                groupby=groupby)
-                               #ignore_stored=ignore_stored,
-                               #only_automatic=only_automatic)
 
     # assert correct number of metrics
     assert n == len(result)
@@ -314,6 +312,18 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
     else:
         assert out.shape != adata_copy.shape
         assert utils.in_uns(out, ["sctoolbox", "report", "qc", which])
+
+
+def test_filter_object_overwrite(adata, caplog):
+    """Test _filter_object overwrite."""
+    adata_copy = adata.copy()
+
+    # apply a filter to create a report
+    out = qc._filter_object(adata_copy, "is_bool", name="filter", inplace=False)
+
+    # try to overwrite the report created above
+    qc._filter_object(out, "is_bool", name="filter", overwrite=True)
+    assert "Applying filter on top of previous filter." in caplog.text
 
 
 def test_filter_object_fail(adata):
