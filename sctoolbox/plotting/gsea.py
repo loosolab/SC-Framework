@@ -132,7 +132,7 @@ def term_dotplot(term: str,
 def gsea_network(enr_res: pd.DataFrame,
                  score_col: str = "NES",
                  clust_col: str = "Cluster",
-                 sig_col: Literal["Adjusted P-value", "P-value", "FDR q-val", "NOM p-val"] = "Adjusted P-value",
+                 sig_col: Literal["Adjusted P-value", "P-value", "FDR q-val", "NOM p-val"] = "FDR q-val",
                  cutoff: int | float = 0.05,
                  scale: int | float = 1,
                  resolution: int | float = 0.35,
@@ -155,7 +155,7 @@ def gsea_network(enr_res: pd.DataFrame,
         Name of enrichment scoring column.
     clust_col : str, default 'Cluster'
         Column name of cluster annotation in enr_res.
-    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'Adjusted P-value'
+    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'FDR q-val'
         Column containing significance of enrichted termn.
     cutoff : int | float, default 0.05
         Set cutoff for sig_col. Only nodes with value < cutoff are shown.
@@ -171,6 +171,10 @@ def gsea_network(enr_res: pd.DataFrame,
     save : Optional[str], default None
         Filename suffix to save the figure.
         The cluster name is added as prefix to the name.
+
+    Notes
+    -----
+    Default values expect input dataframe to be prerank output.
 
     Raises
     ------

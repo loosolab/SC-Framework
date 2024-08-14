@@ -62,10 +62,10 @@ def test_term_dotplot(adata, term_table):
 
 def test_gsea_network(term_table_clustered):
     """Test tsea_network success."""
-    gsea.gsea_network(term_table_clustered, sig_col="FDR q-val")
+    gsea.gsea_network(term_table_clustered)
 
 
 def test_gsea_network_fail(term_table_clustered):
     """Test tsea_network success."""
     with pytest.raises(ValueError):
-        gsea.gsea_network(term_table_clustered, sig_col="FDR q-val", cutoff=0.0000005)
+        gsea.gsea_network(term_table_clustered, cutoff=0.0000005)
