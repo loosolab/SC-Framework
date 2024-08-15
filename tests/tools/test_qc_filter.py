@@ -18,7 +18,7 @@ plt.switch_backend("Agg")
 # --------------------------- FIXTURES ------------------------------ #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="function")  # create for each test
 def adata():
     """Load and returns an anndata object."""
     f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
