@@ -5,7 +5,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
-- add option to chose filter method in rna/qc notebook
+- add option to choose filter method in rna/qc notebook
 - add alternative to interactive thresholds (#38)
 - use sctoolbox.plotting.embedding.plot_embedding (#279)
 
