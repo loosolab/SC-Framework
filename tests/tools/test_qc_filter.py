@@ -342,7 +342,6 @@ def test_filter_object_fail(adata):
     with pytest.raises(ValueError, match="Filter and AnnData dimensions differ!"):
         qc._filter_object(adata, filter=[True])
 
-
     with pytest.raises(RuntimeError, match="The anndata object appears to be filtered."):
         utils.add_uns_info(adata, key=["report", "qc", "obs", "test"], value="mock filter")
         qc._filter_object(adata, filter="is_bool", which="obs", name="test", overwrite=False)
@@ -350,7 +349,7 @@ def test_filter_object_fail(adata):
 
 @pytest.mark.parametrize("invert", [True, False])
 def test_filter_genes(adata, invert):
-    """Test filter_genes"""
+    """Test filter_genes."""
     # randomly select 10% genes
     to_filter = adata.var.sample(frac=0.1).index.tolist()
 
@@ -363,7 +362,7 @@ def test_filter_genes(adata, invert):
 
 @pytest.mark.parametrize("invert", [True, False])
 def test_filter_cells(adata, invert):
-    """Test filter_cells"""
+    """Test filter_cells."""
     # randomly select 10% cells
     to_filter = adata.obs.sample(frac=0.1).index.tolist()
 

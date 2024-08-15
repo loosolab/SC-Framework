@@ -281,6 +281,7 @@ def in_uns(adata: sc.AnnData,
             return False
     return True
 
+
 @beartype
 def get_cell_values(adata: sc.AnnData,
                     element: str) -> np.ndarray:

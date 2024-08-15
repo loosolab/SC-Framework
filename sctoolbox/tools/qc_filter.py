@@ -21,10 +21,6 @@ from beartype import beartype
 import numpy.typing as npt
 from beartype.typing import Optional, Tuple, Union, Any, Literal, Callable, Dict
 
-# frequently used typing
-__number = Union[int, float]
-__number_opt = Union[int, float, None]
-
 # toolbox functions
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -32,12 +28,17 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+# frequently used typing
+__number = Union[int, float]
+__number_opt = Union[int, float, None]
+
 # path in adata.uns that holds the reports
 _uns_report_path = ["sctoolbox", "report", "qc"]
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
+
 
 @deco.log_anndata
 @beartype
@@ -554,7 +555,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, float | int]
+    dict[str, Union[int, float]]
         Dictionary with min and max thresholds.
     """
 
@@ -661,7 +662,7 @@ def mad_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, float | int]
+    dict[str, Union[int, float]]
         Dictionary with min and max thresholds.
     """
     median = np.median(data)
@@ -715,7 +716,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[float | int, dict[str, float | int]]]]
+    dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
@@ -888,6 +889,7 @@ __min_max = Literal["min", "max"]
 __threshold = Dict[__min_max, __number]
 __threshold_opt = Dict[__min_max, __number_opt]
 
+
 @deco.log_anndata
 @beartype
 def get_thresholds(adata: sc.AnnData,
@@ -905,6 +907,10 @@ def get_thresholds(adata: sc.AnnData,
       2. given through the 'manual_thresholds' parameter
       3. generated in this function (automatic thresholds)
     The function will exclusively use stored thresholds and ignore the other sources if stored thresholds are available.
+
+    Warnings/ Notes:
+    - Metrics that are not present within the anndata object are removed with a warning.
+    - Will give a warning if threshold stored within the adata are detected (unless ignore_stored=True).
 
     Parameters
     ----------
@@ -928,11 +934,6 @@ def get_thresholds(adata: sc.AnnData,
         If True, overwrite everything with automatic thresholds.
     kwargs : Any
         Forwarded to sctoolbox.tools.qc_filter.automatic_thresholds.
-
-    Warnings/ Notes
-    ---------------
-    - Metrics that are not present within the anndata object are removed with a warning.
-    - Will give a warning if threshold stored within the adata are detected (unless ignore_stored=True).
 
     Returns
     -------
@@ -1014,9 +1015,9 @@ def get_thresholds(adata: sc.AnnData,
 
 @beartype
 def _match_columns(adata: sc.AnnData,
-               d: dict,
-               which: Literal["obs", "var"] = "obs"
-               ) -> dict:
+                   d: dict,
+                   which: Literal["obs", "var"] = "obs"
+                   ) -> dict:
     """
     Remove dictionary entries where the key does not match a column name of either .var or .obs.
 
@@ -1172,7 +1173,8 @@ def _filter_object(adata: sc.AnnData,
                    ) -> Optional[sc.AnnData]:
     """
     Filter an adata object based on a filter.
-    on either obs (cells) or var (genes). Is called by filter_cells and filter_genes.
+
+    On either obs (cells) or var (genes). Is called by filter_cells and filter_genes.
 
     Parameters
     ----------
@@ -1388,7 +1390,7 @@ def denoise_data(adata: sc.AnnData,
                  prob: float = 0.995,
                  save: Optional[str] = None,
                  verbose: bool = False,
-                 overwrite : bool = False) -> sc.AnnData:
+                 overwrite: bool = False) -> sc.AnnData:
     """
     Use scAR and the raw feature counts to remove ambient RNA.
 
