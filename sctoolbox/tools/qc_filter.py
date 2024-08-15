@@ -738,7 +738,7 @@ def automatic_thresholds(adata: sc.AnnData,
     # Check groupby
     if groupby is not None:
         if groupby not in table.columns:
-            raise ValueError()
+            raise ValueError(f"Invalid groupby value. '{groupby}' is not a column in adata.{which}.")
 
     # Get threshold per data column (and groupby if chosen)
     thresholds = {}
