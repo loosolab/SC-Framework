@@ -1,9 +1,13 @@
 0.10.0 (in progress)
 - add MAD filtering as alternative to gaussian-mixture model (#261)
+- enhance gene labelling (#38)
+- replace deprecated ratelimiter with throttle (#288)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - add option to chose filter method in rna/qc notebook
+- add alternative to interactive thresholds (#38)
+- use sctoolbox.plotting.embedding.plot_embedding (#279)
 
 0.9.0 (02-08-24)
 -------------------
