@@ -234,7 +234,9 @@ def test_get_thresholds(adata, which, groupby):
 
     # test if stored thresholds are returned
     mock_thresh = {"qc_variable2": {"min": -10, "max": 10}}
-    utils.add_uns_info(adata, key=qc._uns_report_path[1:] + [which], value=mock_thresh)
+    utils.add_uns_info(adata,
+                       key=qc._uns_report_path[1:] + [which, "threshold"],
+                       value=mock_thresh)
 
     stored = qc.get_thresholds(adata=adata,
                                manual_thresholds=manual_thresholds,
@@ -298,7 +300,7 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
         to_filter = np.random.choice([True, False], size=len(table)).tolist()
         entries = table[to_filter].index.tolist()
 
-    out = qc._filter_object(adata_copy, to_filter, which=which, invert=invert, inplace=inplace)
+    out = qc._filter_object(adata_copy, to_filter, which=which, invert=invert, inplace=inplace, name="filter")
 
     filtered_table = getattr(adata_copy if inplace else out, which)
 
@@ -308,10 +310,10 @@ def test_filter_object(adata, which, inplace, invert, filter_type):
 
     if inplace:
         assert adata_copy.shape != adata.shape
-        assert utils.in_uns(adata_copy, ["sctoolbox", "report", "qc", which])
+        assert utils.in_uns(adata_copy, ["sctoolbox", "report", "qc", which, "filter"])
     else:
         assert out.shape != adata_copy.shape
-        assert utils.in_uns(out, ["sctoolbox", "report", "qc", which])
+        assert utils.in_uns(out, ["sctoolbox", "report", "qc", which, "filter"])
 
 
 def test_filter_object_overwrite(adata, caplog):
