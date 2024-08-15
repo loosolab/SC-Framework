@@ -28,10 +28,6 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
-# frequently used typing
-__number = Union[int, float]
-__number_opt = Union[int, float, None]
-
 # path in adata.uns that holds the reports
 _uns_report_path = ["sctoolbox", "report", "qc"]
 
@@ -528,9 +524,9 @@ def predict_sex(adata: sc.AnnData,
 @beartype
 def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
-                  min_n: __number = 3,
-                  max_n: __number = 3,
-                  plot: bool = False) -> dict[str, __number]:
+                  min_n: Union[int, float] = 3,
+                  max_n: Union[int, float] = 3,
+                  plot: bool = False) -> dict[str, Union[int, float]]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -546,9 +542,9 @@ def gmm_threshold(data: npt.ArrayLike,
         Array of data to find thresholds for.
     max_mixtures : int, default 5
         Maximum number of gaussian mixtures to fit.
-    min_n : int | float, default 3
+    min_n : Union[int, float], default 3
         Number of SDs from largest component mean to set as min threshold.
-    max_n : int | float, default 3
+    max_n : Union[int, float], default 3
         Number of SDs from largest component mean to set as max threshold.
     plot : bool, default False
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
@@ -641,9 +637,9 @@ def gmm_threshold(data: npt.ArrayLike,
 
 @beartype
 def mad_threshold(data: npt.ArrayLike,
-                  min_n: __number = 3,
-                  max_n: __number = 3,
-                  plot: bool = False) -> dict[str, __number]:
+                  min_n: Union[int, float] = 3,
+                  max_n: Union[int, float] = 3,
+                  plot: bool = False) -> dict[str, Union[int, float]]:
     """
     Compute an automatic threshold using the median absolute deviation (MAD).
 
@@ -653,9 +649,9 @@ def mad_threshold(data: npt.ArrayLike,
     ----------
     data : npt.ArrayLike
         Array of data to find thresholds for.
-    min_n : int | float, default 3
+    min_n : Union[int, float], default 3
         Number of MADs from distribution median to set as min threshold.
-    max_n : int | float, default 3
+    max_n : Union[int, float], default 3
         Number of MADs from distribution median to set as max threshold.
     plot : bool, default False
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
@@ -694,7 +690,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[__number, dict[str, __number]]]]:
+                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -763,13 +759,13 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, __number | dict[str, __number]]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
     Parameters
     ----------
-    threshold_dict : dict[str, dict[str, float | int | dict[str, int | float]]]
+    threshold_dict : dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]
         Dictionary with thresholds.
 
     Returns
@@ -822,7 +818,7 @@ def _validate_minmax(d: dict) -> None:
 
 @beartype
 def validate_threshold_dict(table: pd.DataFrame,
-                            thresholds: dict[str, dict[str, __number] | dict[str, dict[str, __number]]],
+                            thresholds: dict[str, dict[str, Union[int, float]] | dict[str, dict[str, Union[int, float]]]],
                             groupby: Optional[str] = None) -> None:
     """
     Validate threshold dictionary.
@@ -848,7 +844,7 @@ def validate_threshold_dict(table: pd.DataFrame,
     ----------
     table : pd.DataFrame
         Table to validate thresholds for.
-    thresholds : dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]]
+    thresholds : dict[str, dict[str, Union[int, float]] | dict[str, dict[str, Union[int, float]]]]
         Dictionary of thresholds to validate.
     groupby : Optional[str], default None
         Column for grouping thresholds.
@@ -884,21 +880,15 @@ def validate_threshold_dict(table: pd.DataFrame,
                     _validate_minmax(thresholds[col])
 
 
-# setup types
-__min_max = Literal["min", "max"]
-__threshold = Dict[__min_max, __number]
-__threshold_opt = Dict[__min_max, __number_opt]
-
-
 @deco.log_anndata
 @beartype
 def get_thresholds(adata: sc.AnnData,
-                   manual_thresholds: Dict[str, Union[None, __threshold_opt, Dict[str, __threshold_opt]]],
+                   manual_thresholds: Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float, None]], Dict[str, Dict[Literal["min", "max"], Union[int, float, None]]]]],
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
                    ignore_stored: bool = False,
                    only_automatic: bool = False,
-                   **kwargs: Any) -> Dict[str, Union[__threshold, Dict[str, __threshold]]]:
+                   **kwargs: Any) -> Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]:
     """
     Prepare thresholds for filtering.
 
@@ -1079,7 +1069,7 @@ def get_mean_thresholds(thresholds: dict[str, Any]) -> dict[str, Any]:
 @deco.log_anndata
 @beartype
 def apply_qc_thresholds(adata: sc.AnnData,
-                        thresholds: Dict[str, Union[__threshold, Dict[str, __threshold]]],
+                        thresholds: Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]],
                         which: Literal["obs", "var"] = "obs",
                         inplace: bool = True,
                         overwrite: bool = False) -> Optional[sc.AnnData]:
