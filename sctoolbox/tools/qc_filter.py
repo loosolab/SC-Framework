@@ -712,7 +712,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]
+    dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
@@ -922,7 +922,7 @@ def get_thresholds(adata: sc.AnnData,
         Set to ignore predefined/ already used thresholds within the adata.
     only_automatic : bool, default False
         If True, overwrite everything with automatic thresholds.
-    kwargs : Any
+    **kwargs : Any
         Forwarded to sctoolbox.tools.qc_filter.automatic_thresholds.
 
     Returns
@@ -1017,10 +1017,10 @@ def _match_columns(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object
+    d : dict
+        Dictionary with adata.obs or .var colums as keys.
     which : Literal["obs", "var"], default "obs"
         Wether to check adata.obs or adata.var columns.
-    manual_thresholds : dict
-        Dictionary with adata.obs colums as keys.
 
     Returns
     -------
