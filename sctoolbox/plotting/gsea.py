@@ -224,7 +224,7 @@ def gsea_network(enr_res: pd.DataFrame,
             for j in node_set ^ edge_set:
                 G.add_node(j)
                 # Move node without any edges to end of Dataframe to correct order
-                nodes.loc[len(nodes)] = nodes.iloc[j,:]
+                nodes.loc[len(nodes)] = nodes.iloc[j, :]
                 nodes.drop(j, inplace=True)
                 nodes.index = range(len(nodes))
 
