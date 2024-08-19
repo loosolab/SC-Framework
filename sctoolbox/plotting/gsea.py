@@ -217,6 +217,17 @@ def gsea_network(enr_res: pd.DataFrame,
                                     target='targ_idx',
                                     edge_attr=['jaccard_coef', 'overlap_coef', 'overlap_genes'])
 
+        # Add nodes without any edges
+        node_set = set(nodes.index)
+        edge_set = set(edges.src_idx) | set(edges.targ_idx)
+        if not node_set.issubset(list(edge_set)):
+            for j in node_set ^ edge_set:
+                G.add_node(j)
+                # Move node without any edges to end of Dataframe to correct order
+                nodes.loc[len(nodes)] = nodes.iloc[j,:]
+                nodes.drop(j, inplace=True)
+                nodes.index = range(len(nodes))
+
         # init node cooridnates
         pos = nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
 
@@ -235,7 +246,7 @@ def gsea_network(enr_res: pd.DataFrame,
         # draw node label
         nx.draw_networkx_labels(G,
                                 pos=pos,
-                                labels=nodes.Term.to_dict(),
+                                labels=nodes["Term"].to_dict(),
                                 font_size=10,
                                 ax=axes[i],
                                 clip_on=False)
