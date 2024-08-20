@@ -11,9 +11,6 @@
 - added planet_plot for high dimensional anndata plotting (#221)
 - implemented concadata, from_h5ad to load and combine from multiple .h5ad files (#224)
 - ligand-receptor: connectionPlot new parameters (#255)
-<<<<<<< HEAD
-- expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
-=======
 - pca-correlation: replace 'columns' with 'ignore' parameter, allowing to ignore numeric columns for pca correlation. (#228)
 - restructured atac notebook 3 (normalization and batch correction) (#278)
 - Fix minor docstring/example issues.
@@ -23,7 +20,7 @@
 - label_genes now accepts custom genelists (#38)
 - Add inplace parameter to tfidf function (#277)
 - Update plot_group_embeddings() to also take numerical values, e.g. density
->>>>>>> origin/main
+- expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
