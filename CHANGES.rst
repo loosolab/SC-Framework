@@ -1,5 +1,15 @@
+0.10.0 (in progress)
+--------------------
+- Rename enrichr_marker_genes to gene_set_enrichment and add prerank as possible method.
+- Added gsea_network plot function.
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- General: GSEA: Implemented gsea_network plot
+- General: GSEA: Added option to run prerank(gsea) method instead of enrichr
+
 0.9.0 (02-08-24)
--------------------
+----------------
 - Added denoising function using scAR to QC notebook
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
