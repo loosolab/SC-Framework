@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from beartype.typing import Optional, Union, Literal, Any
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -102,6 +102,34 @@ def prepare_atac_anndata(adata: sc.AnnData,
     return adata
 
 
+@beartype
+def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.AnnData:
+    """
+    Load one or more .h5ad files.
+
+    Multiple .h5ad files will be combined with a "batch" column added to adata.obs.
+
+    Parameters
+    ----------
+    h5ad_file : Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+        Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
+        In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+
+    Returns
+    -------
+    sc.AnnData
+        The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
+    """
+    if isinstance(h5ad_file, str):
+        return sc.read_h5ad(filename=h5ad_file)
+    elif isinstance(h5ad_file, Mapping):
+        # load then combine anndata objects
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+    else:
+        # load then combine anndata objects
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+
+
 #####################################################################
 #          ASSEMBLING ANNDATA FROM STARSOLO OUTPUT FOLDERS          #
 #####################################################################
@@ -175,7 +203,8 @@ def from_single_starsolo(path: str,
 def from_quant(path: str,
                configuration: list = [],
                use_samples: Optional[list] = None,
-               dtype: Literal["raw", "filtered"] = "filtered") -> sc.AnnData:
+               dtype: Literal["raw", "filtered"] = "filtered",
+               **kwargs: Any) -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
@@ -191,6 +220,8 @@ def from_quant(path: str,
         List of samples to use. If None, all samples will be used.
     dtype : Literal["raw", "filtered"], default 'filtered'
         The type of Solo data to choose.
+    **kwargs : Any
+        Contains additional arguments for the sctoolbox.utils.assemblers.from_single_starsolo method.
 
     Returns
     -------
@@ -203,7 +234,9 @@ def from_quant(path: str,
         If `use_samples` contains not existing names.
     """
 
-    # TODO: test that quant folder is existing
+    # Test that quant folder exists
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The path to the quant folder does not exist: {path}")
 
     # Collect configuration into a dictionary
     config_dict = {}
@@ -236,7 +269,7 @@ def from_quant(path: str,
 
         logger.info(f"Assembling sample '{sample_name}'")
         solo_dir = os.path.join(sample_dir, "solo")
-        adata = from_single_starsolo(solo_dir, dtype=dtype)
+        adata = from_single_starsolo(solo_dir, dtype=dtype, **kwargs)
 
         # Make barcode index unique
         adata.obs.index = adata.obs.index + "-" + sample_name
@@ -422,23 +455,7 @@ def from_mtx(path: str,
 
     # create final adata
     if len(adata_objects) > 1:
-        adata = sc.concat(adata_objects, join="outer", label="batch")
-
-        # manually combine var table, then add it to the final adata
-        var = pd.concat(
-            [a.var for a in adata_objects],
-            join="outer"
-        )
-
-        # remove duplicates
-        # temporarily set index as column to use this as column for duplicate removal
-        # TODO will raise an error if there happens to be a column with the same name as the index
-        ind_name = var.index.name
-        var = var.reset_index().drop_duplicates(subset=ind_name).set_index(ind_name)
-
-        # add the var table to the adata while ensuring the correct order
-        adata.var = var.loc[adata.var_names]
-
+        adata = utils.adata.concadata(adata_objects)
     else:
         adata = adata_objects[0]
 

@@ -741,6 +741,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 @beartype
 def plot_group_embeddings(adata: sc.AnnData,
                           groupby: str,
+                          col: Optional[str] = None,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
                           save: Optional[str] = None,
@@ -754,6 +755,9 @@ def plot_group_embeddings(adata: sc.AnnData,
         Annotated data matrix object.
     groupby : str
         Name of the column in adata.obs to group by.
+    col : Optional[str], default None
+        Set color for grouped plots. Using groupby if set to None.
+        Set if numerical values should be shown, e.g. density. Set to None for categorical values.
     embedding : Literal["umap", "tsne", "pca"], default "umap"
         Embedding to plot. Must be one of "umap", "tsne", "pca".
     ncols : int, default 4
@@ -776,6 +780,8 @@ def plot_group_embeddings(adata: sc.AnnData,
         pl.embedding.plot_group_embeddings(adata, 'phase', embedding='umap', ncols=4)
     """
 
+    adata = adata.copy()
+
     # Get categories
     groups = adata.obs[groupby].astype("category").cat.categories
     n_groups = len(groups)
@@ -796,6 +802,12 @@ def plot_group_embeddings(adata: sc.AnnData,
 
         ax = axes_list[i]
 
+        if col:
+            adata.obs["color"] = np.where(adata.obs[groupby] == group, adata.obs[col], np.nan)
+            color = "color"
+        else:
+            color = groupby
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning, message="Categorical.replace is deprecated")
             warnings.filterwarnings("ignore", category=FutureWarning, message="In a future version of pandas")
@@ -803,11 +815,11 @@ def plot_group_embeddings(adata: sc.AnnData,
 
             # Plot individual embedding
             if embedding == "umap":
-                sc.pl.umap(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
+                sc.pl.umap(adata, color=color, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
             elif embedding == "tsne":
-                sc.pl.tsne(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
+                sc.pl.tsne(adata, color=color, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
             elif embedding == "pca":
-                sc.pl.pca(adata, color=groupby, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
+                sc.pl.pca(adata, color=color, groups=group, ax=ax, show=False, legend_loc=None, **kwargs)
 
         ax.set_title(group)
 
@@ -1462,6 +1474,7 @@ def plot_pca_variance(adata: sc.AnnData,
                       corr_plot: Optional[Literal["spearmanr", "pearsonr"]] = None,
                       corr_on: Literal["obs", "var"] = "obs",
                       corr_thresh: Optional[float] = None,
+                      ignore: Optional[list[str]] = None,
                       ax: Optional[matplotlib.axes.Axes] = None,
                       save: Optional[str] = None,
                       sel_col: str = "grey",
@@ -1489,6 +1502,9 @@ def plot_pca_variance(adata: sc.AnnData,
         Calculate correlation on either observations (adata.obs) or variables (adata.var).
     corr_thresh : Optional[float], default None
         Enables a red threshold line in the lower plot.
+    ignore : Optional[list[str]], default None
+        List of column names to ignore for correlation. By default (None) all numeric columns are used.
+        All non numeric columns are ignored by default and cannot be used for correlation.
     ax : Optional[matplotlib.axes.Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
@@ -1541,7 +1557,7 @@ def plot_pca_variance(adata: sc.AnnData,
                                                           which=corr_on,
                                                           basis=method,
                                                           n_components=n_pcs,
-                                                          columns=None,
+                                                          ignore=ignore,
                                                           method=corr_plot)
 
         abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
@@ -1659,7 +1675,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                          which: Literal["obs", "var"] = "obs",
                          basis: str = "pca",
                          n_components: int = 10,
-                         columns: Optional[list[str]] = None,
+                         ignore: Optional[list[str]] = None,
                          pvalue_threshold: float = 0.01,
                          method: Literal["spearmanr", "pearsonr"] = "spearmanr",
                          plot_values: Literal["corrcoefs", "pvalues"] = "corrcoefs",
@@ -1680,8 +1696,9 @@ def plot_pca_correlation(adata: sc.AnnData,
         Dimensionality reduction to calculate correlation with. Must be a key in adata.obsm, or a basis available as "X_<basis>" such as "umap", "tsne" or "pca".
     n_components : int, default 10
         Number of components to use for the correlation.
-    columns : Optional[list[str]], default None
-        List of columns to use for the correlation. If None, all numeric columns are used.
+    ignore : Optional[list[str]], default None
+        List of column names to ignore for correlation. By default (None) all numeric columns are used.
+        All non numeric columns are ignored by default and cannot be used for correlation.
     pvalue_threshold : float, default 0.01
         Threshold for significance of correlation. If the p-value is below this threshold, a star is added to the heatmap.
     method : Literal["spearmanr", "pearson"], default "spearmanr"
@@ -1721,7 +1738,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                                                             which=which,
                                                             basis=basis,
                                                             n_components=n_components,
-                                                            columns=columns,
+                                                            ignore=ignore,
                                                             method=method)
 
     # decide which values should be shown

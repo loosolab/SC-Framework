@@ -6,6 +6,9 @@ import pandas as pd
 from sctoolbox.plotting import gsea
 
 
+# ------------------------------ FIXTURES --------------------------------- #
+
+
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
     """Minimal adata file for testing."""
@@ -19,6 +22,9 @@ def term_table():
         "Term": "Actin Filament Organization (GO:0007015)",
         "Genes": ["COBL", "WIPF1;SH3KBP1"]})
     return term_table
+
+
+# ------------------------------ TESTS --------------------------------- #
 
 
 def test_term_dotplot(adata, term_table):
