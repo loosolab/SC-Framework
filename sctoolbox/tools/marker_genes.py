@@ -540,9 +540,9 @@ def get_rank_genes_tables(adata: sc.AnnData,
                 for compare_group in groups:
                     if compare_group != group:
                         s = (adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0).A1
-                        expressed = pd.DataFrame(s, index=adata.var.index)  # expression per gene for this group
+                        expressed = pd.DataFrame(s, index=adata.var.index, dtype="float64")  # expression per gene for this group
                         expressed.columns = [compare_group + "_fraction"]
-                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0
+                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0.0
 
                         group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
 
