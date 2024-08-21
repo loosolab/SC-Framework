@@ -188,7 +188,7 @@ def gsea_network(enr_res: pd.DataFrame,
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
     min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
     node_count = nodes.Cluster.value_counts()
-    valid_cluster =  list(node_count[node_count > 1].index)
+    valid_cluster = list(node_count[node_count > 1].index)
 
     if len(valid_cluster) == 0:
         raise ValueError("No cluster with enrichted pathways found.")
