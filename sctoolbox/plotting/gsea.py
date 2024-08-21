@@ -285,6 +285,7 @@ def gsea_network(enr_res: pd.DataFrame,
     step_num = 5
 
     # Edge legend
+    width_sizes = [0, 1] if not width_sizes else width_sizes
     s_steps = np.linspace(min(width_sizes), max(width_sizes), step_num)
     line_list = [Line2D([], [], color='black', alpha=1, linewidth=s, label=f"{np.round(s / 10, 2)}") for s in s_steps]
     line_list.insert(0, Line2D([], [], alpha=0, label="Shared significant genes\nbetween Pathways"))
