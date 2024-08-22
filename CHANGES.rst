@@ -13,6 +13,7 @@ Changes to notebooks
 - General: GSEA: Implemented gsea_network plot
 - General: GSEA: Added option to run prerank(gsea) method instead of enrichr
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
+- RNA: 02_QC: Docu revision (#296)
 
 0.9.0 (02-08-24)
 ----------------
