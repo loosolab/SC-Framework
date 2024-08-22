@@ -186,8 +186,9 @@ def gsea_network(enr_res: pd.DataFrame,
 
     # Get cluster with enrichted pathways after filtering
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
-    valid_cluster = list(nodes.Cluster.unique())
     min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
+    node_count = nodes.Cluster.value_counts()
+    valid_cluster = list(node_count[node_count > 1].index)
 
     if len(valid_cluster) == 0:
         raise ValueError("No cluster with enrichted pathways found.")
@@ -284,6 +285,7 @@ def gsea_network(enr_res: pd.DataFrame,
     step_num = 5
 
     # Edge legend
+    width_sizes = [0, 1] if not width_sizes else width_sizes
     s_steps = np.linspace(min(width_sizes), max(width_sizes), step_num)
     line_list = [Line2D([], [], color='black', alpha=1, linewidth=s, label=f"{np.round(s / 10, 2)}") for s in s_steps]
     line_list.insert(0, Line2D([], [], alpha=0, label="Shared significant genes\nbetween Pathways"))

@@ -4,6 +4,7 @@
 - replace deprecated ratelimiter with throttle (#288)
 - Rename enrichr_marker_genes to gene_set_enrichment and add prerank as possible method.
 - Added gsea_network plot function.
+- add the markerRepo to our environment
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
