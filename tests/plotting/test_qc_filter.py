@@ -292,7 +292,7 @@ def test_upset_plot_filter_impacts(adata, thresholds, groupby):
     """Test upset_plot_filter_impacts success."""
     plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby)
 
-    assert isinstance(type(plot_result), dict)
+    assert isinstance(plot_result, dict)
     assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
     ax_type = type(plot_result['matrix']).__name__
     assert ax_type.startswith("Axes")
@@ -303,7 +303,7 @@ def test_upset_plot_filter_impacts(adata, thresholds, groupby):
 
     plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby, limit_combinations=2)
 
-    assert isinstance(type(plot_result), dict)
+    assert isinstance(plot_result, dict)
     assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
     ax_type = type(plot_result['matrix']).__name__
     assert ax_type.startswith("Axes")
