@@ -186,8 +186,9 @@ def gsea_network(enr_res: pd.DataFrame,
 
     # Get cluster with enrichted pathways after filtering
     nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
-    valid_cluster = list(nodes.Cluster.unique())
     min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
+    node_count = nodes.Cluster.value_counts()
+    valid_cluster = list(node_count[node_count > 1].index)
 
     if len(valid_cluster) == 0:
         raise ValueError("No cluster with enrichted pathways found.")
@@ -217,6 +218,17 @@ def gsea_network(enr_res: pd.DataFrame,
                                     target='targ_idx',
                                     edge_attr=['jaccard_coef', 'overlap_coef', 'overlap_genes'])
 
+        # Add nodes without any edges
+        node_set = set(nodes.index)
+        edge_set = set(edges.src_idx) | set(edges.targ_idx)
+        if not node_set.issubset(list(edge_set)):
+            for j in node_set ^ edge_set:
+                G.add_node(j)
+                # Move node without any edges to end of Dataframe to correct order
+                nodes.loc[len(nodes)] = nodes.iloc[j, :]
+                nodes.drop(j, inplace=True)
+                nodes.index = range(len(nodes))
+
         # init node cooridnates
         pos = nx.layout.spiral_layout(G, scale=scale, resolution=resolution)
 
@@ -235,7 +247,7 @@ def gsea_network(enr_res: pd.DataFrame,
         # draw node label
         nx.draw_networkx_labels(G,
                                 pos=pos,
-                                labels=nodes.Term.to_dict(),
+                                labels=nodes["Term"].to_dict(),
                                 font_size=10,
                                 ax=axes[i],
                                 clip_on=False)
@@ -273,6 +285,7 @@ def gsea_network(enr_res: pd.DataFrame,
     step_num = 5
 
     # Edge legend
+    width_sizes = [0, 1] if not width_sizes else width_sizes
     s_steps = np.linspace(min(width_sizes), max(width_sizes), step_num)
     line_list = [Line2D([], [], color='black', alpha=1, linewidth=s, label=f"{np.round(s / 10, 2)}") for s in s_steps]
     line_list.insert(0, Line2D([], [], alpha=0, label="Shared significant genes\nbetween Pathways"))

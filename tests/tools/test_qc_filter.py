@@ -2,6 +2,7 @@
 
 import pytest
 import sctoolbox.tools.qc_filter as qc
+import sctoolbox.utils.adata as utils
 import scanpy as sc
 import numpy as np
 import os
@@ -17,7 +18,7 @@ plt.switch_backend("Agg")
 # --------------------------- FIXTURES ------------------------------ #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="function")  # create for each test
 def adata():
     """Load and returns an anndata object."""
     f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
@@ -27,6 +28,10 @@ def adata():
     # add random groups
     adata.obs["group"] = np.random.choice(["grp1", "grp2", "grp3"], size=len(adata))
     adata.var["group"] = np.random.choice(["grp1", "grp2", "grp3"], size=len(adata.var))
+
+    # add random boolean
+    adata.obs["is_bool"] = np.random.choice([True, False], size=len(adata))
+    adata.var["is_bool"] = np.random.choice([True, False], size=len(adata.var))
 
     # Add fake qc variables to anndata
     n1 = int(adata.shape[0] * 0.8)
@@ -106,6 +111,12 @@ def s_file(s_list):
         yield tmp
 
 
+@pytest.fixture(scope="session")
+def norm_dist():
+    """Return a normal distribution."""
+    return np.random.normal(size=1000)
+
+
 # --------------------------- TESTS --------------------------------- #
 
 
@@ -120,11 +131,16 @@ def test_estimate_doublets(adata, groupby, threads):
     assert "doublet_score" in adata.obs.columns
 
 
-def test_get_thresholds():
-    """Test whether min/max threshold can be found for a normal distribution."""
-    data_arr = np.random.normal(size=1000)
+def test_gmm_threshold(norm_dist):
+    """Test whether min/max threshold can be found using a gaussian mixture model."""
+    threshold = qc.gmm_threshold(norm_dist, plot=True)
 
-    threshold = qc._get_thresholds(data_arr)
+    assert "min" in threshold and "max" in threshold
+
+
+def test_mad_threshold(norm_dist):
+    """Test if thresholds can be found using the MAD score."""
+    threshold = qc.mad_threshold(norm_dist, plot=True)
 
     assert "min" in threshold and "max" in threshold
 
@@ -132,13 +148,18 @@ def test_get_thresholds():
 @pytest.mark.parametrize("groupby", [None, "group"])
 @pytest.mark.parametrize("columns", [None, ["qc_variable1", "qc_variable2"]])
 @pytest.mark.parametrize("which", ["obs", "var"])
-def test_automatic_thresholds(adata, which, columns, groupby):
+@pytest.mark.parametrize("fun", [qc.gmm_threshold, qc.mad_threshold, lambda arr: {"min": -1, "max": 1}])
+def test_automatic_thresholds(adata, which, columns, groupby, fun):
     """Test whether automatic thresholds are successfully calculated and added to the threshold dict."""
-    thresholds = qc.automatic_thresholds(adata, which=which, columns=columns, groupby=groupby)
-    threshold_keys = sorted(thresholds.keys())
+    thresholds = qc.automatic_thresholds(adata, which=which, columns=columns, groupby=groupby, FUN=fun)
 
     if columns:
+        # assert output only contains selected columns
+        threshold_keys = sorted(thresholds.keys())
         assert threshold_keys == columns
+    else:
+        # assert output contains all numeric columns
+        assert len(thresholds) == len(getattr(adata, which).select_dtypes("number").columns)
 
 
 def test_automatic_thresholds_failure(adata):
@@ -177,45 +198,179 @@ def test_validate_threshold_dict_invalid(adata, invalid_threshold_dict):
         qc.validate_threshold_dict(adata.obs, invalid_threshold_dict)
 
 
-def test_filter_genes(adata):
-    """Test whether genes were filtered out based on a boolean column."""
-    adata_c = adata.copy()
-    adata_c.var["gene_bool"] = np.random.choice(a=[False, True], size=adata_c.shape[1])
-    n_false = sum(~adata_c.var["gene_bool"])
-    qc.filter_genes(adata_c, "gene_bool", inplace=True)  # removes all genes with boolean True
+@pytest.mark.parametrize("groupby", ["group", None])
+@pytest.mark.parametrize("which", ["obs", "var"])
+def test_get_thresholds(adata, which, groupby):
+    """Test the get_thresholds function."""
+    adata = adata.copy()
 
-    assert adata_c.shape[1] == n_false
+    manual_thresholds = {
+        "qc_variable1": None,
+        "qc_variable2": {"min": None, "max": 1}
+    }
+
+    # number of expected filter metrics
+    n = sum(k in getattr(adata, which).columns for k in manual_thresholds.keys())
+
+    np.random.seed(42)
+    result = qc.get_thresholds(adata=adata,
+                               manual_thresholds=manual_thresholds,
+                               which=which,
+                               groupby=groupby)
+
+    # assert correct number of metrics
+    assert n == len(result)
+
+    # assert all 'None' are replaced with numbers
+    for v in result.values():
+        assert isinstance(v, dict)
+
+        for sup_v in v.values():  # either a dict of thresholds or for groupby a dict containing dicts
+            if isinstance(sup_v, dict):
+                for bot_v in sup_v.values():  # check groupby thresholds
+                    assert bot_v is not None
+            else:
+                assert v is not None
+
+    # test if stored thresholds are returned
+    mock_thresh = {"qc_variable2": {"min": -10, "max": 10}}
+    utils.add_uns_info(adata,
+                       key=qc._uns_report_path[1:] + [which, "threshold"],
+                       value=mock_thresh)
+
+    stored = qc.get_thresholds(adata=adata,
+                               manual_thresholds=manual_thresholds,
+                               which=which,
+                               groupby=groupby)
+    assert stored == mock_thresh
+
+    # test if stored are ignored
+    np.random.seed(42)
+    result2 = qc.get_thresholds(adata=adata,
+                                manual_thresholds=manual_thresholds,
+                                which=which,
+                                groupby=groupby,
+                                ignore_stored=True)
+    assert result == result2 and stored != result2
+
+    # test if only automatic are used
+    np.random.seed(42)
+    auto = qc.get_thresholds(adata=adata,
+                             manual_thresholds=manual_thresholds,
+                             which=which,
+                             groupby=groupby,
+                             only_automatic=True)
+    assert auto != result and auto != stored
 
 
-def test_filter_cells(adata):
-    """Test whether cells were filtered out based on a boolean column."""
-    adata = adata.copy()  # copy adata to avoid inplace changes
-    adata.obs["cell_bool"] = np.random.choice(a=[False, True], size=adata.shape[0])
-    n_false = sum(~adata.obs["cell_bool"])
-    qc.filter_cells(adata, "cell_bool", inplace=True)  # removes all genes with boolean True
+@pytest.mark.parametrize("which", ["obs", "var"])
+def test_match_columns(adata, which, caplog):
+    """Test _match_columns."""
+    cols = getattr(adata, which).columns
+    # collect valid column names
+    test_dict = {key: None for key in cols}
+    # add an invalid name
+    test_dict["invalid"] = "placeholder"
 
-    assert adata.shape[0] == n_false
+    result = qc._match_columns(adata=adata, d=test_dict, which=which)
+
+    assert len(cols) == len(result)
+    assert all(c in result for c in cols)
+    assert "invalid" not in result
+    assert caplog.record_tuples[-1] == ('sctoolbox', logging.WARNING, f'column invalid not found in adata.{which}')
 
 
-@pytest.mark.parametrize("which, to_filter", [("obs", ["AAACCCACAGCCTATA", "AAACCCACAGGGCTTC"]),
-                                              ("var", ["ENSMUSG00000051951", "ENSMUSG00000102851"])])
-def test_filter_object(adata, which, to_filter):
+@pytest.mark.parametrize("invert", [True, False])
+@pytest.mark.parametrize("which, inplace", [("obs", True), ("var", False)])
+@pytest.mark.parametrize("filter_type", ["str", "list[str]", "list[bool]"])
+def test_filter_object(adata, which, inplace, invert, filter_type):
     """Test whether cells/genes are filtered based on a list of cells/genes."""
-    adata = adata.copy()  # copy adata to avoid inplace changes
-    qc._filter_object(adata, to_filter, which=which)
-    table = adata.obs if which == "obs" else adata.var
-    assert all([i not in table.index for i in to_filter])
+    adata_copy = adata.copy()  # copy adata to avoid inplace changes
+    table = getattr(adata, which)
+
+    if filter_type == "str":
+        to_filter = "is_bool"  # refers to a boolean column
+        entries = table[table[to_filter]].index.tolist()
+    elif filter_type == "list[str]":
+        # randomly select 10% of indices to filter
+        to_filter = table.sample(frac=0.1).index.tolist()
+        entries = to_filter
+    elif filter_type == "list[bool]":
+        # create a random boolean list
+        to_filter = np.random.choice([True, False], size=len(table)).tolist()
+        entries = table[to_filter].index.tolist()
+
+    out = qc._filter_object(adata_copy, to_filter, which=which, invert=invert, inplace=inplace, name="filter")
+
+    filtered_table = getattr(adata_copy if inplace else out, which)
+
+    # invert = True -> values should be removed
+    # invert = False -> values should be kept
+    assert all([(i in filtered_table.index) is not invert for i in entries])
+
+    if inplace:
+        assert adata_copy.shape != adata.shape
+        assert utils.in_uns(adata_copy, ["sctoolbox", "report", "qc", which, "filter"])
+    else:
+        assert out.shape != adata_copy.shape
+        assert utils.in_uns(out, ["sctoolbox", "report", "qc", which, "filter"])
+
+
+def test_filter_object_overwrite(adata, caplog):
+    """Test _filter_object overwrite."""
+    adata_copy = adata.copy()
+
+    # apply a filter to create a report
+    out = qc._filter_object(adata_copy, "is_bool", name="filter", inplace=False)
+
+    # try to overwrite the report created above
+    qc._filter_object(out, "is_bool", name="filter", overwrite=True)
+    assert "Applying filter on top of previous filter." in caplog.text
 
 
 def test_filter_object_fail(adata):
-    """Test whether invalid input raises the correct errors."""
+    """Test whether invalid input or prefiltered data raises the correct errors."""
     adata = adata.copy()
     adata.obs["notbool"] = np.random.choice(a=[False, True, np.nan], size=adata.shape[0])
+
     with pytest.raises(ValueError, match="Column notbool contains values that are not of type boolean"):
         qc._filter_object(adata, "notbool", which="obs")
 
     with pytest.raises(ValueError, match="Column invalid not found"):
         qc._filter_object(adata, "invalid", which="obs")
+
+    with pytest.raises(ValueError, match="Filter and AnnData dimensions differ!"):
+        qc._filter_object(adata, filter=[True])
+
+    with pytest.raises(RuntimeError, match="The anndata object appears to be filtered."):
+        utils.add_uns_info(adata, key=["report", "qc", "obs", "test"], value="mock filter")
+        qc._filter_object(adata, filter="is_bool", which="obs", name="test", overwrite=False)
+
+
+@pytest.mark.parametrize("invert", [True, False])
+def test_filter_genes(adata, invert):
+    """Test filter_genes."""
+    # randomly select 10% genes
+    to_filter = adata.var.sample(frac=0.1).index.tolist()
+
+    filtered = qc.filter_genes(adata=adata, genes=to_filter, invert=invert, inplace=False)
+
+    # invert = True -> values should be kept
+    # invert = False -> values should be removed
+    assert all([(i in filtered.var.index) is invert for i in to_filter])
+
+
+@pytest.mark.parametrize("invert", [True, False])
+def test_filter_cells(adata, invert):
+    """Test filter_cells."""
+    # randomly select 10% cells
+    to_filter = adata.obs.sample(frac=0.1).index.tolist()
+
+    filtered = qc.filter_cells(adata=adata, cells=to_filter, invert=invert, inplace=False)
+
+    # invert = True -> values should be kep
+    # invert = False -> values should be removed
+    assert all([(i in filtered.obs.index) is invert for i in to_filter])
 
 
 @pytest.mark.parametrize("threshold", [0.3, 0.0])
@@ -315,6 +470,14 @@ def test_denoise_data(mocker):
     # Assertions
     assert isinstance(result, sc.AnnData)
     assert result.X.shape == adata.X.shape
+    assert utils.in_uns(result, ["sctoolbox", "report", "qc", "denoise"])
 
     # Ensure the logger methods were called
     assert mock_logger.info.call_count == 3
+
+    with pytest.raises(RuntimeError, match="The anndata object appears to be denoised."):
+        qc.denoise_data(result, adata_raw, feature_type='Gene Expression', epochs=10, prob=0.99, save=None, verbose=False, overwrite=False)
+
+    # overwrite denoising
+    qc.denoise_data(result, adata_raw, feature_type='Gene Expression', epochs=10, prob=0.99, save=None, verbose=False, overwrite=True)
+    assert "Applying denoising on top of previous denoising." in mock_logger.warning.call_args[0][0]

@@ -255,6 +255,34 @@ def add_uns_info(adata: sc.AnnData,
 
 
 @beartype
+def in_uns(adata: sc.AnnData,
+           key: str | list[str]) -> bool:
+    """
+    Check whether a key or key path is in adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object to check.
+    key: str | list[str]
+        The key(s) to check. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Returns
+    -------
+    bool
+        True if key or key path is found otherwise False.
+    """
+    d = adata.uns
+    for k in key:
+        if k in d:
+            d = d[k]
+        else:
+            return False
+    return True
+
+
+@beartype
 def get_cell_values(adata: sc.AnnData,
                     element: str) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.

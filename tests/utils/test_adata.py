@@ -99,6 +99,23 @@ def test_add_uns_info(adata):
     assert adata.uns["sctoolbox"]["upper"]["lower"] == ["info", "info2"]
 
 
+@pytest.mark.parametrize("key", ["a", ["a", "b", "c"]])
+def test_in_uns(adata, key):
+    """Test in_uns success."""
+    if isinstance(key, str):
+        assert not utils.in_uns(adata, key)
+
+        adata.uns[key] = "placeholder"
+
+        assert utils.in_uns(adata, key)
+    else:
+        assert not utils.in_uns(adata, ["sctoolbox"] + key)
+
+        utils.add_uns_info(adata=adata, key=key, value="placeholder")
+
+        assert utils.in_uns(adata, ["sctoolbox"] + key)
+
+
 def test_prepare_for_cellxgene(adata_icxg):
     """Test the prepare_for_cellxgene function."""
 
