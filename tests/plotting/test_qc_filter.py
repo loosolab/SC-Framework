@@ -278,6 +278,7 @@ def test_upset_select_cells(adata, thresholds, expected):
 
     assert expected == (sample_selection == global_selection).all().all()
 
+
 @pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},
                                                    'qcvar2': {'min': 0.2, 'max': 0.8}}, None),
                                                  ({'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
