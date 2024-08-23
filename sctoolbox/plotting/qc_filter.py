@@ -929,9 +929,10 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
 # --------------------------- UpSet Plot Threshold Impacts --------------------------- #
 ########################################################################################
 
+
 def _upset_select_cells(adata: sc.AnnData,
-                        thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]],
-                        groupby: Optional[str] = None):
+                        thresholds: Literal[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]],
+                        groupby: Optional[str] = None) -> pd.DataFrame:
     """
     Select cells based on thresholds for UpSet Plot.
 
@@ -939,7 +940,7 @@ def _upset_select_cells(adata: sc.AnnData,
     ----------
     adata : AnnData
         Annotated data matrix object.
-    thresholds : Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]]
+    thresholds : Literal[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]]
         Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
     groupby : Optional[str], default None
         Name of the column in adata.obs to group cells by.
@@ -980,7 +981,28 @@ def _upset_select_cells(adata: sc.AnnData,
     return selection
 
 
-def upset_plot_filter_impacts(adata, thresholds, limit_combinations=None, groupby=None):
+def upset_plot_filter_impacts(adata: sc.AnnData,
+                              thresholds: Literal[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]],
+                              limit_combinations: Optional[int] = None,
+                              groupby: Optional[int] = None) -> dict:
+    """
+    Plot the impact of filtering cells based on thresholds in an UpSet Plot.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix object.
+    thresholds : Literal[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]]
+        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+    limit_combinations : Optional[int], default None
+        Limit the number of combinations to show in the plot.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
+
+    Returns
+    -------
+    plot_result : dict
+    """
     selection = _upset_select_cells(adata, thresholds, groupby)
 
     # Number of variables
