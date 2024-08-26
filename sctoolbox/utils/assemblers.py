@@ -543,6 +543,9 @@ def convertToAdata(file: str,
             stop("Unknown file. Expected '.robj' or '.rds' got", file)
         }
 
+        # update/validate SeuratObject to match newer versions
+        object = UpdateSeuratObject(object)
+
         # ----- convert to SingleCellExperiment ----- #
         # can only convert Seurat -> SingleCellExperiment -> anndata
         if (class(object) == "Seurat") {
