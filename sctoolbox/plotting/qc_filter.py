@@ -23,6 +23,9 @@ import sctoolbox.utils.decorator as deco
 from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
 from beartype import beartype
 
+from sctoolbox._settings import settings
+logger = settings.logger
+
 
 ########################################################################################
 # ------------------------------ QC plots for starsolo ------------------------------- #
@@ -984,7 +987,7 @@ def _upset_select_cells(adata: sc.AnnData,
 def upset_plot_filter_impacts(adata: sc.AnnData,
                               thresholds: Literal[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]],
                               limit_combinations: Optional[int] = None,
-                              groupby: Optional[int] = None) -> dict:
+                              groupby: Optional[int] = None) -> Optional[dict]:
     """
     Plot the impact of filtering cells based on thresholds in an UpSet Plot.
 
@@ -1003,6 +1006,11 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     -------
     plot_result : dict
     """
+    if len(thresholds) <= 1:
+        logger.info("Skipping UpSet Plot as only one threshold is given.")
+
+        return None
+
     selection = _upset_select_cells(adata, thresholds, groupby)
 
     # Number of variables
