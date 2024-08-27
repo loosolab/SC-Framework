@@ -5,7 +5,7 @@ import gitlab
 from getpass import getpass
 import warnings
 import re
-from ratelimiter import RateLimiter
+from throttler import Throttler
 import time
 
 from beartype import beartype
@@ -68,7 +68,7 @@ def gitlab_download(internal_path: str,
         duration = int(round(until - time.time()))
         print('Rate limited, sleeping for {:d} seconds'.format(duration))
 
-    rate_limiter = RateLimiter(max_calls=max_calls, period=period, callback=limited)
+    rate_limiter = Throttler(max_calls=max_calls, period=period, callback=limited)
     token = None
     if commit:
         branch = commit
