@@ -392,7 +392,8 @@ def _run_scrublet(adata: sc.AnnData,
 
             adata.uns['scrublet'] = "scr.Scrublet(X).scrub_doublets()"
 
-        sc.external.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
+        else:
+            sc.external.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
 
