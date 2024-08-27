@@ -1004,7 +1004,7 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
 
     Returns
     -------
-    plot_result : dict
+    plot_result : Optional[dict]
     """
     if len(thresholds) <= 1:
         logger.info("Skipping UpSet Plot as only one threshold is given.")
