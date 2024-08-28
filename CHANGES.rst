@@ -16,6 +16,7 @@ Changes to notebooks
 - General: GSEA: Added option to run prerank(gsea) method instead of enrichr
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
 - General: annotation: Revise annotation notebook (#269)
+- RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
 
 0.9.0 (02-08-24)
 ----------------
