@@ -90,14 +90,15 @@ setup(
         'openpyxl',
         'apybiomart',
         'requests',
-        'ratelimiter',
+        'python-gitlab',
         'psutil',
         'python-gitlab',
         'pyyaml',
         'deprecation',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-        'packaging'
+        'packaging',
+        'throttler'
     ],
     include_package_data=True,
     extras_require=extras_require
