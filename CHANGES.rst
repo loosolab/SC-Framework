@@ -1,5 +1,23 @@
+0.10.0 (in progress)
+- add MAD filtering as alternative to gaussian-mixture model (#261)
+- enhance gene labelling (#38)
+- replace deprecated ratelimiter with throttle (#288)
+- Rename enrichr_marker_genes to gene_set_enrichment and add prerank as possible method.
+- Added gsea_network plot function.
+- add the markerRepo to our environment
+- native scrublet bugfix (#297)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- add option to choose filter method in rna/qc notebook
+- add alternative to interactive thresholds (#38)
+- use sctoolbox.plotting.embedding.plot_embedding (#279)
+- General: GSEA: Implemented gsea_network plot
+- General: GSEA: Added option to run prerank(gsea) method instead of enrichr
+- RNA: 05_receptor-ligand: Split input field into its corresponding sections
+
 0.9.0 (02-08-24)
--------------------
+----------------
 - Added denoising function using scAR to QC notebook
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
