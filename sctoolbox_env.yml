@@ -7,7 +7,7 @@ dependencies:
   - r-seurat
   - bioconductor-singlecellexperiment
   - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
-  - scanpy>=1.9
+  - scanpy>=1.10.2
   - python-annoy
   - notebook==6.5.2
   - bioconductor-deseq2
@@ -18,4 +18,4 @@ dependencies:
   - scvelo>=0.3.1 # highly decreases installation runtime of sc_framework
   - pip  # for installing additional packages
   - pip:
-    - scanpro
+    - scanpro>=0.3.1  # scnapro < 0.3.1 needs statannotations which causes versioning issues

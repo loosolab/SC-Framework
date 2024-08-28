@@ -10,9 +10,45 @@ from beartype.typing import Optional
 
 
 class SctoolboxConfig(object):
-    """Config manager for sctoolbox."""
+    """
+    Config manager for sctoolbox.
 
-    __frozen = False
+    Attributes
+    ----------
+    __frozen : bool
+        If True, disallows new attributes to be added.
+
+    Parameters
+    ----------
+    figure_dir : str
+        Directory to write figures to, default "".
+    figure_prefix : str
+        Prefix for all figures to write (within figure_dir), default "".
+    table_dir : str
+        Directory to write tables to, default "".
+    table_prefix : str
+        Prefix for all tables to write (within table_dir), default "".
+    adata_input_dir : str
+        Directory to read adata objects from, default "".
+    adata_input_prefix : str
+        Prefix for all adata objects to read (within adata_input_dir), default "".
+    adata_output_dir : str
+        Directory to write adata objects to, default "".
+    adata_output_prefix : str
+        Prefix for all adata objects to write (within adata_output_dir), default "".
+    threads : int
+        Default number of threads to use when multiprocessing is available, default 4.
+    create_dirs : bool
+        Create output directories if they do not exist, default True.
+    verbosity : int
+        Logging verbosity: 0 = error, 1 = info, 2 = debug, default 1.
+    log_file : str
+        Path to log file, default None.
+    overwrite_log : bool
+        Overwrite log file if it already exists; default is to append, default False.
+    """
+
+    __frozen: bool = False
 
     def __init__(self,
                  figure_dir: str = "",           # Directory to write figures to
@@ -29,7 +65,6 @@ class SctoolboxConfig(object):
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
                  ):
-        """Initialize settings."""
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
 
