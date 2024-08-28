@@ -339,7 +339,7 @@ def run_scsa(adata: sc.AnnData,
     name_columns = [col for col in dat if col.endswith("_n")]
     for col in name_columns:
         dups = dat[col].duplicated(keep='first')
-        dat[col].mask(dups, other="_NA", inplace=True)  # replace all duplicates with _NA
+        dat[col] = dat[col].mask(dups, other="_NA")  # replace all duplicates with _NA
 
     # Save to file
     csv = './scsa_input.csv'
