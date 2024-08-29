@@ -6,6 +6,7 @@
 - Added gsea_network plot function.
 - add the markerRepo to our environment
 - native scrublet bugfix (#297)
+- fix planet_plot import
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
