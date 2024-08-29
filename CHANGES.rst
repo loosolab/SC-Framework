@@ -17,6 +17,8 @@ Changes to notebooks
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
 - RNA: 04_clustering: Docu revision of the RNA Clustering notebook (#300)
 - ATAC: 04_clustering: Docu revision of the ATAC Clustering notebook (#300)
+- General: annotation: Revise annotation notebook (#269)
+- RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
 
 0.9.0 (02-08-24)
 ----------------
