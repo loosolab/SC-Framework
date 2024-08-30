@@ -341,14 +341,13 @@ def estimate_doublets(adata: sc.AnnData,
 
     # Plot the distribution of scrublet scores
     if plot is True:
-        sc.external.pl.scrublet_score_distribution(adata)
+        sc.pl.scrublet_score_distribution(adata)
 
     # Return adata (or None if inplace)
     if inplace is False:
         return adata
 
 
-@beartype
 def _run_scrublet(adata: sc.AnnData,
                   use_native: bool = False,
                   threshold: Optional[float] = None,
@@ -390,9 +389,10 @@ def _run_scrublet(adata: sc.AnnData,
             adata.obs["doublet_score"] = doublet_scores
             adata.obs["predicted_doublet"] = predicted_doublets
 
-            adata.uns['scrublet'] = "scr.Scrublet(X).scrub_doublets()"
+            adata.uns['scrublet'] = {"doublet_scores_sim": scrub.doublet_scores_sim_}
 
-        sc.external.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
+        else:
+            sc.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
 

@@ -6,6 +6,8 @@
 - Added gsea_network plot function.
 - add the markerRepo to our environment
 - add UpSet plot for threshold comparison (#294)
+- native scrublet bugfix (#297)
+- fix planet_plot import
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -15,6 +17,8 @@ Changes to notebooks
 - General: GSEA: Implemented gsea_network plot
 - General: GSEA: Added option to run prerank(gsea) method instead of enrichr
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
+- General: annotation: Revise annotation notebook (#269)
+- RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
 
 0.9.0 (02-08-24)
 ----------------
