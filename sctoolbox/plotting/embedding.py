@@ -519,7 +519,21 @@ def plot_embedding(adata: sc.AnnData,
         if has_colorbar:
 
             cbar = cbar_ax._colorbar
-            plt.colorbar(cbar.mappable, ax=ax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+
+            # fix colorbar to same height as plot
+            # https://joseph-long.com/writing/colorbars/
+            if "ax" in kwargs:
+                last_axes = plt.gca()
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+
+                # TODO shrink not working
+                plt.colorbar(cbar.mappable, cax=cax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+
+                plt.sca(last_axes)  # return to correct ax
+            else:
+                plt.colorbar(cbar.mappable, ax=ax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+
             new_cbar_ax = ax.figure.axes[-1]
 
             # Carry over title and ylabel
