@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib.collections import PathCollection
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import plotly as po
 import plotly.graph_objects as go
 
@@ -159,8 +160,6 @@ def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> 
     Optional[matplotlib.axes.Axes]
         Either the newly created legend-ax or None if there is no legend within the provided ax.
     """
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-
     handles, labels = ax_obj.get_legend_handles_labels()
 
     # exit if there is no suitable legend within the ax
@@ -330,8 +329,9 @@ def plot_embedding(adata: sc.AnnData,
     axarr = sc.pl.embedding(adata, **kwargs)
 
     # add dedicated legend ax to make it uniform with colorbar
+    leg_ax = None
     if "ax" in kwargs:
-        _add_legend_ax(axarr)
+        leg_ax = _add_legend_ax(axarr)
 
         if style_fallback:
             style = style_fallback
@@ -363,18 +363,24 @@ def plot_embedding(adata: sc.AnnData,
             ax.set_title("")
 
         # Set titles of legend / colorbar / plot
-        legend = ax.get_legend()
-        local_axes = ax.figure._localaxes  # list of all plot and colorbar axes in figure
+        legend = (leg_ax if leg_ax else ax).get_legend()
+        local_axes = (kwargs["ax"] if "ax" in kwargs else ax).figure.axes  # list of all plot and colorbar axes in figure
         has_colorbar = False
         if legend is not None:  # legend of categorical variables
             if not show_title:
                 legend.set_title(ax_color)
-        else:                   # legend of continuous variables
-            cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
-            cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
-            cbar_ax = local_axes[cbar_ax_idx]
-            if cbar_ax._label == "<colorbar>":
-                has_colorbar = True  # this ax has colorbar
+        else:  # legend of continuous variables (colorbar)
+            if "ax" in kwargs:
+                # assume that the colorbar is added at the end of the axis list
+                cbar_ax = local_axes[-1]
+            else:
+                # assume it is added directly after the plot axis
+                cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
+                cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
+                cbar_ax = local_axes[cbar_ax_idx]
+
+            if cbar_ax.get_label() == "<colorbar>":
+                has_colorbar = True  # this ax has a colorbar
 
                 if not show_title:
                     cbar_ax.set_title(ax_color)
@@ -528,7 +534,8 @@ def plot_embedding(adata: sc.AnnData,
                 new_cbar_ax.set_yticks([yticks[0], yticks[-1]])
                 new_cbar_ax.set_yticklabels(["low", "high"])
 
-            # Move colorbar to the correct position in _localaxes
+            # Move colorbar to the correct position in local_axes
+            local_axes = ax.figure.axes  # update list
             cbar_idx = local_axes.index(cbar_ax)
             new_cbar_idx = local_axes.index(new_cbar_ax)
             local_axes[cbar_idx] = new_cbar_ax
