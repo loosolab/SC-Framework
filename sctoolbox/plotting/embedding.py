@@ -140,20 +140,20 @@ def _add_contour(x: np.ndarray,
 
 
 @beartype
-def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str ="<legend>") -> Optional[matplotlib.axes.Axes]:
+def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> Optional[matplotlib.axes.Axes]:
     """
     Create a dedicated ax-object and move the legend of the given ax to it.
-    
+
     Similar to how colorbars are handled.
     Template: https://joseph-long.com/writing/colorbars/
-    
+
     Parameters
     ----------
     ax_obj : matplotlib.axes.Axes
         The ax-object with the legend to move.
     ax_label : str, default '<legend>'
         The label of the legend-ax.
-        
+
     Returns
     -------
     Optional[matplotlib.axes.Axes]
