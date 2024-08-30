@@ -203,6 +203,7 @@ def plot_embedding(adata: sc.AnnData,
                    method: str = "umap",
                    color: Optional[list[str | None] | str] = None,
                    style: Literal["dots", "hexbin", "density"] = "dots",
+                   style_fallback: Optional[Literal["dots", "density"]] = "dots",
                    show_borders: bool = False,
                    show_contour: bool = False,
                    show_count: bool = True,
@@ -222,8 +223,10 @@ def plot_embedding(adata: sc.AnnData,
         Dimensionality reduction method to use. Must be a key in adata.obsm, or a method available as "X_<method>" such as "umap", "tsne" or "pca".
     color : Optional[str | list[str]], default None
         Key for annotation of observations/cells or variables/genes.
-    style : Literal["dots", "hexbin", "density".], default "dots"
+    style : Literal["dots", "hexbin", "density"], default "dots"
         Style of the plot. Must be one of "dots", "hexbin" or "density".
+    style_fallback : Optional[Literal["dots", "density"]], default "dots"
+        Will fallback to this style in case of categorical data. Only works when `ax` parameter is used. None to raise an error instead.
     show_borders : bool, default False
         Whether to show borders around embedding plot. If False, the borders are removed and a small legend is added to the plot.
     show_contour : bool, default False
@@ -325,6 +328,13 @@ def plot_embedding(adata: sc.AnnData,
     kwargs.update(parameters)
 
     axarr = sc.pl.embedding(adata, **kwargs)
+
+    # add dedicated legend ax to make it uniform with colorbar
+    if "ax" in kwargs:
+        _add_legend_ax(axarr)
+
+        if style_fallback:
+            style = style_fallback
 
     # if only one axis is returned, convert to list
     if not isinstance(axarr, list):
