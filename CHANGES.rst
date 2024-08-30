@@ -18,6 +18,7 @@ Changes to notebooks
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
 - General: annotation: Revise annotation notebook (#269)
 - RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
+- ATAC: 01_assembling_anndata: Move ATAC metric to notebook 2
 
 0.9.0 (02-08-24)
 ----------------
