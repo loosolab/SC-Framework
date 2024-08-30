@@ -537,9 +537,8 @@ def plot_embedding(adata: sc.AnnData,
             # Move colorbar to the correct position in local_axes
             local_axes = ax.figure.axes  # update list
             cbar_idx = local_axes.index(cbar_ax)
-            new_cbar_idx = local_axes.index(new_cbar_ax)
             local_axes[cbar_idx] = new_cbar_ax
-            local_axes.pop(new_cbar_idx)  # remove original idx of new_cbar_ax
+            cbar_ax.remove()
 
     # Save figure
     _save_figure(save)
