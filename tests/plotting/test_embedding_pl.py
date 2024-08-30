@@ -101,6 +101,24 @@ def test_invalid_flip_embedding(adata):
         pl.flip_embedding(adata, key="invalid")
 
 
+@pytest.mark.parametrize("color, label", [
+    ("clustering", "clust_label"),  # categorical -> has legend
+    ("qc_float", "label")  # sequential -> no legend (colorbar instead)
+])
+def test_add_legend_ax(adata, color, label):
+    """Test _add_legend_ax."""
+    _, ax = plt.subplots()
+
+    assert len(ax.figure.axes) == 1
+
+    sc.pl.embedding(adata, basis="X_umap", color=color, colorbar_loc=None, ax=ax, show=False)
+    if pl._add_legend_ax(ax, ax_label=label):
+        assert len(ax.figure.axes) == 2
+        assert ax.figure.axes[-1].get_label() == label
+    else:
+        assert len(ax.figure.axes) == 1
+
+
 @pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
                                     {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
 @pytest.mark.parametrize("style", ["dots", "density", "hexbin"])

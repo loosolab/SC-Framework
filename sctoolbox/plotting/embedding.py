@@ -139,6 +139,64 @@ def _add_contour(x: np.ndarray,
     ax.contour(X, Y, f, colors="black", linewidths=0.5)
 
 
+@beartype
+def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str ="<legend>") -> Optional[matplotlib.axes.Axes]:
+    """
+    Create a dedicated ax-object and move the legend of the given ax to it.
+    
+    Similar to how colorbars are handled.
+    Template: https://joseph-long.com/writing/colorbars/
+    
+    Parameters
+    ----------
+    ax_obj : matplotlib.axes.Axes
+        The ax-object with the legend to move.
+    ax_label : str, default '<legend>'
+        The label of the legend-ax.
+        
+    Returns
+    -------
+    Optional[matplotlib.axes.Axes]
+        Either the newly created legend-ax or None if there is no legend within the provided ax.
+    """
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    handles, labels = ax_obj.get_legend_handles_labels()
+
+    # exit if there is no suitable legend within the ax
+    if not handles or not labels:
+        return
+
+    # get current ax
+    last_axes = plt.gca()
+
+    # add a new ax taking 10% of ax_obj space
+    divider = make_axes_locatable(ax_obj)
+    lax = divider.append_axes("right", size="10%", pad=0)
+
+    lax.legend(
+        handles=handles,
+        labels=labels,
+        frameon=False, # same parameters as scanpy.pl.embedding
+        loc="center left",
+        bbox_to_anchor=(-0.9, 0.5),
+        ncol=(1 if len(labels) <= 14 else 2 if len(labels) <= 30 else 3),
+        handletextpad=0
+    )
+
+    # add label for identification and disable axis-lines
+    lax.set_label(ax_label)
+    lax.set_axis_off()
+
+    # return to former ax
+    plt.sca(last_axes)
+
+    # remove former legend
+    ax_obj.get_legend().remove()
+
+    return lax
+
+
 @deco.log_anndata
 @beartype
 def plot_embedding(adata: sc.AnnData,
