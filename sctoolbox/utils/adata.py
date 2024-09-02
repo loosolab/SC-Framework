@@ -173,6 +173,18 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
+    # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
+    # https://github.com/scverse/scanpy/issues/61
+    rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
+    for unk in adata.uns.keys():
+        if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
+            names = list()
+            dnames = adata.uns[unk]["names"].dtype.names # save dtype names
+            for i in adata.uns[unk]["names"]:
+                names.append([j if j == j else "" for j in i])
+            tmp = pd.DataFrame(data=names).to_records(index=False)
+            tmp.dtype.names = dnames # set old names back in place
+            adata.uns[unk]["names"] = tmp
 
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
