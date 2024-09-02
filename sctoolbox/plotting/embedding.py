@@ -556,6 +556,114 @@ def plot_embedding(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
+def feature_per_group(adata: sc.AnnData,
+                      y: str,
+                      x: Optional[Union[str, list[str]]] = None,
+                      top_n: Optional[int] = None,
+                      style: Literal["dots", "hexbin", "density"] = "hexbin",
+                      marker_key: Optional[str] = "rank_genes_groups",
+                      figsize: Optional[Tuple[int | float, int | float]] = None,
+                      save: Optional[str] = None,
+                      **kwargs):
+    """
+    A grid of embeddings with rows/columns corresponding to adata.obs column(s).
+
+    The first column shows the groups (one per row) given through (x -> adata.obs) and the following plots show the expression of the selected features (y or top_n).
+
+    Parameters
+    ----------
+    adata : scanpy.AnnData
+        AnnData used for plotting.
+    y : str
+        Column name of adata.obs. Column should contain categorical values (i.e. not numeric). If not will give a warning attempt to convert to categorical.
+    x : Optional[Union[str, list[str]]]
+        A list of features which will be displayed. Valid names are found in adata.var.index. "x" prohibits the usage of the "top_n" parameter.
+    top_n : Optional[int]
+        Use to display the top markers per group. "top_n" prohibits the usage of the "x" parameter.
+        Expects a precomputed feature ranking e.g. using :func:`scanpy.tl.rank_genes_groups`.
+    style : Literal["dots", "hexbin", "density"], default "dots"
+        The plotting style of the embedding. This selects the style of columns two onward (first column is always "dots").
+        "dots": Plot each given cell.
+        "hexbin": Aggregate the cells into local hexagonal-shapes
+        "density": Aggregate the cells using a kernel density estimation.
+    marker_key : Optional[str], default 'rank_genes_groups'
+        In case of "top_n" us this key to access the ranking information.
+    figsize : Optional[Tuple[int | float, int | float]], default None
+        Figure size. Default is (4.8 * number of column, 3.8 * numer of rows).
+    save : Optional[str], default None
+        Filename to save the figure.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
+
+    Raises
+    ------
+    ValueError :
+        - "top_n" and "x" are both set or neither is set
+        - groups of "y" do not match with the "marker_key"
+
+    Returns
+    -------
+    axes : npt.ArrayLike
+        Array of axis objects
+    """
+    if x and top_n:
+        raise ValueError("The usage of 'top_n' excludes the usage of 'x' and vice versa. Set one of the parameters to None.")
+    elif not x and not top_n:
+        raise ValueError("Set either 'top_n' or 'x'.")
+
+    # check column type
+    if adata.obs[y].dtype.name != 'category':
+        warnings.warn(f"Expected adata.obs['{y}'] to be of type 'category' got '{adata.obs[y].dtype.name}'. This may lead to unexpected behavior convert the coulmn-type to 'category' to ensure proper results.")
+
+    # fetch the groups
+    grps = set(adata.obs[y])
+
+    if top_n:
+        # get the top n markers for each group
+        x = tools.marker_genes.get_rank_genes_tables(adata,
+                                                     key=marker_key,
+                                                     n_genes=top_n)
+
+        # prepare dict
+        x = {key: t["names"].tolist() for key, t in x.items()}
+
+        if grps != set(x.keys()):
+            raise ValueError(f"Groups found in adata.obs['{y}'] does not match to precomputed groups in adata.uns['{marker_key}']")
+
+        ncol = top_n + 1
+    else:
+        # prepare custom features for plotting
+        if not isinstance(x, list):
+            x = [x]
+
+        ncol = len(x) + 1
+
+        x = {g: x for g in grps}
+
+    # create plot
+    fig, axs = plt.subplots(nrows=len(grps),
+                            ncols=ncol,
+                            figsize=figsize if figsize else (4.8 * ncol, 3.8 * len(grps)))
+
+    for i, grp in enumerate(grps):
+        for j, col in enumerate([y] + x[grp]):
+            plot_embedding(
+                adata=adata,
+                color=col,
+                style="dots" if j == 0 else style,
+                groups=grp,
+                ax=axs[i][j],
+                **kwargs
+            )
+
+    # save figure
+    _save_figure(save)
+
+    return axs
+
+
+@deco.log_anndata
+@beartype
 def search_umap_parameters(adata: sc.AnnData,
                            min_dist_range: Tuple[float | int, float | int, float | int] = (0.2, 0.9, 0.2),  # 0.2, 0.4, 0.6, 0.8
                            spread_range: Tuple[float | int, float | int, float | int] = (0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5

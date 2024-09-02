@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 from beartype.roar import BeartypeCallHintParamViolation
@@ -157,6 +158,38 @@ def test_embedding_error(adata):
     with pytest.raises(ValueError):
         pl.plot_embedding(adata, components="3,4")
 
+
+@pytest.mark.parametrize("top_n, x, style", [(None, True, "dots"), (3, None, "hexbin")])
+def test_feature_per_group(adata, x, top_n, style):
+    """Test the feature_per_group plot."""
+    if x:
+        x = adata.var.index[:3].tolist()
+
+    axs = pl.feature_per_group(adata=adata,
+                               y="clustering",
+                               x=x,
+                               top_n=top_n,
+                               style=style)
+
+    # Assert type of output
+    assert isinstance(axs.flatten()[0], matplotlib.axes.Axes)
+
+
+@pytest.mark.parametrize("top_n, x, y", [
+    (None, None, "clustering"),  # neither top_n nor x set
+    (3, True, "clustering"),  # both top_n and x set
+    (3, None, "cat")  # y and top_n ranks don't match
+])
+def test_feature_per_group_fail(adata, top_n, x, y):
+    """Test the feature_per_group errors."""
+    if x:
+        x = adata.var.index[:3].tolist()
+
+    with pytest.raises(ValueError):
+        _ = pl.feature_per_group(adata=adata,
+                                 y=y,
+                                 x=x,
+                                 top_n=top_n)
 
 def test_search_umap_parameters(adata):
     """Test if search_umap_parameters returns an array of axes."""
