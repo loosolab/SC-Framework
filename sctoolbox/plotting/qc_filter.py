@@ -8,6 +8,7 @@ import traitlets
 import functools  # for partial functions
 import glob
 import scanpy as sc
+import upsetplot
 
 import seaborn as sns
 import matplotlib
@@ -21,6 +22,9 @@ import sctoolbox.utils.decorator as deco
 # type hint imports
 from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
 from beartype import beartype
+
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 ########################################################################################
@@ -923,3 +927,140 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
             threshold_dict[measure] = {"min": slider.value[0], "max": slider.value[1]}
 
     return threshold_dict
+
+########################################################################################
+# --------------------------- UpSet Plot Threshold Impacts --------------------------- #
+########################################################################################
+
+
+def _upset_select_cells(adata: sc.AnnData,
+                        thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                        groupby: Optional[str] = None) -> pd.DataFrame:
+    """
+    Select cells based on thresholds for UpSet Plot.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix object.
+    thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
+        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
+
+    Returns
+    -------
+    selection : pd.DataFrame
+        DataFrame containing boolean values for each cell based on thresholds.
+    """
+    selection = {}
+    # loop over all columns
+    for column_name, values in thresholds.items():
+        # loop over all groups
+        if groupby:
+            # initialize an array of False values
+            accumulate_results = np.zeros(adata.obs.shape[0], dtype=bool)
+            # loop over all samples
+            for sample, cutoffs in values.items():
+                # select cells based on the sample
+                sample_selection = np.array(adata.obs[groupby] == sample)
+                # select cells based on the cutoffs
+                cutoff_selection = np.array(
+                    (adata.obs[column_name] < cutoffs['min']) | (adata.obs[column_name] > cutoffs['max']))
+                # add up the selected cells
+                accumulate_results = accumulate_results + np.logical_and(sample_selection, cutoff_selection)
+            # add the results to the selection
+            selection[column_name] = accumulate_results
+
+        else:
+            # select cells based on the cutoffs
+            selection[column_name] = (adata.obs[column_name] < values['min']) | (adata.obs[column_name] > values['max'])
+    # convert to DataFrame
+    selection = pd.DataFrame(selection)
+
+    # reset index
+    selection.reset_index(inplace=True, drop=True)
+
+    return selection
+
+
+def upset_plot_filter_impacts(adata: sc.AnnData,
+                              thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                              limit_combinations: Optional[int] = None,
+                              groupby: Optional[int] = None) -> Optional[dict]:
+    """
+    Plot the impact of filtering cells based on thresholds in an UpSet Plot.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix object.
+    thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
+        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+    limit_combinations : Optional[int], default None
+        Limit the number of combinations to show in the plot.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
+
+    Returns
+    -------
+    plot_result : Optional[dict]
+    """
+    if len(thresholds) <= 1:
+        logger.info("Skipping UpSet Plot as only one threshold is given.")
+
+        return None
+
+    selection = _upset_select_cells(adata, thresholds, groupby)
+
+    # Number of variables
+    n = len(selection.columns)
+
+    # Generate all combinations of True/False
+    raw_combinations = np.array(np.meshgrid(*[[False, True]] * n)).T.reshape(-1, n)
+
+    # Sort the combinations first by the number of True values, then lexicographically
+    sorted_combinations = np.array(sorted(raw_combinations, key=lambda x: (np.sum(x), list(x))))
+
+    # exclude empty combinations
+    mask = np.sum(sorted_combinations, axis=1) != 0
+    combinations = sorted_combinations[mask]
+
+    # make a dataframe
+    combinations_df = pd.DataFrame(combinations, columns=selection.columns)
+
+    results = []
+
+    # loop over all combinations
+    for _, combination in combinations_df.iterrows():
+        # get a list of the column names selected
+        metric_combination = list(selection.columns[combination])
+        # initialize a results array for the combination with len n-cells
+        single_result = np.zeros(selection.shape[0], dtype=bool)
+        # loop over the selected combination
+        for metric in metric_combination:
+            # add up the selected cells
+            single_result = single_result + selection[metric]
+        # append result of the combination
+        results.append(sum(single_result))
+    # add to dataframe
+    combinations_df['counts'] = results
+
+    # limit combinations
+    if limit_combinations:
+        # select all combinations with a grade less or equal the limit
+        limit_mask = np.array(np.sum(combinations_df[selection.columns], axis=1) <= limit_combinations)
+        # always include the total counts
+        limit_mask[-1] = True
+        # index by the mask
+        combinations_df = combinations_df[limit_mask]
+
+    # set the combinations as index
+    combinations_df.set_index(list(selection.columns), inplace=True)
+
+    # plot the UpSet Plot
+    plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
+    plot_result["intersections"].set_ylabel("Cells Filtered")
+    plt.show()
+
+    return plot_result
