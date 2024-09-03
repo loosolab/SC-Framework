@@ -1596,9 +1596,11 @@ def plot_pca_variance(adata: sc.AnnData,
     # Plot barplot of variance
     x = list(range(1, len(var_explained) + 1))
     sns.barplot(x=x,
+                hue=x,
                 y=var_explained,
                 color="grey",
                 palette=palette,
+                legend=False
                 ax=axs[0])
 
     axs[0].set_ylabel("Variance explained (%)", fontsize=12)
@@ -1628,9 +1630,11 @@ def plot_pca_variance(adata: sc.AnnData,
             axs[1].axhline(corr_thresh, color="red")
 
         sns.barplot(x=x,
+                    hue=x,
                     y=abs_corrcoefs,
                     color="grey",
                     palette=palette,
+                    legend=False,
                     ax=axs[1])
 
         # add basis text box
@@ -1649,6 +1653,7 @@ def plot_pca_variance(adata: sc.AnnData,
         axs[1].set_xlabel('Principal components', fontsize=12, labelpad=10)
         axs[1].set_ylabel(f"max( |{corr_plot}| )", fontsize=12)
         axs[1].set_ylim([0, 1])
+        axs[1].set_xticks(axs[1].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=90, size=7)
         axs[1].set_axisbelow(True)
         axs[1].invert_yaxis()
@@ -1751,9 +1756,9 @@ def plot_pca_correlation(adata: sc.AnnData,
     # prepare annotation shown on the heatmap
     annot = table.copy()
 
-    annot = annot.applymap(lambda x: str(np.round(x, 2)))
+    annot = annot.map(lambda x: str(np.round(x, 2)))
     # add stars to significant values
-    stars = pvalues.applymap(lambda p: "*" if p < pvalue_threshold else "")
+    stars = pvalues.map(lambda p: "*" if p < pvalue_threshold else "")
     annot += stars
 
     # Plot heatmap
