@@ -18,7 +18,7 @@ Changes to notebooks
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
 - General: annotation: Revise annotation notebook (#269)
 - RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
-- RNA: 03_normalization_batch_correction revise description and docu (#298)
+- RNA: 03_normalization_batch_correction revise docu and description (#298)
 
 0.9.0 (02-08-24)
 ----------------
