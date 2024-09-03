@@ -467,7 +467,7 @@ def predict_sex(adata: sc.AnnData,
     # Estimate which samples are male/female
     logger.info("Estimating male/female per group")
     assignment = {}
-    for group, table in adata_copy.obs.groupby(groupby):
+    for group, table in adata_copy.obs.groupby(groupby, observed=False):
         n_cells = len(table)
         n_expr = sum(table["gene_expr"] > 0)
         frac = n_expr / n_cells
