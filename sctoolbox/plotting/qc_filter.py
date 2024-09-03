@@ -673,7 +673,6 @@ def quality_violin(adata: sc.AnnData,
     ------
     ValueError
         If 'which' is not 'obs' or 'var' or if columns are not in table.
-
     """
 
     is_interactive = utils.checker._is_interactive()
@@ -762,7 +761,17 @@ def quality_violin(adata: sc.AnnData,
         slider_dict[column] = {}
 
         # Plot data from table
-        sns.violinplot(data=table, x=groupby, hue=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0, legend=False, **kwargs)
+        sns.violinplot(data=table,
+                       x=groupby,
+                       hue=groupby,
+                       y=column,
+                       ax=ax,
+                       order=groups,
+                       palette=color_list if len(color_list) > 1 else None,  # fixes palette without hue warning
+                       color=color_list[0] if len(color_list) == 1 else None,  # ^
+                       cut=0,
+                       legend=False,
+                       **kwargs)
         ax.set_xticks(ax.get_xticks())  # get rid of userwarning https://stackoverflow.com/a/68794383/19870975
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
