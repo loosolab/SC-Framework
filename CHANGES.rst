@@ -5,6 +5,7 @@
 - Rename enrichr_marker_genes to gene_set_enrichment and add prerank as possible method.
 - Added gsea_network plot function.
 - add the markerRepo to our environment
+- add UpSet plot for threshold comparison (#294)
 - native scrublet bugfix (#297)
 - fix planet_plot import
 
@@ -16,9 +17,12 @@ Changes to notebooks
 - General: GSEA: Implemented gsea_network plot
 - General: GSEA: Added option to run prerank(gsea) method instead of enrichr
 - RNA: 05_receptor-ligand: Split input field into its corresponding sections
+- ATAC: 04_clustering: Docu revision of the ATAC Clustering notebook (#300)
+- RNA: 04_clustering: Docu revision of the RNA Clustering notebook (#300)
 - General: annotation: Revise annotation notebook (#269)
 - RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
 - ATAC: 01_assembling_anndata: Move ATAC metric to notebook 2
+- RNA: 03_normalization_batch_correction revise docu and description (#298)
 
 0.9.0 (02-08-24)
 ----------------
