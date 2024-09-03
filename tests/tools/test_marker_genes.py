@@ -170,15 +170,14 @@ def test_mask_rank_genes(adata):
 
 
 @pytest.mark.parametrize("condition_col, error", [
-    ("not_present", "was not found in adata.obs.columns"),
-    ("condition-col", "not a valid column name within R"),
+    ("not_present", "are not found in adata.obs. Available columns are:"),
     ("condition", None)])
 def test_run_deseq2(adata, condition_col, error):
     """Test if deseq2 is run and returns a dataframe."""
 
     # test if error is raised
     if isinstance(error, str):
-        with pytest.raises(ValueError, match=error):
+        with pytest.raises(KeyError, match=error):
             mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
 
     else:  # should run without exceptions

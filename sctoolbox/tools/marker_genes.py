@@ -408,7 +408,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 
         # Get table
         c1, c2 = contrast
-        table_dict = get_rank_genes_tables(adata_sub, n_genes=None, out_group_fractions=True)  # returns dict with each group
+        table_dict = get_rank_genes_tables(adata_sub, key=f"rank_genes_{groupby}", n_genes=None, out_group_fractions=True)  # returns dict with each group
         table = table_dict[c1]
 
         # Reorder columns
@@ -714,7 +714,7 @@ def run_deseq2(adata: sc.AnnData,
 
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
-    utils.checker.check_columns(adata.obs, cols, error=True)
+    utils.checker.check_columns(adata.obs, cols, name="adata.obs", error=True)
 
     # filter features
     layer_data = adata.layers[layer] if layer is not None else adata.X
