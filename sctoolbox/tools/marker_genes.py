@@ -333,8 +333,10 @@ def run_rank_genes(adata: sc.AnnData,
         raise ValueError("groupby must contain at least two groups.")
 
     # Catch ImplicitModificationWarning from scanpy
-    params = {'method': 't-test'}  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+    params = {'method': 't-test',  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+              'key_added': f'rank_genes_{groupby}'}  # set default key_added
     params.update(kwargs)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
         sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
@@ -342,11 +344,10 @@ def run_rank_genes(adata: sc.AnnData,
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
-                                   max_out_group_fraction=max_out_group_fraction)
-
-    # Copy rank_genes_groups to rank_genes_<groupby>
-    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+                                   max_out_group_fraction=max_out_group_fraction,
+                                   key=params["key_added"],
+                                   key_added=f"{params['key_added']}_filtered"
+                                   )
 
 
 @deco.log_anndata

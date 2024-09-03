@@ -224,12 +224,14 @@ def test_add_gene_expression(adata):
         mg.add_gene_expression(adata=adata, gene="INVALID")
 
 
-def test_run_rank_genes(adata):
+@pytest.mark.parametrize("groupby", ["samples"])
+def test_run_rank_genes(adata, groupby):
     """Test ranking genes function."""
 
     adata.uns["log1p"] = {"base": [1, 2, 3]}
-    mg.run_rank_genes(adata, groupby="samples", n_genes=10)
-    assert adata.uns["rank_genes_groups"]
+    mg.run_rank_genes(adata, groupby=groupby, n_genes=10)
+    assert adata.uns[f"rank_genes_{groupby}"]
+    assert adata.uns[f"rank_genes_{groupby}_filtered"]
 
 
 def test_run_rank_genes_fail(adata):
