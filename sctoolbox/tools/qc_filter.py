@@ -499,6 +499,7 @@ def predict_sex(adata: sc.AnnData,
 
         # Plot violins per group + color for female cells
         sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups, **kwargs)
+        axarr[1].set_xticks(axarr[1].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axarr[1].set_xticklabels(groups, rotation=45, ha="right")
         axarr[1].set_ylabel("")
         xlim = axarr[1].get_xlim()
