@@ -196,6 +196,48 @@ def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> 
     return lax
 
 
+@beartype
+def _binarize_expression(adata: sc.AnnData,
+                         features: list[str],
+                         threshold: Optional[float] = 0,
+                         percentile_threshold: Optional[float] = None):
+    """
+    Binarize the expression of a list of features based on a threshold and store the results in adata.obs
+
+    Parameters:
+    - adata : anndata.AnnData
+          Annotated data matrix object.
+    - features : list[str]
+          A list of feature names to be binarized.
+    - threshold : Optional[float], default 0
+          The expression threshold for binarization.
+    - percentile_threshold : float
+          The expression threshold as a percentile of the features expression. Takes precedence over threshold if set.
+
+    Returns:
+    - None: The function updates adata.obs in-place with binary expression data for each feature.
+    """
+    # Check if all features are present in the adata object
+    missing_features = [feature for feature in features if feature not in adata.var_names]
+    if missing_features:
+        raise ValueError(f"Features not found in adata.var_names: {', '.join(missing_features)}")
+
+    for feature in features:
+        feature_expr = adata[:, feature].X
+
+        if not isinstance(feature_expr, np.ndarray):
+            feature_expr = feature_expr.toarray()
+
+        feature_expr = feature_expr.flatten()
+
+        if percentile_threshold is not None:
+            threshold = np.percentile(feature_expr, percentile_threshold)
+
+        # Binarize the expression data
+        binary_expr = np.where(feature_expr > threshold, 'expressed', 'not expressed')
+        adata.obs[f'{feature}_status'] = pd.Categorical(binary_expr)
+
+
 @deco.log_anndata
 @beartype
 def plot_embedding(adata: sc.AnnData,
@@ -562,6 +604,8 @@ def feature_per_group(adata: sc.AnnData,
                       top_n: Optional[int] = None,
                       style: Literal["dots", "hexbin", "density"] = "hexbin",
                       marker_key: Optional[str] = "rank_genes_groups",
+                      binarize_threshold: Optional[float] = None,
+                      binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
                       **kwargs):
@@ -583,13 +627,18 @@ def feature_per_group(adata: sc.AnnData,
         Expects a precomputed feature ranking e.g. using :func:`scanpy.tl.rank_genes_groups`.
     style : Literal["dots", "hexbin", "density"], default "dots"
         The plotting style of the embedding. This selects the style of columns two onward (first column is always "dots").
+        If a binarize_* parameter is given, the style is fixed to "dots".
         "dots": Plot each given cell.
         "hexbin": Aggregate the cells into local hexagonal-shapes
         "density": Aggregate the cells using a kernel density estimation.
     marker_key : Optional[str], default 'rank_genes_groups'
-        In case of "top_n" us this key to access the ranking information.
+        In case of "top_n" use this key to access the ranking information.
+    binarize_threshold : Optional[float], default None
+        Binarize the expression values, given the threshold. Only one of the binarize_* parameters may be given.
+    binarize_percentile_threshold : Optional[float], default None
+        Binarize the expression values, given a percentile. The percentile of a features expression is used as a threshold. Only one of the binarize_* parameters may be given.
     figsize : Optional[Tuple[int | float, int | float]], default None
-        Figure size. Default is (4.8 * number of column, 3.8 * numer of rows).
+        Figure size. Default is (4.8 * number of columns, 3.8 * number of rows).
     save : Optional[str], default None
         Filename to save the figure.
     **kwargs : arguments
@@ -610,6 +659,11 @@ def feature_per_group(adata: sc.AnnData,
         raise ValueError("The usage of 'top_n' excludes the usage of 'x' and vice versa. Set one of the parameters to None.")
     elif not x and not top_n:
         raise ValueError("Set either 'top_n' or 'x'.")
+
+    if binarize_threshold and binarize_percentile_threshold:
+        raise ValueError("The usage of 'binarize_threshold' excludes the usage of 'binarize_percentile_threshold' and vice versa. Set one or both of the parameters to None.")
+
+    binarize = binarize_threshold or binarize_percentile_threshold
 
     # check column type
     if adata.obs[y].dtype.name != 'category':
@@ -640,6 +694,14 @@ def feature_per_group(adata: sc.AnnData,
 
         x = {g: x for g in grps}
 
+    if binarize:
+        features = list()
+        # collect all feature names and extend all names in x with _status
+        for grp in grps:
+            features += x[grp]
+            x[grp] = [f"{feat}_status" for feat in x[grp]]
+        _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold)
+
     # create plot
     fig, axs = plt.subplots(nrows=len(grps),
                             ncols=ncol,
@@ -647,11 +709,17 @@ def feature_per_group(adata: sc.AnnData,
 
     for i, grp in enumerate(grps):
         for j, col in enumerate([y] + x[grp]):
+            if j == 0:
+                group_restriction = grp
+            elif binarize:
+                group_restriction = "expressed"
+            else:
+                group_restriction = None
             plot_embedding(
                 adata=adata,
                 color=col,
-                style="dots" if j == 0 else style,
-                groups=grp,
+                style="dots" if j == 0  or binarize else style,
+                groups=group_restriction,
                 ax=axs[i][j],
                 **kwargs
             )
