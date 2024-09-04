@@ -95,7 +95,9 @@ def recluster(adata: sc.AnnData,
 
     # Check that method is valid
     if method == "leiden":
-        cl_function = sc.tl.leiden
+        # set future defaults to omit warning
+        def cl_function(*args, **kwargs):
+            sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
     elif method == "louvain":
         cl_function = sc.tl.louvain
 
@@ -107,7 +109,9 @@ def recluster(adata: sc.AnnData,
     # --- Start reclustering --- #
     if task == "join":
         translate = {cluster: clusters[0] for cluster in clusters}
-        adata.obs[key_added] = adata.obs[column].replace(translate)
+        # add rest of the clusters otherwise they will be NA
+        translate.update({cluster: cluster for cluster in adata.obs[column] if cluster not in clusters})
+        adata.obs[key_added] = adata.obs[column].map(translate).astype("category")
     elif task == "split":
         cl_function(adata, restrict_to=(column, clusters), resolution=resolution, key_added=key_added)
 
