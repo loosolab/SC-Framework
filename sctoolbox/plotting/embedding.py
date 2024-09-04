@@ -203,6 +203,7 @@ def _binarize_expression(adata: sc.AnnData,
                          percentile_threshold: Optional[float] = None):
     """
     Binarize the expression of a list of features based on a threshold and store the results in adata.obs.
+
     The function updates adata.obs in-place with binary expression data for each feature.
 
     Parameters
