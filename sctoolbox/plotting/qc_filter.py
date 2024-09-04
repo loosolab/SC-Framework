@@ -317,7 +317,7 @@ def n_cells_barplot(adata: sc.AnnData,
     # Get cell counts for groups or all
     tables = []
     if groupby is not None:
-        for i, frame in adata.obs.groupby(groupby):
+        for i, frame in adata.obs.groupby(groupby, observed=False):
             count = frame.value_counts(x).to_frame(name="count").reset_index()
             count["groupby"] = i
             tables.append(count)
