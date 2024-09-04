@@ -81,8 +81,8 @@ def search_clustering_parameters(adata: sc.AnnData,
     # Check that method is valid
     if method == "leiden":
         # set future defaults to omit warning
-        def cl_function(**kwargs):
-            sc.tl.leiden(**kwargs, flavor="igraph", n_iterations=2)
+        def cl_function(*args, **kwargs):
+            sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
     elif method == "louvain":
         cl_function = sc.tl.louvain
 
