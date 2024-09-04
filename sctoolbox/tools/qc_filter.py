@@ -141,6 +141,8 @@ def predict_cell_cycle(adata: sc.AnnData,
         1: If s_genes or g2m_genes is not None and not of type list.
         2: If no cellcycle genes available for the given species.
         3. If given species is not supported and s_genes or g2m_genes are not given.
+    FileNotFoundError
+        If the s_genes or g2m_genes file can not be found.
     """
 
     if not inplace:

@@ -202,23 +202,25 @@ def _binarize_expression(adata: sc.AnnData,
                          threshold: Optional[float] = 0,
                          percentile_threshold: Optional[float] = None):
     """
-    Binarize the expression of a list of features based on a threshold and store the results in adata.obs
+    Binarize the expression of a list of features based on a threshold and store the results in adata.obs.
+    The function updates adata.obs in-place with binary expression data for each feature.
 
     Parameters
     ----------
-    - adata : anndata.AnnData
-          Annotated data matrix object.
-    - features : list[str]
-          A list of feature names to be binarized.
-    - threshold : Optional[float], default 0
-          The expression threshold for binarization.
-    - percentile_threshold : float
-          The expression threshold as a percentile of the features expression. Takes precedence over threshold if set.
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    features : list[str]
+        A list of feature names to be binarized.
+    threshold : Optional[float], default 0
+        The expression threshold for binarization.
+    percentile_threshold : float
+        The expression threshold as a percentile of the features expression. Takes precedence over threshold if set.
 
-    Returns
-    -------
-    None
-          The function updates adata.obs in-place with binary expression data for each feature.
+    Raises
+    ------
+    ValueError
+        If the feature names cannot be found in adata.var_names.
+
     """
     # Check if all features are present in the adata object
     missing_features = [feature for feature in features if feature not in adata.var_names]

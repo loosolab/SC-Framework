@@ -682,11 +682,6 @@ def run_deseq2(adata: sc.AnnData,
         A dataframe containing the results of the DESeq2 analysis.
         Also adds the dataframe to adata.uns["deseq_result"]
 
-    Raises
-    ------
-    KeyError
-        1. If any given column name is not found in adata.obs.
-
     Notes
     -----
     Needs the package 'pydeseq2' to be installed.
