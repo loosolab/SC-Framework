@@ -107,31 +107,6 @@ def test_add_gene_expression(adata):
         mg.add_gene_expression(adata=adata, gene="INVALID")
 
 
-def test_run_rank_genes(adata):
-    """Test ranking genes function."""
-
-    adata.uns["log1p"] = {"base": [1, 2, 3]}
-    mg.run_rank_genes(adata, groupby="samples", n_genes=10)
-    assert adata.uns["rank_genes_groups"]
-
-
-def test_run_rank_genes_fail(adata):
-    """Test if invalid input is caught."""
-
-    adata = adata.copy()
-    adata.obs["invalid_cat"] = "invalid"
-
-    with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
-        mg.run_rank_genes(adata, groupby="invalid_cat")
-
-
-def test_pairwise_rank_genes(adata):
-    """Test pairwise_rank_genes success."""
-    output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
-
-    assert isinstance(output, pd.DataFrame)
-
-
 def test_get_rank_genes_tables(adata):
     """Test if rank gene tables are created and saved to excel file."""
 
@@ -209,20 +184,6 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
         assert score_name in out.obs.columns
 
 
-def test_add_gene_expression(adata):
-    """Test add_gene_expression success and failure."""
-    gene = adata.var.index[0]
-
-    # success
-    assert f"{gene}_values" not in adata.obs.columns
-    mg.add_gene_expression(adata=adata, gene=gene)
-    assert f"{gene}_values" in adata.obs.columns
-
-    # failure
-    with pytest.raises(ValueError):
-        mg.add_gene_expression(adata=adata, gene="INVALID")
-
-
 @pytest.mark.parametrize("groupby", ["samples"])
 def test_run_rank_genes(adata, groupby):
     """Test ranking genes function."""
@@ -248,20 +209,3 @@ def test_pairwise_rank_genes(adata):
     output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
 
     assert isinstance(output, pd.DataFrame)
-
-
-@pytest.mark.parametrize("condition_col, error_regex", [
-    ("not_present", "Columns \'\[\'not_present\'\]\' are not found in dataframe.*"),
-    ("condition", None)])
-def test_deseq(adata, condition_col, error_regex):
-    """Test if deseq2 is run and returns a dataframe."""
-
-    # test if error is raised
-    if isinstance(error_regex, str):
-        with pytest.raises(KeyError, match=error_regex):
-            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-
-    else:  # should run without exceptions
-        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
-
-        assert isinstance(df, pd.DataFrame)

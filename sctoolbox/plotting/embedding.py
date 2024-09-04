@@ -176,7 +176,7 @@ def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> 
     lax.legend(
         handles=handles,
         labels=labels,
-        frameon=False, # same parameters as scanpy.pl.embedding
+        frameon=False,  # same parameters as scanpy.pl.embedding
         loc="center left",
         bbox_to_anchor=(-0.9, 0.5),
         ncol=(1 if len(labels) <= 14 else 2 if len(labels) <= 30 else 3),
@@ -204,7 +204,8 @@ def _binarize_expression(adata: sc.AnnData,
     """
     Binarize the expression of a list of features based on a threshold and store the results in adata.obs
 
-    Parameters:
+    Parameters
+    ----------
     - adata : anndata.AnnData
           Annotated data matrix object.
     - features : list[str]
@@ -214,8 +215,10 @@ def _binarize_expression(adata: sc.AnnData,
     - percentile_threshold : float
           The expression threshold as a percentile of the features expression. Takes precedence over threshold if set.
 
-    Returns:
-    - None: The function updates adata.obs in-place with binary expression data for each feature.
+    Returns
+    -------
+    None
+          The function updates adata.obs in-place with binary expression data for each feature.
     """
     # Check if all features are present in the adata object
     missing_features = [feature for feature in features if feature not in adata.var_names]
@@ -608,9 +611,9 @@ def feature_per_group(adata: sc.AnnData,
                       binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
-                      **kwargs):
+                      **kwargs) -> npt.ArrayLike:
     """
-    A grid of embeddings with rows/columns corresponding to adata.obs column(s).
+    Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
 
     The first column shows the groups (one per row) given through (x -> adata.obs) and the following plots show the expression of the selected features (y or top_n).
 
@@ -646,9 +649,10 @@ def feature_per_group(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError :
-        - "top_n" and "x" are both set or neither is set
-        - groups of "y" do not match with the "marker_key"
+    ValueError
+        "top_n" and "x" are both set or neither is set
+        "binarize_threshold" and "binarize_percentile_threshold" are both set
+        groups of "y" do not match with the "marker_key"
 
     Returns
     -------
@@ -718,7 +722,7 @@ def feature_per_group(adata: sc.AnnData,
             plot_embedding(
                 adata=adata,
                 color=col,
-                style="dots" if j == 0  or binarize else style,
+                style="dots" if j == 0 or binarize else style,
                 groups=group_restriction,
                 ax=axs[i][j],
                 **kwargs
@@ -1781,6 +1785,8 @@ def plot_pca_variance(adata: sc.AnnData,
     ------
     KeyError
         If the given method is not found in adata.uns.
+    ValueError
+        If the 'ax' parameter is not an Axes object.
 
     Examples
     --------

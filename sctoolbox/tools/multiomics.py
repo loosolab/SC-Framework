@@ -41,7 +41,7 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
 
     Raises
     ------
-    ValueError:
+    ValueError
         If no indices of both adata.obs tables are overlapping.
     """
 

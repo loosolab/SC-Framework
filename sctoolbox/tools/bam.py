@@ -248,7 +248,7 @@ def split_bam_clusters(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If groupby column is not in adata.obs
         2. If barcode column is not in adata.obs
         3. If index_bams is set and sort_bams is False

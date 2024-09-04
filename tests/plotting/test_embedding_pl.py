@@ -191,6 +191,7 @@ def test_feature_per_group_fail(adata, top_n, x, y):
                                  x=x,
                                  top_n=top_n)
 
+
 def test_search_umap_parameters(adata):
     """Test if search_umap_parameters returns an array of axes."""
 

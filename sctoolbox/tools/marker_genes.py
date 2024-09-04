@@ -48,7 +48,7 @@ def get_chromosome_genes(gtf: str,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If not all given chromosomes are found in the GTF-file.
     """
 
@@ -269,7 +269,7 @@ def add_gene_expression(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If gene is not in adata.var.index.
     """
 
@@ -318,7 +318,7 @@ def run_rank_genes(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If number of groups defined by the groupby parameter is < 2.
     """
 
@@ -482,7 +482,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If not all columns given in var_columns are in adata.var.
         2. If key cannot be found in adata.uns.
     """
@@ -620,7 +620,7 @@ def mask_rank_genes(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If genes is not of type list.
     """
 
@@ -684,7 +684,7 @@ def run_deseq2(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError:
+    KeyError
         1. If any given column name is not found in adata.obs.
 
     Notes
@@ -757,7 +757,7 @@ def run_deseq2(adata: sc.AnnData,
     contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
         logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
-        ds = DeseqStats(dds, contrast=[condition_col, C2, C1], inference = DefaultInference(n_cpus=threads))
+        ds = DeseqStats(dds, contrast=[condition_col, C2, C1], inference=DefaultInference(n_cpus=threads))
         ds.summary()
 
         # Rename and add to deseq_table
@@ -811,7 +811,7 @@ def score_genes(adata: sc.AnnData,
 
     Raises
     ------
-    FileNotFoundError:
+    FileNotFoundError
         If path given in gene_set does not lead to a file.
     """
 

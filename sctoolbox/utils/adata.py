@@ -179,11 +179,11 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
     for unk in adata.uns.keys():
         if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
             names = list()
-            dnames = adata.uns[unk]["names"].dtype.names # save dtype names
+            dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
             for i in adata.uns[unk]["names"]:
                 names.append([j if j == j else "" for j in i])
             tmp = pd.DataFrame(data=names).to_records(index=False)
-            tmp.dtype.names = dnames # set old names back in place
+            tmp.dtype.names = dnames  # set old names back in place
             adata.uns[unk]["names"] = tmp
 
     # Save adata
