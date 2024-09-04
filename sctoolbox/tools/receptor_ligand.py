@@ -16,6 +16,7 @@ import igraph as ig
 import pycirclize
 from tqdm import tqdm
 import warnings
+import logging
 import liana.resource as liana_res
 
 from beartype.typing import Optional, Tuple
@@ -341,9 +342,17 @@ def interaction_violin_plot(adata: sc.AnnData,
         # get column of not main clusters
         cluster_interactions["Cluster"] = cluster_interactions.apply(lambda x: x.iloc[1] if x.iloc[0] == cluster else x.iloc[0], axis=1).tolist()
 
-        plot = sns.violinplot(x=cluster_interactions["Cluster"],
-                              y=cluster_interactions["interaction_score"],
-                              ax=flat_axs[i])
+        try:
+            # temporarily change logging because of message see link below
+            # https://discourse.matplotlib.org/t/why-am-i-getting-this-matplotlib-error-for-plotting-a-categorical-variable/21758
+            former_level = logging.getLogger("matplotlib").getEffectiveLevel()
+            logging.getLogger("matplotlib").setLevel('WARNING')
+
+            plot = sns.violinplot(x=cluster_interactions["Cluster"],
+                                y=cluster_interactions["interaction_score"],
+                                ax=flat_axs[i])
+        finally:
+            logging.getLogger("matplotlib").setLevel(former_level)
 
         plot.set_xticks(plot.get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         plot.set_xticklabels(plot.get_xticklabels(), rotation=90)
@@ -1091,31 +1100,47 @@ def connectionPlot(adata: sc.AnnData,
     fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, gridspec_kw={'wspace': wspace})
     fig.suptitle(title)
 
-    # receptor plot
-    r_plot = sns.scatterplot(data=data.sort_values(by=receptor_cluster_col, key=sort_fun),
-                             y=receptor_col,
-                             x=receptor_cluster_col,
-                             hue=receptor_hue,
-                             size=receptor_size,
-                             palette=dot_colors,
-                             sizes=dot_size,
-                             legend="brief",
-                             ax=axs[0])
+    try:
+        # temporarily change logging because of message see link below
+        # https://discourse.matplotlib.org/t/why-am-i-getting-this-matplotlib-error-for-plotting-a-categorical-variable/21758
+        former_level = logging.getLogger("matplotlib").getEffectiveLevel()
+        logging.getLogger("matplotlib").setLevel('WARNING')
+
+        # receptor plot
+        r_plot = sns.scatterplot(data=data.sort_values(by=receptor_cluster_col, key=sort_fun),
+                                 y=receptor_col,
+                                 x=receptor_cluster_col,
+                                 hue=receptor_hue,
+                                 size=receptor_size,
+                                 palette=dot_colors,
+                                 sizes=dot_size,
+                                 legend="brief",
+                                 ax=axs[0])
+    finally:
+        logging.getLogger("matplotlib").setLevel(former_level)
 
     r_plot.set(xlabel="Cluster", ylabel=None, title="Receptor", axisbelow=True)
     axs[0].tick_params(axis='x', rotation=90)
     axs[0].grid(alpha=0.8)
 
-    # ligand plot
-    l_plot = sns.scatterplot(data=data.sort_values(by=ligand_cluster_col, key=sort_fun),
-                             y=ligand_col,
-                             x=ligand_cluster_col,
-                             hue=ligand_hue,
-                             size=ligand_size,
-                             palette=dot_colors,
-                             sizes=dot_size,
-                             legend="brief",
-                             ax=axs[1])
+    try:
+        # temporarily change logging because of message see link below
+        # https://discourse.matplotlib.org/t/why-am-i-getting-this-matplotlib-error-for-plotting-a-categorical-variable/21758
+        former_level = logging.getLogger("matplotlib").getEffectiveLevel()
+        logging.getLogger("matplotlib").setLevel('WARNING')
+
+        # ligand plot
+        l_plot = sns.scatterplot(data=data.sort_values(by=ligand_cluster_col, key=sort_fun),
+                                 y=ligand_col,
+                                 x=ligand_cluster_col,
+                                 hue=ligand_hue,
+                                 size=ligand_size,
+                                 palette=dot_colors,
+                                 sizes=dot_size,
+                                 legend="brief",
+                                 ax=axs[1])
+    finally:
+        logging.getLogger("matplotlib").setLevel(former_level)
 
     axs[1].yaxis.tick_right()
     l_plot.set(xlabel="Cluster", ylabel=None, title="Ligand", axisbelow=True)
