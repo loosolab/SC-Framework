@@ -339,12 +339,13 @@ def interaction_violin_plot(adata: sc.AnnData,
         cluster_interactions = get_interactions(adata, min_perc=min_perc, group_a=[cluster])
 
         # get column of not main clusters
-        cluster_interactions["Cluster"] = cluster_interactions.apply(lambda x: x[1] if x[0] == cluster else x[0], axis=1).tolist()
+        cluster_interactions["Cluster"] = cluster_interactions.apply(lambda x: x.iloc[1] if x.iloc[0] == cluster else x.iloc[0], axis=1).tolist()
 
         plot = sns.violinplot(x=cluster_interactions["Cluster"],
                               y=cluster_interactions["interaction_score"],
                               ax=flat_axs[i])
 
+        plot.set_xticks(plot.get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         plot.set_xticklabels(plot.get_xticklabels(), rotation=90)
 
         flat_axs[i].set_title(f"Cluster {cluster}")
