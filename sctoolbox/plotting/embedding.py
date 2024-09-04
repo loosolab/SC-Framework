@@ -1600,7 +1600,7 @@ def plot_pca_variance(adata: sc.AnnData,
                 y=var_explained,
                 color="grey",
                 palette=palette,
-                legend=False
+                legend=False,
                 ax=axs[0])
 
     axs[0].set_ylabel("Variance explained (%)", fontsize=12)
