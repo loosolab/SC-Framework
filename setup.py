@@ -64,7 +64,7 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3.9',  # dict type hints as we use it require python 3.9
+    python_requires='>=3.9, <3.12',  # dict type hints as we use it require python 3.9; temporarilly pin python to version <3.12 until scvelo/skilearn support it
     install_requires=[
         'pysam',
         'matplotlib<3.9.0',
