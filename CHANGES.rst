@@ -10,6 +10,7 @@
 - add UpSet plot for threshold comparison (#294)
 - native scrublet bugfix (#297)
 - fix planet_plot import
+- reduce warnings (#299)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
