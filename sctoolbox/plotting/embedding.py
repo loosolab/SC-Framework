@@ -213,16 +213,21 @@ def _binarize_expression(adata: sc.AnnData,
     features : list[str]
         A list of feature names to be binarized.
     threshold : Optional[float], default 0
-        The expression threshold for binarization.
+        The expression threshold for binarization. Only one of the threshold parameters may be given.
     percentile_threshold : float
-        The expression threshold as a percentile of the features expression. Takes precedence over threshold if set.
+        The expression threshold as a percentile of the features expression. Only one of the threshold parameters may be given.
 
     Raises
     ------
     ValueError
         If the feature names cannot be found in adata.var_names.
+        If "threshold" and "percentile_threshold" are both set
 
     """
+    if threshold is not None and percentile_threshold is not None:
+        raise ValueError("The usage of 'threshold' excludes the usage of 'percentile_threshold' and vice versa. Set one or both of the parameters to None.")
+
+
     # Check if all features are present in the adata object
     missing_features = [feature for feature in features if feature not in adata.var_names]
     if missing_features:
@@ -654,7 +659,6 @@ def feature_per_group(adata: sc.AnnData,
     ------
     ValueError
         "top_n" and "x" are both set or neither is set
-        "binarize_threshold" and "binarize_percentile_threshold" are both set
         groups of "y" do not match with the "marker_key"
 
     Returns
@@ -667,10 +671,7 @@ def feature_per_group(adata: sc.AnnData,
     elif not x and not top_n:
         raise ValueError("Set either 'top_n' or 'x'.")
 
-    if binarize_threshold and binarize_percentile_threshold:
-        raise ValueError("The usage of 'binarize_threshold' excludes the usage of 'binarize_percentile_threshold' and vice versa. Set one or both of the parameters to None.")
-
-    binarize = binarize_threshold or binarize_percentile_threshold
+    binarize = binarize_threshold is not None or binarize_percentile_threshold is not None
 
     # check column type
     if adata.obs[y].dtype.name != 'category':
@@ -702,6 +703,7 @@ def feature_per_group(adata: sc.AnnData,
         x = {g: x for g in grps}
 
     if binarize:
+        adata = adata.copy()  # _binarize_expression will change the adata, we want to keep the original, but plot the changed.
         features = list()
         # collect all feature names and extend all names in x with _status
         for grp in grps:
