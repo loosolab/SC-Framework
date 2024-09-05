@@ -252,3 +252,62 @@ def test_get_slider_thresholds_dict_grouped_diff(slider_dict_grouped_diff):
                                     '2': {'min': 1, 'max': 5}},
                               'B': {'1': {'min': 5, 'max': 7},
                                     '2': {'min': 3, 'max': 4}}}
+
+
+@pytest.mark.parametrize("thresholds, expected", [({'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
+                                                               'C2': {'min': 0.1, 'max': 0.9},
+                                                               'C3': {'min': 0.1, 'max': 0.9}},
+                                                    'qcvar2': {'C1': {'min': 0.2, 'max': 0.8},
+                                                               'C2': {'min': 0.2, 'max': 0.8},
+                                                               'C3': {'min': 0.2, 'max': 0.8}}
+                                                    }, True),
+                                                  ({'qcvar1': {'C1': {'min': 0.1, 'max': 0.8},
+                                                               'C2': {'min': 0.2, 'max': 0.9},
+                                                               'C3': {'min': 0.2, 'max': 0.6}},
+                                                    'qcvar2': {'C1': {'min': 0.1, 'max': 1},
+                                                               'C2': {'min': 0.3, 'max': 0.7},
+                                                               'C3': {'min': 0.2, 'max': 0.7}}
+                                                    }, False)])
+def test_upset_select_cells(adata, thresholds, expected):
+    """Test upset_select_cells success."""
+    global_thresholds = {'qcvar1': {'min': 0.1, 'max': 0.9},
+                         'qcvar2': {'min': 0.2, 'max': 0.8}}
+
+    sample_selection = pl._upset_select_cells(adata, thresholds, groupby='condition')
+    global_selection = pl._upset_select_cells(adata, global_thresholds, groupby=None)
+
+    assert expected == (sample_selection == global_selection).all().all()
+
+
+@pytest.mark.parametrize("thresholds, groupby", [({'qcvar1': {'min': 0.1, 'max': 0.9},
+                                                   'qcvar2': {'min': 0.2, 'max': 0.8}}, None),
+                                                 ({'qcvar1': {'C1': {'min': 0.1, 'max': 0.9},
+                                                              'C2': {'min': 0.1, 'max': 0.9},
+                                                              'C3': {'min': 0.1, 'max': 0.9}},
+                                                   'qcvar2': {'C1': {'min': 0.2, 'max': 0.8},
+                                                              'C2': {'min': 0.2, 'max': 0.8},
+                                                              'C3': {'min': 0.2, 'max': 0.8}}
+                                                   }, 'condition')])
+def test_upset_plot_filter_impacts(adata, thresholds, groupby):
+    """Test upset_plot_filter_impacts success."""
+    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby)
+
+    assert isinstance(plot_result, dict)
+    assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
+    ax_type = type(plot_result['matrix']).__name__
+    assert ax_type.startswith("Axes")
+    ax_type = type(plot_result['shading']).__name__
+    assert ax_type.startswith("Axes")
+    ax_type = type(plot_result['intersections']).__name__
+    assert ax_type.startswith("Axes")
+
+    plot_result = pl.upset_plot_filter_impacts(adata, thresholds=thresholds, groupby=groupby, limit_combinations=2)
+
+    assert isinstance(plot_result, dict)
+    assert list(plot_result.keys()) == ['matrix', 'shading', 'totals', 'intersections']
+    ax_type = type(plot_result['matrix']).__name__
+    assert ax_type.startswith("Axes")
+    ax_type = type(plot_result['shading']).__name__
+    assert ax_type.startswith("Axes")
+    ax_type = type(plot_result['intersections']).__name__
+    assert ax_type.startswith("Axes")
