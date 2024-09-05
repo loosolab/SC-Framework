@@ -214,7 +214,7 @@ def _binarize_expression(adata: sc.AnnData,
         A list of feature names to be binarized.
     threshold : Optional[float], default 0
         The expression threshold for binarization. Only one of the threshold parameters may be given.
-    percentile_threshold : float
+    percentile_threshold : Optional[float]
         The expression threshold as a percentile of the features expression. Only one of the threshold parameters may be given.
 
     Raises
