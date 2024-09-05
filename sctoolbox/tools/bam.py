@@ -661,8 +661,8 @@ def _buffered_reader(path: str,
 
     Raises
     ------
-    Exception
-        If buffered reader failes.
+    e
+        Exception, if buffered reader failes.
     """
 
     # Test parameter types not covered by beartype
@@ -750,8 +750,8 @@ def _writer(read_queue: Any,
 
     Raises
     ------
-    Exception
-        If buffered reader failes.
+    e
+        Exception, if buffered reader failes.
     """
 
     # Check parameter that are not covered by beartype
@@ -965,6 +965,8 @@ def create_fragment_file(bam: str,
         If both barcode_tag and barcode_regex (or neither) are set.
     FileNotFoundError
         If the input bam file does not exist.
+    e
+        Exception, on unkown error while sorting .bam
     """
 
     utils.checker.check_module("pysam")

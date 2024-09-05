@@ -436,8 +436,8 @@ def _gtf_integrity(gtf: str) -> bool:
 
     Raises
     ------
-    argparse.ArgumentTypeError
-        If the file is not in gtf-format.
+    argparse
+        .ArgumentTypeError, If the file is not in gtf-format.
     """
 
     regex_header = '#+.*'
