@@ -227,7 +227,6 @@ def _binarize_expression(adata: sc.AnnData,
     if threshold is not None and percentile_threshold is not None:
         raise ValueError("The usage of 'threshold' excludes the usage of 'percentile_threshold' and vice versa. Set one or both of the parameters to None.")
 
-
     # Check if all features are present in the adata object
     missing_features = [feature for feature in features if feature not in adata.var_names]
     if missing_features:
