@@ -107,31 +107,6 @@ def test_add_gene_expression(adata):
         mg.add_gene_expression(adata=adata, gene="INVALID")
 
 
-def test_run_rank_genes(adata):
-    """Test ranking genes function."""
-
-    adata.uns["log1p"] = {"base": [1, 2, 3]}
-    mg.run_rank_genes(adata, groupby="samples", n_genes=10)
-    assert adata.uns["rank_genes_groups"]
-
-
-def test_run_rank_genes_fail(adata):
-    """Test if invalid input is caught."""
-
-    adata = adata.copy()
-    adata.obs["invalid_cat"] = "invalid"
-
-    with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
-        mg.run_rank_genes(adata, groupby="invalid_cat")
-
-
-def test_pairwise_rank_genes(adata):
-    """Test pairwise_rank_genes success."""
-    output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
-
-    assert isinstance(output, pd.DataFrame)
-
-
 def test_get_rank_genes_tables(adata):
     """Test if rank gene tables are created and saved to excel file."""
 
@@ -170,15 +145,14 @@ def test_mask_rank_genes(adata):
 
 
 @pytest.mark.parametrize("condition_col, error", [
-    ("not_present", "was not found in adata.obs.columns"),
-    ("condition-col", "not a valid column name within R"),
+    ("not_present", "are not found in adata.obs. Available columns are:"),
     ("condition", None)])
 def test_run_deseq2(adata, condition_col, error):
     """Test if deseq2 is run and returns a dataframe."""
 
     # test if error is raised
     if isinstance(error, str):
-        with pytest.raises(ValueError, match=error):
+        with pytest.raises(KeyError, match=error):
             mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
 
     else:  # should run without exceptions
@@ -208,3 +182,30 @@ def test_score_genes(adata_score, score_name, gene_set, inplace):
     else:
         assert score_name not in adata_score.obs.columns
         assert score_name in out.obs.columns
+
+
+@pytest.mark.parametrize("groupby", ["samples"])
+def test_run_rank_genes(adata, groupby):
+    """Test ranking genes function."""
+
+    adata.uns["log1p"] = {"base": [1, 2, 3]}
+    mg.run_rank_genes(adata, groupby=groupby, n_genes=10)
+    assert adata.uns[f"rank_genes_{groupby}"]
+    assert adata.uns[f"rank_genes_{groupby}_filtered"]
+
+
+def test_run_rank_genes_fail(adata):
+    """Test if invalid input is caught."""
+
+    adata = adata.copy()
+    adata.obs["invalid_cat"] = "invalid"
+
+    with pytest.raises(ValueError, match='groupby must contain at least two groups.'):
+        mg.run_rank_genes(adata, groupby="invalid_cat")
+
+
+def test_pairwise_rank_genes(adata):
+    """Test pairwise_rank_genes success."""
+    output = mg.pairwise_rank_genes(adata=adata, groupby="samples")
+
+    assert isinstance(output, pd.DataFrame)

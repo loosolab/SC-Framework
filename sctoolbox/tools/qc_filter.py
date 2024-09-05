@@ -137,10 +137,12 @@ def predict_cell_cycle(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1: If s_genes or g2m_genes is not None and not of type list.
         2: If no cellcycle genes available for the given species.
         3. If given species is not supported and s_genes or g2m_genes are not given.
+    FileNotFoundError
+        If the s_genes or g2m_genes file can not be found.
     """
 
     if not inplace:
@@ -718,7 +720,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If which is not set to 'obs' or 'var'
     """
 
@@ -1096,7 +1098,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1: If the keys in thresholds do not match with the columns in adata.<which>.
     """
     # get the table which contains the filter metrics
@@ -1412,7 +1414,6 @@ def denoise_data(adata: sc.AnnData,
     ------
     ValueError
         When feature_type is None and adata.var does not have column 'feature_types'.
-    ValueError
         When feature_type is None and features in adata.var['feature_types'] are not supported.
     RuntimeError
         Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.

@@ -176,7 +176,7 @@ def tfidf(anndata: sc.AnnData,
 
     Raises
     ------
-    AttributeError:
+    AttributeError
         log(TF*IDF) requires log(TF) and log(IDF) to be False.
 
     Returns
@@ -339,10 +339,10 @@ def batch_correction(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If batch_key column is not in adata.obs
         2. If batch correction method is invalid.
-    KeyError:
+    KeyError
         If PCA has not been calculated before running bbknn.
     """
 
@@ -479,7 +479,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError:
+    KeyError
         1. If obsm_key is not in adata.obsm.
         2. If batch_key is no column in adata.obs.
     """

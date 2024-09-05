@@ -48,7 +48,7 @@ def get_chromosome_genes(gtf: str,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If not all given chromosomes are found in the GTF-file.
     """
 
@@ -269,7 +269,7 @@ def add_gene_expression(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If gene is not in adata.var.index.
     """
 
@@ -318,7 +318,7 @@ def run_rank_genes(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If number of groups defined by the groupby parameter is < 2.
     """
 
@@ -333,8 +333,10 @@ def run_rank_genes(adata: sc.AnnData,
         raise ValueError("groupby must contain at least two groups.")
 
     # Catch ImplicitModificationWarning from scanpy
-    params = {'method': 't-test'}  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+    params = {'method': 't-test',  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+              'key_added': f'rank_genes_{groupby}'}  # set default key_added
     params.update(kwargs)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
         sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
@@ -342,11 +344,10 @@ def run_rank_genes(adata: sc.AnnData,
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
-                                   max_out_group_fraction=max_out_group_fraction)
-
-    # Copy rank_genes_groups to rank_genes_<groupby>
-    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+                                   max_out_group_fraction=max_out_group_fraction,
+                                   key=params["key_added"],
+                                   key_added=f"{params['key_added']}_filtered"
+                                   )
 
 
 @deco.log_anndata
@@ -407,7 +408,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 
         # Get table
         c1, c2 = contrast
-        table_dict = get_rank_genes_tables(adata_sub, n_genes=None, out_group_fractions=True)  # returns dict with each group
+        table_dict = get_rank_genes_tables(adata_sub, key=f"rank_genes_{groupby}", n_genes=None, out_group_fractions=True)  # returns dict with each group
         table = table_dict[c1]
 
         # Reorder columns
@@ -481,7 +482,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If not all columns given in var_columns are in adata.var.
         2. If key cannot be found in adata.uns.
     """
@@ -540,9 +541,9 @@ def get_rank_genes_tables(adata: sc.AnnData,
                 for compare_group in groups:
                     if compare_group != group:
                         s = (adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0).A1
-                        expressed = pd.DataFrame(s, index=adata.var.index)  # expression per gene for this group
+                        expressed = pd.DataFrame(s, index=adata.var.index, dtype="float64")  # expression per gene for this group
                         expressed.columns = [compare_group + "_fraction"]
-                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0
+                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0.0
 
                         group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
 
@@ -619,7 +620,7 @@ def mask_rank_genes(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If genes is not of type list.
     """
 
@@ -649,9 +650,11 @@ def run_deseq2(adata: sc.AnnData,
                condition_col: str,
                confounders: Optional[list[str]] = None,
                layer: Optional[str] = None,
-               percentile_range: Tuple[int, int] = (0, 100)) -> pd.DataFrame:
+               percentile_range: Tuple[int, int] = (0, 100),
+               min_count: int = 0,
+               threads: Optional[int] = None) -> pd.DataFrame:
     """
-    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
+    Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Parameters
     ----------
@@ -664,10 +667,14 @@ def run_deseq2(adata: sc.AnnData,
     confounders : Optional[list[str]], default None
         List of additional column names in adata.obs containing confounders to be included in the model.
     layer : Optional[str], default None
-        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
+        Name of layer containing raw counts to be used for pyDESeq2. Default is None (use .X for counts)
     percentile_range : Tuple[int, int], default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
+    min_count : int
+        The minimum count of peaks a feature should have to be used. Default is 0, which means all features are used.
+    threads : Optional[int]
+        The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
 
     Returns
     -------
@@ -675,45 +682,38 @@ def run_deseq2(adata: sc.AnnData,
         A dataframe containing the results of the DESeq2 analysis.
         Also adds the dataframe to adata.uns["deseq_result"]
 
-    Raises
-    ------
-    ValueError:
-        1. If any given column name is not found in adata.obs.
-        2. If any given column name contains characters not compatible with R.
-
     Notes
     -----
-    Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
+    Needs the package 'pydeseq2' to be installed.
+    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
 
     See Also
     --------
     sctoolbox.utils.bioutils.pseudobulk_table
     """
+    utils.checker.check_module("pydeseq2")
+    from pydeseq2.dds import DeseqDataSet
+    from pydeseq2.ds import DeseqStats
+    from pydeseq2.default_inference import DefaultInference
 
-    utils.general.setup_R()
-    from diffexpr.py_deseq import py_DESeq2
+    if threads is None:
+        threads = settings.threads
 
-    # Setup the design formula
+    # Setup the design factors
     if confounders is None:
         confounders = []
     elif not isinstance(confounders, list):
         confounders = [confounders]
 
-    design_formula = "~ " + " + ".join(confounders + [condition_col])
+    design_factors = confounders + [condition_col]
 
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
-    for col in cols:
-        if col not in adata.obs.columns:
-            raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
+    utils.checker.check_columns(adata.obs, cols, name="adata.obs", error=True)
 
-        # Check that column is valid for R
-        pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
-        if not re.match(pattern, col):
-            s = f"Column '{col}' is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: "
-            s += "'A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.'"
-            raise ValueError(s)
+    # filter features
+    layer_data = adata.layers[layer] if layer is not None else adata.X
+    adata = adata[:, layer_data.sum(axis=0) >= min_count]
 
     # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
@@ -721,51 +721,49 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.sort_index(inplace=True)
 
     conditions = sample_df[condition_col].unique()
-    samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
 
     # Build count matrix
-    print("Building count matrix")
+    logger.debug("Building count matrix")
     count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
                                                   percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
-    count_table.index.name = "gene"
-    count_table.reset_index(inplace=True)
+
+    # running sanity checks
+    for col in sample_df.index:
+        # no negative values
+        if np.any(count_table[col] < 0):
+            logger.warn(f"Warning: negative value in count_table for column '{col}'")
+
+    count_table = count_table.transpose()
 
     # Run DEseq2
     print("Running DESeq2")
-    dds = py_DESeq2(count_matrix=count_table,
-                    design_matrix=sample_df,
-                    design_formula=design_formula,
-                    gene_column='gene')
-    dds.run_deseq()
-
-    # Normalizing counts
-    dds.normalized_count()
-    dds.normalized_count_df.drop(columns="gene", inplace=True)
-    dds.normalized_count_df.columns = dds.samplenames
+    dds = DeseqDataSet(counts=count_table, metadata=sample_df, design_factors=design_factors, n_cpus=threads)
+    dds.deseq2()
 
     # Create result table with mean values per condition
-    deseq_table = pd.DataFrame(index=dds.normalized_count_df.index)
+    deseq_table = pd.DataFrame(index=dds.var.index)
 
     for i, condition in enumerate(conditions):
-        samples = samples_per_cond[condition]
-        mean_values = dds.normalized_count_df[samples].mean(axis=1)
+        mean_values = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :].mean(axis=0)
         deseq_table.insert(i, condition + "_mean", mean_values)
 
     # Get results per contrast
     contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
-
-        dds.get_deseq_result(contrast=[condition_col, C2, C1])
-        dds.deseq_result.drop(columns="gene", inplace=True)
+        logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
+        ds = DeseqStats(dds, contrast=[condition_col, C2, C1], inference=DefaultInference(n_cpus=threads))
+        ds.summary()
 
         # Rename and add to deseq_table
-        dds.deseq_result.drop(columns=["lfcSE", "stat"], inplace=True)
-        dds.deseq_result.columns = [C2 + "/" + C1 + "_" + col for col in dds.deseq_result.columns]
-        deseq_table = deseq_table.merge(dds.deseq_result, left_index=True, right_index=True)
+        df = ds.results_df
+        df.drop(columns=["lfcSE", "stat"], inplace=True)
+        df.columns = [C2 + "/" + C1 + "_" + col for col in df.columns]
+        deseq_table = deseq_table.merge(df, left_index=True, right_index=True)
 
     # Add normalized individual sample counts to the back of table
-    deseq_table = deseq_table.merge(dds.normalized_count_df, left_index=True, right_index=True)
+    normalized_counts = pd.DataFrame(dds.layers["normed_counts"], index=dds.obs.index, columns=dds.var.index).transpose()
+    deseq_table = deseq_table.merge(normalized_counts, left_index=True, right_index=True)
 
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
@@ -808,7 +806,7 @@ def score_genes(adata: sc.AnnData,
 
     Raises
     ------
-    FileNotFoundError:
+    FileNotFoundError
         If path given in gene_set does not lead to a file.
     """
 

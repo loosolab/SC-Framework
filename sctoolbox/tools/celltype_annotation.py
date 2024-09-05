@@ -271,11 +271,11 @@ def run_scsa(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError:
+    KeyError
         1. If key is not in adata.uns.
         2. If 'params' is not in adata.uns[key] or if 'groupby' is not in adata.uns[key]['params'].
         3. If gene column is not in adata.var
-    ValueError:
+    ValueError
         1. If species parameter is not Human, Mouse or None.
         2. If no species and no user database is provided.
         3. If SCSA run failes
