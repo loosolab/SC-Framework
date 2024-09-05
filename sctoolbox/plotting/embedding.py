@@ -1932,7 +1932,7 @@ def plot_pca_variance(adata: sc.AnnData,
     else:
         # Finalize plot
         axs[0].set_xlabel('Principal components', fontsize=12, labelpad=10)
-        axs[0].set_xticks(axs[1].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
+        axs[0].set_xticks(axs[0].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=90, size=7)
         axs[0].set_axisbelow(True)
         axs[0].margins(x=0.01)  # space before first and after last bar
