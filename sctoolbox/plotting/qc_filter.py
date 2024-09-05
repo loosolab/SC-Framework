@@ -8,8 +8,9 @@ import traitlets
 import functools  # for partial functions
 import glob
 import scanpy as sc
-import upsetplot
+import warnings
 
+import upsetplot
 import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
@@ -1067,8 +1068,12 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     # set the combinations as index
     combinations_df.set_index(list(selection.columns), inplace=True)
 
-    # plot the UpSet Plot
-    plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
+    with warnings.catch_warnings():  # TODO remove when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+        warnings.filterwarnings("ignore", message="A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.")
+
+        # plot the UpSet Plot
+        plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
+
     plot_result["intersections"].set_ylabel("Cells Filtered")
     plt.show()
 
