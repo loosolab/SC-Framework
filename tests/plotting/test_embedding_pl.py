@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 from beartype.roar import BeartypeCallHintParamViolation
@@ -101,6 +102,24 @@ def test_invalid_flip_embedding(adata):
         pl.flip_embedding(adata, key="invalid")
 
 
+@pytest.mark.parametrize("color, label", [
+    ("clustering", "clust_label"),  # categorical -> has legend
+    ("qc_float", "label")  # sequential -> no legend (colorbar instead)
+])
+def test_add_legend_ax(adata, color, label):
+    """Test _add_legend_ax."""
+    _, ax = plt.subplots()
+
+    assert len(ax.figure.axes) == 1
+
+    sc.pl.embedding(adata, basis="X_umap", color=color, colorbar_loc=None, ax=ax, show=False)
+    if pl._add_legend_ax(ax, ax_label=label):
+        assert len(ax.figure.axes) == 2
+        assert ax.figure.axes[-1].get_label() == label
+    else:
+        assert len(ax.figure.axes) == 1
+
+
 @pytest.mark.parametrize("kwargs", [{"show_title": True, "show_contour": True, "components": "1,2"},
                                     {"show_title": False, "show_contour": False, "components": ["1,2", "2,3"]}])
 @pytest.mark.parametrize("style", ["dots", "density", "hexbin"])
@@ -138,6 +157,39 @@ def test_embedding_error(adata):
     """Test that embedding raises error for invalid input."""
     with pytest.raises(ValueError):
         pl.plot_embedding(adata, components="3,4")
+
+
+@pytest.mark.parametrize("top_n, x, style", [(None, True, "dots"), (3, None, "hexbin")])
+def test_feature_per_group(adata, x, top_n, style):
+    """Test the feature_per_group plot."""
+    if x:
+        x = adata.var.index[:3].tolist()
+
+    axs = pl.feature_per_group(adata=adata,
+                               y="clustering",
+                               x=x,
+                               top_n=top_n,
+                               style=style)
+
+    # Assert type of output
+    assert isinstance(axs.flatten()[0], matplotlib.axes.Axes)
+
+
+@pytest.mark.parametrize("top_n, x, y", [
+    (None, None, "clustering"),  # neither top_n nor x set
+    (3, True, "clustering"),  # both top_n and x set
+    (3, None, "cat")  # y and top_n ranks don't match
+])
+def test_feature_per_group_fail(adata, top_n, x, y):
+    """Test the feature_per_group errors."""
+    if x:
+        x = adata.var.index[:3].tolist()
+
+    with pytest.raises(ValueError):
+        _ = pl.feature_per_group(adata=adata,
+                                 y=y,
+                                 x=x,
+                                 top_n=top_n)
 
 
 def test_search_umap_parameters(adata):

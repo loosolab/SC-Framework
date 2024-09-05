@@ -77,7 +77,7 @@ def download_db(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1: If ligand_column is not in database.
         2: If receptor_column is not in database.
         3: If db_path is neither a file nor a LIANA resource.
@@ -159,10 +159,10 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1: If receptor-ligand database cannot be found.
         2: Id database genes do not match adata genes.
-    Exception:
+    Exception
         If not interactions were found.
     """
 
@@ -410,7 +410,7 @@ def hairball(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If restrict_to contains invalid clusters.
     """
 
@@ -1050,7 +1050,7 @@ def connectionPlot(adata: sc.AnnData,
 
     Raises
     ------
-    Exception:
+    Exception
         If no onteractions between clsuters are found.
     """
 
