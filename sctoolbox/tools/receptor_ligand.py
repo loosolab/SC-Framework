@@ -349,8 +349,8 @@ def interaction_violin_plot(adata: sc.AnnData,
             logging.getLogger("matplotlib").setLevel('WARNING')
 
             plot = sns.violinplot(x=cluster_interactions["Cluster"],
-                                y=cluster_interactions["interaction_score"],
-                                ax=flat_axs[i])
+                                  y=cluster_interactions["interaction_score"],
+                                  ax=flat_axs[i])
         finally:
             logging.getLogger("matplotlib").setLevel(former_level)
 
