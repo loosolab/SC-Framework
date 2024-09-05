@@ -21,6 +21,7 @@ Changes to notebooks
 - RNA: 04_clustering: Docu revision of the RNA Clustering notebook (#300)
 - General: annotation: Revise annotation notebook (#269)
 - RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
+- ATAC: 01_assembling_anndata: Move ATAC metric to notebook 2
 - RNA: 03_normalization_batch_correction revise docu and description (#298)
 
 0.9.0 (02-08-24)
