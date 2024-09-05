@@ -12,7 +12,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # bbknn requires sk-learn <= 1.2, anndata>=10.9 requires mudata>=0.3.1
-                  "velocity": ['scvelo'],
+                  "velocity": ['scvelo>=0.3.1'],
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
                   "deseq2": ["pydeseq2>=0.4.11"],
