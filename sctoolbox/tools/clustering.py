@@ -50,15 +50,15 @@ def recluster(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError:
+    KeyError
         If the given embeding is not in the data.
         1. If the given embedding is not in the data.
         2. If given column is not found in adata.obs
-    ValueError:
+    ValueError
         If a given cluster is not found in the adata.
 
-    Example
-    ------
+    Examples
+    --------
     .. plot::
         :context: close-figs
 

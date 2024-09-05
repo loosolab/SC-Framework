@@ -84,7 +84,7 @@ def lsi(data: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If highly variable genes are used and not found in adata.var['highly_variable'].
 
     Notes
@@ -215,7 +215,7 @@ def define_PC(anndata: sc.AnnData) -> int:
 
     Raises
     ------
-    ValueError:
+    ValueError
         If PCA is not found in anndata.
     """
 
@@ -271,7 +271,7 @@ def propose_pcs(anndata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If PCA is not found in anndata.
     """
 

@@ -1,4 +1,6 @@
 0.10.0 (in progress)
+--------------------
+- deseq2 (R) -> pydeseq2 (python)
 - add MAD filtering as alternative to gaussian-mixture model (#261)
 - enhance gene labelling (#38)
 - replace deprecated ratelimiter with throttle (#288)
@@ -11,6 +13,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- expand marker_genes notebook for atac & move to general_notebooks
 - add option to choose filter method in rna/qc notebook
 - add alternative to interactive thresholds (#38)
 - use sctoolbox.plotting.embedding.plot_embedding (#279)
@@ -21,6 +24,7 @@ Changes to notebooks
 - RNA: 04_clustering: Docu revision of the RNA Clustering notebook (#300)
 - General: annotation: Revise annotation notebook (#269)
 - RNA: 02_QC: Docu revision of the RNA QC notebook (#296)
+- ATAC: 01_assembling_anndata: Move ATAC metric to notebook 2
 - RNA: 03_normalization_batch_correction revise docu and description (#298)
 
 0.9.0 (02-08-24)
@@ -45,6 +49,7 @@ Changes to notebooks
 - label_genes now accepts custom genelists (#38)
 - Add inplace parameter to tfidf function (#277)
 - Update plot_group_embeddings() to also take numerical values, e.g. density
+- expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^

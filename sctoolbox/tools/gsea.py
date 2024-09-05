@@ -74,9 +74,9 @@ def gene_set_enrichment(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError:
+    KeyError
         If marker_key not in adata.uns
-    ValueError:
+    ValueError
         If result dictinary is empty
     """
     if marker_key in adata.uns:
