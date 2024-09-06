@@ -21,7 +21,8 @@ RUN apt-get install --assume-yes gfortran
 # Install missing libraries
 RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
-    apt-get install -y git
+    apt-get install -y git && \
+    apt-get install cmake libgmp-dev libglpk-dev libarpack2-dev libopenblas-dev git ninja bison flex
 
 # update mamba
 RUN mamba update -n base mamba && \
