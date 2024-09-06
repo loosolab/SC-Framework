@@ -26,7 +26,7 @@ ENV TZ=Etc/UTC
 RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
     apt-get install -y git && \
-    apt-get install -y cmake 
+    apt-get install -y 'cmake>=3.18'
 
 # update mamba
 RUN mamba update -n base mamba && \
