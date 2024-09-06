@@ -26,7 +26,8 @@ ENV TZ=Etc/UTC
 RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
     apt-get install -y git && \
-    apt-get install -y cmake build-essential
+    pip install --upgrade pip && \
+    pip install 'cmake>=3.18'
 
 # update mamba
 RUN mamba update -n base mamba && \
@@ -34,7 +35,7 @@ RUN mamba update -n base mamba && \
 
 # install enviroment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
-    pip install --upgrade pip && \
+    
     mamba install rust
 
 # install sctoolbox
