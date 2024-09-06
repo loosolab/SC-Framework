@@ -9,6 +9,7 @@ import scanpy as sc
 from gseapy import enrichment_map
 import networkx as nx
 import numpy as np
+import warnings
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal, Tuple
@@ -184,11 +185,15 @@ def gsea_network(enr_res: pd.DataFrame,
     """
     check_columns(enr_res, columns=[score_col, clust_col, sig_col])
 
-    # Get cluster with enrichted pathways after filtering
-    nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
-    min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
-    node_count = nodes.Cluster.value_counts()
-    valid_cluster = list(node_count[node_count > 1].index)
+    with warnings.catch_warnings():
+        # hide future warnings until gseapy fixes them
+        warnings.filterwarnings(action='ignore', message=".*Series.replace.*|.*chained assignment.*")
+
+        # Get cluster with enrichted pathways after filtering
+        nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
+        min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
+        node_count = nodes.Cluster.value_counts()
+        valid_cluster = list(node_count[node_count > 1].index)
 
     if len(valid_cluster) == 0:
         raise ValueError("No cluster with enrichted pathways found.")
@@ -209,8 +214,12 @@ def gsea_network(enr_res: pd.DataFrame,
         # Create cluster subset
         tmp = enr_res[enr_res[clust_col] == cluster]
 
-        # Calculate enrichment map
-        nodes, edges = enrichment_map(tmp, column=sig_col, cutoff=cutoff)
+        with warnings.catch_warnings():
+            # hide future warnings until gseapy fixes them
+            warnings.filterwarnings(action='ignore', message=".*Series.replace.*|.*chained assignment.*")
+
+            # Calculate enrichment map
+            nodes, edges = enrichment_map(tmp, column=sig_col, cutoff=cutoff)
 
         # build graph
         G = nx.from_pandas_edgelist(edges,
