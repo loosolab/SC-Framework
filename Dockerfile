@@ -26,6 +26,7 @@ ENV TZ=Etc/UTC
 RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
     apt-get install -y git && \
+    apt-get install -y build-essential && \ 
     pip install --upgrade pip && \
     pip install 'cmake>=3.18'
 
