@@ -29,7 +29,8 @@ RUN mamba update -n base mamba && \
 
 # install enviroment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
-    pip install --upgrade pip
+    pip install --upgrade pip && \
+    mamba install rust
 
 # install sctoolbox
 RUN pip install "/home/sc_framework/[all]" && \
