@@ -35,7 +35,6 @@ RUN mamba update -n base mamba && \
 
 # install enviroment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
-    
     mamba install rust
 
 # install sctoolbox
