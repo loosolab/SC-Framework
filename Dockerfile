@@ -25,10 +25,11 @@ RUN apt-get install bedtools && \
 
 # update mamba
 RUN mamba update -n base mamba && \
-    mamba --version
+    mamba --version 
 
 # install enviroment
-RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
+RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
+    pip install --upgrade pip
 
 # install sctoolbox
 RUN pip install "/home/sc_framework/[all]" && \
