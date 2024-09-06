@@ -15,8 +15,8 @@ dependencies:
   - pybedtools
   - ipykernel # needed to register environment as jupyter kernel
   - pybedtools
-  - scvelo>=0.3.2 # highly decreases installation runtime of sc_framework
   - pip  # for installing additional packages
   - pip:
     - scanpro>=0.3.1  # scnapro < 0.3.1 needs statannotations which causes versioning issues
     - git+https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+    - git+https://github.com/theislab/scvelo.git # highly decreases installation runtime of sc_framework
