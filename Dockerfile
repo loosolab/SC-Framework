@@ -18,6 +18,10 @@ RUN apt-get update --assume-yes && \
 # install Fortran compiler 
 RUN apt-get install --assume-yes gfortran
 
+# Set timezone for tzdata
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
 # Install missing libraries
 RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
