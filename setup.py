@@ -11,8 +11,8 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks>=3.8', 'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # bbknn requires sk-learn <= 1.2, anndata>=10.9 requires mudata>=0.3.1
-                  "velocity": ['scvelo>=0.3.2'],
+                  "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
+                  "velocity": ['scvelo'],
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
                   "deseq2": ["pydeseq2>=0.4.11"],
@@ -64,7 +64,7 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3.9, <3.12',  # dict type hints as we use it require python 3.9; temporarilly pin python to version <3.12 until scvelo/skilearn support it
+    python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
         'pysam',
         'matplotlib<3.9.0',
