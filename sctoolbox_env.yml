@@ -6,7 +6,6 @@ dependencies:
   - r-base
   - r-seurat
   - bioconductor-singlecellexperiment
-  - bioconductor-deseq2
   - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
   - scanpy>=1.10.2
   - python-annoy
@@ -15,7 +14,6 @@ dependencies:
   - pybedtools
   - ipykernel # needed to register environment as jupyter kernel
   - pybedtools
-  - scvelo>=0.3.1 # highly decreases installation runtime of sc_framework
   - lightning>=2.0,<2.2 # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/303
   - setuptools_scm==8.0.4 # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
   - pip>=24.2 # for installing additional packages
