@@ -762,7 +762,8 @@ def run_deseq2(adata: sc.AnnData,
         deseq_table = deseq_table.merge(df, left_index=True, right_index=True)
 
     # Add normalized individual sample counts to the back of table
-    normalized_counts = pd.DataFrame(dds.layers["normed_counts"], index=dds.obs.index, columns=dds.var.index).transpose()
+    # convert .obs.index to list to avoid KeyError
+    normalized_counts = pd.DataFrame(dds.layers["normed_counts"], index=list(dds.obs.index), columns=dds.var.index).transpose()
     deseq_table = deseq_table.merge(normalized_counts, left_index=True, right_index=True)
 
     # Sort by p-value of first contrast
