@@ -11,8 +11,8 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks>=3.8', 'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn<=1.2.2', 'igraph', 'pycirclize', 'liana'],  # bbknn requires sk-learn <= 1.2
-                  "velocity": ['scvelo'],
+                  "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
+                  "velocity": ['scvelo @ git+https://github.com/theislab/scvelo.git'],
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
                   "deseq2": ["pydeseq2>=0.4.11"],

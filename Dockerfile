@@ -18,23 +18,31 @@ RUN apt-get update --assume-yes && \
 # install Fortran compiler 
 RUN apt-get install --assume-yes gfortran
 
+# Set timezone for tzdata
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
 # Install missing libraries
 RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
-    apt-get install -y git
+    apt-get install -y git && \
+    apt-get install -y build-essential && \ 
+    pip install --upgrade pip && \
+    pip install 'cmake>=3.18'
 
 # update mamba
 RUN mamba update -n base mamba && \
-    mamba --version
+    mamba --version 
 
 # install enviroment
-RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
+RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
+    mamba install rust
 
 # install sctoolbox
 RUN pip install "/home/sc_framework/[all]" && \
     pip install pytest && \
-    pip install pytest-cov && \
     pip install pytest-html && \
+    pip install pytest-cov && \
     pip install pytest-mock
 
 # Generate an ssh key
