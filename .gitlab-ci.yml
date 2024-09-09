@@ -339,7 +339,7 @@ notebooks:
     - apt-get update
     - apt-get -y install libsasl2-dev python-dev-is-python3 libldap2-dev libssl-dev
     - pip install python-ldap pyOpenSSL
-    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git@updata_mamplan_creator # set to branch until this is merged to master
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
     - python -m ipykernel install --user --name sctoolbox
     - cp -t ./rna_analysis/notebooks/ ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb # ./general_notebooks/pseudotime_analysis.ipynb
