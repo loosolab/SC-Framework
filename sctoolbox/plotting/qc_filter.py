@@ -8,8 +8,9 @@ import traitlets
 import functools  # for partial functions
 import glob
 import scanpy as sc
-import upsetplot
+import warnings
 
+import upsetplot
 import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
@@ -321,7 +322,7 @@ def n_cells_barplot(adata: sc.AnnData,
     # Get cell counts for groups or all
     tables = []
     if groupby is not None:
-        for i, frame in adata.obs.groupby(groupby):
+        for i, frame in adata.obs.groupby(groupby, observed=False):
             count = frame.value_counts(x).to_frame(name="count").reset_index()
             count["groupby"] = i
             tables.append(count)
@@ -677,7 +678,6 @@ def quality_violin(adata: sc.AnnData,
     ------
     ValueError
         If 'which' is not 'obs' or 'var' or if columns are not in table.
-
     """
 
     is_interactive = utils.checker._is_interactive()
@@ -766,7 +766,17 @@ def quality_violin(adata: sc.AnnData,
         slider_dict[column] = {}
 
         # Plot data from table
-        sns.violinplot(data=table, x=groupby, hue=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0, legend=False, **kwargs)
+        sns.violinplot(data=table,
+                       x=groupby,
+                       hue=groupby,
+                       y=column,
+                       ax=ax,
+                       order=groups,
+                       palette=color_list if len(color_list) > 1 else None,  # fixes palette without hue warning
+                       color=color_list[0] if len(color_list) == 1 else None,  # ^
+                       cut=0,
+                       legend=False,
+                       **kwargs)
         ax.set_xticks(ax.get_xticks())  # get rid of userwarning https://stackoverflow.com/a/68794383/19870975
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
@@ -1058,8 +1068,12 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     # set the combinations as index
     combinations_df.set_index(list(selection.columns), inplace=True)
 
-    # plot the UpSet Plot
-    plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
+    with warnings.catch_warnings():  # TODO remove when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+        warnings.filterwarnings("ignore", message="A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.")
+
+        # plot the UpSet Plot
+        plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
+
     plot_result["intersections"].set_ylabel("Cells Filtered")
     plt.show()
 

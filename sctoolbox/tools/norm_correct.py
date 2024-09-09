@@ -125,7 +125,7 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         logger.info('Performing total normalization and PCA...')
         sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
         sc.pp.log1p(adata)
-        sc.pp.pca(adata, use_highly_variable=use_highly_variable)
+        sc.pp.pca(adata, mask_var="highly_variable" if use_highly_variable else None)
 
     elif method == "tfidf":
         logger.info('Performing TFIDF and LSI...')

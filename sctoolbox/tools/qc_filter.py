@@ -469,7 +469,7 @@ def predict_sex(adata: sc.AnnData,
     # Estimate which samples are male/female
     logger.info("Estimating male/female per group")
     assignment = {}
-    for group, table in adata_copy.obs.groupby(groupby):
+    for group, table in adata_copy.obs.groupby(groupby, observed=False):
         n_cells = len(table)
         n_expr = sum(table["gene_expr"] > 0)
         frac = n_expr / n_cells
@@ -501,6 +501,7 @@ def predict_sex(adata: sc.AnnData,
 
         # Plot violins per group + color for female cells
         sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups, **kwargs)
+        axarr[1].set_xticks(axarr[1].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axarr[1].set_xticklabels(groups, rotation=45, ha="right")
         axarr[1].set_ylabel("")
         xlim = axarr[1].get_xlim()

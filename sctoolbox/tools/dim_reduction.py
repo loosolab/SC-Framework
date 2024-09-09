@@ -24,7 +24,7 @@ logger = settings.logger
 @deco.log_anndata
 @beartype
 def compute_PCA(anndata: sc.AnnData,
-                use_highly_variable: bool = True,
+                mask_var: Optional[str | List] = "highly_variable",
                 inplace: bool = False,
                 **kwargs: Any) -> Optional[sc.AnnData]:
     """
@@ -34,8 +34,8 @@ def compute_PCA(anndata: sc.AnnData,
     ----------
     anndata : sc.AnnData
         Anndata object to add the PCA to.
-    use_highly_variable : bool, default True
-        If true, use highly variable genes to compute PCA.
+    mask_var : Optional[str], default 'highly_variable'
+        To run only on a certain set of genes given by a boolean array or a string referring to an array in var. By default, uses .var['highly_variable'] if available, else everything.
     inplace : bool, default False
         Whether the anndata object is modified inplace.
     **kwargs : Any
@@ -51,7 +51,7 @@ def compute_PCA(anndata: sc.AnnData,
 
     # Computing PCA
     logger.info("Computing PCA")
-    sc.pp.pca(adata_m, use_highly_variable=use_highly_variable, **kwargs)
+    sc.pp.pca(adata_m, mask_var=mask_var, **kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
     # cr.build_infor(adata_m, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable), inplace=True)
