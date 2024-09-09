@@ -41,8 +41,8 @@ RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
 # install sctoolbox
 RUN pip install "/home/sc_framework/[all]" && \
     pip install pytest && \
-    pip install pytest-cov && \
     pip install pytest-html && \
+    pip install pytest-cov && \
     pip install pytest-mock
 
 # Generate an ssh key
