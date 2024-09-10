@@ -12,6 +12,7 @@
 - native scrublet bugfix (#297)
 - fix planet_plot import
 - reduce warnings (#299)
+- fixed env issue
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
