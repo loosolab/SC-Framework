@@ -1,4 +1,4 @@
-0.10.0 (in progress)
+0.10.0 (10-09-24)
 --------------------
 - deseq2 (R) -> pydeseq2 (python)
 - add MAD filtering as alternative to gaussian-mixture model (#261)
