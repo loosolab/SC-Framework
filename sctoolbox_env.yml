@@ -10,12 +10,14 @@ dependencies:
   - scanpy>=1.10.2
   - python-annoy
   - notebook==6.5.2
-  - bioconductor-deseq2
   - rpy2
   - pybedtools
   - ipykernel # needed to register environment as jupyter kernel
   - pybedtools
-  - scvelo>=0.3.1 # highly decreases installation runtime of sc_framework
-  - pip  # for installing additional packages
+  - lightning>=2.0,<2.2 # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/303
+  - setuptools_scm==8.0.4 # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
+  - pip>=24.2 # for installing additional packages
   - pip:
     - scanpro>=0.3.1  # scnapro < 0.3.1 needs statannotations which causes versioning issues
+    - git+https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+    - git+https://github.com/theislab/scvelo.git # highly decreases installation runtime of sc_framework

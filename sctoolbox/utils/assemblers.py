@@ -57,6 +57,8 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
     Raises
     ------
+    ValueError
+        If coordinate columns is a list that has not length 3.
     KeyError
         If coordinate columns are not found in adata.var.
     """
@@ -232,6 +234,8 @@ def from_quant(path: str,
     ------
     ValueError
         If `use_samples` contains not existing names.
+    FileNotFoundError
+        If the path to the quant folder does not exist.
     """
 
     # Test that quant folder exists
@@ -410,7 +414,7 @@ def from_mtx(path: str,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If mtx files are not found.
         2. If multiple barcode or variable files were found for one mtx file.
         3. If the barcode file is missing for mtx file.
@@ -542,6 +546,9 @@ def convertToAdata(file: str,
         if (class(object) == "try-error") {
             stop("Unknown file. Expected '.robj' or '.rds' got", file)
         }
+
+        # update/validate SeuratObject to match newer versions
+        object = UpdateSeuratObject(object)
 
         # ----- convert to SingleCellExperiment ----- #
         # can only convert Seurat -> SingleCellExperiment -> anndata

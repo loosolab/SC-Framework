@@ -246,23 +246,23 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
 
     # get the count from the adata
     df_counts = sc.get.obs_df(adata, [x_col, y_col])
-    df_counts = df_counts.groupby([x_col, y_col]).size().reset_index(name='total_count')
+    df_counts = df_counts.groupby([x_col, y_col], observed=False).size().reset_index(name='total_count')
 
     # get the count of the obs exceeding the threshold per cluster for genes as well as other obs columns
     # here x is an entry in the groupby object corresponding to each (x_col, y_col) group. Now, for each x we have a dataframe containing the df_values entries corresponding to the group. Now, in this dataframe of x, for each column in the all_columns, we count the number of entries exceeding the given threshold for that column.
-    df_exceedance_counts = df_values.groupby([x_col, y_col]).apply(lambda x: pd.Series({all_columns[i]: _count_greater_than_threshold(x[all_columns[i]], all_thresholds[i]) for i in range(len(all_columns))})).reset_index()
+    df_exceedance_counts = df_values.groupby([x_col, y_col], observed=False).apply(lambda x: pd.Series({all_columns[i]: _count_greater_than_threshold(x[all_columns[i]], all_thresholds[i]) for i in range(len(all_columns))})).reset_index()
 
     # get aggregate values per cluster for genes as well as other obs columns
     if obs_aggregator_array is not None and len(obs_aggregator_array) != len(obs_columns):
         raise ValueError("obs_columns and obs_aggregator_array should have the same lengths or obs_aggregator_array should not be passed")
     elif obs_aggregator_array is None:
         # use the layer_value_aggregator for obs
-        df_aggregate_values = df_values.groupby([x_col, y_col]).agg(layer_value_aggregator).reset_index()
+        df_aggregate_values = df_values.groupby([x_col, y_col], observed=False).agg(layer_value_aggregator).reset_index()
     else:
         # create an aggregator array with length len(genes)+len(obs_columns)
         full_aggregator_array = [*([layer_value_aggregator] * len(genes)), *obs_aggregator_array]
         # apply the individual given aggregator for each of the column in the all_columns array
-        df_aggregate_values = df_values.groupby([x_col, y_col]).agg({all_columns[i]: full_aggregator_array[i] for i in range(len(all_columns))}).reset_index()
+        df_aggregate_values = df_values.groupby([x_col, y_col], observed=False).agg({all_columns[i]: full_aggregator_array[i] for i in range(len(all_columns))}).reset_index()
 
     # merge the dataframes. Note that after merging, the 'genename_x' is the gene count , whereas 'genename_y' is the gene expression.
     plot_vars = pd.merge(df_counts, df_exceedance_counts, on=[x_col, y_col])

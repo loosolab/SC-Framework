@@ -80,7 +80,9 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     # Check that method is valid
     if method == "leiden":
-        cl_function = sc.tl.leiden
+        # set future defaults to omit warning
+        def cl_function(*args, **kwargs):
+            sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
     elif method == "louvain":
         cl_function = sc.tl.louvain
 
@@ -93,7 +95,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     ncols = min(ncols, len(resolutions))  # number of resolutions caps number of columns
     nrows = int(np.ceil(len(resolutions) / ncols))
     fig, axarr = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
-    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr  # reshape 1-column array
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
 
     axes = axarr.flatten()

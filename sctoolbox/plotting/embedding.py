@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib.collections import PathCollection
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import plotly as po
 import plotly.graph_objects as go
 
@@ -139,6 +140,114 @@ def _add_contour(x: np.ndarray,
     ax.contour(X, Y, f, colors="black", linewidths=0.5)
 
 
+@beartype
+def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> Optional[matplotlib.axes.Axes]:
+    """
+    Create a dedicated ax-object and move the legend of the given ax to it.
+
+    Similar to how colorbars are handled.
+    Template: https://joseph-long.com/writing/colorbars/
+
+    Parameters
+    ----------
+    ax_obj : matplotlib.axes.Axes
+        The ax-object with the legend to move.
+    ax_label : str, default '<legend>'
+        The label of the legend-ax.
+
+    Returns
+    -------
+    Optional[matplotlib.axes.Axes]
+        Either the newly created legend-ax or None if there is no legend within the provided ax.
+    """
+    handles, labels = ax_obj.get_legend_handles_labels()
+
+    # exit if there is no suitable legend within the ax
+    if not handles or not labels:
+        return
+
+    # get current ax
+    last_axes = plt.gca()
+
+    # add a new ax taking 10% of ax_obj space
+    divider = make_axes_locatable(ax_obj)
+    lax = divider.append_axes("right", size="10%", pad=0)
+
+    lax.legend(
+        handles=handles,
+        labels=labels,
+        frameon=False,  # same parameters as scanpy.pl.embedding
+        loc="center left",
+        bbox_to_anchor=(-0.9, 0.5),
+        ncol=(1 if len(labels) <= 14 else 2 if len(labels) <= 30 else 3),
+        handletextpad=0
+    )
+
+    # add label for identification and disable axis-lines
+    lax.set_label(ax_label)
+    lax.set_axis_off()
+
+    # return to former ax
+    plt.sca(last_axes)
+
+    # remove former legend
+    ax_obj.get_legend().remove()
+
+    return lax
+
+
+@beartype
+def _binarize_expression(adata: sc.AnnData,
+                         features: list[str],
+                         threshold: Optional[float] = 0,
+                         percentile_threshold: Optional[float] = None):
+    """
+    Binarize the expression of a list of features based on a threshold and store the results in adata.obs.
+
+    The function updates adata.obs in-place with binary expression data for each feature.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix object.
+    features : list[str]
+        A list of feature names to be binarized.
+    threshold : Optional[float], default 0
+        The expression threshold for binarization. Only one of the threshold parameters may be given.
+    percentile_threshold : Optional[float]
+        The expression threshold as a percentile of the features expression. Only one of the threshold parameters may be given.
+
+    Raises
+    ------
+    ValueError
+        If the feature names cannot be found in adata.var_names.
+        If "threshold" and "percentile_threshold" are both set
+
+    """
+    if threshold is not None and percentile_threshold is not None:
+        raise ValueError("The usage of 'threshold' excludes the usage of 'percentile_threshold' and vice versa. Set one or both of the parameters to None.")
+
+    # Check if all features are present in the adata object
+    missing_features = [feature for feature in features if feature not in adata.var_names]
+    if missing_features:
+        raise ValueError(f"Features not found in adata.var_names: {', '.join(missing_features)}")
+
+    for feature in features:
+        feature_expr = adata[:, feature].X
+
+        if not isinstance(feature_expr, np.ndarray):
+            feature_expr = feature_expr.toarray()
+
+        feature_expr = feature_expr.flatten()
+
+        if percentile_threshold is not None:
+            threshold = np.percentile(feature_expr, percentile_threshold)
+
+        # Binarize the expression data
+        binary_expr = np.where(feature_expr > threshold, 'expressed', 'not expressed')
+        adata.obs[f'{feature}_status'] = pd.Categorical(binary_expr)
+
+
 @deco.log_anndata
 @beartype
 def plot_embedding(adata: sc.AnnData,
@@ -164,7 +273,7 @@ def plot_embedding(adata: sc.AnnData,
         Dimensionality reduction method to use. Must be a key in adata.obsm, or a method available as "X_<method>" such as "umap", "tsne" or "pca".
     color : Optional[str | list[str]], default None
         Key for annotation of observations/cells or variables/genes.
-    style : Literal["dots", "hexbin", "density".], default "dots"
+    style : Literal["dots", "hexbin", "density"], default "dots"
         Style of the plot. Must be one of "dots", "hexbin" or "density".
     show_borders : bool, default False
         Whether to show borders around embedding plot. If False, the borders are removed and a small legend is added to the plot.
@@ -268,6 +377,11 @@ def plot_embedding(adata: sc.AnnData,
 
     axarr = sc.pl.embedding(adata, **kwargs)
 
+    # add dedicated legend ax to make it uniform with colorbar
+    leg_ax = None
+    if "ax" in kwargs:
+        leg_ax = _add_legend_ax(axarr)
+
     # if only one axis is returned, convert to list
     if not isinstance(axarr, list):
         axarr = [axarr]
@@ -295,18 +409,24 @@ def plot_embedding(adata: sc.AnnData,
             ax.set_title("")
 
         # Set titles of legend / colorbar / plot
-        legend = ax.get_legend()
-        local_axes = ax.figure._localaxes  # list of all plot and colorbar axes in figure
+        legend = (leg_ax if leg_ax else ax).get_legend()
+        local_axes = (kwargs["ax"] if "ax" in kwargs else ax).figure.axes  # list of all plot and colorbar axes in figure
         has_colorbar = False
         if legend is not None:  # legend of categorical variables
             if not show_title:
                 legend.set_title(ax_color)
-        else:                   # legend of continuous variables
-            cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
-            cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
-            cbar_ax = local_axes[cbar_ax_idx]
-            if cbar_ax._label == "<colorbar>":
-                has_colorbar = True  # this ax has colorbar
+        else:  # legend of continuous variables (colorbar)
+            if "ax" in kwargs:
+                # assume that the colorbar is added at the end of the axis list
+                cbar_ax = local_axes[-1]
+            else:
+                # assume it is added directly after the plot axis
+                cbar_ax_idx = local_axes.index(ax) + 1  # colorbar is always right after plot
+                cbar_ax_idx = min(cbar_ax_idx, len(local_axes) - 1)  # ensure that idx is within bounds
+                cbar_ax = local_axes[cbar_ax_idx]
+
+            if cbar_ax.get_label() == "<colorbar>":
+                has_colorbar = True  # this ax has a colorbar
 
                 if not show_title:
                     cbar_ax.set_title(ax_color)
@@ -445,7 +565,21 @@ def plot_embedding(adata: sc.AnnData,
         if has_colorbar:
 
             cbar = cbar_ax._colorbar
-            plt.colorbar(cbar.mappable, ax=ax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+
+            # fix colorbar to same height as plot
+            # https://joseph-long.com/writing/colorbars/
+            if "ax" in kwargs:
+                last_axes = plt.gca()
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+
+                # TODO shrink not working
+                plt.colorbar(cbar.mappable, cax=cax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+
+                plt.sca(last_axes)  # return to correct ax
+            else:
+                plt.colorbar(cbar.mappable, ax=ax, pad=0.01, aspect=30 * shrink_colorbar, shrink=shrink_colorbar, fraction=0.08, anchor=(0.0, 0.0))  # need to plot again to gain control of aspect ratio
+
             new_cbar_ax = ax.figure.axes[-1]
 
             # Carry over title and ylabel
@@ -460,16 +594,148 @@ def plot_embedding(adata: sc.AnnData,
                 new_cbar_ax.set_yticks([yticks[0], yticks[-1]])
                 new_cbar_ax.set_yticklabels(["low", "high"])
 
-            # Move colorbar to the correct position in _localaxes
+            # Move colorbar to the correct position in local_axes
+            local_axes = ax.figure.axes  # update list
             cbar_idx = local_axes.index(cbar_ax)
-            new_cbar_idx = local_axes.index(new_cbar_ax)
             local_axes[cbar_idx] = new_cbar_ax
-            local_axes.pop(new_cbar_idx)  # remove original idx of new_cbar_ax
+            cbar_ax.remove()
 
     # Save figure
     _save_figure(save)
 
     return axarr
+
+
+@deco.log_anndata
+@beartype
+def feature_per_group(adata: sc.AnnData,
+                      y: str,
+                      x: Optional[Union[str, list[str]]] = None,
+                      top_n: Optional[int] = None,
+                      style: Literal["dots", "hexbin", "density"] = "hexbin",
+                      marker_key: Optional[str] = "rank_genes_groups",
+                      binarize_threshold: Optional[float] = None,
+                      binarize_percentile_threshold: Optional[float] = None,
+                      figsize: Optional[Tuple[int | float, int | float]] = None,
+                      save: Optional[str] = None,
+                      **kwargs) -> npt.ArrayLike:
+    """
+    Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
+
+    The first column shows the groups (one per row) given through (x -> adata.obs) and the following plots show the expression of the selected features (y or top_n).
+
+    Parameters
+    ----------
+    adata : scanpy.AnnData
+        AnnData used for plotting.
+    y : str
+        Column name of adata.obs. Column should contain categorical values (i.e. not numeric). If not will give a warning attempt to convert to categorical.
+    x : Optional[Union[str, list[str]]]
+        A list of features which will be displayed. Valid names are found in adata.var.index. "x" prohibits the usage of the "top_n" parameter.
+    top_n : Optional[int]
+        Use to display the top markers per group. "top_n" prohibits the usage of the "x" parameter.
+        Expects a precomputed feature ranking e.g. using :func:`scanpy.tl.rank_genes_groups`.
+    style : Literal["dots", "hexbin", "density"], default "dots"
+        The plotting style of the embedding. This selects the style of columns two onward (first column is always "dots").
+        If a binarize_* parameter is given, the style is fixed to "dots".
+        "dots": Plot each given cell.
+        "hexbin": Aggregate the cells into local hexagonal-shapes
+        "density": Aggregate the cells using a kernel density estimation.
+    marker_key : Optional[str], default 'rank_genes_groups'
+        In case of "top_n" use this key to access the ranking information.
+    binarize_threshold : Optional[float], default None
+        Binarize the expression values, given the threshold. Only one of the binarize_* parameters may be given.
+    binarize_percentile_threshold : Optional[float], default None
+        Binarize the expression values, given a percentile. The percentile of a features expression is used as a threshold. Only one of the binarize_* parameters may be given.
+    figsize : Optional[Tuple[int | float, int | float]], default None
+        Figure size. Default is (4.8 * number of columns, 3.8 * number of rows).
+    save : Optional[str], default None
+        Filename to save the figure.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
+
+    Raises
+    ------
+    ValueError
+        "top_n" and "x" are both set or neither is set
+        groups of "y" do not match with the "marker_key"
+
+    Returns
+    -------
+    axes : npt.ArrayLike
+        Array of axis objects
+    """
+    if x and top_n:
+        raise ValueError("The usage of 'top_n' excludes the usage of 'x' and vice versa. Set one of the parameters to None.")
+    elif not x and not top_n:
+        raise ValueError("Set either 'top_n' or 'x'.")
+
+    binarize = binarize_threshold is not None or binarize_percentile_threshold is not None
+
+    # check column type
+    if adata.obs[y].dtype.name != 'category':
+        warnings.warn(f"Expected adata.obs['{y}'] to be of type 'category' got '{adata.obs[y].dtype.name}'. This may lead to unexpected behavior convert the coulmn-type to 'category' to ensure proper results.")
+
+    # fetch the groups
+    grps = set(adata.obs[y])
+
+    if top_n:
+        # get the top n markers for each group
+        x = tools.marker_genes.get_rank_genes_tables(adata,
+                                                     key=marker_key,
+                                                     n_genes=top_n)
+
+        # prepare dict
+        x = {key: t["names"].tolist() for key, t in x.items()}
+
+        if grps != set(x.keys()):
+            raise ValueError(f"Groups found in adata.obs['{y}'] does not match to precomputed groups in adata.uns['{marker_key}']")
+
+        ncol = top_n + 1
+    else:
+        # prepare custom features for plotting
+        if not isinstance(x, list):
+            x = [x]
+
+        ncol = len(x) + 1
+
+        x = {g: x for g in grps}
+
+    if binarize:
+        adata = adata.copy()  # _binarize_expression will change the adata, we want to keep the original, but plot the changed.
+        features = list()
+        # collect all feature names and extend all names in x with _status
+        for grp in grps:
+            features += x[grp]
+            x[grp] = [f"{feat}_status" for feat in x[grp]]
+        _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold)
+
+    # create plot
+    fig, axs = plt.subplots(nrows=len(grps),
+                            ncols=ncol,
+                            figsize=figsize if figsize else (4.8 * ncol, 3.8 * len(grps)))
+
+    for i, grp in enumerate(grps):
+        for j, col in enumerate([y] + x[grp]):
+            if j == 0:
+                group_restriction = grp
+            elif binarize:
+                group_restriction = "expressed"
+            else:
+                group_restriction = None
+            plot_embedding(
+                adata=adata,
+                color=col,
+                style="dots" if j == 0 or binarize else style,
+                groups=group_restriction,
+                ax=axs[i][j],
+                **kwargs
+            )
+
+    # save figure
+    _save_figure(save)
+
+    return axs
 
 
 @deco.log_anndata
@@ -1046,7 +1312,7 @@ def plot_3D_UMAP(adata: sc.AnnData,
     fig = go.Figure()
 
     # Plot per group in obs
-    if color in adata.obs.columns and isinstance(adata.obs[color][0], str):
+    if color in adata.obs.columns and isinstance(adata.obs[color].iloc[0], str):
 
         df["category"] = adata.obs[color].values  # color should be interpreted as a categorical variable
         categories = df["category"].unique()
@@ -1523,6 +1789,8 @@ def plot_pca_variance(adata: sc.AnnData,
     ------
     KeyError
         If the given method is not found in adata.uns.
+    ValueError
+        If the 'ax' parameter is not an Axes object.
 
     Examples
     --------
@@ -1596,9 +1864,11 @@ def plot_pca_variance(adata: sc.AnnData,
     # Plot barplot of variance
     x = list(range(1, len(var_explained) + 1))
     sns.barplot(x=x,
+                hue=x,
                 y=var_explained,
                 color="grey",
                 palette=palette,
+                legend=False,
                 ax=axs[0])
 
     axs[0].set_ylabel("Variance explained (%)", fontsize=12)
@@ -1628,9 +1898,11 @@ def plot_pca_variance(adata: sc.AnnData,
             axs[1].axhline(corr_thresh, color="red")
 
         sns.barplot(x=x,
+                    hue=x,
                     y=abs_corrcoefs,
                     color="grey",
                     palette=palette,
+                    legend=False,
                     ax=axs[1])
 
         # add basis text box
@@ -1649,6 +1921,7 @@ def plot_pca_variance(adata: sc.AnnData,
         axs[1].set_xlabel('Principal components', fontsize=12, labelpad=10)
         axs[1].set_ylabel(f"max( |{corr_plot}| )", fontsize=12)
         axs[1].set_ylim([0, 1])
+        axs[1].set_xticks(axs[1].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=90, size=7)
         axs[1].set_axisbelow(True)
         axs[1].invert_yaxis()
@@ -1659,6 +1932,7 @@ def plot_pca_variance(adata: sc.AnnData,
     else:
         # Finalize plot
         axs[0].set_xlabel('Principal components', fontsize=12, labelpad=10)
+        axs[0].set_xticks(axs[0].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=90, size=7)
         axs[0].set_axisbelow(True)
         axs[0].margins(x=0.01)  # space before first and after last bar
@@ -1751,9 +2025,9 @@ def plot_pca_correlation(adata: sc.AnnData,
     # prepare annotation shown on the heatmap
     annot = table.copy()
 
-    annot = annot.applymap(lambda x: str(np.round(x, 2)))
+    annot = annot.map(lambda x: str(np.round(x, 2)))
     # add stars to significant values
-    stars = pvalues.applymap(lambda p: "*" if p < pvalue_threshold else "")
+    stars = pvalues.map(lambda p: "*" if p < pvalue_threshold else "")
     annot += stars
 
     # Plot heatmap

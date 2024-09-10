@@ -324,7 +324,7 @@ def _prepare_gtf(gtf: str,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1: If GTF-file could not be uncompressed. Whiel trying to sort the GTF-file.
         2: If one subprocess during the sorting step fails.
         3: If GTF-file could not be read. For example, due to an invalid format.

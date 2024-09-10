@@ -34,6 +34,8 @@ def check_module(module: str) -> None:
     ------
     ImportError
         If the module is not available for import.
+    Exception
+        If the module cannot be loaded due to an unknown exception.
     """
 
     error = 0
@@ -413,8 +415,6 @@ def var_index_to_column(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError
-        If `coordinate_columns` are not available.
     ValueError
         If regions are of incorrect format.
     """

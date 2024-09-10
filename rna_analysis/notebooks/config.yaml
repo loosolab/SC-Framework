@@ -27,22 +27,14 @@
 "0A":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
-  figure_dir: "../figures/0A_markers/"
-  table_dir: "../tables/0A_markers/"
+  figure_dir: "../figures/0A_receptor_ligand/"
+  table_dir: "../tables/0A_receptor_ligand/"
   log_file: "../logs/0A_log.txt"
   overwrite_log: True
 
 "0B":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
-  figure_dir: "../figures/0B_receptor_ligand/"
-  table_dir: "../tables/0B_receptor_ligand/"
-  log_file: "../logs/0B_log.txt"
-  overwrite_log: True
-
-"0C":
-  adata_input_dir: "../adatas/"
-  adata_output_dir: "../adatas/"
-  figure_dir: "../figures/0C_velocity_analysis/"
-  log_file: "../logs/0C_velocity_log.txt"
+  figure_dir: "../figures/0B_velocity_analysis/"
+  log_file: "../logs/0B_velocity_log.txt"
   overwrite_log: True

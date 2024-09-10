@@ -81,7 +81,7 @@ def add_insertsize(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If bam and fragments is given.
         2. If bam and fragments is not given.
         3. If no barcodes between bam- or fragment-file and adata overlap
@@ -158,7 +158,7 @@ def _insertsize_from_bam(bam: str,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. No reads found in bam-file.
         2. If no reads in bam-file overlap with barcodes.
     """

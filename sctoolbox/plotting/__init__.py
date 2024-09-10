@@ -12,7 +12,8 @@ __all__ = [
     "highly_variable",
     "marker_genes",
     "qc_filter",
-    "velocity"
+    "velocity",
+    "planet_plot"
 ]
 
 

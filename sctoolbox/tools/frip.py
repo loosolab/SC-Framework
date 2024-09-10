@@ -78,7 +78,7 @@ def calc_frip_scores(adata: sc.AnnData,
     logger.info("writing regions to bedfile")
     with open(regions_bed, "w") as out_file:
         for region in tqdm(adata.var.iterrows(), desc='extract adata.var regions'):
-            line = str(region[1][0]) + '\t' + str(region[1][1]) + '\t' + str(region[1][2]) + '\n'
+            line = str(region[1].iloc[0]) + '\t' + str(region[1].iloc[1]) + '\t' + str(region[1].iloc[2]) + '\n'
             out_file.write(line)
     out_file.close()
 
