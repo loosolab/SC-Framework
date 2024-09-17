@@ -529,7 +529,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
         for group in groups:
 
             # Fraction of cells inside group expressing each gene
-            s = (adata[adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0).A1  # sum of cells with expression > 0 for this cluster
+            s = np.ravel((adata[adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0))  # sum of cells with expression > 0 for this cluster
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_expr"]
 
@@ -540,7 +540,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             if out_group_fractions is True:
                 for compare_group in groups:
                     if compare_group != group:
-                        s = (adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0).A1
+                        s = np.ravel((adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0))
                         expressed = pd.DataFrame(s, index=adata.var.index, dtype="float64")  # expression per gene for this group
                         expressed.columns = [compare_group + "_fraction"]
                         expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0.0
@@ -549,7 +549,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
 
             # Fraction of cells outside group expressing each gene
             other_groups = [g for g in groups if g != group]
-            s = (adata[adata.obs[groupby].isin(other_groups), :].X > 0).sum(axis=0).A1
+            s = np.ravel((adata[adata.obs[groupby].isin(other_groups), :].X > 0).sum(axis=0))
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_out_expr"]
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
