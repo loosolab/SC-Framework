@@ -1,4 +1,4 @@
-0.10.1 (16-09-24)
+0.10.1 (17-09-24)
 - temp fix pycirclize KeyError (until this is done https://github.com/moshi4/pyCirclize/issues/75)
 - fix .A1 deprecated
 
