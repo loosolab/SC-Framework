@@ -3,6 +3,10 @@
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
 
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- fix RNA:02 zebrafish gender suggestion (#311)
+
 
 0.10.1 (17-09-24)
 -----------------
