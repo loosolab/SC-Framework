@@ -105,7 +105,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]) -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -113,7 +113,7 @@ def from_h5ad(h5ad_file: Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnD
 
     Parameters
     ----------
-    h5ad_file : Union[str, Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+    h5ad_file : Union[str, Collection[str], Mapping[str, str]]
         Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
         In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
 
