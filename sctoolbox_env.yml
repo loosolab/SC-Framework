@@ -16,6 +16,7 @@ dependencies:
   - pybedtools
   - lightning>=2.0,<2.2 # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/303
   - setuptools_scm==8.0.4 # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
+  - rust # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (gseapy, louvain)
   - pip>=24.2 # for installing additional packages
   - pip:
     - scanpro>=0.3.1  # scnapro < 0.3.1 needs statannotations which causes versioning issues

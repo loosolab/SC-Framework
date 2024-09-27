@@ -99,7 +99,8 @@ setup(
         'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
         'packaging',
         'throttler',
-        'upsetplot'
+        'upsetplot',
+        'cmake>=3.18'  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (gseapy, louvain)
     ],
     include_package_data=True,
     extras_require=extras_require
