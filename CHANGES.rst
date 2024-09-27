@@ -7,7 +7,6 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - fix RNA:02 zebrafish gender suggestion (#311)
 
-
 0.10.1 (17-09-24)
 -----------------
 - temp fix pycirclize KeyError (until this is done https://github.com/moshi4/pyCirclize/issues/75)
