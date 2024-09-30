@@ -66,7 +66,8 @@ setup(
     py_modules=modules,
     python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
-        'pysam',
+	'cmake>=3.18',  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (gseapy, louvain)
+	'pysam',
         'matplotlib<3.9.0',
         'matplotlib_venn',
         'scanpy>=1.10.2',  # 'colorbar_loc' not available before 1.9
@@ -99,8 +100,7 @@ setup(
         'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
         'packaging',
         'throttler',
-        'upsetplot',
-        'cmake>=3.18'  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (gseapy, louvain)
+        'upsetplot'
     ],
     include_package_data=True,
     extras_require=extras_require
