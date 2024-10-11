@@ -1,4 +1,9 @@
+0.11.0
+--------------------
+- fix pl.embedding.plot_pca_variance() does not select all PCs using 100% (#309)
+
 0.10.1 (17-09-24)
+--------------------
 - temp fix pycirclize KeyError (until this is done https://github.com/moshi4/pyCirclize/issues/75)
 - fix .A1 deprecated
 
