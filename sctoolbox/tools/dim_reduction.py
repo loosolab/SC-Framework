@@ -297,7 +297,7 @@ def propose_pcs(anndata: sc.AnnData,
             # compute percentile
             percentile = np.percentile(a=variance, q=100 - perc_thresh)
 
-            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var > percentile))
+            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var >= percentile))
 
     if "cumulative variance" in how:
         cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
@@ -312,7 +312,7 @@ def propose_pcs(anndata: sc.AnnData,
             # compute percentile
             percentile = np.percentile(a=cumulative, q=perc_thresh)
 
-            selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum < percentile))
+            selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum <= percentile))
 
     if "correlation" in how:
         # color by highest absolute correlation
