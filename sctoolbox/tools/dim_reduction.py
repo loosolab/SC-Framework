@@ -292,12 +292,13 @@ def propose_pcs(anndata: sc.AnnData,
 
         selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
 
+        # index to subset the PCs afterwards
+        subset_idx = np.array(list(selected_pcs[0].copy()))-1
+
     if "variance" in how:
         # check if selected_pcs hold some values
         if len(selected_pcs) > 0:
-            # the lines below exclude the already filtered PCs
             # subset PC names to the still available PCs
-            subset_idx = np.array(list(selected_pcs[0].copy())) - 1
             PC_names = PC_names[subset_idx]
             # subset the variances to the still availbale PCs
             variance = anndata.uns["pca"]["variance_ratio"][subset_idx]
@@ -319,7 +320,6 @@ def propose_pcs(anndata: sc.AnnData,
     if "cumulative variance" in how:
         # check if selected_pcs hold some values
         if len(selected_pcs) > 0:
-            # the lines below exclude the already filtered PCs
             # subset PC names to the still available PCs
             PC_names = PC_names[subset_idx]
             # subset the variances to the still availbale PCs
