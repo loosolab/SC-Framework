@@ -1,9 +1,15 @@
-0.11.0
+0.11.0 (in progress)
 --------------------
 - fix pl.embedding.plot_pca_variance() does not select all PCs using 100% (#309)
+- fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
+- fix gseapy, louvain install outside of the docker image (#310)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- fix RNA:02 zebrafish gender suggestion (#311)
 
 0.10.1 (17-09-24)
---------------------
+-----------------
 - temp fix pycirclize KeyError (until this is done https://github.com/moshi4/pyCirclize/issues/75)
 - fix .A1 deprecated
 
@@ -13,7 +19,7 @@ Changes to notebooks
 - annotation: fix marker repo clone cell
 
 0.10.0 (10-09-24)
---------------------
+-----------------
 - deseq2 (R) -> pydeseq2 (python)
 - add MAD filtering as alternative to gaussian-mixture model (#261)
 - enhance gene labelling (#38)
