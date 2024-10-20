@@ -293,7 +293,7 @@ def propose_pcs(anndata: sc.AnnData,
         selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
 
         # index to subset the PCs afterwards
-        subset_idx = np.array(list(selected_pcs[0].copy()))-1
+        subset_idx = np.array(list(selected_pcs[0].copy())) - 1
 
     if "variance" in how:
         # check if selected_pcs hold some values
