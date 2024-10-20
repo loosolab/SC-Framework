@@ -280,7 +280,7 @@ def propose_pcs(anndata: sc.AnnData,
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
 
     # setup PC names
-    PC_names = np.arange(1, len(anndata.uns["pca"]["variance_ratio"]) + 1, dtype=int)
+    all_PC_names = np.arange(1, len(anndata.uns["pca"]["variance_ratio"]) + 1, dtype=int)
 
     selected_pcs = []
 
@@ -290,7 +290,7 @@ def propose_pcs(anndata: sc.AnnData,
 
         abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
 
-        selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
+        selected_pcs.append(set(pc for pc, cc in zip(all_PC_names, abs_corrcoefs) if cc < corr_thresh))
 
     if "variance" in how:
         # check if selected_pcs hold some values
@@ -298,11 +298,12 @@ def propose_pcs(anndata: sc.AnnData,
             # index to subset the PCs afterwards
             subset_idx = np.array(list(selected_pcs[0].copy())) - 1
             # subset PC names to the still available PCs
-            PC_names = PC_names[subset_idx]
+            PC_names = all_PC_names[subset_idx]
             # subset the variances to the still availbale PCs
             variance = anndata.uns["pca"]["variance_ratio"][subset_idx]
         else:
             variance = anndata.uns["pca"]["variance_ratio"]
+            PC_names = all_PC_names
 
         if var_method == "knee":
             # compute knee
@@ -322,11 +323,12 @@ def propose_pcs(anndata: sc.AnnData,
             # index to subset the PCs afterwards
             subset_idx = np.array(list(selected_pcs[0].copy())) - 1
             # subset PC names to the still available PCs
-            PC_names = PC_names[subset_idx]
+            PC_names = all_PC_names[subset_idx]
             # subset the variances to the still availbale PCs
             cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"][subset_idx])
         else:
             cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
+            PC_names = all_PC_names
 
         if var_method == "knee":
             # compute knee
