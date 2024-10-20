@@ -82,9 +82,9 @@ def test_propose_pcs_succsess(adata_pca):
 
     # test percentile finding option
     assert [1, 3, 4, 5, 6] == std.propose_pcs(anndata=adata_pca,
-                                           how=["variance", "cumulative variance", "correlation"],
-                                           var_method="percent",
-                                           perc_thresh=10)
+                                              how=["variance", "cumulative variance", "correlation"],
+                                              var_method="percent",
+                                              perc_thresh=10)
 
 
 # -------------------------------- subset_pca --------------------------------
