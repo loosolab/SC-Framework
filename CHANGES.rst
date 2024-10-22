@@ -7,6 +7,7 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - fix RNA:02 zebrafish gender suggestion (#311)
+- prepare_for_cellxgene: Add auth parameter
 
 0.10.1 (17-09-24)
 -----------------
