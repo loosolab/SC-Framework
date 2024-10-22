@@ -975,7 +975,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
             # Set legend loc for last column
             if i == 0 and j == (len(loop_params[0]) - 1):
-                legend_loc = "left"
+                legend_loc = "center left"
             else:
                 legend_loc = "none"
 
