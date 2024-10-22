@@ -254,7 +254,7 @@ def propose_pcs(anndata: sc.AnnData,
     anndata: sc.AnnData
         Anndata object with PCA to get PCs from.
     how: List[Literal["variance", "cumulative variance", "correlation"]], default ["variance", "correlation"]
-        Values to use for PC proposal. Will independently apply filters to all selected methods and return the union of PCs.
+        Values to use for PC proposal. Will independently apply filters to all selected methods and return the intersection of PCs.
     var_method: Literal["knee", "percent"], default "percent"
         Either define a threshold based on a knee algorithm or use the percentile.
     perc_thresh: Union[int, float], default 30
@@ -299,7 +299,7 @@ def propose_pcs(anndata: sc.AnnData,
             subset_idx = np.array(list(selected_pcs[0].copy())) - 1
             # subset PC names to the still available PCs
             PC_names = all_PC_names[subset_idx]
-            # subset the variances to the still availbale PCs
+            # subset the variances to the still available PCs
             variance = anndata.uns["pca"]["variance_ratio"][subset_idx]
         else:
             variance = anndata.uns["pca"]["variance_ratio"]
