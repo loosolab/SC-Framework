@@ -2,6 +2,7 @@
 -----------------
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
+- CI: Revert to installing mampok from main
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
