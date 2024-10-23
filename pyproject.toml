@@ -1,3 +1,7 @@
 [build-system]
-requires = ["setuptools", "numpy"]  # needed pre-install
+requires = [
+    "setuptools",  # needed pre-install
+    "numpy",  # needed pre-install
+    "cmake>=3.18"  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
+]
 build-backend = "setuptools.build_meta"
