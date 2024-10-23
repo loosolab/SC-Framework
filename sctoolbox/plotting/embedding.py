@@ -718,21 +718,27 @@ def feature_per_group(adata: sc.AnnData,
                             figsize=figsize if figsize else (4.8 * ncol, 3.8 * len(grps)))
 
     for i, grp in enumerate(grps):
-        for j, col in enumerate([y] + x[grp]):
+        color_names = [y] + x[grp]
+        for j in range(ncol):
             if j == 0:
                 group_restriction = grp
             elif binarize:
                 group_restriction = "expressed"
             else:
                 group_restriction = None
-            plot_embedding(
-                adata=adata,
-                color=col,
-                style="dots" if j == 0 or binarize else style,
-                groups=group_restriction,
-                ax=axs[i][j],
-                **kwargs
-            )
+
+            if j < len(color_names):
+                plot_embedding(
+                    adata=adata,
+                    color=color_names[j],
+                    style="dots" if j == 0 or binarize else style,
+                    groups=group_restriction,
+                    ax=axs[i][j],
+                    **kwargs
+                )
+            else:
+                # remove empty axis
+                fig.delaxes(axs[i][j])
 
     # save figure
     _save_figure(save)
