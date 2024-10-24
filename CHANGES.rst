@@ -1,6 +1,6 @@
 0.11.0 (in progress)
 --------------------
-- fix pl.embedding.plot_pca_variance() does not select all PCs using 100% (#309)
+- fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
 
