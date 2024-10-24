@@ -290,6 +290,7 @@ def propose_pcs(anndata: sc.AnnData,
     if "variance" in how:
 
         variance = anndata.uns["pca"][variance_column]
+        variance = variance * 100  # convert to percent
 
         if var_method == "knee":
             # compute knee
@@ -306,6 +307,7 @@ def propose_pcs(anndata: sc.AnnData,
     if "cumulative variance" in how:
 
         cumulative = np.cumsum(anndata.uns["pca"][variance_column])
+        cumulative = cumulative * 100  # convert to percent
 
         if var_method == "knee":
             # compute knee
