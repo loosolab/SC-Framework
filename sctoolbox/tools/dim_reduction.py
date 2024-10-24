@@ -243,6 +243,7 @@ def propose_pcs(anndata: sc.AnnData,
                 var_method: Literal["knee", "percent"] = "percent",
                 perc_thresh: Union[int, float] = 30,
                 corr_thresh: float = 0.3,
+                variance_column: Optional[str] = "variance_ratio",
                 corr_kwargs: Optional[dict] = {}) -> List[int]:
     """
     Propose a selection of PCs that can be used for further analysis.
@@ -261,6 +262,8 @@ def propose_pcs(anndata: sc.AnnData,
         Percentile threshold of the PCs that should be included. Only for var_method="percent" and expects a value from 0-100.
     corr_thresh: float, default 0.3
         Filter PCs with a correlation greater than the given value.
+    variance_column: Optional[str], default "variance_ratio"
+        Column in anndata.uns to use for variance calculation.
     corr_kwargs: Optional(dict), default None
         Parameters forwarded to `sctoolbox.tools.correlation_matrix`.
 
@@ -276,17 +279,17 @@ def propose_pcs(anndata: sc.AnnData,
     """
 
     # check if pca exists
-    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
+    if "pca" not in anndata.uns or variance_column not in anndata.uns["pca"]:
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
 
     # setup PC names
-    PC_names = np.arange(1, len(anndata.uns["pca"]["variance_ratio"]) + 1, dtype=int)
+    PC_names = np.arange(1, len(anndata.uns["pca"][variance_column]) + 1, dtype=int)
 
     selected_pcs = []
 
     if "variance" in how:
 
-        variance = anndata.uns["pca"]["variance_ratio"]
+        variance = anndata.uns["pca"][variance_column]
 
         if var_method == "knee":
             # compute knee
@@ -302,7 +305,7 @@ def propose_pcs(anndata: sc.AnnData,
 
     if "cumulative variance" in how:
 
-        cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
+        cumulative = np.cumsum(anndata.uns["pca"][variance_column])
 
         if var_method == "knee":
             # compute knee
