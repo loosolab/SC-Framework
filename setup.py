@@ -8,7 +8,11 @@ import glob
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks>=3.8', 'peakqc'],
+                  "atac": ['episcanpy',
+                           'uropa',
+                           'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
+                           'pygenometracks>=3.8',
+                           'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
@@ -69,7 +73,7 @@ setup(
         'pysam',
         'matplotlib<3.9.0',
         'matplotlib_venn',
-        'scanpy>=1.10.2',  # 'colorbar_loc' not available before 1.9
+        'scanpy[louvain,leiden]>=1.10.2',  # 'colorbar_loc' not available before 1.9; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
@@ -84,18 +88,15 @@ setup(
         'ipympl',
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
-        'leidenalg',
         'IPython',
         'openpyxl',
         'apybiomart',
         'requests',
         'python-gitlab',
         'psutil',
-        'python-gitlab',
         'deprecation',
         'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
-        'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
         'packaging',
         'throttler',
         'upsetplot'
