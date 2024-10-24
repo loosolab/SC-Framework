@@ -280,30 +280,13 @@ def propose_pcs(anndata: sc.AnnData,
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
 
     # setup PC names
-    all_PC_names = np.arange(1, len(anndata.uns["pca"]["variance_ratio"]) + 1, dtype=int)
+    PC_names = np.arange(1, len(anndata.uns["pca"]["variance_ratio"]) + 1, dtype=int)
 
     selected_pcs = []
 
-    if "correlation" in how:
-        # color by highest absolute correlation
-        corrcoefs, _ = scem.correlation_matrix(adata=anndata, **corr_kwargs)
-
-        abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
-
-        selected_pcs.append(set(pc for pc, cc in zip(all_PC_names, abs_corrcoefs) if cc < corr_thresh))
-
     if "variance" in how:
-        # check if selected_pcs hold some values
-        if len(selected_pcs) > 0:
-            # index to subset the PCs afterwards
-            subset_idx = np.array(list(selected_pcs[0].copy())) - 1
-            # subset PC names to the still available PCs
-            PC_names = all_PC_names[subset_idx]
-            # subset the variances to the still availbale PCs
-            variance = anndata.uns["pca"]["variance_ratio"][subset_idx]
-        else:
-            variance = anndata.uns["pca"]["variance_ratio"]
-            PC_names = all_PC_names
+
+        variance = anndata.uns["pca"]["variance_ratio"]
 
         if var_method == "knee":
             # compute knee
@@ -318,17 +301,8 @@ def propose_pcs(anndata: sc.AnnData,
             selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var >= percentile))
 
     if "cumulative variance" in how:
-        # check if selected_pcs hold some values
-        if len(selected_pcs) > 0:
-            # index to subset the PCs afterwards
-            subset_idx = np.array(list(selected_pcs[0].copy())) - 1
-            # subset PC names to the still available PCs
-            PC_names = all_PC_names[subset_idx]
-            # subset the variances to the still availbale PCs
-            cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"][subset_idx])
-        else:
-            cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
-            PC_names = all_PC_names
+
+        cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
 
         if var_method == "knee":
             # compute knee
@@ -341,6 +315,14 @@ def propose_pcs(anndata: sc.AnnData,
             percentile = np.percentile(a=cumulative, q=perc_thresh)
 
             selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum <= percentile))
+
+    if "correlation" in how:
+        # color by highest absolute correlation
+        corrcoefs, _ = scem.correlation_matrix(adata=anndata, **corr_kwargs)
+
+        abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
+
+        selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
 
     # create overlap of selected PCs
     selected_pcs = list(set.intersection(*selected_pcs))
