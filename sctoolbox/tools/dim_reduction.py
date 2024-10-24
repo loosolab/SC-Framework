@@ -285,12 +285,12 @@ def propose_pcs(anndata: sc.AnnData,
     # setup PC names
     PC_names = np.arange(1, len(anndata.uns["pca"][variance_column]) + 1, dtype=int)
 
+    variance = anndata.uns["pca"][variance_column]
+    variance = variance * 100  # convert to percent
+
     selected_pcs = []
 
     if "variance" in how:
-
-        variance = anndata.uns["pca"][variance_column]
-        variance = variance * 100  # convert to percent
 
         if var_method == "knee":
             # compute knee
@@ -306,8 +306,7 @@ def propose_pcs(anndata: sc.AnnData,
 
     if "cumulative variance" in how:
 
-        cumulative = np.cumsum(anndata.uns["pca"][variance_column])
-        cumulative = cumulative * 100  # convert to percent
+        cumulative = np.cumsum(variance)
 
         if var_method == "knee":
             # compute knee
