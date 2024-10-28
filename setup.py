@@ -37,7 +37,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
                   "velocity": ['scvelo @ git+https://github.com/theislab/scvelo.git'],
                   "pseudotime": ["scFates"],
-                  "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
+                  "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
                   "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
                   }
