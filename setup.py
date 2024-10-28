@@ -6,6 +6,25 @@ import re
 import os
 import glob
 
+import subprocess
+import sys
+
+# install these dependencies before everything else
+# do this here (not in conda) to make this package buildable without prior steps
+pre_deps = [
+    "cmake>=3.18",  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
+    "setuptools_scm==8.0.4"  # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
+]
+
+# get a clean bash path (not altered by the pip build process)
+# Pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
+# This is circumvented by installing the pre-dependencies globally. Which is similar to doing "pip install <pre-deps>" before "pip install sctoolbox".
+# TODO only works on Linux based systems
+clean_path = subprocess.check_output(["echo $PATH"], shell=True).decode("utf-8").strip()
+
+for dep in pre_deps:
+    subprocess.run([sys.executable, "-m", "pip", "install", dep], env={'PATH': clean_path}, check=True)
+
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "atac": ['episcanpy',
