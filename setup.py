@@ -90,7 +90,7 @@ setup(
     python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
         'pysam',
-        'matplotlib>3.9.0',
+        'matplotlib',
         'matplotlib_venn',
         'scanpy[louvain,leiden]>=1.10.2',  # 'colorbar_loc' not available before 1.9; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
