@@ -42,7 +42,12 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
                   }
 
+# contains all requirements aka a full installation
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
+# contains the requirements needed to run notebooks 1-4 (atac & rna); skipping rarely used dependencies (e.g. scar)
+extras_require["core"] = sum([value for key, value in extras_require.items() if key in ["converter", "atac", "interactive", "batch_correction"]], start=[])
+# contains dependencies needed for the downstream notebooks (general & notebooks after 4)
+extras_require["downstream"] = sum([value for key, value in extras_require.items() if key in ["receptor_ligand", "velocity", "pseudotime", "gsea", "deseq2"]], start=[])
 
 
 def find_version(f: str) -> str:
