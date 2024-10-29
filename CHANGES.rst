@@ -1,5 +1,7 @@
 0.10.2 (in progress)
 -----------------
+- feature_per_group remove empty axis (#312)
+- fix get_rank_genes_tables return less than n_genes for filtered ranking
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
 
