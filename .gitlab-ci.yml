@@ -346,10 +346,10 @@ notebooks:
   after_script:
     - pwd
     - echo -------------------------------------------------- RNA logs --------------------------------------------------
-    - ls -l rna_analysis/logs/ 2>/dev/null || echo "Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks."
+    - ls -l rna_analysis/logs/ 2>/dev/null || true && echo "Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks."
     - for f in rna_analysis/logs/*; do if [ -f "$f" ]; then echo $f; cat $f; fi; done
     - echo -------------------------------------------------- ATAC logs --------------------------------------------------
-    - ls -l atac_analysis/logs/ 2>/dev/null || echo "Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks."
+    - ls -l atac_analysis/logs/ 2>/dev/null || true && echo "Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks."
     - for f in atac_analysis/logs/*; do if [ -f "$f" ]; then echo $f; cat $f; fi; done
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
