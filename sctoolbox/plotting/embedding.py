@@ -23,7 +23,7 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated
+from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
 import numpy.typing as npt
 
@@ -745,6 +745,54 @@ def feature_per_group(adata: sc.AnnData,
 
     return axs
 
+
+@deco.log_anndata
+@beartype
+def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.sum, fun_kwargs: dict = {"axis": 1}, **kwargs):
+    """
+    Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object.
+    features : List
+        A list of features to aggregate.
+    fun : Callable, default np.sum
+        The aggregation function.
+    fun_kwargs : dict, default {"axis": 1}
+        Additional arguments for the aggregation function.
+    **kwargs, arguments
+        Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
+
+    Returns
+    -------
+    axes : npt.ArrayLike
+        Array of axis objects
+
+    Examples
+    --------
+    """
+    try:
+        # create subset of features
+        # TODO check missing features and warn
+        subset = adata[:, features]
+
+        # get layer
+        # TODO enable other layers
+        layer = subset.X.toarray()
+
+        # calculate score
+        # TODO https://github.com/scverse/scanpy/issues/532 sc.tl.score_genes?
+        # TODO make sure to not overwrite an existing obs column
+        adata.obs["test_score"] = np.array(fun(layer, **fun_kwargs)).flatten()
+
+        # TODO cleanup -> remove score column even on error
+
+        # plot
+        return plot_embedding(adata, color="test_score", **kwargs)
+    finally:
+        adata.obs.drop(columns=["test_score"], inplace=True)
 
 @deco.log_anndata
 @beartype
