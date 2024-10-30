@@ -4,10 +4,12 @@
 - fix get_rank_genes_tables return less than n_genes for filtered ranking
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
+- add a bar plot to predict_cell_cycle (#301)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - fix RNA:02 zebrafish gender suggestion (#311)
+- revise 03_normalization_batch_correction notebook
 
 0.10.1 (17-09-24)
 -----------------
