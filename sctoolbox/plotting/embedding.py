@@ -759,7 +759,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     features : List
         A list of features to aggregate. Uses the names in adata.var.index.
     fname : str
-        Name of the selected feature group. Will be added as column to adata.obs and used as plot title.
+        Name of the selected feature group. Will be added as column to adata.obs (see keep_score) and used as plot title.
     keep_score : bool, default False
         Set to keep the aggregated feature score stored in adata.obs[fname].
     fun : Callable, default np.sum
@@ -786,12 +786,12 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     --------
     """
     try:
-        # create subset of features
         # check for missing features
         missing = set(features) - set(adata.var.index)
         if missing:
             raise ValueError(f"Features {missing} are not found in adata.var.index!")
 
+        # create subset of features
         subset = adata[:, features]
 
         # select layer
