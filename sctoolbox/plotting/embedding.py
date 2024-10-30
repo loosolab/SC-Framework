@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.sum, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: str = False , fun: Callable = np.sum, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -758,6 +758,10 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
         The AnnData object.
     features : List
         A list of features to aggregate. Uses the names in adata.var.index.
+    fname : str
+        Name of the selected feature group. Will be added as column to adata.obs and used as plot title.
+    keep_score : bool, default False
+        Set to keep the aggregated feature score stored in adata.obs[fname].
     fun : Callable, default np.sum
         The aggregation function.
     fun_kwargs : dict, default {"axis": 1}
@@ -770,7 +774,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
     Raises
     ------
     ValueError
-        For features not found in adata.var.index.
+        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
 
     Returns
     -------
@@ -795,17 +799,20 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
         else:
             matrix = subset.X.toarray()
 
-        # calculate score
         # TODO https://github.com/scverse/scanpy/issues/532 sc.tl.score_genes?
-        # TODO make sure to not overwrite an existing obs column
-        adata.obs["test_score"] = np.array(fun(matrix, **fun_kwargs)).flatten()
 
-        # TODO cleanup -> remove score column even on error
+        # make sure to not overwrite an existing obs column
+        if fname in adata.obs.columns:
+            raise ValueError(f"{fname} already exists in adata.obs.columns. Select a different name or remove the column before running this function.")
+
+        # calculate score and add as obs column
+        adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
 
         # plot
-        return plot_embedding(adata, color="test_score", **kwargs)
+        return plot_embedding(adata, color=fname, **kwargs)
     finally:
-        adata.obs.drop(columns=["test_score"], inplace=True)
+        if not keep_score:
+            adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
 
 @deco.log_anndata
 @beartype
