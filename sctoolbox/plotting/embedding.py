@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: str = False , fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False , fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
