@@ -4,9 +4,11 @@
 - fix get_rank_genes_tables return less than n_genes for filtered ranking
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
+- implemented plotting.embedding.agg_feature_embedding
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- add agg_feature_embedding to the group_marker notebook
 - fix RNA:02 zebrafish gender suggestion (#311)
 
 0.10.1 (17-09-24)
