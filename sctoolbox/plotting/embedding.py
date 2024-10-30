@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.sum, fun_kwargs: dict = {"axis": 1}, **kwargs):
+def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.sum, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -762,6 +762,8 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
         The aggregation function.
     fun_kwargs : dict, default {"axis": 1}
         Additional arguments for the aggregation function.
+    layer : Optional[str], default None
+        Name of the adata layer used for the calculation. Defaults to `adata.X`.
     **kwargs, arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
@@ -787,14 +789,16 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
 
         subset = adata[:, features]
 
-        # get layer
-        # TODO enable other layers
-        layer = subset.X.toarray()
+        # select layer
+        if layer:
+            matrix = subset.layers[layer].toarray()
+        else:
+            matrix = subset.X.toarray()
 
         # calculate score
         # TODO https://github.com/scverse/scanpy/issues/532 sc.tl.score_genes?
         # TODO make sure to not overwrite an existing obs column
-        adata.obs["test_score"] = np.array(fun(layer, **fun_kwargs)).flatten()
+        adata.obs["test_score"] = np.array(fun(matrix, **fun_kwargs)).flatten()
 
         # TODO cleanup -> remove score column even on error
 
