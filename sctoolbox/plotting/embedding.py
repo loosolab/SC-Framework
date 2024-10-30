@@ -784,6 +784,13 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
+
+        # select the first three genes
+        features = list(adata.var.index[:3])
+
+        pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
     """
     try:
         # check for missing features
