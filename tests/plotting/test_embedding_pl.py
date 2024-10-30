@@ -20,8 +20,7 @@ plt.switch_backend("Agg")
 # ------------------------------ FIXTURES --------------------------------- #
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
-def adata():
+def _make_adata():
     """Load and returns an anndata object."""
 
     np.random.seed(1)  # set seed for reproducibility
@@ -50,6 +49,18 @@ def adata():
     # sc.tl.dendrogram(adata, groupby='clustering')
 
     return adata
+
+
+@pytest.fixture(scope="session")  # re-use the fixture for all tests
+def adata():
+    """Create a fixture of the adata with session scope."""
+    return _make_adata()
+
+
+@pytest.fixture(scope="function")  # create a new fixture for each test
+def adata_fun_scope():
+    """Create a fixture of the adata with function scope."""
+    return _make_adata()
 
 
 @pytest.fixture
@@ -190,6 +201,32 @@ def test_feature_per_group_fail(adata, top_n, x, y):
                                  y=y,
                                  x=x,
                                  top_n=top_n)
+
+@pytest.mark.parametrize("features, fname, keep_score", [
+    (["invalid"], "", False),  # invalid feature
+    ([], "invalid", False),  # invalid fname
+    ([], "Feature set", True),  # keep score
+    ([], "Feature set", False),  # don't keep score
+])
+def test_agg_feature_embedding(adata_fun_scope, features, fname, keep_score):
+    """Test the agg_feature_embedding function."""
+    feat_set = features + list(adata_fun_scope.var.index[:3])
+
+    if "invalid" in feat_set or fname == "invalid":
+        if "invalid" in feat_set:
+            assert features[0] not in adata_fun_scope.var.index
+        elif fname == "invalid":
+            fname = adata_fun_scope.obs.columns[0]
+
+        with pytest.raises(ValueError):
+            pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname)
+    else:
+        # make sure the column is not yet present
+        assert fname not in adata_fun_scope.obs.columns
+
+        pl.agg_feature_embedding(adata_fun_scope, features=feat_set, fname=fname, keep_score=keep_score)
+
+        assert (fname in adata_fun_scope.obs.columns) == keep_score
 
 
 def test_search_umap_parameters(adata):
