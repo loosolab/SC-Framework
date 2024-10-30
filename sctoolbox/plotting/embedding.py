@@ -757,13 +757,18 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
     adata : sc.AnnData
         The AnnData object.
     features : List
-        A list of features to aggregate.
+        A list of features to aggregate. Uses the names in adata.var.index.
     fun : Callable, default np.sum
         The aggregation function.
     fun_kwargs : dict, default {"axis": 1}
         Additional arguments for the aggregation function.
     **kwargs, arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
+
+    Raises
+    ------
+    ValueError
+        For features not found in adata.var.index.
 
     Returns
     -------
@@ -775,7 +780,11 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fun: Callable = np.
     """
     try:
         # create subset of features
-        # TODO check missing features and warn
+        # check for missing features
+        missing = set(features) - set(adata.var.index)
+        if missing:
+            raise ValueError(f"Features {missing} are not found in adata.var.index!")
+
         subset = adata[:, features]
 
         # get layer
