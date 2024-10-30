@@ -1419,6 +1419,7 @@ def denoise_data(adata: sc.AnnData,
         Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
     """
     utils.checker.check_module("scar")
+    import scar
 
     report_path = _uns_report_path + ["denoise"]
     # check for previous denoising
