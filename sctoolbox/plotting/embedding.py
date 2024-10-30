@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False , fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> npt.ArrayLike:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -769,7 +769,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         Additional arguments for the aggregation function.
     layer : Optional[str], default None
         Name of the adata layer used for the calculation. Defaults to `adata.X`.
-    **kwargs, arguments
+    **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
     Raises
@@ -821,6 +821,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     finally:
         if not keep_score:
             adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
+
 
 @deco.log_anndata
 @beartype

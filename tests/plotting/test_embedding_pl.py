@@ -202,6 +202,7 @@ def test_feature_per_group_fail(adata, top_n, x, y):
                                  x=x,
                                  top_n=top_n)
 
+
 @pytest.mark.parametrize("features, fname, keep_score", [
     (["invalid"], "", False),  # invalid feature
     ([], "invalid", False),  # invalid fname
