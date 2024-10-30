@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: str = False , fun: Callable = np.sum, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: str = False , fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs):
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -763,7 +763,8 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     keep_score : bool, default False
         Set to keep the aggregated feature score stored in adata.obs[fname].
     fun : Callable, default np.sum
-        The aggregation function.
+        The aggregation function. Expects a numpy array with values to aggregate as first parameter. E.g.:
+        numpy.sum, numpy.mean (re-creates the cellxgene gene set), numpy.median, etc.
     fun_kwargs : dict, default {"axis": 1}
         Additional arguments for the aggregation function.
     layer : Optional[str], default None
@@ -799,7 +800,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         else:
             matrix = subset.X.toarray()
 
-        # TODO https://github.com/scverse/scanpy/issues/532 sc.tl.score_genes?
+        # TODO https://github.com/scverse/scanpy/issues/532 support sc.tl.score_genes?
 
         # make sure to not overwrite an existing obs column
         if fname in adata.obs.columns:
