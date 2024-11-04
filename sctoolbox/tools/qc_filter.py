@@ -107,6 +107,7 @@ def predict_cell_cycle(adata: sc.AnnData,
                        s_genes: Optional[str | list[str]] = None,
                        g2m_genes: Optional[str | list[str]] = None,
                        groupby: Optional[str] = None,
+                       plot: bool = True,
                        save: Optional[str] = None,
                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
@@ -133,6 +134,8 @@ def predict_cell_cycle(adata: sc.AnnData,
     groupby : Optional[str], default None
         Name of a column in adata.obs to split the bar plot showing counts and proportions of each phase.
         If None, the plot shows cell counts per phase.
+    plot : bool, default True
+        Plot a bar plot to show counts of cells in each phase.
     save : Optional[str], default None
         Path to save the plot.
     inplace : bool, default True
@@ -229,8 +232,10 @@ def predict_cell_cycle(adata: sc.AnnData,
     adata.obs['G2M_score'] = sdata.obs['G2M_score']
     adata.obs['phase'] = sdata.obs['phase']
 
-    pl.qc_filter.n_cells_barplot(adata, x="phase", groupby=groupby,
-                                 save=save)
+    # plot a bar plot showing counts (and proportions) of cells in each phase
+    if plot:
+        pl.qc_filter.n_cells_barplot(adata, x="phase", groupby=groupby,
+                                    save=save)
 
     if not inplace:
         return adata
