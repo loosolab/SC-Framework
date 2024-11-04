@@ -31,7 +31,7 @@ if _is_notebook():
         """
         Set background color of current jupyter cell.
 
-        Adapted from https://stackoverflow.com/a/53746904.
+        Adapted from https://stackoverflow.com/a/68902884.
         Note: Jupyter notebook v6+ needed
 
         Change color of the cell by either calling the function
@@ -52,13 +52,15 @@ if _is_notebook():
         """
 
         script = f"""
-                var cell = this.closest('.code_cell');
-                var editor = cell.querySelector('.CodeMirror-sizer');
-                editor.style.background='{color}';
-                this.parentNode.removeChild(this)
+                // select the cell
+                var cell = [this.closest('.code_cell,.jp-CodeCell')];
+                // select the part of the cell that should be colored (code area)
+                ca = [].slice.call(cell[0].querySelectorAll('.CodeMirror-sizer,.highlight'));
+                // change the background color of all selected elements
+                ca.forEach(e=>e.style.background='{color}');
                 """
 
-        display(HTML(f'<img src onerror="{script}">'))
+        display(HTML(f'<img src onerror="{script}" style="display:none">'))
 
 
 def clear() -> None:
