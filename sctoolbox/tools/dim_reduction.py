@@ -243,6 +243,7 @@ def propose_pcs(anndata: sc.AnnData,
                 var_method: Literal["knee", "percent"] = "percent",
                 perc_thresh: Union[int, float] = 30,
                 corr_thresh: float = 0.3,
+                variance_column: Optional[str] = "variance_ratio",
                 corr_kwargs: Optional[dict] = {}) -> List[int]:
     """
     Propose a selection of PCs that can be used for further analysis.
@@ -254,13 +255,15 @@ def propose_pcs(anndata: sc.AnnData,
     anndata: sc.AnnData
         Anndata object with PCA to get PCs from.
     how: List[Literal["variance", "cumulative variance", "correlation"]], default ["variance", "correlation"]
-        Values to use for PC proposal. Will independently apply filters to all selected methods and return the union of PCs.
+        Values to use for PC proposal. Will independently apply filters to all selected methods and return the intersection of PCs.
     var_method: Literal["knee", "percent"], default "percent"
         Either define a threshold based on a knee algorithm or use the percentile.
     perc_thresh: Union[int, float], default 30
         Percentile threshold of the PCs that should be included. Only for var_method="percent" and expects a value from 0-100.
     corr_thresh: float, default 0.3
         Filter PCs with a correlation greater than the given value.
+    variance_column: Optional[str], default "variance_ratio"
+        Column in anndata.uns to use for variance calculation.
     corr_kwargs: Optional(dict), default None
         Parameters forwarded to `sctoolbox.tools.correlation_matrix`.
 
@@ -276,16 +279,18 @@ def propose_pcs(anndata: sc.AnnData,
     """
 
     # check if pca exists
-    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
+    if "pca" not in anndata.uns or variance_column not in anndata.uns["pca"]:
         raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
 
     # setup PC names
-    PC_names = range(1, len(anndata.uns["pca"]["variance_ratio"]) + 1)
+    PC_names = np.arange(1, len(anndata.uns["pca"][variance_column]) + 1, dtype=int)
+
+    variance = anndata.uns["pca"][variance_column]
+    variance = variance * 100  # convert to percent
 
     selected_pcs = []
 
     if "variance" in how:
-        variance = anndata.uns["pca"]["variance_ratio"]
 
         if var_method == "knee":
             # compute knee
@@ -297,10 +302,11 @@ def propose_pcs(anndata: sc.AnnData,
             # compute percentile
             percentile = np.percentile(a=variance, q=100 - perc_thresh)
 
-            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var > percentile))
+            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var >= percentile))
 
     if "cumulative variance" in how:
-        cumulative = np.cumsum(anndata.uns["pca"]["variance_ratio"])
+
+        cumulative = np.cumsum(variance)
 
         if var_method == "knee":
             # compute knee
@@ -312,7 +318,7 @@ def propose_pcs(anndata: sc.AnnData,
             # compute percentile
             percentile = np.percentile(a=cumulative, q=perc_thresh)
 
-            selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum < percentile))
+            selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum <= percentile))
 
     if "correlation" in how:
         # color by highest absolute correlation
@@ -324,6 +330,9 @@ def propose_pcs(anndata: sc.AnnData,
 
     # create overlap of selected PCs
     selected_pcs = list(set.intersection(*selected_pcs))
+
+    # convert numpy.int64 to int
+    selected_pcs = [int(x) for x in selected_pcs]
 
     return selected_pcs
 
