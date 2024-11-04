@@ -235,7 +235,7 @@ def predict_cell_cycle(adata: sc.AnnData,
     # plot a bar plot showing counts (and proportions) of cells in each phase
     if plot:
         pl.qc_filter.n_cells_barplot(adata, x="phase", groupby=groupby,
-                                    save=save)
+                                     save=save)
 
     if not inplace:
         return adata
