@@ -27,17 +27,19 @@ def _is_notebook() -> bool:
 
 if _is_notebook():
     @register_line_magic
-    def bgcolor(color: str, cell: Optional[str] = None) -> None:
+    def bgcolor(color: str, select: Optional[list[int]] = None) -> None:
         """
-        Set background color of current jupyter cell.
+        Set background color of current jupyter cell or the selected cells.
 
         Adapted from https://stackoverflow.com/a/68902884.
         Note: Jupyter notebook v6+ needed
 
         Change color of the cell by either calling the function
         `bgcolor("yellow")`
+        `bgcolor("yellow", [0, 2, 4])`
         or with magic (has to be first line in cell!)
         `%bgcolor yellow`
+        Cell selection is not possible with magic.
 
         Parameters
         ----------
@@ -47,18 +49,35 @@ if _is_notebook():
                 - rgb(255,0,0)
                 - #FF0000
             See https://www.rapidtables.com/web/css/css-color.html
-        cell : Optional[str], default None
-            Code of the cell that will be evaluated.
+        select : Optional[list[int]], default None
+            Index of cells where the background color should be changed. Leave empty to change the color of the current cell.
+            Note: The index only accounts for code-cells.
+            Note: Not functional in 'magic-mode'.
         """
-
-        script = f"""
-                // select the cell
-                var cell = [this.closest('.code_cell,.jp-CodeCell')];
-                // select the part of the cell that should be colored (code area)
-                ca = [].slice.call(cell[0].querySelectorAll('.CodeMirror-sizer,.highlight'));
-                // change the background color of all selected elements
-                ca.forEach(e=>e.style.background='{color}');
-                """
+        if select:
+            # color selected cells
+            script = f"""
+                    // get all code cells
+                    let all_cells = document.querySelectorAll('.code_cell,.jp-CodeCell')
+                    // define the cell selection
+                    let selection = Array({','.join(map(str, select))});
+                    // select the cells
+                    let sel_cells = selection.map(x=>all_cells[x]);
+                    // select the parts of the cells that should be colored (code area)
+                    let ca = sel_cells.map(e=>Array.from(e.querySelectorAll('.CodeMirror-sizer,.highlight'))).flat();
+                    // change the background color of all selected elements
+                    ca.forEach(e=>e.style.background='{color}');
+                    """
+        else:
+            # color the current cell
+            script = f"""
+                    // select the cell
+                    let cell = [this.closest('.code_cell,.jp-CodeCell')];
+                    // select the part of the cell that should be colored (code area)
+                    let ca = [].slice.call(cell[0].querySelectorAll('.CodeMirror-sizer,.highlight'));
+                    // change the background color of all selected elements
+                    ca.forEach(e=>e.style.background='{color}');
+                    """
 
         display(HTML(f'<img src onerror="{script}" style="display:none">'))
 
