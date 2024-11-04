@@ -1,12 +1,16 @@
 0.11.0 (in progress)
 --------------------
 - fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
+- feature_per_group remove empty axis (#312)
+- fix get_rank_genes_tables return less than n_genes for filtered ranking
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
+- CI: Revert to installing mampok from main
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - fix RNA:02 zebrafish gender suggestion (#311)
+- prepare_for_cellxgene: Add auth parameter
 
 0.10.1 (17-09-24)
 -----------------

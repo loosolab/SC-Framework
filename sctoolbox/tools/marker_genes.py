@@ -511,15 +511,14 @@ def get_rank_genes_tables(adata: sc.AnnData,
             data[col] = tables[col][group].values
         table = pd.DataFrame(data)
 
+        # Remove any NaN genes (genes are set to NaN if 'filter_rank_genes_groups' was used)
+        table.dropna(inplace=True)
+
         # Subset to n_genes if chosen
         if n_genes is not None:
             table = table.iloc[:n_genes, :]
 
         group_tables[group] = table
-
-    # Remove any NaN genes (genes are set to NaN if 'filter_rank_genes_groups' was used)
-    for group in group_tables:
-        group_tables[group].dropna(inplace=True)
 
     # Get in/out group fraction of expressed genes (only works for .X-values above 0)
     if (adata.X.min() < 0) == 0:  # only calculate fractions for raw expression data
