@@ -6,10 +6,12 @@
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
 - CI: Revert to installing mampok from main
+- add a bar plot to predict_cell_cycle (#301)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - fix RNA:02 zebrafish gender suggestion (#311)
+- revise 03_normalization_batch_correction notebook
 - prepare_for_cellxgene: Add auth parameter
 
 0.10.1 (17-09-24)
