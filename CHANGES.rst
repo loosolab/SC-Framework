@@ -5,11 +5,13 @@
 - fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
 - fix gseapy, louvain install outside of the docker image (#310)
 - CI: Revert to installing mampok from main
+- implement bgcolor cell-selection
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - fix RNA:02 zebrafish gender suggestion (#311)
 - prepare_for_cellxgene: Add auth parameter
+- use the bgcolor cell-selection in all notebooks
 
 0.10.1 (17-09-24)
 -----------------
