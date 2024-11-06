@@ -14,7 +14,6 @@ from kneed import KneeLocator
 import matplotlib.pyplot as plt
 import scrublet as scr
 import scipy.stats as stats
-from scar import model, setup_anndata
 from scipy.sparse import csr_matrix
 
 from beartype import beartype
@@ -1435,6 +1434,9 @@ def denoise_data(adata: sc.AnnData,
     RuntimeError
         Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
     """
+    utils.checker.check_module("scar")
+    import scar
+
     report_path = _uns_report_path + ["denoise"]
     # check for previous denoising
     previous_filter = utils.adata.in_uns(adata, report_path)
@@ -1472,7 +1474,7 @@ def denoise_data(adata: sc.AnnData,
 
     logger.info('Setting up adata...')
     start_time = time.time()
-    setup_anndata(
+    scar.setup_anndata(
         adata=adata,
         raw_adata=adata_raw,
         prob=prob,
@@ -1488,21 +1490,21 @@ def denoise_data(adata: sc.AnnData,
     logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
 
     logger.info('Training model to remove ambient signal...')
-    scar = model(raw_count=adata,
-                 feature_type=FEATURES[feature_type],
-                 sparsity=0.9,
-                 device='auto'  # Both cpu and cuda are supported.
-                 )
+    scar_model = scar.model(raw_count=adata,
+                            feature_type=FEATURES[feature_type],
+                            sparsity=0.9,
+                            device='auto'  # Both cpu and cuda are supported.
+                            )
 
-    scar.train(epochs=epochs,
-               batch_size=64,
-               verbose=verbose)
+    scar_model.train(epochs=epochs,
+                     batch_size=64,
+                     verbose=verbose)
 
     # After training, we can infer the native true signal
-    scar.inference(batch_size=256)
+    scar_model.inference(batch_size=256)
 
     adata_denoised = adata.copy()
-    adata_denoised.X = csr_matrix(scar.native_counts, dtype=np.float32)
+    adata_denoised.X = csr_matrix(scar_model.native_counts, dtype=np.float32)
 
     # add report to adata
     utils.adata.add_uns_info(adata=adata_denoised,

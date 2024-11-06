@@ -37,7 +37,7 @@ RUN mamba update -n base mamba && \
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
 # install sctoolbox
-RUN pip install "/home/sc_framework/[all]" && \
+RUN pip install "/home/sc_framework/[core,downstream]" && \
     pip install pytest && \
     pip install pytest-html && \
     pip install pytest-cov && \
