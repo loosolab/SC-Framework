@@ -1,3 +1,7 @@
 [build-system]
-requires = ["setuptools", "numpy"]  # needed pre-install
+requires = [
+    "setuptools",  # needed pre-install
+    "numpy",  # needed pre-install
+    "pip"  # to make pip accessible during installation
+]
 build-backend = "setuptools.build_meta"

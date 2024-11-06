@@ -6,20 +6,48 @@ import re
 import os
 import glob
 
+import subprocess
+import sys
+
+# install these dependencies before everything else
+# do this here (not in conda) to make this package buildable without prior steps
+pre_deps = [
+    "cmake>=3.18",  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
+    "setuptools_scm==8.0.4"  # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
+]
+
+# get a clean bash path (not altered by the pip build process)
+# Pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
+# This is circumvented by installing the pre-dependencies globally. Which is similar to doing "pip install <pre-deps>" before "pip install sctoolbox".
+# TODO only works on Linux based systems
+clean_path = subprocess.check_output(["echo $PATH"], shell=True).decode("utf-8").strip()
+
+for dep in pre_deps:
+    subprocess.run([sys.executable, "-m", "pip", "install", dep], env={'PATH': clean_path}, check=True)
+
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['pyyaml', 'episcanpy', 'uropa', 'pybedtools', 'pygenometracks>=3.8', 'peakqc'],
+                  "atac": ['episcanpy',
+                           'uropa',
+                           'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
+                           'pygenometracks>=3.8',
+                           'peakqc'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
                   "velocity": ['scvelo @ git+https://github.com/theislab/scvelo.git'],
                   "pseudotime": ["scFates"],
-                  "gsea": ["gseapy==1.1.2"],  # Version 1.1.3 currently does not work properly with our pinned matplotlib version. Could also be a bug by gseapy.
+                  "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
                   "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
                   }
 
+# contains all requirements aka a full installation
 extras_require["all"] = list(dict.fromkeys([item for sublist in extras_require.values() for item in sublist]))  # flatten list of all requirements
+# contains the requirements needed to run notebooks 1-4 (atac & rna); skipping rarely used dependencies (e.g. scar)
+extras_require["core"] = sum([value for key, value in extras_require.items() if key in ["converter", "atac", "interactive", "batch_correction"]], start=[])
+# contains dependencies needed for the downstream notebooks (general & notebooks after 4)
+extras_require["downstream"] = sum([value for key, value in extras_require.items() if key in ["receptor_ligand", "velocity", "pseudotime", "gsea", "deseq2"]], start=[])
 
 
 def find_version(f: str) -> str:
@@ -66,11 +94,10 @@ setup(
     py_modules=modules,
     python_requires='>=3.9',  # dict type hints as we use it require python 3.9
     install_requires=[
-        'cmake>=3.18',  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (gseapy, louvain)
         'pysam',
-        'matplotlib<3.9.0',
+        'matplotlib',
         'matplotlib_venn',
-        'scanpy>=1.10.2',  # 'colorbar_loc' not available before 1.9
+        'scanpy[louvain,leiden]>=1.10.2',  # 'colorbar_loc' not available before 1.9; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
@@ -85,19 +112,15 @@ setup(
         'ipympl',
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
-        'leidenalg',
-        'louvain',
         'IPython',
         'openpyxl',
         'apybiomart',
         'requests',
         'python-gitlab',
         'psutil',
-        'python-gitlab',
         'deprecation',
         'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
-        'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
         'packaging',
         'throttler',
         'upsetplot'
