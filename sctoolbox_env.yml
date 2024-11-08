@@ -1,23 +1,26 @@
+# This environment mainly holds dependencies that are needed to run the notebooks.
+# Dependencies needed to run the sctoolbox should be put into the setup.py or pyproject.toml if possible.
+
 name: sctoolbox
 channels:
     - bioconda
     - conda-forge
 dependencies:
+# jupyter dependencies
+  - notebook==6.5.2
+  - ipykernel  # needed to register environment as jupyter kernel
+# Dependencies used within the notebooks (but not the sctoolbox package)
+  - pip>=24.2  # for installing additional packages
+  - pip:
+    - scanpro>=0.3.1  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+    - git+https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+# sctoolbox related dependency exemptions
+# R dependencies (needed to enable data R->Python conversion)
   - r-base
   - r-seurat
   - bioconductor-singlecellexperiment
-  - samtools>=1.9 # fixes https://github.com/merenlab/anvio/issues/1479
-  - scanpy>=1.10.2
-  - python-annoy
-  - notebook==6.5.2
   - rpy2
-  - pybedtools
-  - ipykernel # needed to register environment as jupyter kernel
-  - pybedtools
-  - lightning>=2.0,<2.2 # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/303
-  - setuptools_scm==8.0.4 # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
-  - pip>=24.2 # for installing additional packages
-  - pip:
-    - scanpro>=0.3.1  # scnapro < 0.3.1 needs statannotations which causes versioning issues
-    - git+https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
-    - git+https://github.com/theislab/scvelo.git # highly decreases installation runtime of sc_framework
+# Other
+  - samtools>=1.9  # fixes https://github.com/merenlab/anvio/issues/1479
+  - rust  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (gseapy)
+  - pybedtools  # this will install bedtools and ensure it is setup to work with pybedtools

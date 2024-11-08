@@ -23,7 +23,7 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated
+from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
 import numpy.typing as npt
 
@@ -245,7 +245,10 @@ def _binarize_expression(adata: sc.AnnData,
 
         # Binarize the expression data
         binary_expr = np.where(feature_expr > threshold, 'expressed', 'not expressed')
-        adata.obs[f'{feature}_status'] = pd.Categorical(binary_expr)
+        adata.obs[feature] = pd.Categorical(binary_expr)
+
+    # add "_" postfix to adata.var.index to clarify that adata.obs should be used
+    adata.var.index += "_"
 
 
 @deco.log_anndata
@@ -704,10 +707,9 @@ def feature_per_group(adata: sc.AnnData,
     if binarize:
         adata = adata.copy()  # _binarize_expression will change the adata, we want to keep the original, but plot the changed.
         features = list()
-        # collect all feature names and extend all names in x with _status
+        # collect all feature names and extend all names in x
         for grp in grps:
             features += x[grp]
-            x[grp] = [f"{feat}_status" for feat in x[grp]]
         _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold)
 
     # create plot
@@ -716,26 +718,109 @@ def feature_per_group(adata: sc.AnnData,
                             figsize=figsize if figsize else (4.8 * ncol, 3.8 * len(grps)))
 
     for i, grp in enumerate(grps):
-        for j, col in enumerate([y] + x[grp]):
+        color_names = [y] + x[grp]
+        for j in range(ncol):
             if j == 0:
                 group_restriction = grp
             elif binarize:
                 group_restriction = "expressed"
             else:
                 group_restriction = None
-            plot_embedding(
-                adata=adata,
-                color=col,
-                style="dots" if j == 0 or binarize else style,
-                groups=group_restriction,
-                ax=axs[i][j],
-                **kwargs
-            )
+
+            if j < len(color_names):
+                plot_embedding(
+                    adata=adata,
+                    color=color_names[j],
+                    style="dots" if j == 0 or binarize else style,
+                    groups=group_restriction,
+                    ax=axs[i][j],
+                    **kwargs
+                )
+            else:
+                # remove empty axis
+                fig.delaxes(axs[i][j])
 
     # save figure
     _save_figure(save)
 
     return axs
+
+
+@deco.log_anndata
+@beartype
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> npt.ArrayLike:
+    """
+    Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object.
+    features : List
+        A list of features to aggregate. Uses the names in adata.var.index.
+    fname : str
+        Name of the selected feature group. Will be added as column to adata.obs (see keep_score) and used as plot title.
+    keep_score : bool, default False
+        Set to keep the aggregated feature score stored in adata.obs[fname].
+    fun : Callable, default np.mean
+        The aggregation function. Expects a numpy array with values to aggregate as first parameter. E.g.:
+        numpy.sum, numpy.mean (re-creates the cellxgene gene set), numpy.median, etc.
+    fun_kwargs : dict, default {"axis": 1}
+        Additional arguments for the aggregation function.
+    layer : Optional[str], default None
+        Name of the adata layer used for the calculation. Defaults to `adata.X`.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
+
+    Raises
+    ------
+    ValueError
+        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
+
+    Returns
+    -------
+    axes : npt.ArrayLike
+        Array of axis objects
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        # select the first three genes
+        features = list(adata.var.index[:3])
+
+        pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
+    """
+    try:
+        # check for missing features
+        missing = set(features) - set(adata.var.index)
+        if missing:
+            raise ValueError(f"Features {missing} are not found in adata.var.index!")
+
+        # create subset of features
+        subset = adata[:, features]
+
+        # select layer
+        if layer:
+            matrix = subset.layers[layer].toarray()
+        else:
+            matrix = subset.X.toarray()
+
+        # TODO https://github.com/scverse/scanpy/issues/532 support sc.tl.score_genes?
+
+        # make sure to not overwrite an existing obs column
+        if fname in adata.obs.columns:
+            raise ValueError(f"{fname} already exists in adata.obs.columns. Select a different name or remove the column before running this function.")
+
+        # calculate score and add as obs column
+        adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
+
+        # plot
+        return plot_embedding(adata, color=fname, **kwargs)
+    finally:
+        if not keep_score:
+            adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
 
 
 @deco.log_anndata
@@ -975,7 +1060,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
             # Set legend loc for last column
             if i == 0 and j == (len(loop_params[0]) - 1):
-                legend_loc = "left"
+                legend_loc = "center left"
             else:
                 legend_loc = "none"
 
