@@ -23,7 +23,7 @@ import plotly.graph_objects as go
 from numba import errors as numba_errors
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated
+from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
 import numpy.typing as npt
 
@@ -744,6 +744,83 @@ def feature_per_group(adata: sc.AnnData,
     _save_figure(save)
 
     return axs
+
+
+@deco.log_anndata
+@beartype
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> npt.ArrayLike:
+    """
+    Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object.
+    features : List
+        A list of features to aggregate. Uses the names in adata.var.index.
+    fname : str
+        Name of the selected feature group. Will be added as column to adata.obs (see keep_score) and used as plot title.
+    keep_score : bool, default False
+        Set to keep the aggregated feature score stored in adata.obs[fname].
+    fun : Callable, default np.mean
+        The aggregation function. Expects a numpy array with values to aggregate as first parameter. E.g.:
+        numpy.sum, numpy.mean (re-creates the cellxgene gene set), numpy.median, etc.
+    fun_kwargs : dict, default {"axis": 1}
+        Additional arguments for the aggregation function.
+    layer : Optional[str], default None
+        Name of the adata layer used for the calculation. Defaults to `adata.X`.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
+
+    Raises
+    ------
+    ValueError
+        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
+
+    Returns
+    -------
+    axes : npt.ArrayLike
+        Array of axis objects
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        # select the first three genes
+        features = list(adata.var.index[:3])
+
+        pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
+    """
+    try:
+        # check for missing features
+        missing = set(features) - set(adata.var.index)
+        if missing:
+            raise ValueError(f"Features {missing} are not found in adata.var.index!")
+
+        # create subset of features
+        subset = adata[:, features]
+
+        # select layer
+        if layer:
+            matrix = subset.layers[layer].toarray()
+        else:
+            matrix = subset.X.toarray()
+
+        # TODO https://github.com/scverse/scanpy/issues/532 support sc.tl.score_genes?
+
+        # make sure to not overwrite an existing obs column
+        if fname in adata.obs.columns:
+            raise ValueError(f"{fname} already exists in adata.obs.columns. Select a different name or remove the column before running this function.")
+
+        # calculate score and add as obs column
+        adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
+
+        # plot
+        return plot_embedding(adata, color=fname, **kwargs)
+    finally:
+        if not keep_score:
+            adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
 
 
 @deco.log_anndata
