@@ -7,6 +7,7 @@ import os
 import sctoolbox.utils as utils
 import re
 import shutil
+from types import SimpleNamespace
 
 
 # --------------------------- FIXTURES ------------------------------ #
@@ -95,18 +96,21 @@ def test_barcode_index(adata):
     utils.bioutils.barcode_index(adata)
 
 
-def test_get_organism():
+def test_get_organism(mocker):
     """Test function get_organism()."""
 
     # invalid host
+    mocker.patch('requests.get', return_value=SimpleNamespace(status_code=404))
     with pytest.raises(ConnectionError):
         utils.bioutils.get_organism("ENSE00000000361", host="http://www.ensembl.org/invalid/")
 
     # invalid id
+    mocker.patch('requests.get', return_value=SimpleNamespace(status_code=200, url="http://www.ensembl.org/Multi/Gene"))
     with pytest.raises(ValueError):
         utils.bioutils.get_organism("invalid_id")
 
     # valid call
+    mocker.patch('requests.get', return_value=SimpleNamespace(status_code=200, url="http://www.ensembl.org/Homo_sapiens/Gene"))
     assert utils.bioutils.get_organism("ENSG00000164690") == "Homo_sapiens"
 
 
