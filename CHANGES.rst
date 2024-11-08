@@ -1,5 +1,5 @@
-0.11.0 (in progress)
---------------------
+0.11.0 (08-11-24)
+-----------------
 - fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
 - feature_per_group remove empty axis (#312)
 - fix get_rank_genes_tables return less than n_genes for filtered ranking
