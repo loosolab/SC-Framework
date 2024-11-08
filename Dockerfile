@@ -27,19 +27,17 @@ RUN apt-get install bedtools && \
     apt-get install -y libcurl4 && \
     apt-get install -y git && \
     apt-get install -y build-essential && \ 
-    pip install --upgrade pip && \
-    pip install 'cmake>=3.18'
+    pip install --upgrade pip
 
 # update mamba
 RUN mamba update -n base mamba && \
     mamba --version 
 
 # install enviroment
-RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml && \
-    mamba install rust
+RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
 # install sctoolbox
-RUN pip install "/home/sc_framework/[all]" && \
+RUN pip install "/home/sc_framework/[core,downstream]" && \
     pip install pytest && \
     pip install pytest-html && \
     pip install pytest-cov && \

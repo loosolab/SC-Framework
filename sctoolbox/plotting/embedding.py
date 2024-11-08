@@ -245,7 +245,10 @@ def _binarize_expression(adata: sc.AnnData,
 
         # Binarize the expression data
         binary_expr = np.where(feature_expr > threshold, 'expressed', 'not expressed')
-        adata.obs[f'{feature}_status'] = pd.Categorical(binary_expr)
+        adata.obs[feature] = pd.Categorical(binary_expr)
+
+    # add "_" postfix to adata.var.index to clarify that adata.obs should be used
+    adata.var.index += "_"
 
 
 @deco.log_anndata
@@ -704,10 +707,9 @@ def feature_per_group(adata: sc.AnnData,
     if binarize:
         adata = adata.copy()  # _binarize_expression will change the adata, we want to keep the original, but plot the changed.
         features = list()
-        # collect all feature names and extend all names in x with _status
+        # collect all feature names and extend all names in x
         for grp in grps:
             features += x[grp]
-            x[grp] = [f"{feat}_status" for feat in x[grp]]
         _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold)
 
     # create plot
@@ -716,21 +718,27 @@ def feature_per_group(adata: sc.AnnData,
                             figsize=figsize if figsize else (4.8 * ncol, 3.8 * len(grps)))
 
     for i, grp in enumerate(grps):
-        for j, col in enumerate([y] + x[grp]):
+        color_names = [y] + x[grp]
+        for j in range(ncol):
             if j == 0:
                 group_restriction = grp
             elif binarize:
                 group_restriction = "expressed"
             else:
                 group_restriction = None
-            plot_embedding(
-                adata=adata,
-                color=col,
-                style="dots" if j == 0 or binarize else style,
-                groups=group_restriction,
-                ax=axs[i][j],
-                **kwargs
-            )
+
+            if j < len(color_names):
+                plot_embedding(
+                    adata=adata,
+                    color=color_names[j],
+                    style="dots" if j == 0 or binarize else style,
+                    groups=group_restriction,
+                    ax=axs[i][j],
+                    **kwargs
+                )
+            else:
+                # remove empty axis
+                fig.delaxes(axs[i][j])
 
     # save figure
     _save_figure(save)
@@ -975,7 +983,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
             # Set legend loc for last column
             if i == 0 and j == (len(loop_params[0]) - 1):
-                legend_loc = "left"
+                legend_loc = "center left"
             else:
                 legend_loc = "none"
 

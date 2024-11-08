@@ -1,4 +1,22 @@
+0.11.0 (in progress)
+--------------------
+- fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
+- feature_per_group remove empty axis (#312)
+- fix get_rank_genes_tables return less than n_genes for filtered ranking
+- fix _search_dim_red_parameters "ValueError: 'left' is not a valid value for loc"
+- fix gseapy, louvain install outside of the docker image (#310)
+- cleanup installation/ dependencies
+- CI: Revert to installing mampok from main
+- add a bar plot to predict_cell_cycle (#301)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- fix RNA:02 zebrafish gender suggestion (#311)
+- revise 03_normalization_batch_correction notebook
+- prepare_for_cellxgene: Add auth parameter
+
 0.10.1 (17-09-24)
+-----------------
 - temp fix pycirclize KeyError (until this is done https://github.com/moshi4/pyCirclize/issues/75)
 - fix .A1 deprecated
 
@@ -8,7 +26,7 @@ Changes to notebooks
 - annotation: fix marker repo clone cell
 
 0.10.0 (10-09-24)
---------------------
+-----------------
 - deseq2 (R) -> pydeseq2 (python)
 - add MAD filtering as alternative to gaussian-mixture model (#261)
 - enhance gene labelling (#38)
