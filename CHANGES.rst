@@ -8,6 +8,7 @@
 - cleanup installation/ dependencies
 - CI: Revert to installing mampok from main
 - add a bar plot to predict_cell_cycle (#301)
+- update readme
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
