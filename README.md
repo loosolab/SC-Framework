@@ -1,4 +1,7 @@
-![coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/coverage.svg?key_text=coverage&key_width=70)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11065517.svg)](https://doi.org/10.5281/zenodo.11065517)
+![Release](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/badges/release.svg)
+![Coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/coverage.svg?key_text=coverage&key_width=70)
+![Pipeline](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/pipeline.svg?ignore_skipped=true)
 
 
 # SC Framework
@@ -137,4 +140,4 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 
 ### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
-**A:** We are always happy to help. In order to keep track of every changes, if you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
+**A:** We are always happy to help. If you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Thank you!

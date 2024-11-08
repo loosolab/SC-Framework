@@ -9,6 +9,7 @@
 - CI: Revert to installing mampok from main
 - implement bgcolor cell-selection
 - add a bar plot to predict_cell_cycle (#301)
+- update readme
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
