@@ -137,4 +137,4 @@ The `*_analysis` directory contains up to five subdirectories. In the beginning,
 
 ### Q: I have encountered a bug, I have a feature request, there is something I need help with or want to discuss.
 
-**A:** We are always happy to help. In order to keep track of every changes, if you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Issues can be opened [here](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues). Thank you!
+**A:** We are always happy to help. If you encounter something that needs attention open an issue with a detailed explanation and if possible a small code example. Thank you!
