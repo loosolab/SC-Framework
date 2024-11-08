@@ -762,7 +762,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         Name of the selected feature group. Will be added as column to adata.obs (see keep_score) and used as plot title.
     keep_score : bool, default False
         Set to keep the aggregated feature score stored in adata.obs[fname].
-    fun : Callable, default np.sum
+    fun : Callable, default np.mean
         The aggregation function. Expects a numpy array with values to aggregate as first parameter. E.g.:
         numpy.sum, numpy.mean (re-creates the cellxgene gene set), numpy.median, etc.
     fun_kwargs : dict, default {"axis": 1}
