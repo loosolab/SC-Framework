@@ -8,7 +8,9 @@
 - implemented plotting.embedding.agg_feature_embedding
 - cleanup installation/ dependencies
 - CI: Revert to installing mampok from main
+- implement bgcolor cell-selection
 - add a bar plot to predict_cell_cycle (#301)
+- update readme
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -16,6 +18,7 @@ Changes to notebooks
 - fix RNA:02 zebrafish gender suggestion (#311)
 - revise 03_normalization_batch_correction notebook
 - prepare_for_cellxgene: Add auth parameter
+- use the bgcolor cell-selection in all notebooks
 
 0.10.1 (17-09-24)
 -----------------
