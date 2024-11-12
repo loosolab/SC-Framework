@@ -377,6 +377,11 @@ def pairwise_rank_genes(adata: sc.AnnData,
     **kwargs : Any
         Additional arguments to be passed to scanpy.tl.rank_genes_groups.
 
+    Raises
+    ------
+    ValueError
+        Raised when there are less than two groups in the adata.obs column selected by groupby.
+
     Returns
     -------
     pd.DataFrame
