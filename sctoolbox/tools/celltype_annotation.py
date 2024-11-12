@@ -90,7 +90,7 @@ def get_celltype_assignment(adata: sc.AnnData,
     marker_genes_table = pd.DataFrame(markers)
 
     # Get pseudobulk table
-    table = utils.pseudobulk_table(sub, clustering)
+    table = utils.bioutils.pseudobulk_table(sub, clustering)
     table.index.name = "genes"
     table.reset_index(inplace=True)
 
@@ -271,11 +271,11 @@ def run_scsa(adata: sc.AnnData,
 
     Raises
     ------
-    KeyError:
+    KeyError
         1. If key is not in adata.uns.
         2. If 'params' is not in adata.uns[key] or if 'groupby' is not in adata.uns[key]['params'].
         3. If gene column is not in adata.var
-    ValueError:
+    ValueError
         1. If species parameter is not Human, Mouse or None.
         2. If no species and no user database is provided.
         3. If SCSA run failes
@@ -339,7 +339,7 @@ def run_scsa(adata: sc.AnnData,
     name_columns = [col for col in dat if col.endswith("_n")]
     for col in name_columns:
         dups = dat[col].duplicated(keep='first')
-        dat[col].mask(dups, other="_NA", inplace=True)  # replace all duplicates with _NA
+        dat[col] = dat[col].mask(dups, other="_NA")  # replace all duplicates with _NA
 
     # Save to file
     csv = './scsa_input.csv'
@@ -347,7 +347,7 @@ def run_scsa(adata: sc.AnnData,
 
     # ---- building the SCSA command ---- #
     results_path = "./scsa_results.txt"
-    utils.create_dir(results_path)  # make sure the full path to results exists
+    utils.io.create_dir(results_path)  # make sure the full path to results exists
 
     scsa_cmd = f"{python_path} {scsa_path} -i {csv} -f {fc} -p {pvalue} -o {results_path} -m txt "
     scsa_cmd += f"--db {marker_db} "
@@ -385,7 +385,7 @@ def run_scsa(adata: sc.AnnData,
 
     # Remove the temporary files
     files = [csv, results_path]
-    utils.remove_files(files)
+    utils.io.remove_files(files)
 
     # Add the annotated celltypes to the anndata-object
     if inplace:

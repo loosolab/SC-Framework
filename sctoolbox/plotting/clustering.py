@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 from beartype import beartype
-from beartype.typing import Literal, Tuple, Optional
+from beartype.typing import Literal, Tuple, Optional, Any
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -23,7 +23,8 @@ def search_clustering_parameters(adata: sc.AnnData,
                                  embedding: str = "X_umap",
                                  ncols: int = 3,
                                  verbose: bool = True,
-                                 save: Optional[str] = None) -> np.ndarray:
+                                 save: Optional[str] = None,
+                                 **kwargs: Any) -> np.ndarray:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -43,6 +44,8 @@ def search_clustering_parameters(adata: sc.AnnData,
         Print progress to console.
     save : Optional[str], default None
         Path to save figure.
+    **kwargs : Any
+        Keyword arguments to be passed to sc.pl.embedding.
 
     Returns
     -------
@@ -61,7 +64,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
+        pl.clustering.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
     """
 
     # Check validity of parameters
@@ -77,7 +80,9 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     # Check that method is valid
     if method == "leiden":
-        cl_function = sc.tl.leiden
+        # set future defaults to omit warning
+        def cl_function(*args, **kwargs):
+            sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
     elif method == "louvain":
         cl_function = sc.tl.louvain
 
@@ -90,7 +95,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     ncols = min(ncols, len(resolutions))  # number of resolutions caps number of columns
     nrows = int(np.ceil(len(resolutions) / ncols))
     fig, axarr = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
-    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr  # reshape 1-column array
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
 
     axes = axarr.flatten()
@@ -103,14 +108,14 @@ def search_clustering_parameters(adata: sc.AnnData,
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
         cl_function(adata, resolution=res, key_added=key_added)
-        adata.obs[key_added] = utils.rename_categories(adata.obs[key_added])  # rename to start at 1
+        adata.obs[key_added] = utils.tables.rename_categories(adata.obs[key_added])  # rename to start at 1
         n_clusters = adata.obs[key_added].nunique()
 
         # Plot embedding
         title = f"Resolution: {res} (clusters: {n_clusters})\ncolumn name: {key_added}"
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning, message="No data for colormapping provided via 'c'*")
-            sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False)
+            sc.pl.embedding(adata, embedding, color=key_added, ax=axes[i], legend_loc="on data", title=title, show=False, **kwargs)
 
     # Hide plots not filled in
     for ax in axes[len(resolutions):]:
@@ -129,7 +134,8 @@ def marker_gene_clustering(adata: sc.AnnData,
                            marker_genes_dict: dict[str, list[str]],
                            show_umap: bool = True,
                            save: Optional[str] = None,
-                           figsize: Optional[Tuple[float | int, float | int]] = None) -> list:
+                           figsize: Optional[Tuple[float | int, float | int]] = None,
+                           **kwargs: Any) -> list:
     """
     Plot an overview of marker genes and clustering.
 
@@ -147,6 +153,8 @@ def marker_gene_clustering(adata: sc.AnnData,
         If given, save the figure to this path.
     figsize : Tuple[float | int, float | int], default: None
         Size of the figure. If `None`, use default size.
+    **kwargs : Any
+        Keyword arguments to be passed to sc.pl.dotplot.
 
     Returns
     -------
@@ -160,7 +168,7 @@ def marker_gene_clustering(adata: sc.AnnData,
 
         marker_genes_dict = {"S": ["PCNA"], "G2M": ["HMGB2"]}
 
-        pl.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
+        pl.clustering.marker_gene_clustering(adata, "phase", marker_genes_dict, show_umap=True, save=None, figsize=None)
     """
 
     i = 0
@@ -179,10 +187,10 @@ def marker_gene_clustering(adata: sc.AnnData,
         axarr = [axarr]  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
-    marker_genes_dict = utils.check_marker_lists(adata, marker_genes_dict)
+    marker_genes_dict = utils.checker.check_marker_lists(adata, marker_genes_dict)
 
     # Plot marker gene expression on the right
-    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i])
+    ax = sc.pl.dotplot(adata, marker_genes_dict, groupby=groupby, show=False, dendrogram=True, ax=axarr[i], **kwargs)
     ax["mainplot_ax"].set_ylabel(groupby)
     ax["mainplot_ax"].set_xticklabels(ax["mainplot_ax"].get_xticklabels(), ha="right", rotation=45)
 

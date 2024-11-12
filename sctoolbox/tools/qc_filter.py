@@ -4,6 +4,7 @@ import pandas as pd
 import scanpy as sc
 import multiprocessing as mp
 import warnings
+import time
 import anndata
 import pkg_resources
 import glob
@@ -11,24 +12,29 @@ from pathlib import Path
 from sklearn.mixture import GaussianMixture
 from kneed import KneeLocator
 import matplotlib.pyplot as plt
+import scrublet as scr
+import scipy.stats as stats
+from scipy.sparse import csr_matrix
 
 from beartype import beartype
 import numpy.typing as npt
-from beartype.typing import Optional, Tuple, Union, Any, Literal
-# import scrublet as scr
+from beartype.typing import Optional, Tuple, Union, Any, Literal, Callable, Dict
 
 # toolbox functions
-import sctoolbox
 import sctoolbox.utils as utils
-from sctoolbox.plotting import _save_figure
+import sctoolbox.plotting as pl
+from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
 
+# path in adata.uns that holds the reports
+_uns_report_path = ["sctoolbox", "report", "qc"]
 
 ###############################################################################
 #                        PRE-CALCULATION OF QC METRICS                        #
 ###############################################################################
+
 
 @deco.log_anndata
 @beartype
@@ -59,7 +65,20 @@ def calculate_qc_metrics(adata: sc.AnnData,
     --------
     scanpy.pp.calculate_qc_metrics
         https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.calculate_qc_metrics.html
+
+    Examples
+    --------
+    .. exec_code::
+
+        import scanpy as sc
+        import sctoolbox as sct
+
+        adata = sc.datasets.pbmc3k()
+        print("Columns in .obs before 'calculate_qc_metrics':", adata.obs.columns.tolist())
+        sct.tools.qc_filter.calculate_qc_metrics(adata, inplace=True)
+        print("Columns in .obs after 'calculate_qc_metrics':", adata.obs.columns.tolist())
     """
+
     # add metrics to copy of anndata
     if not inplace:
         adata = adata.copy()
@@ -86,6 +105,9 @@ def predict_cell_cycle(adata: sc.AnnData,
                        species: Optional[str],
                        s_genes: Optional[str | list[str]] = None,
                        g2m_genes: Optional[str | list[str]] = None,
+                       groupby: Optional[str] = None,
+                       plot: bool = True,
+                       save: Optional[str] = None,
                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -108,6 +130,13 @@ def predict_cell_cycle(adata: sc.AnnData,
         a list of genes for the G2M-phase or a txt file containing one gene per row.
         If only g2m_genes is provided and species is a supported input, the default
         s_genes list will be used, otherwise the function will not run.
+    groupby : Optional[str], default None
+        Name of a column in adata.obs to split the bar plot showing counts and proportions of each phase.
+        If None, the plot shows cell counts per phase.
+    plot : bool, default True
+        Plot a bar plot to show counts of cells in each phase.
+    save : Optional[str], default None
+        Path to save the plot.
     inplace : bool, default True
         if True, add new columns to the original anndata object.
 
@@ -118,10 +147,12 @@ def predict_cell_cycle(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1: If s_genes or g2m_genes is not None and not of type list.
         2: If no cellcycle genes available for the given species.
         3. If given species is not supported and s_genes or g2m_genes are not given.
+    FileNotFoundError
+        If the s_genes or g2m_genes file can not be found.
     """
 
     if not inplace:
@@ -134,7 +165,7 @@ def predict_cell_cycle(adata: sc.AnnData,
             # check if s_genes is a file or list
             if isinstance(genes, str):
                 if Path(genes).is_file():  # check if file exists
-                    genes = utils.read_list_file(genes)
+                    genes = utils.general.read_list_file(genes)
                 else:
                     raise FileNotFoundError(f'The file {genes} was not found!')
             elif isinstance(s_genes, np.ndarray):
@@ -161,7 +192,7 @@ def predict_cell_cycle(adata: sc.AnnData,
 
         # check if given species is available
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
+        available_species = utils.general.clean_flanking_strings(available_files)
         if species not in available_species:
             logger.debug("Species was not found in available species!")
             logger.debug(f"genelist_dir: {genelist_dir}")
@@ -200,6 +231,11 @@ def predict_cell_cycle(adata: sc.AnnData,
     adata.obs['G2M_score'] = sdata.obs['G2M_score']
     adata.obs['phase'] = sdata.obs['phase']
 
+    # plot a bar plot showing counts (and proportions) of cells in each phase
+    if plot:
+        pl.qc_filter.n_cells_barplot(adata, x="phase", groupby=groupby,
+                                     save=save)
+
     if not inplace:
         return adata
 
@@ -207,7 +243,8 @@ def predict_cell_cycle(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def estimate_doublets(adata: sc.AnnData,
-                      threshold: float = 0.25,
+                      use_native: bool = False,
+                      threshold: Optional[float] = None,
                       inplace: bool = True,
                       plot: bool = True,
                       groupby: Optional[str] = None,
@@ -224,6 +261,8 @@ def estimate_doublets(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to estimate doublets for.
+    use_native : bool, default False
+        If True, uses the native implementation of scrublet.
     threshold : float, default 0.25
         Threshold for doublet detection.
     inplace : bool, default True
@@ -272,18 +311,18 @@ def estimate_doublets(adata: sc.AnnData,
                 sub.uns = {}
                 sub.layers = None
 
-                job = pool.apply_async(_run_scrublet, (sub,), {"threshold": threshold, "verbose": False, **kwargs})
+                job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
                 jobs.append(job)
             pool.close()
 
-            sctoolbox.utilities.monitor_jobs(jobs, "Scrublet per group")
+            utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
             results = [job.get() for job in jobs]
 
         else:
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
                 logger.info("Scrublet per group: {}/{}".format(i + 1, len(all_groups)))
-                res = _run_scrublet(sub, threshold=threshold, verbose=False, **kwargs)
+                res = _run_scrublet(sub, use_native=use_native, threshold=threshold, verbose=False, **kwargs)
                 results.append(res)
 
         # Collect results for each element in tuples
@@ -311,7 +350,7 @@ def estimate_doublets(adata: sc.AnnData,
 
     if fill_na:
         adata.obs[["doublet_score", "predicted_doublet"]] = (
-            utils.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
+            utils.tables.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
 
     # Check if all values in colum are of type boolean
     if adata.obs["predicted_doublet"].dtype != "bool":
@@ -319,15 +358,16 @@ def estimate_doublets(adata: sc.AnnData,
 
     # Plot the distribution of scrublet scores
     if plot is True:
-        sc.external.pl.scrublet_score_distribution(adata)
+        sc.pl.scrublet_score_distribution(adata)
 
     # Return adata (or None if inplace)
     if inplace is False:
         return adata
 
 
-@beartype
 def _run_scrublet(adata: sc.AnnData,
+                  use_native: bool = False,
+                  threshold: Optional[float] = None,
                   **kwargs: Any) -> Tuple[pd.DataFrame, dict[str, Union[np.ndarray, float, dict[str, float]]]]:
     """
     Thread-safe wrapper for running scrublet, which also takes care of catching any warnings.
@@ -336,6 +376,10 @@ def _run_scrublet(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to estimate doublets for.
+    use_native : bool, default False
+        If True, uses the native implementation of scrublet.
+    threshold : float, default 0.25
+        Threshold for doublet detection.
     **kwargs : Any
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
@@ -349,14 +393,23 @@ def _run_scrublet(adata: sc.AnnData,
         warnings.filterwarnings("ignore", category=UserWarning, message="Received a view of an AnnData*")
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute `.obs`*")  # because adata is a view
 
-        # X = adata.X
-        # scrub = scr.Scrublet(X)
-        # doublet_scores, predicted_doublets = scrub.scrub_doublets()
+        if use_native:
+            # Run scrublet with native implementation
+            X = adata.X
+            scrub = scr.Scrublet(X)
+            doublet_scores, predicted_doublets = scrub.scrub_doublets()
 
-        # adata.obs["doublet_score"] = doublet_scores
-        # adata.obs["predicted_doublet"] = predicted_doublets
+            # Apply manual threshold
+            if threshold:
+                predicted_doublets = scrub.call_doublets(threshold=threshold)
 
-        sc.external.pp.scrublet(adata, copy=False, **kwargs)
+            adata.obs["doublet_score"] = doublet_scores
+            adata.obs["predicted_doublet"] = predicted_doublets
+
+            adata.uns['scrublet'] = {"doublet_scores_sim": scrub.doublet_scores_sim_}
+
+        else:
+            sc.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
 
@@ -369,7 +422,8 @@ def predict_sex(adata: sc.AnnData,
                 gene_column: Optional[str] = None,
                 threshold: float = 0.3,
                 plot: bool = True,
-                save: Optional[str] = None) -> None:
+                save: Optional[str] = None,
+                **kwargs: Any) -> None:
     """
     Predict sex based on expression of Xist (or another gene).
 
@@ -389,6 +443,8 @@ def predict_sex(adata: sc.AnnData,
         Whether to plot the distribution of gene expression per group.
     save : Optional[str], default None
         If provided, the plot will be saved to this path.
+    **kwargs : Any
+        Additional arguments are passed to scanpy.pl.violin.
 
     Notes
     -----
@@ -428,7 +484,7 @@ def predict_sex(adata: sc.AnnData,
     # Estimate which samples are male/female
     logger.info("Estimating male/female per group")
     assignment = {}
-    for group, table in adata_copy.obs.groupby(groupby):
+    for group, table in adata_copy.obs.groupby(groupby, observed=False):
         n_cells = len(table)
         n_expr = sum(table["gene_expr"] > 0)
         frac = n_expr / n_cells
@@ -459,7 +515,8 @@ def predict_sex(adata: sc.AnnData,
         axarr[0].set_ylabel(f"Normalized {gene} expression")
 
         # Plot violins per group + color for female cells
-        sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups)
+        sc.pl.violin(adata_copy, keys="gene_expr", groupby=groupby, jitter=False, ax=axarr[1], show=False, order=groups, **kwargs)
+        axarr[1].set_xticks(axarr[1].get_xticks())  # https://stackoverflow.com/a/68794383/19870975
         axarr[1].set_xticklabels(groups, rotation=45, ha="right")
         axarr[1].set_ylabel("")
         xlim = axarr[1].get_xlim()
@@ -483,15 +540,19 @@ def predict_sex(adata: sc.AnnData,
 ###############################################################################
 
 @beartype
-def _get_thresholds(data: npt.ArrayLike,
-                    max_mixtures: int = 5,
-                    n_std: int | float = 3,
-                    plot: bool = True) -> dict[str, float]:
+def gmm_threshold(data: npt.ArrayLike,
+                  max_mixtures: int = 5,
+                  min_n: Union[int, float] = 3,
+                  max_n: Union[int, float] = 3,
+                  plot: bool = False) -> dict[str, Union[int, float]]:
     """
     Get automatic min/max thresholds for input data array.
 
     The function will fit a gaussian mixture model, and find the threshold
-    based on the mean and standard deviation of the largest mixture in the model.
+    based on the mean and standard deviation (SD) of the largest mixture in the model.
+    The threshold is calculates as mean(largest component) +/- SD * n.
+
+    The number of mixtures aka components is estimated using the Bayesian information criterion (BIC) criterion.
 
     Parameters
     ----------
@@ -499,14 +560,16 @@ def _get_thresholds(data: npt.ArrayLike,
         Array of data to find thresholds for.
     max_mixtures : int, default 5
         Maximum number of gaussian mixtures to fit.
-    n_std : int | float, default 3
-        Number of standard deviations from distribution mean to set as min/max thresholds.
-    plot : bool, default True
+    min_n : Union[int, float], default 3
+        Number of SDs from largest component mean to set as min threshold.
+    max_n : Union[int, float], default 3
+        Number of SDs from largest component mean to set as max threshold.
+    plot : bool, default False
         If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
 
     Returns
     -------
-    dict[str, float]
+    dict[str, Union[int, float]]
         Dictionary with min and max thresholds.
     """
 
@@ -533,11 +596,15 @@ def _get_thresholds(data: npt.ArrayLike,
     # Choose best number of mixtures
     try:
         kn = KneeLocator(n_list, BIC, curve='convex', direction='decreasing')
-        M_best = models[kn.knee - 1]  # -1 to get index
+        # store selected mixtures
+        selected = kn.knee
+        M_best = models[selected - 1]  # -1 to get index
 
     except Exception:
         # Knee could not be found; use the normal distribution estimated using one gaussian
         M_best = models[0]
+        # store selected mixtures
+        selected = 1
 
     # Which is the largest component? And what are the mean/variance of this distribution?
     weights = M_best.weights_
@@ -546,8 +613,8 @@ def _get_thresholds(data: npt.ArrayLike,
     dist_std = np.sqrt(M_best.covariances_[i][0][0])
 
     # Threshold estimation
-    thresholds = {"min": dist_mean - dist_std * n_std,
-                  "max": dist_mean + dist_std * n_std}
+    thresholds = {"min": dist_mean - dist_std * min_n,
+                  "max": dist_mean + dist_std * max_n}
 
     # ------ Plot if chosen -------#
     if plot:
@@ -560,6 +627,8 @@ def _get_thresholds(data: npt.ArrayLike,
         axarr[0].plot(n_list, BIC, color="blue")
         axarr[0].set_xlabel("Number of mixtures")
         axarr[0].set_ylabel("BIC")
+
+        axarr[0].axvline(selected, color="red", linestyle="--", label="Selected mixtures")
 
         # Plot distribution of gaussian mixtures
         min_x = min(data)
@@ -585,10 +654,61 @@ def _get_thresholds(data: npt.ArrayLike,
 
 
 @beartype
+def mad_threshold(data: npt.ArrayLike,
+                  min_n: Union[int, float] = 3,
+                  max_n: Union[int, float] = 3,
+                  plot: bool = False) -> dict[str, Union[int, float]]:
+    """
+    Compute an automatic threshold using the median absolute deviation (MAD).
+
+    The threshold is calcualted as median(data) -/+ MAD * n.
+
+    Parameters
+    ----------
+    data : npt.ArrayLike
+        Array of data to find thresholds for.
+    min_n : Union[int, float], default 3
+        Number of MADs from distribution median to set as min threshold.
+    max_n : Union[int, float], default 3
+        Number of MADs from distribution median to set as max threshold.
+    plot : bool, default False
+        If True, will plot the distribution of BIC and the fit of the gaussian mixtures to the data.
+
+    Returns
+    -------
+    dict[str, Union[int, float]]
+        Dictionary with min and max thresholds.
+    """
+    median = np.median(data)
+    MAD = stats.median_abs_deviation(data)
+
+    result = {"min": median - MAD * min_n,
+              "max": median + MAD * max_n}
+
+    if plot:
+        _, ax = plt.subplots(figsize=(7, 3), constrained_layout=True)
+
+        ax.hist(data, density=True)
+        ax.set_xlabel("Value")
+        ax.set_ylabel("Density")
+
+        ml1 = ax.axvline(result["min"], color="red", linestyle="--")
+        ml2 = ax.axvline(result["max"], color="red", linestyle="--")
+        medl = ax.axvline(median, color="grey", linestyle="--")
+        ax.legend((medl, ml1, ml2),
+                  (f"Median ({median:.2f})", f"Min. MAD ({result['min']:.2f})", f"Max. MAD ({result['max']:.2f})"),
+                  bbox_to_anchor=(1.05, 1), loc=2)  # locate legend outside of plot
+
+    return result
+
+
+@beartype
 def automatic_thresholds(adata: sc.AnnData,
                          which: Literal["obs", "var"] = "obs",
                          groupby: Optional[str] = None,
-                         columns: Optional[list[str]] = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+                         columns: Optional[list[str]] = None,
+                         FUN: Callable = gmm_threshold,
+                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -602,16 +722,21 @@ def automatic_thresholds(adata: sc.AnnData,
         Group rows by the column given in 'groupby' to find thresholds independently per group
     columns : Optional[list[str]], default None
         Columns to calculate automatic thresholds for. If None, will take all numeric columns.
+    FUN : Callable, default gmm_threshold
+        A filter function. The function is expected to accept an array of values and to return a dict with thresholds: {"min": 0, "max": 1}.
+        Available functions: sctoolbox.tools.qc_filter.gmm_threshold, sctoolbox.tools.qc_filter.mad_threshold.
+    FUN_kwargs : dict
+        Dict of additional kwargs forwarded to the filter function.
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
+    dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
     Raises
     ------
-    ValueError:
+    ValueError
         If which is not set to 'obs' or 'var'
     """
 
@@ -620,8 +745,6 @@ def automatic_thresholds(adata: sc.AnnData,
         table = adata.obs
     elif which == "var":
         table = adata.var
-    else:
-        raise ValueError("'which' must be either 'obs' or 'var'.")
 
     # Establish which columns to find thresholds for
     if columns is None:
@@ -630,7 +753,7 @@ def automatic_thresholds(adata: sc.AnnData,
     # Check groupby
     if groupby is not None:
         if groupby not in table.columns:
-            raise ValueError()
+            raise ValueError(f"Invalid groupby value. '{groupby}' is not a column in adata.{which}.")
 
     # Get threshold per data column (and groupby if chosen)
     thresholds = {}
@@ -639,7 +762,7 @@ def automatic_thresholds(adata: sc.AnnData,
         if groupby is None:
             data = table[col].values
             data[np.isnan(data)] = 0
-            d = _get_thresholds(data, plot=False)
+            d = FUN(data, **FUN_kwargs)
             thresholds[col] = d
 
         else:
@@ -647,20 +770,20 @@ def automatic_thresholds(adata: sc.AnnData,
             for group, subtable in table.groupby(groupby):
                 data = subtable[col].values
                 data[np.isnan(data)] = 0
-                d = _get_thresholds(data, plot=False)
+                d = FUN(data, **FUN_kwargs)
                 thresholds[col][group] = d
 
     return thresholds
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, float | int]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
     Parameters
     ----------
-    threshold_dict : dict[str, dict[str, float | int]]
+    threshold_dict : dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]
         Dictionary with thresholds.
 
     Returns
@@ -713,7 +836,7 @@ def _validate_minmax(d: dict) -> None:
 
 @beartype
 def validate_threshold_dict(table: pd.DataFrame,
-                            thresholds: dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]],
+                            thresholds: dict[str, dict[str, Union[int, float]] | dict[str, dict[str, Union[int, float]]]],
                             groupby: Optional[str] = None) -> None:
     """
     Validate threshold dictionary.
@@ -739,7 +862,7 @@ def validate_threshold_dict(table: pd.DataFrame,
     ----------
     table : pd.DataFrame
         Table to validate thresholds for.
-    thresholds : dict[str, dict[str, int | float] | dict[str, dict[str, int | float]]]
+    thresholds : dict[str, dict[str, Union[int, float]] | dict[str, dict[str, Union[int, float]]]]
         Dictionary of thresholds to validate.
     groupby : Optional[str], default None
         Column for grouping thresholds.
@@ -777,89 +900,161 @@ def validate_threshold_dict(table: pd.DataFrame,
 
 @deco.log_anndata
 @beartype
-def get_thresholds_wrapper(adata: sc.AnnData,
-                           manual_thresholds: dict,
-                           only_automatic_thresholds: bool = True,
-                           groupby: Optional[str] = None) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+def get_thresholds(adata: sc.AnnData,
+                   manual_thresholds: Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float, None]], Dict[str, Dict[Literal["min", "max"], Union[int, float, None]]]]],
+                   which: Literal["obs", "var"] = "obs",
+                   groupby: Optional[str] = None,
+                   ignore_stored: bool = False,
+                   only_automatic: bool = False,
+                   **kwargs: Any) -> Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]:
     """
-    Get the thresholds for the filtering.
+    Prepare thresholds for filtering.
+
+    Thresholds are optained from three different sources per default in the following order:
+      1. stored within the adata from a previous filtering
+      2. given through the 'manual_thresholds' parameter
+      3. generated in this function (automatic thresholds)
+    The function will exclusively use stored thresholds and ignore the other sources if stored thresholds are available.
+
+    Warnings/ Notes:
+    - Metrics that are not present within the anndata object are removed with a warning.
+    - Will give a warning if threshold stored within the adata are detected (unless ignore_stored=True).
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object to find QC thresholds for.
-    manual_thresholds : dict[str, dict[str, Union[float, dict[str, float]]]]
-        Dictionary containing manually set thresholds
-    only_automatic_thresholds : bool, default True
-        If True, only set automatic thresholds.
+    manual_thresholds : Dict[str, Union[None, Dict[Literal["min", "max"], Optional[Union[int, float]]], Dict[str, Dict[Literal["min", "max"], Optional[Union[int, float]]]]]]
+        Dictionary containing manually set thresholds.
+        Formatted as:
+        {
+            <metric_name>: None |
+                           {'min': <val> | None, 'max': <val> | None} |
+                           {<cond_A>: {'min': <val> | None, 'max': <val> | None}, <cond_B>: {'min': <val> | None, 'max': <val> | None}, ...}
+        }
+    which : Literal["obs", "var"], default "obs"
+        Which data to find thresholds for. Either "obs" or "var".
     groupby : Optional[str], default None
         Group cells by column in adata.obs.
+    ignore_stored : bool, default False
+        Set to ignore predefined/ already used thresholds within the adata.
+    only_automatic : bool, default False
+        If True, overwrite everything with automatic thresholds.
+    **kwargs : Any
+        Forwarded to sctoolbox.tools.qc_filter.automatic_thresholds.
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
-        Dictionary containing the thresholds
+    Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
+        A dictionary containing the thresholds.
     """
-    manual_thresholds = get_keys(adata, manual_thresholds)
+    # remove keys not present in the adata
+    manual_thresholds = _match_columns(adata=adata, d=manual_thresholds, which=which)
 
-    if only_automatic_thresholds:
-        keys = list(manual_thresholds.keys())
-        thresholds = automatic_thresholds(adata, which="obs", columns=keys, groupby=groupby)
-        return thresholds
-    else:
+    metric_names = list(manual_thresholds.keys())
+
+    # calculate automatic thresholds for everything
+    auto_thr = automatic_thresholds(adata, which=which, columns=metric_names, groupby=groupby, **kwargs)
+
+    # overwrite everything with automatic thresholds
+    if only_automatic:
+        return auto_thr
+
+    # fetch and return thresholds stored within the adata
+    if utils.adata.in_uns(adata=adata, key=_uns_report_path + [which, "threshold"]):
+        stored = None
+        for name in _uns_report_path + [which, "threshold"]:
+            stored = stored[name] if stored else adata.uns[name]
+
+        if stored:
+            logger.warning('Found previously applied thresholds within the adata.')
+            if not ignore_stored:
+                logger.warning('Using thresholds stored within the adata set "ignore_stored=True" to use manual and/or automatic thresholds.')
+                return stored
+
+    # keep manual thresholds; use automatic thresholds for missing values
+    thresholds = {}
+
+    # thresholds which are not set by the user are set automatically
+    for key, value in manual_thresholds.items():
+        # identify and temporary store threshold (missing values will be filled in below)
+        if value is None:
+            current_thresh = {}
+        else:
+            current_thresh = value
+        # global_thresh = value if value is not None and "min" in value or "max" in value else {}
+
         if groupby:
-            samples = []
-            current_sample = None
-            for sample in adata.obs[groupby]:
-                if current_sample != sample:
-                    samples.append(sample)
-                    current_sample = sample
-        # thresholds which are not set by the user are set automatically
-        for key, value in manual_thresholds.items():
-            if value['min'] is None or value['max'] is None:
-                auto_thr = automatic_thresholds(adata, which="obs", columns=[key], groupby=groupby)
-                manual_thresholds[key] = auto_thr[key]
-            else:
-                if groupby:
-                    thresholds = {}
-                    for sample in samples:
-                        thresholds[sample] = value
+            # create one threshold (lower and upper) per group in metric
+            # will fill missing values with generated automatic thresholds
+            groups = set(adata.obs[groupby])
+
+            metric_threshold = {}
+            for grp in groups:
+                grp_thresh = {}
+
+                # use global or group bound if given else use automatic bound
+                for bound in ["min", "max"]:
+                    if bound in current_thresh and current_thresh[bound] is not None:
+                        grp_thresh[bound] = current_thresh[bound]
+                    elif (isinstance(manual_thresholds[key], dict)
+                          and grp in manual_thresholds[key]
+                          and bound in manual_thresholds[key][grp]):
+                        grp_thresh[bound] = manual_thresholds[key][grp][bound]
+                    else:
+                        grp_thresh[bound] = auto_thr[key][grp][bound]
+
+                metric_threshold[grp] = grp_thresh
+            thresholds[key] = metric_threshold
+        else:
+            # create one global threshold per metric
+            # missing values are filled using the automatic threshold
+
+            metric_threshold = {}
+            for bound in ["min", "max"]:
+                if bound in current_thresh and current_thresh[bound] is not None:
+                    metric_threshold[bound] = current_thresh[bound]
                 else:
-                    thresholds = {key: value}
+                    metric_threshold[bound] = auto_thr[key][bound]
+            thresholds[key] = metric_threshold
 
-                manual_thresholds[key] = thresholds
-
-        return manual_thresholds
+    return thresholds
 
 
 @beartype
-def get_keys(adata: sc.AnnData,
-             manual_thresholds: dict[str, Any]) -> dict[str, dict[str, Union[float, dict[str, float]]]]:
+def _match_columns(adata: sc.AnnData,
+                   d: dict,
+                   which: Literal["obs", "var"] = "obs"
+                   ) -> dict:
     """
-    Get threshold dictionary with keys that overlap with adata.obs.columns.
+    Remove dictionary entries where the key does not match a column name of either .var or .obs.
+
+    Will give a warning for entries without a matching key.
 
     Parameters
     ----------
     adata : sc.AnnData
         Anndata object
-    manual_thresholds : dict[str, Any]
-        Dictionary with adata.obs colums as keys.
+    d : dict
+        Dictionary with adata.obs or .var colums as keys.
+    which : Literal["obs", "var"], default "obs"
+        Wether to check adata.obs or adata.var columns.
 
     Returns
     -------
-    dict[str, dict[str, Union[float, dict[str, float]]]]
-        Dictionary with key - adata.obs.column overlap
+    dict
+        Same dictionary as the input (d) but without entries where the key did not match a column in either .obs or .var.
     """
+    d_out = {}
 
-    m_thresholds = {}
-    legend = adata.obs.columns
-    for key, value in manual_thresholds.items():
-        if key in legend:
-            m_thresholds[key] = value
+    col_names = getattr(adata, which).columns
+    for key, value in d.items():
+        if key in col_names:
+            d_out[key] = value
         else:
-            logger.info('column: ' + key + ' not found in adata.obs')
+            logger.warning(f'column {key} not found in adata.{which}')
 
-    return m_thresholds
+    return d_out
 
 
 @beartype
@@ -892,10 +1087,10 @@ def get_mean_thresholds(thresholds: dict[str, Any]) -> dict[str, Any]:
 @deco.log_anndata
 @beartype
 def apply_qc_thresholds(adata: sc.AnnData,
-                        thresholds: dict[str, Any],
+                        thresholds: Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]],
                         which: Literal["obs", "var"] = "obs",
-                        groupby: Optional[str] = None,
-                        inplace: bool = True) -> Optional[sc.AnnData]:
+                        inplace: bool = True,
+                        overwrite: bool = False) -> Optional[sc.AnnData]:
     """
     Apply QC thresholds to anndata object.
 
@@ -903,14 +1098,14 @@ def apply_qc_thresholds(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to filter.
-    thresholds : dict[str, Any]
+    thresholds : Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
         Dictionary of thresholds to apply.
     which : Literal["obs", "var"], default 'obs'
        Which table to filter on. Must be one of "obs" / "var".
-    groupby : Optional[str], default None
-        Column in table to group by.
     inplace : bool, default True
         Change adata inplace or return a changed copy.
+    overwrite : bool, default False
+        Set to overwrite previously applied filters.
 
     Returns
     -------
@@ -919,100 +1114,55 @@ def apply_qc_thresholds(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
-        1: If the keys in thresholds do not match with the columns in adata.[which].
-        2: If grouped thesholds are not found. For example do not contain min and max values.
-        3: If thresholds do not contain min and max values.
+    ValueError
+        1: If the keys in thresholds do not match with the columns in adata.<which>.
     """
-
-    table = adata.obs if which == "obs" else adata.var
-
-    # Cells or genes? For naming in log prints
-    if which == "obs":
-        name = "cells"
-    else:
-        name = ".var features"
+    # get the table which contains the filter metrics
+    table = getattr(adata, which)
 
     # Check if all columns are found in adata
-    not_found = list(set(thresholds) - set(table.columns))
-    if len(not_found) > 0:
-        logger.info("{0} threshold columns were not found in adata and could therefore not be applied. These columns are: {1}".format(len(not_found), not_found))
-    thresholds = {k: thresholds[k] for k in thresholds if k not in not_found}
+    thresholds = _match_columns(adata, thresholds, which=which)
 
     if len(thresholds) == 0:
         raise ValueError(f"The thresholds given do not match the columns given in adata.{which}. Please adjust the 'which' parameter if needed.")
 
-    if groupby is not None:
-        groups = table[groupby].unique()
+    # create a boolean filter per metric
+    inclusion_bools = []  # a list of lists that represents the filters of all metrics
+    for metric, _dict in thresholds.items():
+        # global filtering
+        if "min" in _dict or "max" in _dict:
+            # create one filter list per threshold then combine
+            # allows setting only a single bound
+            tmp_bool = []
+            for bound, val in _dict.items():
+                tmp_bool.append(
+                    list(table[metric] >= val if bound == "min" else table[metric] <= val)
+                )
 
-    # Check that thresholds contain min/max
-    for column, d in thresholds.items():
-        if 'min' not in d and 'max' not in d:
-            if groupby is not None:
-                keys = d.keys()
-                not_found = list(set(keys) - set(groups))
-                if len(not_found) > 0:
-                    raise ValueError(f"{len(not_found)} groups from thresholds were not found in adata.obs[{groupby}]. These groups are: {not_found}")
-
-            else:
-                raise ValueError("Error in threshold format: Thresholds must contain min or max per column, or a threshold per group in groupby")
-
-    # Apply thresholds
-    for column, d in thresholds.items():
-
-        # Update size of table
-        table = adata.obs if which == "obs" else adata.var
-
-        # Collect boolean array of rows to select of table
-        global_threshold = False  # can be overwritten if thresholds are global
-        excluded = np.array([False] * len(table))
-        if groupby is not None:
-            if "min" in d or "max" in d:
-                global_threshold = True
-
-            else:
-                for group in d:
-                    minmax_dict = d[group]
-
-                    group_bool = table[groupby] == group
-
-                    if "min" in minmax_dict:
-                        excluded = excluded | (group_bool & (table[column] < minmax_dict["min"]))
-
-                    if "max" in minmax_dict:
-                        excluded = excluded | (group_bool & (table[column] > minmax_dict["max"]))
         else:
-            global_threshold = True
+            # group based filtering
+            tmp_bool = []
+            for _, grp_dict in _dict.items():
+                for bound, val in grp_dict.items():
+                    tmp_bool.append(
+                        list(table[metric] >= val if bound == "min" else table[metric] <= val)
+                    )
 
-        # Select using a global threshold
-        if global_threshold is True:
-            minmax_dict = d
+        # create an union of the collected boolean threshold lists
+        inclusion_bools.append([all(row) for row in zip(*tmp_bool)])
 
-            if "min" in minmax_dict:
-                excluded = excluded | (table[column] < minmax_dict["min"])  # if already excluded, or if excluded by min
+    # create an union from the boolean filters of all metrics
+    include = [all(row) for row in zip(*inclusion_bools)]
 
-            if "max" in minmax_dict:
-                excluded = excluded | (table[column] > minmax_dict["max"])
-
-        # Apply filtering
-        included = ~excluded
-
-        if inplace:
-            # NOTE: these are privat anndata functions so they might change without warning!
-            if which == "obs":
-                adata._inplace_subset_obs(included)
-            else:
-                adata._inplace_subset_var(included)
-        else:
-            if which == "obs":
-                adata = adata[included]
-            else:
-                adata = adata[:, included]  # filter on var
-
-        logger.info(f"Filtering based on '{column}' from {len(table)} -> {sum(included)} {name}")
-
-    if inplace is False:
-        return adata
+    # apply the filter
+    return _filter_object(adata=adata,
+                          filter=include,
+                          which=which,
+                          invert=False,
+                          inplace=inplace,
+                          name="threshold",
+                          value=thresholds,
+                          overwrite=overwrite)
 
 
 ###############################################################################
@@ -1021,50 +1171,119 @@ def apply_qc_thresholds(adata: sc.AnnData,
 
 @beartype
 def _filter_object(adata: sc.AnnData,
-                   filter: str | list[str],
+                   filter: str | list[str] | list[bool],
                    which: Literal["obs", "var"] = "obs",
-                   remove_bool: bool = True,
-                   inplace: bool = True) -> Optional[sc.AnnData]:
-    """Filter an adata object based on a filter on either obs (cells) or var (genes). Is called by filter_cells and filter_genes."""
+                   invert: bool = False,
+                   inplace: bool = True,
+                   name: Optional[str | list[str]] = None,
+                   value: Optional[Dict] = None,
+                   overwrite: bool = False
+                   ) -> Optional[sc.AnnData]:
+    """
+    Filter an adata object based on a filter.
 
-    # Decide which element type (genes/cells) we are dealing with
-    if which == "obs":
-        table = adata.obs
-        table_name = "adata.obs"
-        element_name = "cells"
-    else:
-        table = adata.var
-        table_name = "adata.var"
-        element_name = "genes"
+    On either obs (cells) or var (genes). Is called by filter_cells and filter_genes.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The anndata object to filter.
+    filter : str | list[str] | list[bool]
+        The filter that will be applied to the anndata. Either
+            - a name corresponding to a .var or .obs column (the column has to contain boolean values),
+            - a list of indices to keep or
+            - a list of boolean values.
+        Anything that evaluates to True will be kept.
+    which : Literal["obs", "var"], default "obs"
+        Filter observations (cells) or variables (genes, peaks, etc.).
+    invert : bool, default True
+        Invert the filter.
+    inplace : bool, default True
+        Whether to update the anndata object inplace.
+    name : Optional[str | list[str]], default None
+        Name of the applied filter.
+        Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
+        A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
+        If the given name already exists a RuntimeError is raised unless `overwrite=True`.
+    value : Optional[Dict], default None
+        The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
+    overwrite : bool, default False
+        Set to apply filter on top of existing filter.
+
+    Raises
+    ------
+    ValueError
+        - Filter is a non existent column name or not of type boolean.
+        - The boolean filter length is unequal to the appropriate AnnData dimension.
+    RuntimeError
+        Raised if a previous filtering is detected in adata.uns['sctoolbox']['report']['filter'][<which>] and overwrite = False.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The filtered anndata object.
+    """
+    report_path = _uns_report_path + [which]
+    if name:
+        if value is None:
+            value = {}
+
+        if isinstance(name, str):
+            name = [name]
+        # check if the adata is already filtered
+        previous_filter = utils.adata.in_uns(adata, report_path + name)
+
+        if not overwrite and previous_filter:
+            raise RuntimeError("The anndata object appears to be filtered. Set `overwrite=True` to apply the filtering on top.")
+        elif overwrite and previous_filter:
+            logger.warning("Applying filter on top of previous filter.")
+
+    table = getattr(adata, which)
 
     n_before = len(table)
 
-    # genes is either a string (column in .var table) or a list of genes to remove
+    # generate filter array
     if isinstance(filter, str):
+        # filter based on a boolean column
+
         if filter not in table.columns:
-            raise ValueError(f"Column {filter} not found in {table_name}.columns")
+            raise ValueError(f"Column {filter} not found in adata.{which}.")
 
         if table[filter].dtype.name != "bool":
-            raise ValueError(f"Column {filter} contains values that are not of type boolean")
+            raise ValueError(f"Column {filter} contains values that are not of type boolean.")
 
+        # get a boolean numpy array
         boolean = table[filter].values
-        if remove_bool is True:
-            boolean = ~boolean
+
+    elif isinstance(filter[0], str):  # parameter is restricted to list[str] and list[bool] so it is sufficient to check the first element
+        # filter based on a list of indices
+
+        # Check if all indices are found in the adata
+        not_found = list(set(filter) - set(table.index))
+        if not_found:
+            logger.info(f"Detected {len(not_found)} filter indices not present in the AnnData object. The following elements are not present and therefore ignored: {not_found}.")
+
+        boolean = table.index.isin(filter)
 
     else:
-        # Check if all genes/cells are found in adata
-        not_found = list(set(filter) - set(table.index))
-        if len(not_found) > 0:
-            logger.info(f"{len(not_found)} {element_name} were not found in adata and could therefore not be removed. These genes are: {not_found}")
+        # filter based on a boolean list
 
-        boolean = ~table.index.isin(filter)
+        # check the dimensions
+        if len(filter) != len(table):
+            raise ValueError(f"Filter and AnnData dimensions differ! The filter list is of length {len(filter)} whereas AnnData.{which} is of length {len(table)}. Please ensure that the filter is of the same length as the AnnData.")
+
+        boolean = np.array(filter)
+
+    # invert the array
+    if invert:
+        boolean = ~boolean
 
     # Remove genes from adata
     if inplace:
         if which == "obs":
             adata._inplace_subset_obs(boolean)
         elif which == "var":
-            adata._inplace_subset_var(boolean)  # boolean is the included genes
+            adata._inplace_subset_var(boolean)
     else:
         if which == "obs":
             adata = adata[boolean]
@@ -1073,9 +1292,18 @@ def _filter_object(adata: sc.AnnData,
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    logger.info(f"Filtered out {filtered} {element_name} from adata. New number of {element_name} is: {n_after}")
+    logger.info(f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after}).")
 
-    if inplace is False:
+    # store thresholds and statistics
+    if name:
+        value["before"] = n_before
+        value["after"] = n_after
+
+        utils.adata.add_uns_info(adata=adata,
+                                 key=report_path[1:] + name,
+                                 value=value)
+
+    if not inplace:
         return adata
 
 
@@ -1083,59 +1311,204 @@ def _filter_object(adata: sc.AnnData,
 @beartype
 def filter_cells(adata: sc.AnnData,
                  cells: str | list[str],
-                 remove_bool: bool = True,
-                 inplace: bool = True) -> Optional[sc.AnnData]:
+                 invert: bool = False,
+                 inplace: bool = True,
+                 name: Optional[str | list[str]] = None,
+                 value: Optional[Dict] = None,
+                 overwrite: bool = False) -> Optional[sc.AnnData]:
     """
-    Remove cells from anndata object.
+    Remove cells from the AnnData object.
 
     Parameters
     ----------
     adata : sc.AnnData
-        Anndata object to filter.
+        The AnnData object to filter.
     cells : str | list[str]
-        A column in .obs containing boolean indicators or a list of cells to remove from object .obs table.
-    remove_bool : bool, default True
-        Is used if genes is a column in .obs table. If True, remove cells that are True. If False, remove cells that are False.
+        A column in .obs containing boolean indicators or a list of cell indices. The given selection will be removed.
+    invert : bool, default False
+        Invert the cell selection. If True will keep selected cells.
     inplace : bool, default True
         If True, filter inplace. If False, return filtered adata object.
+    name : Optional[str | list[tr]], default None
+        Name of the applied filter.
+        Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
+        A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
+        If the given key already exists a RuntimeError is raised unless `overwrite=True`.
+    value : Optional[Dict], default None
+        The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
+    overwrite : bool, default False
+        Set to apply filter on top of existing filter.
 
     Returns
     -------
     Optional[sc.AnnData]
-        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
+        If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    ret = _filter_object(adata, cells, which="obs", remove_bool=remove_bool, inplace=inplace)
-
-    return ret
+    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
 
 
 @deco.log_anndata
 @beartype
 def filter_genes(adata: sc.AnnData,
                  genes: str | list[str],
-                 remove_bool: bool = True,
-                 inplace: bool = True) -> Optional[sc.AnnData]:
+                 invert: bool = False,
+                 inplace: bool = True,
+                 name: Optional[str | list[str]] = None,
+                 value: Optional[Dict] = None,
+                 overwrite: bool = False) -> Optional[sc.AnnData]:
     """
     Remove genes from adata object.
 
     Parameters
     ----------
     adata : sc.AnnData
-        Annotated data matrix object to filter
+        The AnnData object to filter.
     genes : str | list[str]
-        A column containing boolean indicators or a list of genes to remove from object .var table.
-    remove_bool : bool, default True
-        Is used if genes is a column in .var table. If True, remove genes that are True. If False, remove genes that are False.
+        A column in .var containing boolean indicators or a list of gene indices. The given selection will be removed.
+    invert : bool, default False
+        Invert the cell selection. If True will keep selected cells.
     inplace : bool, default True
         If True, filter inplace. If False, return filtered adata object.
+    name : Optional[str | list[tr]], default None
+        Name of the applied filter.
+        Will create a report in `adata.uns['sctoolbox']['report']['filter'][<which>]` containing the values given in `value`.
+        A list will be treated as a path e.g. ['a', 'b'] will resolve to adata.uns['sctoolbox']['report']['filter'][<which>]['a']['b'].
+        If the given key already exists a RuntimeError is raised unless `overwrite=True`.
+    value : Optional[Dict], default None
+        The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
+    overwrite : bool, default False
+        Set to apply filter on top of existing filter.
 
     Returns
     -------
     Optional[sc.AnnData]
-        If inplace is False, returns the filtered Anndata object. If inplace is True, returns None.
+        If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    ret = _filter_object(adata, genes, which="var", remove_bool=remove_bool, inplace=inplace)
+    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
 
-    return ret
+
+@deco.log_anndata
+@beartype
+def denoise_data(adata: sc.AnnData,
+                 adata_raw: sc.AnnData,
+                 feature_type: Literal['Gene Expression', 'Peaks', 'CRISPR Guide Capture', 'Multiplexing Capture', None] = 'Gene Expression',
+                 epochs: int = 150,
+                 prob: float = 0.995,
+                 save: Optional[str] = None,
+                 verbose: bool = False,
+                 overwrite: bool = False) -> sc.AnnData:
+    """
+    Use scAR and the raw feature counts to remove ambient RNA.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Anndata object to denoise
+    adata_raw : sc.AnnData
+        Raw anndata object with all droplets
+    feature_type : Literal["Gene Expression", "Peaks", "CRISPR Guide Capture", "Multiplexing Capture"], default "Gene Expression"
+        Type of data e.g. Gene Expression for scRNA, Peaks for scATAC. If None, the values found in column adata.var['feature_types'] are used.
+    epochs : int, default 150
+        Number of iterations to train the model
+    prob : float, default 0.995
+        Probability of a gene to contain ambient RNA
+    save : Optional[str], default None
+        Path to save the knee plot
+    verbose : bool, default False
+        Enable scAR status messages.
+    overwrite : bool, default False
+        Set to perform denoising on top of existing denoising.
+
+    Returns
+    -------
+    sc.AnnData
+        Denoised anndata object
+
+    Raises
+    ------
+    ValueError
+        When feature_type is None and adata.var does not have column 'feature_types'.
+        When feature_type is None and features in adata.var['feature_types'] are not supported.
+    RuntimeError
+        Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
+    """
+    utils.checker.check_module("scar")
+    import scar
+
+    report_path = _uns_report_path + ["denoise"]
+    # check for previous denoising
+    previous_filter = utils.adata.in_uns(adata, report_path)
+
+    if not overwrite and previous_filter:
+        raise RuntimeError("The anndata object appears to be denoised. Set `overwrite=True` to apply the denoising on top.")
+    elif overwrite and previous_filter:
+        logger.warning("Applying denoising on top of previous denoising.")
+
+    import warnings
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning)
+
+    FEATURES = {
+        'Gene Expression': 'mRNA',
+        'Peaks': 'ATAC',
+        'CRISPR Guide Capture': 'sgRNA',
+        'Multiplexing Capture': 'CMO',
+    }
+
+    if feature_type is None:
+        # check if column "feature_types" is in adata.var
+        if 'feature_types' not in adata.var.columns:
+            raise ValueError(f"'feature_types' column is missing from adata.var! Please specify the feature type manually in parameter <feature_type>.\nAvailable feature_type: {list(FEATURES.keys())}")
+        else:
+            # check if the feature types in column are supported
+            features = adata.var['feature_types'].unique()
+            check = all(x in FEATURES.keys() for x in features)
+            if not check:
+                not_supported = set(features) - set(FEATURES.keys())
+                raise ValueError(f"{list(not_supported)} features are not supported! Supported features are: {list(FEATURES.keys())}")
+    else:
+        adata_raw.var['feature_types'] = feature_type
+        adata.var['feature_types'] = feature_type
+
+    logger.info('Setting up adata...')
+    start_time = time.time()
+    scar.setup_anndata(
+        adata=adata,
+        raw_adata=adata_raw,
+        prob=prob,
+        kneeplot=True,
+        feature_type=feature_type,
+        verbose=verbose
+    )
+
+    _save_figure(save)
+
+    end_time = time.time() - start_time
+
+    logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
+
+    logger.info('Training model to remove ambient signal...')
+    scar_model = scar.model(raw_count=adata,
+                            feature_type=FEATURES[feature_type],
+                            sparsity=0.9,
+                            device='auto'  # Both cpu and cuda are supported.
+                            )
+
+    scar_model.train(epochs=epochs,
+                     batch_size=64,
+                     verbose=verbose)
+
+    # After training, we can infer the native true signal
+    scar_model.inference(batch_size=256)
+
+    adata_denoised = adata.copy()
+    adata_denoised.X = csr_matrix(scar_model.native_counts, dtype=np.float32)
+
+    # add report to adata
+    utils.adata.add_uns_info(adata=adata_denoised,
+                             key=report_path[1:],
+                             value=True)
+
+    return adata_denoised

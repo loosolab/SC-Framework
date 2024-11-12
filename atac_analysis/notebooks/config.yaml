@@ -1,0 +1,25 @@
+"01":
+  adata_output_dir: "../adatas/"
+  log_file: "../logs/01_log.txt"
+  overwrite_log: True
+
+"02":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/02_QC/"
+  log_file: "../logs/02_log.txt"
+  overwrite_log: True
+
+"03":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/03_batch_correction/"
+  log_file: "../logs/03_log.txt"
+  overwrite_log: True
+
+"04":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/04_clustering/"
+  log_file: "../logs/04_log.txt"
+  overwrite_log: True

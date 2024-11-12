@@ -1,5 +1,5 @@
 """Tools for marker gene analyis."""
-import os
+
 import re
 import glob
 import pkg_resources
@@ -10,14 +10,18 @@ import itertools
 import warnings
 import anndata
 from pathlib import Path
+import matplotlib.pyplot as plt
 
-from beartype.typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any, Literal
 from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
+
+# path to the internal gene lists (gender, cellcycle, mito, ...)
+_GENELIST_LOC = Path(pkg_resources.resource_filename("sctoolbox", "data/gene_lists/"))
 
 
 @beartype
@@ -44,7 +48,7 @@ def get_chromosome_genes(gtf: str,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If not all given chromosomes are found in the GTF-file.
     """
 
@@ -84,8 +88,18 @@ def get_chromosome_genes(gtf: str,
 @deco.log_anndata
 @beartype
 def label_genes(adata: sc.AnnData,
-                species: str,
-                gene_column: Optional[str] = None) -> list[str]:
+                species: Optional[str] = None,
+                gene_column: Optional[str] = None,
+                plot: bool = True,
+                # mitochondiral args
+                m_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                m_regex: Optional[str] = "^mt",
+                # ribosomal args
+                r_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                r_regex: Optional[str] = "^rps|rpl",
+                # gender args
+                g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                g_regex: Optional[str] = None) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
 
@@ -95,10 +109,29 @@ def label_genes(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object.
-    species : str
-        Name of the species.
+    species : Optional[str]
+        Name of the species. Mandatory if any of 'm_genes', 'r_genes' or 'g_genes' is set to 'internal' otherwise unused.
     gene_column : Optional[str], default None
         Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
+    plot : bool, default True
+        Enables barplot.
+    m_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of mitochondrial genes, a file containing one mitochondrial gene name per line or 'internal' to use an sctoolbox provided list.
+    m_regex : Optional[str], default "^mt"
+        A regex to identify mitochondrial genes if 'm_genes' is not available or failing.
+    r_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of ribosomal genes, a file containing one ribosomal gene name per line or 'internal' to use an sctoolbox provided list.
+    r_regex : Optional[str], default "^rps|rpl"
+        A regex to identify ribosomal genes if 'r_genes' is not available or failing.
+    g_genes : Optional[list[str], str, Literal["internal"]], default "internal"
+        Either a list of gender genes, a file containing one gender gene name per line or 'internal' to use an sctoolbox provided list.
+    g_regex : Optional[str]
+        A regex to identify gender genes if 'g_genes' is not available or failing.
+
+    Raises
+    ------
+    ValueError
+        If 'species' parameter is missing despite having any of 'm_genes', 'r_genes', 'g_genes' set to 'internal'.
 
     Returns
     -------
@@ -109,11 +142,10 @@ def label_genes(adata: sc.AnnData,
     --------
     sctoolbox.tools.qc_filter.predict_cell_cycle : for cell cycle prediction.
     """
-
-    # Location of gene lists
-    genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
-
-    species = species.lower()
+    if species:
+        species = species.lower()
+    elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal":
+        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes' and 'g_genes' to not be 'internal'.")
 
     # Get the full list of genes from adata
     if gene_column is None:
@@ -124,31 +156,101 @@ def label_genes(adata: sc.AnnData,
     # ------- Annotate genes in adata ------ #
     var_cols = []  # store names of new var columns
 
-    # Annotate ribosomal genes
-    adata.var["is_ribo"] = adata_genes.str.lower().str.startswith(('rps', 'rpl'))
-    var_cols.append("is_ribo")
+    for kind, labeler, regex in [("mito", m_genes, m_regex),
+                                 ("ribo", r_genes, r_regex),
+                                 ("gender", g_genes, g_regex)]:
+        # prepare genelist if needed
+        if labeler == "internal":
+            available_species = utils.general.clean_flanking_strings(glob.glob(str(_GENELIST_LOC / f"*_{kind}_genes.txt")))
+            if species not in available_species:
+                avail_str = f" Available species are: {available_species}"
+                logger.warning(f"No {kind} genes available for species '{species}'." + (avail_str if available_species else ""))
+                logger.warning(f"Falling back to regex '{regex}'...")
 
-    # Annotate mitochrondrial genes
-    path_mito_genes = genelist_dir + species + "_mito_genes.txt"
-    if os.path.exists(path_mito_genes):
-        gene_list = utils.read_list_file(path_mito_genes)
-        adata.var["is_mito"] = adata_genes.isin(gene_list)  # boolean indicator
-    else:
-        adata.var["is_mito"] = adata_genes.str.lower().str.startswith("mt")  # fall back to mt search
-    var_cols.append("is_mito")
+                genelist = None
+            else:
+                genelist = utils.general.read_list_file(str(_GENELIST_LOC / f"{species}_{kind}_genes.txt"))
+        elif isinstance(labeler, str):
+            try:
+                genelist = utils.general.read_list_file(labeler)
+            except FileNotFoundError:
+                logger.warning(f"File {labeler} not found.")
+                logger.warning(f"Falling back to regex '{regex}'...")
 
-    # Annotate gender genes
-    path_gender_genes = genelist_dir + species + "_gender_genes.txt"
-    if os.path.exists(path_gender_genes):
-        gene_list = utils.read_list_file(path_gender_genes)
-        adata.var["is_gender"] = adata_genes.isin(gene_list)  # boolean indicator
-        var_cols.append("is_gender")
-    else:
-        available_files = glob.glob(genelist_dir + "*_gender_genes.txt")
-        available_species = utils.clean_flanking_strings(available_files)
-        logger.warning(f"No gender genes available for species '{species}'. Available species are: {available_species}")
+                genelist = None
+        elif isinstance(labeler, list):
+            genelist = labeler
+        else:
+            genelist = None  # to trigger regex
+
+        # create list of boolean indicators
+        bool_label = _annotate(genes=adata_genes, labeler=genelist, regex=regex, kind=kind)
+
+        if bool_label is not None:
+            adata.var[f"is_{kind}"] = bool_label
+            var_cols.append(f"is_{kind}")
+
+    if plot and var_cols:
+        _, ax = plt.subplots(figsize=(5, 3))
+
+        # get the number of assigned genes per category (absolute and percent)
+        abs_height = [adata.var[col].sum() for col in var_cols]
+        per_height = [v / len(adata.var) * 100 for v in abs_height]
+
+        # absolute
+        rects = ax.bar(x=var_cols, height=abs_height)
+        ax.bar_label(rects, labels=[f"{a} ({p:.2f} %)" for a, p in zip(abs_height, per_height)], padding=3)
+        ax.set_title("Number of genes")
+        ax.tick_params(axis="x", rotation=45)
+        ax.set(ylim=(0, len(adata.var)), ylabel="count")
+        # create secondary y-axis
+        secax = ax.secondary_yaxis("right",
+                                   functions=(lambda x: x / len(adata.var) * 100,  # translates count -> percentage
+                                              lambda x: x * len(adata.var) / 100))  # translates percentage -> count
+        secax.set_ylabel("percentage [%]")
+        # add text box
+        ax.text(x=.975,
+                y=.95,
+                s=f"Total genes: {len(adata.var)}",
+                transform=ax.transAxes,
+                va="top",
+                ha="right",
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
+                )
 
     return var_cols
+
+
+def _annotate(genes: pd.Series, labeler: Optional[list[str]], regex: Optional[str], kind: str) -> pd.Series:
+    """
+    Create a boolean list that shows whether a gene is contained in 'labeler' or matches the regex.
+
+    Parameters
+    ----------
+    genes : pd.Series
+        A list of genes that are matched to 'labeler' or if not available 'regex'.
+    labeler : Optional[list[str]]
+        A second list the first is checked against. If not given uses regex matching instead.
+    regex : Optional[str]
+        A regex pattern used to match genes. Only used if labeler = None.
+    kind : str
+        Name of the genes that are annotated. E.g. mito
+
+    Returns
+    -------
+    pd.Series
+        A boolean list of len(genes). True denotes 'genes' that matched either the regex or where contained in the labeler list.
+    """
+    logger.info(f"Annotating {kind} genes...")
+    if labeler:
+        # handle elements which are in the labeler list but not in the genes list
+        not_found = [lab for lab in labeler if lab not in genes]
+        if not_found:
+            logger.warning(f"Following genes are not present in the dataset. Please check for typos. {not_found}")
+        return genes.isin(labeler)
+    elif regex:
+        return genes.str.match(regex, case=False)
+    logger.warn("Neither genelist nor regex available. Skipping...")
 
 
 @deco.log_anndata
@@ -167,7 +269,7 @@ def add_gene_expression(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If gene is not in adata.var.index.
     """
 
@@ -216,7 +318,7 @@ def run_rank_genes(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If number of groups defined by the groupby parameter is < 2.
     """
 
@@ -231,8 +333,10 @@ def run_rank_genes(adata: sc.AnnData,
         raise ValueError("groupby must contain at least two groups.")
 
     # Catch ImplicitModificationWarning from scanpy
-    params = {'method': 't-test'}  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+    params = {'method': 't-test',  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
+              'key_added': f'rank_genes_{groupby}'}  # set default key_added
     params.update(kwargs)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
         sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
@@ -240,18 +344,17 @@ def run_rank_genes(adata: sc.AnnData,
     sc.tl.filter_rank_genes_groups(adata,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
-                                   max_out_group_fraction=max_out_group_fraction)
-
-    # Copy rank_genes_groups to rank_genes_<groupby>
-    adata.uns["rank_genes_" + groupby] = adata.uns["rank_genes_groups"]
-    adata.uns["rank_genes_" + groupby + "_filtered"] = adata.uns["rank_genes_groups_filtered"]
+                                   max_out_group_fraction=max_out_group_fraction,
+                                   key=params["key_added"],
+                                   key_added=f"{params['key_added']}_filtered"
+                                   )
 
 
 @deco.log_anndata
 @beartype
 def pairwise_rank_genes(adata: sc.AnnData,
                         groupby: str,
-                        foldchange_threshold: float = 1,
+                        foldchange_threshold: int | float = 1,
                         min_in_group_fraction: float = 0.25,
                         max_out_group_fraction: float = 0.5,
                         **kwargs: Any
@@ -265,7 +368,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
         Anndata object containing expression data.
     groupby : str
         Key in adata.obs containing groups to be compared.
-    foldchange_threshold : float, default 1
+    foldchange_threshold : int | float, default 1
         Minimum foldchange (+/-) to be considered as a marker gene.
     min_in_group_fraction : float, default 0.25
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
@@ -309,7 +412,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 
         # Get table
         c1, c2 = contrast
-        table_dict = get_rank_genes_tables(adata_sub, n_genes=None, out_group_fractions=True)  # returns dict with each group
+        table_dict = get_rank_genes_tables(adata_sub, key=f"rank_genes_{groupby}", n_genes=None, out_group_fractions=True)  # returns dict with each group
         table = table_dict[c1]
 
         # Reorder columns
@@ -354,7 +457,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 @beartype
 def get_rank_genes_tables(adata: sc.AnnData,
                           key: str = "rank_genes_groups",
-                          n_genes: int | None = 200,
+                          n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
                           save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
@@ -367,7 +470,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
         Anndata object containing ranked genes.
     key : str, default "rank_genes_groups"
         The key in adata.uns to be used for fetching ranked genes.
-    n_genes : int, default 200
+    n_genes : Optional[int], default 200
         Number of genes to be included in the tables. If None, all genes are included.
     out_group_fractions : bool, default False
         If True, the output tables will contain additional columns giving the fraction of genes per group.
@@ -383,7 +486,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If not all columns given in var_columns are in adata.var.
         2. If key cannot be found in adata.uns.
     """
@@ -412,15 +515,14 @@ def get_rank_genes_tables(adata: sc.AnnData,
             data[col] = tables[col][group].values
         table = pd.DataFrame(data)
 
+        # Remove any NaN genes (genes are set to NaN if 'filter_rank_genes_groups' was used)
+        table.dropna(inplace=True)
+
         # Subset to n_genes if chosen
         if n_genes is not None:
             table = table.iloc[:n_genes, :]
 
         group_tables[group] = table
-
-    # Remove any NaN genes (genes are set to NaN if 'filter_rank_genes_groups' was used)
-    for group in group_tables:
-        group_tables[group].dropna(inplace=True)
 
     # Get in/out group fraction of expressed genes (only works for .X-values above 0)
     if (adata.X.min() < 0) == 0:  # only calculate fractions for raw expression data
@@ -430,27 +532,27 @@ def get_rank_genes_tables(adata: sc.AnnData,
         for group in groups:
 
             # Fraction of cells inside group expressing each gene
-            s = (adata[adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0).A1  # sum of cells with expression > 0 for this cluster
+            s = np.ravel((adata[adata.obs[groupby].isin([group]), :].X > 0).sum(axis=0))  # sum of cells with expression > 0 for this cluster
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_expr"]
 
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
-            group_tables[group][group + "_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group]
+            group_tables[group][group + "_fraction"] = group_tables[group]["n_expr"] / n_cells_dict[group] if group in n_cells_dict else 0
 
             # Fraction of cells for individual groups
             if out_group_fractions is True:
                 for compare_group in groups:
                     if compare_group != group:
-                        s = (adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0).A1
-                        expressed = pd.DataFrame(s, index=adata.var.index)  # expression per gene for this group
+                        s = np.ravel((adata[adata.obs[groupby].isin([compare_group]), :].X > 0).sum(axis=0))
+                        expressed = pd.DataFrame(s, index=adata.var.index, dtype="float64")  # expression per gene for this group
                         expressed.columns = [compare_group + "_fraction"]
-                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group]
+                        expressed.iloc[:, 0] = expressed.iloc[:, 0] / n_cells_dict[compare_group] if compare_group in n_cells_dict else 0.0
 
                         group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_index=True, how="left")
 
             # Fraction of cells outside group expressing each gene
             other_groups = [g for g in groups if g != group]
-            s = (adata[adata.obs[groupby].isin(other_groups), :].X > 0).sum(axis=0).A1
+            s = np.ravel((adata[adata.obs[groupby].isin(other_groups), :].X > 0).sum(axis=0))
             expressed = pd.DataFrame([adata.var.index, s]).T
             expressed.columns = ["names", "n_out_expr"]
             group_tables[group] = group_tables[group].merge(expressed, left_on="names", right_on="names", how="left")
@@ -461,7 +563,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             else:
                 out_group_name = "out_group_fraction"
 
-            n_out_group = sum([n_cells_dict[other_group] for other_group in other_groups])  # sum of cells in other groups
+            n_out_group = sum([n_cells_dict[other_group] if other_group in n_cells_dict else 0 for other_group in other_groups])  # sum of cells in other groups
             group_tables[group][out_group_name] = group_tables[group]["n_out_expr"] / n_out_group
             group_tables[group].drop(columns=["n_expr", "n_out_expr"], inplace=True)
 
@@ -486,7 +588,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
                 table["scores"] = table["scores"].round(3)
                 table["logfoldchanges"] = table["logfoldchanges"].round(3)
 
-                table.to_excel(writer, sheet_name=utils._sanitize_sheetname(f'{group}'), index=False)
+                table.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{group}'), index=False)
 
         logger.info(f"Saved marker gene tables to '{filename}'")
 
@@ -521,7 +623,7 @@ def mask_rank_genes(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         If genes is not of type list.
     """
 
@@ -551,9 +653,11 @@ def run_deseq2(adata: sc.AnnData,
                condition_col: str,
                confounders: Optional[list[str]] = None,
                layer: Optional[str] = None,
-               percentile_range: Tuple[int, int] = (0, 100)) -> pd.DataFrame:
+               percentile_range: Tuple[int, int] = (0, 100),
+               min_count: int = 0,
+               threads: Optional[int] = None) -> pd.DataFrame:
     """
-    Run DESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
+    Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Parameters
     ----------
@@ -566,10 +670,14 @@ def run_deseq2(adata: sc.AnnData,
     confounders : Optional[list[str]], default None
         List of additional column names in adata.obs containing confounders to be included in the model.
     layer : Optional[str], default None
-        Name of layer containing raw counts to be used for DESeq2. Default is None (use .X for counts)
+        Name of layer containing raw counts to be used for pyDESeq2. Default is None (use .X for counts)
     percentile_range : Tuple[int, int], default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
+    min_count : int
+        The minimum count of peaks a feature should have to be used. Default is 0, which means all features are used.
+    threads : Optional[int]
+        The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
 
     Returns
     -------
@@ -577,45 +685,38 @@ def run_deseq2(adata: sc.AnnData,
         A dataframe containing the results of the DESeq2 analysis.
         Also adds the dataframe to adata.uns["deseq_result"]
 
-    Raises
-    ------
-    ValueError:
-        1. If any given column name is not found in adata.obs.
-        2. If any given column name contains characters not compatible with R.
-
     Notes
     -----
-    Needs the package 'diffexpr' to be installed along with 'bioconductor-deseq2' and 'rpy2'.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install . .[deseq2]`.
+    Needs the package 'pydeseq2' to be installed.
+    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
 
     See Also
     --------
-    sctoolbox.utils.pseudobulk_table
+    sctoolbox.utils.bioutils.pseudobulk_table
     """
+    utils.checker.check_module("pydeseq2")
+    from pydeseq2.dds import DeseqDataSet
+    from pydeseq2.ds import DeseqStats
+    from pydeseq2.default_inference import DefaultInference
 
-    utils.setup_R()
-    from diffexpr.py_deseq import py_DESeq2
+    if threads is None:
+        threads = settings.threads
 
-    # Setup the design formula
+    # Setup the design factors
     if confounders is None:
         confounders = []
     elif not isinstance(confounders, list):
         confounders = [confounders]
 
-    design_formula = "~ " + " + ".join(confounders + [condition_col])
+    design_factors = confounders + [condition_col]
 
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
-    for col in cols:
-        if col not in adata.obs.columns:
-            raise ValueError(f"Column '{col}' was not found in adata.obs.columns.")
+    utils.checker.check_columns(adata.obs, cols, name="adata.obs", error=True)
 
-        # Check that column is valid for R
-        pattern = r'^[a-zA-Z](?:[a-zA-Z0-9_]*\.(?!$))?[\w.]*$'
-        if not re.match(pattern, col):
-            s = f"Column '{col}' is not a valid column name within R (which is needed for DEseq2). Please adjust the column name. A valid name is defined as: "
-            s += "'A syntactically valid name consists of letters, numbers and the dot or underline characters and starts with a letter or the dot not followed by a number.'"
-            raise ValueError(s)
+    # filter features
+    layer_data = adata.layers[layer] if layer is not None else adata.X
+    adata = adata[:, layer_data.sum(axis=0) >= min_count]
 
     # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
@@ -623,58 +724,57 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.sort_index(inplace=True)
 
     conditions = sample_df[condition_col].unique()
-    samples_per_cond = {cond: sample_df[sample_df[condition_col] == cond].index.tolist() for cond in conditions}
 
     # Build count matrix
-    print("Building count matrix")
-    count_table = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                         percentile_range=percentile_range)
+    logger.debug("Building count matrix")
+    count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
+                                                  percentile_range=percentile_range)
     count_table = count_table.astype(int)  # DESeq2 requires integer counts
-    count_table.index.name = "gene"
-    count_table.reset_index(inplace=True)
+
+    # running sanity checks
+    for col in sample_df.index:
+        # no negative values
+        if np.any(count_table[col] < 0):
+            logger.warn(f"Warning: negative value in count_table for column '{col}'")
+
+    count_table = count_table.transpose()
 
     # Run DEseq2
     print("Running DESeq2")
-    dds = py_DESeq2(count_matrix=count_table,
-                    design_matrix=sample_df,
-                    design_formula=design_formula,
-                    gene_column='gene')
-    dds.run_deseq()
-
-    # Normalizing counts
-    dds.normalized_count()
-    dds.normalized_count_df.drop(columns="gene", inplace=True)
-    dds.normalized_count_df.columns = dds.samplenames
+    dds = DeseqDataSet(counts=count_table, metadata=sample_df, design_factors=design_factors, n_cpus=threads)
+    dds.deseq2()
 
     # Create result table with mean values per condition
-    deseq_table = pd.DataFrame(index=dds.normalized_count_df.index)
+    deseq_table = pd.DataFrame(index=dds.var.index)
 
     for i, condition in enumerate(conditions):
-        samples = samples_per_cond[condition]
-        mean_values = dds.normalized_count_df[samples].mean(axis=1)
+        mean_values = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :].mean(axis=0)
         deseq_table.insert(i, condition + "_mean", mean_values)
 
     # Get results per contrast
     contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
-
-        dds.get_deseq_result(contrast=[condition_col, C2, C1])
-        dds.deseq_result.drop(columns="gene", inplace=True)
+        logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
+        ds = DeseqStats(dds, contrast=[condition_col, C2, C1], inference=DefaultInference(n_cpus=threads))
+        ds.summary()
 
         # Rename and add to deseq_table
-        dds.deseq_result.drop(columns=["lfcSE", "stat"], inplace=True)
-        dds.deseq_result.columns = [C2 + "/" + C1 + "_" + col for col in dds.deseq_result.columns]
-        deseq_table = deseq_table.merge(dds.deseq_result, left_index=True, right_index=True)
+        df = ds.results_df
+        df.drop(columns=["lfcSE", "stat"], inplace=True)
+        df.columns = [C2 + "/" + C1 + "_" + col for col in df.columns]
+        deseq_table = deseq_table.merge(df, left_index=True, right_index=True)
 
     # Add normalized individual sample counts to the back of table
-    deseq_table = deseq_table.merge(dds.normalized_count_df, left_index=True, right_index=True)
+    # convert .obs.index to list to avoid KeyError
+    normalized_counts = pd.DataFrame(dds.layers["normed_counts"], index=list(dds.obs.index), columns=dds.var.index).transpose()
+    deseq_table = deseq_table.merge(normalized_counts, left_index=True, right_index=True)
 
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
     deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
 
     # Add to adata uns
-    utils.add_uns_info(adata, "deseq_result", deseq_table)
+    utils.adata.add_uns_info(adata, "deseq_result", deseq_table)
 
     return deseq_table
 
@@ -684,9 +784,10 @@ def run_deseq2(adata: sc.AnnData,
 def score_genes(adata: sc.AnnData,
                 gene_set: str | list[str],
                 score_name: str = 'score',
-                inplace: bool = True) -> Optional[sc.AnnData]:
+                inplace: bool = True,
+                **kwargs: Any) -> Optional[sc.AnnData]:
     """
-    Assign a score to each cell depending on the expression of a set of genes.
+    Assign a score to each cell depending on the expression of a set of genes. This is a wrapper for scanpy.tl.score_genes.
 
     Parameters
     ----------
@@ -699,6 +800,8 @@ def score_genes(adata: sc.AnnData,
         Name of the column in obs table where the score will be added.
     inplace : bool, default True
         Adds the new column to the original anndata object.
+    **kwargs : Any
+        Additional arguments to be passed to scanpy.tl.score_genes.
 
     Returns
     -------
@@ -707,7 +810,7 @@ def score_genes(adata: sc.AnnData,
 
     Raises
     ------
-    FileNotFoundError:
+    FileNotFoundError
         If path given in gene_set does not lead to a file.
     """
 
@@ -726,7 +829,7 @@ def score_genes(adata: sc.AnnData,
     sdata = sc.pp.scale(adata, copy=True)
 
     # Score the cells
-    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name)
+    sc.tl.score_genes(sdata, gene_list=gene_set, score_name=score_name, **kwargs)
     # add score to adata.obs
     adata.obs[score_name] = sdata.obs[score_name]
 

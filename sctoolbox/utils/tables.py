@@ -105,12 +105,14 @@ def _sanitize_sheetname(s: str,
         Valid excel sheetname
     """
 
-    return utils.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
+    return utils.general.sanitize_string(s, char_list=["\\", "/", "*", "?", ":", "[", "]"], replace=replace)[0:31]
 
 
 @beartype
 def write_excel(table_dict: dict[str, Any],
-                filename: str, index: bool = False) -> None:
+                filename: str,
+                index: bool = False,
+                **kwargs: Any) -> None:
     """
     Write a dictionary of tables to a single excel file with one table per sheet.
 
@@ -122,6 +124,8 @@ def write_excel(table_dict: dict[str, Any],
         Path to output file.
     index : bool, default False
         Whether to include the index of the tables in file.
+    **kwargs : Any
+        Keyword arguments passed to pandas.DataFrame.to_excel.
 
     Raises
     ------
@@ -134,10 +138,14 @@ def write_excel(table_dict: dict[str, Any],
         if not isinstance(table, pd.DataFrame):
             raise Exception(f"Table {name} is not a pandas DataFrame!")
 
+    # Setup kwargs
+    write_kwargs = {"engine": "xlsxwriter"}  # default: faster than openpyxl
+    write_kwargs.update(kwargs)  # overwrite defaults with user input
+
     # Write to excel
     with pd.ExcelWriter(filename) as writer:
         for name, table in table_dict.items():
-            table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, engine='xlsxwriter')  # faster than openpyxl
+            table.to_excel(writer, sheet_name=_sanitize_sheetname(f'{name}'), index=index, **write_kwargs)
 
 
 @beartype
