@@ -688,11 +688,13 @@ def run_deseq2(adata: sc.AnnData,
     ------
     ValueError:
         1. If any given column name is not found in adata.obs.
+        2. Invalid contrasts are supplied.
+        3. Negative counts are encountered.
 
     Notes
     -----
     Needs the package 'pydeseq2' to be installed.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
+    This can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
 
     See Also
     --------
@@ -741,6 +743,9 @@ def run_deseq2(adata: sc.AnnData,
         contrast_conditions = set(itertools.chain.from_iterable(contrasts))
         logger.debug(contrast_conditions)
         adata = adata[adata.obs[condition_col].isin(contrast_conditions)]
+
+        # Remove samples not in contrasts
+        sample_df = sample_df[sample_df["condition"].isin(contrast_conditions)]
 
     # Build count matrix
     logger.debug("Building count matrix")
