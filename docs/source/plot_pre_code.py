@@ -3,6 +3,7 @@ import sctoolbox.plotting as pl
 
 # Load example dataset
 import numpy as np
+np.random.seed(42)
 import scanpy as sc
 
 adata = sc.datasets.pbmc68k_reduced()

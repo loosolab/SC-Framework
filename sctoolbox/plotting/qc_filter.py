@@ -1,26 +1,31 @@
 """Functions for plotting QC-related figures e.g. number of cells per group and violins."""
 
-from math import ceil
 import pandas as pd
 import copy
 import numpy as np
 import ipywidgets
+import traitlets
 import functools  # for partial functions
 import glob
 import scanpy as sc
+import warnings
 
+import upsetplot
 import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import violinplot, _save_figure
+from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from typing import Tuple, Union, List, Dict, Optional, Literal, Callable, Iterable, Any
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
 from beartype import beartype
+
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 ########################################################################################
@@ -52,7 +57,7 @@ def _read_starsolo_summary(folder: str) -> pd.DataFrame:
         raise ValueError(f"No STARsolo summary files found in folder '{folder}'. Please check the path and try again.")
 
     # Read statistics from summary files
-    names = utils.clean_flanking_strings(summary_files)
+    names = utils.general.clean_flanking_strings(summary_files)
     summary_tables = []
     for name, f in zip(names, summary_files):
         star_table = pd.read_csv(f, index_col=0, header=None, names=[name])
@@ -69,7 +74,8 @@ def plot_starsolo_quality(folder: str,
                                                  "Median Reads per Cell", "Median Gene per Cell"],
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
-                          save: Optional[str] = None) -> np.ndarray:
+                          save: Optional[str] = None,
+                          **kwargs: Any) -> np.ndarray:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -84,6 +90,8 @@ def plot_starsolo_quality(folder: str,
         Order of conditions in the plot. If None, the order is alphabetical.
     save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
+    **kwargs : Any
+        Additional arguments passed to seaborn.barplot.
 
     Returns
     -------
@@ -100,7 +108,7 @@ def plot_starsolo_quality(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_quality("data/quant/")
+        pl.qc_filter.plot_starsolo_quality("data/quant/")
     """
 
     # Prepare functions for converting labels
@@ -138,7 +146,7 @@ def plot_starsolo_quality(folder: str,
         # Plot data to barplot
         ax = axes[i]
         data = summary_table.loc[measure].astype(float)
-        sns.barplot(x=data.index, y=data.values, ax=ax, edgecolor="black")
+        sns.barplot(x=data.index, y=data.values, ax=ax, edgecolor="black", **kwargs)
         ax.set_title(measure)
 
         # Format yticklabels
@@ -191,7 +199,7 @@ def plot_starsolo_UMI(folder: str,
     .. plot::
         :context: close-figs
 
-        pl.plot_starsolo_UMI("data/quant/", ncol=2)
+        pl.qc_filter.plot_starsolo_UMI("data/quant/", ncol=2)
     """
 
     summary_table = _read_starsolo_summary(folder)
@@ -200,7 +208,7 @@ def plot_starsolo_UMI(folder: str,
     if len(umi_files) == 0:
         raise ValueError("No UMI files found in folder. Please check the path and try again.")
 
-    names = utils.clean_flanking_strings(umi_files)
+    names = utils.general.clean_flanking_strings(umi_files)
 
     # Setup plot
     ncol = min(len(names), ncol)
@@ -303,18 +311,18 @@ def n_cells_barplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain")
 
     .. plot::
         :context: close-figs
 
-        pl.n_cells_barplot(adata, x="louvain", groupby="condition")
+        pl.qc_filter.n_cells_barplot(adata, x="louvain", groupby="condition")
     """
 
     # Get cell counts for groups or all
     tables = []
     if groupby is not None:
-        for i, frame in adata.obs.groupby(groupby):
+        for i, frame in adata.obs.groupby(groupby, observed=False):
             count = frame.value_counts(x).to_frame(name="count").reset_index()
             count["groupby"] = i
             tables.append(count)
@@ -386,7 +394,8 @@ def n_cells_barplot(adata: sc.AnnData,
 def group_correlation(adata: sc.AnnData,
                       groupby: str,
                       method: Literal["spearman", "pearson", "kendall"] | Callable = "spearman",
-                      save: Optional[str] = None) -> sns.matrix.ClusterGrid:
+                      save: Optional[str] = None,
+                      **kwargs: Any) -> sns.matrix.ClusterGrid:
     """Plot correlation matrix between groups in `groupby`.
 
     The function expects the count data in .X to be normalized across cells.
@@ -401,6 +410,8 @@ def group_correlation(adata: sc.AnnData,
         Correlation method to use. See pandas.DataFrame.corr for options.
     save : Optional[str], default None
         Path to save the plot. If None, the plot is not saved.
+    **kwargs : Any
+        Additional arguments passed to seaborn.clustermap.
 
     Returns
     -------
@@ -422,19 +433,22 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.group_correlation(adata, "phase", method="spearman", save=None)
+        pl.qc_filter.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
     # Calculate correlation of groups
-    count_table = utils.pseudobulk_table(adata, groupby=groupby)
+    count_table = utils.bioutils.pseudobulk_table(adata, groupby=groupby)
     corr = count_table.corr(numeric_only=False, method=method)
 
+    clustermap_kwargs = {"figsize": (4, 4),
+                         "cmap": "Reds",
+                         "xticklabels": True,
+                         "yticklabels": True,
+                         "cbar_kws": {'orientation': 'horizontal', 'label': method}}  # defaults
+    clustermap_kwargs.update(kwargs)    # overwrite defaults with user input
+
     # Plot clustermap
-    g = sns.clustermap(corr, figsize=(4, 4),
-                       xticklabels=True,
-                       yticklabels=True,
-                       cmap="Reds",
-                       cbar_kws={'orientation': 'horizontal', 'label': method})
+    g = sns.clustermap(corr, **clustermap_kwargs)
     g.ax_heatmap.set_facecolor("grey")
 
     # Adjust cbar
@@ -453,77 +467,6 @@ def group_correlation(adata: sc.AnnData,
     return g
 
 
-@deco.log_anndata
-@beartype
-def qc_violins(anndata: sc.AnnData,
-               thresholds: pd.DataFrame,
-               colors: Optional[list[str]] = None,
-               save: Optional[str] = None,
-               ncols: int = 3,
-               figsize: Optional[Tuple[int | float, int | float]] = None,
-               dpi: int = 300):
-    """
-    Grid of violinplots with optional cutoffs.
-
-    Parameters
-    ----------
-    anndata : sc.AnnData
-        Anndata object providing violin data.
-    thresholds : pd.DataFrame
-        Dataframe with anndata.var & anndata.obs column names as index, and threshold column with lists of cutoff lines to draw.
-        Note: Row order defines plot order.
-        Structure:
-
-            - index (two columns)
-                - Name of anndata.var or anndata.obs column.
-                - Name of origin. Either "obs" or "var".
-            - 1st column: Threshold number(s) defining violinplot lines. Either None, single number or list of numbers.
-            - 2nd column: Name of anndata.var or anndata.obs column used for color grouping or None to disable.
-    colors : Optional[list[str]], default None
-        List of colors for the violins.
-               save: Optional[str] = None,
-    save : str, default None
-        Path and name of file to be saved.
-    ncols : int, default 3
-        Number of violins per row.
-    figsize : Optional[Tuple[int | float, int | float]], default None
-        Size of figure in inches.
-    dpi : int, default 300
-        Dots per inch.
-
-    Raises
-    ------
-    ValueError
-        If threshold table indices are not column names in anndata.obs or anndata.var.
-    """
-    # test if threshold indexes are column names in .obs or .var
-    invalid_index = set(thresholds.index.get_level_values(0)) - set(anndata.obs.columns) - set(anndata.var.columns)
-    if invalid_index:
-        raise ValueError(f"Threshold table indices need to be column names of anndata.obs or anndata.var. Indices not found: {invalid_index}")
-
-    # create subplot grid
-    nrows = ceil(len(thresholds) / ncols)
-    figsize = figsize if figsize is not None else (ncols * 4, nrows * 4)
-
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, dpi=dpi, figsize=figsize, constrained_layout=True)
-    axs = axs.flatten()  # flatten to 1d array per row
-
-    # iterate over threshold rows
-    for ((name, origin), row), ax in zip(thresholds.iterrows(), axs):
-        # find out if in obs or var
-        table = anndata.var if origin == "var" else anndata.obs
-
-        # create violin
-        violinplot(table=table, y=name, hlines=row[0], color_by=row[1], colors=colors, ax=ax, title=f"{origin}: {name}", ylabel=False)
-
-    # delete unused subplots
-    for i in range(len(thresholds), len(axs)):
-        fig.delaxes(axs[i])
-
-    # Save plot
-    _save_figure(save)
-
-
 #####################################################################
 # --------------------------- Insertsize -------------------------- #
 #####################################################################
@@ -531,7 +474,8 @@ def qc_violins(anndata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def plot_insertsize(adata: sc.AnnData,
-                    barcodes: Optional[list[str]] = None) -> matplotlib.axes.Axes:
+                    barcodes: Optional[list[str]] = None,
+                    **kwargs: Any) -> matplotlib.axes.Axes:
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
@@ -541,6 +485,8 @@ def plot_insertsize(adata: sc.AnnData,
         AnnData object containing insertsize distribution in adata.uns["insertsize_distribution"].
     barcodes : Optional[list[str]], default None
         Subset of barcodes to plot information for. If None, all barcodes are used.
+    **kwargs : Any
+        Additional arguments passed to seaborn.lineplot.
 
     Returns
     -------
@@ -569,7 +515,7 @@ def plot_insertsize(adata: sc.AnnData,
         table = insertsize_distribution.sum(axis=0)
 
     # Plot
-    ax = sns.lineplot(x=table.index, y=table.values)
+    ax = sns.lineplot(x=table.index, y=table.values, **kwargs)
     ax.set_xlabel("Insertsize (bp)")
     ax.set_ylabel("Count")
 
@@ -582,12 +528,12 @@ def plot_insertsize(adata: sc.AnnData,
 
 
 @beartype
-def _link_sliders(sliders: list[ipywidgets.widgets.IntRangeSlider]) -> list[ipywidgets.link]:
+def _link_sliders(sliders: list[ipywidgets.widgets.FloatRangeSlider]) -> list[ipywidgets.link]:
     """Link the values between interactive sliders.
 
     Parameters
     ----------
-    sliders : list[ipywidgets.widgets.IntRangeSlider]
+    sliders : list[ipywidgets.widgets.FloatRangeSlider]
         List of sliders to link.
 
     Returns
@@ -607,7 +553,7 @@ def _link_sliders(sliders: list[ipywidgets.widgets.IntRangeSlider]) -> list[ipyw
 
 
 @beartype
-def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox,
+def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox | traitlets.utils.bunch.Bunch,  # after first check, checkbox is a bunch object
                     linkage_dict: dict,
                     slider_list: list,
                     key: str):
@@ -680,13 +626,12 @@ def quality_violin(adata: sc.AnnData,
                    header: Optional[list[str]] = None,
                    color_list: Optional[list[str | Tuple[float | int, float | int, float | int]]] = None,
                    title: Optional[str] = None,
-                   thresholds: Optional[dict[Literal["min", "max"], int | float]] = None,
+                   thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
                    global_threshold: bool = True,
                    interactive: bool = True,
-                   save: Optional[str] = None
-                   ) -> Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox],
-                              Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe],
-                                              Dict[str, ipywidgets.FloatRangeSlider.observe]]]]:
+                   save: Optional[str] = None,
+                   **kwargs: Any
+                   ) -> Tuple[Any, Dict[str, Any]]:
     """
     Plot quality measurements for cells/features in an anndata object.
 
@@ -712,7 +657,7 @@ def quality_violin(adata: sc.AnnData,
         A list of colors to use for violins. If None, colors are chosen automatically.
     title : Optional[str], default None
         The title of the full plot.
-    thresholds : Optional[dict[Literal["min", "max"], int | float]], default None
+    thresholds : Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]], default None
         Dictionary containing initial min/max thresholds to show in plot.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
@@ -720,20 +665,22 @@ def quality_violin(adata: sc.AnnData,
         Whether to show interactive sliders. If False, the static matplotlib plot is shown.
     save : Optional[str], optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
+    **kwargs : Any
+        Additional arguments passed to seaborn.violinplot.
 
     Returns
     -------
-    Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
+    Tuple[Any, Dict[str, Any]]
+        Tuple[Union[matplotlib.figure.Figure, ipywidgets.HBox], Dict[str, Union[List[ipywidgets.FloatRangeSlider.observe], Dict[str, ipywidgets.FloatRangeSlider.observe]]]]
         First element contains figure (static) or figure and sliders (interactive). The second element is a nested dict of slider values that are continously updated.
 
     Raises
     ------
     ValueError
         If 'which' is not 'obs' or 'var' or if columns are not in table.
-
     """
 
-    is_interactive = utils._is_interactive()
+    is_interactive = utils.checker._is_interactive()
 
     # ---------------- Test input and get ready --------------#
 
@@ -819,7 +766,18 @@ def quality_violin(adata: sc.AnnData,
         slider_dict[column] = {}
 
         # Plot data from table
-        sns.violinplot(data=table, x=groupby, y=column, ax=ax, order=groups, palette=color_list, cut=0)
+        sns.violinplot(data=table,
+                       x=groupby,
+                       hue=groupby,
+                       y=column,
+                       ax=ax,
+                       order=groups,
+                       palette=color_list if len(color_list) > 1 else None,  # fixes palette without hue warning
+                       color=color_list[0] if len(color_list) == 1 else None,  # ^
+                       cut=0,
+                       legend=False,
+                       **kwargs)
+        ax.set_xticks(ax.get_xticks())  # get rid of userwarning https://stackoverflow.com/a/68794383/19870975
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
         ax.set_ylabel("")
         ax.set_xlabel("")
@@ -917,9 +875,7 @@ def quality_violin(adata: sc.AnnData,
     # Assemble accordion with different measures
     if is_interactive:
 
-        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None)
-        for i in range(len(columns)):
-            accordion.set_title(i, columns[i])
+        accordion = ipywidgets.Accordion(children=accordion_content, selected_index=None, titles=columns)
 
         fig.canvas.header_visible = False
         fig.canvas.toolbar_visible = False
@@ -939,7 +895,7 @@ def quality_violin(adata: sc.AnnData,
     else:
         figure = fig  # non interactive figure
 
-    return figure, slider_dict
+    return (figure, slider_dict)
 
 
 @beartype
@@ -981,3 +937,144 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
             threshold_dict[measure] = {"min": slider.value[0], "max": slider.value[1]}
 
     return threshold_dict
+
+########################################################################################
+# --------------------------- UpSet Plot Threshold Impacts --------------------------- #
+########################################################################################
+
+
+def _upset_select_cells(adata: sc.AnnData,
+                        thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                        groupby: Optional[str] = None) -> pd.DataFrame:
+    """
+    Select cells based on thresholds for UpSet Plot.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix object.
+    thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
+        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
+
+    Returns
+    -------
+    selection : pd.DataFrame
+        DataFrame containing boolean values for each cell based on thresholds.
+    """
+    selection = {}
+    # loop over all columns
+    for column_name, values in thresholds.items():
+        # loop over all groups
+        if groupby:
+            # initialize an array of False values
+            accumulate_results = np.zeros(adata.obs.shape[0], dtype=bool)
+            # loop over all samples
+            for sample, cutoffs in values.items():
+                # select cells based on the sample
+                sample_selection = np.array(adata.obs[groupby] == sample)
+                # select cells based on the cutoffs
+                cutoff_selection = np.array(
+                    (adata.obs[column_name] < cutoffs['min']) | (adata.obs[column_name] > cutoffs['max']))
+                # add up the selected cells
+                accumulate_results = accumulate_results + np.logical_and(sample_selection, cutoff_selection)
+            # add the results to the selection
+            selection[column_name] = accumulate_results
+
+        else:
+            # select cells based on the cutoffs
+            selection[column_name] = (adata.obs[column_name] < values['min']) | (adata.obs[column_name] > values['max'])
+    # convert to DataFrame
+    selection = pd.DataFrame(selection)
+
+    # reset index
+    selection.reset_index(inplace=True, drop=True)
+
+    return selection
+
+
+def upset_plot_filter_impacts(adata: sc.AnnData,
+                              thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                              limit_combinations: Optional[int] = None,
+                              groupby: Optional[int] = None) -> Optional[dict]:
+    """
+    Plot the impact of filtering cells based on thresholds in an UpSet Plot.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix object.
+    thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
+        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+    limit_combinations : Optional[int], default None
+        Limit the number of combinations to show in the plot.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
+
+    Returns
+    -------
+    plot_result : Optional[dict]
+    """
+    if len(thresholds) <= 1:
+        logger.info("Skipping UpSet Plot as only one threshold is given.")
+
+        return None
+
+    selection = _upset_select_cells(adata, thresholds, groupby)
+
+    # Number of variables
+    n = len(selection.columns)
+
+    # Generate all combinations of True/False
+    raw_combinations = np.array(np.meshgrid(*[[False, True]] * n)).T.reshape(-1, n)
+
+    # Sort the combinations first by the number of True values, then lexicographically
+    sorted_combinations = np.array(sorted(raw_combinations, key=lambda x: (np.sum(x), list(x))))
+
+    # exclude empty combinations
+    mask = np.sum(sorted_combinations, axis=1) != 0
+    combinations = sorted_combinations[mask]
+
+    # make a dataframe
+    combinations_df = pd.DataFrame(combinations, columns=selection.columns)
+
+    results = []
+
+    # loop over all combinations
+    for _, combination in combinations_df.iterrows():
+        # get a list of the column names selected
+        metric_combination = list(selection.columns[combination])
+        # initialize a results array for the combination with len n-cells
+        single_result = np.zeros(selection.shape[0], dtype=bool)
+        # loop over the selected combination
+        for metric in metric_combination:
+            # add up the selected cells
+            single_result = single_result + selection[metric]
+        # append result of the combination
+        results.append(sum(single_result))
+    # add to dataframe
+    combinations_df['counts'] = results
+
+    # limit combinations
+    if limit_combinations:
+        # select all combinations with a grade less or equal the limit
+        limit_mask = np.array(np.sum(combinations_df[selection.columns], axis=1) <= limit_combinations)
+        # always include the total counts
+        limit_mask[-1] = True
+        # index by the mask
+        combinations_df = combinations_df[limit_mask]
+
+    # set the combinations as index
+    combinations_df.set_index(list(selection.columns), inplace=True)
+
+    with warnings.catch_warnings():  # TODO remove when this is merged https://github.com/jnothman/UpSetPlot/pull/278
+        warnings.filterwarnings("ignore", message="A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.")
+
+        # plot the UpSet Plot
+        plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
+
+    plot_result["intersections"].set_ylabel("Cells Filtered")
+    plt.show()
+
+    return plot_result

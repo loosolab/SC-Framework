@@ -9,10 +9,10 @@ from scipy.sparse import issparse
 import gzip
 import argparse
 import os
-import sys
+import pybedtools
 import scanpy as sc
 
-from typing import Optional, Literal, Tuple
+from beartype.typing import Optional, Literal, Tuple, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -130,7 +130,7 @@ def barcode_index(adata: sc.AnnData) -> None:
     # regex for any barcode
     regex = re.compile(r'([ATCG]{8,16})')
     # get first index element
-    first_index = adata.obs.index[0]
+    first_index = str(adata.obs.index[0])
     # check if the first index element is a barcode
     if regex.match(first_index):
         index_is_barcode = True
@@ -198,6 +198,7 @@ def get_organism(ensembl_id: str,
     return species
 
 
+# TODO: add unit test
 @beartype
 def gene_id_to_name(ids: list[str], species: str) -> pd.DataFrame:
     """
@@ -242,6 +243,7 @@ def gene_id_to_name(ids: list[str], species: str) -> pd.DataFrame:
     return id_name_mapping
 
 
+# TODO: add unit test, currently no usage
 @deco.log_anndata
 @beartype
 def convert_id(adata: sc.AnnData,
@@ -408,6 +410,7 @@ def unify_genes_column(adata: sc.AnnData,
 #                   Check integrity of gtf file                     #
 #####################################################################
 
+# TODO: add unit test
 @beartype
 def _gtf_integrity(gtf: str) -> bool:
     """
@@ -445,7 +448,7 @@ def _gtf_integrity(gtf: str) -> bool:
     header = False
     format_gtf = False
 
-    if utils._is_gz_file(gtf):
+    if utils.checker._is_gz_file(gtf):
         fp = gzip.open(gtf, 'rt')  # read text (rt) mode
     else:
         fp = open(gtf)
@@ -486,7 +489,7 @@ def _gtf_integrity(gtf: str) -> bool:
 
 
 @beartype
-def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str) -> None:
+def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> None:
     """
     Overlap two bedfiles and writes the overlap to a new bedfile.
 
@@ -498,17 +501,25 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str) -> None:
         path to bedfile2
     overlap : str
         path to output bedfile
+    **kwargs : Any
+        Additional arguments passed to pybedtools.BedTool.intersect
 
     Returns
     -------
     None
-
     """
-    # Overlap two bedfiles
-    bedtools = os.path.join('/'.join(sys.executable.split('/')[:-1]), 'bedtools')
-    intersect_cmd = f'{bedtools} intersect -a {bed1} -b {bed2} -u -sorted > {overlap}'
-    # run command
-    os.system(intersect_cmd)
+    # Ensure that path to bedtools is set
+    pybedtools.helpers.set_bedtools_path(utils.checker._add_path())
+    # Load the bed files using Pybedtools
+    bedfile1 = pybedtools.BedTool(bed1)
+    bedfile2 = pybedtools.BedTool(bed2)
+
+    # Perform the intersection
+    # The kwargs can be passed directly to the intersect function
+    intersected = bedfile1.intersect(bedfile2, **kwargs)
+
+    # Save the output
+    intersected.saveas(overlap)
 
 
 @beartype

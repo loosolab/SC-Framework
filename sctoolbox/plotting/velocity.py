@@ -11,7 +11,7 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox.plotting.general import _save_figure
 
 # type hint imports
-from typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any
 from beartype import beartype
 import matplotlib
 
@@ -82,7 +82,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
     mat.index = genes
 
     # z-score normalize per row
-    mat = utils.table_zscore(mat)
+    mat = utils.tables.table_zscore(mat)
 
     # Plot heatmap
     n_genes = len(mat)

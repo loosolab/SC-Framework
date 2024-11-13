@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 import scanpy as sc
 
-from typing import Optional, Tuple, Any
+from beartype.typing import Optional, Tuple, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -98,7 +98,7 @@ def annot_HVG(anndata: sc.AnnData,
 @beartype
 def get_variable_features(adata: sc.AnnData,
                           max_cells: Optional[float | int] = None,
-                          min_cells: Optional[float | int] = None,
+                          min_cells: Optional[float | int] = 0,
                           show: bool = True,
                           inplace: bool = True) -> Optional[sc.AnnData]:
     """
@@ -109,8 +109,8 @@ def get_variable_features(adata: sc.AnnData,
     adata : sc.AnnData
         The anndata object containing counts for variables.
     max_cells : Optional[float | int], default None
-        The maximum variability score to set as threshold.
-    min_cells : Optional[float | int], default None
+        The maximum variability score to set as threshold. Defaults to knee estimated threshold.
+    min_cells : Optional[float | int], default 0
         The minimum variability score to set as threshold.
     show : bool, default True
         Show plot of variability scores and thresholds.
@@ -121,6 +121,11 @@ def get_variable_features(adata: sc.AnnData,
     -----
     Designed for scATAC-seq data
 
+    Raises
+    ------
+    KeyError
+        If adata.var['n_cells_by_counts'] is not available.
+
     Returns
     -------
     Optional[sc.AnnData]
@@ -128,8 +133,11 @@ def get_variable_features(adata: sc.AnnData,
         If inplace is True, the function returns an anndata object.
     """
 
-    utils.check_module("kneed")
-    utils.check_module("statsmodels")
+    if 'n_cells_by_counts' not in adata.var.columns:
+        raise KeyError("Required column adata.var['n_cells_by_counts'] missing. Please run scanpy.pp.calculate_qc_metrics.")
+
+    utils.checker.check_module("kneed")
+    utils.checker.check_module("statsmodels")
 
     if inplace is False:
         adata = adata.copy()

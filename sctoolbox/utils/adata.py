@@ -6,8 +6,10 @@ from collections.abc import Sequence  # check if object is iterable
 from collections import OrderedDict
 import scipy
 import matplotlib.pyplot as plt
+from scipy.sparse import issparse
+import pandas as pd
 
-from typing import Optional, Any
+from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
@@ -171,6 +173,18 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
     """
+    # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
+    # https://github.com/scverse/scanpy/issues/61
+    rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
+    for unk in adata.uns.keys():
+        if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
+            names = list()
+            dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
+            for i in adata.uns[unk]["names"]:
+                names.append([j if j == j else "" for j in i])
+            tmp = pd.DataFrame(data=names).to_records(index=False)
+            tmp.dtype.names = dnames  # set old names back in place
+            adata.uns[unk]["names"] = tmp
 
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
@@ -253,13 +267,77 @@ def add_uns_info(adata: sc.AnnData,
 
 
 @beartype
+def in_uns(adata: sc.AnnData,
+           key: str | list[str]) -> bool:
+    """
+    Check whether a key or key path is in adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object to check.
+    key: str | list[str]
+        The key(s) to check. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Returns
+    -------
+    bool
+        True if key or key path is found otherwise False.
+    """
+    d = adata.uns
+    for k in key:
+        if k in d:
+            d = d[k]
+        else:
+            return False
+    return True
+
+
+@beartype
+def get_cell_values(adata: sc.AnnData,
+                    element: str) -> np.ndarray:
+    """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Anndata object.
+    element : str
+        The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+
+    Returns
+    -------
+    np.ndarray
+        Array of values per cell in adata.
+
+    Raises
+    ------
+    ValueError
+        If element is not found in adata.obs or adata.var.
+    """
+
+    if element in adata.obs:
+        values = np.array(adata.obs[element].values)
+    elif element in adata.var.index:
+        idx = list(adata.var.index).index(element)
+        values = adata.X[:, idx]
+        values = values.todense().A1 if issparse(values) else values
+    else:
+        raise ValueError(f"Element '{element}' not found in adata.obs or adata.var.")
+
+    return values
+
+
+@beartype
 def prepare_for_cellxgene(adata: sc.AnnData,
                           keep_obs: Optional[list[str]] = None,
                           keep_var: Optional[list[str]] = None,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
-                          cmap: Optional[str] = "viridis",
+                          cmap: Optional[str] = None,
+                          palette: Optional[str | Sequence[str]] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -278,8 +356,14 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Dictionary of .var columns to rename. Key is the old name, value the new one.
     embedding_names : Optional[list[str]], default ["pca", "umap", "tsne"]
         List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.
-    cmap : Optional[str], default viridis
-        Use this replacement color map for broken color maps. If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
+    cmap : Optional[str], default None
+        Color map to use for continous variables.
+        Use this replacement color map for broken color maps.
+        If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
+    palette : Optional[str | Sequence[str]], default None
+        Color map to use for categorical annotation groups.
+        Use this replacement color map for broken color maps.
+        If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
     inplace : bool, default False
 
     Raises
@@ -301,7 +385,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
             sec_table = obj.var
 
         # drop columns
-        if keep:
+        if keep is not None:
             drop = set(sec_table.columns) - set(keep)
             sec_table.drop(columns=drop, inplace=True)
 
@@ -340,6 +424,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
     # ----- .var -----
     clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+    out.var_names_make_unique()
 
     # ----- .X -----
     # convert .X to sparse matrix if needed
@@ -369,8 +454,49 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
                 # scanpy replaces broken colormap before plotting
                 basis = list(out.obsm.keys())[0]
-                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=cmap, show=False)
+                sc.pl.embedding(adata=out, basis=basis, color=obs_key, palette=palette, color_map=cmap, show=False)
                 plt.close()  # prevent that plot is shown
 
     if not inplace:
         return out
+
+
+@beartype
+def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], label: Optional[str] = "batch") -> sc.AnnData:
+    """
+    Concatenate several anndata objects by appending cells.
+
+    Essentially `sc.concat(adatas, join="outer", axis=0)` but retains adata.var information.
+
+    Parameters
+    ----------
+    adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]]
+        A combination of AnnData objects to concatenate. Forwarded to the `adatas` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat).
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+
+    Returns
+    -------
+    sc.AnnData
+        Returns the combined AnnData object.
+    """
+    # create adata
+    adata = sc.concat(adatas, join="outer", axis=0, label=label)
+
+    # manually combine var table, then add it to the adata
+    var = pd.concat(
+        [a.var for a in (adatas.values() if isinstance(adatas, Mapping) else adatas)],
+        join="outer"
+    )
+
+    # remove duplicates
+    # temporarily set index as column to use this as column for duplicate removal
+    ind_name = var.index.name
+    tmp_name = "_".join(var.columns) + "_" if len(var.columns) else "index"  # create a name that is not present in the var columns
+    var = var.reset_index(names=tmp_name).drop_duplicates(subset=tmp_name).set_index(tmp_name)
+    var.index.name = ind_name  # revert to the original index name
+
+    # add the var table to the adata while ensuring the correct order
+    adata.var = var.loc[adata.var_names]
+
+    return adata

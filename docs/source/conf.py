@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'SC FRAMEWORK'
-copyright = '2023, Loosolab'
+copyright = '2024, Loosolab'
 author = 'Loosolab'
 
 # -- General configuration ---------------------------------------------------
@@ -34,7 +34,8 @@ author = 'Loosolab'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['matplotlib.sphinxext.plot_directive',
+extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in docs
+              'sphinx_exec_code',   # for code examples in docs
               'sphinx.ext.autodoc',
               'sphinx.ext.autosummary',
               'sphinx.ext.napoleon',
@@ -67,10 +68,19 @@ for link in links:
     os.remove(link)
 
 # Create nblinks for current notebooks
-notebooks = glob.glob("../../*notebooks/*.ipynb")  # captures both rna-notebooks, atac-notebooks etc.
+notebooks = glob.glob("../../*_analysis/notebooks/*.ipynb") # captures both rna-notebooks, atac-notebooks etc.
+notebooks.extend(glob.glob("../../*_notebooks/*.ipynb")) # capture general_notebooks
 for f in notebooks:
 
-    notebook_folder = f.split("/")[-2] + "/"
+    if "rna_analysis" in f:
+        notebook_folder = "rna-notebooks/"
+    elif "atac_analysis" in f:
+        notebook_folder = "atac-notebooks/"
+    elif "general_notebooks" in f:
+        notebook_folder = "general-notebooks/"
+    else:
+        raise ValueError("Did not recoginze notebook type.")
+    
     os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
 
     f_name = os.path.basename(f).replace(".ipynb", "")
@@ -84,16 +94,17 @@ nbsphinx_execute = 'never'
 # -- Options for automatic plots in docs -------------------------------------
 
 # Copy data from test data folder to docs folder
-#os.makedirs("source/API", exist_ok=True)
+# os.makedirs("source/API", exist_ok=True)
 
 # copy folder
-shutil.copytree("../../tests/data", "API/data")
+shutil.copytree("../../tests/data", "API/data", dirs_exist_ok=True)  # dirs_exist_true only important when testing locally
 
 plot_include_source = True
 plot_html_show_source_link = False
 plot_formats = [("png", 90)]
 plot_html_show_formats = False
 plot_pre_code = open("plot_pre_code.py").read()
+utils_pre_code = open("utils_pre_code.py").read()
 
 plot_rcparams = {'savefig.bbox': 'tight'}  # make sure plots are not cut off in the docs
 plot_apply_rcparams = True                 # if context option is used

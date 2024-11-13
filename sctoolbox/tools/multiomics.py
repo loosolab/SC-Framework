@@ -5,7 +5,7 @@ from functools import reduce
 import warnings
 
 from beartype import beartype
-from typing import Literal
+from beartype.typing import Literal
 
 import sctoolbox.utils as utils
 
@@ -41,7 +41,7 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
 
     Raises
     ------
-    ValueError:
+    ValueError
         If no indices of both adata.obs tables are overlapping.
     """
 
@@ -98,8 +98,8 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
                                                            right_index=True), obs_list)
     merged_adata.obsm = obsm_dict
 
-    utils.fill_na(merged_adata.obs)
-    utils.fill_na(merged_adata.var)
+    utils.tables.fill_na(merged_adata.obs)
+    utils.tables.fill_na(merged_adata.var)
 
     if len(merged_adata.var) <= 50:
         warnings.warn("The adata object contains less than 51 genes/var entries. "

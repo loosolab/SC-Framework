@@ -7,11 +7,19 @@ from io import StringIO
 import sys
 
 from sctoolbox.utils.adata import load_h5ad, get_adata_subsets
-from sctoolbox._settings import settings, settings_from_config
+from sctoolbox import settings
+logger = settings.logger
+
+
+# --------------------------- FIXTURES ------------------------------ #
+
 
 adata_path = os.path.join(os.path.dirname(__file__), 'data', "adata.h5ad")
 config_path = os.path.join(os.path.dirname(__file__), 'data', "test_config.yaml")
 config_path_nokey = os.path.join(os.path.dirname(__file__), 'data', "test_config_nokey.yaml")
+
+
+# --------------------------- TESTS --------------------------------- #
 
 
 @pytest.mark.parametrize("key, value",
@@ -80,7 +88,7 @@ def test_logfile_verbosity():
 @pytest.mark.parametrize("key, path", [(None, config_path_nokey), ("01", config_path)])
 def test_settings_from_config(key, path):
     """Tests that the function is able to read the config yaml and and applies the settings."""
-    settings_from_config(path, key=key)
+    settings.settings_from_config(path, key=key)
     assert getattr(settings, "overwrite_log")
     assert getattr(settings, "log_file") == "pipeline_output/logs/01_log.txt"
     settings.reset()
@@ -89,5 +97,27 @@ def test_settings_from_config(key, path):
 def test_invalid_key_settings_from_config():
     """Test that apropriate Error is returned if the given key is not found in the yaml."""
     with pytest.raises(KeyError, match="Key 01 not found in config file"):
-        settings_from_config(config_path_nokey, key="01")
+        settings.settings_from_config(config_path_nokey, key="01")
     settings.reset()
+
+
+def test_user_logging():
+    """Test is logfile is correctly overwritten."""
+
+    settings.log_file = "test.log"
+    logger.info("test_info")
+    assert "test_info" in open(settings.log_file).read()
+
+    # Set again to the same file
+    settings.log_file = "test.log"
+    logger.info("test_info2")
+    content = open(settings.log_file).read()
+    assert "test_info" in content  # check that the first log is still there
+    assert "test_info2" in content
+
+    # Set to overwrite the file
+    settings.overwrite_log = True
+    logger.info("test_info3")
+    content = open(settings.log_file).read()
+    assert "test_info2" not in content  # previous log was overwritten
+    assert "test_info3" in content      # new log is there

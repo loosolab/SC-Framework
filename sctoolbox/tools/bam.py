@@ -8,7 +8,7 @@ from multiprocessing.pool import ApplyResult
 import scanpy as sc
 from functools import partial
 
-from typing import TYPE_CHECKING, Iterable, Optional, Literal, Any, Sequence
+from beartype.typing import TYPE_CHECKING, Iterable, Optional, Literal, Any, Sequence
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 @beartype
 def bam_adata_ov(adata: sc.AnnData,
                  bamfile: str,
-                 cb_col: str) -> float:
+                 cb_tag: str = "CB") -> float:
     """
     Check if adata.obs barcodes existing in a column of a bamfile.
 
@@ -33,7 +33,7 @@ def bam_adata_ov(adata: sc.AnnData,
         adata object where adata.obs is stored
     bamfile : str
         path of the bamfile to investigate
-    cb_col : str
+    cb_tag : str, default 'CB'
         bamfile column to extract the barcodes from
 
     Returns
@@ -49,7 +49,7 @@ def bam_adata_ov(adata: sc.AnnData,
     counter = 0
     iterations = 1000
     for read in bam_obj:
-        tag = read.get_tag(cb_col)
+        tag = read.get_tag(cb_tag)
         sample.append(tag)
         if counter == iterations:
             break
@@ -66,7 +66,8 @@ def bam_adata_ov(adata: sc.AnnData,
 @deco.log_anndata
 @beartype
 def check_barcode_tag(adata: sc.AnnData,
-                      bamfile: str, cb_col: str) -> None:
+                      bamfile: str,
+                      cb_tag: str = "CB") -> None:
     """
     Check for the possibilty that the wrong barcode is used.
 
@@ -76,7 +77,7 @@ def check_barcode_tag(adata: sc.AnnData,
         adata object where adata.obs is stored
     bamfile : str
         path of the bamfile to investigate
-    cb_col : str
+    cb_tag : str, default 'CB'
         bamfile column to extract the barcodes from
 
     Raises
@@ -85,7 +86,7 @@ def check_barcode_tag(adata: sc.AnnData,
         If barcode hit rate could not be identified
     """
 
-    hitrate = bam_adata_ov(adata, bamfile, cb_col)
+    hitrate = bam_adata_ov(adata, bamfile, cb_tag)
 
     if hitrate == 0:
         logger.warning('None of the barcodes from the bamfile found in the .obs table.\n'
@@ -128,15 +129,15 @@ def subset_bam(bam_in: str,
     """
 
     # check then load modules
-    utils.check_module("tqdm")
-    if utils._is_notebook() is True:
+    utils.checker.check_module("tqdm")
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
 
     # Create output dir if needed
-    utils.create_dir(bam_out)
+    utils.io.create_dir(bam_out)
 
     if os.path.exists(bam_out) and overwrite is False:
         logger.warning(f"Output file {bam_out} exists. Skipping.")
@@ -247,20 +248,20 @@ def split_bam_clusters(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If groupby column is not in adata.obs
         2. If barcode column is not in adata.obs
         3. If index_bams is set and sort_bams is False
     """
 
     # then load modules
-    utils.check_module("tqdm")
-    if utils._is_notebook() is True:
+    utils.checker.check_module("tqdm")
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
 
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     # check whether groupby and barcode_col are in adata.obs
@@ -277,7 +278,7 @@ def split_bam_clusters(adata: sc.AnnData,
         bams = [bams]
 
     # create output folder if needed
-    utils.create_dir(os.path.dirname(output_prefix))  # upper directory of prefix
+    utils.io.create_dir(os.path.dirname(output_prefix))  # upper directory of prefix
 
     # Establish clusters from obs
     clusters = list(set(adata.obs[groupby]))
@@ -327,7 +328,7 @@ def split_bam_clusters(adata: sc.AnnData,
         manager = mp.Manager()
 
         # Make chunks of writer_threads
-        cluster_chunks = utils.split_list(clusters, writer_threads)
+        cluster_chunks = utils.general.split_list(clusters, writer_threads)
         cluster_queues = {}
         for chunk in cluster_chunks:
             m = manager.Queue(maxsize=max_queue_size)  # setup queue to get reads from readers
@@ -458,7 +459,7 @@ def open_bam(file: str,
     """
 
     # check then load modules
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     # save verbosity, then set temporary one
@@ -491,7 +492,7 @@ def get_bam_reads(bam_obj: "pysam.AlignmentFile") -> int:
     """
 
     # check then load modules
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     # Get number of reads in bam
@@ -541,15 +542,15 @@ def _monitor_progress(progress_queue: Any,
     """
 
     # Check parameter that beartype cannot cover
-    utils.check_type(progress_queue, "progress_queue", BaseProxy)
+    utils.checker.check_type(progress_queue, "progress_queue", BaseProxy)
     for value in cluster_queues.values():
-        utils.check_type(value, "cluster_queues value", BaseProxy)
+        utils.checker.check_type(value, "cluster_queues value", BaseProxy)
     for jobs in reader_jobs:
-        utils.check_type(jobs, "reader_jobs", ApplyResult)
+        utils.checker.check_type(jobs, "reader_jobs", ApplyResult)
     for jobs in writer_jobs:
-        utils.check_type(jobs, "writer_jobs", ApplyResult)
+        utils.checker.check_type(jobs, "writer_jobs", ApplyResult)
 
-    if utils._is_notebook() is True:
+    if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
     else:
         from tqdm import tqdm
@@ -660,14 +661,14 @@ def _buffered_reader(path: str,
 
     Raises
     ------
-    Exception
-        If buffered reader failes.
+    e
+        Exception, if buffered reader failes.
     """
 
     # Test parameter types not covered by beartype
     for value in out_queues.values():
-        utils.check_type(value, "out_queues.values", BaseProxy)
-    utils.check_type(progress_queue, "progress_queue", BaseProxy)
+        utils.checker.check_type(value, "out_queues.values", BaseProxy)
+    utils.checker.check_type(progress_queue, "progress_queue", BaseProxy)
 
     try:
         # open bam
@@ -749,13 +750,13 @@ def _writer(read_queue: Any,
 
     Raises
     ------
-    Exception
-        If buffered reader failes.
+    e
+        Exception, if buffered reader failes.
     """
 
     # Check parameter that are not covered by beartype
-    utils.check_type(read_queue, "read_queue", BaseProxy)
-    utils.check_type(progress_queue, "progress_queue", BaseProxy)
+    utils.checker.check_type(read_queue, "read_queue", BaseProxy)
+    utils.checker.check_type(progress_queue, "progress_queue", BaseProxy)
 
     try:
         import pysam  # install of pysam was checked in parent function
@@ -850,19 +851,19 @@ def bam_to_bigwig(bam: str,
         return output
 
     # Check required modules
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     if bedtools_path is None:
-        bedtools_path = utils.get_binary_path("bedtools")
+        bedtools_path = utils.general.get_binary_path("bedtools")
 
     if bgtobw_path is None:
-        bgtobw_path = utils.get_binary_path("bedGraphToBigWig")
+        bgtobw_path = utils.general.get_binary_path("bedGraphToBigWig")
 
     # Get size of genome and write a chromsizes file
     bamobj = pysam.AlignmentFile(bam, "rb")
     chromsizes = {chrom: bamobj.lengths[i] for i, chrom in enumerate(bamobj.references)}
-    chromsizes_file = utils.get_temporary_filename(tempdir)
+    chromsizes_file = utils.io.get_temporary_filename(tempdir)
 
     with open(chromsizes_file, "w") as f:
         for chrom, size in chromsizes.items():
@@ -878,25 +879,25 @@ def bam_to_bigwig(bam: str,
     bamobj.close()
 
     # Convert bam to bedgraph
-    bedgraph_out = utils.get_temporary_filename(tempdir)
+    bedgraph_out = utils.io.get_temporary_filename(tempdir)
     cmd = f"{bedtools_path} genomecov -bg -ibam {bam} > {bedgraph_out}"
     logger.info("Running: " + cmd)
-    utils.run_cmd(cmd)
+    utils.general.run_cmd(cmd)
 
     # Sort and scale input
-    bedgraph_out_sorted = utils.get_temporary_filename(tempdir)
+    bedgraph_out_sorted = utils.io.get_temporary_filename(tempdir)
     cmd = f"sort -k1,1 -k2,2n -T {tempdir} {bedgraph_out} |  awk '{{$4=$4*{scaling_factor}; print $0}}' > {bedgraph_out_sorted}"
     logger.info("Running: " + cmd)
-    utils.run_cmd(cmd)
+    utils.general.run_cmd(cmd)
 
     # Convert bedgraph to bigwig
     cmd = f"{bgtobw_path} {bedgraph_out_sorted} {chromsizes_file} {output}"
     logger.info("Running: " + cmd)
-    utils.run_cmd(cmd)
+    utils.general.run_cmd(cmd)
 
     # Remove all temp files
     if remove_temp is True:
-        utils.remove_files([chromsizes_file, bedgraph_out, bedgraph_out_sorted])
+        utils.io.remove_files([chromsizes_file, bedgraph_out, bedgraph_out_sorted])
 
     logger.info(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
 
@@ -964,9 +965,11 @@ def create_fragment_file(bam: str,
         If both barcode_tag and barcode_regex (or neither) are set.
     FileNotFoundError
         If the input bam file does not exist.
+    e
+        Exception, on unkown error while sorting .bam
     """
 
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     # Establish output filename
@@ -1021,7 +1024,7 @@ def create_fragment_file(bam: str,
     bamfile = pysam.AlignmentFile(bam)
     chromosomes = bamfile.references
     bamfile.close()
-    chromosome_chunks = utils.split_list(chromosomes, nproc)
+    chromosome_chunks = utils.general.split_list(chromosomes, nproc)
 
     # Create fragments from bam
     logger.info("Creating fragments from chromosomes...")
@@ -1047,7 +1050,7 @@ def create_fragment_file(bam: str,
         pool.close()
 
         # monitor progress
-        utils.monitor_jobs(jobs, description="Progress")  # waits for all jobs to finish
+        utils.multiprocessing.monitor_jobs(jobs, description="Progress")  # waits for all jobs to finish
         pool.join()
 
         # get number of written fragments
@@ -1074,7 +1077,7 @@ def create_fragment_file(bam: str,
 
     # Remove temp files
     if not keep_temp:
-        utils.remove_files(temp_files)
+        utils.io.rm_tmp(temp_files=temp_files)
 
     # Index fragments file
     if index:
@@ -1184,7 +1187,7 @@ def _write_fragments(bam: str,
         If None of barcode_tag and barcode_regex are set.
     """
 
-    utils.check_module("pysam")
+    utils.checker.check_module("pysam")
     import pysam
 
     # Establish function to use for getting barcode

@@ -4,10 +4,11 @@ import scanpy as sc
 import pandas as pd
 import os
 import glob
+from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from typing import Optional, Union, Literal, Any
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -20,77 +21,115 @@ logger = settings.logger
 #####################################################################
 
 @beartype
-def assemble_from_h5ad(h5ad_files: list[str],
-                       merge_column: str = 'sample',
-                       coordinate_cols: Optional[list[str]] = None,
-                       set_index: bool = True,
-                       index_from: Optional[str] = None) -> sc.AnnData:
-    """
-    Assembles multiple adata files into a single adata object.
+def prepare_atac_anndata(adata: sc.AnnData,
+                         coordinate_cols: Optional[Union[list[str], str]] = None,
+                         h5ad_path: Optional[str] = None,
+                         remove_var_index_prefix: bool = True,
+                         keep_original_index: Optional[str] = None,
+                         coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
+    r"""
+    Prepare AnnData object of ATAC-seq data to be in the correct format for the subsequent pipeline.
 
-    This concatenates adata.obs and merges adata.uns.
+    This includes formatting the index, formatting the coordinate columns, and setting the barcode as the index.
 
     Parameters
     ----------
-    h5ad_files : list[str]
-        List of h5ad_files.
-    merge_column : str, default 'sample'
-        Column name to store sample identifier.
-    coordinate_cols : Optional[list[str]], default None
-        Location information of the peaks.
-    set_index : bool
-        If True, index will be formatted and can be set by a given column.
-    index_from : Optional[str], default None
-        Column to build the index from.
+    adata : sc.AnnData
+        The AnnData object to be prepared.
+    coordinate_cols : Optional[list[str], str], default None
+        Parameter ensures location info is in adata.var and adata.var.index and formatted correctly.
+        1. A list of 3 adata.var column names e.g. ['chr', 'start', 'end'] that will be used to create the index.
+        2. A string (adata.var column name) that contains all three coordinates to create the index.
+        3. And if None, the coordinates will be created from the index.
+    h5ad_path : Optional[str], default None
+        Path to the h5ad file.
+    remove_var_index_prefix : bool, default True
+        If True, the prefix ("chr") of the index will be removed.
+    keep_original_index : Optional[str], default None
+        If not None, the original index will be kept in adata.obs by the name provided.
+    coordinate_regex : str, default "chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+"
+        Regular expression to check if the index is in the correct format.
 
     Returns
     -------
     sc.AnnData
-        The concatenated adata object. Contains a sample column in `adata.obs` to identify original files.
+        The prepared AnnData object.
+
+    Raises
+    ------
+    ValueError
+        If coordinate columns is a list that has not length 3.
+    KeyError
+        If coordinate columns are not found in adata.var.
     """
+    if coordinate_cols:
+        if isinstance(coordinate_cols, list):
+            if len(coordinate_cols) != 3:
+                logger.error("Coordinate columns must be a list of 3 elements. e.g. ['chr', 'start', 'end'] or a single string with all coordinates.")
+                raise ValueError
 
-    adata_dict = {}
-    counter = 0
-    for h5ad_path in h5ad_files:
-        counter += 1
+        if not utils.checker.check_columns(adata.var,
+                                           coordinate_cols,
+                                           error=False,
+                                           name="adata.var"):  # Check that coordinate_cols are in adata.var)
+            logger.error('Coordinate columns not found in adata.var')
+            raise KeyError
 
-        sample = 'sample' + str(counter)
+    # Format index
+    logger.info("formatting index")
+    # This checks if the index is available and valid, if not it creates it.
+    utils.checker.var_column_to_index(adata,
+                                      coordinate_cols=coordinate_cols,
+                                      remove_var_index_prefix=remove_var_index_prefix,
+                                      keep_original_index=keep_original_index,
+                                      coordinate_regex=coordinate_regex)
 
-        adata = sc.read_h5ad(h5ad_path)
-        if set_index:
-            logger.info("formatting index")
-            utils.format_index(adata, index_from)
+    # Format coordinate columns
+    logger.info("formatting coordinate columns")
+    # This checks if the coordinate columns are available and valid, if not it creates them.
 
-        # Establish columns for coordinates
-        if coordinate_cols is None:
-            coordinate_cols = adata.var.columns[:3]  # first three columns are coordinates
-        else:
-            utils.check_columns(adata.var, coordinate_cols,
-                                "coordinate_cols")  # Check that coordinate_cols are in adata.var)
+    # Establish columns for coordinates
+    if coordinate_cols is None:
+        coordinate_cols = ['chr', 'start', 'stop']
 
-        # Format coordinate columns
-        logger.info("formatting coordinate columns")
-        utils.format_adata_var(adata, coordinate_cols, coordinate_cols)
+    # Format coordinate columns
+    utils.checker.var_index_to_column(adata, coordinate_cols)
 
-        # check if the barcode is the index otherwise set it
-        utils.barcode_index(adata)
+    # check if the barcode is the index otherwise set it
+    utils.bioutils.barcode_index(adata)
 
+    if h5ad_path is not None:
         adata.obs = adata.obs.assign(file=h5ad_path)
 
-        # Add conditions here
-
-        adata_dict[sample] = adata
-
-    adata = sc.concat(adata_dict, label=merge_column)
-    adata.uns = sc.concat(adata_dict, uns_merge='same').uns
-    for value in adata_dict.values():
-        adata.var = pd.merge(adata.var, value.var, left_index=True, right_index=True)
-
-    # Remove name of indexes for cellxgene compatibility
-    adata.obs.index.name = None
-    adata.var.index.name = None
-
     return adata
+
+
+@beartype
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.AnnData:
+    """
+    Load one or more .h5ad files.
+
+    Multiple .h5ad files will be combined with a "batch" column added to adata.obs.
+
+    Parameters
+    ----------
+    h5ad_file : Union[str, Collection[str], Mapping[str, str]]
+        Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
+        In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+
+    Returns
+    -------
+    sc.AnnData
+        The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
+    """
+    if isinstance(h5ad_file, str):
+        return sc.read_h5ad(filename=h5ad_file)
+    elif isinstance(h5ad_file, Mapping):
+        # load then combine anndata objects
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+    else:
+        # load then combine anndata objects
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
 
 
 #####################################################################
@@ -166,7 +205,8 @@ def from_single_starsolo(path: str,
 def from_quant(path: str,
                configuration: list = [],
                use_samples: Optional[list] = None,
-               dtype: Literal["raw", "filtered"] = "filtered") -> sc.AnnData:
+               dtype: Literal["raw", "filtered"] = "filtered",
+               **kwargs: Any) -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
 
@@ -182,6 +222,8 @@ def from_quant(path: str,
         List of samples to use. If None, all samples will be used.
     dtype : Literal["raw", "filtered"], default 'filtered'
         The type of Solo data to choose.
+    **kwargs : Any
+        Contains additional arguments for the sctoolbox.utils.assemblers.from_single_starsolo method.
 
     Returns
     -------
@@ -192,9 +234,13 @@ def from_quant(path: str,
     ------
     ValueError
         If `use_samples` contains not existing names.
+    FileNotFoundError
+        If the path to the quant folder does not exist.
     """
 
-    # TODO: test that quant folder is existing
+    # Test that quant folder exists
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The path to the quant folder does not exist: {path}")
 
     # Collect configuration into a dictionary
     config_dict = {}
@@ -227,7 +273,7 @@ def from_quant(path: str,
 
         logger.info(f"Assembling sample '{sample_name}'")
         solo_dir = os.path.join(sample_dir, "solo")
-        adata = from_single_starsolo(solo_dir, dtype=dtype)
+        adata = from_single_starsolo(solo_dir, dtype=dtype, **kwargs)
 
         # Make barcode index unique
         adata.obs.index = adata.obs.index + "-" + sample_name
@@ -246,7 +292,7 @@ def from_quant(path: str,
     adata = adata_list[0].concatenate(adata_list[1:], join="outer")
 
     # Add information to uns
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
 
     return adata
 
@@ -256,29 +302,28 @@ def from_quant(path: str,
 #####################################################################
 
 @beartype
-def from_single_mtx(mtx: str,
-                    barcodes: str,
-                    genes: str,
+def from_single_mtx(mtx: Union[str, Path],
+                    barcodes: Union[str, Path],
+                    variables: Optional[Union[str, Path]] = None,
                     transpose: bool = True,
-                    header: Union[int, list[int], Literal['infer'], None] = 'infer',
+                    header: Union[int, list[int], Literal['infer'], None] = None,
                     barcode_index: int = 0,
                     genes_index: int = 0,
-                    delimiter: str = "\t",
-                    **kwargs: Any) -> sc.AnnData:
+                    delimiter: str = "\t") -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
     Parameters
     ----------
-    mtx : str
+    mtx : Union[str, Path]
         Path to the mtx file (.mtx)
-    barcodes : str
+    barcodes : Union[str, Path]
         Path to cell label file (.obs)
-    genes : str
-        Path to gene label file (.var)
+    variables : Optional[Union[str, Path]], default None
+        Path to variable label file (.var). E.g. gene labels for RNA or peak labels for ATAC.
     transpose : bool, default True
         Set True to transpose mtx matrix.
-    header : Union[int, list[int], Literal['infer'], None], default 'infer'
+    header : Union[int, list[int], Literal['infer'], None], default None
         Set header parameter for reading metadata tables using pandas.read_csv.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
@@ -286,8 +331,6 @@ def from_single_mtx(mtx: str,
         Column which contains the gene IDs.
     delimiter : str, default '\t'
         delimiter of genes and barcodes table.
-    **kwargs : Any
-        Contains additional arguments for scanpy.read_mtx method
 
     Returns
     -------
@@ -301,7 +344,7 @@ def from_single_mtx(mtx: str,
     """
 
     # Read mtx file
-    adata = sc.read_mtx(filename=mtx, dtype='float32', **kwargs)
+    adata = sc.read_mtx(filename=mtx, dtype='float32')
 
     # Transpose matrix if necessary
     if transpose:
@@ -311,19 +354,22 @@ def from_single_mtx(mtx: str,
     barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
     barcode_csv.index.names = ['index']
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
-    genes_csv = pd.read_csv(genes, header=header, index_col=genes_index, delimiter=delimiter)
-    genes_csv.index.names = ['index']
-    genes_csv.columns = [str(c) for c in genes_csv.columns]  # convert to string
+
+    if variables:
+        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
+        var_csv.index.names = ['index']
+        var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
     # Test if they are unique
     if not barcode_csv.index.is_unique:
         raise ValueError("Barcode index column does not contain unique values")
-    if not genes_csv.index.is_unique:
+    if variables and not var_csv.index.is_unique:
         raise ValueError("Genes index column does not contain unique values")
 
     # Add tables to anndata object
     adata.obs = barcode_csv
-    adata.var = genes_csv
+    if variables:
+        adata.var = var_csv
 
     # Add filename to .obs
     adata.obs["filename"] = os.path.basename(mtx)
@@ -334,25 +380,32 @@ def from_single_mtx(mtx: str,
 
 @beartype
 def from_mtx(path: str,
-             mtx: str = "*_matrix.mtx*",
-             barcodes: str = "*_barcodes.tsv*",
-             genes: str = "*_genes.tsv*",
+             mtx: str = "*matrix.mtx*",
+             barcodes: str = "*barcodes.tsv*",
+             variables: str = "*genes.tsv*",
+             var_error: bool = True,
              **kwargs: Any) -> sc.AnnData:
     """
-    Build an adata object from list of mtx, barcodes and genes files.
+    Build an adata object from list of mtx, barcodes and variables files.
+
+    This function recursively scans trough all subdirectories of the given path for files matching the pattern of the `mtx` parameter.
+    Mtx files accompanied by a file matching the `barcodes` or `variables` pattern will be added to the resulting AnnData as `.obs` and `.var` tables.
 
     Parameters
     ----------
     path : str
         Path to data files
-    mtx : str, default '*_matrix.mtx*'
+    mtx : str, default '*matrix.mtx*'
         String for glob to find matrix files.
-    barcodes : str, default '*_barcodes.tsv*'
+    barcodes : str, default '*barcodes.tsv*'
         String for glob to find barcode files.
-    genes : str, default '*_genes.tsv*'
-        String for glob to find gene label files.
+    variables : str, default '*genes.tsv*'
+        String for glob to find e.g. gene label files (RNA).
+    var_error : bool, default True
+        Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
     **kwargs : Any
-        Contains additional arguments for scanpy.read_mtx method
+        Contains additional arguments for the sctoolbox.utils.assemblers.from_single_mtx method.
+
 
     Returns
     -------
@@ -362,30 +415,51 @@ def from_mtx(path: str,
     Raises
     ------
     ValueError
-        If files are not found.
+        1. If mtx files are not found.
+        2. If multiple barcode or variable files were found for one mtx file.
+        3. If the barcode file is missing for mtx file.
+        4. If the variable file is missing for mtx file and var_error is set to True
     """
+    # initialize path as path object
+    path = Path(path)
 
-    mtx = glob.glob(os.path.join(path, mtx))
-    barcodes = glob.glob(os.path.join(path, barcodes))
-    genes = glob.glob(os.path.join(path, genes))
+    # recursively find mtx files
+    mtx_files = list(path.rglob(mtx))
 
-    # Check if lists are same length
-    # https://stackoverflow.com/questions/35791051/better-way-to-check-if-all-lists-in-a-list-are-the-same-length
-    it = iter([mtx, barcodes, genes])
-    the_len = len(next(it))
-    if not all(len(list_len) == the_len for list_len in it):
-        raise ValueError("Found different quantitys of mtx, genes, barcode files.\n Please check given suffixes or filenames")
-
-    if not mtx:
-        raise ValueError('No files were found with the given directory and suffixes')
+    if not mtx_files:
+        raise ValueError('No files were found with the given directory and suffixes.')
 
     adata_objects = []
-    for i, m in enumerate(mtx):
-        print(f"Reading files: {i+1} of {len(mtx)} ")
-        adata_objects.append(from_single_mtx(m, barcodes[i], genes[i], **kwargs))
+    for i, m in enumerate(mtx_files):
+        logger.info(f"Reading files: {i+1} of {len(mtx_files)} ")
 
+        # find barcode and variable file in same folder
+        barcode_file = list(m.parents[0].glob(barcodes))
+        if len(barcode_file) > 1:
+            raise ValueError(f'{str(m)} expected one barcode file but found multiple: {[str(bf) for bf in barcode_file]}')
+        elif len(barcode_file) < 1:
+            raise ValueError(f'Missing required barcode file for {str(m)}.')
+
+        variable_file = list(m.parents[0].glob(variables))
+        if len(variable_file) > 1:
+            raise ValueError(f'{str(m)} expected one variable file but found multiple: {[str(vf) for vf in variable_file]}')
+        elif var_error and len(variable_file) < 1:
+            raise ValueError(f'Missing required variable file for {str(m)}.')
+
+        # create adata object
+        adata_objects.append(
+            from_single_mtx(m,
+                            barcode_file[0],
+                            variable_file[0] if variable_file else None,
+                            **kwargs)
+        )
+
+        # add relative path to obs as it could contain e.g. sample information
+        adata_objects[-1].obs["rel_path"] = str(m.parents[0].relative_to(path))
+
+    # create final adata
     if len(adata_objects) > 1:
-        adata = adata_objects[0].concatenate(*adata_objects[1:], join="outer")
+        adata = utils.adata.concadata(adata_objects)
     else:
         adata = adata_objects[0]
 
@@ -422,19 +496,19 @@ def convertToAdata(file: str,
     """
 
     # Setup R
-    utils.setup_R(r_home)
+    utils.general.setup_R(r_home)
 
     # Initialize R <-> python interface
-    utils.check_module("anndata2ri")
+    utils.checker.check_module("anndata2ri")
     import anndata2ri
-    utils.check_module("rpy2")
+    utils.checker.check_module("rpy2")
     from rpy2.robjects import r, default_converter, conversion, globalenv
     anndata2ri.activate()
 
     # create rpy2 None to NULL converter
     # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     none_converter = conversion.Converter("None converter")
-    none_converter.py2rpy.register(type(None), utils._none2null)
+    none_converter.py2rpy.register(type(None), utils.general._none2null)
 
     # check if Seurat and SingleCellExperiment are installed
     r("""
@@ -473,6 +547,9 @@ def convertToAdata(file: str,
             stop("Unknown file. Expected '.robj' or '.rds' got", file)
         }
 
+        # update/validate SeuratObject to match newer versions
+        object = UpdateSeuratObject(object)
+
         # ----- convert to SingleCellExperiment ----- #
         # can only convert Seurat -> SingleCellExperiment -> anndata
         if (class(object) == "Seurat") {
@@ -504,8 +581,12 @@ def convertToAdata(file: str,
     # this also converts to anndata
     adata = globalenv["object"]
 
+    # fixes https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/205
+    adata.obs.index = adata.obs.index.astype('object')
+    adata.var.index = adata.var.index.astype('object')
+
     # Add information to uns
-    utils.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
     if output:
         # Saving adata.h5ad

@@ -5,9 +5,13 @@ import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 
-from typing import Optional, Any
+import deprecation
+from sctoolbox import __version__
+
+from beartype.typing import Optional, Any, Literal, List, Union
 from beartype import beartype
 
+import sctoolbox.tools.embedding as scem
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -20,7 +24,7 @@ logger = settings.logger
 @deco.log_anndata
 @beartype
 def compute_PCA(anndata: sc.AnnData,
-                use_highly_variable: bool = True,
+                mask_var: Optional[str | List] = "highly_variable",
                 inplace: bool = False,
                 **kwargs: Any) -> Optional[sc.AnnData]:
     """
@@ -30,8 +34,8 @@ def compute_PCA(anndata: sc.AnnData,
     ----------
     anndata : sc.AnnData
         Anndata object to add the PCA to.
-    use_highly_variable : bool, default True
-        If true, use highly variable genes to compute PCA.
+    mask_var : Optional[str], default 'highly_variable'
+        To run only on a certain set of genes given by a boolean array or a string referring to an array in var. By default, uses .var['highly_variable'] if available, else everything.
     inplace : bool, default False
         Whether the anndata object is modified inplace.
     **kwargs : Any
@@ -47,7 +51,7 @@ def compute_PCA(anndata: sc.AnnData,
 
     # Computing PCA
     logger.info("Computing PCA")
-    sc.pp.pca(adata_m, use_highly_variable=use_highly_variable, **kwargs)
+    sc.pp.pca(adata_m, mask_var=mask_var, **kwargs)
 
     # Adding info in anndata.uns["infoprocess"]
     # cr.build_infor(adata_m, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable), inplace=True)
@@ -56,52 +60,16 @@ def compute_PCA(anndata: sc.AnnData,
         return adata_m
 
 
-# wrapper no longer used
-# @beartype
-# def norm_log_PCA(anndata: sc.AnnData,
-#                 exclude_HEG: bool = True,
-#                 use_HVG_PCA: bool = True,
-#                 inplace: bool = False):
-#    """
-#    Defining the ideal number of highly variable genes (HGV), annotate them and compute PCA.
-#
-#    Parameters
-#    ----------
-#    anndata : sc.AnnData
-#        Anndata object to work on.
-#    exclude_HEG : boolean, default True
-#        If True, highly expressed genes (HEG) will be not considered in the normalization.
-#    use_HVG_PCA : bool, default True
-#        If true, highly variable genes (HVG) will be also considered to calculate PCA.
-#    inplace : bool, default False
-#        Whether to work inplace on the anndata object.
-#
-#    Returns
-#    -------
-#    Optional[sc.AnnData]:
-#        Anndata with expression values normalized and log converted and PCA computed.
-#    """
-#    adata_m = anndata if inplace else anndata.copy()
-#
-#    # Normalization and converting to log
-#    nc.adata_normalize_total(adata_m, exclude_HEG, inplace=True)
-#
-#    # Annotate highly variable genes
-#    hv.annot_HVG(adata_m, inplace=True)
-#
-#    # Compute PCA
-#    compute_PCA(adata_m, use_highly_variable=use_HVG_PCA, inplace=True)
-#
-#    if not inplace:
-#        return adata_m
-
-
 @beartype
 def lsi(data: sc.AnnData,
         scale_embeddings: bool = True,
-        n_comps: int = 50) -> None:
+        n_comps: int = 50,
+        use_highly_variable: bool = False) -> None:
     """
-    Run Latent Semantic Indexing.
+    Run Latent Semantic Indexing for dimensionality reduction.
+
+    Values represent the similarity of cells in the original space.
+    doi: 10.3389/fphys.2013.00008
 
     Parameters
     ----------
@@ -111,6 +79,13 @@ def lsi(data: sc.AnnData,
         Scale embeddings to zero mean and unit variance.
     n_comps : int, default 50
         Number of components to calculate with SVD.
+    use_highly_variable : bool, default True
+        If true, use highly variable genes to compute LSI.
+
+    Raises
+    ------
+    ValueError
+        If highly variable genes are used and not found in adata.var['highly_variable'].
 
     Notes
     -----
@@ -119,11 +94,19 @@ def lsi(data: sc.AnnData,
 
     adata = data
 
+    # Subset adata to highly variable genes
+    if use_highly_variable:
+        if "highly_variable" not in adata.var:
+            raise ValueError("Highly variable genes not found in adata.var['highly_variable'].")
+        adata_comp = adata[:, adata.var['highly_variable']]
+    else:
+        adata_comp = adata
+
     # In an unlikely scnenario when there are less 50 features, set n_comps to that value
-    n_comps = min(n_comps, adata.X.shape[1])
+    n_comps = min(n_comps, adata_comp.X.shape[1])
 
     # logging.info("Performing SVD")
-    cell_embeddings, svalues, peaks_loadings = svds(adata.X, k=n_comps)
+    cell_embeddings, svalues, peaks_loadings = svds(adata_comp.X, k=n_comps)
 
     # Re-order components in the descending order
     cell_embeddings = cell_embeddings[:, ::-1]
@@ -136,10 +119,18 @@ def lsi(data: sc.AnnData,
         )
 
     var_explained = np.round(svalues ** 2 / np.sum(svalues ** 2), decimals=3)
-    stdev = svalues / np.sqrt(adata.X.shape[0] - 1)
+    stdev = svalues / np.sqrt(adata_comp.X.shape[0] - 1)
 
+    # Add results to adata
     adata.obsm["X_lsi"] = cell_embeddings
-    adata.varm["LSI"] = peaks_loadings.T
+    # if highly variable genes are used, only store the loadings for those genes and set the rest to 0
+    if use_highly_variable:
+        adata.varm["LSI"] = np.zeros(shape=(adata.n_vars, n_comps))
+        adata.varm["LSI"][adata.var['highly_variable']] = peaks_loadings.T
+    else:
+        adata.varm["LSI"] = peaks_loadings.T
+
+    # Add variance explained to uns
     adata.uns["lsi"] = {"stdev": stdev,
                         "variance": svalues,
                         "variance_ratio": var_explained}
@@ -152,7 +143,7 @@ def lsi(data: sc.AnnData,
 
 @beartype
 def apply_svd(adata: sc.AnnData,
-              layer: str = None) -> sc.AnnData:
+              layer: Optional[str] = None) -> sc.AnnData:
     """
     Singular value decomposition of anndata object.
 
@@ -160,7 +151,7 @@ def apply_svd(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object to be decomposed.
-    layer : str, default None
+    layer : Optional[str], default None
         The layer to be decomposed. If None, the layer is set to "X".
 
     Returns
@@ -202,6 +193,9 @@ def apply_svd(adata: sc.AnnData,
 #                         Subset number of PCs                             #
 ############################################################################
 
+@deprecation.deprecated(deprecated_in="0.5", removed_in="0.7",
+                        current_version=__version__,
+                        details="Use the 'sctoolbox.tools.propose_pcs' function instead.")
 @beartype
 def define_PC(anndata: sc.AnnData) -> int:
     """
@@ -221,7 +215,7 @@ def define_PC(anndata: sc.AnnData) -> int:
 
     Raises
     ------
-    ValueError:
+    ValueError
         If PCA is not found in anndata.
     """
 
@@ -243,11 +237,112 @@ def define_PC(anndata: sc.AnnData) -> int:
     return knee
 
 
+@beartype
+def propose_pcs(anndata: sc.AnnData,
+                how: List[Literal["variance", "cumulative variance", "correlation"]] = ["variance", "correlation"],
+                var_method: Literal["knee", "percent"] = "percent",
+                perc_thresh: Union[int, float] = 30,
+                corr_thresh: float = 0.3,
+                variance_column: Optional[str] = "variance_ratio",
+                corr_kwargs: Optional[dict] = {}) -> List[int]:
+    """
+    Propose a selection of PCs that can be used for further analysis.
+
+    Note: Function expects PCA to be computed beforehand.
+
+    Parameters
+    ----------
+    anndata: sc.AnnData
+        Anndata object with PCA to get PCs from.
+    how: List[Literal["variance", "cumulative variance", "correlation"]], default ["variance", "correlation"]
+        Values to use for PC proposal. Will independently apply filters to all selected methods and return the intersection of PCs.
+    var_method: Literal["knee", "percent"], default "percent"
+        Either define a threshold based on a knee algorithm or use the percentile.
+    perc_thresh: Union[int, float], default 30
+        Percentile threshold of the PCs that should be included. Only for var_method="percent" and expects a value from 0-100.
+    corr_thresh: float, default 0.3
+        Filter PCs with a correlation greater than the given value.
+    variance_column: Optional[str], default "variance_ratio"
+        Column in anndata.uns to use for variance calculation.
+    corr_kwargs: Optional(dict), default None
+        Parameters forwarded to `sctoolbox.tools.correlation_matrix`.
+
+    Returns
+    -------
+    List[int]
+        List of PCs proposed for further use.
+
+    Raises
+    ------
+    ValueError
+        If PCA is not found in anndata.
+    """
+
+    # check if pca exists
+    if "pca" not in anndata.uns or variance_column not in anndata.uns["pca"]:
+        raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
+
+    # setup PC names
+    PC_names = np.arange(1, len(anndata.uns["pca"][variance_column]) + 1, dtype=int)
+
+    variance = anndata.uns["pca"][variance_column]
+    variance = variance * 100  # convert to percent
+
+    selected_pcs = []
+
+    if "variance" in how:
+
+        if var_method == "knee":
+            # compute knee
+            kn = KneeLocator(PC_names, variance, curve='convex', direction='decreasing')
+            knee = int(kn.knee)  # cast from numpy.int64
+
+            selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+        elif var_method == "percent":
+            # compute percentile
+            percentile = np.percentile(a=variance, q=100 - perc_thresh)
+
+            selected_pcs.append(set(pc for pc, var in zip(PC_names, variance) if var >= percentile))
+
+    if "cumulative variance" in how:
+
+        cumulative = np.cumsum(variance)
+
+        if var_method == "knee":
+            # compute knee
+            kn = KneeLocator(PC_names, cumulative, curve='concave', direction='increasing')
+            knee = int(kn.knee)  # cast from numpy.int64
+
+            selected_pcs.append(set(pc for pc in PC_names if pc <= knee))
+        elif var_method == "percent":
+            # compute percentile
+            percentile = np.percentile(a=cumulative, q=perc_thresh)
+
+            selected_pcs.append(set(pc for pc, cum in zip(PC_names, cumulative) if cum <= percentile))
+
+    if "correlation" in how:
+        # color by highest absolute correlation
+        corrcoefs, _ = scem.correlation_matrix(adata=anndata, **corr_kwargs)
+
+        abs_corrcoefs = list(corrcoefs.abs().max(axis=0))
+
+        selected_pcs.append(set(pc for pc, cc in zip(PC_names, abs_corrcoefs) if cc < corr_thresh))
+
+    # create overlap of selected PCs
+    selected_pcs = list(set.intersection(*selected_pcs))
+
+    # convert numpy.int64 to int
+    selected_pcs = [int(x) for x in selected_pcs]
+
+    return selected_pcs
+
+
 @deco.log_anndata
 @beartype
 def subset_PCA(adata: sc.AnnData,
-               n_pcs: int,
+               n_pcs: Optional[int] = None,
                start: int = 0,
+               select: Optional[List[int]] = None,
                inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
@@ -258,10 +353,12 @@ def subset_PCA(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object containing the PCA coordinates.
-    n_pcs : int
+    n_pcs : Optional[int], default None
         Number of PCs to keep.
     start : int, default 0
         Index (0-based) of the first PC to keep. E.g. if start = 1 and n_pcs = 10, you will exclude the first PC to keep 9 PCs.
+    select : Optional[List[int]], default None
+        Provide a list of PC numbers to keep. E.g. [2, 3, 5] will select the second, third and fifth PC. Will overwrite the n_pcs and start parameter.
     inplace : bool, default True
         Whether to work inplace on the anndata object.
 
@@ -274,11 +371,21 @@ def subset_PCA(adata: sc.AnnData,
     if inplace is False:
         adata = adata.copy()
 
-    adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
-    adata.varm["PCs"] = adata.varm["PCs"][:, start:n_pcs]
+    if select:
+        # adjust selection to be 0-based
+        select = [i - 1 for i in select]
 
-    if "variance_ratio" in adata.uns.get("pca", {}):
-        adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][start:n_pcs]
+        adata.obsm["X_pca"] = adata.obsm["X_pca"][:, select]
+        adata.varm["PCs"] = adata.varm["PCs"][:, select]
+
+        if "variance_ratio" in adata.uns.get("pca", {}):
+            adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][select]
+    else:
+        adata.obsm["X_pca"] = adata.obsm["X_pca"][:, start:n_pcs]
+        adata.varm["PCs"] = adata.varm["PCs"][:, start:n_pcs]
+
+        if "variance_ratio" in adata.uns.get("pca", {}):
+            adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][start:n_pcs]
 
     if inplace is False:
         return adata
