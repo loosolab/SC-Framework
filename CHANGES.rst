@@ -1,3 +1,7 @@
+0.12.0 (in progress)
+--------------------
+- add contrasts parameter to tools.marker_genes.run_deseq2
+
 0.11.0 (08-11-24)
 -----------------
 - fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
