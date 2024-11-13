@@ -744,8 +744,8 @@ def run_deseq2(adata: sc.AnnData,
 
     # Build count matrix
     logger.debug("Building count matrix")
-    counts_df = utils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                       percentile_range=percentile_range)
+    counts_df = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
+                                                percentile_range=percentile_range)
     counts_df = counts_df.astype(int)  # pyDESeq2 requires integer counts
     counts_df = counts_df.transpose()  # pyDESeq2 requires genes as columns
     if counts_df.min().min() < 0:
