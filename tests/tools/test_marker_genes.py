@@ -148,8 +148,7 @@ def test_mask_rank_genes(adata):
     ("not_present", "are not found in adata.obs. Available columns are:", None),
     ("condition", None, "valid"),  # with specifically selected constrasts
     ("condition", None, None),  # with all contrasts
-    ("condition", "is not valid. Valid contrasts are:", [("invalid", "invalid")])
-    ])
+    ("condition", "is not valid. Valid contrasts are:", [("invalid", "invalid")])])
 def test_run_deseq2(adata, condition_col, error, contrast):
     """Test if deseq2 is run and returns a dataframe."""
 
