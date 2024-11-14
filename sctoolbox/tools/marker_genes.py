@@ -686,7 +686,7 @@ def run_deseq2(adata: sc.AnnData,
 
     Raises
     ------
-    ValueError:
+    ValueError
         1. If any given column name is not found in adata.obs.
         2. Invalid contrasts are supplied.
         3. Negative counts are encountered.
