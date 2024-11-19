@@ -144,19 +144,29 @@ def test_mask_rank_genes(adata):
         assert len(set(genes) - set(table_names)) == len(genes)  # all genes are masked
 
 
-@pytest.mark.parametrize("condition_col, error", [
-    ("not_present", "are not found in adata.obs. Available columns are:"),
-    ("condition", None)])
-def test_run_deseq2(adata, condition_col, error):
+@pytest.mark.parametrize("condition_col, error, contrast", [
+    ("not_present", "are not found in adata.obs. Available columns are:", None),
+    ("condition", None, "valid"),  # with specifically selected constrasts
+    ("condition", None, None),  # with all contrasts
+    ("condition", "is not valid. Valid contrasts are:", [("invalid", "invalid")])])
+def test_run_deseq2(adata, condition_col, error, contrast):
     """Test if deseq2 is run and returns a dataframe."""
 
     # test if error is raised
     if isinstance(error, str):
-        with pytest.raises(KeyError, match=error):
-            mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+        if condition_col == "not_present":
+            with pytest.raises(KeyError, match=error):
+                mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+        elif condition_col == "condition":
+            with pytest.raises(ValueError, match=error):
+                mg.run_deseq2(adata, sample_col="samples", contrasts=contrast, condition_col=condition_col, layer="raw")
 
     else:  # should run without exceptions
-        df = mg.run_deseq2(adata, sample_col="samples", condition_col=condition_col, layer="raw")
+        if contrast == "valid":
+            conditions = list(set(adata.obs[condition_col]))
+            contrast = [(conditions[0], conditions[1])]
+
+        df = mg.run_deseq2(adata, sample_col="samples", contrasts=contrast, condition_col=condition_col, layer="raw")
 
         assert isinstance(df, pd.DataFrame)
 
