@@ -1,3 +1,10 @@
+0.12.0 (in progress)
+--------------------
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- General: group_marker: set n_genes as top_n for get_rank_genes_tables
+
 0.11.0 (08-11-24)
 -----------------
 - fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
