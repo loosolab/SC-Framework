@@ -1,3 +1,7 @@
+0.12.0 (in progress)
+--------------------
+- tools.marker_genes.pairwise_rank_genes check minimum amount of groups
+
 0.11.0 (08-11-24)
 -----------------
 - fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
