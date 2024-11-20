@@ -1,5 +1,7 @@
 0.12.0 (in progress)
 --------------------
+- add contrasts parameter to tools.marker_genes.run_deseq2
+- tools.marker_genes.pairwise_rank_genes check minimum amount of groups
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
