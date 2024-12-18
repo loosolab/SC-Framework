@@ -6,6 +6,7 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - General: group_marker: set n_genes as top_n for get_rank_genes_tables
+- ATAC 01 assembly: fix error when selecting the path_mtx (3rd) option (#326)
 
 0.11.0 (08-11-24)
 -----------------
