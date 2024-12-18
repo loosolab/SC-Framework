@@ -6,6 +6,7 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - General: group_marker: set n_genes as top_n for get_rank_genes_tables
+- General: prepare_for_cellxgene: set required mampok version to 3.0.4
 
 0.11.0 (08-11-24)
 -----------------
