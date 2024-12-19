@@ -661,7 +661,7 @@ def _buffered_reader(path: str,
 
     Raises
     ------
-    e
+    Exception
         Exception, if buffered reader failes.
     """
 
@@ -750,7 +750,7 @@ def _writer(read_queue: Any,
 
     Raises
     ------
-    e
+    Exception
         Exception, if buffered reader failes.
     """
 
@@ -965,7 +965,7 @@ def create_fragment_file(bam: str,
         If both barcode_tag and barcode_regex (or neither) are set.
     FileNotFoundError
         If the input bam file does not exist.
-    e
+    Exception
         Exception, on unkown error while sorting .bam
     """
 

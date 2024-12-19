@@ -144,7 +144,7 @@ def run_cmd(cmd: str) -> None:
 
     Raises
     ------
-    e
+    subprocess.CalledProcessError
         subprocess.CalledProcessError, If command has an error.
     """
 
