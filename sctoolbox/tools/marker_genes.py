@@ -12,8 +12,8 @@ import anndata
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from beartype.typing import Optional, Tuple, Any, Literal
 from beartype import beartype
+from beartype.typing import Optional, Tuple, Any, Literal
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
@@ -377,6 +377,11 @@ def pairwise_rank_genes(adata: sc.AnnData,
     **kwargs : Any
         Additional arguments to be passed to scanpy.tl.rank_genes_groups.
 
+    Raises
+    ------
+    ValueError
+        Raised when there are less than two groups in the adata.obs column selected by groupby.
+
     Returns
     -------
     pd.DataFrame
@@ -385,6 +390,10 @@ def pairwise_rank_genes(adata: sc.AnnData,
 
     groups = adata.obs[groupby].astype("category").cat.categories
     contrasts = list(itertools.combinations(groups, 2))
+    logger.debug(f"Contrasts: {contrasts}")
+
+    if len(contrasts) == 0:
+        raise ValueError(f"Number of groups in '{groupby}' must be at least 2. Found: {list(groups)}")
 
     # Check that fractions are available
     use_fractions = True
@@ -647,31 +656,34 @@ def mask_rank_genes(adata: sc.AnnData,
 def run_deseq2(adata: sc.AnnData,
                sample_col: str,
                condition_col: str,
-               confounders: Optional[list[str]] = None,
+               confounders: Optional[str | list[str]] = None,
                layer: Optional[str] = None,
+               contrasts: Optional[list[Tuple]] = None,
+               min_counts: int = 5,
                percentile_range: Tuple[int, int] = (0, 100),
-               min_count: int = 0,
                threads: Optional[int] = None) -> pd.DataFrame:
     """
     Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
     Parameters
     ----------
-    adata : sc.AnnData
+    adata : anndata.AnnData
         Anndata object containing raw counts.
     sample_col : str
         Column name in adata.obs containing sample names.
     condition_col : str
-        Column name in adata.obs containing condition names to be compared.
-    confounders : Optional[list[str]], default None
+        Column name in adata.obs containing conditions to be compared in contrasts, e.g. condition A vs. condition B.
+    confounders : list, default None
         List of additional column names in adata.obs containing confounders to be included in the model.
     layer : Optional[str], default None
         Name of layer containing raw counts to be used for pyDESeq2. Default is None (use .X for counts)
-    percentile_range : Tuple[int, int], default (0, 100)
+    contrasts : list of tuples, default None
+        List of tuples containing the conditions to be compared in contrasts, e.g. [(A, B), (A, C)].
+    min_counts : int, default 5
+        Minimum number of counts per gene to be included in the analysis.
+    percentile_range : tuple, default (0, 100)
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
-    min_count : int
-        The minimum count of peaks a feature should have to be used. Default is 0, which means all features are used.
     threads : Optional[int]
         The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
 
@@ -681,10 +693,17 @@ def run_deseq2(adata: sc.AnnData,
         A dataframe containing the results of the DESeq2 analysis.
         Also adds the dataframe to adata.uns["deseq_result"]
 
+    Raises
+    ------
+    ValueError
+        1. If any given column name is not found in adata.obs.
+        2. Invalid contrasts are supplied.
+        3. Negative counts are encountered.
+
     Notes
     -----
     Needs the package 'pydeseq2' to be installed.
-    These can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
+    This can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
 
     See Also
     --------
@@ -704,51 +723,71 @@ def run_deseq2(adata: sc.AnnData,
     elif not isinstance(confounders, list):
         confounders = [confounders]
 
-    design_factors = confounders + [condition_col]
-
     # Check that sample_col and condition_col are in adata.obs
     cols = [sample_col, condition_col] + confounders
     utils.checker.check_columns(adata.obs, cols, name="adata.obs", error=True)
-
-    # filter features
-    layer_data = adata.layers[layer] if layer is not None else adata.X
-    adata = adata[:, layer_data.sum(axis=0) >= min_count]
 
     # Build sample_df
     sample_df = adata.obs[cols].reset_index(drop=True).drop_duplicates()
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)
 
+    logger.debug("sample_df:")
+    logger.debug(sample_df)
+
     conditions = sample_df[condition_col].unique()
+
+    # Establish contrasts
+    all_contrasts = list(itertools.combinations(conditions, 2))
+    if contrasts is None:
+        contrasts = all_contrasts
+    else:
+        # Check that all contrasts are valid
+        all_contrasts_inv = [(C2, C1) for C1, C2 in all_contrasts]  # Check both directions
+        for contrast in contrasts:
+            if contrast not in all_contrasts + all_contrasts_inv:
+                raise ValueError(f"Contrast {contrast} is not valid. Valid contrasts are: {all_contrasts}")
+
+        # Remove cells not in contrasts
+        contrast_conditions = set(itertools.chain.from_iterable(contrasts))
+        logger.debug(contrast_conditions)
+        adata = adata[adata.obs[condition_col].isin(contrast_conditions)]
+
+        # Remove samples not in contrasts
+        sample_df = sample_df[sample_df["condition"].isin(contrast_conditions)]
 
     # Build count matrix
     logger.debug("Building count matrix")
-    count_table = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                                  percentile_range=percentile_range)
-    count_table = count_table.astype(int)  # DESeq2 requires integer counts
+    counts_df = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
+                                                percentile_range=percentile_range)
+    counts_df = counts_df.astype(int)  # pyDESeq2 requires integer counts
+    counts_df = counts_df.transpose()  # pyDESeq2 requires genes as columns
+    if counts_df.min().min() < 0:
+        raise ValueError("Negative counts found. Please make sure that the counts are not normalized, for example by setting 'layer' to choose different counts.")
 
-    # running sanity checks
-    for col in sample_df.index:
-        # no negative values
-        if np.any(count_table[col] < 0):
-            logger.warn(f"Warning: negative value in count_table for column '{col}'")
-
-    count_table = count_table.transpose()
+    # Filter genes using min_counts
+    genes_to_keep = counts_df.columns[counts_df.sum(axis=0) >= min_counts]
+    counts_df = counts_df[genes_to_keep]
 
     # Run DEseq2
-    print("Running DESeq2")
-    dds = DeseqDataSet(counts=count_table, metadata=sample_df, design_factors=design_factors, n_cpus=threads)
+    logger.debug("Running pyDESeq2")
+    design_factors = confounders + [condition_col]
+    dds = DeseqDataSet(counts=counts_df,
+                       metadata=sample_df,
+                       design_factors=design_factors,
+                       refit_cooks=True,
+                       n_cpus=threads)
     dds.deseq2()
 
     # Create result table with mean values per condition
     deseq_table = pd.DataFrame(index=dds.var.index)
 
+    # Get normalized counts per sample and condition
     for i, condition in enumerate(conditions):
         mean_values = dds.layers["normed_counts"][dds.obs[condition_col] == condition, :].mean(axis=0)
         deseq_table.insert(i, condition + "_mean", mean_values)
 
     # Get results per contrast
-    contrasts = list(itertools.combinations(conditions, 2))
     for C1, C2 in contrasts:
         logger.debug(f"Calculating stats for contrast: {C1} vs. {C2}")
         ds = DeseqStats(dds, contrast=[condition_col, C2, C1], inference=DefaultInference(n_cpus=threads))
