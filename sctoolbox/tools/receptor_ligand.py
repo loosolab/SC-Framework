@@ -752,14 +752,17 @@ def cyclone(
                    adjust_rotation=True)
 
         # add top receptor/ ligand gene track
+        # shows the top x genes (interaction score) with the respective cluster as ligand
+        # and the same for receptor
         if show_genes:
             track2 = sector.add_track((73, 77))
 
             # get first x unique receptor/ ligand genes
             # https://stackoverflow.com/a/17016257/19870975
-            sector_interactions = filtered[filtered["receptor_cluster"] == sector.name]
-            top_receptors = list(dict.fromkeys(sector_interactions["receptor_gene"]))[:gene_amount]
-            top_ligands = list(dict.fromkeys(sector_interactions["ligand_gene"]))[:gene_amount]
+            sector_r_interactions = filtered[filtered["receptor_cluster"] == sector.name]
+            top_receptors = list(dict.fromkeys(sector_r_interactions["receptor_gene"]))[:gene_amount]
+            sector_l_interactions = filtered[filtered["ligand_cluster"] == sector.name]
+            top_ligands = list(dict.fromkeys(sector_l_interactions["ligand_gene"]))[:gene_amount]
 
             # generates dummy data for the heatmap function to give it a red and a blue half
             dummy_data = [1] * len(top_receptors) + [2] * len(top_ligands)
