@@ -2,6 +2,8 @@
 --------------------
 - add contrasts parameter to tools.marker_genes.run_deseq2
 - tools.marker_genes.pairwise_rank_genes check minimum amount of groups
+- cyclone fix shown top receptor/ligand genes
+- hairball add node_size & node_label_size
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
