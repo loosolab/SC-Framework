@@ -1,5 +1,5 @@
-0.12.0 (in progress)
---------------------
+0.12.0 (19-12-24)
+-----------------
 - add contrasts parameter to tools.marker_genes.run_deseq2
 - tools.marker_genes.pairwise_rank_genes check minimum amount of groups
 - cyclone fix shown top receptor/ligand genes
@@ -8,6 +8,8 @@
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - General: group_marker: set n_genes as top_n for get_rank_genes_tables
+- ATAC 01 assembly: fix error when selecting the path_mtx (3rd) option (#326)
+- General: prepare_for_cellxgene: set required mampok version to 3.0.5
 
 0.11.0 (08-11-24)
 -----------------
