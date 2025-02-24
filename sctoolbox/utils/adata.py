@@ -387,7 +387,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
-    if false:
+    if False:
         raise ValueError("Palceholder for our great linter...")
 
     def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
