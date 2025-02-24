@@ -193,6 +193,26 @@ def test_prepare_cellxgene_emb(adata_icxg, inplace, embedding_names):
             assert len(out.var.columns) == 1
             assert len(adata.obs.columns) > 1
             assert len(adata.var.columns) > 1
+            
+            
+def test_prepare_cellxgene_delete(adata2):
+    """Test delete_obs and delete_var parameters."""
+    
+    with pytest.raises(ValueError):
+        utils.prepare_for_cellxgene(adata2, delete_obs=[], keep_obs=[])
+    with pytest.raises(ValueError):
+        utils.prepare_for_cellxgene(adata2, delete_var=[], keep_var=[])
+
+    obs_cols = list(adata2.obs.columns)[:-1]
+    var_cols = list(adata2.var.columns)[:-1]
+    prepare_out = utils.prepare_for_cellxgene(adata2,
+                                      delete_obs=[adata2.obs.columns[-1]],
+                                      delete_var=[adata2.var.columns[-1]],
+                                      inplace=False)
+
+    assert obs_cols == list(prepare_out.obs.columns)
+    assert var_cols == list(prepare_out.var.columns)
+
 
 
 @pytest.mark.parametrize("adatas,label", [(["adata1", "adata2"], "list"), ({"a": "adata1", "b": "adata2"}, "dict")])

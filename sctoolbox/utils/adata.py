@@ -390,7 +390,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
     def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
-        if (keep and delete) or (keep == [] and delete == []) or (keep and delete == []) or (delete and keep == []):
+        if keep is not None and delete is not None:
             raise ValueError(f"Both 'keep_{axis}' and 'delete_{axis}' parameters are set. Please configure only one to proceed.")
 
         if axis == "obs":
