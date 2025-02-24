@@ -62,7 +62,7 @@ def _make_square(ax: matplotlib.axes.Axes) -> None:
 
 
 @beartype
-def _add_figure_title(axarr: Iterable[matplotlib.axes.Axes] | matplotlib.axes.Axes | seaborn.matrix.ClusterGrid,
+def _add_figure_title(axarr: list[matplotlib.axes.Axes] | dict[str, matplotlib.axes.Axes] | matplotlib.axes.Axes | seaborn.matrix.ClusterGrid,
                       title: str,
                       y: float | int = 1.3,
                       fontsize: int = 16) -> None:
