@@ -1,3 +1,13 @@
+0.13.0 (in progress)
+--------------------
+- Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- General: prepare_for_cellxgene: Set mampok version to 3.0.6
+- General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
+- General: prepare_for_cellxgene: Add delete column option for .obs and .var
+
 0.12.0 (19-12-24)
 -----------------
 - add contrasts parameter to tools.marker_genes.run_deseq2
