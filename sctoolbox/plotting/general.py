@@ -13,7 +13,7 @@ import scipy.cluster.hierarchy as sciclust
 import seaborn
 
 from beartype import beartype
-from beartype.typing import Iterable, Optional, Literal, Tuple, Union, Any
+from beartype.typing import Optional, Literal, Tuple, Union, Any
 
 from sctoolbox import settings
 
