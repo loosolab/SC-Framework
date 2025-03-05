@@ -1,3 +1,7 @@
+0.13.0 (in progress)
+-----------------
+- predict_cell_cycle: implemented gene_column parameter
+
 0.12.0 (19-12-24)
 -----------------
 - add contrasts parameter to tools.marker_genes.run_deseq2
