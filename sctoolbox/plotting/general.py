@@ -37,7 +37,7 @@ def _save_figure(path: Optional[str],
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
-    max_size : int, default 2**16
+    max_pixle : int, default 2**16
         The maximum of pixles a figure can have in each direction. Figures exceeding this value will be resized to this maximum and a warning will be shown.
         2**16 is the maximum the jpeg-format can handle.
     **kwargs : Any
@@ -61,7 +61,7 @@ def _save_figure(path: Optional[str],
                 w = max_pixle - 1
             if h > max_pixle:
                 h = max_pixle - 1
-            fig.set_size_inches(w/dpi, h/dpi)
+            fig.set_size_inches(w / dpi, h / dpi)
 
         output_path = settings.full_figure_prefix + path
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
