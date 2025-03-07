@@ -1,6 +1,7 @@
 0.13.0 (in progress)
 -----------------
 - predict_cell_cycle: implemented gene_column parameter
+- restrict the maximum size of a figure (2^16 pixle)
 
 0.12.0 (19-12-24)
 -----------------
