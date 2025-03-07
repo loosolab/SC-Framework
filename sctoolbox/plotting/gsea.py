@@ -117,15 +117,19 @@ def term_dotplot(term: str,
                          var_name=groupby,
                          value_name="Mean Expression").rename({index_name: "Gene"}, axis=1)
 
-    zscore = stats.zscore(bulks.T).T
-
+    zscore = pd.DataFrame(stats.zscore(bulks.T).T)
+    zscore.index = bulks.index
+    
     long_zscore = pd.melt(zscore.reset_index(),
                           id_vars=index_name,
                           var_name=groupby,
                           value_name="Zscore").rename({index_name: "Gene"}, axis=1)
 
+    long_bulks[groupby] = long_bulks[groupby].astype(str)
+    long_zscore[groupby] = long_zscore[groupby].astype(str)
+
     # combine expression and zscores
-    comb = long_bulks.merge(long_zscore, on=["Gene", groupby])
+    comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
 
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
 
