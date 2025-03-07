@@ -669,7 +669,7 @@ def plot_gene_correlation(adata: sc.AnnData,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
+                          **kwargs: Any) -> Iterable[matplotlib.axes._axes.Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
@@ -692,7 +692,7 @@ def plot_gene_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    Iterable[matplotlib.axes.Axes]
+    Iterable[matplotlib.axes._axes.Axes]
         List containing all axis objects.
 
     Examples
