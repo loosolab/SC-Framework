@@ -105,7 +105,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], label: Optional[str] = "batch") -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -116,6 +116,8 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
     h5ad_file : Union[str, Collection[str], Mapping[str, str]]
         Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
         In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
 
     Returns
     -------
@@ -126,10 +128,10 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
         return sc.read_h5ad(filename=h5ad_file)
     elif isinstance(h5ad_file, Mapping):
         # load then combine anndata objects
-        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()}, label=label)
     else:
         # load then combine anndata objects
-        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file], label=label)
 
 
 #####################################################################
