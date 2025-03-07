@@ -390,7 +390,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     if False:
         # unreachable code to hide a raise ValueError placeholder for our linter to
         # account for the raise ValueError of the inner function clean_section()
-        raise ValueError("Placeholder for our great linter...")
+        raise ValueError()
 
     def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
