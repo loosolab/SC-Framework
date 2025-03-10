@@ -58,12 +58,12 @@ def sc_colormap() -> ListedColormap:
     return sc_cmap
 
 
-def grey_colormap() -> matplotlib.colors.ListedColormap:
+def grey_colormap() -> ListedColormap:
     """Get a colormap with grey-scale colors, but without white to still show cells.
 
     Returns
     -------
-    cmap : matplotlib.colors.ListedColormap
+    cmap : ListedColormap
         Grey-scale colormap.
     """
     color_cmap = cm.get_cmap('Greys', 200)
