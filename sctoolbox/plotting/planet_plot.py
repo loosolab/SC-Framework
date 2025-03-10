@@ -66,7 +66,7 @@ def _calculate_dot_sizes(values: pd.Series | NDArray,
 
     Returns
     -------
-    sizes : np.ndarray
+    sizes : NDArray
         Returns a series or an array containing the sizes for the dots depending upon the input type for values.
 
     """

@@ -26,7 +26,7 @@ def search_clustering_parameters(adata: sc.AnnData,
                                  ncols: int = 3,
                                  verbose: bool = True,
                                  save: Optional[str] = None,
-                                 **kwargs: Any) -> NDArray:
+                                 **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a grid of different resolution parameters for clustering.
 

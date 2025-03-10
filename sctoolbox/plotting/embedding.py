@@ -40,12 +40,12 @@ logger = settings.logger
 #############################################################################
 
 @beartype
-def sc_colormap() -> matplotlib.colors.ListedColormap:
+def sc_colormap() -> ListedColormap:
     """Get a colormap with 0-count cells colored grey (to use for embeddings).
 
     Returns
     -------
-    cmap : matplotlib.colors.ListedColormap
+    cmap : ListedColormap
         Colormap with 0-count cells colored grey.
     """
 

@@ -304,7 +304,7 @@ def n_cells_barplot(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : list[Axes]
+    axarr : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Examples

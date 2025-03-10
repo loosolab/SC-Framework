@@ -14,7 +14,7 @@ from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from beartype.typing import Optional, Tuple, Literal, Iterable, Any
+from beartype.typing import Optional, Tuple, Literal, Any
 from beartype import beartype
 from numpy.typing import NDArray
 
@@ -693,7 +693,7 @@ def plot_gene_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    Iterable[matplotlib.axes._axes.Axes]
+    NDArray[Axes]
         List containing all axis objects.
 
     Examples
