@@ -230,7 +230,7 @@ class Annotator(object):
             print("!WARNING3:Zero marker sets found")
             print("!WARNING3:Change the threshold or tissue name and try again?")
             print("!WARNING3:EnsemblID or GeneID,try '-E' command?")
-            return fc, None, cluster_genes
+            return fc, [], cluster_genes
 
         # Remove duplicate rows and sum weights
         fc.columns = [ccol, gcol, 'c']
