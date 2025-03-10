@@ -4,7 +4,7 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib
+from matplotlib.axes import Axes
 from matplotlib.colors import rgb2hex
 from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
@@ -357,7 +357,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
                        orientation_labels_array: list | None = None,
-                       save: str | None = None) -> NDArray[matplotlib.axes.Axes]:
+                       save: str | None = None) -> NDArray[Axes]:
     r"""
     Render the planet plot on the basis of the preprocessed data.
 
@@ -477,7 +477,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
 
     Returns
     -------
-    NDArray[matplotlib.axes.Axes]
+    NDArray[Axes]
         An array of axis objects.
 
     Raises

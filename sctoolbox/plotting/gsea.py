@@ -3,7 +3,7 @@
 import scipy.stats as stats
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib
+from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scanpy as sc
@@ -32,7 +32,7 @@ def term_dotplot(term: str,
                  term_col: str = "Term",
                  groups: Optional[list[str] | str] = None,
                  hue: Literal["Mean Expression", "Zscore"] = "Zscore",
-                 **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
+                 **kwargs: Any) -> NDArray[Axes]:
     """
     Plot mean expression and zscore of cluster for one GO-term.
 
@@ -67,8 +67,8 @@ def term_dotplot(term: str,
 
     Returns
     -------
-    NDArray[matplotlib.axes.Axes]
-        Array of matplotlib.axes.Axes objects containing the dotplot and the dendrogram(s).
+    NDArray[Axes]
+        Array of Axes objects containing the dotplot and the dendrogram(s).
 
     Raises
     ------

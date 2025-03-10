@@ -3,7 +3,7 @@
 import numpy as np
 import scanpy as sc
 import matplotlib.pyplot as plt
-import matplotlib
+from matplotlib.axes import Axes
 import warnings
 
 from beartype import beartype
@@ -51,7 +51,7 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : NDArray[matplotlib.axes.Axes]
+    axarr : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -137,7 +137,7 @@ def marker_gene_clustering(adata: sc.AnnData,
                            show_umap: bool = True,
                            save: Optional[str] = None,
                            figsize: Optional[Tuple[float | int, float | int]] = None,
-                           **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
+                           **kwargs: Any) -> NDArray[Axes]:
     """
     Plot an overview of marker genes and clustering.
 
@@ -160,7 +160,7 @@ def marker_gene_clustering(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : NDArray[matplotlib.axes.Axes]
+    axarr : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Examples

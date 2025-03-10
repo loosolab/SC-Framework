@@ -12,7 +12,7 @@ import warnings
 
 import upsetplot
 import seaborn as sns
-import matplotlib
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
@@ -76,7 +76,7 @@ def plot_starsolo_quality(folder: str,
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
+                          **kwargs: Any) -> NDArray[Axes]:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -96,7 +96,7 @@ def plot_starsolo_quality(folder: str,
 
     Returns
     -------
-    axes : NDArray[matplotlib.axes.Axes]
+    axes : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -173,7 +173,7 @@ def plot_starsolo_quality(folder: str,
 @beartype
 def plot_starsolo_UMI(folder: str,
                       ncol: int = 3,
-                      save: Optional[str] = None) -> NDArray[matplotlib.axes.Axes]:
+                      save: Optional[str] = None) -> NDArray[Axes]:
     """Plot UMI distribution for each condition in a folder.
 
     Parameters
@@ -187,7 +187,7 @@ def plot_starsolo_UMI(folder: str,
 
     Returns
     -------
-    axes : NDArray[matplotlib.axes.Axes]
+    axes : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -279,7 +279,7 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
-                    **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
+                    **kwargs: Any) -> NDArray[Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -304,7 +304,7 @@ def n_cells_barplot(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : list[matplotlib.axes.Axes]
+    axarr : list[Axes]
         Array of axes objects containing the plot(s).
 
     Examples
@@ -476,7 +476,7 @@ def group_correlation(adata: sc.AnnData,
 @beartype
 def plot_insertsize(adata: sc.AnnData,
                     barcodes: Optional[list[str]] = None,
-                    **kwargs: Any) -> matplotlib.axes.Axes:
+                    **kwargs: Any) -> Axes:
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
@@ -491,7 +491,7 @@ def plot_insertsize(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axes object containing the plot.
 
     Raises
