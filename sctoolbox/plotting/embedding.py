@@ -25,7 +25,7 @@ from numba import errors as numba_errors
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
-import numpy.typing as npt
+from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 import sctoolbox.tools as tools
@@ -111,16 +111,16 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 #####################################################################
 
 @beartype
-def _add_contour(x: np.ndarray,
-                 y: np.ndarray,
+def _add_contour(x: NDArray,
+                 y: NDArray,
                  ax: matplotlib.axes.Axes):
     """Add contour plot to a scatter plot.
 
     Parameters
     ----------
-    x : np.ndarray
+    x : NDArray
         x-coordinates of the scatter plot.
-    y : np.ndarray
+    y : NDArray
         y-coordinates of the scatter plot.
     ax : matplotlib.axes.Axes
         Axis object to add the contour plot to.
@@ -265,7 +265,7 @@ def plot_embedding(adata: sc.AnnData,
                    shrink_colorbar: float | int = 0.3,
                    square: bool = True,
                    save: Optional[str] = None,
-                   **kwargs) -> npt.ArrayLike:
+                   **kwargs) -> NDArray[matplotlib.axes.Axes]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -299,7 +299,7 @@ def plot_embedding(adata: sc.AnnData,
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[matplotlib.axes.Axes]
         Array of axis objects
 
     Raises
@@ -606,7 +606,7 @@ def plot_embedding(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
-    return axarr
+    return np.array(axarr)
 
 
 @deco.log_anndata
@@ -621,7 +621,7 @@ def feature_per_group(adata: sc.AnnData,
                       binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
-                      **kwargs) -> npt.ArrayLike:
+                      **kwargs) -> NDArray[matplotlib.axes.Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
 
@@ -665,7 +665,7 @@ def feature_per_group(adata: sc.AnnData,
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[matplotlib.axes.Axes]
         Array of axis objects
     """
     if x and top_n:
@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> npt.ArrayLike:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> NDArray[matplotlib.axes.Axes]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -779,7 +779,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[matplotlib.axes.Axes]
         Array of axis objects
 
     Examples
@@ -832,7 +832,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            n_components: int = 2,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs: Any) -> np.ndarray:
+                           **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
@@ -856,7 +856,7 @@ def search_umap_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Examples
@@ -884,7 +884,7 @@ def search_tsne_parameters(adata: sc.AnnData,
                            color: Optional[str] = None,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs: Any) -> np.ndarray:
+                           **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -907,7 +907,7 @@ def search_tsne_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Examples
@@ -937,7 +937,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
                                color: Optional[str] = None,
                                threads: int = 4,
                                save: Optional[str] = None,
-                               **kwargs: Any) -> np.ndarray:
+                               **kwargs: Any) -> NDArray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
@@ -966,7 +966,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
     """
 
@@ -1096,7 +1096,7 @@ def plot_group_embeddings(adata: sc.AnnData,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> np.ndarray:
+                          **kwargs: Any) -> NDArray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -1120,7 +1120,7 @@ def plot_group_embeddings(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         Flat numpy array of axis objects
 
     Examples
@@ -1191,7 +1191,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
                        var_list: list[str] | str,
                        embedding: Literal["umap", "tsne", "pca"] = "umap",
                        adata_names: Optional[list[str]] = None,
-                       **kwargs: Any) -> np.ndarray:
+                       **kwargs: Any) -> NDArray:
     """Compare embeddings across different adata objects.
 
     Plots a grid of embeddings with the different adatas on the x-axis, and colored variables on the y-axis.
@@ -1211,7 +1211,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Raises
@@ -1582,7 +1582,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      max_clusters: int = 20,
                      output: Optional[str] = None,
                      dpi: int = 300,
-                     **kwargs: Any) -> npt.ArrayLike:
+                     **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -1614,7 +1614,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[matplotlib.axes.Axes]
         Array of matplotlib.axes.Axes objects created by matplotlib.
 
     Raises
@@ -1674,7 +1674,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     cols = len(adatas)
     figsize = figsize if figsize is not None else (2 + cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize)  # , constrained_layout=True)
-    axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
+    axs = axs.flatten() if rows > 1 or cols > 1 else np.array([axs])  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0

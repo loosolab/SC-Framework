@@ -14,6 +14,7 @@ import seaborn
 
 from beartype import beartype
 from beartype.typing import Optional, Literal, Tuple, Union, Any
+from numpy.typing import NDArray
 
 from sctoolbox import settings
 
@@ -70,7 +71,7 @@ def _add_figure_title(axarr: list[matplotlib.axes.Axes] | dict[str, matplotlib.a
 
     Parameters
     ----------
-    axarr : Iterable[matplotlib.axes.Axes] | matplotlib.axes.Axes
+    axarr : list[matplotlib.axes.Axes] | dict[str, matplotlib.axes.Axes] | matplotlib.axes.Axes | seaborn.matrix.ClusterGrid
         List of axes to add the title to.
     title : str
         Title to add at the top of plot.
@@ -194,7 +195,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                        x_rot: int = 45,
                        show_grid: bool = False,
                        save: Optional[str] = None,
-                       **kwargs: Any) -> list:
+                       **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -235,8 +236,8 @@ def clustermap_dotplot(table: pd.DataFrame,
 
     Returns
     -------
-    list
-        List of matplotlib.axes.Axes objects containing the dotplot and the dendrogram(s).
+    NDArray[matplotlib.axes.Axes]
+        Array of matplotlib.axes.Axes objects containing the dotplot and the dendrogram(s).
 
     Examples
     --------
@@ -365,7 +366,7 @@ def clustermap_dotplot(table: pd.DataFrame,
     # Save figure
     _save_figure(save)
 
-    return axes
+    return np.array(axes)
 
 
 ########################################################################################
@@ -781,7 +782,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
-                     **kwargs: Any) -> np.ndarray:
+                     **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
     If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
@@ -801,7 +802,7 @@ def pairwise_scatter(table: pd.DataFrame,
 
     Returns
     -------
-    np.ndarray
+    NDArray[matplotlib.axes.Axes]
         Array of matplotlib.axes.Axes objects.
 
     Raises

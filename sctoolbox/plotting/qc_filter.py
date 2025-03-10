@@ -21,8 +21,9 @@ from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any  # , Union, List
 from beartype import beartype
+from numpy.typing import NDArray
 
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -75,7 +76,7 @@ def plot_starsolo_quality(folder: str,
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> np.ndarray:
+                          **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -95,7 +96,7 @@ def plot_starsolo_quality(folder: str,
 
     Returns
     -------
-    axes : np.ndarray
+    axes : NDArray[matplotlib.axes.Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -172,7 +173,7 @@ def plot_starsolo_quality(folder: str,
 @beartype
 def plot_starsolo_UMI(folder: str,
                       ncol: int = 3,
-                      save: Optional[str] = None) -> np.ndarray:
+                      save: Optional[str] = None) -> NDArray[matplotlib.axes.Axes]:
     """Plot UMI distribution for each condition in a folder.
 
     Parameters
@@ -186,7 +187,7 @@ def plot_starsolo_UMI(folder: str,
 
     Returns
     -------
-    axes : np.ndarray
+    axes : NDArray[matplotlib.axes.Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -278,7 +279,7 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
-                    **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
+                    **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -303,7 +304,7 @@ def n_cells_barplot(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : Iterable[matplotlib.axes.Axes]
+    axarr : list[matplotlib.axes.Axes]
         Array of axes objects containing the plot(s).
 
     Examples
@@ -345,7 +346,7 @@ def n_cells_barplot(adata: sc.AnnData,
         _, axarr = plt.subplots(1, 2, figsize=figsize)
     else:
         _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
-        axarr = [axarr]
+        axarr = np.array([axarr])
 
     counts_wide.plot.bar(stacked=stacked, ax=axarr[0], legend=False, **kwargs)
     axarr[0].set_title("Number of cells")
@@ -556,7 +557,7 @@ def _link_sliders(sliders: list[ipywidgets.widgets.FloatRangeSlider]) -> list[ip
 def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox | traitlets.utils.bunch.Bunch,  # after first check, checkbox is a bunch object
                     linkage_dict: dict,
                     slider_list: list,
-                    key: str):
+                    key: str) -> None:
     """
     Either link or unlink sliders depending on the new value of the checkbox.
 

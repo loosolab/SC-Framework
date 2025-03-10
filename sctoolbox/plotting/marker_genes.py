@@ -16,6 +16,7 @@ from matplotlib.patches import Patch
 
 from beartype.typing import Optional, Tuple, Literal, Iterable, Any
 from beartype import beartype
+from numpy.typing import NDArray
 
 # sctoolbox functions
 import sctoolbox.utils as utils
@@ -669,7 +670,7 @@ def plot_gene_correlation(adata: sc.AnnData,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> Iterable[matplotlib.axes._axes.Axes]:
+                          **kwargs: Any) -> NDArray[matplotlib.axes.Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
