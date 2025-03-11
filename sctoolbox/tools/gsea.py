@@ -132,7 +132,8 @@ def gene_set_enrichment(adata: sc.AnnData,
                     kwargs = {**defaultKwargs, **kwargs}
 
                     deg["names"] = deg["names"].str.upper()
-                    enr = gp.prerank(rnk=deg[["names", "scores"]],
+                    deg.index = deg["names"]
+                    enr = gp.prerank(rnk=deg["scores"],
                                      gene_sets=gene_sets,
                                      **kwargs)
                     enr.res2d['UP_DW'] = key

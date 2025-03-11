@@ -3,6 +3,13 @@
 - predict_cell_cycle: implemented "gene_column" parameter
 - restrict the maximum size of a figure (2^16 pixle)
 - from_h5ad: expose concadata "label" parameter
+- Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- General: prepare_for_cellxgene: Set mampok version to 3.0.6
+- General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
+- General: prepare_for_cellxgene: Add delete column option for .obs and .var
 
 0.12.0 (19-12-24)
 -----------------

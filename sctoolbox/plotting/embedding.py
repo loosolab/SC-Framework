@@ -10,8 +10,8 @@ from scipy.sparse import issparse
 import itertools
 
 import seaborn as sns
-import matplotlib
-import matplotlib as mpl
+from matplotlib import __version__ as mpl_version, rcParams
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
@@ -25,7 +25,7 @@ from numba import errors as numba_errors
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
-import numpy.typing as npt
+from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 import sctoolbox.tools as tools
@@ -40,12 +40,12 @@ logger = settings.logger
 #############################################################################
 
 @beartype
-def sc_colormap() -> matplotlib.colors.ListedColormap:
+def sc_colormap() -> ListedColormap:
     """Get a colormap with 0-count cells colored grey (to use for embeddings).
 
     Returns
     -------
-    cmap : matplotlib.colors.ListedColormap
+    cmap : ListedColormap
         Colormap with 0-count cells colored grey.
     """
 
@@ -58,12 +58,12 @@ def sc_colormap() -> matplotlib.colors.ListedColormap:
     return sc_cmap
 
 
-def grey_colormap() -> matplotlib.colors.ListedColormap:
+def grey_colormap() -> ListedColormap:
     """Get a colormap with grey-scale colors, but without white to still show cells.
 
     Returns
     -------
-    cmap : matplotlib.colors.ListedColormap
+    cmap : ListedColormap
         Grey-scale colormap.
     """
     color_cmap = cm.get_cmap('Greys', 200)
@@ -111,18 +111,18 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 #####################################################################
 
 @beartype
-def _add_contour(x: np.ndarray,
-                 y: np.ndarray,
-                 ax: matplotlib.axes.Axes):
+def _add_contour(x: NDArray,
+                 y: NDArray,
+                 ax: Axes):
     """Add contour plot to a scatter plot.
 
     Parameters
     ----------
-    x : np.ndarray
+    x : NDArray
         x-coordinates of the scatter plot.
-    y : np.ndarray
+    y : NDArray
         y-coordinates of the scatter plot.
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axis object to add the contour plot to.
     """
 
@@ -141,7 +141,7 @@ def _add_contour(x: np.ndarray,
 
 
 @beartype
-def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> Optional[matplotlib.axes.Axes]:
+def _add_legend_ax(ax_obj: Axes, ax_label: str = "<legend>") -> Optional[Axes]:
     """
     Create a dedicated ax-object and move the legend of the given ax to it.
 
@@ -150,14 +150,14 @@ def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> 
 
     Parameters
     ----------
-    ax_obj : matplotlib.axes.Axes
+    ax_obj : Axes
         The ax-object with the legend to move.
     ax_label : str, default '<legend>'
         The label of the legend-ax.
 
     Returns
     -------
-    Optional[matplotlib.axes.Axes]
+    Optional[Axes]
         Either the newly created legend-ax or None if there is no legend within the provided ax.
     """
     handles, labels = ax_obj.get_legend_handles_labels()
@@ -265,7 +265,7 @@ def plot_embedding(adata: sc.AnnData,
                    shrink_colorbar: float | int = 0.3,
                    square: bool = True,
                    save: Optional[str] = None,
-                   **kwargs) -> npt.ArrayLike:
+                   **kwargs) -> NDArray[Axes]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -299,7 +299,7 @@ def plot_embedding(adata: sc.AnnData,
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[Axes]
         Array of axis objects
 
     Raises
@@ -445,7 +445,7 @@ def plot_embedding(adata: sc.AnnData,
 
             # Determine colors to use
             cmap = kwargs["color_map"]
-            cmap = mpl.rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
+            cmap = rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
             if color_values is None:
                 cmap = grey_colormap()  # if no color values are given, use greyscale to show density
 
@@ -606,7 +606,7 @@ def plot_embedding(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
-    return axarr
+    return np.array(axarr)
 
 
 @deco.log_anndata
@@ -621,7 +621,7 @@ def feature_per_group(adata: sc.AnnData,
                       binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
-                      **kwargs) -> npt.ArrayLike:
+                      **kwargs) -> NDArray[Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
 
@@ -665,7 +665,7 @@ def feature_per_group(adata: sc.AnnData,
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[Axes]
         Array of axis objects
     """
     if x and top_n:
@@ -748,7 +748,7 @@ def feature_per_group(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> npt.ArrayLike:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> NDArray[Axes]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -779,7 +779,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[Axes]
         Array of axis objects
 
     Examples
@@ -832,7 +832,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            n_components: int = 2,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs: Any) -> np.ndarray:
+                           **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
@@ -856,7 +856,7 @@ def search_umap_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Examples
@@ -884,7 +884,7 @@ def search_tsne_parameters(adata: sc.AnnData,
                            color: Optional[str] = None,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs: Any) -> np.ndarray:
+                           **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -907,7 +907,7 @@ def search_tsne_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Examples
@@ -937,7 +937,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
                                color: Optional[str] = None,
                                threads: int = 4,
                                save: Optional[str] = None,
-                               **kwargs: Any) -> np.ndarray:
+                               **kwargs: Any) -> NDArray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
@@ -966,7 +966,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
     """
 
@@ -1096,7 +1096,7 @@ def plot_group_embeddings(adata: sc.AnnData,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> np.ndarray:
+                          **kwargs: Any) -> NDArray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -1120,7 +1120,7 @@ def plot_group_embeddings(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         Flat numpy array of axis objects
 
     Examples
@@ -1191,7 +1191,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
                        var_list: list[str] | str,
                        embedding: Literal["umap", "tsne", "pca"] = "umap",
                        adata_names: Optional[list[str]] = None,
-                       **kwargs: Any) -> np.ndarray:
+                       **kwargs: Any) -> NDArray:
     """Compare embeddings across different adata objects.
 
     Plots a grid of embeddings with the different adatas on the x-axis, and colored variables on the y-axis.
@@ -1211,7 +1211,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Raises
@@ -1582,7 +1582,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      max_clusters: int = 20,
                      output: Optional[str] = None,
                      dpi: int = 300,
-                     **kwargs: Any) -> npt.ArrayLike:
+                     **kwargs: Any) -> NDArray[Axes]:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -1614,8 +1614,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
     Returns
     -------
-    axes : npt.ArrayLike
-        Array of matplotlib.axes.Axes objects created by matplotlib.
+    axes : NDArray[Axes]
+        Array of Axes objects created by matplotlib.
 
     Raises
     ------
@@ -1674,7 +1674,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     cols = len(adatas)
     figsize = figsize if figsize is not None else (2 + cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize)  # , constrained_layout=True)
-    axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
+    axs = axs.flatten() if rows > 1 or cols > 1 else np.array([axs])  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0
@@ -1766,7 +1766,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                     n_clusters = min(max_clusters, len(lines))
                     n_cols = int(np.ceil(n_clusters / per_column))
 
-                    if mpl.__version__ > '3.6.0':
+                    if mpl_version > '3.6.0':
                         ax.legend(lines[:max_clusters], labels[:max_clusters],
                                   title=color, ncols=n_cols, frameon=False,
                                   bbox_to_anchor=(1.05, 0.5),
@@ -1826,11 +1826,11 @@ def plot_pca_variance(adata: sc.AnnData,
                       corr_on: Literal["obs", "var"] = "obs",
                       corr_thresh: Optional[float] = None,
                       ignore: Optional[list[str]] = None,
-                      ax: Optional[matplotlib.axes.Axes] = None,
+                      ax: Optional[Axes] = None,
                       save: Optional[str] = None,
                       sel_col: str = "grey",
                       om_col: str = "lightgrey"
-                      ) -> matplotlib.axes.Axes:
+                      ) -> Axes:
     """Plot the pca variance explained by each component as a barplot.
 
     Parameters
@@ -1856,7 +1856,7 @@ def plot_pca_variance(adata: sc.AnnData,
     ignore : Optional[list[str]], default None
         List of column names to ignore for correlation. By default (None) all numeric columns are used.
         All non numeric columns are ignored by default and cannot be used for correlation.
-    ax : Optional[matplotlib.axes.Axes], default None
+    ax : Optional[Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
         Filename to save the figure. If None, the figure is not saved.
@@ -1867,7 +1867,7 @@ def plot_pca_variance(adata: sc.AnnData,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         Axes object containing the plot.
 
     Raises
@@ -2041,7 +2041,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                          figsize: Optional[Tuple[int, int]] = None,
                          title: Optional[str] = None,
                          save: Optional[str] = None,
-                         **kwargs: Any) -> matplotlib.axes.Axes:
+                         **kwargs: Any) -> Axes:
     """
     Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
 
@@ -2076,7 +2076,7 @@ def plot_pca_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axes object containing the heatmap.
 
     Examples
