@@ -357,6 +357,17 @@ def from_single_mtx(mtx: Union[str, Path],
 
     if variables:
         var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
+
+        # Handle Bed files
+        if os.path.split(variables)[1].endswith('.bed'):
+            columns = var_csv.columns
+            var_csv.rename(columns={columns[0]: 'start', columns[1]: 'stop'}, inplace=True)
+            var_csv['chr'] = list(var_csv.index)
+
+            var_csv['IDs'] = var_csv['chr'].astype(str) + ':' + var_csv['start'].astype(str) + '-' + var_csv[
+                'stop'].astype(str)
+            var_csv.set_index('IDs', inplace=True)
+
         var_csv.index.names = ['index']
         var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
