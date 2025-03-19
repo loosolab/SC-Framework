@@ -1,6 +1,7 @@
 0.13.0 (in progress)
 --------------------
 - Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
+- set scanpy>=1.11 to fix run_rank_genes error (#331)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
