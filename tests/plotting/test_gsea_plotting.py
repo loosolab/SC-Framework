@@ -3,6 +3,7 @@
 import pytest
 import scanpy as sc
 import pandas as pd
+import numpy as np
 from sctoolbox.plotting import gsea
 
 
@@ -55,7 +56,7 @@ def test_term_dotplot(adata, term_table):
                              adata=adata,
                              groupby="louvain")
 
-    assert isinstance(axes, list)
+    assert isinstance(axes, np.ndarray)
     ax_type = type(axes[0]).__name__
     assert ax_type.startswith("Axes")
 

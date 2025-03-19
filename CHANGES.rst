@@ -1,14 +1,21 @@
 0.13.0 (in progress)
------------------
+--------------------
+- Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- velocity: Changed scvelo.read() to scanpy.read() in the velocity notebook due to deprecation (#344)
+- General: prepare_for_cellxgene: Set mampok version to 3.0.6
+- General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
+- General: prepare_for_cellxgene: Add delete column option for .obs and .var
 - RNA 02 QC: fixed bug causing initial var thresholds to be ignored
 
 0.12.0 (19-12-24)
 -----------------
 - add contrasts parameter to tools.marker_genes.run_deseq2
 - tools.marker_genes.pairwise_rank_genes check minimum amount of groups
+- cyclone fix shown top receptor/ligand genes
+- hairball add node_size & node_label_size
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
