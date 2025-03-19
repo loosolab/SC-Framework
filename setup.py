@@ -97,7 +97,7 @@ setup(
         'pysam',
         'matplotlib',
         'matplotlib_venn',
-        'scanpy[louvain,leiden]>=1.10.2',  # 'colorbar_loc' not available before 1.9; also install community detection (louvain & leiden)
+        'scanpy[louvain,leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
