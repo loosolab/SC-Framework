@@ -332,6 +332,7 @@ def cluster_dotplot(term_table: pd.DataFrame,
                     top_down: int = 5,
                     cutoff: float = 0.05,
                     save_figs: bool = True,
+                    save_prefix: str = ""
                     **kwargs: Any):
     """
     Plot up/down regulated pathways per cluster.
@@ -353,6 +354,8 @@ def cluster_dotplot(term_table: pd.DataFrame,
         Filter cutoff for sig_col.
     save_figs : bool, default True
         If True, save each plot.
+    save_prefix : str, default ""
+        Prefix for filenames.
     """
     for c in term_table[cluster_col].unique():
         tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
@@ -362,7 +365,7 @@ def cluster_dotplot(term_table: pd.DataFrame,
         if tmp.empty:
             print(f"No enrichted pathways found with cutoff set to {cutoff}")
             continue
-        save = f"GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
+        save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
         gsea_dot(tmp, save=save, **kwargs)
 
 
