@@ -366,7 +366,7 @@ def cluster_dotplot(term_table: pd.DataFrame,
             print(f"No enrichted pathways found with cutoff set to {cutoff}")
             continue
         save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
-        gsea_dot(tmp, save=save, **kwargs)
+        gsea_dot(tmp, save=save, title=f"Top regulated pathways of cluster {c}",**kwargs)
 
 
 def gsea_dot(term_table: pd.DataFrame,
