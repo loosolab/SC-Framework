@@ -332,7 +332,7 @@ def cluster_dotplot(term_table: pd.DataFrame,
                     top_down: int = 5,
                     cutoff: float = 0.05,
                     save_figs: bool = True,
-                    save_prefix: str = ""
+                    save_prefix: str = "",
                     **kwargs: Any):
     """
     Plot up/down regulated pathways per cluster.
