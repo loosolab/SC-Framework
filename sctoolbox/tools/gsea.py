@@ -82,7 +82,8 @@ def gene_set_enrichment(adata: sc.AnnData,
     if marker_key in adata.uns:
         marker_tables = get_rank_genes_tables(adata,
                                               out_group_fractions=True,
-                                              key=marker_key)
+                                              key=marker_key,
+                                              n_genes = None)
     else:
         raise KeyError("Marker key not found! Please check parameter!")
 
@@ -97,47 +98,36 @@ def gene_set_enrichment(adata: sc.AnnData,
     gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
 
     path_enr = {}
-    for ct, table in tqdm.tqdm(marker_tables.items()):
-        # subset up or down regulated genes
-        degs_sig = table[table["pvals_adj"] < pvals_adj_tresh]
-        degs_up = degs_sig[degs_sig["logfoldchanges"] > 0]
-        degs_dw = degs_sig[degs_sig["logfoldchanges"] < 0]
-
-        degs = {"UP": degs_up, "Down": degs_dw}
+    for ct, deg in tqdm.tqdm(marker_tables.items()):
         enr_list = list()
-
         # enrichr API
-        for key, deg in degs.items():
-            if len(deg) > 0:
-                if method == "enrichr":
-                    enr = gp.enrichr(list(deg["names"].str.upper()),
-                                     gene_sets=gene_sets,
-                                     organism=organism,
-                                     background=background,
-                                     outdir=None,
-                                     no_plot=True,
-                                     verbose=False)
-                    enr.res2d['UP_DW'] = key
-                    enr_list.append(enr.res2d)
-                elif method == "prerank":
+        if len(deg) > 0:
+            if method == "enrichr":
+                enr = gp.enrichr(list(deg["names"].str.upper()),
+                                 gene_sets=gene_sets,
+                                 organism=organism,
+                                 background=background,
+                                 outdir=None,
+                                 no_plot=True,
+                                 verbose=False)
+                enr_list.append(enr.res2d)
+            elif method == "prerank":
+                # Set default kwargs
+                defaultKwargs = {"threads": 4,
+                                 "min_size": 5,
+                                 "max_size": 1000,
+                                 "permutation_num": 1000,
+                                 "outdir": None,
+                                 "seed": 6,
+                                 "verbose": True}
+                kwargs = {**defaultKwargs, **kwargs}
 
-                    # Set default kwargs
-                    defaultKwargs = {"threads": 4,
-                                     "min_size": 5,
-                                     "max_size": 1000,
-                                     "permutation_num": 1000,
-                                     "outdir": None,
-                                     "seed": 6,
-                                     "verbose": True}
-                    kwargs = {**defaultKwargs, **kwargs}
-
-                    deg["names"] = deg["names"].str.upper()
-                    deg.index = deg["names"]
-                    enr = gp.prerank(rnk=deg["scores"],
-                                     gene_sets=gene_sets,
-                                     **kwargs)
-                    enr.res2d['UP_DW'] = key
-                    enr_list.append(enr.res2d)
+                deg["names"] = deg["names"].str.upper()
+                deg.index = deg["names"]
+                enr = gp.prerank(rnk=deg["scores"],
+                                 gene_sets=gene_sets,
+                                 **kwargs)
+                enr_list.append(enr.res2d)
 
         # concat results
         if not all(x is None for x in enr_list):

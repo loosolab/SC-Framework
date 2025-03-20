@@ -3,6 +3,7 @@
 import scipy.stats as stats
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -322,3 +323,115 @@ def gsea_network(enr_res: pd.DataFrame,
 
     fig.tight_layout()
     _save_figure(save)
+
+
+def cluster_dotplot(term_table: pd.DataFrame,
+                    cluster_col: str = "Cluster",
+                    sig_col: Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'] = 'FDR q-val',
+                    top_up: int = 5,
+                    top_down: int = 5,
+                    cutoff: float = 0.05,
+                    save_figs: bool = True,
+                    **kwargs: Any):
+    """
+    Plot up/down regulated pathways per cluster.
+    
+    Parameters
+    ----------
+    term_table : pd.DataFrame
+        Table of GO-term enriched genes.
+        Output of sctoolbox.tools.gsea.gene_set_enrichment().
+    cluster_col : str, default 'Cluster'
+        Cluster column name.
+    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'FDR q-val'
+        Column containing significance of enrichted termn.
+    top_up: int, default 5
+        Number of upregulated pathways to be plotted.
+    top_down: int, default 5
+        Number of downregulated pathways to be plotted.
+    cutoff: float, default 0.05
+        Filter cutoff for sig_col.
+    save_figs : bool, default True
+        If True, save each plot.
+    """
+    for c in term_table[cluster_col].unique():
+        tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
+        tmp["NES"] = tmp["NES"].astype(float)
+        tmp = pd.concat([tmp.nlargest(top_up, "NES"), tmp.nsmallest(top_down, "NES")])
+        tmp.sort_values("NES", inplace=True, ascending=False)
+        if tmp.empty:
+            print(f"No enrichted pathways found with cutoff set to {cutoff}")
+            continue
+        save = f"GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
+        gsea_dot(tmp, save=save, **kwargs)
+
+
+def gsea_dot(term_table: pd.DataFrame,
+             sig_col: Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'] = 'FDR q-val',
+             x: str = "NES",
+             figsize: Tuple[int, int] = (5, 8),
+             size: int = 2,
+             cmap: str = "viridis",
+             title: str = "Top regulated pathways",
+             title_size: int = 16,
+             save: Optional[str] = None) -> Axes :
+    """
+    Plot up/down regulated pathways.
+    
+    Parameters
+    ----------
+    term_table : pd.DataFrame
+        Table of GO-term enriched genes.
+        Output of sctoolbox.tools.gsea.gene_set_enrichment().
+    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'FDR q-val'
+        Column containing significance of enrichted termn.
+    figsize: Tuple[int, int], default (5, 8)
+        Tuple setting the figure size.
+    size: int, default 2
+        Dot size muliplier
+    cmap: str, default "viridis"
+        Colormap for dots
+    title: str, default "Top regualted pathways"
+        Figure title
+    title_size: int, default 16
+        Title font size.
+    save : Optional[str], default None
+        Filename suffix to save the figure.
+
+    Returns
+    -------
+    Axes
+        Axes objectthe dotplot.
+    """
+    term_table["% Genes in set"] = [int(round(eval(operation)*100,0)) for operation in term_table["Tag %"]]
+    norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    # Create figure
+    fig, ax = plt.subplots(1, figsize=figsize)
+    plot = sns.scatterplot(data=term_table,
+                    y="Term",
+                    x=x,
+                    size="% Genes in set",
+                    sizes=(50, 200),
+                    hue=sig_col,
+                    palette=cmap,
+                    ax=ax
+                    )
+    # Move legend to right side
+    sns.move_legend(plot, loc='upper left', bbox_to_anchor=(1, 1, 0, 0))
+    
+    # extract the existing handles and labels
+    h, l = ax.get_legend_handles_labels()
+    i = l.index('% Genes in set')
+
+    ax.legend(h[i:], l[i:], bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., fontsize=13, frameon=False, alignment="left")
+    
+    cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1,0.1), label=sig_col, aspect=10)
+    cbar.set_label(sig_col, rotation=0, ha="left", fontsize=13)
+    ax.set_ylabel("")
+    ax.set_title(title, **{"fontsize":title_size})
+    ax.grid(True, axis="y")
+
+    _save_figure(save)
+
+    return ax
