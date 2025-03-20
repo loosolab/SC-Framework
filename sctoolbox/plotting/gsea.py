@@ -434,7 +434,7 @@ def gsea_dot(term_table: pd.DataFrame,
     ax.set_ylabel("")
     ax.set_title(title, **{"fontsize":title_size})
     ax.grid(True, axis="y")
-
+    fig.tight_layout()
     _save_figure(save)
 
     return ax
