@@ -99,7 +99,7 @@ nbsphinx_execute = 'never'
 # copy folder
 shutil.copytree("../../tests/data", "API/data", dirs_exist_ok=True)  # dirs_exist_true only important when testing locally
 # copy folder
-shutil.copytree("../image", "image", dirs_exist_ok=True)  # dirs_exist_true only important when testing locally
+shutil.copytree("../../image", "image", dirs_exist_ok=True)
 
 plot_include_source = True
 plot_html_show_source_link = False
