@@ -356,6 +356,8 @@ def cluster_dotplot(term_table: pd.DataFrame,
         If True, save each plot.
     save_prefix : str, default ""
         Prefix for filenames.
+    **kwargs : Any
+        Additional parameters for sctoolbox.plotting.gsea.gsea_dot
     """
     for c in term_table[cluster_col].unique():
         tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
@@ -377,7 +379,7 @@ def gsea_dot(term_table: pd.DataFrame,
              cmap: str = "viridis",
              title: str = "Top regulated pathways",
              title_size: int = 16,
-             save: Optional[str] = None) -> Axes :
+             save: Optional[str] = None) -> Axes:
     """
     Plot up/down regulated pathways.
     
