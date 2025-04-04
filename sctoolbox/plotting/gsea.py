@@ -3,6 +3,7 @@
 import scipy.stats as stats
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scanpy as sc
@@ -13,6 +14,7 @@ import warnings
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal, Tuple
+from numpy.typing import NDArray
 
 from sctoolbox.plotting.general import clustermap_dotplot, _save_figure
 from sctoolbox.utils.bioutils import pseudobulk_table
@@ -30,7 +32,7 @@ def term_dotplot(term: str,
                  term_col: str = "Term",
                  groups: Optional[list[str] | str] = None,
                  hue: Literal["Mean Expression", "Zscore"] = "Zscore",
-                 **kwargs: Any) -> list:
+                 **kwargs: Any) -> NDArray[Axes]:
     """
     Plot mean expression and zscore of cluster for one GO-term.
 
@@ -65,8 +67,8 @@ def term_dotplot(term: str,
 
     Returns
     -------
-    list
-        List of matplotlib.axes.Axes objects containing the dotplot and the dendrogram(s).
+    NDArray[Axes]
+        Array of Axes objects containing the dotplot and the dendrogram(s).
 
     Raises
     ------
@@ -117,15 +119,19 @@ def term_dotplot(term: str,
                          var_name=groupby,
                          value_name="Mean Expression").rename({index_name: "Gene"}, axis=1)
 
-    zscore = stats.zscore(bulks.T).T
+    zscore = pd.DataFrame(stats.zscore(bulks.T).T)
+    zscore.index = bulks.index
 
     long_zscore = pd.melt(zscore.reset_index(),
                           id_vars=index_name,
                           var_name=groupby,
                           value_name="Zscore").rename({index_name: "Gene"}, axis=1)
 
+    long_bulks[groupby] = long_bulks[groupby].astype(str)
+    long_zscore[groupby] = long_zscore[groupby].astype(str)
+
     # combine expression and zscores
-    comb = long_bulks.merge(long_zscore, on=["Gene", groupby])
+    comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
 
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
 

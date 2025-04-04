@@ -333,6 +333,8 @@ def get_cell_values(adata: sc.AnnData,
 def prepare_for_cellxgene(adata: sc.AnnData,
                           keep_obs: Optional[list[str]] = None,
                           keep_var: Optional[list[str]] = None,
+                          delete_obs: Optional[list[str]] = None,
+                          delete_var: Optional[list[str]] = None,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
@@ -348,8 +350,16 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Anndata object.
     keep_obs : Optional[list[str]], default None
         adata.obs columns that should be kept. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
     keep_var : Optional[list[str]], default None
         adata.var columns that should be kept. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
+    delete_obs : Optional[list[str]], default None
+        adata.obs columns that should be deleted. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
+    delete_var : Optional[list[str]], default None
+        adata.var columns that should be deleted. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
     rename_obs : Optional[dict[str, str]], default None
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
     rename_var : Optional[dict[str, str]], default None
@@ -369,16 +379,24 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If not at least one of the named embeddings are found in the adata.
+        1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
+        2. If not at least one of the named embeddings are found in the adata.
 
     Returns
     -------
     Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
+    if False:
+        # unreachable code to hide a raise ValueError placeholder for our linter to
+        # account for the raise ValueError of the inner function clean_section()
+        raise ValueError()
 
-    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
+    def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
+        if keep is not None and delete is not None:
+            raise ValueError(f"'keep_{axis}' and 'delete_{axis}' are mutually exclusive. Please configure only one to proceed.")
+
         if axis == "obs":
             sec_table = obj.obs
         elif axis == "var":
@@ -387,6 +405,12 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         # drop columns
         if keep is not None:
             drop = set(sec_table.columns) - set(keep)
+        elif delete is not None:
+            drop = set(delete)
+        else:
+            drop = False
+
+        if drop is not False:
             sec_table.drop(columns=drop, inplace=True)
 
             # drop matching color maps
@@ -420,10 +444,11 @@ def prepare_for_cellxgene(adata: sc.AnnData,
             raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
-    clean_section(out, axis="obs", keep=keep_obs, rename=rename_obs)
+    clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
+    out.obs_names_make_unique()
 
     # ----- .var -----
-    clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+    clean_section(out, axis="var", keep=keep_var, delete=delete_var, rename=rename_var)
     out.var_names_make_unique()
 
     # ----- .X -----
