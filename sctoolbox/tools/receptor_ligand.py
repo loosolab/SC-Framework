@@ -1456,8 +1456,6 @@ def calculate_condition_differences(adata: sc.AnnData,
     TypeError
         If cluster_filter is not a list
         If gene_filter is not a list
-    if condition_filters is None:
-        condition_filters = {}
     """
 
     invalid_keys = set(condition_filters.keys()) - set(condition_columns)
@@ -2834,7 +2832,7 @@ def track_clusters_or_genes(
     -------
     List[matplotlib.figure.Figure]
         List of generated figures
-      
+
     Raises
     ------
     ValueError
