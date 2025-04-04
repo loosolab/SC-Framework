@@ -21,9 +21,6 @@ import warnings
 import logging
 import liana.resource as liana_res
 import networkx as nx
-import warnings
-import math
-from collections import Counter
 from beartype.typing import Optional, Tuple, List, Dict
 import numpy.typing as npt
 from beartype import beartype
@@ -245,7 +242,6 @@ def calculate_interaction_table(adata: sc.AnnData,
     for cluster in scaled_mean_expression.columns:
         scaled_mean_expression[cluster] = scaled_mean_expression[cluster] * scaling_factor[cluster]
 
-
     # ----- compute zscore of cluster means for each gene -----
     # create pandas functions that show progress bar
     tqdm.pandas(desc="computing Z-scores")
@@ -305,7 +301,7 @@ def calculate_interaction_table(adata: sc.AnnData,
     else:
         interactions["receptor_score"] = interactions["receptor_score"]
         interactions["ligand_score"] = interactions["ligand_score"]
-    
+
     interactions["interaction_score"] = interactions["receptor_score"] + interactions["ligand_score"]
 
     # clean up columns
@@ -531,7 +527,7 @@ def hairball(adata: sc.AnnData,
 
     if save:
         fig.savefig(f"{settings.figure_dir}/{save}")
-        
+
     return axes
 
 
@@ -1441,8 +1437,6 @@ def calculate_condition_differences(adata: sc.AnnData,
         Whether to weight the expression Z-Score by the expression proprotion.
     inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
-    overwrite : bool, default False
-        If True will overwrite existing condition differences.
 
     Returns
     -------
@@ -1451,9 +1445,20 @@ def calculate_condition_differences(adata: sc.AnnData,
         - First level keys are condition dimensions (e.g., 'group_timepoint')
         - Second level keys are specific comparisons (e.g., 'timepoint=4d_Infected_vs_Control')
         - Third level contains 'differences': DataFrame of interaction differences
-    """
+
+    Raises
+    ------
+    ValueError
+        If invalid keys are provided in condition_filters
+        If no valid values exist for a condition after filtering
+        If fewer than one condition column is provided
+        If no valid values match any provided filters
+    TypeError
+        If cluster_filter is not a list
+        If gene_filter is not a list
     if condition_filters is None:
         condition_filters = {}
+    """
 
     invalid_keys = set(condition_filters.keys()) - set(condition_columns)
     if invalid_keys:
@@ -1598,7 +1603,7 @@ def calculate_condition_differences(adata: sc.AnnData,
 
             # Compare all pairs of primary values
             for i in range(len(primary_values)):
-                for j in range(i+1, len(primary_values)):
+                for j in range(i + 1, len(primary_values)):
                     value_a = primary_values[i]
                     value_b = primary_values[j]
 
@@ -1788,7 +1793,6 @@ def calculate_condition_differences_over_time(
         inplace: bool = False,
         overwrite: bool = False,
         save: Optional[str] = None) -> Optional[Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]:
-
     """
     Analyze cell-cell interactions across multiple timepoints for a specific condition.
 
@@ -1893,7 +1897,7 @@ def calculate_condition_differences_over_time(
         comparisons = [(reference_timepoint, tp) for tp in timepoints if tp != reference_timepoint]
     else:
         # Default to sequential comparison
-        comparisons = [(timepoints[i], timepoints[i+1]) for i in range(len(timepoints)-1)]
+        comparisons = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints)-1)]
 
     # Create formatted condition strings for each timepoint
     timepoint_conditions = {tp: f"{condition_value}_{tp}" for tp in timepoints}
@@ -2024,7 +2028,7 @@ def calculate_condition_differences_over_time(
         tp2_for_ranking = interactions_tp2[['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster', 'interaction_score']]
 
         combined_scores = pd.concat([
-            tp1_for_ranking['interaction_score'], 
+            tp1_for_ranking['interaction_score'],
             tp2_for_ranking['interaction_score']
         ])
 
@@ -2046,12 +2050,12 @@ def calculate_condition_differences_over_time(
 
         # Merge interaction tables
         interactions_tp1['join_key'] = interactions_tp1.apply(
-            lambda x: f"{x['receptor_gene']}|{x['ligand_gene']}|{x['receptor_cluster']}|{x['ligand_cluster']}", 
+            lambda x: f"{x['receptor_gene']}|{x['ligand_gene']}|{x['receptor_cluster']}|{x['ligand_cluster']}",
             axis=1
         )
 
         interactions_tp2['join_key'] = interactions_tp2.apply(
-            lambda x: f"{x['receptor_gene']}|{x['ligand_gene']}|{x['receptor_cluster']}|{x['ligand_cluster']}", 
+            lambda x: f"{x['receptor_gene']}|{x['ligand_gene']}|{x['receptor_cluster']}|{x['ligand_cluster']}",
             axis=1
         )
 
@@ -2355,7 +2359,7 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                     rows, cols = 2, 4
                 else:
                     cols = 4
-                    rows = math.ceil((num_hubs + (1 if has_non_hub else 0)) / (cols-1))  # +1 for legend
+                    rows = math.ceil((num_hubs + (1 if has_non_hub else 0)) / (cols - 1))  # +1 for legend
 
                 # Create figure with GridSpec for multi-grid layout
                 fig = plt.figure(figsize=figsize, dpi=dpi)
@@ -2365,8 +2369,12 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                 width_ratios = [1] * (cols - 1) + [0.5]
 
                 # Create the grid with appropriate spacing
-                gs = gridspec.GridSpec(rows, cols, figure=fig, width_ratios=width_ratios,
-                                      wspace=0.3, hspace=0.35)
+                gs = gridspec.GridSpec(
+                    rows, cols,
+                    figure=fig,
+                    width_ratios=width_ratios,
+                    wspace=0.3, hspace=0.35
+                )
 
                 # Determine min and max values for the colormap
                 if direction_name == 'positive':
@@ -2482,9 +2490,9 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                     row, col = available_positions.pop(0)
                     if num_hubs <= 3 and cols > 3:
                         # For few hubs, let the non-hub network span two columns
-                        non_hub_position = gs[row, col:(col+2)]
+                        non_hub_position = gs[row, col:(col + 2)]
                         # Remove the next position due tospanning
-                        if available_positions and available_positions[0][0] == row and available_positions[0][1] == col+1:
+                        if available_positions and available_positions[0][0] == row and available_positions[0][1] == col + 1:
                             available_positions.pop(0)
                     else:
                         non_hub_position = gs[row, col]
@@ -2652,7 +2660,7 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                     ha='left',
                     va='center',
                     transform=arrow_ax.transAxes
-                ) 
+                )
 
                 # Save if requested
                 if save:
@@ -2826,6 +2834,14 @@ def track_clusters_or_genes(
     -------
     List[matplotlib.figure.Figure]
         List of generated figures
+            
+    Raises
+    ------
+    ValueError
+        If neither clusters nor genes are provided
+        If timepoint_order is not provided
+        If no temporal comparison is found in the provided results
+        If no comparisons have at least min_interactions matching the specified clusters/genes
     """
 
     # Validate inputs
@@ -2879,16 +2895,14 @@ def track_clusters_or_genes(
         # Apply cluster filter if provided
         if clusters is not None:
             cluster_mask = (
-                filtered_df['receptor_cluster'].isin(clusters) | 
-                filtered_df['ligand_cluster'].isin(clusters)
+                filtered_df['receptor_cluster'].isin(clusters) | filtered_df['ligand_cluster'].isin(clusters)
             )
             filtered_df = filtered_df[cluster_mask]
 
         # Apply gene filter if provided
         if genes is not None:
             gene_mask = (
-                filtered_df['receptor_gene'].isin(genes) | 
-                filtered_df['ligand_gene'].isin(genes)
+                filtered_df['receptor_gene'].isin(genes) | filtered_df['ligand_gene'].isin(genes)
             )
             filtered_df = filtered_df[gene_mask]
 
