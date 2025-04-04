@@ -662,7 +662,7 @@ def _buffered_reader(path: str,
     Raises
     ------
     Exception
-        Exception, if buffered reader failes.
+        If buffered reader failes.
     """
 
     # Test parameter types not covered by beartype
@@ -751,7 +751,7 @@ def _writer(read_queue: Any,
     Raises
     ------
     Exception
-        Exception, if buffered reader failes.
+        If buffered reader failes.
     """
 
     # Check parameter that are not covered by beartype
@@ -966,7 +966,7 @@ def create_fragment_file(bam: str,
     FileNotFoundError
         If the input bam file does not exist.
     Exception
-        Exception, on unkown error while sorting .bam
+        On unkown error while sorting .bam
     """
 
     utils.checker.check_module("pysam")
