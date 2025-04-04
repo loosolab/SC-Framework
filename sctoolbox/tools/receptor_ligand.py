@@ -1897,7 +1897,7 @@ def calculate_condition_differences_over_time(
         comparisons = [(reference_timepoint, tp) for tp in timepoints if tp != reference_timepoint]
     else:
         # Default to sequential comparison
-        comparisons = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints)-1)]
+        comparisons = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
 
     # Create formatted condition strings for each timepoint
     timepoint_conditions = {tp: f"{condition_value}_{tp}" for tp in timepoints}
@@ -2834,7 +2834,7 @@ def track_clusters_or_genes(
     -------
     List[matplotlib.figure.Figure]
         List of generated figures
-            
+      
     Raises
     ------
     ValueError
