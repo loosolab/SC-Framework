@@ -63,7 +63,7 @@ def pseudobulk_table(adata: sc.AnnData,
     res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
     for column_i, clust in enumerate(groupby_categories):
 
-        cluster_values = mat[adata.obs[groupby].isin([clust]), :]
+        cluster_values = mat[list(adata.obs[groupby].isin([clust])), :]
 
         if percentile_range == (0, 100):  # uses all cells
             if how == "mean":

@@ -10,12 +10,13 @@ import re
 
 # for plotting
 import seaborn as sns
-import matplotlib
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from beartype.typing import Optional, Tuple, Literal, Iterable, Any
+from beartype.typing import Optional, Tuple, Literal, Any
 from beartype import beartype
+from numpy.typing import NDArray
 
 # sctoolbox functions
 import sctoolbox.utils as utils
@@ -195,9 +196,9 @@ def grouped_violin(adata: sc.AnnData,
                    title: Optional[str] = None,
                    style: Literal["violin", "boxplot", "bar"] = "violin",
                    normalize: bool = False,
-                   ax: Optional[matplotlib.axes.Axes] = None,
+                   ax: Optional[Axes] = None,
                    save: Optional[str] = None,
-                   **kwargs: Any) -> matplotlib.axes.Axes:
+                   **kwargs: Any) -> Axes:
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
 
@@ -223,7 +224,7 @@ def grouped_violin(adata: sc.AnnData,
         Plot style. Either "violin" or "boxplot" or "bar".
     normalize : bool, default False
         If True, normalize the values in 'y' to the range [0, 1] per group in 'x'.
-    ax : Optional[matplotlib.axes.Axes], default None
+    ax : Optional[Axes], default None
         A matplotlib axes object to plot violinplots in. If None, a new figure and axes is created.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
@@ -232,7 +233,7 @@ def grouped_violin(adata: sc.AnnData,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
 
     Raises
     ------
@@ -349,7 +350,7 @@ def group_expression_boxplot(adata: sc.AnnData,
                              gene_list: list[str],
                              groupby: str,
                              figsize: Optional[Tuple[int | float, int | float]] = None,
-                             **kwargs: Any) -> matplotlib.axes.Axes:
+                             **kwargs: Any) -> Axes:
     """
     Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
 
@@ -370,7 +371,7 @@ def group_expression_boxplot(adata: sc.AnnData,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
 
     Examples
     --------
@@ -603,7 +604,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
 def plot_differential_genes(rank_table: pd.DataFrame,
                             title: str = "Differentially expressed genes",
                             save: Optional[str] = None,
-                            **kwargs: Any) -> matplotlib.axes.Axes:
+                            **kwargs: Any) -> Axes:
     """
     Plot number of differentially expressed genes per contrast in a barplot.
 
@@ -625,7 +626,7 @@ def plot_differential_genes(rank_table: pd.DataFrame,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         Axes object.
 
     Examples
@@ -669,7 +670,7 @@ def plot_gene_correlation(adata: sc.AnnData,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
+                          **kwargs: Any) -> NDArray[Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
@@ -692,7 +693,7 @@ def plot_gene_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    Iterable[matplotlib.axes.Axes]
+    NDArray[Axes]
         List containing all axis objects.
 
     Examples

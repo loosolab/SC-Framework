@@ -406,7 +406,9 @@ def hairball(adata: sc.AnnData,
              show_count: bool = False,
              restrict_to: Optional[list[str]] = None,
              additional_nodes: Optional[list[str]] = None,
-             hide_edges: Optional[list[Tuple[str, str]]] = None) -> npt.ArrayLike:
+             hide_edges: Optional[list[Tuple[str, str]]] = None,
+             node_size: int | float = 10,
+             node_label_size: int | float = 12) -> npt.ArrayLike:
     """
     Generate network graph of interactions between clusters. See cyclone plot for alternative.
 
@@ -438,6 +440,10 @@ def hairball(adata: sc.AnnData,
         List of additional node names displayed in the hairball.
     hide_edges : Optional[list[Tuple[str, str]]], default None
         List of tuples with node names that should not have an edge shown. Order doesn't matter. E.g. `[("a", "b")]` to omit the edge between node a and b.
+    node_size : int | float, default 10
+        Set the size of the nodes.
+    node_label_size : int | float, default 12
+        Set the font size of the node labels.
 
     Returns
     -------
@@ -477,8 +483,8 @@ def hairball(adata: sc.AnnData,
 
     graph.add_vertices(clusters)
     graph.vs['label'] = clusters
-    graph.vs['size'] = 0.1  # node size
-    graph.vs['label_size'] = 12  # label size
+    graph.vs['size'] = node_size  # node size
+    graph.vs['label_size'] = node_label_size  # label size
     graph.vs['label_dist'] = 2  # distance of label to node # not working
     graph.vs['label_angle'] = 1.5708  # rad = 90 degree # not working
 
@@ -778,14 +784,17 @@ def cyclone(
                    adjust_rotation=True)
 
         # add top receptor/ ligand gene track
+        # shows the top x genes (interaction score) with the respective cluster as ligand
+        # and the same for receptor
         if show_genes:
             track2 = sector.add_track((73, 77))
 
             # get first x unique receptor/ ligand genes
             # https://stackoverflow.com/a/17016257/19870975
-            sector_interactions = filtered[filtered["receptor_cluster"] == sector.name]
-            top_receptors = list(dict.fromkeys(sector_interactions["receptor_gene"]))[:gene_amount]
-            top_ligands = list(dict.fromkeys(sector_interactions["ligand_gene"]))[:gene_amount]
+            sector_r_interactions = filtered[filtered["receptor_cluster"] == sector.name]
+            top_receptors = list(dict.fromkeys(sector_r_interactions["receptor_gene"]))[:gene_amount]
+            sector_l_interactions = filtered[filtered["ligand_cluster"] == sector.name]
+            top_ligands = list(dict.fromkeys(sector_l_interactions["ligand_gene"]))[:gene_amount]
 
             # generates dummy data for the heatmap function to give it a red and a blue half
             dummy_data = [1] * len(top_receptors) + [2] * len(top_ligands)
