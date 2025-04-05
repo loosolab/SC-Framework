@@ -86,8 +86,8 @@ def adata_with_conditions(adata_inter):
     obj.obs['condition'] = ['control'] * (n_cells // 2) + ['treatment'] * (n_cells - n_cells // 2)
 
     # Add timepoint column
-    third = n_cells // 3
-    obj.obs['timepoint'] = ['tp1'] * third + ['tp2'] * third + ['tp3'] * (n_cells - 2 * third)
+    timepoints = ['tp1', 'tp2', 'tp3']
+    obj.obs['timepoint'] = [timepoints[i % 3] for i in range(n_cells)]
 
     return obj
 
