@@ -76,6 +76,65 @@ def adata_inter(adata_db):
                                           overwrite=False)
 
 
+@pytest.fixture
+def adata_with_conditions(adata_inter):
+    """Add condition and timepoint columns to the AnnData object."""
+    obj = adata_inter.copy()
+
+    # Add condition column with treatment and control group
+    n_cells = obj.n_obs
+    obj.obs['condition'] = ['control'] * (n_cells // 2) + ['treatment'] * (n_cells - n_cells // 2)
+
+    # Add timepoint column
+    third = n_cells // 3
+    obj.obs['timepoint'] = ['tp1'] * third + ['tp2'] * third + ['tp3'] * (n_cells - 2 * third)
+
+    return obj
+
+
+@pytest.fixture
+def mock_diff_results():
+    """Create mock difference results for testing."""
+    # Create a simple mock structure mimicking the output of calculate_condition_differences
+    differences_df = pd.DataFrame({
+        'receptor_gene': ['Gene1', 'Gene2', 'Gene3', 'Gene4', 'Gene5'],
+        'ligand_gene': ['GeneA', 'GeneB', 'GeneC', 'GeneD', 'GeneE'],
+        'receptor_cluster': ['cluster 1', 'cluster 2', 'cluster 3', 'cluster 1', 'cluster 2'],
+        'ligand_cluster': ['cluster 4', 'cluster 5', 'cluster 6', 'cluster 5', 'cluster 6'],
+        'interaction_score_a': [0.5, 0.6, 0.7, 0.8, 0.9],
+        'interaction_score_b': [0.9, 0.8, 0.7, 0.6, 0.5],
+        'quantile_rank_a': [0.2, 0.3, 0.5, 0.7, 0.9],
+        'quantile_rank_b': [0.9, 0.8, 0.5, 0.3, 0.1],
+        'rank_diff': [0.7, 0.5, 0.0, -0.4, -0.8],
+        'abs_diff': [0.7, 0.5, 0.0, 0.4, 0.8]
+    })
+
+    # Add attrs to mimic output
+    differences_df.attrs = {
+        'condition_a': 'Control',
+        'condition_b': 'Treatment',
+        'timepoint_1': 'tp1',
+        'timepoint_2': 'tp2',
+        'condition': 'test_experiment',
+        'group_name': 'Test Comparison',
+        'condition_name': 'test_dimension'
+    }
+
+    # Create the nested dictionary structure
+    return {
+        'test_dimension': {
+            'Treatment_vs_Control': {
+                'differences': differences_df
+            }
+        },
+        'time_series': {
+            'tp2_Treatment_vs_tp1_Treatment': {
+                'differences': differences_df.copy()
+            }
+        }
+    }
+
+
 # ------------------------------ TESTS -------------------------------- #
 
 
@@ -254,3 +313,135 @@ def test_connectionPlot(adata_inter):
                              line_colors="rainbow")
 
     assert isinstance(plot, np.ndarray)
+
+
+# ----- test difference analysis functions ----- #
+
+def test_condition_differences_network(mock_diff_results):
+    """Test that condition_differences_network generates figures."""
+    figures = rl.condition_differences_network(
+        diff_results=mock_diff_results,
+        n_top=5,
+        figsize=(10, 8),
+        dpi=72,
+        split_by_direction=True,
+        hub_threshold=2
+    )
+
+    # Check if figures were created
+    assert isinstance(figures, list)
+    assert all(isinstance(fig, Figure) for fig in figures)
+
+    for fig in figures:
+        plt.close(fig)
+
+
+def test_plot_all_condition_differences(mock_diff_results):
+    """Test that plot_all_condition_differences works with mock data."""
+    figures_dict = rl.plot_all_condition_differences(
+        diff_results=mock_diff_results,
+        n_top=5,
+        figsize=(10, 8),
+        dpi=72,
+        split_by_direction=True,
+        hub_threshold=2,
+        show=False,
+        return_figures=True
+    )
+
+    # Check the returned dictionary structure
+    assert isinstance(figures_dict, dict)
+    assert all(isinstance(figures_dict[dim], list) for dim in figures_dict)
+
+    for dim in figures_dict:
+        for fig in figures_dict[dim]:
+            plt.close(fig)
+
+
+def test_track_clusters_or_genes(mock_diff_results):
+    """Test track_clusters_or_genes works with mock data."""
+    timepoint_order = ['tp1', 'tp2', 'tp3']
+
+    # Track cluster
+    figures = rl.track_clusters_or_genes(
+        diff_results=mock_diff_results,
+        clusters=['cluster 1', 'cluster 2'],
+        timepoint_order=timepoint_order,
+        min_interactions=1,
+        n_top=5,
+        figsize=(10, 8),
+        dpi=72,
+        split_by_direction=True,
+        hub_threshold=2
+    )
+
+    # Check if figures were created
+    assert isinstance(figures, list)
+    assert all(isinstance(fig, Figure) for fig in figures)
+
+    for fig in figures:
+        plt.close(fig)
+
+    # Track genes
+    figures = rl.track_clusters_or_genes(
+        diff_results=mock_diff_results,
+        genes=['Gene1', 'GeneA'],
+        timepoint_order=timepoint_order,
+        min_interactions=1,
+        n_top=5,
+        figsize=(10, 8),
+        dpi=72,
+        split_by_direction=True,
+        hub_threshold=2
+    )
+
+    # Check if figures were created
+    assert isinstance(figures, list)
+    assert all(isinstance(fig, Figure) for fig in figures)
+
+    for fig in figures:
+        plt.close(fig)
+
+
+def test_calculate_condition_differences(adata_with_conditions):
+    """Test if calculate_condition_differences works with condition adata."""
+    diff_results = rl.calculate_condition_differences(
+        adata=adata_with_conditions,
+        condition_columns=['condition'],
+        cluster_column='cluster',
+        min_perc=0,
+        condition_filters={'condition': ['control', 'treatment']},
+        inplace=False
+    )
+
+    # Verify structure
+    assert isinstance(diff_results, dict)
+    assert 'condition' in diff_results
+
+    # Check if at least one comparison and difference df
+    has_comparisons = False
+    for dim, comparisons in diff_results.items():
+        if comparisons:
+            has_comparisons = True
+            for comp_key, comp_data in comparisons.items():
+                if 'differences' in comp_data:
+                    assert isinstance(comp_data['differences'], pd.DataFrame)
+                    break
+    assert has_comparisons
+
+
+def test_calculate_condition_differences_over_time(adata_with_conditions):
+    """Test if calculate_condition_differences_over_time works with condition adata."""
+    diff_results = rl.calculate_condition_differences_over_time(
+        adata=adata_with_conditions,
+        timepoint_column='timepoint',
+        condition_column='condition',
+        condition_value='control',
+        cluster_column='cluster',
+        timepoint_order=['tp1', 'tp2', 'tp3'],
+        min_perc=0,
+        inplace=False
+    )
+
+    assert isinstance(diff_results, dict)
+    assert 'time_series' in diff_results

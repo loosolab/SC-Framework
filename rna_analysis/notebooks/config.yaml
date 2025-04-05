@@ -38,3 +38,11 @@
   figure_dir: "../figures/0B_velocity_analysis/"
   log_file: "../logs/0B_velocity_log.txt"
   overwrite_log: True
+
+"0C":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/0C_receptor_ligand_differences/"
+  table_dir: "../tables/0C_receptor_ligand_differences/"
+  log_file: "../logs/0C_log.txt"
+  overwrite_log: True
