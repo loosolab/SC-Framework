@@ -77,9 +77,9 @@ def adata_inter(adata_db):
 
 
 @pytest.fixture
-def adata_with_conditions(adata_inter):
+def adata_with_conditions(adata_db):
     """Add condition and timepoint columns to the AnnData object."""
-    obj = adata_inter.copy()
+    obj = adata_db.copy()
 
     # Add condition column with treatment and control group
     n_cells = obj.n_obs
