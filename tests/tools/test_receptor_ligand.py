@@ -418,16 +418,10 @@ def test_calculate_condition_differences(adata_with_conditions):
     assert isinstance(diff_results, dict)
     assert 'condition' in diff_results
 
-    # Check if at least one comparison and difference df
-    has_comparisons = False
     for dim, comparisons in diff_results.items():
-        if comparisons:
-            has_comparisons = True
-            for comp_key, comp_data in comparisons.items():
-                if 'differences' in comp_data:
-                    assert isinstance(comp_data['differences'], pd.DataFrame)
-                    break
-    assert has_comparisons
+        for comp_key, comp_data in comparisons.items():
+            if 'differences' in comp_data:
+                assert isinstance(comp_data['differences'], pd.DataFrame)
 
 
 def test_calculate_condition_differences_over_time(adata_with_conditions):
