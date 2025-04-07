@@ -101,6 +101,7 @@ def gene_set_enrichment(adata: sc.AnnData,
     modified_adata.uns['gsea']['method'] = method
     modified_adata.uns['gsea']['stat_col'] = "FDR q-val" if method == "prerank" else "Adjusted P-value"
     modified_adata.uns['gsea']['score_col'] = "NES" if method == "prerank" else "Combined Score"
+    modified_adata.uns['gsea']['overlap_col'] = "Tag %" if method == "prerank" else "Overlap"
 
     if marker_key in adata.uns:
         marker_tables = get_rank_genes_tables(modified_adata,

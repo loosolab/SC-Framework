@@ -476,7 +476,7 @@ def gsea_dot(adata: sc.AnnData,
 
     term_table["% Genes in set"] = [
         int(round(eval(operation) * 100, 0))
-        for operation in term_table["Tag %"]
+        for operation in term_table[adata.uns['gsea']['overlap_col']]
     ]
 
     norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
