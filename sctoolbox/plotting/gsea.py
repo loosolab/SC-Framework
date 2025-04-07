@@ -22,6 +22,9 @@ from sctoolbox.utils.bioutils import pseudobulk_table
 from sctoolbox.utils.checker import check_columns
 import sctoolbox.utils.decorator as deco
 
+from sctoolbox import settings
+logger = settings.logger
+
 
 @deco.log_anndata
 @beartype
@@ -95,13 +98,17 @@ def term_dotplot(adata: sc.AnnData,
 
     """
     if "gsea" not in adata.uns.keys():
-        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+        msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
+        logger.error(msg)
+        raise ValueError(msg)
 
+    logger.info("Get enrichment table.")
     term_table = adata.uns['gsea']['enrichment_table'].copy()
 
     check_columns(term_table, columns=[term_col])
 
     # get related genes
+    logger.info("Get term related genes.")
     active_genes = list(set(term_table.loc[term_table[term_col] == term][gene_col].str.split(";").explode()))
     active_genes = list(map(str.upper, active_genes))
 
@@ -109,9 +116,12 @@ def term_dotplot(adata: sc.AnnData,
     index_name = "index" if not adata.var.index.name else adata.var.index.name
 
     if not active_genes:
-        raise ValueError(f"No genes matching the term '{term}' found in term_table")
+        msg = f"No genes matching the term '{term}' found in term_table"
+        logger.error(msg)
+        raise ValueError(msg)
 
     # subset adata to active genes
+    logger.info("Subset AnnData object.")
     subset = adata[:, adata.var.index.str.upper().isin(active_genes)]
 
     bulks = pseudobulk_table(subset, groupby=groupby)
@@ -124,6 +134,7 @@ def term_dotplot(adata: sc.AnnData,
                          var_name=groupby,
                          value_name="Mean Expression").rename({index_name: "Gene"}, axis=1)
 
+    logger.info("Calculate Z scores.")
     zscore = pd.DataFrame(stats.zscore(bulks.T).T)
     zscore.index = bulks.index
     zscore.columns = bulks.columns
@@ -195,10 +206,13 @@ def gsea_network(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If no cluster with valied pathways are found.
+        If gsea key is not found in adata.uns.
+        If no cluster with valid pathways are found.
     """
     if "gsea" not in adata.uns.keys():
-        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+        msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
+        logger.error(msg)
+        raise ValueError(msg)
 
     term_table = adata.uns['gsea']['enrichment_table'].copy()
     sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
@@ -206,6 +220,7 @@ def gsea_network(adata: sc.AnnData,
 
     check_columns(term_table, columns=[score_col, clust_col, sig_col])
 
+    logger.info("Calculate enrichment map...")
     with warnings.catch_warnings():
         # hide future warnings until gseapy fixes them
         warnings.filterwarnings(action='ignore', message=".*Series.replace.*|.*chained assignment.*")
@@ -217,9 +232,12 @@ def gsea_network(adata: sc.AnnData,
         valid_cluster = list(node_count[node_count > 1].index)
 
     if len(valid_cluster) == 0:
-        raise ValueError("No cluster with enrichted pathways found.")
+        msg = "No cluster with enrichted pathways found."
+        logger.error(msg)
+        raise ValueError(msg)
 
     # Plot setup
+    logger.info("Plotting network...")
     num_clust = len(valid_cluster)
     ncols = min(ncols, num_clust)
     nrows = int(np.ceil(num_clust / ncols))
@@ -379,7 +397,9 @@ def cluster_dotplot(adata: sc.AnnData,
         If gsea results cannot be found in adata.uns.
     """
     if "gsea" not in adata.uns.keys():
-        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+        msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
+        logger.error(msg)
+        raise ValueError(msg)
 
     term_table = adata.uns['gsea']['enrichment_table'].copy()
     sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
@@ -388,12 +408,13 @@ def cluster_dotplot(adata: sc.AnnData,
     check_columns(term_table, columns=[cluster_col, sig_col])
 
     for c in term_table[cluster_col].unique():
+        logger.info(f"Plotting dotplot for cluster {c}")
         tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
         tmp[score_col] = tmp[score_col].astype(float)
         tmp = pd.concat([tmp.nlargest(top_up, score_col), tmp.nsmallest(top_down, score_col)])
         tmp.sort_values(score_col, inplace=True, ascending=False)
         if tmp.empty:
-            print(f"No enrichted pathways found with cutoff set to {cutoff}")
+            logger.info(f"No enrichted pathways of cluster {c} found with cutoff set to {cutoff}")
             continue
         save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
         empty_adata = sc.AnnData()
@@ -457,7 +478,9 @@ def gsea_dot(adata: sc.AnnData,
         If gsea results cannot be found in adata.uns.
     """
     if "gsea" not in adata.uns.keys():
-        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+        msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
+        logger.error(msg)
+        raise ValueError(msg)
 
     term_table = adata.uns['gsea']['enrichment_table'].copy()
     sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
@@ -466,6 +489,7 @@ def gsea_dot(adata: sc.AnnData,
     check_columns(term_table, columns=[cluster_col, x, sig_col])
 
     # Filter enrichment table
+    logger.info("Filtering enrichment table...")
     term_table = term_table[term_table[sig_col] <= cutoff]
     if top_term:
         term_table = term_table.groupby(cluster_col).apply(
@@ -479,6 +503,7 @@ def gsea_dot(adata: sc.AnnData,
         for operation in term_table[adata.uns['gsea']['overlap_col']]
     ]
 
+    logger.info("Generating dotplot...")
     norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     # Create figure

@@ -13,6 +13,9 @@ from sctoolbox.tools.marker_genes import get_rank_genes_tables
 from beartype import beartype
 from beartype.typing import Optional, Literal, Any
 
+from sctoolbox import settings
+logger = settings.logger
+
 
 @deprecation.deprecated(deprecated_in="0.10", removed_in="1.0",
                         current_version=sctoolbox.__version__,
@@ -87,7 +90,7 @@ def gene_set_enrichment(adata: sc.AnnData,
     """
 
     if not overwrite and "gsea" in adata.uns:
-        warnings.warn("GSEA seems to have been run before! Skipping. Set `overwrite=True` to replace.")
+        logger.warning("GSEA seems to have been run before! Skipping. Set `overwrite=True` to replace.")
 
         if inplace:
             return
@@ -103,16 +106,20 @@ def gene_set_enrichment(adata: sc.AnnData,
     modified_adata.uns['gsea']['score_col'] = "NES" if method == "prerank" else "Combined Score"
     modified_adata.uns['gsea']['overlap_col'] = "Tag %" if method == "prerank" else "Overlap"
 
+    logger.info("Getting gene rank tables.")
     if marker_key in adata.uns:
         marker_tables = get_rank_genes_tables(modified_adata,
                                               out_group_fractions=True,
                                               key=marker_key,
                                               n_genes=None)
     else:
-        raise KeyError("Marker key not found! Please check parameter!")
+        msg = "Marker key not found! Please check parameter!"
+        logger.error(msg)
+        raise KeyError(msg)
 
     if not gene_sets:
         # A public library is used if gene_set is not given
+        logger.info("Downloading gene set library.")
         gene_sets = gp.get_library(name=library_name, organism=organism)
         modified_adata.uns['gsea']['library'] = library_name
     else:
@@ -121,13 +128,15 @@ def gene_set_enrichment(adata: sc.AnnData,
         # Generating background if no custom background is given
         background = set([item for sublist in gene_sets.values() for item in sublist])
     if method == "enrichr":
-        modified_adata.uns['gsea']['background'] = background
+        logger.info("Setting background")
+        modified_adata.uns['gsea']['background'] = list(background)
 
     # Convert gene sets to upper case
     gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
 
     path_enr = {}
     for ct, deg in tqdm.tqdm(marker_tables.items()):
+        logger.info(f"Running {method} for cluster {ct}.")
         enr_list = list()
         # enrichr API
         if len(deg) > 0:
@@ -163,12 +172,15 @@ def gene_set_enrichment(adata: sc.AnnData,
             path_enr[ct] = pd.concat(enr_list)
             path_enr[ct]["Cluster"] = ct
         else:
-            warnings.warn(f"No valid pathways found for cluster {ct}")
+            logger.warning(f"No valid pathways found for cluster {ct}")
 
     # Return combined table
     if not path_enr:
-        raise ValueError("No valid pathways found for dataset.")
+        mgs = "No valid pathways found for dataset."
+        logger.error(msg)
+        raise ValueError(msg)
 
+    logger.info("Saving results in 'adata.uns['gsea']['enrichment_table']'")
     modified_adata.uns['gsea']['enrichment_table'] = pd.concat(path_enr.values())
 
     if not inplace:

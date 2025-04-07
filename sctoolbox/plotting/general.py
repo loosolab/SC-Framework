@@ -17,6 +17,7 @@ from beartype.typing import Optional, Literal, Tuple, Union, Any
 from numpy.typing import NDArray
 
 from sctoolbox import settings
+logger = settings.logger
 
 
 ########################################################################################
@@ -48,6 +49,7 @@ def _save_figure(path: Optional[str],
     # This moves the checking to the _save_figure function rather than each plotting function.
     if path is not None:
         output_path = settings.full_figure_prefix + path
+        logger.info(f"Saving figure to {output_path}")
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
 
 
