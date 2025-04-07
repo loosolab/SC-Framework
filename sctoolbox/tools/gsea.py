@@ -30,10 +30,12 @@ def gene_set_enrichment(adata: sc.AnnData,
                         method: Literal["prerank", "enrichr"] = "prerank",
                         pvals_adj_tresh: float = 0.05,
                         library_name: str = "GO_Biological_Process_2023",
+                        overwrite: bool = False,
+                        inplace: bool = False,
                         gene_sets: Optional[dict[str, list[str]]] = None,
                         background: Optional[set[str]] = None,
                         **kwargs: Any
-                        ) -> pd.DataFrame:
+                        ) -> Optional[sc.AnnData]:
     """
     Run gene set enrichment on marker genes.
 
@@ -52,9 +54,13 @@ def gene_set_enrichment(adata: sc.AnnData,
     library_name : str, default GO_Biological_Process_2023
         Name of public GO library.
         Get gene sets from public GO library.
+    overwrite : bool, default False
+        If True will overwrite existing gsea results.
+    inplace : bool, default False
+        Whether to copy `adata` or modify it inplace.
     gene_sets : Optional[dict[str, list[str]]], default None
         Dictionary with pathway names as key and gene set as value.
-        If given library name is ignored.
+        If given, library name is ignored.
     background : Optional[set[str]], default None
         Set of background genes. Will be automatically determined when library_name or gene_sets is given.
         Only needed for enrichr.
@@ -69,8 +75,8 @@ def gene_set_enrichment(adata: sc.AnnData,
 
     Returns
     -------
-    pd.DataFrame
-        Combined enrichr results.
+    Optional[sc.AnnData]
+        AnnData object with combined enrichr results stored in .uns['gsea'].
 
     Raises
     ------
@@ -79,8 +85,25 @@ def gene_set_enrichment(adata: sc.AnnData,
     ValueError
         If result dictinary is empty
     """
+
+    if not overwrite and "gsea" in adata.uns:
+        warnings.warn("GSEA seems to have been run before! Skipping. Set `overwrite=True` to replace.")
+
+        if inplace:
+            return
+        else:
+            return adata
+
+    modified_adata = adata if inplace else adata.copy()
+
+    # setup dict to store information old data will be overwriten!
+    modified_adata.uns['gsea'] = dict()
+    modified_adata.uns['gsea']['method'] = method
+    modified_adata.uns['gsea']['stat_col'] = "FDR q-val" if method == "prerank" else "Adjusted P-value"
+    modified_adata.uns['gsea']['score_col'] = "NES" if method == "prerank" else "Combined Score"
+
     if marker_key in adata.uns:
-        marker_tables = get_rank_genes_tables(adata,
+        marker_tables = get_rank_genes_tables(modified_adata,
                                               out_group_fractions=True,
                                               key=marker_key,
                                               n_genes = None)
@@ -90,9 +113,14 @@ def gene_set_enrichment(adata: sc.AnnData,
     if not gene_sets:
         # A public library is used if gene_set is not given
         gene_sets = gp.get_library(name=library_name, organism=organism)
+        modified_adata.uns['gsea']['library'] = library_name
+    else:
+        modified_adata.uns['gsea']['gene_sets'] = gene_sets
     if not background:
         # Generating background if no custom background is given
         background = set([item for sublist in gene_sets.values() for item in sublist])
+    if method == "enrichr":
+        modified_adata.uns['gsea']['background'] = background
 
     # Convert gene sets to upper case
     gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
@@ -139,4 +167,8 @@ def gene_set_enrichment(adata: sc.AnnData,
     # Return combined table
     if not path_enr:
         raise ValueError("No valid pathways found for dataset.")
-    return (pd.concat(path_enr.values()))
+
+    modified_adata.uns['gsea']['enrichment_table'] = pd.concat(path_enr.values())
+
+    if not inplace:
+        return modified_adata

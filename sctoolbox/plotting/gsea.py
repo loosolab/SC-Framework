@@ -25,9 +25,8 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 @beartype
-def term_dotplot(term: str,
-                 term_table: pd.DataFrame,
-                 adata: sc.AnnData,
+def term_dotplot(adata: sc.AnnData,
+                 term: str,
                  groupby: str,
                  gene_col: str = "Lead_genes",
                  term_col: str = "Term",
@@ -39,13 +38,10 @@ def term_dotplot(term: str,
 
     Parameters
     ----------
+    adata : sc.anndata
+        Anndata object containing adata.uns['gsea']['enrichment_table']
     term : str
         Name of GO-term, e.g 'ATP Metabolic Process (GO:0046034)'
-    term_table : pd.DataFrame
-        Table of GO-term enriched genes.
-        Output of sctoolbox.tools.gsea.gene_set_enrichment().
-    adata : sc.AnnData
-        Anndata object.
     groupby : str
         Key from `adata.obs` to group cells by.
     gene_col : str, default "Lead_genes"
@@ -74,6 +70,7 @@ def term_dotplot(term: str,
     Raises
     ------
     ValueError
+        If gsea results cannot be found in adata.uns.
         If no genes are matching the given term in term_table
 
     Examples
@@ -97,6 +94,13 @@ def term_dotplot(term: str,
                              groupby="louvain")
 
     """
+    if "gsea" not in adata.uns.keys():
+        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+
+    term_table = adata.uns['gsea']['enrichment_table'].copy()
+
+    check_columns(term_table, columns=[term_col])
+
     # get related genes
     active_genes = list(set(term_table.loc[term_table[term_col] == term][gene_col].str.split(";").explode()))
     active_genes = list(map(str.upper, active_genes))
@@ -122,6 +126,7 @@ def term_dotplot(term: str,
 
     zscore = pd.DataFrame(stats.zscore(bulks.T).T)
     zscore.index = bulks.index
+    zscore.columns = bulks.columns
 
     long_zscore = pd.melt(zscore.reset_index(),
                           id_vars=index_name,
@@ -138,10 +143,10 @@ def term_dotplot(term: str,
 
 
 @beartype
-def gsea_network(enr_res: pd.DataFrame,
-                 score_col: str = "NES",
+def gsea_network(adata: sc.AnnData,
+                 score_col: Optional[str] = None,
                  clust_col: str = "Cluster",
-                 sig_col: Literal["Adjusted P-value", "P-value", "FDR q-val", "NOM p-val"] = "FDR q-val",
+                 sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
                  cutoff: int | float = 0.05,
                  scale: int | float = 1,
                  resolution: int | float = 0.35,
@@ -158,14 +163,16 @@ def gsea_network(enr_res: pd.DataFrame,
 
     Parameters
     ----------
-    enr_res : pd.DataFrame
-        Dataframe containing 2D gsea results.
+    adata : sc.anndata
+        Anndata object containing adata.uns['gsea']['enrichment_table']
     score_col : str, default 'NES'
         Name of enrichment scoring column.
-    clust_col : str, default 'Cluster'
-        Column name of cluster annotation in enr_res.
-    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'FDR q-val'
+    clust_col : Optional[str], default None
+        Column name in adata.uns['gsea']['enrichment_table'] containing enrichment score.
+        If None uses default stored in adata.uns['gsea']['score_col']
+    sig_col : Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']], default None
         Column containing significance of enrichted termn.
+        If None uses default stored in adata.uns['gsea']['stat_col']
     cutoff : int | float, default 0.05
         Set cutoff for sig_col. Only nodes with value < cutoff are shown.
     scale : int | float, default 1
@@ -190,14 +197,21 @@ def gsea_network(enr_res: pd.DataFrame,
     ValueError
         If no cluster with valied pathways are found.
     """
-    check_columns(enr_res, columns=[score_col, clust_col, sig_col])
+    if "gsea" not in adata.uns.keys():
+        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+
+    term_table = adata.uns['gsea']['enrichment_table'].copy()
+    sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
+    score_col = score_col if score_col else adata.uns['gsea']['score_col']
+
+    check_columns(term_table, columns=[score_col, clust_col, sig_col])
 
     with warnings.catch_warnings():
         # hide future warnings until gseapy fixes them
         warnings.filterwarnings(action='ignore', message=".*Series.replace.*|.*chained assignment.*")
 
         # Get cluster with enrichted pathways after filtering
-        nodes, _ = enrichment_map(enr_res, column=sig_col, cutoff=cutoff)
+        nodes, _ = enrichment_map(term_table, column=sig_col, cutoff=cutoff)
         min_NES, max_NES = min(list(nodes[score_col])), max(list(nodes[score_col]))
         node_count = nodes.Cluster.value_counts()
         valid_cluster = list(node_count[node_count > 1].index)
@@ -211,7 +225,7 @@ def gsea_network(enr_res: pd.DataFrame,
     nrows = int(np.ceil(num_clust / ncols))
     figsize = figsize if figsize else (8 * ncols, 6 * nrows)
     fig, axarr = plt.subplots(nrows, ncols, figsize=figsize)
-    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr    # reshape 1-column array
+    axarr = np.array(axarr).reshape((-1, 1)) if ncols == 1 else axarr  # reshape 1-column array
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr  # reshape 1-row array
     axes = axarr.flatten()
 
@@ -219,7 +233,7 @@ def gsea_network(enr_res: pd.DataFrame,
     width_sizes = list()
     for i, cluster in enumerate(valid_cluster):
         # Create cluster subset
-        tmp = enr_res[enr_res[clust_col] == cluster]
+        tmp = term_table[term_table[clust_col] == cluster]
 
         with warnings.catch_warnings():
             # hide future warnings until gseapy fixes them
@@ -325,9 +339,9 @@ def gsea_network(enr_res: pd.DataFrame,
     _save_figure(save)
 
 
-def cluster_dotplot(term_table: pd.DataFrame,
+def cluster_dotplot(adata: sc.AnnData,
                     cluster_col: str = "Cluster",
-                    sig_col: Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'] = 'FDR q-val',
+                    sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
                     top_up: int = 5,
                     top_down: int = 5,
                     cutoff: float = 0.05,
@@ -336,21 +350,21 @@ def cluster_dotplot(term_table: pd.DataFrame,
                     **kwargs: Any):
     """
     Plot up/down regulated pathways per cluster.
-    
+
     Parameters
     ----------
-    term_table : pd.DataFrame
-        Table of GO-term enriched genes.
-        Output of sctoolbox.tools.gsea.gene_set_enrichment().
+    adata : sc.anndata
+        Anndata object containing adata.uns['gsea']['enrichment_table']
     cluster_col : str, default 'Cluster'
         Cluster column name.
-    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'FDR q-val'
+    sig_col : Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']], default None
         Column containing significance of enrichted termn.
-    top_up: int, default 5
+        If None uses default stored in adata.uns['gsea']['stat_col']
+    top_up : int, default 5
         Number of upregulated pathways to be plotted.
-    top_down: int, default 5
+    top_down : int, default 5
         Number of downregulated pathways to be plotted.
-    cutoff: float, default 0.05
+    cutoff : float, default 0.05
         Filter cutoff for sig_col.
     save_figs : bool, default True
         If True, save each plot.
@@ -358,22 +372,42 @@ def cluster_dotplot(term_table: pd.DataFrame,
         Prefix for filenames.
     **kwargs : Any
         Additional parameters for sctoolbox.plotting.gsea.gsea_dot
+
+    Raises
+    ------
+    ValueError
+        If gsea results cannot be found in adata.uns.
     """
+    if "gsea" not in adata.uns.keys():
+        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+
+    term_table = adata.uns['gsea']['enrichment_table'].copy()
+    sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
+    score_col = adata.uns['gsea']['score_col']
+
+    check_columns(term_table, columns=[cluster_col, sig_col])
+
     for c in term_table[cluster_col].unique():
         tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
-        tmp["NES"] = tmp["NES"].astype(float)
-        tmp = pd.concat([tmp.nlargest(top_up, "NES"), tmp.nsmallest(top_down, "NES")])
-        tmp.sort_values("NES", inplace=True, ascending=False)
+        tmp[score_col] = tmp[score_col].astype(float)
+        tmp = pd.concat([tmp.nlargest(top_up, score_col), tmp.nsmallest(top_down, score_col)])
+        tmp.sort_values(score_col, inplace=True, ascending=False)
         if tmp.empty:
             print(f"No enrichted pathways found with cutoff set to {cutoff}")
             continue
         save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
-        gsea_dot(tmp, save=save, title=f"Top regulated pathways of cluster {c}",**kwargs)
+        empty_adata = sc.AnnData()
+        empty_adata.uns["gsea"] = adata.uns['gsea']
+        empty_adata.uns["gsea"]["enrichment_table"] = tmp
+        gsea_dot(empty_adata, save=save, title=f"Top regulated pathways of cluster {c}", **kwargs)
 
 
-def gsea_dot(term_table: pd.DataFrame,
-             sig_col: Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'] = 'FDR q-val',
-             x: str = "NES",
+def gsea_dot(adata: sc.AnnData,
+             sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
+             x: Optional[str] = None,
+             cluster_col:str = "Cluster",
+             cutoff: float = 0.05,
+             top_term: Optional[int] = None,
              figsize: Tuple[int, int] = (5, 8),
              size: int = 2,
              cmap: str = "viridis",
@@ -382,23 +416,32 @@ def gsea_dot(term_table: pd.DataFrame,
              save: Optional[str] = None) -> Axes:
     """
     Plot up/down regulated pathways.
-    
+
     Parameters
     ----------
-    term_table : pd.DataFrame
-        Table of GO-term enriched genes.
-        Output of sctoolbox.tools.gsea.gene_set_enrichment().
-    sig_col : Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val'], default 'FDR q-val'
+    adata : sc.anndata
+        Anndata object containing adata.uns['gsea']['enrichment_table']
+    sig_col : Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']], default None
         Column containing significance of enrichted termn.
-    figsize: Tuple[int, int], default (5, 8)
+        If None uses default stored in adata.uns['gsea']['stat_col']
+    x : Optional[str], default None
+        Column name in adata.uns['gsea']['enrichment_table'] containing enrichment score.
+        If None uses default stored in adata.uns['gsea']['score_col']
+    cluster_col : str, default 'Cluster'
+        Cluster column name in adata.uns['gsea']['enrichment_table']
+    cutoff : float, default 0.05
+        Filter cutoff for sig_col.
+    top_term : Optional[int], default None
+        Select top_terms per cluster.
+    figsize : Tuple[int, int], default (5, 8)
         Tuple setting the figure size.
-    size: int, default 2
+    size : int, default 2
         Dot size muliplier
-    cmap: str, default "viridis"
+    cmap : str, default "viridis"
         Colormap for dots
-    title: str, default "Top regualted pathways"
+    title : str, default "Top regualted pathways"
         Figure title
-    title_size: int, default 16
+    title_size : int, default 16
         Title font size.
     save : Optional[str], default None
         Filename suffix to save the figure.
@@ -406,9 +449,36 @@ def gsea_dot(term_table: pd.DataFrame,
     Returns
     -------
     Axes
-        Axes objectthe dotplot.
+        Axes object.
+
+    Raises
+    ------
+    ValueError
+        If gsea results cannot be found in adata.uns.
     """
-    term_table["% Genes in set"] = [int(round(eval(operation)*100,0)) for operation in term_table["Tag %"]]
+    if "gsea" not in adata.uns.keys():
+        raise ValueError("Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function.")
+
+    term_table = adata.uns['gsea']['enrichment_table'].copy()
+    sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
+    x = x if x else adata.uns['gsea']['score_col']
+
+    check_columns(term_table, columns=[cluster_col, x, sig_col])
+
+    # Filter enrichment table
+    term_table = term_table[term_table[sig_col] <= cutoff]
+    if top_term:
+        term_table = term_table.groupby(cluster_col).apply(
+            lambda y: y.sort_values(by=x, ascending=False)
+            .head(top_term)
+            .reset_index(drop=True)
+        ).reset_index(drop=True)
+
+    term_table["% Genes in set"] = [
+        int(round(eval(operation) * 100, 0))
+        for operation in term_table["Tag %"]
+    ]
+
     norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     # Create figure
@@ -424,13 +494,14 @@ def gsea_dot(term_table: pd.DataFrame,
                     )
     # Move legend to right side
     sns.move_legend(plot, loc='upper left', bbox_to_anchor=(1, 1, 0, 0))
-    
+
     # extract the existing handles and labels
     h, l = ax.get_legend_handles_labels()
     i = l.index('% Genes in set')
 
-    ax.legend(h[i:], l[i:], bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., fontsize=13, frameon=False, alignment="left")
-    
+    ax.legend(h[i:], l[i:], bbox_to_anchor=(1.05, 1),
+              loc=2, borderaxespad=0., fontsize=13,
+              frameon=False, alignment="left")
     cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1,0.1), label=sig_col, aspect=10)
     cbar.set_label(sig_col, rotation=0, ha="left", fontsize=13)
     ax.set_ylabel("")
