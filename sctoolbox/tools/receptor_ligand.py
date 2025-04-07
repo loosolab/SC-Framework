@@ -1648,7 +1648,7 @@ def calculate_condition_differences(adata: sc.AnnData,
                         differences.to_csv(f"{settings.table_dir}/{comparison_key}_differences.csv", sep='\t', index=False)
             primary_adatas.clear()
             del primary_adatas
-            
+
             return results
 
         # Process the next level of conditions
