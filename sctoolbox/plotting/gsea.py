@@ -484,28 +484,28 @@ def gsea_dot(adata: sc.AnnData,
     # Create figure
     fig, ax = plt.subplots(1, figsize=figsize)
     plot = sns.scatterplot(data=term_table,
-                    y="Term",
-                    x=x,
-                    size="% Genes in set",
-                    sizes=(50, 200),
-                    hue=sig_col,
-                    palette=cmap,
-                    ax=ax
-                    )
+                           y="Term",
+                           x=x,
+                           size="% Genes in set",
+                           sizes=(50, 200),
+                           hue=sig_col,
+                           palette=cmap,
+                           ax=ax
+    )
     # Move legend to right side
     sns.move_legend(plot, loc='upper left', bbox_to_anchor=(1, 1, 0, 0))
 
     # extract the existing handles and labels
-    h, l = ax.get_legend_handles_labels()
-    i = l.index('% Genes in set')
+    handles, labels = ax.get_legend_handles_labels()
+    i = labels.index('% Genes in set')
 
-    ax.legend(h[i:], l[i:], bbox_to_anchor=(1.05, 1),
+    ax.legend(handles[i:], labels[i:], bbox_to_anchor=(1.05, 1),
               loc=2, borderaxespad=0., fontsize=13,
               frameon=False, alignment="left")
-    cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1,0.1), label=sig_col, aspect=10)
+    cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1, 0.1), label=sig_col, aspect=10)
     cbar.set_label(sig_col, rotation=0, ha="left", fontsize=13)
     ax.set_ylabel("")
-    ax.set_title(title, **{"fontsize":title_size})
+    ax.set_title(title, **{"fontsize": title_size})
     ax.grid(True, axis="y")
     fig.tight_layout()
     _save_figure(save)

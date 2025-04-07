@@ -107,7 +107,7 @@ def gene_set_enrichment(adata: sc.AnnData,
         marker_tables = get_rank_genes_tables(modified_adata,
                                               out_group_fractions=True,
                                               key=marker_key,
-                                              n_genes = None)
+                                              n_genes=None)
     else:
         raise KeyError("Marker key not found! Please check parameter!")
 
