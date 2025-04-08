@@ -4,6 +4,7 @@ import gseapy as gp
 import scanpy as sc
 import tqdm
 import deprecation
+import logging
 
 import sctoolbox
 import sctoolbox.utils.decorator as deco
@@ -180,7 +181,12 @@ def gene_set_enrichment(adata: sc.AnnData,
         raise ValueError(msg)
 
     logger.info("Saving results in 'adata.uns['gsea']['enrichment_table']'")
-    modified_adata.uns['gsea']['enrichment_table'] = pd.concat(path_enr.values())
+    merged_results = pd.concat(path_enr.values())
+    if method == "prerank":
+        merged_results[['ES', 'NES', 'NOM p-val', 'FDR q-val', 'FWER p-val']] = merged_results[
+            ['ES', 'NES', 'NOM p-val', 'FDR q-val', 'FWER p-val']
+        ].astype(float)
+    modified_adata.uns['gsea']['enrichment_table'] = merged_results
 
     if not inplace:
         return modified_adata

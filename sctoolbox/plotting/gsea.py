@@ -418,7 +418,7 @@ def cluster_dotplot(adata: sc.AnnData,
             continue
         save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
         empty_adata = sc.AnnData()
-        empty_adata.uns["gsea"] = adata.uns['gsea']
+        empty_adata.uns["gsea"] = adata.uns['gsea'].copy()
         empty_adata.uns["gsea"]["enrichment_table"] = tmp
         gsea_dot(empty_adata, save=save, title=f"Top regulated pathways of cluster {c}", **kwargs)
 
