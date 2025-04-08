@@ -4,7 +4,6 @@ import gseapy as gp
 import scanpy as sc
 import tqdm
 import deprecation
-import logging
 
 import sctoolbox
 import sctoolbox.utils.decorator as deco
