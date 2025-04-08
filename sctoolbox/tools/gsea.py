@@ -3,7 +3,6 @@ import pandas as pd
 import gseapy as gp
 import scanpy as sc
 import tqdm
-import warnings
 import deprecation
 
 import sctoolbox
@@ -176,7 +175,7 @@ def gene_set_enrichment(adata: sc.AnnData,
 
     # Return combined table
     if not path_enr:
-        mgs = "No valid pathways found for dataset."
+        msg = "No valid pathways found for dataset."
         logger.error(msg)
         raise ValueError(msg)
 

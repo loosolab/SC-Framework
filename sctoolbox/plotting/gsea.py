@@ -426,7 +426,7 @@ def cluster_dotplot(adata: sc.AnnData,
 def gsea_dot(adata: sc.AnnData,
              sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
              x: Optional[str] = None,
-             cluster_col:str = "Cluster",
+             cluster_col: str = "Cluster",
              cutoff: float = 0.05,
              top_term: Optional[int] = None,
              figsize: Tuple[int, int] = (5, 8),
@@ -516,7 +516,7 @@ def gsea_dot(adata: sc.AnnData,
                            hue=sig_col,
                            palette=cmap,
                            ax=ax
-    )
+                           )
     # Move legend to right side
     sns.move_legend(plot, loc='upper left', bbox_to_anchor=(1, 1, 0, 0))
 
