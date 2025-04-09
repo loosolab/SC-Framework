@@ -2,7 +2,6 @@
 
 import pytest
 import scanpy as sc
-import pandas as pd
 import numpy as np
 import sctoolbox.tools as tools
 from sctoolbox.plotting import gsea
