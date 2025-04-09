@@ -365,7 +365,7 @@ def cluster_dotplot(adata: sc.AnnData,
                     cutoff: float = 0.05,
                     save_figs: bool = True,
                     save_prefix: str = "",
-                    **kwargs: Any):
+                    **kwargs: Any) -> dict:
     """
     Plot up/down regulated pathways per cluster.
 
@@ -391,6 +391,11 @@ def cluster_dotplot(adata: sc.AnnData,
     **kwargs : Any
         Additional parameters for sctoolbox.plotting.gsea.gsea_dot
 
+    Returns
+    -------
+    dict
+        Dictionary with cluster name as key and dotplot axes object as value.
+
     Raises
     ------
     ValueError
@@ -407,6 +412,8 @@ def cluster_dotplot(adata: sc.AnnData,
 
     check_columns(term_table, columns=[cluster_col, sig_col])
 
+    dotplots = dict()
+
     for c in term_table[cluster_col].unique():
         logger.info(f"Plotting dotplot for cluster {c}")
         tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
@@ -420,7 +427,10 @@ def cluster_dotplot(adata: sc.AnnData,
         empty_adata = sc.AnnData()
         empty_adata.uns["gsea"] = adata.uns['gsea'].copy()
         empty_adata.uns["gsea"]["enrichment_table"] = tmp
-        gsea_dot(empty_adata, save=save, title=f"Top regulated pathways of cluster {c}", **kwargs)
+        axes = gsea_dot(empty_adata, save=save, title=f"Top regulated pathways of cluster {c}", **kwargs)
+        dotplots[c] = axes
+
+    return dotplots
 
 
 def gsea_dot(adata: sc.AnnData,
