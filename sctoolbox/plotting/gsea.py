@@ -440,7 +440,8 @@ def gsea_dot(adata: sc.AnnData,
              cutoff: float = 0.05,
              top_term: Optional[int] = None,
              figsize: Tuple[int, int] = (5, 8),
-             size: int = 2,
+             sizes: Tuple[int, int] = (50, 200),
+             x_label_rotation: int = 0,
              cmap: str = "viridis",
              title: str = "Top regulated pathways",
              title_size: int = 16,
@@ -466,8 +467,10 @@ def gsea_dot(adata: sc.AnnData,
         Select top_terms per cluster.
     figsize : Tuple[int, int], default (5, 8)
         Tuple setting the figure size.
-    size : int, default 2
-        Dot size muliplier
+    sizes : Tuple[int, int], default (50, 200)
+        Dot size min, max tuple
+    x_label_rotation : int, default 0
+        Set x-tick label rotation angle
     cmap : str, default "viridis"
         Colormap for dots
     title : str, default "Top regualted pathways"
@@ -522,7 +525,7 @@ def gsea_dot(adata: sc.AnnData,
                            y="Term",
                            x=x,
                            size="% Genes in set",
-                           sizes=(50, 200),
+                           sizes=sizes,
                            hue=sig_col,
                            palette=cmap,
                            ax=ax
@@ -541,6 +544,7 @@ def gsea_dot(adata: sc.AnnData,
     cbar.set_label(sig_col, rotation=0, ha="left", fontsize=13)
     ax.set_ylabel("")
     ax.set_title(title, **{"fontsize": title_size})
+    ax.tick_params(axis='x', rotation=x_label_rotation)
     ax.grid(True, axis="y")
     fig.tight_layout()
     _save_figure(save)
