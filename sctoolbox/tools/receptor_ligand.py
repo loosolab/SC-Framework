@@ -1495,7 +1495,7 @@ def calculate_condition_differences(adata: sc.AnnData,
 
         # Apply cluster filter if provided
         if cluster_filter is not None:
-            available_clusters = set(filtered_adata.obs[cluster_column].unique())
+            available_clusters = set(filtered_adata.obs[cluster_column])
             requested_clusters = set(cluster_filter)
             valid_clusters = requested_clusters.intersection(available_clusters)
 
