@@ -1472,12 +1472,6 @@ def calculate_condition_differences(adata: sc.AnnData,
         if invalid_keys:
             raise ValueError(f"Invalid keys in condition_filters: {invalid_keys}. Valid keys are: {condition_columns}")
 
-    if cluster_filter is not None and not isinstance(cluster_filter, list):
-        raise TypeError(f"cluster_filter must be a list, got {type(cluster_filter)}")
-
-    if gene_filter is not None:
-        if not isinstance(gene_filter, list):
-            raise TypeError(f"gene_filter must be a list, got {type(gene_filter)}")
 
     if len(condition_columns) < 1:
         raise ValueError(f"Need at least one condition column, got {len(condition_columns)}")
