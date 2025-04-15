@@ -308,8 +308,9 @@ def from_single_mtx(mtx: Union[str, Path],
                     transpose: bool = True,
                     header: Union[int, list[int], Literal['infer'], None] = None,
                     barcode_index: int = 0,
-                    genes_index: int = 0,
-                    delimiter: str = "\t") -> sc.AnnData:
+                    var_index: Optional[int] = 0,
+                    delimiter: str = "\t",
+                    comment_flag: str = '#') -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -327,10 +328,12 @@ def from_single_mtx(mtx: Union[str, Path],
         Set header parameter for reading metadata tables using pandas.read_csv.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
-    genes_index : int, default 0
+    var_index : Optional[int], default 0
         Column which contains the gene IDs.
     delimiter : str, default '\t'
         delimiter of genes and barcodes table.
+    comment_flag : str, default '#'
+        Comment flag for the genes and barcodes table.
 
     Returns
     -------
@@ -351,23 +354,13 @@ def from_single_mtx(mtx: Union[str, Path],
         adata = adata.transpose()
 
     # Read in gene and cell annotation
-    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
+    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter, comment=comment_flag)
     barcode_csv.index.names = ['index']
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
 
     if variables:
-        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
-
-        # Handle Bed files
-        if os.path.split(variables)[1].endswith('.bed'):
-            columns = var_csv.columns
-            var_csv.rename(columns={columns[0]: 'start', columns[1]: 'stop'}, inplace=True)
-            var_csv['chr'] = list(var_csv.index)
-
-            var_csv['IDs'] = var_csv['chr'].astype(str) + ':' + var_csv['start'].astype(str) + '-' + var_csv[
-                'stop'].astype(str)
-            var_csv.set_index('IDs', inplace=True)
-
+        # Read in var table
+        var_csv = pd.read_csv(variables, header=header, index_col=var_index, delimiter=delimiter, comment=comment_flag)
         var_csv.index.names = ['index']
         var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
