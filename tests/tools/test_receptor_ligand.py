@@ -360,7 +360,7 @@ def test_filter_anndata(
     expected_success
 ):
     """Test filtering AnnData based on conditions."""
-    with patch('rl.calculate_interaction_table') as mock_calc:
+    with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table') as mock_calc:
         with warnings.catch_warnings(record=True):
             # Filter data
             result = rl._filter_anndata(
@@ -403,7 +403,7 @@ def test_calculate_condition_difference(adata_with_conditions):
     adata_b = adata_with_conditions.copy()
 
     # Mock get_interactions to return test data
-    with patch('sctoolbox.tools.receptor_ligand.differences.get_interactions') as mock_get:
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
         # Mock different interaction tables for the two conditions
         mock_get.side_effect = [
             pd.DataFrame({  # Condition A
@@ -442,8 +442,8 @@ def test_calculate_condition_difference(adata_with_conditions):
 def test_process_condition_combinations(adata_with_conditions):
     """Test processing condition combinations."""
     # Mock filter_anndata and calculate_condition_difference
-    with patch('rl._filter_anndata') as mock_filter:
-        with patch('rl._calculate_condition_difference') as mock_calc:
+    with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
+        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_calc:
             # Setup filtered data and results
             filtered_data = adata_with_conditions.copy()
             mock_filter.return_value = filtered_data
@@ -496,7 +496,7 @@ def test_calculate_condition_differences(
         adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] = diff_results
 
     # Mock _process_condition_combinations
-    with patch('rl._process_condition_combinations') as mock_process:
+    with patch('sctoolbox.tools.receptor_ligand._process_condition_combinations') as mock_process:
         # Set up mock return value
         mock_process.return_value = {
             'new_comparison': {
@@ -543,7 +543,7 @@ def test_calculate_condition_differences(
 def test_calculate_condition_differences_time_analysis(adata_with_conditions):
     """Test time series analysis functionality."""
     # Mock _process_condition_combinations
-    with patch('rl._process_condition_combinations') as mock_process:
+    with patch('sctoolbox.tools.receptor_ligand._process_condition_combinations') as mock_process:
         # Set up mock return value
         mock_process.return_value = {'test': {'differences': pd.DataFrame()}}
 
@@ -659,7 +659,7 @@ def test_plot_networks(adata_with_diff_results):
             rl.condition_differences_network(
                 adata=adata_with_diff_results,
                 n_top=10,
-                split_by_direction=True,
+                split_by_direction=False,
                 close_figs=True
             )
 

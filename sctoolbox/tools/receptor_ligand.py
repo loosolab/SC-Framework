@@ -45,7 +45,7 @@ def download_db(adata: sc.AnnData,
                 inplace: bool = False,
                 overwrite: bool = False,
                 remove_duplicates: bool = True) -> Optional[sc.AnnData]:
-    """
+    r"""
     Download table of receptor-ligand interactions and store in adata.
 
     Parameters
@@ -1426,7 +1426,7 @@ def _add_uns_info_rl(
     adata: sc.AnnData,
     value: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
     inplace: bool = True
-) -> Optional[sc.AnnData]:
+) -> Optional[sc.AnnData | None]:
     """Store receptor-ligand analysis results in the AnnData object.
 
     Parameters
@@ -1449,17 +1449,20 @@ def _add_uns_info_rl(
     _add_uns_info_rl(adata, results, inplace=True)
     # Results stored in adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
     """
-    # Ensure nested structure exists
-    adata.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
-
-    # Store the value and return
     if inplace:
-        adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] = value
-        return None
+        adata_out = adata
+    else:
+        adata_out = adata.copy()
 
-    adata_out = adata.copy()
+    # Ensure nested structure exists
+    adata_out.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
+
+    # Store the value
     adata_out.uns['sctoolbox']['receptor-ligand']['condition-differences'] = value
-    return adata_out
+
+    if not inplace:
+        return adata_out
+    return None
 
 
 # Function to create a filtered AnnData object
@@ -1483,6 +1486,8 @@ def _filter_anndata(
         Input annotated data matrix.
     condition_values, condition_columns : List[str] | npt.ArrayLike
         Values and column names for filtering.
+    condition_columns : List[str] | npt.ArrayLike
+        Columns in adata.obs for filtering
     cluster_column : str
         Column containing cluster information.
     cluster_filter : Optional[List[str] | npt.ArrayLike]
@@ -1500,6 +1505,12 @@ def _filter_anndata(
     -------
     Optional[sc.AnnData]
         Filtered AnnData object or None if no matches.
+
+    Raises
+    ------
+    ValueError
+        If condition lengths don't match, if required columns are missing,
+        or if specified clusters or genes are not found in the data.
 
     Examples
     --------
@@ -1547,7 +1558,7 @@ def _filter_anndata(
 
         cluster_mask = filtered.obs[cluster_column].isin(valid_clusters)
         if cluster_mask.sum() == 0:
-            warnings.warn(f"No cells match the cluster filter.")
+            warnings.warn("No cells match the cluster filter.")
             return None
 
         filtered = filtered[cluster_mask].copy()
@@ -1605,9 +1616,13 @@ def _calculate_condition_difference(
 
     Parameters
     ----------
-    adata_a, adata_b : sc.AnnData
+    adata_a : sc.AnnData
         Annotated single-cell data matrices for the two conditions.
-    condition_a_name, condition_b_name : str
+    adata_b : sc.AnnData
+        Annotated single-cell data matrices for the two conditions.
+    condition_a_name : str
+        Names of the conditions for column labeling.
+    condition_b_name : str
         Names of the conditions for column labeling.
     min_perc : Optional[int | float]
         Minimum percentage of cells expressing the gene (0-100).
@@ -1699,7 +1714,7 @@ def _process_condition_combinations(
     normalize: Optional[int] = None,
     weight_by_ep: bool = True,
     save_diff: bool = False,
-    sequential_time_analysis: bool = False
+    sequential_time_analysis: bool = True
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """Process and compare combinations of conditions for differential analysis.
 
@@ -1713,10 +1728,21 @@ def _process_condition_combinations(
         Possible values for each condition column
     cluster_column : str
         Column containing cluster information
-    min_perc, interaction_score, interaction_perc : Optional[float], optional
-        Filtering thresholds for interactions
-    cluster_filter, gene_filter : Optional[List[str]], optional
-        Specific clusters/genes to include
+    min_perc : Optional[int | float], optional
+        Minimum percentage of cells in a cluster expressing a gene (0-100).
+        Default is None.
+    interaction_score : Optional[float | int], optional
+        Threshold for filtering receptor-ligand interactions by score.
+        Ignored if interaction_perc is set. Default is None.
+    interaction_perc : Optional[int | float], optional
+        Percentile threshold for filtering receptor-ligand interactions (0-100).
+        Overrides interaction_score. Default is None.
+    cluster_filter : Optional[List[str] | npt.ArrayLike], optional
+        Clusters to include in analysis.
+        If None, all clusters are included. Default is None.
+    gene_filter : Optional[List[str] | npt.ArrayLike], optional
+        Genes to include in analysis.
+        If None, all genes are included. Default is None.
     gene_column : Optional[str], optional
         Column for gene IDs (uses index if None)
     normalize : Optional[int], optional
@@ -1725,7 +1751,7 @@ def _process_condition_combinations(
         Weight expression by proportion
     save_diff : bool, default False
         Save difference tables to disk
-    sequential_time_analysis : bool, default False
+    sequential_time_analysis : bool, default True
         If True, only compare sequential timepoints (t₁ vs t₀, t₂ vs t₁, etc.)
         rather than all combinations of timepoints
 
@@ -1807,8 +1833,8 @@ def _process_condition_combinations(
             # Sort by the order in the original condition_values_dict to respect user-defined order
             ordered_targets = [t for t in condition_values_dict[target_condition] if t in valid_targets]
             # Create pairs of sequential timepoints only
-            comparison_pairs = [(ordered_targets[i], ordered_targets[i+1])
-                                for i in range(len(ordered_targets)-1)]
+            comparison_pairs = [(ordered_targets[i], ordered_targets[i + 1])
+                                for i in range(len(ordered_targets) - 1)]
         else:
             # Compare all combinations (default behavior)
             comparison_pairs = list(itertools.combinations(valid_targets, 2))
@@ -1973,12 +1999,10 @@ def calculate_condition_differences(
     )
     """
     # Check if condition differences already exist
-    if (
-        not overwrite and
-        'sctoolbox' in adata.uns and
-        'receptor-ligand' in adata.uns['sctoolbox'] and
-        'condition-differences' in adata.uns['sctoolbox']["receptor-ligand"]
-    ):
+    if (not overwrite
+            and 'sctoolbox' in adata.uns
+            and 'receptor-ligand' in adata.uns['sctoolbox']
+            and 'condition-differences' in adata.uns['sctoolbox']['receptor-ligand']):
         warnings.warn("Condition differences already exists! Skipping. Set `overwrite=True` to replace.")
 
         if inplace:
@@ -2069,8 +2093,8 @@ def calculate_condition_differences(
     # If time series analysis, add time metadata to the results
     if time_column is not None and time_order is not None:
         # Store the time ordering information with the results
-        for comparison_key, comparison_data in all_results[target_condition].items():
-            for result_key, result_df in comparison_data.items():
+        for _, comparison_data in all_results[target_condition].items():
+            for _, result_df in comparison_data.items():
                 result_df['time_column'] = time_column
                 result_df['time_order'] = ','.join(time_order)
 
@@ -2104,7 +2128,8 @@ between different cell populations across experimental conditions and timepoints
 """
 
 
-def _identify_hub_networks(G, hub_threshold=4):
+def _identify_hub_networks(G: nx.DiGraph,
+                           hub_threshold: int = 4) -> tuple[dict[str, nx.DiGraph], list[tuple[str, str]]]:
     """
     Identify hub nodes and create hub-centric subgraphs.
 
@@ -2151,8 +2176,14 @@ def _identify_hub_networks(G, hub_threshold=4):
     return hub_networks, non_hub_edges
 
 
-def _draw_network(graph, ax, title=None, cell_colors=None, cell_shapes=None,
-                  colormap=None, norm=None, all_cell_types=None):
+def _draw_network(graph: nx.DiGraph,
+                  ax: plt.Axes,
+                  title: Optional[str] = None,
+                  cell_colors: Optional[dict[str, str]] = None,
+                  cell_shapes: Optional[dict[str, str]] = None,
+                  colormap: Optional[plt.cm.ScalarMappable] = None,
+                  norm: Optional[plt.Normalize] = None,
+                  all_cell_types: Optional[set[str]] = None) -> None:
     """
     Draw a network on the given axis.
 
@@ -2174,6 +2205,11 @@ def _draw_network(graph, ax, title=None, cell_colors=None, cell_shapes=None,
         Normalization for edge colors
     all_cell_types : set
         Set of all cell types to ensure consistent drawing
+
+    Returns
+    -------
+    None
+        This function modifies the provided axis in-place
 
     Examples
     --------
@@ -2286,7 +2322,7 @@ def _draw_network(graph, ax, title=None, cell_colors=None, cell_shapes=None,
     ax.set_axis_off()
 
 
-def _extract_diff_key_columns(diff_df):
+def _extract_diff_key_columns(diff_df: pd.DataFrame) -> dict[str, str | list[str]]:
     """
     Extract standardized key column names from the differences DataFrame.
 
@@ -2581,10 +2617,10 @@ def condition_differences_network(
                     }
 
                     # Derive interaction score columns based on condition names
-                    interaction_a_col = next((col for col in row.index if col.startswith('interaction_score_') and
-                                             col.endswith(f"_{condition_a}")), None)
-                    interaction_b_col = next((col for col in row.index if col.startswith('interaction_score_') and
-                                             col.endswith(f"_{condition_b}")), None)
+                    interaction_a_col = next((col for col in row.index if col.startswith('interaction_score_')
+                                             and col.endswith(f"_{condition_a}")), None)
+                    interaction_b_col = next((col for col in row.index if col.startswith('interaction_score_')
+                                             and col.endswith(f"_{condition_b}")), None)
 
                     interaction_a = row[interaction_a_col] if interaction_a_col else None
                     interaction_b = row[interaction_b_col] if interaction_b_col else None
@@ -2865,7 +2901,9 @@ def plot_all_condition_differences(
         Minimum connections for a node to be considered a hub
     color_palette : str, default 'tab20'
         Matplotlib colormap to use for cell types
-    vmin, vmax : float, default -1.0, 1.0
+    vmin  : float, default -1.0
+        Color scale limits for edge colors
+     vmax : float, default 1.0
         Color scale limits for edge colors
     n_cols : int, default 4
         Number of columns in the grid layout
@@ -2882,6 +2920,11 @@ def plot_all_condition_differences(
     -------
     Optional[Dict[str, List[matplotlib.figure.Figure]]]
         Dictionary of figures by dimension key if return_figures=True
+
+    Raises
+    ------
+    ValueError
+        If no condition differences are found in the AnnData object
 
     Examples
     --------
