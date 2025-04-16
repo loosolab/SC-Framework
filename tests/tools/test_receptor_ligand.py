@@ -9,6 +9,11 @@ import random
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
+import networkx as nx
+from unittest.mock import patch, MagicMock
+from matplotlib import gridspec
+import warnings
+
 import sctoolbox.tools.receptor_ligand as rl
 
 
@@ -75,64 +80,57 @@ def adata_inter(adata_db):
                                           inplace=False,
                                           overwrite=False)
 
+# ------------------------------ FIXTURES FOR DIFFERENCE TESTING -------------------------------- #
 
 @pytest.fixture
-def adata_with_conditions(adata_db):
-    """Add condition and timepoint columns to the AnnData object."""
-    obj = adata_db.copy()
-
-    # Add condition column with treatment and control group
-    n_cells = obj.n_obs
-    obj.obs['condition'] = ['control'] * (n_cells // 2) + ['treatment'] * (n_cells - n_cells // 2)
-
-    # Add timepoint column
-    timepoints = ['tp1', 'tp2', 'tp3']
-    obj.obs['timepoint'] = [timepoints[i % 3] for i in range(n_cells)]
-
+def adata_with_conditions(adata_inter):
+    """Add condition information to existing adata_inter fixture."""
+    obj = adata_inter.copy()
+    
+    # Add condition information
+    n_obs = len(obj)
+    obj.obs['condition'] = ['control'] * (n_obs // 2) + ['treatment'] * (n_obs - n_obs // 2)
+    obj.obs['batch'] = ['batch1'] * (n_obs // 2) + ['batch2'] * (n_obs - n_obs // 2)
+    obj.obs['timepoint'] = ['day0'] * (n_obs // 3) + ['day3'] * (n_obs // 3) + ['day7'] * (n_obs - 2 * (n_obs // 3))
+    
     return obj
 
 
 @pytest.fixture
-def mock_diff_results():
-    """Create mock difference results for testing."""
-    # Create a simple mock structure mimicking the output of calculate_condition_differences
-    differences_df = pd.DataFrame({
-        'receptor_gene': ['Gene1', 'Gene2', 'Gene3', 'Gene4', 'Gene5'],
-        'ligand_gene': ['GeneA', 'GeneB', 'GeneC', 'GeneD', 'GeneE'],
-        'receptor_cluster': ['cluster 1', 'cluster 2', 'cluster 3', 'cluster 1', 'cluster 2'],
-        'ligand_cluster': ['cluster 4', 'cluster 5', 'cluster 6', 'cluster 5', 'cluster 6'],
-        'interaction_score_a': [0.5, 0.6, 0.7, 0.8, 0.9],
-        'interaction_score_b': [0.9, 0.8, 0.7, 0.6, 0.5],
-        'quantile_rank_a': [0.2, 0.3, 0.5, 0.7, 0.9],
-        'quantile_rank_b': [0.9, 0.8, 0.5, 0.3, 0.1],
-        'rank_diff': [0.7, 0.5, 0.0, -0.4, -0.8],
-        'abs_diff': [0.7, 0.5, 0.0, 0.4, 0.8]
+def diff_results():
+    """Create mock differential analysis results."""
+    differences = pd.DataFrame({
+        'receptor_gene': ['gene1', 'gene2', 'gene3'],
+        'ligand_gene': ['gene10', 'gene20', 'gene30'],
+        'receptor_cluster': ['cluster 0', 'cluster 1', 'cluster 2'],
+        'ligand_cluster': ['cluster 1', 'cluster 2', 'cluster 0'],
+        'interaction_score_treatment': [0.8, 0.6, 0.7],
+        'interaction_score_control': [0.5, 0.3, 0.9],
+        'quantile_rank_treatment': [0.9, 0.6, 0.7],
+        'quantile_rank_control': [0.5, 0.3, 0.8],
+        'rank_diff_control_vs_treatment': [-0.4, -0.3, 0.1],
+        'abs_diff_control_vs_treatment': [0.4, 0.3, 0.1]
     })
-
-    # Add attrs to mimic output
-    differences_df.attrs = {
-        'condition_a': 'Control',
-        'condition_b': 'Treatment',
-        'timepoint_1': 'tp1',
-        'timepoint_2': 'tp2',
-        'condition': 'test_experiment',
-        'group_name': 'Test Comparison',
-        'condition_name': 'test_dimension'
-    }
-
-    # Create the nested dictionary structure
+    
     return {
-        'test_dimension': {
-            'Treatment_vs_Control': {
-                'differences': differences_df
-            }
-        },
-        'time_series': {
-            'tp2_Treatment_vs_tp1_Treatment': {
-                'differences': differences_df.copy()
+        'condition': {
+            'control_vs_treatment': {
+                'differences': differences
             }
         }
     }
+
+
+@pytest.fixture
+def adata_with_diff_results(adata_with_conditions, diff_results):
+    """Create AnnData with mock differential results."""
+    obj = adata_with_conditions.copy()
+    
+    # Add the mock results
+    obj.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
+    obj.uns['sctoolbox']['receptor-ligand']['condition-differences'] = diff_results
+    
+    return obj
 
 
 # ------------------------------ TESTS -------------------------------- #
@@ -315,127 +313,355 @@ def test_connectionPlot(adata_inter):
     assert isinstance(plot, np.ndarray)
 
 
-# ----- test difference analysis functions ----- #
+# ----- Tests for receptor-ligand differences analysis functions. ----- #
 
-def test_condition_differences_network(mock_diff_results):
-    """Test that condition_differences_network generates figures."""
-    figures = rl.condition_differences_network(
-        diff_results=mock_diff_results,
-        n_top=5,
-        figsize=(10, 8),
-        dpi=72,
-        split_by_direction=True,
-        hub_threshold=2
+# ------------------------------ HELPER DIFFENRENCE FUNCTION TESTS -------------------------------- #
+
+@pytest.mark.parametrize("inplace", [True, False])
+def test_add_uns_info_rl(inplace):
+    """Test adding results to .uns."""
+    # Create test data
+    adata = sc.AnnData(np.random.rand(10, 10))
+    value = {'test': {'data': {'differences': pd.DataFrame()}}}
+
+    # Test the function
+    result = rl._add_uns_info_rl(adata, value, inplace=inplace)
+
+    if inplace:
+        # Check inplace modification
+        assert result is None
+        assert 'sctoolbox' in adata.uns
+        assert 'receptor-ligand' in adata.uns['sctoolbox']
+        assert 'condition-differences' in adata.uns['sctoolbox']['receptor-ligand']
+        assert adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] == value
+    else:
+        # Check return of copy
+        assert result is not None
+        assert 'sctoolbox' not in adata.uns  # Original unchanged
+        assert 'sctoolbox' in result.uns
+        assert 'receptor-ligand' in result.uns['sctoolbox']
+        assert 'condition-differences' in result.uns['sctoolbox']['receptor-ligand']
+        assert result.uns['sctoolbox']['receptor-ligand']['condition-differences'] == value
+
+
+@pytest.mark.parametrize(
+    "condition_values,condition_columns,expected_success", 
+    [
+        # Basic condition filtering - success case
+        (['control'], ['condition'], True),
+        # Non-existent condition - failure case
+        (['non_existent'], ['condition'], False),
+    ]
+)
+def test_filter_anndata(
+    adata_with_conditions,
+    condition_values,
+    condition_columns,
+    expected_success
+):
+    """Test filtering AnnData based on conditions."""
+    with patch('rl.calculate_interaction_table') as mock_calc:
+        with warnings.catch_warnings(record=True):
+            # Filter data
+            result = rl._filter_anndata(
+                adata=adata_with_conditions,
+                condition_values=condition_values,
+                condition_columns=condition_columns,
+                cluster_column='cluster'
+            )
+
+            if expected_success:
+                assert result is not None
+                # Check condition filtering
+                for col, val in zip(condition_columns, condition_values):
+                    assert all(result.obs[col] == val)
+                # Verify interaction table calculation was called
+                mock_calc.assert_called_once()
+            else:
+                assert result is None
+                # For failure cases, mock_calc should not be called
+                mock_calc.assert_not_called()
+
+
+def test_filter_anndata_mismatch_condition_lengths(adata_with_conditions):
+    """Test error when condition values and columns don't match."""
+    with pytest.raises(ValueError) as excinfo:
+        rl._filter_anndata(
+            adata=adata_with_conditions,
+            condition_values=['control', 'treatment'],
+            condition_columns=['condition'],
+            cluster_column='cluster'
+        )
+
+    assert "Expected" in str(excinfo.value)
+
+
+def test_calculate_condition_difference(adata_with_conditions):
+    """Test calculating differences between conditions."""
+    # Create copies for different conditions
+    adata_a = adata_with_conditions.copy()
+    adata_b = adata_with_conditions.copy()
+
+    # Mock get_interactions to return test data
+    with patch('sctoolbox.tools.receptor_ligand.differences.get_interactions') as mock_get:
+        # Mock different interaction tables for the two conditions
+        mock_get.side_effect = [
+            pd.DataFrame({  # Condition A
+                'receptor_gene': ['gene1', 'gene2', 'gene3'],
+                'ligand_gene': ['gene10', 'gene20', 'gene30'],
+                'receptor_cluster': ['cluster 0', 'cluster 1', 'cluster 2'],
+                'ligand_cluster': ['cluster 1', 'cluster 2', 'cluster 0'],
+                'interaction_score': [0.8, 0.6, 0.7]
+            }),
+            pd.DataFrame({  # Condition B
+                'receptor_gene': ['gene1', 'gene2', 'gene3'],
+                'ligand_gene': ['gene10', 'gene20', 'gene30'],
+                'receptor_cluster': ['cluster 0', 'cluster 1', 'cluster 2'],
+                'ligand_cluster': ['cluster 1', 'cluster 2', 'cluster 0'],
+                'interaction_score': [0.5, 0.3, 0.9]
+            })
+        ]
+
+        # Calculate differences
+        result = rl._calculate_condition_difference(
+            adata_a=adata_a,
+            adata_b=adata_b,
+            condition_a_name='control',
+            condition_b_name='treatment',
+            min_perc=None,
+            interaction_score=0.5,
+            interaction_perc=None
+        )
+
+        # Check the result structure
+        assert 'rank_diff_treatment_vs_control' in result.columns
+        assert 'abs_diff_treatment_vs_control' in result.columns
+        assert all(result['abs_diff_treatment_vs_control'] >= 0)
+
+
+def test_process_condition_combinations(adata_with_conditions):
+    """Test processing condition combinations."""
+    # Mock filter_anndata and calculate_condition_difference
+    with patch('rl._filter_anndata') as mock_filter:
+        with patch('rl._calculate_condition_difference') as mock_calc:
+            # Setup filtered data and results
+            filtered_data = adata_with_conditions.copy()
+            mock_filter.return_value = filtered_data
+            mock_calc.return_value = pd.DataFrame({
+                'receptor_gene': ['gene1', 'gene2'],
+                'ligand_gene': ['gene10', 'gene20'],
+                'receptor_cluster': ['cluster 0', 'cluster 1'],
+                'ligand_cluster': ['cluster 1', 'cluster 2'],
+                'rank_diff_treatment_vs_control': [0.3, -0.2],
+                'abs_diff_treatment_vs_control': [0.3, 0.2]
+            })
+
+            # Process standard condition comparison
+            result = rl._process_condition_combinations(
+                adata=adata_with_conditions,
+                condition_columns=['condition'],
+                condition_values_dict={'condition': ['control', 'treatment']},
+                cluster_column='cluster',
+                sequential_time_analysis=False
+            )
+
+            # Check results
+            assert len(result) > 0
+            assert 'treatment_vs_control' in result
+
+            # Check structure of the results
+            comparison_data = result['treatment_vs_control']
+            assert 'differences' in comparison_data
+            assert isinstance(comparison_data['differences'], pd.DataFrame)
+
+
+# ------------------------------ MAIN FUNCTION DIFFERENCE TESTS -------------------------------- #
+
+@pytest.mark.parametrize("inplace,overwrite,has_existing", [
+    (True, True, True),    # Modify inplace, overwrite existing
+    (False, False, True),  # Return copy, don't overwrite
+])
+def test_calculate_condition_differences(
+    adata_with_conditions,
+    diff_results,
+    inplace,
+    overwrite,
+    has_existing
+):
+    """Test the main calculate_condition_differences function."""
+    # Prepare data - add existing results if needed
+    adata = adata_with_conditions.copy()
+    if has_existing:
+        adata.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
+        adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] = diff_results
+
+    # Mock _process_condition_combinations
+    with patch('rl._process_condition_combinations') as mock_process:
+        # Set up mock return value
+        mock_process.return_value = {
+            'new_comparison': {
+                'differences': pd.DataFrame({
+                    'receptor_gene': ['gene1'],
+                    'ligand_gene': ['gene10'],
+                    'receptor_cluster': ['cluster 0'],
+                    'ligand_cluster': ['cluster 1'],
+                    'rank_diff_new_vs_old': [0.3],
+                    'abs_diff_new_vs_old': [0.3]
+                })
+            }
+        }
+
+        # Capture warnings
+        with warnings.catch_warnings(record=True) as w:
+            # Run with parameters
+            result = rl.calculate_condition_differences(
+                adata=adata,
+                condition_columns=['condition'],
+                cluster_column='cluster',
+                inplace=inplace,
+                overwrite=overwrite
+            )
+
+            # Check behavior based on parameters
+            if has_existing and not overwrite:
+                # Should warn and skip processing
+                assert len(w) > 0
+                assert "already exists" in str(w[0].message)
+                assert not mock_process.called
+            else:
+                # Should process
+                assert mock_process.called
+
+            # Check result based on inplace
+            if inplace:
+                assert result is None
+            else:
+                assert result is not None
+                assert result is not adata
+
+
+def test_calculate_condition_differences_time_analysis(adata_with_conditions):
+    """Test time series analysis functionality."""
+    # Mock _process_condition_combinations
+    with patch('rl._process_condition_combinations') as mock_process:
+        # Set up mock return value
+        mock_process.return_value = {'test': {'differences': pd.DataFrame()}}
+
+        # Run with time series settings
+        rl.calculate_condition_differences(
+            adata=adata_with_conditions,
+            condition_columns=['timepoint', 'condition'],
+            cluster_column='cluster',
+            time_column='timepoint',
+            time_order=['day0', 'day3', 'day7']
+        )
+
+        # Verify mock_process was called with sequential_time_analysis=True
+        assert mock_process.called
+        assert mock_process.call_args[1]['sequential_time_analysis'] is True
+
+
+# ------------------------------ ERROR CASE TESTS -------------------------------- #
+
+@pytest.mark.parametrize("error_condition,expected_error", [
+    # Missing time_order
+    ({"time_column": "timepoint", "time_order": None}, "time_order must be provided"),
+    # Invalid time column
+    ({"time_column": "non_existent", "time_order": ['day0']}, "time_column"),
+    # Invalid condition filter
+    ({"condition_filters": {"non_existent": ["value"]}}, "Invalid keys"),
+])
+def test_calculate_condition_differences_errors(
+    adata_with_conditions,
+    error_condition,
+    expected_error
+):
+    """Test error handling in condition differences calculation."""
+    # Prepare data with time column if needed
+    adata = adata_with_conditions.copy()
+
+    # Build kwargs from the error_condition and base parameters
+    kwargs = {
+        "adata": adata,
+        "condition_columns": ['condition'],
+        "cluster_column": 'cluster'
+    }
+    kwargs.update(error_condition)
+
+    # Test for the expected error
+    with pytest.raises(ValueError) as excinfo:
+        rl.calculate_condition_differences(**kwargs)
+
+    assert expected_error in str(excinfo.value)
+
+
+# ------------------------------ VISUALIZATION TESTS -------------------------------- #
+
+def test_extract_diff_key_columns():
+    """Test extracting key columns from differences dataframe."""
+    # Test standard column names
+    df1 = pd.DataFrame({
+        'rank_diff_treatment_vs_control': [0.5], 
+        'abs_diff_treatment_vs_control': [0.5]
+    })
+    result1 = rl._extract_diff_key_columns(df1)
+    assert result1['condition_a'] == 'control'
+    assert result1['condition_b'] == 'treatment'
+    assert result1['diff_col'] == 'rank_diff_treatment_vs_control'
+
+    # Test time series column info
+    df2 = pd.DataFrame({
+        'rank_diff_day7_vs_day0': [0.5],
+        'abs_diff_day7_vs_day0': [0.5],
+        'time_column': ['timepoint'],
+        'time_order': ['day0,day3,day7']
+    })
+    result2 = rl._extract_diff_key_columns(df2)
+    assert result2['condition_a'] == 'day0'
+    assert result2['condition_b'] == 'day7'
+    assert result2['time_column'] == 'timepoint'
+    assert result2['time_order'] == ['day0', 'day3', 'day7']
+
+
+@pytest.mark.parametrize("graph_data,hub_threshold,expected_hubs", [
+    # Hub with 5 connections
+    ([('hub1', 'node1'), ('hub1', 'node2'), ('hub1', 'node3'), ('node4', 'hub1'), ('node5', 'hub1')], 
+     4, ['hub1']),
+    # No hubs (threshold too high)
+    ([('node1', 'node2'), ('node1', 'node3'), ('node2', 'node3')], 
+     4, []),
+])
+def test_identify_hub_networks(graph_data, hub_threshold, expected_hubs):
+    """Test the network hub identification."""
+    # Create test graph
+    G = nx.DiGraph()
+    G.add_edges_from(graph_data)
+
+    # Identify hubs
+    hub_networks, _ = rl._identify_hub_networks(
+        G, hub_threshold=hub_threshold
     )
 
-    # Check if figures were created
-    assert isinstance(figures, list)
-    assert all(isinstance(fig, Figure) for fig in figures)
-
-    for fig in figures:
-        plt.close(fig)
+    # Check hub nodes
+    assert set(hub_networks.keys()) == set(expected_hubs)
 
 
-def test_plot_all_condition_differences(mock_diff_results):
-    """Test that plot_all_condition_differences works with mock data."""
-    figures_dict = rl.plot_all_condition_differences(
-        diff_results=mock_diff_results,
-        n_top=5,
-        figsize=(10, 8),
-        dpi=72,
-        split_by_direction=True,
-        hub_threshold=2,
-        show=False,
-        return_figures=True
-    )
+def test_plot_networks(adata_with_diff_results):
+    """Test network plotting functionality."""
+    # Test with mocked figure
+    with patch('matplotlib.pyplot.figure') as mock_fig:
+        with patch('matplotlib.pyplot.close'):
+            # Mock figure and axis
+            mock_fig.return_value = MagicMock()
+            mock_fig.return_value.add_subplot.return_value = MagicMock()
 
-    # Check the returned dictionary structure
-    assert isinstance(figures_dict, dict)
-    assert all(isinstance(figures_dict[dim], list) for dim in figures_dict)
+            # Call plotting function
+            rl.condition_differences_network(
+                adata=adata_with_diff_results,
+                n_top=10,
+                split_by_direction=True,
+                close_figs=True
+            )
 
-    for dim in figures_dict:
-        for fig in figures_dict[dim]:
-            plt.close(fig)
-
-
-def test_track_clusters_or_genes(mock_diff_results):
-    """Test track_clusters_or_genes works with mock data."""
-    timepoint_order = ['tp1', 'tp2', 'tp3']
-
-    # Track cluster
-    figures = rl.track_clusters_or_genes(
-        diff_results=mock_diff_results,
-        clusters=['cluster 1', 'cluster 2'],
-        timepoint_order=timepoint_order,
-        min_interactions=1,
-        n_top=5,
-        figsize=(10, 8),
-        dpi=72,
-        split_by_direction=True,
-        hub_threshold=2
-    )
-
-    # Check if figures were created
-    assert isinstance(figures, list)
-    assert all(isinstance(fig, Figure) for fig in figures)
-
-    for fig in figures:
-        plt.close(fig)
-
-    # Track genes
-    figures = rl.track_clusters_or_genes(
-        diff_results=mock_diff_results,
-        genes=['Gene1', 'GeneA'],
-        timepoint_order=timepoint_order,
-        min_interactions=1,
-        n_top=5,
-        figsize=(10, 8),
-        dpi=72,
-        split_by_direction=True,
-        hub_threshold=2
-    )
-
-    # Check if figures were created
-    assert isinstance(figures, list)
-    assert all(isinstance(fig, Figure) for fig in figures)
-
-    for fig in figures:
-        plt.close(fig)
-
-
-def test_calculate_condition_differences(adata_with_conditions):
-    """Test if calculate_condition_differences works with condition adata."""
-    diff_results = rl.calculate_condition_differences(
-        adata=adata_with_conditions,
-        condition_columns=['condition'],
-        cluster_column='cluster',
-        min_perc=0,
-        condition_filters={'condition': ['control', 'treatment']},
-        inplace=False
-    )
-
-    # Verify structure
-    assert isinstance(diff_results, dict)
-    assert 'condition' in diff_results
-
-    for dim, comparisons in diff_results.items():
-        for comp_key, comp_data in comparisons.items():
-            if 'differences' in comp_data:
-                assert isinstance(comp_data['differences'], pd.DataFrame)
-
-
-def test_calculate_condition_differences_over_time(adata_with_conditions):
-    """Test if calculate_condition_differences_over_time works with condition adata."""
-    diff_results = rl.calculate_condition_differences_over_time(
-        adata=adata_with_conditions,
-        timepoint_column='timepoint',
-        condition_column='condition',
-        condition_value='control',
-        cluster_column='cluster',
-        timepoint_order=['tp1', 'tp2', 'tp3'],
-        min_perc=0,
-        inplace=False
-    )
-
-    assert isinstance(diff_results, dict)
-    assert 'time_series' in diff_results
+            # Just check that the function runs without errors
+            assert mock_fig.called

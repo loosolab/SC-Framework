@@ -21,13 +21,16 @@ import warnings
 import logging
 import liana.resource as liana_res
 import networkx as nx
-from beartype.typing import Optional, Tuple, List, Dict
+from beartype.typing import Optional, Tuple, List, Dict, Set
 import numpy.typing as npt
 from beartype import beartype
+
+import itertools
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
+logger = settings.logger
 
 # -------------------------------------------------- setup functions -------------------------------------------------- #
 
@@ -40,8 +43,9 @@ def download_db(adata: sc.AnnData,
                 receptor_column: str,
                 sep: str = "\t",
                 inplace: bool = False,
-                overwrite: bool = False) -> Optional[sc.AnnData]:
-    r"""
+                overwrite: bool = False,
+                remove_duplicates: bool = True) -> Optional[sc.AnnData]:
+    """
     Download table of receptor-ligand interactions and store in adata.
 
     Parameters
@@ -67,6 +71,8 @@ def download_db(adata: sc.AnnData,
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
         If True will overwrite existing database.
+    remove_duplicates : bool, default True
+        If True, removes duplicate receptor-ligand combinations.
 
     Notes
     -----
@@ -112,6 +118,13 @@ def download_db(adata: sc.AnnData,
         raise ValueError(f"Ligand column '{ligand_column}' not found in database! Available columns: {database.columns}")
     if receptor_column not in database.columns:
         raise ValueError(f"Receptor column '{receptor_column}' not found in database! Available columns: {database.columns}")
+
+    # Remove duplicates if requested
+    if remove_duplicates:
+        # Get mask of duplicated receptor-ligand combinations
+        duplicate_mask = database.duplicated(subset=[ligand_column, receptor_column], keep='first')
+        # Remove duplicates
+        database = database[~duplicate_mask]
 
     modified_adata = adata if inplace else adata.copy()
 
@@ -172,7 +185,7 @@ def calculate_interaction_table(adata: sc.AnnData,
     """
 
     if "receptor-ligand" not in adata.uns.keys():
-        raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(...)` before running this function.")
+        raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(   )` before running this function.")
 
     # interaction table already exists?
     if not overwrite and "receptor-ligand" in adata.uns and "interactions" in adata.uns["receptor-ligand"]:
@@ -262,16 +275,12 @@ def calculate_interaction_table(adata: sc.AnnData,
                     "ligand_cluster_size": []}
 
     # ----- create interaction table -----
-    processed_pairs = set()
     for _, (receptor, ligand) in tqdm(adata.uns["receptor-ligand"]["database"][[r_col, l_col]].iterrows(),
                                       total=len(adata.uns["receptor-ligand"]["database"]),
                                       desc="finding receptor-ligand interactions"):
-        # Skip if pair has already been processed or is empty
-        pair_key = f"{receptor}|{ligand}"
-        if pair_key in processed_pairs or receptor is np.nan or ligand is np.nan:
-            continue
 
-        processed_pairs.add(pair_key)
+        if receptor is np.nan or ligand is np.nan:
+            continue
 
         if receptor not in zscores.index or ligand not in zscores.index:
             continue
@@ -499,7 +508,6 @@ def hairball(adata: sc.AnnData,
 
     # set edge colors/ width based on weight
     colormap = matplotlib.cm.get_cmap('viridis', len(graph.es))
-    print(f"Max weight {np.max(np.array(graph.es['weight']))}")
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
     for e in graph.es:
         e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
@@ -639,7 +647,7 @@ def cyclone(
     if not directional:
         interactions_undirected = interactions_directed.copy()
 
-        # OpenAI GPT-4 supported >>>
+        # OpenAI GPT-4 supported    
         # First, make sure each edge is represented in the same way, by sorting the two ends
         interactions_undirected[cluster_col_list] = np.sort(
             interactions_undirected[cluster_col_list].values,
@@ -1390,170 +1398,628 @@ def _check_interactions(anndata: sc.AnnData):
 
     # is interaction table available?
     if "receptor-ligand" not in anndata.uns.keys() or "interactions" not in anndata.uns["receptor-ligand"].keys():
-        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(...)` before running this function.")
+        raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(   )` before running this function.")
 
-# ----------------------------------------- differences calculation ---------------------------------------------------------------------#
+# --------- DIFFERENCE CALCULATION ----------#
+"""
+Receptor-Ligand Difference Analysis
+
+This section provides functions for receptor-ligand interaction analysis
+between different cell populations across experimental conditions.
+The analysis pipeline:
+
+1. Filters the AnnData object based on conditions, clusters, and genes
+2. Calculates interaction tables between cell clusters
+3. Compares interaction scores between different conditions
+4. Processes combinations of conditions for differential analysis
+5. Stores results in the AnnData object
+
+The results can be visualized with the plotting functions
+of the subsequent section.
+"""
 
 
-@deco.log_anndata
-@beartype
-def calculate_condition_differences(adata: sc.AnnData,
-                                    condition_columns: List[str],
-                                    cluster_column: str,
-                                    min_perc: Optional[int | float] = None,
-                                    interaction_score: Optional[float | int] = None,
-                                    interaction_perc: Optional[int | float] = None,
-                                    condition_filters: Optional[Dict[str, List[str]]] = None,
-                                    gene_column: Optional[str] = None,
-                                    cluster_filter: Optional[List[str]] = None,
-                                    gene_filter: Optional[List[str]] = None,
-                                    normalize: Optional[int] = None,
-                                    weight_by_ep: Optional[bool] = True,
-                                    inplace: bool = False) -> Optional[Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]:
+# Function to add data to adata.uns
+def _add_uns_info_rl(
+    adata: sc.AnnData, 
+    value: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
+    inplace: bool = True
+) -> Optional[sc.AnnData]:
+    """Store receptor-ligand analysis results in the AnnData object.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Input AnnData object
+    value : dict
+        Value to store in the AnnData object
+    inplace : bool, default True
+        Whether to modify adata inplace or return a copy
+
+    Returns
+    -------
+    AnnData or None
+        Modified AnnData if not inplace, otherwise None
+
+    Examples
+    --------
+    results = {'condition1': {'comparison1': {'differences': df}}}
+    _add_uns_info_rl(adata, results, inplace=True)
+    # Results stored in adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
     """
-    Calculate interaction quantile rank differences between conditions.
+    # Ensure nested structure exists
+    adata.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
 
-    This function compares values of the first condition within each
-    combination of the subsequent conditions.
+    # Store the value and return
+    if inplace:
+        adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] = value
+        return None
+
+    adata_out = adata.copy()
+    adata_out.uns['sctoolbox']['receptor-ligand']['condition-differences'] = value
+    return adata_out
+
+
+# Function to create a filtered AnnData object
+@beartype
+def _filter_anndata(
+    adata: sc.AnnData,
+    condition_values: List[str] | npt.ArrayLike,
+    condition_columns: List[str] | npt.ArrayLike,
+    cluster_column: str,
+    cluster_filter: Optional[List[str] | npt.ArrayLike] = None,
+    gene_column: Optional[str] = None,
+    gene_filter: Optional[List[str] | npt.ArrayLike] = None,
+    normalize: Optional[int] = None,
+    weight_by_ep: bool = True
+) -> Optional[sc.AnnData]:
+    """Create a filtered AnnData object based on specified conditions.
 
     Parameters
     ----------
     adata : sc.AnnData
-        AnnData object that holds the expression values and metadata
-    condition_columns : List[str]
-        Names of columns in adata.obs for hierarchical filtering, in order.
-        The first column contains values to be compared within each combination of the other columns.
+        Input annotated data matrix.
+    condition_values, condition_columns : List[str] | npt.ArrayLike
+        Values and column names for filtering.
     cluster_column : str
-        Name of the cluster column in adata.obs.
-    min_perc : Optional[int | float], default None
-        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
-    interaction_score : Optional[float | int], default None
-        Filter receptor-ligand interactions below given score. Ignored if `interaction_perc` is set.
-    interaction_perc : Optional[int | float], default None
-        Filter receptor-ligand interactions below the given percentile. Overwrite `interaction_score`. Value from 0-100.
-    condition_filters : Optional[Dict[str, List[str]]], default None
-        Dictionary mapping condition column names to lists of values to include.
-        If a column is not in this dictionary or the dictionary is None, all unique values for that column will be used.
-    gene_column : Optional[str], default None
-        Column in adata.var that holds gene symbols/ids. Uses index when None.
-    cluster_filter : Optional[List[str]], default None
-        List of cluster names to include in the analysis. If None, all clusters will be included.
-    gene_filter : Optional[List[str]], default None
-        List of genes to include in the analysis. If None, all genes will be included.
-    normalize : Optional[int], default None
-        Correct clusters to given size. If None, max clustersize is used.
-    weight_by_ep : Optional[bool], default True
-        Whether to weight the expression Z-Score by the expression proprotion.
-    inplace : bool, default False
-        Whether to copy `adata` or modify it inplace.
+        Column containing cluster information.
+    cluster_filter : Optional[List[str] | npt.ArrayLike]
+        Specific clusters to include (all if None).
+    gene_column : Optional[str]
+        Column containing gene identifiers (uses index if None).
+    gene_filter : Optional[List[str] | npt.ArrayLike]
+        Specific genes to include (all if None).
+    normalize : Optional[int]
+        Size to normalize clusters to (no normalization if None).
+    weight_by_ep : bool, default True
+        Whether to weight expression by proportion.
 
     Returns
     -------
-    Optional[Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]
-        If not inplace, return nested dictionary with results organized by condition combinations:
-        - First level keys are condition dimensions (e.g., 'group_timepoint')
-        - Second level keys are specific comparisons (e.g., 'timepoint=4d_Infected_vs_Control')
-        - Third level contains 'differences': DataFrame of interaction differences
+    Optional[sc.AnnData]
+        Filtered AnnData object or None if no matches.
+
+    Examples
+    --------
+    filtered_data = _filter_anndata(
+         adata=adata,
+            condition_values=['treatment'],
+            condition_columns=['condition'],
+            cluster_column='leiden',
+            cluster_filter=['T-cell', 'B-cell']
+    )
+    """
+    # Validate and normalize inputs
+    if len(condition_values) != len(condition_columns):
+        raise ValueError(f"Expected {len(condition_columns)} condition values, got {len(condition_values)}")
+
+    # Create pairs of condition columns and values for filtering
+    condition_pairs = list(zip(
+        np.array(condition_columns) if condition_columns is not None else [],
+        np.array(condition_values) if condition_values is not None else []
+    ))
+
+    # Filter out pairs where value is None
+    valid_pairs = [(col, val) for col, val in condition_pairs if val is not None]
+    if not valid_pairs:
+        return None
+
+    # Construct and apply query for cell filtering
+    query = " & ".join([f"{col} == '{val}'" for col, val in valid_pairs])
+    cell_mask = adata.obs.eval(query)
+
+    if cell_mask.sum() == 0:
+        warnings.warn(f"No cells found for conditions {dict(valid_pairs)}.")
+        return None
+
+    filtered = adata[cell_mask].copy()
+
+    # Apply cluster filter if provided
+    if cluster_filter is not None:
+        cluster_filter = np.unique(cluster_filter)
+        valid_clusters = set(cluster_filter).intersection(set(filtered.obs[cluster_column]))
+
+        if not valid_clusters:
+            warnings.warn("No valid clusters for the specified conditions.")
+            return None
+
+        cluster_mask = filtered.obs[cluster_column].isin(valid_clusters)
+        if cluster_mask.sum() == 0:
+            warnings.warn(f"No cells match the cluster filter.")
+            return None
+
+        filtered = filtered[cluster_mask].copy()
+
+    # Apply gene filter if provided
+    if gene_filter is not None:
+        gene_filter = np.unique(gene_filter)
+
+        if gene_column is not None and gene_column not in filtered.var.columns:
+            raise ValueError(f"gene_column: {gene_column} not available in adata.var.columns")
+
+        # Get gene source (index or column)
+        gene_source = filtered.var.index if gene_column is None else filtered.var[gene_column]
+        valid_genes = set(gene_filter).intersection(set(gene_source))
+
+        if not valid_genes:
+            warnings.warn("No valid genes for the specified conditions.")
+            return None
+
+        # Apply gene mask
+        gene_mask = (filtered.var.index if gene_column is None else filtered.var[gene_column]).isin(valid_genes)
+
+        if gene_mask.sum() == 0:
+            warnings.warn("No genes match the gene filter.")
+            return None
+
+        filtered = filtered[:, gene_mask].copy()
+
+    # Calculate interaction table for the filtered data
+    calculate_interaction_table(
+        adata=filtered,
+        cluster_column=cluster_column,
+        gene_index=gene_column,
+        normalize=normalize,
+        weight_by_ep=weight_by_ep,
+        inplace=True,
+        overwrite=True
+    )
+
+    return filtered
+
+
+# Function to calculate differences between two AnnData objects
+@beartype
+def _calculate_condition_difference(
+    adata_a: sc.AnnData,
+    adata_b: sc.AnnData,
+    condition_a_name: str,
+    condition_b_name: str,
+    min_perc: Optional[int | float] = None,
+    interaction_score: Optional[float | int] = None,
+    interaction_perc: Optional[float | int] = None
+) -> pd.DataFrame:
+    """Calculate quantile rank differences between two conditions' interaction scores.
+
+    Parameters
+    ----------
+    adata_a, adata_b : sc.AnnData
+        Annotated single-cell data matrices for the two conditions.
+    condition_a_name, condition_b_name : str
+        Names of the conditions for column labeling.
+    min_perc : Optional[int | float]
+        Minimum percentage of cells expressing the gene (0-100).
+    interaction_score : Optional[float | int]
+        Minimum interaction score threshold (ignored if interaction_perc is set).
+    interaction_perc : Optional[float | int]
+        Minimum interaction percentile threshold (0-100, overrides interaction_score).
+
+    Returns
+    -------
+    pd.DataFrame
+        Quantile-ranked interaction differences between conditions.
+
+    Notes
+    -----
+    Filters might introduce bias in the difference calculation.
+
+    Examples
+    --------
+    diff_result = _calculate_condition_difference(
+        adata_a=adata_treatment,
+        adata_b=adata_control,
+        condition_a_name='treatment',
+        condition_b_name='control',
+        min_perc=10
+    )
+    diff_result.sort_values('abs_diff_control_vs_treatment', ascending=False).head()
+    """
+    # Get interaction tables and add condition labels
+    interactions = {
+        condition_a_name: get_interactions(
+            adata_a, min_perc=min_perc,
+            interaction_score=interaction_score,
+            interaction_perc=interaction_perc
+        ),
+        condition_b_name: get_interactions(
+            adata_b, min_perc=min_perc,
+            interaction_score=interaction_score,
+            interaction_perc=interaction_perc
+        )
+    }
+
+    # Add condition labels and combine for ranking
+    for cond, df in interactions.items():
+        df['condition'] = cond
+
+    combined = pd.concat(interactions.values(), ignore_index=True)
+    combined['quantile_rank'] = combined['interaction_score'].rank(method='average', pct=True)
+
+    # Key columns for merging - used to identify unique receptor-ligand pairs
+    key_cols = ['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster']
+
+    # Extract ranks and merge back to original data
+    for cond in [condition_a_name, condition_b_name]:
+        cond_ranks = combined[combined['condition'] == cond][key_cols + ['quantile_rank']]
+        interactions[cond] = pd.merge(interactions[cond], cond_ranks, on=key_cols)
+
+    # Merge the interaction tables with descriptive suffixes
+    a_suffix, b_suffix = f"_{condition_a_name}", f"_{condition_b_name}"
+    result = pd.merge(
+        interactions[condition_a_name], 
+        interactions[condition_b_name],
+        on=key_cols, 
+        suffixes=(a_suffix, b_suffix)
+    )
+
+    # Calculate difference between condition ranks
+    diff_col = f'rank_diff_{condition_b_name}_vs_{condition_a_name}'
+    abs_diff_col = f'abs_diff_{condition_b_name}_vs_{condition_a_name}'
+
+    result[diff_col] = result[f'quantile_rank{b_suffix}'] - result[f'quantile_rank{a_suffix}']
+    result[abs_diff_col] = result[diff_col].abs()
+
+    return result
+
+
+@beartype
+def _process_condition_combinations(
+    adata: sc.AnnData,
+    condition_columns: List[str] | npt.ArrayLike,
+    condition_values_dict: Dict[str, List[str] | npt.ArrayLike],
+    cluster_column: str,
+    min_perc: Optional[int | float] = None,
+    interaction_score: Optional[float | int] = None,
+    interaction_perc: Optional[float | int] = None,
+    cluster_filter: Optional[List[str] | npt.ArrayLike] = None,
+    gene_column: Optional[str] = None,
+    gene_filter: Optional[List[str] | npt.ArrayLike] = None,
+    normalize: Optional[int] = None,
+    weight_by_ep: bool = True,
+    save_diff: bool = False,
+    sequential_time_analysis: bool = False
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """Process and compare combinations of conditions for differential analysis.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated single-cell data matrix
+    condition_columns : List[str] | npt.ArrayLike
+        Columns in adata.obs for filtering
+    condition_values_dict : Dict[str, List[str] | npt.ArrayLike]
+        Possible values for each condition column
+    cluster_column : str
+        Column containing cluster information
+    min_perc, interaction_score, interaction_perc : Optional[float], optional
+        Filtering thresholds for interactions
+    cluster_filter, gene_filter : Optional[List[str]], optional
+        Specific clusters/genes to include
+    gene_column : Optional[str], optional
+        Column for gene IDs (uses index if None)
+    normalize : Optional[int], optional
+        Size for cluster normalization
+    weight_by_ep : bool, default True
+        Weight expression by proportion
+    save_diff : bool, default False
+        Save difference tables to disk
+    sequential_time_analysis : bool, default False
+        If True, only compare sequential timepoints (t₁ vs t₀, t₂ vs t₁, etc.)
+        rather than all combinations of timepoints
+
+    Returns
+    -------
+    Dict[str, Dict[str, pd.DataFrame]]
+        Comparison results dictionary
+
+    Examples
+    --------
+    condition_values = {'treatment': ['A', 'B', 'C'], 'batch': ['1', '2']}
+    results = _process_condition_combinations(
+        adata=adata,
+        condition_columns=['treatment', 'batch'],
+        condition_values_dict=condition_values,
+        cluster_column='leiden'
+    )
+    """
+    # Process inputs and setup
+    condition_columns = np.array(condition_columns)
+    target_condition = condition_columns[0]  # First condition is the target to compare
+    target_values = condition_values_dict[target_condition]
+
+    # Check if we have enough values to compare
+    if len(target_values) < 2:
+        warnings.warn(f"Need at least 2 values for {target_condition} to compare")
+        return {}
+
+    # Generate all possible combinations of control conditions
+    control_conditions = condition_columns[1:] 
+    if not control_conditions.size:
+        # If only one condition column, no additional controls
+        control_combinations = [{}]
+    else:
+        # Generate all combinations of values for control conditions
+        control_values = [condition_values_dict[col] for col in control_conditions]
+        control_combinations = [
+            dict(zip(control_conditions, combo)) 
+            for combo in itertools.product(*control_values)
+        ]
+
+    # Store results
+    all_results = {}
+
+    # Process each control combination
+    for control_dict in control_combinations:
+        # Create a descriptive string for this control combination
+        control_desc = "_".join([f"{col}={val}" for col, val in control_dict.items()])
+        filtered_datasets = {}
+
+        # Filter data for each target value
+        for target_value in target_values:
+            # Combine target and control values for filtering
+            filter_values = [target_value] + [control_dict.get(col) for col in condition_columns[1:]]
+            logger.info(f"Filtering for {list(zip(condition_columns, filter_values))}")
+
+            # Filter the AnnData object
+            filtered = _filter_anndata(
+                adata=adata,
+                condition_values=filter_values,
+                condition_columns=condition_columns,
+                cluster_column=cluster_column,
+                cluster_filter=cluster_filter,
+                gene_column=gene_column,
+                gene_filter=gene_filter,
+                normalize=normalize,
+                weight_by_ep=weight_by_ep
+            )
+
+            if filtered is not None:
+                filtered_datasets[target_value] = filtered
+                logger.info(f"Filtered {target_condition}={target_value}: {filtered.n_obs} cells")
+
+        # Get valid targets and determine what pairs to compare
+        valid_targets = list(filtered_datasets.keys())
+
+        # Determine which pairs to compare
+        if sequential_time_analysis and len(valid_targets) > 1:
+            # Sort by the order in the original condition_values_dict to respect user-defined order
+            ordered_targets = [t for t in condition_values_dict[target_condition] if t in valid_targets]
+            # Create pairs of sequential timepoints only
+            comparison_pairs = [(ordered_targets[i], ordered_targets[i+1])
+                                for i in range(len(ordered_targets)-1)]
+        else:
+            # Compare all combinations (default behavior)
+            comparison_pairs = list(itertools.combinations(valid_targets, 2))
+
+        # Process each comparison pair
+        for value_a, value_b in comparison_pairs:
+            diff_result = _calculate_condition_difference(
+                adata_a=filtered_datasets[value_a],
+                adata_b=filtered_datasets[value_b],
+                condition_a_name=str(value_a),
+                condition_b_name=str(value_b),
+                min_perc=min_perc,
+                interaction_score=interaction_score,
+                interaction_perc=interaction_perc
+            )
+
+            if not diff_result.empty:
+                # Create key and store results
+                comp_key = f"{control_desc}_{value_b}_vs_{value_a}" if control_desc else f"{value_b}_vs_{value_a}"
+
+                # Add control info to results
+                for col, val in control_dict.items():
+                    diff_result[f"control_{col}"] = val
+
+                # Store and optionally save results
+                all_results[comp_key] = {'differences': diff_result}
+
+                if save_diff:
+                    diff_result.to_csv(f"{settings.table_dir}/{comp_key}_differences.csv", sep='\t', index=False)
+
+    return all_results
+
+
+@deco.log_anndata
+@beartype
+def calculate_condition_differences(
+    adata: sc.AnnData,
+    condition_columns: List[str] | npt.ArrayLike,
+    cluster_column: str,
+    min_perc: Optional[int | float] = None,
+    interaction_score: Optional[float | int] = None,
+    interaction_perc: Optional[int | float] = None,
+    condition_filters: Optional[Dict[str, List[str] | npt.ArrayLike]] = None,
+    time_column: Optional[str] = None,
+    time_order: Optional[List[str] | npt.ArrayLike] = None,
+    gene_column: Optional[str] = None,
+    cluster_filter: Optional[List[str] | npt.ArrayLike] = None,
+    gene_filter: Optional[List[str] | npt.ArrayLike] = None,
+    normalize: Optional[int] = None,
+    weight_by_ep: Optional[bool] = True,
+    inplace: bool = False,
+    overwrite: bool = False,
+    save_diff: bool = False
+) -> Optional[sc.AnnData | Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]:
+    """
+    Calculate interaction quantile rank differences between conditions.
+
+    Compares values of the first condition within each combination of subsequent conditions.
+    Can also analyze conditions over specific timepoints in user-defined order.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        Annotated data matrix with expression values and metadata.
+    condition_columns : List[str] | npt.ArrayLike
+        Columns in adata.obs for hierarchical filtering, ordered sequentially.
+        First column contains values to be compared within combinations of other columns.
+    cluster_column : str
+        Name of the cluster column in adata.obs.
+    min_perc : Optional[int | float], optional
+        Minimum percentage of cells in a cluster expressing a gene (0-100).
+        Default is None.
+    interaction_score : Optional[float | int], optional
+        Threshold for filtering receptor-ligand interactions by score.
+        Ignored if interaction_perc is set. Default is None.
+    interaction_perc : Optional[int | float], optional
+        Percentile threshold for filtering receptor-ligand interactions (0-100).
+        Overrides interaction_score. Default is None.
+    condition_filters : Optional[Dict[str, List[str] | npt.ArrayLike]], optional
+        Mapping of condition column names to values to include.
+        If None or column not specified, all unique values are used. Default is None.
+    time_column : Optional[str], optional
+        Column in adata.obs containing timepoint information.
+        If provided, analysis will respect time ordering. Default is None.
+    time_order : Optional[List[str] | npt.ArrayLike], optional
+        Order of timepoints to use in analysis.
+        Required if time_column is specified. Default is None.
+    gene_column : Optional[str], optional
+        Column in adata.var containing gene symbols/IDs.
+        Uses index if None. Default is None.
+    cluster_filter : Optional[List[str] | npt.ArrayLike], optional
+        Clusters to include in analysis.
+        If None, all clusters are included. Default is None.
+    gene_filter : Optional[List[str] | npt.ArrayLike], optional
+        Genes to include in analysis.
+        If None, all genes are included. Default is None.
+    normalize : Optional[int], optional
+        Correct clusters to specified size.
+        If None, maximum cluster size is used. Default is None.
+    weight_by_ep : Optional[bool], default True
+        Whether to weight expression Z-Score by expression proportion.
+    inplace : bool, default False
+        If True, modifies adata in-place.
+        If False, returns a copy of adata with results.
+    overwrite : bool, default False
+        If True, overwrites existing interaction table.
+    save_diff : bool, default False
+        Whether to save the differences table.
+
+    Returns
+    -------
+    Optional[sc.AnnData | Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]
+        - If inplace=False: Returns a copy of AnnData with condition differences
+        - If inplace=True: Returns None, modifies original AnnData
+        - Nested dictionary contains detailed condition difference calculations
 
     Raises
     ------
     ValueError
-        If invalid keys are provided in condition_filters
-        If no valid values exist for a condition after filtering
-        If fewer than one condition column is provided
-        If no valid values match any provided filters
-    TypeError
-        If cluster_filter is not a list
-        If gene_filter is not a list
-    """
+        - If invalid keys are provided in condition_filters
+        - If no valid values exist for a condition after filtering
+        - If fewer than one condition column is provided
+        - If no valid values match any provided filters
 
+    Examples
+    --------
+    # Calculate differences between treatment conditions across batches
+    diff_adata = calculate_condition_differences(
+        adata=adata,
+        condition_columns=['treatment', 'batch'],
+        cluster_column='leiden',
+        min_perc=10,
+        condition_filters={'treatment': ['control', 'treatment_A', 'treatment_B']},
+        inplace=False
+    )
+
+    # Access the results
+    results = diff_adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
+
+    # Temporal analysis with timepoints in specific order
+    time_series_adata = calculate_condition_differences(
+        adata=adata,
+        condition_columns=['timepoint', 'treatment'],
+        cluster_column='leiden',
+        time_column='timepoint',
+        time_order=['day0', 'day3', 'day7', 'day14', 'day28'],
+        condition_filters={'treatment': ['control', 'drug_A']},
+        inplace=False
+    )
+
+    # Analyzing a condition over timepoints
+    # Note: 'timepoint' as first column with time_column specified
+    # will trigger sequential analysis (day3 vs day0, day7 vs day3, etc.)
+    time_course_adata = calculate_condition_differences(
+        adata=adata,
+        condition_columns=['timepoint', 'treatment'],
+        cluster_column='leiden',
+        time_column='timepoint',
+        time_order=['day0', 'day3', 'day7', 'day14', 'day28'],
+        condition_filters={'treatment': ['drug_A']},
+        inplace=False
+    )
+    """
+    # Check if condition differences already exist
+    if (
+        not overwrite and
+        'sctoolbox' in adata.uns and
+        'receptor-ligand' in adata.uns['sctoolbox'] and
+        'condition-differences' in adata.uns['sctoolbox']["receptor-ligand"]
+    ):
+        warnings.warn("Condition differences already exists! Skipping. Set `overwrite=True` to replace.")
+
+        if inplace:
+            return None
+        else:
+            return adata
+
+    # Validate time information if provided
+    if time_column is not None:
+        if time_column not in adata.obs.columns:
+            raise ValueError(f"time_column '{time_column}' not found in adata.obs columns")
+
+        if time_order is None:
+            raise ValueError("time_order must be provided when time_column is specified")
+
+        # Check if all provided time points exist in the data
+        time_values = set(adata.obs[time_column])
+        missing_times = set(time_order) - time_values
+        if missing_times:
+            raise ValueError(f"The following time points in time_order were not found in the data: {missing_times}")
+
+    # Validate condition filters
     if condition_filters is not None:
         invalid_keys = set(condition_filters.keys()) - set(condition_columns)
         if invalid_keys:
             raise ValueError(f"Invalid keys in condition_filters: {invalid_keys}. Valid keys are: {condition_columns}")
 
-
+    # Ensure we have at least one condition column
     if len(condition_columns) < 1:
         raise ValueError(f"Need at least one condition column, got {len(condition_columns)}")
 
-    # Function to create a filtered AnnData object
-    def create_filtered_adata(condition_values):
-        if len(condition_values) != len(condition_columns):
-            raise ValueError(f"Expected {len(condition_columns)} condition values, got {len(condition_values)}")
-
-        # Create filter query
-        condition_query = " & ".join([f"{col} == '{val}'" for col, val in zip(condition_columns, condition_values)])
-
-        # Check if any cells match the condition
-        matching_cells = adata.obs.eval(condition_query).sum()
-        if matching_cells == 0:
-            warnings.warn(f"No cells found for condition {condition_values}. Skipping.")
-            return None
-
-        # Create filtered AnnData
-        filtered_adata = adata[adata.obs.eval(condition_query)].copy()
-
-        # Apply cluster filter if provided
-        if cluster_filter is not None:
-            available_clusters = set(filtered_adata.obs[cluster_column])
-            requested_clusters = set(cluster_filter)
-            valid_clusters = requested_clusters.intersection(available_clusters)
-
-            if not valid_clusters:
-                warnings.warn(f"No valid clusters for condition {condition_values}. Skipping.")
-                return None
-
-            cluster_mask = filtered_adata.obs[cluster_column].isin(valid_clusters)
-            if cluster_mask.sum() == 0:
-                warnings.warn(f"No cells match cluster filter for {condition_values}. Skipping.")
-                return None
-
-            filtered_adata = filtered_adata[cluster_mask].copy()
-
-            del cluster_mask
-
-        if gene_filter is not None and gene_column in filtered_adata.var.columns:
-            available_genes = set(filtered_adata.var[gene_column])
-            requested_genes = set(gene_filter)
-            valid_genes = requested_genes.intersection(available_genes)
-
-            if not valid_genes:
-                warnings.warn(f"No valid genes for condition {condition_values}. Skipping.")
-                return None
-
-            gene_mask = filtered_adata.var[gene_column].isin(valid_genes)
-            if gene_mask.sum() == 0:
-                warnings.warn(f"No genes match gene filter for {condition_values}. Skipping.")
-                return None
-
-            filtered_adata = filtered_adata[:, gene_mask].copy()
-
-            del gene_mask
-
-        # Calculate interaction table
-        try:
-            calculate_interaction_table(
-                adata=filtered_adata,
-                cluster_column=cluster_column,
-                gene_index=gene_column,
-                normalize=normalize,
-                weight_by_ep=weight_by_ep,
-                inplace=True,
-                overwrite=True
-            )
-            return filtered_adata
-        except Exception as e:
-            warnings.warn(f"Error calculating interactions for {condition_values}: {str(e)}")
-            return None
+    # Convert inputs to numpy arrays for consistent handling
+    condition_columns = np.array(condition_columns) if condition_columns is not None else None
+    cluster_filter = np.unique(cluster_filter) if cluster_filter is not None else None
+    gene_filter = np.unique(gene_filter) if gene_filter is not None else None
 
     # Get all possible values for each condition
     condition_values_dict = {}
     for col in condition_columns:
         if col in condition_filters and condition_filters[col]:
             # Use filtered values
-            available_values = set(adata.obs[col].unique())
-            requested_values = set(condition_filters[col])
-            valid_values = list(requested_values.intersection(available_values))
+            available_values = set(adata.obs[col])
+            valid_values = list(set(condition_filters[col]).intersection(available_values))
 
             if not valid_values:
                 raise ValueError(f"No valid values for condition '{col}'. Available: {available_values}")
@@ -1563,649 +2029,439 @@ def calculate_condition_differences(adata: sc.AnnData,
             # Use all values
             condition_values_dict[col] = sorted(list(adata.obs[col].unique()))
 
-    # Function to recursively process condition combinations
-    def process_combinations(current_level=1, fixed_conditions=None):
-        if fixed_conditions is None:
-            fixed_conditions = {}
-
-        # If all secondary conditions are processed, perform comparison
-        if current_level >= len(condition_columns):
-
-            # Get primary condition values for comparison
-            primary_column = condition_columns[0]
-            primary_values = condition_values_dict[primary_column]
-
-            if len(primary_values) < 2:
-                warnings.warn(f"Need at least 2 values for {primary_column} to compare, got {primary_values}")
-                return {}
-
-            # Create a description of the fixed conditions
-            fixed_desc = "_".join([f"{col}={val}" for col, val in fixed_conditions.items()])
-
-            print(f"Comparing {primary_column} values within {fixed_desc}")
-
-            # Dictionary to store AnnData objects for each primary value
-            primary_adatas = {}
-
-            # Process each primary value
-            for primary_value in primary_values:
-                # Combine with fixed conditions
-                all_values = [primary_value] + [fixed_conditions[col] for col in condition_columns[1:]]
-
-                # Create filtered AnnData
-                print(f"Processing {list(zip(condition_columns, all_values))}")
-                filtered_adata = create_filtered_adata(all_values)
-
-                if filtered_adata is not None:
-                    primary_adatas[primary_value] = filtered_adata
-                    print(f"Processed {primary_column}={primary_value} for {fixed_desc} ({filtered_adata.n_obs} cells)")
-
-            # Compare all pairs of primary values
-            results = {}
-
-            # Compare all pairs of primary values
-            for i in range(len(primary_values)):
-                for j in range(i + 1, len(primary_values)):
-                    value_a = primary_values[i]
-                    value_b = primary_values[j]
-
-                    if value_a not in primary_adatas or value_b not in primary_adatas:
-                        warnings.warn(f"Missing data for comparison between {value_a} and {value_b}")
-                        continue
-
-                    print(f"Comparing {value_b} vs {value_a} within {fixed_desc}")
-
-                    # Calculate differences
-                    differences = calculate_differences(
-                        primary_adatas[value_a],
-                        primary_adatas[value_b],
-                        value_a,
-                        value_b,
-                        min_perc=min_perc,
-                        interaction_score=interaction_score,
-                        interaction_perc=interaction_perc
-                    )
-
-                    if differences is not None:
-                        # Create comparison key
-                        if fixed_desc:
-                            comparison_key = f"{fixed_desc}_{value_b}_vs_{value_a}"
-                        else:
-                            comparison_key = f"{value_b}_vs_{value_a}"
-
-                        # Store results
-                        results[comparison_key] = {
-                            'differences': differences
-                        }
-
-                        # Save to file if needed
-                        differences.to_csv(f"{settings.table_dir}/{comparison_key}_differences.csv", sep='\t', index=False)
-            primary_adatas.clear()
-            del primary_adatas
-
-            return results
-
-        # Process the next level of conditions
-        current_column = condition_columns[current_level]
-        possible_values = condition_values_dict[current_column]
-
-        # Dictionary to store results for this level
-        level_results = {}
-
-        # Process each value of the current condition
-        for value in possible_values:
-            # Update fixed conditions
-            new_fixed = fixed_conditions.copy()
-            new_fixed[current_column] = value
-
-            # Recursively process the next level
-            next_results = process_combinations(current_level + 1, new_fixed)
-
-            # Merge with level results
-            level_results.update(next_results)
-
-            del new_fixed
-
-        return level_results
-
-    # Function to calculate differences between two AnnData objects
-    def calculate_differences(adata_a, adata_b, value_a, value_b, **kwargs):
-        try:
-            # Get interaction tables
-            interactions_a = get_interactions(
-                anndata=adata_a,
-                min_perc=kwargs.get('min_perc'),
-                interaction_score=kwargs.get('interaction_score'),
-                interaction_perc=kwargs.get('interaction_perc')
-            )
-
-            interactions_b = get_interactions(
-                anndata=adata_b,
-                min_perc=kwargs.get('min_perc'),
-                interaction_score=kwargs.get('interaction_score'),
-                interaction_perc=kwargs.get('interaction_perc')
-            )
-
-            print(f"Found {len(interactions_a)} interactions for {value_a}")
-            print(f"Found {len(interactions_b)} interactions for {value_b}")
-
-            # Add condition labels
-            interactions_a = interactions_a.copy()
-            interactions_b = interactions_b.copy()
-
-            interactions_a['condition'] = 'a'
-            interactions_b['condition'] = 'b'
-
-            # Combine for quantile ranking
-            merged_long = pd.concat([interactions_a, interactions_b], ignore_index=True)
-
-            # Calculate quantile ranking
-            merged_long['quantile_rank'] = merged_long['interaction_score'].rank(
-                method='average',
-                pct=True
-            )
-
-            # Extract ranks
-            ranks_a = merged_long[merged_long['condition'] == 'a'][['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster', 'quantile_rank']]
-            ranks_b = merged_long[merged_long['condition'] == 'b'][['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster', 'quantile_rank']]
-
-            del merged_long
-
-            # Merge ranks back
-            interactions_a = pd.merge(
-                interactions_a,
-                ranks_a,
-                on=['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster']
-            )
-
-            del ranks_a
-
-            interactions_b = pd.merge(
-                interactions_b,
-                ranks_b,
-                on=['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster']
-            )
-
-            del ranks_b
-
-            # Merge interaction tables
-            merged = pd.merge(
-                interactions_a, interactions_b,
-                on=['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster'],
-                suffixes=('_a', '_b')
-            )
-
-            del interactions_a
-            del interactions_b
-
-            # Calculate differences
-            merged['rank_diff'] = merged['quantile_rank_b'] - merged['quantile_rank_a']
-            merged['abs_diff'] = merged['rank_diff'].abs()
-
-            # Sort by absolute difference
-            merged = merged.sort_values('abs_diff', ascending=False)
-
-            # Store metadata
-            merged.attrs['condition_a'] = value_a
-            merged.attrs['condition_b'] = value_b
-
-            return merged
-
-        except Exception as e:
-            warnings.warn(f"Error calculating differences: {str(e)}")
-            return None
+    # If time_column is provided and it's one of the condition columns, sort the values according to user-provided time_order
+    if time_column is not None and time_column in condition_columns:
+        # Filter time_order to include only available values in the selected condition
+        available_times = set(condition_values_dict[time_column])
+        ordered_times = [t for t in time_order if t in available_times]
+        # Replace the default ordering with the user-provided order
+        condition_values_dict[time_column] = ordered_times
 
     # Start processing
-    print("Starting comparison processing...")
-    all_results = {condition_columns[0]: process_combinations()}
+    logger.info("Starting comparison processing   ")
 
-    if len(all_results[condition_columns[0]]) == 0:
+    # The first column is the target condition to compare
+    target_condition = condition_columns[0]
+
+    # Check if time series analysis
+    is_time_series = time_column is not None and time_column == target_condition
+
+    # Process all condition combinations
+    all_results = {target_condition: _process_condition_combinations(
+        adata=adata,
+        condition_columns=condition_columns,
+        condition_values_dict=condition_values_dict,
+        cluster_column=cluster_column,
+        min_perc=min_perc,
+        interaction_score=interaction_score,
+        interaction_perc=interaction_perc,
+        cluster_filter=cluster_filter,
+        gene_column=gene_column,
+        gene_filter=gene_filter,
+        normalize=normalize,
+        weight_by_ep=weight_by_ep,
+        save_diff=save_diff,
+        sequential_time_analysis=is_time_series
+    )}
+
+    # If time series analysis, add time metadata to the results
+    if time_column is not None and time_order is not None:
+        # Store the time ordering information with the results
+        for comparison_key, comparison_data in all_results[target_condition].items():
+            for result_key, result_df in comparison_data.items():
+                result_df['time_column'] = time_column
+                result_df['time_order'] = ','.join(time_order)
+
+    # Check if any comparisons were found
+    if len(all_results[target_condition]) == 0:
         warnings.warn("No comparisons found. Check your condition values and filters.")
     else:
-        print(f"Completed processing with {len(all_results[condition_columns[0]])} comparisons")
+        logger.info(f"Completed processing with {len(all_results[target_condition])} comparisons")
+        if time_column is not None:
+            logger.info(f"Temporal analysis using '{time_column}' with order: {time_order}")
 
+    # Store results in the AnnData object
     if inplace:
-        if "condition-differences" not in adata.uns:
-            adata.uns["condition-differences"] = {}
-        adata.uns["condition-differences"] = all_results
-    else:
-        return all_results
-
-
-@deco.log_anndata
-@beartype
-def calculate_condition_differences_over_time(
-        adata: sc.AnnData,
-        timepoint_column: str,
-        condition_column: str,
-        condition_value: str,
-        cluster_column: str,
-        min_perc: Optional[int | float] = None,
-        interaction_score: Optional[float | int] = None,
-        interaction_perc: Optional[int | float] = None,
-        reference_timepoint: Optional[str] = None,
-        timepoint_order: List[str] = None,
-        gene_column: Optional[str] = None,
-        cluster_filter: Optional[List[str]] = None,
-        gene_filter: Optional[List[str]] = None,
-        normalize: Optional[int] = None,
-        weight_by_ep: Optional[bool] = True,
-        inplace: bool = False,
-        overwrite: bool = False,
-        save: Optional[str] = None) -> Optional[Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]:
-    """
-    Analyze cell-cell interactions across multiple timepoints for a specific condition.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        AnnData object that contains the full dataset.
-    timepoint_column : str
-        The column in adata.obs containing timepoint information.
-    condition_column : str
-        The column in adata.obs containing condition information.
-    condition_value : str
-        The specific condition value to analyze (e.g., "treatment" or "control").
-    cluster_column : str
-        The column in adata.obs containing cluster information.
-    min_perc : Optional[int | float], default None
-        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
-    interaction_score : Optional[float | int], default None
-        Filter receptor-ligand interactions below given score. Ignored if `interaction_perc` is set.
-    interaction_perc : Optional[int | float], default None
-        Filter receptor-ligand interactions below the given percentile. Overwrite `interaction_score`. Value from 0-100.
-    reference_timepoint : Optional[str], default None
-        If specified, all timepoints will be compared to this reference timepoint.
-        If None, consecutive timepoints will be compared.
-    timepoint_order : List[str], default None
-        Custom ordering of timepoints.
-    gene_column : Optional[str], default None
-        Column in adata.var that holds gene symbols/ids.
-    cluster_filter : Optional[List[str]], default None
-        List of cluster names to include in the analysis. If None, all clusters will be included.
-    gene_filter : Optional[List[str]], default None
-        List of genes to include in the analysis. If None, all genes will be included.
-    normalize : Optional[int], default None
-        Correct clusters to given size. If None, max clustersize is used.
-    weight_by_ep : Optional[bool], default True
-        Whether to weight the expression Z-Score by the expression proprotion.
-    inplace : bool, default False
-        Whether to copy `adata` or modify it inplace.
-    overwrite : bool, default False
-        Whether to overwrite existing temporal difference analysis.
-    save : Optional[str], default None
-        Output filename base for saving results.
-
-    Returns
-    -------
-    Optional[Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]
-        If not inplace, return hierarchical dictionary with the structure:
-        {
-            "time_series": {
-                "comparison_key": {
-                    "differences": pd.DataFrame
-                }
-            }
-        }
-        Compatible with condition_differences_network function.
-
-    Raises
-    ------
-    ValueError
-        1: If fewer than 2 timepoints found for the specified condition.
-        2: If the reference timepoint is not found.
-        3: If cluster_filter or gene_filter contain invalid entries.
-    TypeError
-        If cluster_filter or gene_filter are not lists.
-    """
-
-    # Validate input parameters
-    if cluster_filter is not None and not isinstance(cluster_filter, list):
-        raise TypeError(f"cluster_filter must be a list, got {type(cluster_filter)}")
-
-    if gene_filter is not None:
-        if not isinstance(gene_filter, list):
-            raise TypeError(f"gene_filter must be a list, got {type(gene_filter)}")
-        if gene_column is None:
-            warnings.warn("gene_filter provided but gene_column is None. Gene filtering will be skipped.")
-
-    # Get all timepoints for the specified condition
-    condition_mask = adata.obs[condition_column] == condition_value
-    available_timepoints = set(adata.obs.loc[condition_mask, timepoint_column].unique())
-
-    if len(available_timepoints) < 2:
-        raise ValueError(f"Found fewer than 2 timepoints for condition '{condition_value}'.")
-
-    # Handle custom timepoint ordering
-    if timepoint_order is not None:
-        # Validate that all specified timepoints exist in the data
-        missing_timepoints = [tp for tp in timepoint_order if tp not in available_timepoints]
-        if missing_timepoints:
-            raise ValueError(f"The following timepoints specified in timepoint_order were not found in the data: {missing_timepoints}")
-        timepoints = [tp for tp in timepoint_order if tp in available_timepoints]
-    else:
-        raise ValueError("timepoint_order must be explicitly provided")
-
-    print(f"Using {len(timepoints)} timepoints for condition '{condition_value}': {timepoints}")
-
-    # Determine which comparisons to make
-    comparisons = []
-    if reference_timepoint is not None:
-        if reference_timepoint not in timepoints:
-            raise ValueError(f"Reference timepoint '{reference_timepoint}' not found in data or in the specified timepoint order.")
-        # Compare all other timepoints to the reference
-        comparisons = [(reference_timepoint, tp) for tp in timepoints if tp != reference_timepoint]
-    else:
-        # Default to sequential comparison
-        comparisons = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
-
-    # Create formatted condition strings for each timepoint
-    timepoint_conditions = {tp: f"{condition_value}_{tp}" for tp in timepoints}
-
-    # Function to create a filtered AnnData for a specific timepoint
-    def create_filtered_adata(timepoint):
-        print(f"Processing timepoint: {timepoint}")
-
-        # Create the filter query
-        condition_query = f"{condition_column} == '{condition_value}' & {timepoint_column} == '{timepoint}'"
-
-        # Check if any cells match before creating subset
-        matching_cells = adata.obs.eval(condition_query).sum()
-        if matching_cells == 0:
-            print(f"No cells found for timepoint {timepoint}. Skipping.")
-            return None
-
-        # Create filtered AnnData
-        filtered_adata = adata[adata.obs.eval(condition_query)].copy()
-
-        # Apply cluster filter if provided
-        if cluster_filter is not None:
-            available_clusters = set(filtered_adata.obs[cluster_column].unique())
-            requested_clusters = set(cluster_filter)
-            valid_clusters = requested_clusters.intersection(available_clusters)
-
-            if not valid_clusters:
-                print(f"No valid clusters for timepoint {timepoint}. Skipping.")
-                return None
-
-            cluster_mask = filtered_adata.obs[cluster_column].isin(valid_clusters)
-            filtered_adata = filtered_adata[cluster_mask].copy()
-
-        # Apply gene filter if provided
-        if gene_filter is not None and gene_column in filtered_adata.var.columns:
-            available_genes = set(filtered_adata.var[gene_column])
-            requested_genes = set(gene_filter)
-            valid_genes = requested_genes.intersection(available_genes)
-
-            if not valid_genes:
-                print(f"No valid genes for timepoint {timepoint}. Skipping.")
-                return None
-
-            gene_mask = filtered_adata.var[gene_column].isin(valid_genes)
-            filtered_adata = filtered_adata[:, gene_mask].copy()
-
-        # Calculate interaction table
-        try:
-            calculate_interaction_table(
-                adata=filtered_adata,
-                cluster_column=cluster_column,
-                gene_index=gene_column,
-                normalize=normalize,
-                weight_by_ep=weight_by_ep,
-                inplace=True,
-                overwrite=True
-            )
-            return filtered_adata
-        except Exception as e:
-            print(f"Error calculating interactions for timepoint {timepoint}: {str(e)}")
-            return None
-
-    # Function to get interaction data from AnnData
-    def get_filtered_interactions(adata_obj):
-        if adata_obj is None or "receptor-ligand" not in adata_obj.uns:
-            return None
-
-        try:
-            interactions = get_interactions(
-                anndata=adata_obj,
-                min_perc=min_perc,
-                interaction_score=interaction_score,
-                interaction_perc=interaction_perc
-            )
-            return interactions
-        except Exception as e:
-            print(f"Error getting interactions: {str(e)}")
-            return None
-
-    # Function to calculate differences between two timepoints
-    def calculate_timepoint_diff(tp1, tp2):
-        print(f"Comparing timepoints: {tp1} vs {tp2}")
-
-        # Get condition labels
-        tp1_condition = timepoint_conditions[tp1]
-        tp2_condition = timepoint_conditions[tp2]
-
-        # Process first timepoint
-        adata_tp1 = create_filtered_adata(tp1)
-        if adata_tp1 is None:
-            print(f"Failed to process timepoint {tp1}. Skipping comparison.")
-            return None
-
-        interactions_tp1 = get_filtered_interactions(adata_tp1)
-        if interactions_tp1 is None or len(interactions_tp1) == 0:
-            print(f"No interactions found for timepoint {tp1}. Skipping comparison.")
-            del adata_tp1
-            return None
-
-        # Process second timepoint
-        adata_tp2 = create_filtered_adata(tp2)
-        if adata_tp2 is None:
-            print(f"Failed to process timepoint {tp2}. Skipping comparison.")
-            del adata_tp1
-            del interactions_tp1
-            return None
-
-        interactions_tp2 = get_filtered_interactions(adata_tp2)
-        if interactions_tp2 is None or len(interactions_tp2) == 0:
-            print(f"No interactions found for timepoint {tp2}. Skipping comparison.")
-            del adata_tp1
-            del adata_tp2
-            del interactions_tp1
-            return None
-
-        print(f"Found {len(interactions_tp1)} interactions for {tp1}")
-        print(f"Found {len(interactions_tp2)} interactions for {tp2}")
-
-        # Prepare for comparison
-        interactions_tp1 = interactions_tp1.copy()
-        interactions_tp2 = interactions_tp2.copy()
-
-        interactions_tp1['timepoint'] = 'tp1'
-        interactions_tp2['timepoint'] = 'tp2'
-
-        # Combine for quantile ranking
-        tp1_for_ranking = interactions_tp1[['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster', 'interaction_score']]
-        tp2_for_ranking = interactions_tp2[['receptor_gene', 'ligand_gene', 'receptor_cluster', 'ligand_cluster', 'interaction_score']]
-
-        combined_scores = pd.concat([
-            tp1_for_ranking['interaction_score'],
-            tp2_for_ranking['interaction_score']
-        ])
-
-        # Calculate ranks
-        ranks = combined_scores.rank(method='average', pct=True)
-
-        # Split ranks back to respective timepoints
-        tp1_ranks = ranks[:len(tp1_for_ranking)]
-        tp2_ranks = ranks[len(tp1_for_ranking):]
-
-        # Add ranks back to original dataframes
-        interactions_tp1['quantile_rank'] = tp1_ranks.values
-        interactions_tp2['quantile_rank'] = tp2_ranks.values
-
-        del tp1_for_ranking
-        del tp2_for_ranking
-        del combined_scores
-        del ranks
-
-        # Merge interaction tables
-        interactions_tp1['join_key'] = interactions_tp1.apply(
-            lambda x: f"{x['receptor_gene']}|{x['ligand_gene']}|{x['receptor_cluster']}|{x['ligand_cluster']}",
-            axis=1
-        )
-
-        interactions_tp2['join_key'] = interactions_tp2.apply(
-            lambda x: f"{x['receptor_gene']}|{x['ligand_gene']}|{x['receptor_cluster']}|{x['ligand_cluster']}",
-            axis=1
-        )
-
-        # Select only necessary columns for merge
-        tp1_for_merge = interactions_tp1[['join_key', 'interaction_score', 'quantile_rank']]
-        tp2_for_merge = interactions_tp2[['join_key', 'interaction_score', 'quantile_rank']]
-
-        # Rename columns
-        tp1_for_merge.columns = ['join_key', 'interaction_score_a', 'quantile_rank_a']
-        tp2_for_merge.columns = ['join_key', 'interaction_score_b', 'quantile_rank_b']
-
-        # Merge on join key
-        merged = pd.merge(tp1_for_merge, tp2_for_merge, on='join_key')
-
-        # Split join key back to original components
-        key_components = merged['join_key'].str.split('|', expand=True)
-        merged['receptor_gene'] = key_components[0]
-        merged['ligand_gene'] = key_components[1]
-        merged['receptor_cluster'] = key_components[2]
-        merged['ligand_cluster'] = key_components[3]
-
-        # Drop the join key
-        merged.drop('join_key', axis=1, inplace=True)
-
-        # Calculate differences
-        merged['rank_diff'] = merged['quantile_rank_b'] - merged['quantile_rank_a']
-        merged['abs_diff'] = merged['rank_diff'].abs()
-
-        # Sort by absolute difference
-        merged = merged.sort_values('abs_diff', ascending=False)
-
-        # Add metadata using attrs
-        merged.attrs['timepoint_1'] = tp1
-        merged.attrs['timepoint_2'] = tp2
-        merged.attrs['condition'] = condition_value
-        merged.attrs['condition_a'] = tp1_condition
-        merged.attrs['condition_b'] = tp2_condition
-        merged.attrs['group_name'] = f"Timepoint Comparison: {tp2} vs {tp1}"
-        merged.attrs['condition_name'] = "time_series"
-
-        del adata_tp1
-        del adata_tp2
-        del interactions_tp1
-        del interactions_tp2
-        del tp1_for_merge
-        del tp2_for_merge
-
-        # Save results if requested
-        if save:
-            comparison_key = f"{tp2_condition}_vs_{tp1_condition}"
-            csv_path = f"{save}_{comparison_key}_differences.csv"
-            merged.to_csv(f"{settings.table_dir}/{csv_path}", sep='\t', index=False)
-
-        return merged
-
-    # Initialize the hierarchical results dictionary
-    hierarchical_results = {"time_series": {}}
-
-    # Process each comparison individually to minimize memory usage
-    for tp1, tp2 in comparisons:
-        if tp1 == tp2:
-            continue
-
-        # Calculate differences
-        diff_result = calculate_timepoint_diff(tp1, tp2)
-
-        if diff_result is not None:
-            # Create comparison key
-            tp1_condition = timepoint_conditions[tp1]
-            tp2_condition = timepoint_conditions[tp2]
-            comparison_key = f"{tp2_condition}_vs_{tp1_condition}"
-
-            # Store in results dictionary
-            hierarchical_results["time_series"][comparison_key] = {"differences": diff_result}
-
-    # Store results in the AnnData object if inplace
-    if inplace:
-        if "temporal-differences" not in adata.uns or overwrite:
-            adata.uns["temporal-differences"] = hierarchical_results
-        else:
-            warnings.warn("Temporal differences already exist in adata.uns['temporal-differences']. Set overwrite=True to replace.")
+        # Modify adata in place
+        _add_uns_info_rl(adata, value=all_results, inplace=True)
         return None
     else:
-        return hierarchical_results
+        # Create a copy and return it
+        adata_copy = adata.copy()
+        _add_uns_info_rl(adata_copy, value=all_results, inplace=True)
+        return adata_copy
+
+# ---------- DIFFERENCE PLOTTING -----------#
 
 
-@beartype
-def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
-                                  n_top: int = 100,
-                                  figsize: Tuple[int, int] = (22, 16),
-                                  dpi: int = 300,
-                                  save: Optional[str] = None,
-                                  split_by_direction: bool = True,
-                                  hub_threshold: int = 4) -> List[matplotlib.figure.Figure]:
+"""
+Receptor-Ligand Difference Visualization
+
+This section provides functions for visualizing receptor-ligand interaction differences
+between different cell populations across experimental conditions and timepoints.
+"""
+
+
+def _identify_hub_networks(G, hub_threshold=4):
     """
-    Visualize differences between conditions as a receptor-ligand network with hubs separated.
-
-    Creates a multi-grid visualization where network hubs are displayed separately.
+    Identify hub nodes and create hub-centric subgraphs.
 
     Parameters
     ----------
-    diff_results : Dict[str, Dict[str, Dict[str, pd.DataFrame]]]
-        Results from calculate_condition_differences or analyze_condition_over_time function
-    n_top : int, default 20
-        Number of top differential interactions to display
-    figsize : Tuple[int, int], default (22, 16)
-        Size of the figure
-    dpi : int, default 300
-        The resolution of the figure.
-    save : Optional[str], default None
-        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
-    split_by_direction : bool, default True
-        Whether to create separate networks for positive and negative differences
+    G : networkx.DiGraph
+        The input graph
     hub_threshold : int, default 4
         Minimum number of connections for a node to be considered a hub
 
     Returns
     -------
+    tuple
+        (hub_networks, non_hub_edges)
+        - hub_networks: Dictionary of hub-centered subgraphs keyed by hub node
+        - non_hub_edges: List of edges between non-hub nodes
+
+    Examples
+    --------
+    G = nx.DiGraph()
+    G.add_edges_from([('A', 'B'), ('A', 'C'), ('A', 'D'), ('A', 'E'), ('B', 'C')])
+    hub_networks, non_hub_edges = _identify_hub_networks(G, hub_threshold=3)
+    """
+    # Use degree function to get node connections
+    node_degrees = dict(G.degree())
+
+    # Identify hub nodes
+    hub_nodes = {node for node, degree in node_degrees.items() if degree >= hub_threshold}
+
+    # Create hub-centered subgraphs
+    hub_networks = {}
+    for hub in hub_nodes:
+        # Get all neighbors of the hub
+        neighbors = set(G.successors(hub)).union(set(G.predecessors(hub)))
+        # Create a subgraph with the hub and its neighbors
+        nodes_in_subgraph = {hub}.union(neighbors)
+        subgraph = G.subgraph(nodes_in_subgraph).copy()
+        hub_networks[hub] = subgraph
+
+    # Identify edges between non-hub nodes
+    non_hub_edges = [(u, v) for u, v in G.edges() 
+                     if u not in hub_nodes and v not in hub_nodes]
+
+    return hub_networks, non_hub_edges
+
+
+def _draw_network(graph, ax, title=None, cell_colors=None, cell_shapes=None, 
+                  colormap=None, norm=None, all_cell_types=None):
+    """
+    Draw a network on the given axis.
+
+    Parameters
+    ----------
+    graph : networkx.DiGraph
+        The graph to draw
+    ax : matplotlib.axes.Axes
+        The axis to draw on
+    title : str, optional
+        Title for the plot
+    cell_colors : dict
+        Mapping of cell type to color
+    cell_shapes : dict
+        Mapping of cell type to node shape
+    colormap : matplotlib.colors.Colormap
+        Colormap for edge colors
+    norm : matplotlib.colors.Normalize
+        Normalization for edge colors
+    all_cell_types : set
+        Set of all cell types to ensure consistent drawing
+
+    Examples
+    --------
+    # Create simple test graph
+    G = nx.DiGraph()
+    G.add_node('A_cluster1', cell_type='cluster1', gene='A')
+    G.add_node('B_cluster2', cell_type='cluster2', gene='B')
+    G.add_edge('A_cluster1', 'B_cluster2', diff=0.5)
+
+    # Setup for drawing
+    cell_colors = {'cluster1': 'blue', 'cluster2': 'red'}
+    cell_shapes = {'cluster1': 'o', 'cluster2': 's'}
+    colormap = plt.cm.Reds
+    norm = Normalize(vmin=0, vmax=1)
+
+    # Create figure and draw
+    fig, ax = plt.subplots()
+    _draw_network(G, ax, title='Test Network',
+                    cell_colors=cell_colors, cell_shapes=cell_shapes,
+                    colormap=colormap, norm=norm, all_cell_types={'cluster1', 'cluster2'})
+    plt.close()
+    """
+    # Skip if graph is empty
+    if len(graph.nodes()) == 0:
+        ax.set_axis_off()
+        if title:
+            ax.set_title(title, fontsize=12)
+        return
+
+    # Create layout for this network
+    pos = nx.spring_layout(graph, k=2.0, iterations=333, seed=42, scale=0.9)
+
+    # Group nodes by cell type for more efficient drawing
+    node_groups = {}
+    for node, data in graph.nodes(data=True):
+        cell_type = data.get('cell_type')
+        if cell_type:
+            if cell_type not in node_groups:
+                node_groups[cell_type] = []
+            node_groups[cell_type].append(node)
+
+    # Draw all nodes for each cell type at once
+    for cell_type in sorted(all_cell_types):
+        # Get all nodes for this cluster
+        ct_nodes = node_groups.get(cell_type, [])
+
+        # Draw all nodes for this cluster with the same shape and color
+        if ct_nodes:
+            nx.draw_networkx_nodes(
+                graph, pos,
+                nodelist=ct_nodes,
+                node_color=[cell_colors[cell_type]] * len(ct_nodes),
+                node_size=700,
+                alpha=0.8,
+                edgecolors='lightgrey',
+                linewidths=0.5,
+                node_shape=cell_shapes[cell_type],
+                ax=ax
+            )
+
+    # Create edge colors and labels for drawing
+    edge_colors = []
+    edge_list = []
+    edge_labels = {}
+
+    for u, v, data in graph.edges(data=True):
+        edge_list.append((u, v))
+        edge_colors.append(colormap(norm(data['diff'])))
+        edge_labels[(u, v)] = f"{data['diff']:.2f}"
+
+    # Draw all edges at once
+    nx.draw_networkx_edges(
+        graph, pos,
+        edgelist=edge_list,
+        width=1.5,
+        edge_color=edge_colors,
+        arrows=True,
+        arrowsize=15,
+        arrowstyle='-|>',
+        connectionstyle='arc3,rad=0.1',
+        ax=ax
+    )
+
+    # Draw edge labels
+    nx.draw_networkx_edge_labels(
+        graph, pos,
+        edge_labels=edge_labels,
+        font_size=8,
+        bbox=dict(facecolor='white', alpha=0.0, edgecolor='none', boxstyle='round,pad=0.2'),
+        ax=ax
+    )
+
+    # Extract node labels
+    labels = {node: data.get('gene', node) for node, data in graph.nodes(data=True)}
+
+    # Draw labels
+    nx.draw_networkx_labels(
+        graph, pos,
+        labels=labels,
+        font_size=10,
+        font_weight='normal',
+        bbox=dict(facecolor='white', alpha=0.0, edgecolor='none', boxstyle='round,pad=0.2'),
+        ax=ax
+    )
+
+    # Set title if provided
+    if title:
+        ax.set_title(title, fontsize=12)
+
+    ax.set_axis_off()
+
+
+def _extract_diff_key_columns(diff_df):
+    """
+    Extract standardized key column names from the differences DataFrame.
+
+    Parameters
+    ----------
+    diff_df : pd.DataFrame
+        Differences DataFrame from condition_differences calculation
+
+    Returns
+    -------
+    dict
+        Dictionary with standardized column names mapping
+
+    Examples
+    --------
+    # Example with standard column names
+    df1 = pd.DataFrame({
+        'rank_diff_B_vs_A': [0.5],
+        'abs_diff_B_vs_A': [0.5]
+    })
+    _extract_diff_key_columns(df1)
+
+    # Example with time column info
+    df2 = pd.DataFrame({
+        'rank_diff_day7_vs_day0': [0.5],
+        'abs_diff_day7_vs_day0': [0.5],
+        'time_column': ['timepoint'],
+        'time_order': ['day0,day3,day7,day14']
+    })
+    _extract_diff_key_columns(df2)
+    """
+    # Initialize the result dictionary
+    result = {}
+
+    # Find the rank difference column (it should start with 'rank_diff_')
+    diff_cols = [col for col in diff_df.columns if col.startswith('rank_diff_')]
+    abs_diff_cols = [col for col in diff_df.columns if col.startswith('abs_diff_')]
+
+    if diff_cols and abs_diff_cols:
+        diff_col = diff_cols[0]
+        abs_diff_col = abs_diff_cols[0]
+
+        # Extract condition names from the column name. Format is typically 'rank_diff_conditionB_vs_conditionA'
+        parts = diff_col.split('_')
+        if len(parts) >= 4 and parts[-2] == 'vs':
+            result['condition_a'] = parts[-1]
+            result['condition_b'] = parts[-3]
+            result['diff_col'] = diff_col
+            result['abs_diff_col'] = abs_diff_col
+
+    # Check for time series information
+    if 'time_column' in diff_df.columns and not diff_df['time_column'].isna().all():
+        time_col = diff_df['time_column'].iloc[0]
+        result['time_column'] = time_col
+
+    if 'time_order' in diff_df.columns and not diff_df['time_order'].isna().all():
+        # Convert comma-separated string to list
+        time_order_str = diff_df['time_order'].iloc[0]
+        if isinstance(time_order_str, str):
+            result['time_order'] = time_order_str.split(',')
+
+    return result
+
+
+@beartype
+def condition_differences_network(
+    adata: sc.AnnData,
+    n_top: int = 100,
+    figsize: Tuple[int, int] = (22, 16),
+    dpi: int = 300,
+    save: Optional[str] = None,
+    split_by_direction: bool = True,
+    hub_threshold: int = 4,
+    color_palette: str = 'tab20',
+    vmin: float = -1.0,
+    vmax: float = 1.0,
+    n_cols: int = 4,
+    n_rows: Optional[int] = None,
+    close_figs: bool = True
+) -> List[matplotlib.figure.Figure]:
+    """
+    Visualize differences between conditions as a receptor-ligand network with hubs separated.
+
+    Creates a multi-grid visualization where network hubs are displayed separately.
+    Works with both standard condition differences and time series analyses.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        AnnData object containing results from calculate_condition_differences
+    n_top : int, default 100
+        Number of top differential interactions to display
+    figsize : Tuple[int, int], default (22, 16)
+        Size of the figure
+    dpi : int, default 300
+        The resolution of the figure
+    save : Optional[str], default None
+        Output filename base. Uses the internal 'sctoolbox.settings.figure_dir'
+    split_by_direction : bool, default True
+        Whether to create separate networks for positive and negative differences
+    hub_threshold : int, default 4
+        Minimum number of connections for a node to be considered a hub
+    color_palette : str, default 'tab20'
+        Color palette to use for cell types
+    vmin : float, default -1.0
+        Minimum value for colormap normalization
+    vmax : float, default 1.0
+        Maximum value for colormap normalization
+    n_cols : int, default 4
+        Number of columns in the grid layout
+    n_rows : Optional[int], default None
+        Number of rows in the grid layout, calculated automatically if None
+    close_figs : bool, default True
+        Whether to close figures after saving to free up memory
+
+    Returns
+    -------
     List[matplotlib.figure.Figure]
-        List of generated figures
+        List of generated figures (note: if close_figs=True, these figures will be closed)
 
     Raises
     ------
     ValueError
-        If no valid differences are found in the provided diff_results.
+        If no valid differences are found in the provided AnnData object.
+
+    Examples
+    --------
+    # Visualize differences for standard condition comparison
+    figs = condition_differences_network(
+        adata=adata,
+        n_top=50,
+        split_by_direction=True,
+        save="condition_diff_network"
+    )
+
+    # Visualize differences for time series analysis
+    time_figs = condition_differences_network(
+        adata=time_adata,
+        split_by_direction=False,
+        hub_threshold=3,
+        n_cols=3
+    )
     """
+    # Get condition differences from adata
+    diff_results = adata.uns.get('sctoolbox', {}).get('receptor-ligand', {}).get("condition-differences", {})
+
     # Check if data is available
-    if not diff_results or all(len(dimension) == 0 for dimension in diff_results.values()):
-        raise ValueError("No valid condition differences found in the provided results.")
+    if not diff_results:
+        raise ValueError("No valid condition differences found in the AnnData object.")
 
     # List to store all generated figures
     figures = []
 
-    # Dictionary to store cluster column colors
-    all_cell_types = set()
-
     # Collect all cell types across all comparisons
-    for _, con_results in diff_results.items():
-        for comparison_key, comparison_data in con_results.items():
-            if 'differences' not in comparison_data:
+    all_cell_types = set()
+    for dimension_results in diff_results.values():
+        for comparison_data in dimension_results.values():
+            # Skip non-dictionary entries or entries without differences
+            if not isinstance(comparison_data, dict) or 'differences' not in comparison_data:
                 continue
 
             diff_df = comparison_data['differences']
+
+            # Skip empty DataFrames
+            if len(diff_df) == 0:
+                continue
 
             # Add cell types to the set
             all_cell_types.update(diff_df['receptor_cluster'].unique())
             all_cell_types.update(diff_df['ligand_cluster'].unique())
 
-    # Get colormap
-    color_palette = plt.colormaps.get_cmap('tab20')
+    # If no cell types were found, raise an error
+    if not all_cell_types:
+        raise ValueError("No valid cell types found in the differences data.")
+
+    # Get colormap for cell types
+    cmap = plt.colormaps.get_cmap(color_palette)
 
     # Define node shapes
     cluster_shapes = ['o', 's', 'p', '^', 'D', 'v', '<', '>', '8', 'h', 'H', 'd', 'P', 'X']
@@ -2214,62 +2470,83 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
     cell_colors = {}
     cell_shapes = {}
 
-    # Create the 280 pairs of (color, sape) combinations
+    # Create pairs of (color, shape) combinations efficiently
     sorted_cell_types = sorted(all_cell_types)
     for i, ct in enumerate(sorted_cell_types):
-        color_idx = i % 20
-        shape_idx = i // 20
+        color_idx = i % cmap.N
+        shape_idx = i // cmap.N % len(cluster_shapes)
 
-        cell_colors[ct] = color_palette(color_idx)
+        cell_colors[ct] = cmap(color_idx)
+        cell_shapes[ct] = cluster_shapes[shape_idx]
 
-        if shape_idx < len(cluster_shapes):
-            cell_shapes[ct] = cluster_shapes[shape_idx]
-        else:
-            # If more then 280 clusters, then clycle
-            cell_shapes[ct] = cluster_shapes[shape_idx % len(cluster_shapes)]
+    # Define colormap settings based on direction
+    colormap_settings = {
+        'positive': {'vmin': 0, 'vmax': vmax, 'cmap': 'Reds'},
+        'negative': {'vmin': vmin, 'vmax': 0, 'cmap': 'Blues_r'},
+        'all': {'vmin': vmin, 'vmax': vmax, 'cmap': 'RdBu_r'}
+    }
 
     # Process each condition dimension
-    for con_name, con_results in diff_results.items():
+    for dimension_key, dimension_results in diff_results.items():
 
         # Process each comparison in this dimension
-        for comparison_key, comparison_data in con_results.items():
-            # Get the differences table
-            if 'differences' not in comparison_data:
-                warnings.warn(f"No differences table found for {comparison_key}, skipping visualization")
+        for comparison_key, comparison_data in dimension_results.items():
+            # Skip non-dictionary entries or entries without differences
+            if not isinstance(comparison_data, dict) or 'differences' not in comparison_data:
                 continue
-
+  
             diff_df = comparison_data['differences']
 
-            # Skip if no differences
+            # Skip if empty
             if len(diff_df) == 0:
-                warnings.warn(f"No differences found for {comparison_key}, skipping visualization")
                 continue
 
-            # Get condition metadata for title
-            condition_a = diff_df.attrs.get('condition_a', 'Condition A')
-            condition_b = diff_df.attrs.get('condition_b', 'Condition B')
+            # Extract key column information
+            col_info = _extract_diff_key_columns(diff_df)
+            if not col_info or 'diff_col' not in col_info:
+                logger.warning(f"Could not identify difference columns for {comparison_key}")
+                continue
+ 
+            # Use extracted column names
+            diff_col = col_info.get('diff_col')
+            abs_diff_col = col_info.get('abs_diff_col')
+            condition_a = col_info.get('condition_a', 'Condition A')
+            condition_b = col_info.get('condition_b', 'Condition B')
+
+            # Check if this is a time series comparison
+            is_time_series = 'time_column' in col_info and 'time_order' in col_info
+            time_info = ""
+            if is_time_series:
+                time_col = col_info['time_column']
+                time_points = col_info['time_order']
+                # Find position of conditions in the time series
+                if condition_a in time_points and condition_b in time_points:
+                    pos_a = time_points.index(condition_a)
+                    pos_b = time_points.index(condition_b)
+                    time_info = f" | {time_col}: {pos_a} → {pos_b}"
 
             # Determine directions to plot
             directions = []
             if split_by_direction:
                 # Get top positive differences
-                pos_diff = diff_df[diff_df['rank_diff'] > 0].sort_values('rank_diff', ascending=False).head(n_top)
-                if len(pos_diff) > 0:
-                    directions.append(('positive', pos_diff, 'Higher in ' + condition_b))
+                pos_mask = diff_df[diff_col] > 0
+                if pos_mask.any():
+                    pos_diff = diff_df[pos_mask].sort_values(diff_col, ascending=False).head(n_top)
+                    directions.append(('positive', pos_diff, f'Higher in {condition_b}'))
 
                 # Get top negative differences
-                neg_diff = diff_df[diff_df['rank_diff'] < 0].sort_values('rank_diff', ascending=True).head(n_top)
-                if len(neg_diff) > 0:
-                    directions.append(('negative', neg_diff, 'Higher in ' + condition_a))
+                neg_mask = diff_df[diff_col] < 0
+                if neg_mask.any():
+                    neg_diff = diff_df[neg_mask].sort_values(diff_col, ascending=True).head(n_top)
+                    directions.append(('negative', neg_diff, f'Higher in {condition_a}'))
             else:
                 # Get top absolute differences
-                top_diff = diff_df.sort_values('abs_diff', ascending=False).head(n_top)
+                top_diff = diff_df.sort_values(abs_diff_col, ascending=False).head(n_top)
                 if len(top_diff) > 0:
                     directions.append(('all', top_diff, 'All differences'))
 
             # Skip if no directions to plot
             if not directions:
-                warnings.warn(f"No differences found for {comparison_key}, skipping visualization")
                 continue
 
             # Create visualizations for each direction
@@ -2277,76 +2554,74 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                 # Create a graph
                 G = nx.DiGraph()
 
-                # Add nodes and edges for top interactions
+                # Prepare node and edge data for efficient graph creation
+                receptor_nodes = {}
+                ligand_nodes = {}
+                edges = []
+
+                # Use appropriate column names based on extracted info
                 for _, row in top_diff.iterrows():
                     # Node identifiers
                     r_node = f"{row['receptor_gene']}_{row['receptor_cluster']}"
                     l_node = f"{row['ligand_gene']}_{row['ligand_cluster']}"
 
-                    # Add nodes with metadata
-                    G.add_node(r_node,
-                               cell_type=row['receptor_cluster'],
-                               gene=row['receptor_gene'],
-                               is_receptor=True)
+                    # Collect node data
+                    receptor_nodes[r_node] = {
+                        'cell_type': row['receptor_cluster'],
+                        'gene': row['receptor_gene'],
+                        'is_receptor': True
+                    }
 
-                    G.add_node(l_node,
-                               cell_type=row['ligand_cluster'],
-                               gene=row['ligand_gene'],
-                               is_receptor=False)
+                    ligand_nodes[l_node] = {
+                        'cell_type': row['ligand_cluster'],
+                        'gene': row['ligand_gene'],
+                        'is_receptor': False
+                    }
 
-                    # Add edge with metadata
-                    G.add_edge(l_node, r_node,
-                               weight=abs(row['rank_diff']),
-                               diff=row['rank_diff'],
-                               interaction_a=row['interaction_score_a'],
-                               interaction_b=row['interaction_score_b'])
+                    # Derive interaction score columns based on condition names
+                    interaction_a_col = next((col for col in row.index if col.startswith('interaction_score_') and
+                                             col.endswith(f"_{condition_a}")), None)
+                    interaction_b_col = next((col for col in row.index if col.startswith('interaction_score_') and
+                                             col.endswith(f"_{condition_b}")), None)
 
-                # Skip if no edges in the graph
-                if len(G.edges) == 0:
-                    warnings.warn(f"No {direction_name} differences found for {comparison_key}, skipping visualization")
+                    interaction_a = row[interaction_a_col] if interaction_a_col else None
+                    interaction_b = row[interaction_b_col] if interaction_b_col else None
+
+                    # Collect edge data
+                    edges.append((l_node, r_node, {
+                        'weight': abs(row[diff_col]),
+                        'diff': row[diff_col],
+                        'interaction_a': interaction_a,
+                        'interaction_b': interaction_b
+                    }))
+
+                # Skip if no edges
+                if not edges:
                     continue
 
-                # Identify hub nodes (nodes with high connectivity)
-                node_connections = Counter()
-                for u, v in G.edges():
-                    node_connections[u] += 1
-                    node_connections[v] += 1
+                # Add all nodes and edges at once
+                G.add_nodes_from(receptor_nodes.items())
+                G.add_nodes_from(ligand_nodes.items())
+                G.add_edges_from(edges)
 
-                # Nodes that have connections greater than or equal to the threshold are considered hubs
-                hub_nodes = {node for node, count in node_connections.items() if count >= hub_threshold}
+                # Skip if graph is empty
+                if len(G.nodes()) == 0:
+                    continue
 
-                # Create a dictionary to organize hubs and their direct connections
-                hub_networks = {}
-                non_hub_edges = []
+                # Identify hub nodes and their networks
+                hub_networks, non_hub_edges = _identify_hub_networks(G, hub_threshold)
 
-                # If there are hub nodes, create a separate subgraph for each hub
-                if hub_nodes:
-                    # Create a subgraph for each hub node
-                    for hub in hub_nodes:
-                        # Get all neighbors of the hub
-                        neighbors = set(G.successors(hub)).union(set(G.predecessors(hub)))
-                        # Create a subgraph with the hub and its neighbors
-                        nodes_in_subgraph = {hub}.union(neighbors)
-                        subgraph = G.subgraph(nodes_in_subgraph).copy()
-                        hub_networks[hub] = subgraph
-
-                # Create a subgraph with remaining non-hub nodes and edges
-                for u, v in G.edges():
-                    if u not in hub_nodes and v not in hub_nodes:
-                        non_hub_edges.append((u, v))
-
-                # Create the non-hub subgraph
+                # Create non-hub subgraph if needed
+                non_hub_subgraph = None
                 if non_hub_edges:
                     non_hub_subgraph = G.edge_subgraph(non_hub_edges).copy()
-                else:
-                    non_hub_subgraph = nx.DiGraph()
 
                 # Determine layout for the multi-grid visualization
                 num_hubs = len(hub_networks)
-                has_non_hub = len(non_hub_edges) > 0
+                has_non_hub = non_hub_subgraph is not None and len(non_hub_subgraph.edges) > 0
 
                 # Calculate grid layout parameters with last column for cluster legend
-                if num_hubs == 0:
+                if num_hubs == 0 and has_non_hub:
                     # Only non-hub network + legend
                     rows, cols = 1, 2
                 elif num_hubs == 1:
@@ -2359,13 +2634,23 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                     rows, cols = 2, 4
                 else:
                     cols = 4
-                    rows = math.ceil((num_hubs + (1 if has_non_hub else 0)) / (cols - 1))  # +1 for legend
+                    # First row is reserved for non-hubs
+                    rows = math.ceil((num_hubs + (cols if has_non_hub else 0)) / (cols - 1))  # +1 for legend
+
+                # Override with user-provided parameters if given
+                if n_rows is not None:
+                    rows = n_rows
+                if n_cols is not None:
+                    cols = min(n_cols, num_hubs + 1 + (1 if has_non_hub else 0))  # +1 for legend
+
+                # Close any existing figures to free memory if requested
+                if close_figs:
+                    plt.close('all')
 
                 # Create figure with GridSpec for multi-grid layout
                 fig = plt.figure(figsize=figsize, dpi=dpi)
 
-                # Create grid with the required number of rows and columns
-                # while reserving the last column for the legend and make halve size
+                # Create grid with the last column for legend and make it half size
                 width_ratios = [1] * (cols - 1) + [0.5]
 
                 # Create the grid with appropriate spacing
@@ -2376,249 +2661,109 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                     wspace=0.3, hspace=0.35
                 )
 
-                # Determine min and max values for the colormap
-                if direction_name == 'positive':
-                    vmin = 0
-                    # vmin = min(row['rank_diff'] for _, row in top_diff.iterrows()) - 0.2
-                    # vmax = max(row['rank_diff'] for _, row in top_diff.iterrows())
-                    vmax = 1
-                    cmap = 'Reds'
-                elif direction_name == 'negative':
-                    # vmin = min(row['rank_diff'] for _, row in top_diff.iterrows()) - 0.2
-                    vmin = -1
-                    vmax = 0
-                    # vmax = max(row['rank_diff'] for _, row in top_diff.iterrows())
-                    cmap = 'Blues_r'
-                else:
-                    vmin = -1
-                    vmax = 1
-                    cmap = 'RdBu_r'
+                # Set colormap parameters based on direction
+                cm_settings = colormap_settings[direction_name]
+                norm = mcolors.Normalize(vmin=cm_settings['vmin'], vmax=cm_settings['vmax'])
+                colormap = plt.colormaps.get_cmap(cm_settings['cmap'])
 
-                # Create a normalized colormap
-                norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-                colormap = plt.colormaps.get_cmap(cmap)
+                # Prepare the list of subgraphs to plot
+                plots_to_display = []
 
-                # Function to draw a network on a given axis
-                def draw_network(graph, ax, title=None):
-                    # Layout for this network
-                    pos = nx.spring_layout(graph, k=2.0, iterations=200, seed=42, scale=1.0)
+                # Add non-hub subgraph
+                if non_hub_subgraph:
+                    plots_to_display.append(('non_hub', non_hub_subgraph, "Non-Hub Network"))
 
-                    # Draw edges
-                    for u, v, data in graph.edges(data=True):
-                        # Edge color based on difference
-                        edge_color = colormap(norm(data['diff']))
+                # Add hub subgraphs
+                for hub, subgraph in hub_networks.items():
+                    plots_to_display.append((hub, subgraph, f"Hub: {hub}"))
 
-                        width = 1.5
+                # Tracking grid positions for dynamic allocation
+                current_row, current_col = 0, 0
 
-                        # Draw the edge
-                        nx.draw_networkx_edges(
-                            graph, pos,
-                            edgelist=[(u, v)],
-                            width=width,
-                            edge_color=[edge_color],
-                            arrows=True,
-                            arrowsize=15,
-                            arrowstyle='-|>',
-                            connectionstyle='arc3,rad=0.1',
-                            ax=ax
-                        )
+                # Draw each plot in its position
+                for i, (plot_id, graph, title) in enumerate(plots_to_display):
+                    # 2x1 grid for non-hub
+                    if plot_id == 'non_hub':
+                        # Check if there's enough space to use a colsx1 block for non-hub
+                        if current_col + 1 >= (cols - 1):
+                            current_col = 0
+                            current_row += 1
 
-                        # Add edge label with difference score
-                        x = (pos[u][0] + pos[v][0]) / 2
-                        y = (pos[u][1] + pos[v][1]) / 2
+                        ax = fig.add_subplot(gs[current_row, current_col:current_col + (cols - 1)])
 
-                        edge_label = f"{data['diff']:.2f}"
-                        ax.text(
-                            x, y, edge_label, fontsize=8,
-                            bbox=dict(facecolor='white', alpha=0.0, edgecolor='none', boxstyle='round,pad=0.2'),
-                            ha='center', va='center'
-                        )
+                        # Move to next row
+                        current_row += 1
 
-                    # Draw nodes with consistent shape and color based on cluster
-                    for cell_type in sorted(all_cell_types):
-                        # Get all nodes for this cluster
-                        ct_nodes = [n for n in graph.nodes() if graph.nodes[n].get('cell_type') == cell_type]
+                    else:
+                        # If we reach the end of a row, move to the next row
+                        if current_col >= (cols - 1):
+                            current_col = 0
+                            current_row += 1
 
-                        # Draw all nodes for this cluster with the same shape and color
-                        if ct_nodes:
-                            nx.draw_networkx_nodes(
-                                graph, pos,
-                                nodelist=ct_nodes,
-                                node_color=[cell_colors[cell_type]] * len(ct_nodes),
-                                node_size=700,
-                                alpha=0.8,
-                                edgecolors='lightgrey',
-                                linewidths=0.5,
-                                node_shape=cell_shapes[cell_type],
-                                ax=ax
-                            )
+                        ax = fig.add_subplot(gs[current_row, current_col])
+                        current_col += 1
 
-                    # Add node labels with adjusted positions
-                    labels = {node: data.get('gene', node) for node, data in graph.nodes(data=True)}
-
-                    # Draw labels
-                    nx.draw_networkx_labels(
-                        graph, pos,
-                        labels=labels,
-                        font_size=10,
-                        font_weight='normal',
-                        bbox=dict(facecolor='white', alpha=0.0, edgecolor='none', boxstyle='round,pad=0.2'),
-                        ax=ax
+                    _draw_network(
+                        graph, ax,
+                        title=title,
+                        cell_colors=cell_colors,
+                        cell_shapes=cell_shapes,
+                        colormap=colormap,
+                        norm=norm,
+                        all_cell_types=all_cell_types
                     )
 
-                    # Set title if provided
-                    if title:
-                        ax.set_title(title, fontsize=12)
+                # Add legend to the final column
+                ax_legend = fig.add_subplot(gs[:, -1])
+                ax_legend.axis('off')
 
-                    ax.set_axis_off()
-
-                # Create a layout plan for where to place each element
-                layout_plan = []
-
-                # Create a legend spanning all rows in the last column
-                legend_position = gs[:, -1]
-
-                # Create positions for the network plots (excluding the legend column)
-                available_positions = []
-                for r in range(rows):
-                    for c in range(cols - 1):
-                        available_positions.append((r, c))
-
-                # Place the non-hub network first (if available)
-                if has_non_hub:
-                    # Place non-hub network in the first position
-                    row, col = available_positions.pop(0)
-                    if num_hubs <= 3 and cols > 3:
-                        # For few hubs, let the non-hub network span two columns
-                        non_hub_position = gs[row, col:(col + 2)]
-                        # Remove the next position due tospanning
-                        if available_positions and available_positions[0][0] == row and available_positions[0][1] == col + 1:
-                            available_positions.pop(0)
-                    else:
-                        non_hub_position = gs[row, col]
-
-                    layout_plan.append(('non-hub', non_hub_position))
-
-                # Place hub networks in the remaining positions
-                hub_names = sorted(hub_networks.keys())
-                for i, hub in enumerate(hub_names):
-                    if i < len(available_positions):
-                        row, col = available_positions[i]
-                        hub_position = gs[row, col]
-                        layout_plan.append((hub, hub_position))
-                    else:
-                        warnings.warn(f"Too many hubs to display. Showing only {len(available_positions)} out of {num_hubs}. \
-                                      \n Consider increasing the hub_threshold or reducing the n_top parameter.")
-                        break
-
-                # Add the legend to the layout plan
-                layout_plan.append(('legend', legend_position))
-
-                # Now draw networks according to the layout plan
-                for item_type, position in layout_plan:
-                    if item_type == 'non-hub':
-                        ax_non_hub = fig.add_subplot(position)
-                        draw_network(non_hub_subgraph, ax_non_hub, "Non-Hub Nodes")
-                    elif item_type == 'legend':
-                        ax_legend = fig.add_subplot(position)
-                        ax_legend.axis('off')
-                    else:
-                        # This is a hub
-                        hub = item_type
-                        ax_hub = fig.add_subplot(position)
-
-                        # Get hub info
-                        hub_gene = G.nodes[hub].get('gene', '')
-                        hub_cell_type = G.nodes[hub].get('cell_type', '')
-                        hub_type = "Receptor" if G.nodes[hub].get('is_receptor', False) else "Ligand"
-
-                        # Create descriptive title
-                        hub_title = f"Hub: {hub_gene} ({hub_type}) in {hub_cell_type}\n{len(hub_networks[hub].edges())} connections"
-
-                        draw_network(hub_networks[hub], ax_hub, hub_title)
-
-                # Calculate which cell types are present in this graph
-                present_cell_types = set()
-                for n in G.nodes():
-                    ct = G.nodes[n].get('cell_type')
-                    if ct is not None:
-                        present_cell_types.add(ct)
-
-                # Create sorted list of present cell types
-                present_cell_types = sorted(present_cell_types)
-
-                # Create legend elements
-                legend_elements = [
-                    matplotlib.patches.Patch(facecolor='white', edgecolor='black', label='Cell Types:', alpha=0.7)
-                ]
-
-                # Add elements for each cell type that exists in this graph
-                for ct in sorted(present_cell_types):
+                # Create proxy handles for legend
+                legend_elements = []
+                for ct in sorted_cell_types:
+                    shape = cell_shapes[ct]
+                    color = cell_colors[ct]
                     legend_elements.append(
-                        lines.Line2D(
-                            [0], [0],
-                            color=cell_colors[ct],
-                            marker=cell_shapes[ct],
-                            markersize=10,
-                            linestyle='none',
-                            markeredgecolor='black',
-                            markeredgewidth=0.7,
-                            label=ct
+                        matplotlib.lines.Line2D(
+                            [], [], marker=shape, color='w', label=ct,
+                            markerfacecolor=color, markersize=10,
+                            markeredgecolor='lightgrey', linestyle='None'
                         )
                     )
 
-                # Add explanation of score differences
-                if direction_name == 'positive':
-                    colorbar_title = f'Edges colored by quantile rank differences: Interaction is higher in {condition_b}'
-                elif direction_name == 'negative':
-                    colorbar_title = f'Edges colored by quantile rank differences: Interaction is higher in {condition_a}'
-
-                # Distribute legend
-                if rows >= 2:
-                    # Split legend elements between cell types and other info
-                    split_idx = 1 + len(present_cell_types)
-
-                    # Create section for cell types
-                    cell_type_elements = legend_elements[:split_idx]
-
-                    # Add cell types legend at the top of the legend column
-                    legend = ax_legend.legend(
-                        handles=cell_type_elements,
-                        loc="upper center",
-                        fontsize=12,
-                        framealpha=0.9,
-                        title_fontsize=12,
-                        handlelength=1.5,
-                        handletextpad=0.6,
-                        labelspacing=1.0,
-                        borderpad=1,
-                        ncol=1
-                    )
-                    ax_legend.add_artist(legend)
-                else:
-                    # For single row layout
-                    ax_legend.legend(
-                        handles=legend_elements,
-                        loc="center",
-                        fontsize=12,
-                        framealpha=0.9,
-                        title_fontsize=12,
-                        handlelength=1.5,
-                        handletextpad=0.6,
-                        labelspacing=1.0,
-                        borderpad=1,
-                        ncol=1
-                    )
+                # Draw the legend
+                ax_legend.legend(
+                    handles=legend_elements,
+                    loc='center left',
+                    title="Cell Types",
+                    fontsize=10,
+                    title_fontsize=12,
+                    handlelength=1.5,
+                    handletextpad=0.6,
+                    labelspacing=1.0,
+                    borderpad=1,
+                    ncol=1
+                )
 
                 # Add main title for the entire figure
-                if hub_nodes:
-                    hub_info = f"{len(hub_nodes)} Hubs (≥{hub_threshold} connections)"
+                if hub_networks:
+                    hub_info = f"{len(hub_networks)} Hubs (≥{hub_threshold} connections)"
                 else:
                     hub_info = ""
 
-                main_title = f"{condition_b} - {condition_a} | {direction_label} | {hub_info}"
+                main_title = f"{condition_b} - {condition_a}{time_info} | {direction_label}"
+                if hub_info:
+                    main_title += f" | {hub_info}"
+
                 fig.suptitle(main_title, fontsize=16, y=0.98)
                 plt.subplots_adjust(bottom=0.15)
+
+                # Set colorbar title based on direction
+                if direction_name == 'positive':
+                    colorbar_title = f'Quantile rank differences: Higher in {condition_b}'
+                elif direction_name == 'negative':
+                    colorbar_title = f'Quantile rank differences: Higher in {condition_a}'
+                else:
+                    colorbar_title = 'Quantile rank differences'
 
                 # Add colorbar for edge colors at the bottom of the figure
                 sm = matplotlib.cm.ScalarMappable(cmap=colormap, norm=norm)
@@ -2626,36 +2771,31 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
                 cbar_ax = fig.add_axes([0.35, 0.06, 0.3, 0.02])
                 cbar = plt.colorbar(sm, cax=cbar_ax, orientation="horizontal", shrink=0.6, pad=0.15)
                 cbar.set_label(colorbar_title, fontsize=12)
-                cbar.ax.tick_params(labelsize=12)
+                cbar.ax.tick_params(labelsize=10)
 
+                # Add arrow legend to explain edge direction
                 arrow_ax = fig.add_axes([0.15, 0.06, 0.25, 0.02])
                 arrow_ax.axis('off')
 
-                arrow_x_start = 0.2
-                arrow_x_end = 0.25
-                arrow_y = 0.5
-
-                arrow_line = lines.Line2D(
-                    [arrow_x_start, arrow_x_end],
-                    [arrow_y, arrow_y],
+                # Draw arrow example
+                arrow_ax.add_artist(lines.Line2D(
+                    [0.2, 0.25], [0.5, 0.5],
                     color='black',
                     linewidth=2,
                     transform=arrow_ax.transAxes
-                )
-                arrow_ax.add_artist(arrow_line)
+                ))
 
-                arrow_head = lines.Line2D(
-                    [arrow_x_end], [arrow_y],
+                arrow_ax.add_artist(lines.Line2D(
+                    [0.25], [0.5],
                     marker='>',
                     markersize=10,
                     color='black',
                     transform=arrow_ax.transAxes
-                )
-                arrow_ax.add_artist(arrow_head)
+                ))
 
                 arrow_ax.text(
                     0.30, 0.5,
-                    "Edge Direction:\nLigand to Receptor",
+                    "Edge Direction:\nLigand → Receptor",
                     fontsize=12,
                     ha='left',
                     va='center',
@@ -2664,10 +2804,17 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
 
                 # Save if requested
                 if save:
-                    plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')
+                    output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.png"
+                    output_path = f"{settings.figure_dir}/{output_filename}"
+                    plt.savefig(output_path, bbox_inches='tight')
 
                 # Store the figure for return
                 figures.append(fig)
+
+    # Close all figures if requested to free memory
+    if close_figs:
+        for fig in figures:
+            plt.close(fig)
 
     # Return the list of figures
     return figures
@@ -2675,269 +2822,131 @@ def condition_differences_network(diff_results: Dict[str, Dict[str, Dict[str, pd
 
 @beartype
 def plot_all_condition_differences(
-    diff_results: Dict[str, Dict[str, Dict[str, pd.DataFrame]]] = None,
+    adata: sc.AnnData,
     n_top: int = 100,
     figsize: Tuple[int, int] = (22, 16),
     dpi: int = 300,
     save_prefix: Optional[str] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
+    color_palette: str = 'tab20',
+    vmin: float = -1.0,
+    vmax: float = 1.0,
+    n_cols: int = 4,
+    n_rows: Optional[int] = None,
     show: bool = True,
-    return_figures: bool = False
+    return_figures: bool = False,
+    close_figs: bool = True
 ) -> Optional[Dict[str, List[matplotlib.figure.Figure]]]:
     """
-    Plot network visualizations for all condition differences.
+    Generate network plots for all condition difference comparisons.
 
-    This is a wrapper function that calls condition_differences_network on all differences
-    found in the output from calculate_condition_differences.
+    This function processes all dimensions in the condition differences data
+    and generates visualizations for each comparison. Works with both standard
+    condition differences and time series analyses.
 
     Parameters
     ----------
-    diff_results : Dict[str, Dict[str, Dict[str, pd.DataFrame]]], default None
-        Results from calculate_condition_differences or calculate_condition_differences_over_time.
-    n_top : int, default 20
-        Number of top differential interactions to display in each network
+    adata : sc.AnnData
+        AnnData object containing condition differences data
+    n_top : int, default 100
+        Number of top differential interactions to display
     figsize : Tuple[int, int], default (22, 16)
         Size of the figure
     dpi : int, default 300
-        The resolution of the figures
+        Resolution of the figure
     save_prefix : Optional[str], default None
-        Prefix for saved figures. If provided, each figure will be saved with this prefix
-        followed by the condition dimension and comparison name
+        Prefix for saved image filenames
     split_by_direction : bool, default True
-        Whether to create separate networks for positive and negative differences
+        Create separate plots for positive and negative differences
     hub_threshold : int, default 4
-        Minimum number of connections for a node to be considered a hub
+        Minimum connections for a node to be considered a hub
+    color_palette : str, default 'tab20'
+        Matplotlib colormap to use for cell types
+    vmin, vmax : float, default -1.0, 1.0
+        Color scale limits for edge colors
+    n_cols : int, default 4
+        Number of columns in the grid layout
+    n_rows : Optional[int], default None
+        Number of rows in the grid layout (calculated if None)
     show : bool, default True
-        Whether to display the figures
+        Display the figures after generating
     return_figures : bool, default False
-        Whether to return the generated figures as a dictionary
+        Return the generated figures
+    close_figs : bool, default True
+        Close figures after processing to free memory
 
     Returns
     -------
     Optional[Dict[str, List[matplotlib.figure.Figure]]]
-        If return_figures is True, returns a dictionary mapping condition dimensions
-        to lists of generated figures
+        Dictionary of figures by dimension key if return_figures=True
 
-    Raises
-    ------
-    ValueError
-        If no diff_results are provided
-    """
-    # Get the differences results if not provided
-    if diff_results is None:
-        raise ValueError(
-            "Run calculate_condition_differences or calculate_condition_differences_over_time first, "
-            "or provide diff_results."
-        )
-
-    if not diff_results or all(len(dimension) == 0 for dimension in diff_results.values()):
-        raise ValueError("No condition differences found in the provided results.")
-
-    # Dictionary to store all generated figures if return_figures is True
-    all_figures = {} if return_figures else None
-
-    # Process each condition dimension
-    for condition_dim, comparisons in diff_results.items():
-        print(f"Processing condition dimension: {condition_dim}")
-
-        # Skip if no comparisons in this dimension
-        if len(comparisons) == 0:
-            warnings.warn(f"No comparisons found for dimension '{condition_dim}', skipping")
-            continue
-
-        # Create save name if saving is requested
-        if save_prefix:
-            save_name = f"{save_prefix}_{condition_dim}"
-        else:
-            save_name = None
-
-        # Call condition_differences_network for this dimension
-        try:
-            # Create subdictionary with just this dimension
-            subset_diff_results = {condition_dim: comparisons}
-
-            figures = condition_differences_network(
-                diff_results=subset_diff_results,
-                n_top=n_top,
-                figsize=figsize,
-                dpi=dpi,
-                save=save_name,
-                split_by_direction=split_by_direction,
-                hub_threshold=hub_threshold
-            )
-
-            # Store figures if requested
-            if return_figures:
-                all_figures[condition_dim] = figures
-
-            # Display figures if requested
-            if show:
-                for fig in figures:
-                    plt.figure(fig.number)
-                    plt.show()
-            else:
-                for fig in figures:
-                    plt.close(fig)
-
-            print(f"Generated {len(figures)} network plots for '{condition_dim}'")
-
-        except Exception as e:
-            warnings.warn(f"Error plotting networks for dimension '{condition_dim}': {str(e)}")
-
-    return all_figures if return_figures else None
-
-
-@beartype
-def track_clusters_or_genes(
-    diff_results: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
-    clusters: Optional[List[str]] = None,
-    genes: Optional[List[str]] = None,
-    timepoint_order: List[str] = None,
-    min_interactions: int = 5,
-    n_top: int = 100,
-    figsize: Tuple[int, int] = (22, 16),
-    dpi: int = 300,
-    save_prefix: Optional[str] = None,
-    split_by_direction: bool = True,
-    hub_threshold: int = 4
-) -> List[matplotlib.figure.Figure]:
-    """
-    Track the evolution of interactions involving specific clusters or genes across timepoints.
-
-    Parameters
-    ----------
-    diff_results : Dict[str, Dict[str, Dict[str, pd.DataFrame]]]
-        Results from calculate_condition_differences_over_time
-    clusters : Optional[List[str]], default None
-        List of cluster names to track. If None, no cluster filtering is applied.
-    genes : Optional[List[str]], default None
-        List of gene names to track. If None, no gene filtering is applied.
-    timepoint_order : List[str], default None
-        Ordered list of timepoints. If None, will attempt to infer from the data.
-    min_interactions : int, default 5
-        Minimum number of interactions required to generate a network for a timepoint
-    n_top : int, default 20
-        Number of top differential interactions to display in each network
-    figsize : Tuple[int, int], default (22, 16)
-        Size of the figure
-    dpi : int, default 300
-        The resolution of the figure
-    save_prefix : Optional[str], default None
-        Prefix for saved figures
-    split_by_direction : bool, default True
-        Whether to create separate networks for positive and negative differences
-    hub_threshold : int, default 4
-        Minimum number of connections for a node to be considered a hub
-
-    Returns
-    -------
-    List[matplotlib.figure.Figure]
-        List of generated figures
-
-    Raises
-    ------
-    ValueError
-        If neither clusters nor genes are provided
-        If timepoint_order is not provided
-        If no temporal comparison is found in the provided results
-        If no comparisons have at least min_interactions matching the specified clusters/genes
-    """
-
-    # Validate inputs
-    if clusters is None and genes is None:
-        raise ValueError("At least one of clusters or genes must be provided.")
-
-    if timepoint_order is None:
-        raise ValueError("timepoint_order must be provided")
-
-    # Find the time dimension (e. g. "time_series")
-    time_dim = None
-    for dim in diff_results:
-        if diff_results[dim]:
-            time_dim = dim
-            break
-
-    if not time_dim:
-        raise ValueError("No temporal comparison found in the provided results.")
-
-    # Extract all timepoints from the comparisons
-    available_timepoints = set()
-    time_comparisons = {}
-
-    for comp_key, comp_data in diff_results[time_dim].items():
-        if 'differences' not in comp_data:
-            continue
-
-        diff_df = comp_data['differences']
-
-        if not hasattr(diff_df, 'attrs'):
-            continue
-
-        tp1 = diff_df.attrs.get('timepoint_1')
-        tp2 = diff_df.attrs.get('timepoint_2')
-
-        if tp1 and tp2:
-            available_timepoints.add(tp1)
-            available_timepoints.add(tp2)
-            time_comparisons[comp_key] = (tp1, tp2)
-
-    # Create filtered version of diff_results containing only the specified clusters/genes
-    filtered_results = {time_dim: {}}
-
-    for comp_key, comp_data in diff_results[time_dim].items():
-        if 'differences' not in comp_data:
-            continue
-
-        diff_df = comp_data['differences']
-        filtered_df = diff_df.copy()
-
-        # Apply cluster filter if provided
-        if clusters is not None:
-            cluster_mask = (
-                filtered_df['receptor_cluster'].isin(clusters) | filtered_df['ligand_cluster'].isin(clusters)
-            )
-            filtered_df = filtered_df[cluster_mask]
-
-        # Apply gene filter if provided
-        if genes is not None:
-            gene_mask = (
-                filtered_df['receptor_gene'].isin(genes) | filtered_df['ligand_gene'].isin(genes)
-            )
-            filtered_df = filtered_df[gene_mask]
-
-        # Only add if enough interactions
-        if len(filtered_df) >= min_interactions:
-            for attr_name in diff_df.attrs:
-                filtered_df.attrs[attr_name] = diff_df.attrs[attr_name]
-            filtered_results[time_dim][comp_key] = {'differences': filtered_df}
-        else:
-            print(f"Skipping {comp_key}: Only {len(filtered_df)} interactions match criteria (minimum {min_interactions})")
-
-    if not any(filtered_results[time_dim].values()):
-        raise ValueError(f"No comparisons have at least {min_interactions} interactions matching the specified clusters/genes.")
-
-    # Generate network visualizations for each timepoint
-    figures = condition_differences_network(
-        diff_results=filtered_results,
-        n_top=n_top,
-        figsize=figsize,
-        dpi=dpi,
-        save=save_prefix,
-        split_by_direction=split_by_direction,
-        hub_threshold=hub_threshold
+    Examples
+    --------
+    # Generate and display all condition difference plots
+    plot_all_condition_differences(
+        adata=adata,
+        n_top=50,
+        save_prefix="all_conditions",
+        show=True
     )
 
-    # Add filter information to titles
-    for fig in figures:
-        current_title = fig._suptitle.get_text() if fig._suptitle else ""
-        filter_desc = []
-        if clusters:
-            filter_desc.append(f"Clusters: {', '.join(clusters)}")
-        if genes:
-            filter_desc.append(f"Genes: {', '.join(genes)}")
-        filter_info = " | ".join(filter_desc)
-        new_title = f"{current_title}\nFiltered by: {filter_info}"
-        fig.suptitle(new_title)
+    # Generate plots for time series analysis
+    figs_dict = plot_all_condition_differences(
+        adata=time_adata,
+        split_by_direction=False,
+        hub_threshold=3,
+        n_cols=3,
+        return_figures=True
+    )
+    """
+    # Get condition differences from the AnnData object
+    diff_results = adata.uns.get('sctoolbox', {}).get('receptor-ligand', {}).get("condition-differences", {})
+    if not diff_results:
+        raise ValueError("No condition differences found in the AnnData object.")
 
-    return figures
+    # Initialize dictionary to store figures if requested
+    all_figures = {} if return_figures else None
+
+    # Process each dimension separately
+    for dimension_key, dimension_results in diff_results.items():
+        if not dimension_results:
+            continue
+
+        # Create a temporary AnnData with just this dimension's results
+        temp_adata = sc.AnnData()
+        temp_adata.uns['sctoolbox'] = {
+            'receptor-ligand': {'condition-differences': {dimension_key: dimension_results}}
+        }
+
+        # Generate filename with dimension if saving
+        save_name = f"{save_prefix}_{dimension_key}" if save_prefix else None
+
+        # Generate figures for this dimension
+        figures = condition_differences_network(
+            adata=temp_adata,
+            n_top=n_top,
+            figsize=figsize,
+            dpi=dpi,
+            save=save_name,
+            split_by_direction=split_by_direction,
+            hub_threshold=hub_threshold,
+            color_palette=color_palette,
+            vmin=vmin,
+            vmax=vmax,
+            n_cols=n_cols,
+            n_rows=n_rows,
+            close_figs=close_figs and not show  # Don't close if showing
+        )
+
+        # Store figures if requested
+        if return_figures:
+            all_figures[dimension_key] = figures
+
+        # Show figures if requested
+        if show:
+            for fig in figures:
+                plt.figure(fig.number)
+                plt.show()
+
+    return all_figures if return_figures else None
