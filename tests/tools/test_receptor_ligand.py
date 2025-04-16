@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 
 import networkx as nx
 from unittest.mock import patch, MagicMock
-from matplotlib import gridspec
 import warnings
 
 import sctoolbox.tools.receptor_ligand as rl
@@ -82,17 +81,18 @@ def adata_inter(adata_db):
 
 # ------------------------------ FIXTURES FOR DIFFERENCE TESTING -------------------------------- #
 
+
 @pytest.fixture
 def adata_with_conditions(adata_inter):
     """Add condition information to existing adata_inter fixture."""
     obj = adata_inter.copy()
-    
+
     # Add condition information
     n_obs = len(obj)
     obj.obs['condition'] = ['control'] * (n_obs // 2) + ['treatment'] * (n_obs - n_obs // 2)
     obj.obs['batch'] = ['batch1'] * (n_obs // 2) + ['batch2'] * (n_obs - n_obs // 2)
     obj.obs['timepoint'] = ['day0'] * (n_obs // 3) + ['day3'] * (n_obs // 3) + ['day7'] * (n_obs - 2 * (n_obs // 3))
-    
+
     return obj
 
 
@@ -111,7 +111,7 @@ def diff_results():
         'rank_diff_control_vs_treatment': [-0.4, -0.3, 0.1],
         'abs_diff_control_vs_treatment': [0.4, 0.3, 0.1]
     })
-    
+
     return {
         'condition': {
             'control_vs_treatment': {
@@ -125,11 +125,11 @@ def diff_results():
 def adata_with_diff_results(adata_with_conditions, diff_results):
     """Create AnnData with mock differential results."""
     obj = adata_with_conditions.copy()
-    
+
     # Add the mock results
     obj.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
     obj.uns['sctoolbox']['receptor-ligand']['condition-differences'] = diff_results
-    
+
     return obj
 
 
@@ -345,7 +345,7 @@ def test_add_uns_info_rl(inplace):
 
 
 @pytest.mark.parametrize(
-    "condition_values,condition_columns,expected_success", 
+    "condition_values,condition_columns,expected_success",
     [
         # Basic condition filtering - success case
         (['control'], ['condition'], True),
@@ -601,7 +601,7 @@ def test_extract_diff_key_columns():
     """Test extracting key columns from differences dataframe."""
     # Test standard column names
     df1 = pd.DataFrame({
-        'rank_diff_treatment_vs_control': [0.5], 
+        'rank_diff_treatment_vs_control': [0.5],
         'abs_diff_treatment_vs_control': [0.5]
     })
     result1 = rl._extract_diff_key_columns(df1)
@@ -625,10 +625,10 @@ def test_extract_diff_key_columns():
 
 @pytest.mark.parametrize("graph_data,hub_threshold,expected_hubs", [
     # Hub with 5 connections
-    ([('hub1', 'node1'), ('hub1', 'node2'), ('hub1', 'node3'), ('node4', 'hub1'), ('node5', 'hub1')], 
+    ([('hub1', 'node1'), ('hub1', 'node2'), ('hub1', 'node3'), ('node4', 'hub1'), ('node5', 'hub1')],
      4, ['hub1']),
     # No hubs (threshold too high)
-    ([('node1', 'node2'), ('node1', 'node3'), ('node2', 'node3')], 
+    ([('node1', 'node2'), ('node1', 'node3'), ('node2', 'node3')],
      4, []),
 ])
 def test_identify_hub_networks(graph_data, hub_threshold, expected_hubs):

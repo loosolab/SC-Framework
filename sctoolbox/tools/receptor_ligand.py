@@ -21,7 +21,7 @@ import warnings
 import logging
 import liana.resource as liana_res
 import networkx as nx
-from beartype.typing import Optional, Tuple, List, Dict, Set
+from beartype.typing import Optional, Tuple, List, Dict
 import numpy.typing as npt
 from beartype import beartype
 
@@ -647,7 +647,7 @@ def cyclone(
     if not directional:
         interactions_undirected = interactions_directed.copy()
 
-        # OpenAI GPT-4 supported    
+        # OpenAI GPT-4 supported
         # First, make sure each edge is represented in the same way, by sorting the two ends
         interactions_undirected[cluster_col_list] = np.sort(
             interactions_undirected[cluster_col_list].values,
@@ -1401,6 +1401,8 @@ def _check_interactions(anndata: sc.AnnData):
         raise ValueError("Could not find interaction data! Please setup with `calculate_interaction_table(   )` before running this function.")
 
 # --------- DIFFERENCE CALCULATION ----------#
+
+
 """
 Receptor-Ligand Difference Analysis
 
@@ -1421,7 +1423,7 @@ of the subsequent section.
 
 # Function to add data to adata.uns
 def _add_uns_info_rl(
-    adata: sc.AnnData, 
+    adata: sc.AnnData,
     value: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
     inplace: bool = True
 ) -> Optional[sc.AnnData]:
@@ -1666,9 +1668,9 @@ def _calculate_condition_difference(
     # Merge the interaction tables with descriptive suffixes
     a_suffix, b_suffix = f"_{condition_a_name}", f"_{condition_b_name}"
     result = pd.merge(
-        interactions[condition_a_name], 
+        interactions[condition_a_name],
         interactions[condition_b_name],
-        on=key_cols, 
+        on=key_cols,
         suffixes=(a_suffix, b_suffix)
     )
 
@@ -1753,7 +1755,7 @@ def _process_condition_combinations(
         return {}
 
     # Generate all possible combinations of control conditions
-    control_conditions = condition_columns[1:] 
+    control_conditions = condition_columns[1:]
     if not control_conditions.size:
         # If only one condition column, no additional controls
         control_combinations = [{}]
@@ -1761,7 +1763,7 @@ def _process_condition_combinations(
         # Generate all combinations of values for control conditions
         control_values = [condition_values_dict[col] for col in control_conditions]
         control_combinations = [
-            dict(zip(control_conditions, combo)) 
+            dict(zip(control_conditions, combo))
             for combo in itertools.product(*control_values)
         ]
 
@@ -2143,13 +2145,13 @@ def _identify_hub_networks(G, hub_threshold=4):
         hub_networks[hub] = subgraph
 
     # Identify edges between non-hub nodes
-    non_hub_edges = [(u, v) for u, v in G.edges() 
+    non_hub_edges = [(u, v) for u, v in G.edges()
                      if u not in hub_nodes and v not in hub_nodes]
 
     return hub_networks, non_hub_edges
 
 
-def _draw_network(graph, ax, title=None, cell_colors=None, cell_shapes=None, 
+def _draw_network(graph, ax, title=None, cell_colors=None, cell_shapes=None,
                   colormap=None, norm=None, all_cell_types=None):
     """
     Draw a network on the given axis.
@@ -2494,7 +2496,7 @@ def condition_differences_network(
             # Skip non-dictionary entries or entries without differences
             if not isinstance(comparison_data, dict) or 'differences' not in comparison_data:
                 continue
-  
+
             diff_df = comparison_data['differences']
 
             # Skip if empty
@@ -2506,7 +2508,7 @@ def condition_differences_network(
             if not col_info or 'diff_col' not in col_info:
                 logger.warning(f"Could not identify difference columns for {comparison_key}")
                 continue
- 
+
             # Use extracted column names
             diff_col = col_info.get('diff_col')
             abs_diff_col = col_info.get('abs_diff_col')
