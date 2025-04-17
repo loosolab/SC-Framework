@@ -4,6 +4,7 @@ import pytest
 import scanpy as sc
 import sctoolbox.tools as tools
 import pandas as pd
+from sctoolbox.utils.adata import in_uns
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -37,13 +38,12 @@ def test_gene_set_enrichment(adata, method, res_col):
                                                organism="human",
                                                method=method,
                                                inplace=False)
-    assert 'gsea' in adata_mod.uns
-    assert 'enrichment_table' in adata_mod.uns['gsea']
-    assert isinstance(adata_mod.uns['gsea']['enrichment_table'], pd.DataFrame)
-    assert len(adata_mod.uns['gsea']['enrichment_table'].columns) > 0
-    print(res_col)
-    print(adata_mod.uns['gsea']['enrichment_table'].columns)
-    assert set(res_col).issubset(set(adata_mod.uns['gsea']['enrichment_table'].columns))
+    assert in_uns(adata_mod, ['sctoolbox', 'gsea'])
+    assert not in_uns(adata, ['sctoolbox', 'gsea'])
+    assert 'enrichment_table' in adata_mod.uns['sctoolbox']['gsea']
+    assert isinstance(adata_mod.uns['sctoolbox']['gsea']['enrichment_table'], pd.DataFrame)
+    assert len(adata_mod.uns['sctoolbox']['gsea']['enrichment_table'].columns) > 0
+    assert set(res_col).issubset(set(adata_mod.uns['sctoolbox']['gsea']['enrichment_table'].columns))
 
 
 def test_fail_gene_set_enrichment(adata):

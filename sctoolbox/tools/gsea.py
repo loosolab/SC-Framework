@@ -3,25 +3,16 @@ import pandas as pd
 import gseapy as gp
 import scanpy as sc
 import tqdm
-import deprecation
 
-import sctoolbox
 import sctoolbox.utils.decorator as deco
 from sctoolbox.tools.marker_genes import get_rank_genes_tables
 
 from beartype import beartype
 from beartype.typing import Optional, Literal, Any
 
+import sctoolbox.utils as utils
 from sctoolbox import settings
 logger = settings.logger
-
-
-@deprecation.deprecated(deprecated_in="0.10", removed_in="1.0",
-                        current_version=sctoolbox.__version__,
-                        details="enrichr_marker_genes() is replaced by gene_set_enrichment().")
-def enrichr_marker_genes(adata, **kwargs):
-    """Run enrichr method to support older gsea notebook versions."""
-    return gene_set_enrichment(adata, method="enrichr", **kwargs)
 
 
 @deco.log_anndata
@@ -64,21 +55,23 @@ def gene_set_enrichment(adata: sc.AnnData,
         Dictionary with pathway names as key and gene set as value.
         If given, library name is ignored.
     background : Optional[set[str]], default None
-        Set of background genes. Will be automatically determined when library_name or gene_sets is given.
-        Only needed for enrichr.
+        Set of background genes. Will be automatically determined when
+        library_name or gene_sets is given. Only needed for enrichr.
     **kwargs : Any
         Additional parameters forwarded to gseapy.prerank().
 
     Notes
     -----
-    This function only works in combination with the tools.marker_genes.run_rank_genes function.
-    Depending on the organism the genes are saved uppercase or lowercase. Since it does not follow
-    the typically guidelines all genes are converted to uppercase to prevent failed overlaps.
+    This function only works in combination with the
+    tools.marker_genes.run_rank_genes function. Depending on the organism the
+    genes are saved uppercase or lowercase. Since it does not follow the
+    typically guidelines all genes are converted to uppercase to prevent
+    failed overlaps.
 
     Returns
     -------
     Optional[sc.AnnData]
-        AnnData object with combined enrichr results stored in .uns['gsea'].
+        AnnData object with combined enrichr results stored in .uns['sctoolbox']['gsea'].
 
     Raises
     ------
@@ -99,11 +92,21 @@ def gene_set_enrichment(adata: sc.AnnData,
     modified_adata = adata if inplace else adata.copy()
 
     # setup dict to store information old data will be overwriten!
-    modified_adata.uns['gsea'] = dict()
-    modified_adata.uns['gsea']['method'] = method
-    modified_adata.uns['gsea']['stat_col'] = "FDR q-val" if method == "prerank" else "Adjusted P-value"
-    modified_adata.uns['gsea']['score_col'] = "NES" if method == "prerank" else "Combined Score"
-    modified_adata.uns['gsea']['overlap_col'] = "Tag %" if method == "prerank" else "Overlap"
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'method'],
+                             value=method)
+    stat_col = "FDR q-val" if method == "prerank" else "Adjusted P-value"
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'stat_col'],
+                             value=stat_col)
+    score_col = "NES" if method == "prerank" else "Combined Score"
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'score_col'],
+                             value=score_col)
+    overlap_col = "Tag %" if method == "prerank" else "Overlap"
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'overlap_col'],
+                             value=overlap_col)
 
     logger.info("Getting gene rank tables.")
     if marker_key in adata.uns:
@@ -120,7 +123,9 @@ def gene_set_enrichment(adata: sc.AnnData,
         # A public library is used if gene_set is not given
         logger.info("Downloading gene set library.")
         gene_sets = gp.get_library(name=library_name, organism=organism)
-        modified_adata.uns['gsea']['library'] = library_name
+        utils.adata.add_uns_info(modified_adata,
+                                 key=['gsea', 'library'],
+                                 value=library_name)
     else:
         modified_adata.uns['gsea']['gene_sets'] = gene_sets
     if not background:
@@ -128,7 +133,9 @@ def gene_set_enrichment(adata: sc.AnnData,
         background = set([item for sublist in gene_sets.values() for item in sublist])
     if method == "enrichr":
         logger.info("Setting background")
-        modified_adata.uns['gsea']['background'] = list(background)
+        utils.adata.add_uns_info(modified_adata,
+                                 key=['gsea', 'background'],
+                                 value=list(background))
 
     # Convert gene sets to upper case
     gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
@@ -179,13 +186,15 @@ def gene_set_enrichment(adata: sc.AnnData,
         logger.error(msg)
         raise ValueError(msg)
 
-    logger.info("Saving results in 'adata.uns['gsea']['enrichment_table']'")
+    logger.info("Saving results in 'adata.uns['sctoolbox']['gsea']['enrichment_table']'")
     merged_results = pd.concat(path_enr.values())
     if method == "prerank":
         merged_results[['ES', 'NES', 'NOM p-val', 'FDR q-val', 'FWER p-val']] = merged_results[
             ['ES', 'NES', 'NOM p-val', 'FDR q-val', 'FWER p-val']
         ].astype(float)
-    modified_adata.uns['gsea']['enrichment_table'] = merged_results
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'enrichment_table'],
+                             value=merged_results)
 
     if not inplace:
         return modified_adata

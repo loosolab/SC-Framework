@@ -295,6 +295,41 @@ def in_uns(adata: sc.AnnData,
 
 
 @beartype
+def get_uns(adata: sc.AnnData,
+            key: str | list[str]) -> Any:
+    """
+    Get value from adata.uns
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object.
+    key: str | list[str]
+        The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
+
+    Returns
+    -------
+    Any
+        Any value stored in adata.uns
+    """
+    d = adata.uns
+    path = ""
+    for k in key:
+        if k in d:
+            d = d[k]
+            path += f"['{k}']"
+        else:
+            raise ValueError(f"Key {k} not found in adata.uns{path}")
+    return d
+
+
+@beartype
 def get_cell_values(adata: sc.AnnData,
                     element: str) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.

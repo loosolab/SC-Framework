@@ -21,9 +21,12 @@ from sctoolbox.plotting.general import clustermap_dotplot, _save_figure
 from sctoolbox.utils.bioutils import pseudobulk_table
 from sctoolbox.utils.checker import check_columns
 import sctoolbox.utils.decorator as deco
+from sctoolbox.utils.adata import get_uns, in_uns, add_uns_info
 
 from sctoolbox import settings
 logger = settings.logger
+
+_core_uns_path = ['sctoolbox', 'gsea']
 
 
 @deco.log_anndata
@@ -42,7 +45,7 @@ def term_dotplot(adata: sc.AnnData,
     Parameters
     ----------
     adata : sc.anndata
-        Anndata object containing adata.uns['gsea']['enrichment_table']
+        Anndata object containing adata.uns['sctoolbox']['gsea']['enrichment_table']
     term : str
         Name of GO-term, e.g 'ATP Metabolic Process (GO:0046034)'
     groupby : str
@@ -97,13 +100,13 @@ def term_dotplot(adata: sc.AnnData,
                              groupby="louvain")
 
     """
-    if "gsea" not in adata.uns.keys():
+    if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
         raise ValueError(msg)
 
     logger.info("Get enrichment table.")
-    term_table = adata.uns['gsea']['enrichment_table'].copy()
+    term_table = get_uns(adata, _core_uns_path + ['enrichment_table']).copy()
 
     check_columns(term_table, columns=[term_col])
 
@@ -175,15 +178,15 @@ def gsea_network(adata: sc.AnnData,
     Parameters
     ----------
     adata : sc.anndata
-        Anndata object containing adata.uns['gsea']['enrichment_table']
+        Anndata object containing adata.uns['sctoolbox']['gsea']['enrichment_table']
     score_col : str, default 'NES'
         Name of enrichment scoring column.
     clust_col : Optional[str], default None
-        Column name in adata.uns['gsea']['enrichment_table'] containing enrichment score.
-        If None uses default stored in adata.uns['gsea']['score_col']
+        Column name in adata.uns['sctoolbox']['gsea']['enrichment_table'] containing enrichment score.
+        If None uses default stored in adata.uns['sctoolbox']['gsea']['score_col']
     sig_col : Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']], default None
         Column containing significance of enrichted termn.
-        If None uses default stored in adata.uns['gsea']['stat_col']
+        If None uses default stored in adata.uns['sctoolbox']['gsea']['stat_col']
     cutoff : int | float, default 0.05
         Set cutoff for sig_col. Only nodes with value < cutoff are shown.
     scale : int | float, default 1
@@ -209,14 +212,15 @@ def gsea_network(adata: sc.AnnData,
         If gsea key is not found in adata.uns.
         If no cluster with valid pathways are found.
     """
-    if "gsea" not in adata.uns.keys():
+    if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
         raise ValueError(msg)
 
-    term_table = adata.uns['gsea']['enrichment_table'].copy()
-    sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
-    score_col = score_col if score_col else adata.uns['gsea']['score_col']
+    term_table = get_uns(adata, _core_uns_path + ['enrichment_table']).copy()
+
+    sig_col = sig_col if sig_col else get_uns(adata, _core_uns_path + ['stat_col'])
+    score_col = score_col if score_col else get_uns(adata, _core_uns_path + ['score_col'])
 
     check_columns(term_table, columns=[score_col, clust_col, sig_col])
 
@@ -372,12 +376,12 @@ def cluster_dotplot(adata: sc.AnnData,
     Parameters
     ----------
     adata : sc.anndata
-        Anndata object containing adata.uns['gsea']['enrichment_table']
+        Anndata object containing adata.uns['sctoolbox']['gsea']['enrichment_table']
     cluster_col : str, default 'Cluster'
         Cluster column name.
     sig_col : Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']], default None
-        Column containing significance of enrichted termn.
-        If None uses default stored in adata.uns['gsea']['stat_col']
+        Column containing significance of enriched term.
+        If None uses default stored in adata.uns['sctoolbox']['gsea']['stat_col']
     top_up : int, default 5
         Number of upregulated pathways to be plotted.
     top_down : int, default 5
@@ -401,33 +405,49 @@ def cluster_dotplot(adata: sc.AnnData,
     ValueError
         If gsea results cannot be found in adata.uns.
     """
-    if "gsea" not in adata.uns.keys():
+    if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
         raise ValueError(msg)
 
-    term_table = adata.uns['gsea']['enrichment_table'].copy()
-    sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
-    score_col = adata.uns['gsea']['score_col']
+    # Get required data from adata.uns['sctoolbox']['gsea']
+    term_table = get_uns(adata, _core_uns_path + ['enrichment_table']).copy()
+    sig_col = sig_col if sig_col else get_uns(adata, _core_uns_path + ['stat_col'])
+    score_col = get_uns(adata, _core_uns_path + ['score_col'])
 
+    # Check if enrichment table contains required columns
     check_columns(term_table, columns=[cluster_col, sig_col])
 
     dotplots = dict()
-
+    # Loop over all cluster names
     for c in term_table[cluster_col].unique():
         logger.info(f"Plotting dotplot for cluster {c}")
+        # filter enrichment table based on given cutoff
         tmp = term_table[(term_table[cluster_col] == c) & (term_table[sig_col] <= cutoff)].copy()
+        # Cast score col to float
         tmp[score_col] = tmp[score_col].astype(float)
+        # Get top X and bottom X pathways in enrichment table
         tmp = pd.concat([tmp.nlargest(top_up, score_col), tmp.nsmallest(top_down, score_col)])
+        # Sort based on score_col
         tmp.sort_values(score_col, inplace=True, ascending=False)
+        # Check if table not empty after filtering, otherwise continue with next cluster
         if tmp.empty:
             logger.info(f"No enrichted pathways of cluster {c} found with cutoff set to {cutoff}")
             continue
+        # Prepare save parameter
         save = f"{save_prefix}_GSEA_dotplot_top_pathways_per_cluster_{c}.pdf" if save_figs else None
+
+        # build empty adata with adata.uns['sctoolbox']['gsea'] fileld as its needed as input type for gsea_dot
         empty_adata = sc.AnnData()
-        empty_adata.uns["gsea"] = adata.uns['gsea'].copy()
-        empty_adata.uns["gsea"]["enrichment_table"] = tmp
-        axes = gsea_dot(empty_adata, save=save, title=f"Top regulated pathways of cluster {c}", **kwargs)
+        add_uns_info(empty_adata,
+                     key=['gsea'],
+                     value=get_uns(adata, _core_uns_path).copy())
+        add_uns_info(empty_adata,
+                     key=["gsea", "enrichment_table"],
+                     value=tmp)
+        # Plotting
+        axes = gsea_dot(empty_adata, save=save, top_term=None, 
+                        title=f"Top regulated pathways of cluster {c}", **kwargs)
         dotplots[c] = axes
 
     return dotplots
@@ -438,7 +458,7 @@ def gsea_dot(adata: sc.AnnData,
              x: Optional[str] = None,
              cluster_col: str = "Cluster",
              cutoff: float = 0.05,
-             top_term: Optional[int] = None,
+             top_term: Optional[int] = 5,
              figsize: Tuple[int, int] = (5, 8),
              sizes: Tuple[int, int] = (50, 200),
              x_label_rotation: int = 0,
@@ -452,18 +472,18 @@ def gsea_dot(adata: sc.AnnData,
     Parameters
     ----------
     adata : sc.anndata
-        Anndata object containing adata.uns['gsea']['enrichment_table']
+        Anndata object containing adata.uns['sctoolbox']['gsea']['enrichment_table']
     sig_col : Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']], default None
         Column containing significance of enrichted termn.
-        If None uses default stored in adata.uns['gsea']['stat_col']
+        If None uses default stored in adata.uns['sctoolbox']['gsea']['stat_col']
     x : Optional[str], default None
-        Column name in adata.uns['gsea']['enrichment_table'] containing enrichment score.
-        If None uses default stored in adata.uns['gsea']['score_col']
+        Column name in adata.uns['sctoolbox']['gsea']['enrichment_table'] containing enrichment score.
+        If None uses default stored in adata.uns['sctoolbox']['gsea']['score_col']
     cluster_col : str, default 'Cluster'
-        Cluster column name in adata.uns['gsea']['enrichment_table']
+        Cluster column name in adata.uns['sctoolbox']['gsea']['enrichment_table']
     cutoff : float, default 0.05
         Filter cutoff for sig_col.
-    top_term : Optional[int], default None
+    top_term : Optional[int], default 5
         Select top_terms per cluster.
     figsize : Tuple[int, int], default (5, 8)
         Tuple setting the figure size.
@@ -490,15 +510,17 @@ def gsea_dot(adata: sc.AnnData,
     ValueError
         If gsea results cannot be found in adata.uns.
     """
-    if "gsea" not in adata.uns.keys():
+    if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
         raise ValueError(msg)
 
-    term_table = adata.uns['gsea']['enrichment_table'].copy()
-    sig_col = sig_col if sig_col else adata.uns['gsea']['stat_col']
-    x = x if x else adata.uns['gsea']['score_col']
+    # Get required data from adata.uns['sctoolbox']['gsea']
+    term_table = get_uns(adata, _core_uns_path + ['enrichment_table']).copy()
+    sig_col = sig_col if sig_col else get_uns(adata, _core_uns_path + ['stat_col'])
+    x = x if x else get_uns(adata, _core_uns_path + ['score_col'])
 
+    # Check if enrichment table contains required columns
     check_columns(term_table, columns=[cluster_col, x, sig_col])
 
     # Filter enrichment table
@@ -511,9 +533,13 @@ def gsea_dot(adata: sc.AnnData,
             .reset_index(drop=True)
         ).reset_index(drop=True)
 
+    for i in get_uns(adata, _core_uns_path + ['overlap_col']):
+        print(i)
+
+    # Calc percentage from overlap column
     term_table["% Genes in set"] = [
         int(round(eval(operation) * 100, 0))
-        for operation in term_table[adata.uns['gsea']['overlap_col']]
+        for operation in term_table[get_uns(adata, _core_uns_path + ['overlap_col'])]
     ]
 
     logger.info("Generating dotplot...")
@@ -537,15 +563,20 @@ def gsea_dot(adata: sc.AnnData,
     handles, labels = ax.get_legend_handles_labels()
     i = labels.index('% Genes in set')
 
+    # update legend
     ax.legend(handles[i:], labels[i:], bbox_to_anchor=(1.05, 1),
               loc=2, borderaxespad=0., fontsize=13,
               frameon=False, alignment="left")
+    # set colorbar
     cbar = ax.figure.colorbar(sm, ax=ax, shrink=0.4, anchor=(0.1, 0.1), label=sig_col, aspect=10)
     cbar.set_label(sig_col, rotation=0, ha="left", fontsize=13)
+
+    # set additional labels and title
     ax.set_ylabel("")
     ax.set_title(title, **{"fontsize": title_size})
     ax.set_xticklabels(ax.get_xticklabels(), rotation=x_label_rotation, ha='right')
     ax.grid(True, axis="y")
+    # save plot
     fig.tight_layout()
     _save_figure(save)
 
