@@ -540,7 +540,7 @@ def test_calculate_condition_differences(
             else:
                 assert result is not None
                 # Check the copy is different from the original
-                assert id(result) != id(adata)  # Use this instead of direct 'is not' comparison
+                assert id(result) != id(adata)
                 # Check that data is equivalent
                 assert 'sctoolbox' in result.uns
                 assert 'receptor-ligand' in result.uns['sctoolbox']
