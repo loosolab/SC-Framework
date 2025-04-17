@@ -84,21 +84,9 @@ def term_dotplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        # --- hide: start ---
-        import pandas as pd
-        import sctoolbox.plotting as pl
-        # --- hide: stop ---
-
-        term_table = pd.DataFrame({
-            "Term": "Actin Filament Organization (GO:0007015)",
-            "Lead_genes": ["COBL", "WIPF1;SH3KBP1"]
-        })
-
         pl.gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
-                             term_table=term_table,
                              adata=adata,
                              groupby="louvain")
-
     """
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
@@ -211,6 +199,13 @@ def gsea_network(adata: sc.AnnData,
     ValueError
         If gsea key is not found in adata.uns.
         If no cluster with valid pathways are found.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.gsea.gsea_network(adata, cutoff=0.5)
     """
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
@@ -404,6 +399,13 @@ def cluster_dotplot(adata: sc.AnnData,
     ------
     ValueError
         If gsea results cannot be found in adata.uns.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.gsea.cluster_dotplot(adata)
     """
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
@@ -509,6 +511,13 @@ def gsea_dot(adata: sc.AnnData,
     ------
     ValueError
         If gsea results cannot be found in adata.uns.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        pl.gsea.gsea_dot(adata)
     """
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
