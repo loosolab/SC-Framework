@@ -499,15 +499,17 @@ def test_calculate_condition_differences(
     with patch('sctoolbox.tools.receptor_ligand._process_condition_combinations') as mock_process:
         # Set up mock return value
         mock_process.return_value = {
-            'new_comparison': {
-                'differences': pd.DataFrame({
-                    'receptor_gene': ['gene1'],
-                    'ligand_gene': ['gene10'],
-                    'receptor_cluster': ['cluster 0'],
-                    'ligand_cluster': ['cluster 1'],
-                    'rank_diff_new_vs_old': [0.3],
-                    'abs_diff_new_vs_old': [0.3]
-                })
+            'condition': {
+                'new_comparison': {
+                    'differences': pd.DataFrame({
+                        'receptor_gene': ['gene1'],
+                        'ligand_gene': ['gene10'],
+                        'receptor_cluster': ['cluster 0'],
+                        'ligand_cluster': ['cluster 1'],
+                        'rank_diff_new_vs_old': [0.3],
+                        'abs_diff_new_vs_old': [0.3]
+                    })
+                }
             }
         }
 
@@ -537,7 +539,12 @@ def test_calculate_condition_differences(
                 assert result is None
             else:
                 assert result is not None
-                assert result is not adata
+                # Check the copy is different from the original
+                assert id(result) != id(adata)  # Use this instead of direct 'is not' comparison
+                # Check that data is equivalent
+                assert 'sctoolbox' in result.uns
+                assert 'receptor-ligand' in result.uns['sctoolbox']
+                assert 'condition-differences' in result.uns['sctoolbox']['receptor-ligand']
 
 
 def test_calculate_condition_differences_time_analysis(adata_with_conditions):
