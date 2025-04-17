@@ -298,7 +298,7 @@ def in_uns(adata: sc.AnnData,
 def get_uns(adata: sc.AnnData,
             key: str | list[str]) -> Any:
     """
-    Get value from adata.uns
+    Get value from adata.uns.
 
     Parameters
     ----------
