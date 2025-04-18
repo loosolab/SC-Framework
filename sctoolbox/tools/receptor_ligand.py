@@ -2797,33 +2797,38 @@ def condition_differences_network(
                     4.1. The colorbar for the quantile differences
                     4.2. A legend that describes that the graphs are directed from ligand to receptor
                 """
-                # Determine how many columns the non-hub network should use (in the first row)
-                non_hub_cols = non_hub_cols if non_hub_cols is not None else (cols - 1)
-                # Ensure that non_hub_cols doesn't exceed the available number of columns
-                non_hub_cols = min(non_hub_cols, cols - 1)
 
-                # Calculate grid layout parameters with last column for cluster legend
-                if num_hubs == 0 and has_non_hub:
-                    # Only non-hub network + legend
-                    rows, cols = 1, 2
-                elif num_hubs == 1:
-                    rows, cols = 1, 3
-                elif num_hubs == 2:
-                    rows, cols = 1, 4
-                elif num_hubs == 3:
+                """
+                Calculate number of networks for layout
+                If non-hub exists, it uses space equivalent to non_hub_cols
+                Default non_hub_cols to 3 if None (equivalent to all content columns in a 4-column grid)
+                """
+                non_hub_grid = (non_hub_cols if non_hub_cols is not None else 3) if has_non_hub else 0
+                number_of_networks = num_hubs + non_hub_grid
+
+                """
+                Calculate columns (including legend column)
+                For 0-2 networks: use number of networks + 1 columns (for legend)
+                For 3+ networks: use 4 columns total
+                """
+                cols = min(number_of_networks + 1, 4)
+
+                # Calculate rows
+                if number_of_networks <= 2:
+                    # For 0-2 networks: always 1 row
+                    rows = 1
+                elif number_of_networks == 3:
+                    # For 3 networks: use 2 rows, 3 columns (2×2 + 1 legend column)
                     rows, cols = 2, 3
-                elif num_hubs <= 6:
-                    rows, cols = 2, 4
                 else:
-                    cols = 4
-                    # First row is reserved for non-hubs and stretches over n cols
-                    rows = math.ceil((num_hubs + (non_hub_cols if has_non_hub else 0)) / (cols - 1))  # +1 for legend
+                    # For 4+ networks: use (cols-1) for calculating required rows
+                    rows = math.ceil(number_of_networks / (cols - 1))
 
-                # Override with user-provided parameters if given
+                # Apply user overrides
                 if n_rows is not None:
                     rows = n_rows
                 if n_cols is not None:
-                    cols = min(n_cols, num_hubs + 1 + (1 if has_non_hub else 0))  # +1 for legend
+                    cols = n_cols
 
                 # Close any existing figures to free memory if requested
                 if close_figs:
