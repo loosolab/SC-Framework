@@ -3088,15 +3088,15 @@ def plot_all_condition_differences(
 
     Examples
     --------
-   .. plot::
-        :context: close-figs
+    .. plot::
+            :context: close-figs
 
-        # Generate and display all condition difference network plots
-        plot_all_condition_differences(
-            adata=adata,
-            n_top=100,
-            save_prefix="all_conditions"
-        )
+            # Generate and display all condition difference network plots
+            plot_all_condition_differences(
+                adata=adata,
+                n_top=100,
+                save_prefix="all_conditions"
+            )
     """
     # Get condition differences from the AnnData object
     diff_results = adata.uns.get('sctoolbox', {}).get('receptor-ligand', {}).get("condition-differences", {})
