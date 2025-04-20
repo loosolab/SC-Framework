@@ -751,10 +751,11 @@ def test_process_condition_combinations_time_analysis(
     # Mock dependent functions
     with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
         with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_calc:
-            # Setup filter mock to return data only for valid timepoints
+            # Create a more realistic mock filter function
             def mock_filter_function(*args, **kwargs):
                 values = kwargs.get('condition_values', [])
-                if not values or values[0] not in timepoints:
+                if not values or values[0] not in ['day0', 'day3', 'day7']:
+                    # Only return None for invalid timepoints
                     return None
                 filtered = adata_with_conditions.copy()
                 return filtered
@@ -779,11 +780,14 @@ def test_process_condition_combinations_time_analysis(
                     sequential_time_analysis=sequential
                 )
 
-                # Check success
-                if should_succeed and expected_pairs:
-                    assert result  # Just check that we got results
+                # If none of the timepoints are valid, expect an empty result
+                valid_timepoints = [t for t in timepoints if t in ['day0', 'day3', 'day7']]
+                expect_results = len(valid_timepoints) > 1
+
+                if expect_results:
+                    assert result  # Should get results with valid timepoints
                 else:
-                    assert not result  # Empty dict for failure cases
+                    assert not result  # Empty dict if not enough valid timepoints
 
 
 @pytest.mark.parametrize(
@@ -815,8 +819,7 @@ def test_plot_all_condition_differences(
         with patch('matplotlib.pyplot.figure'):
             with patch('matplotlib.pyplot.show') as mock_show:
                 # Setup mock figure
-                mock_fig = MagicMock()
-                mock_fig.number = 1
+                mock_fig = Figure()
                 mock_network.return_value = [mock_fig]
 
                 # Test execution
@@ -841,6 +844,10 @@ def test_plot_all_condition_differences(
                 # Verify results
                 if return_figs:
                     assert isinstance(result, dict)
+                    # Check all items in the dict are lists of Figure objects
+                    for figures_list in result.values():
+                        assert isinstance(figures_list, list)
+                        assert all(isinstance(fig, Figure) for fig in figures_list)
                 else:
                     assert result is None
 
