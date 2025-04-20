@@ -2140,7 +2140,9 @@ def calculate_condition_differences(
     # Get all possible values for each condition
     condition_values_dict = {}
     for col in condition_columns:
-        if col in condition_filters and condition_filters[col]:
+        if col in condition_filters \
+         and condition_filters[col] is not None \
+         and len(condition_filters[col]) > 0:
             # Get all possible values from the data
             available_values = set(modified_adata.obs[col])
             # Use intersection to get values that both exist in the data AND are in the filter
@@ -2723,7 +2725,7 @@ def condition_differences_network(
                 ligand_nodes = {}
                 edges = []
 
-                # Use appropriate column names based on extracted info
+                # Use correct column names based on extracted info
                 for _, row in top_diff.iterrows():
                     # Node identifiers
                     r_node = f"{row['receptor_gene']}_{row['receptor_cluster']}"
@@ -2843,7 +2845,7 @@ def condition_differences_network(
                 """
                 width_ratios = [1] * (cols - 1) + [0.5]
 
-                # Create the grid with appropriate spacing
+                # Create the grid with correct spacing
                 gs = gridspec.GridSpec(
                     rows, cols,
                     figure=fig,
@@ -2872,7 +2874,7 @@ def condition_differences_network(
 
                 """
                 Draw each plot in its position
-                This loop places each network in the appropriate grid cell
+                This loop places each network in the respective grid cell
                 """
                 for i, (plot_id, graph, title) in enumerate(plots_to_display):
                     # 2x1 grid for non-hub
@@ -2882,11 +2884,11 @@ def condition_differences_network(
                             current_col = 0
                             current_row += 1
 
-                            # Non-hub gets non_hub_cols columns
-                        ax = fig.add_subplot(gs[current_row, current_col:current_col + (non_hub_cols)])
+                        # Non-hub gets non_hub_cols columns according to the non hub grid
+                        ax = fig.add_subplot(gs[current_row, current_col:current_col + (non_hub_grid)])
 
                         # Move to next position
-                        current_col += non_hub_cols
+                        current_col += non_hub_grid
 
                         # If this row is filled with subplots, move to next row
                         if current_col >= (cols - 1):
