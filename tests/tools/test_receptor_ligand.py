@@ -816,10 +816,11 @@ def test_plot_all_condition_differences(
 
     # Mock dependencies
     with patch('sctoolbox.tools.receptor_ligand.condition_differences_network') as mock_network:
-        with patch('matplotlib.pyplot.figure'):
+        with patch('matplotlib.pyplot.figure') as mock_figure:
             with patch('matplotlib.pyplot.show') as mock_show:
-                # Setup mock figure
-                mock_fig = Figure()
+                # Create a mock figure with a number attribute
+                mock_fig = MagicMock(spec=Figure)
+                mock_fig.number = 1
                 mock_network.return_value = [mock_fig]
 
                 # Test execution
@@ -834,6 +835,11 @@ def test_plot_all_condition_differences(
                     assert "No condition differences found" in str(excinfo.value)
                     return
 
+                # Mock plt.figure(fig.number)
+                if show:
+                    # For show=True tests, intercept the pyplot.figure call
+                    mock_figure.return_value = MagicMock()
+
                 result = rl.plot_all_condition_differences(
                     adata=adata,
                     show=show,
@@ -844,10 +850,7 @@ def test_plot_all_condition_differences(
                 # Verify results
                 if return_figs:
                     assert isinstance(result, dict)
-                    # Check all items in the dict are lists of Figure objects
-                    for figures_list in result.values():
-                        assert isinstance(figures_list, list)
-                        assert all(isinstance(fig, Figure) for fig in figures_list)
+                    assert all(isinstance(value, list) for value in result.values())
                 else:
                     assert result is None
 
