@@ -2140,9 +2140,12 @@ def calculate_condition_differences(
     # Get all possible values for each condition
     condition_values_dict = {}
     for col in condition_columns:
-        if col in condition_filters \
-         and condition_filters[col] is not None \
-         and len(condition_filters[col]) > 0:
+        if (
+            condition_filters is not None
+            and col in condition_filters
+            and condition_filters[col] is not None
+            and len(condition_filters[col]) > 0
+        ):
             # Get all possible values from the data
             available_values = set(modified_adata.obs[col])
             # Use intersection to get values that both exist in the data AND are in the filter

@@ -659,7 +659,7 @@ def test_plot_networks(adata_with_diff_results):
     with patch('matplotlib.pyplot.figure') as mock_fig:
         with patch('matplotlib.pyplot.close'):
             # Mock figure and axis
-            mock_fig.return_value = MagicMock()
+            mock_fig.return_value = MagicMock(spec=plt.figure.Figure)
             mock_fig.return_value.add_subplot.return_value = MagicMock()
 
             # Call plotting function
