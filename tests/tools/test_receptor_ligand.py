@@ -672,3 +672,195 @@ def test_plot_networks(adata_with_diff_results):
 
             # Just check that the function runs without errors
             assert mock_fig.called
+
+
+@pytest.mark.parametrize(
+    "cluster_filter,gene_filter,should_succeed",
+    [
+        # Success cases
+        (['cluster 0', 'cluster 1'], None, True),
+        (None, lambda adata: adata.var['gene'].iloc[:5].tolist(), True),
+        (['cluster 0'], lambda adata: adata.var['gene'].iloc[:5].tolist(), True),
+
+        # Failure cases
+        (['non_existent_cluster'], None, False),
+        (None, lambda _: ['non_existent_gene'], False),
+        ([], None, False),
+
+        # Edge cases
+        (['cluster 0'], None, True),
+        (None, lambda adata: [adata.var['gene'].iloc[0]], True),
+    ]
+)
+def test_filter_anndata_with_filters(
+    adata_with_conditions, cluster_filter, gene_filter, should_succeed
+):
+    """Test filtering AnnData with various cluster and gene filters."""
+    # Resolve callable gene filters
+    if callable(gene_filter):
+        gene_filter = gene_filter(adata_with_conditions)
+
+    with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table') as mock_calc:
+        with warnings.catch_warnings(record=True):
+            # Filter data with provided filters
+            result = rl._filter_anndata(
+                adata=adata_with_conditions,
+                condition_values=['control'],
+                condition_columns=['condition'],
+                cluster_column='cluster',
+                cluster_filter=cluster_filter,
+                gene_column='gene',
+                gene_filter=gene_filter
+            )
+
+            if should_succeed:
+                assert result is not None
+                if cluster_filter:
+                    for cluster in cluster_filter:
+                        assert cluster in result.obs['cluster'].unique()
+                if gene_filter:
+                    for gene in gene_filter:
+                        assert gene in result.var['gene'].tolist()
+                assert mock_calc.called
+            else:
+                assert result is None
+                assert not mock_calc.called
+
+
+@pytest.mark.parametrize(
+    "sequential,timepoints,expected_pairs,should_succeed",
+    [
+        # Success cases
+        (True, ['day0', 'day3', 'day7'], [('day0', 'day3'), ('day3', 'day7')], True),
+        (False, ['day0', 'day3', 'day7'],
+         [('day0', 'day3'), ('day0', 'day7'), ('day3', 'day7')], True),
+
+        # Failure case
+        (True, ['invalid1', 'invalid2'], [], False),
+
+        # Edge cases
+        (True, ['day0', 'day7'], [('day0', 'day7')], True),
+        (True, ['day7', 'day0', 'day3'], [('day7', 'day0'), ('day0', 'day3')], True),
+        (True, ['day0'], [], True),
+    ]
+)
+def test_process_condition_combinations_time_analysis(
+    adata_with_conditions, sequential, timepoints, expected_pairs, should_succeed
+):
+    """Test time analysis in process_condition_combinations."""
+    # Mock dependent functions
+    with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
+        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_calc:
+            # Setup filter mock to return data only for valid timepoints
+            def filter_side_effect(*args, **kwargs):
+                values = kwargs.get('condition_values', [])
+                if not values or values[0] not in ['day0', 'day3', 'day7']:
+                    return None
+                filtered = adata_with_conditions.copy()
+                return filtered
+
+            mock_filter.side_effect = filter_side_effect
+
+            # Setup calculation mock
+            mock_calc.return_value = pd.DataFrame({
+                'receptor_gene': ['gene1'],
+                'ligand_gene': ['gene10'],
+                'rank_diff_dummy': [0.5],
+                'abs_diff_dummy': [0.5]
+            })
+
+            # Run with specified parameters
+            with warnings.catch_warnings(record=True):
+                result = rl._process_condition_combinations(
+                    adata=adata_with_conditions,
+                    condition_columns=['timepoint'],
+                    condition_values_dict={'timepoint': timepoints},
+                    cluster_column='cluster',
+                    sequential_time_analysis=sequential
+                )
+
+                # Check success
+                if should_succeed and expected_pairs:
+                    assert result
+                    # Check correct pairs were compared
+                    calls = mock_calc.call_args_list
+                    for expected in expected_pairs:
+                        # Find any call with this pair (in either order)
+                        found = False
+                        for call in calls:
+                            args = call[0]
+                            if len(args) >= 4:  # Ensure enough args
+                                pair = (args[2], args[3])  # condition_a_name, condition_b_name
+                                if pair == expected or pair == (expected[1], expected[0]):
+                                    found = True
+                                    break
+                        assert found, f"Expected comparison {expected} not found"
+                else:
+                    assert not result  # Empty dict for failure cases
+
+
+@pytest.mark.parametrize(
+    "return_figs,show,save_prefix,mock_empty",
+    [
+        # Success cases
+        (True, False, None, False),
+        (False, False, None, False),
+        (True, False, "test_prefix", False),
+
+        # Failure case
+        (True, False, None, True),
+
+        # Edge case
+        (True, True, "test_prefix", False),
+    ]
+)
+def test_plot_all_condition_differences(
+    adata_with_diff_results, return_figs, show, save_prefix, mock_empty
+):
+    """Test plot_all_condition_differences function."""
+    # Prepare test data
+    adata = adata_with_diff_results.copy()
+    if mock_empty:
+        adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] = {}
+
+    # Mock dependencies
+    with patch('sctoolbox.tools.receptor_ligand.condition_differences_network') as mock_network:
+        with patch('matplotlib.pyplot.figure'):
+            with patch('matplotlib.pyplot.show') as mock_show:
+                # Setup mock figure
+                mock_fig = MagicMock(spec=Figure)
+                mock_network.return_value = [mock_fig]
+
+                # Test execution
+                if mock_empty:
+                    with pytest.raises(ValueError) as excinfo:
+                        rl.plot_all_condition_differences(
+                            adata=adata,
+                            show=show,
+                            return_figures=return_figs,
+                            save_prefix=save_prefix
+                        )
+                    assert "No condition differences found" in str(excinfo.value)
+                else:
+                    result = rl.plot_all_condition_differences(
+                        adata=adata,
+                        show=show,
+                        return_figures=return_figs,
+                        save_prefix=save_prefix
+                    )
+
+                    # Check results
+                    if return_figs:
+                        assert isinstance(result, dict)
+                    else:
+                        assert result is None
+
+                    # Check show was called if requested
+                    assert mock_show.called == show
+
+                    # Check save parameter passed correctly
+                    if save_prefix:
+                        for call in mock_network.call_args_list:
+                            kwargs = call[1]
+                            if 'save' in kwargs:
+                                assert save_prefix in kwargs['save']
