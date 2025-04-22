@@ -84,6 +84,13 @@ def term_dotplot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
+        tools.marker_genes.run_rank_genes(adata, "louvain")
+        tools.gsea.gene_set_enrichment(adata,
+                                   marker_key="rank_genes_louvain_filtered",
+                                   organism="human",
+                                   method="prerank",
+                                   inplace=True)
+
         pl.gsea.term_dotplot(term="Actin Filament Organization (GO:0007015)",
                              adata=adata,
                              groupby="louvain")
