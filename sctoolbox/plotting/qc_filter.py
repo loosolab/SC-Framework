@@ -423,17 +423,6 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
-        adata = sc.datasets.pbmc68k_reduced()
-
-    .. plot::
-        :context: close-figs
-
         pl.qc_filter.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
