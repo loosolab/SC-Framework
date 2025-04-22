@@ -9,6 +9,8 @@ import scanpy as sc
 
 adata = sc.datasets.pbmc68k_reduced()
 adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
+
+# Setup for GSEA plots
 tools.marker_genes.run_rank_genes(adata, "louvain")
 tools.gsea.gene_set_enrichment(adata,
                                marker_key="rank_genes_louvain_filtered",
