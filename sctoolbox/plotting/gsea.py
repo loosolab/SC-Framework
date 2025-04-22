@@ -517,7 +517,7 @@ def gsea_dot(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.gsea.gsea_dot(adata)
+        pl.gsea.gsea_dot(adata, x="Cluster")
     """
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
