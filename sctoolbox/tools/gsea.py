@@ -14,6 +14,8 @@ import sctoolbox.utils as utils
 from sctoolbox import settings
 logger = settings.logger
 
+_core_uns_path = ['sctoolbox', 'gsea']
+
 
 @deco.log_anndata
 @beartype
@@ -81,7 +83,7 @@ def gene_set_enrichment(adata: sc.AnnData,
         If result dictinary is empty
     """
 
-    if not overwrite and "gsea" in adata.uns:
+    if not overwrite and utils.adata.in_uns(adata, _core_uns_path):
         logger.warning("GSEA seems to have been run before! Skipping. Set `overwrite=True` to replace.")
 
         if inplace:
