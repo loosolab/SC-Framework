@@ -30,6 +30,9 @@ import itertools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
+from sctoolbox.utils import add_uns_info
+from sctoolbox.utils import in_uns
+
 logger = settings.logger
 
 # -------------------------------------------------- setup functions -------------------------------------------------- #
@@ -1403,71 +1406,20 @@ def _check_interactions(anndata: sc.AnnData):
 # --------- DIFFERENCE CALCULATION ----------#
 
 
-"""
-Receptor-Ligand Difference Analysis
+# Receptor-Ligand Difference Analysis
 
-This section provides functions for receptor-ligand interaction analysis
-between different cell populations across experimental conditions.
-The analysis pipeline:
+# This section provides functions for receptor-ligand interaction analysis
+# between different cell populations across experimental conditions.
+# The analysis pipeline:
 
-1. Filters the AnnData object based on conditions, clusters, and genes
-2. Calculates interaction tables between cell clusters
-3. Compares interaction scores between different conditions
-4. Processes combinations of conditions for differential analysis
-5. Stores results in the AnnData object
+# 1. Filters the AnnData object based on conditions, clusters, and genes
+# 2. Calculates interaction tables between cell clusters
+# 3. Compares interaction scores between different conditions
+# 4. Processes combinations of conditions for differential analysis
+# 5. Stores results in the AnnData object
 
-The results can be visualized with the plotting functions
-of the subsequent section.
-"""
-
-
-# Function to add data to adata.uns
-def _add_uns_info_rl(
-    adata: sc.AnnData,
-    value: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
-    inplace: bool = True
-) -> Optional[sc.AnnData]:
-    """Store receptor-ligand analysis results in the AnnData object.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        Input AnnData object.
-    value : dict
-        Value to store in the AnnData object.
-    inplace : bool, default True
-        Whether to modify adata inplace or return a copy.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        Modified AnnData if not inplace, otherwise None.
-
-    Examples
-    --------
-    results = {'condition1': {'comparison1': {'differences': df}}}
-    _add_uns_info_rl(adata, results, inplace=True)
-    # Results stored in adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
-    """
-    if inplace:
-        adata_out = adata
-    else:
-        adata_out = adata.copy()
-
-    """
-    Ensure nested structure exists
-    Note: This creates a nested dict path if it doesn't exist yet
-    For example, if adata.uns is empty, this creates:
-    adata.uns = {'sctoolbox': {'receptor-ligand': {'condition-differences': {}}}}    adata_out.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
-    """
-    adata_out.uns.setdefault('sctoolbox', {}).setdefault('receptor-ligand', {}).setdefault('condition-differences', {})
-
-    # Store the value, i. e. a Pandas DataFrame
-    adata_out.uns['sctoolbox']['receptor-ligand']['condition-differences'] = value
-
-    if not inplace:
-        return adata_out
-    return None
+# The results can be visualized with the plotting functions
+# of the subsequent section.
 
 
 # Function to create a filtered AnnData object
@@ -1481,7 +1433,9 @@ def _filter_anndata(
     gene_column: Optional[str] = None,
     gene_filter: Optional[List[str] | npt.ArrayLike] = None,
     normalize: Optional[int] = None,
-    weight_by_ep: bool = True
+    weight_by_ep: bool = True,
+    inplace: bool = True,
+    overwrite: bool = True,
 ) -> Optional[sc.AnnData]:
     """Create a filtered AnnData object based on specified conditions.
 
@@ -1505,6 +1459,11 @@ def _filter_anndata(
         Size to normalize clusters to (no normalization if None).
     weight_by_ep : bool, default True
         Whether to weight expression by proportion.
+    inplace : bool, default False
+        If True, modifies adata in-place.
+        If False, returns a copy of adata with results.
+    overwrite : bool, default False
+        If True, overwrites existing interaction table.
 
     Returns
     -------
@@ -1519,42 +1478,37 @@ def _filter_anndata(
 
     Examples
     --------
-     filtered_data = _filter_anndata(
-        adata=adata,
-        condition_values=['treatment'],
-        condition_columns=['condition'],
-        cluster_column='leiden',
-        cluster_filter=['T-cell', 'B-cell']
-     )
+    # Returns an adata with T-/B-cells belonging to the treatment condition.
+    filtered_data = _filter_anndata(
+       adata=adata,
+       condition_values=['treatment'],
+       condition_columns=['condition'],
+       cluster_column='leiden',
+       cluster_filter=['T-cell', 'B-cell']
+    )
     """
     # Validate and normalize inputs
     if len(condition_values) != len(condition_columns):
         raise ValueError(f"Expected {len(condition_columns)} condition values, got {len(condition_values)}")
 
-    """
-    Create pairs of condition columns and values for filtering
-    Example: If condition_columns=['batch', 'treatment'] and condition_values=['1', 'control'],
-    This creates: [('batch', '1'), ('treatment', 'control')]
-    """
+    # Create pairs of condition columns and values for filtering
+    # Example: If condition_columns=['batch', 'treatment'] and condition_values=['1', 'control'],
+    # This creates: [('batch', '1'), ('treatment', 'control')]
     condition_pairs = list(zip(
         np.array(condition_columns) if condition_columns is not None else [],
         np.array(condition_values) if condition_values is not None else []
     ))
 
-    """
-    Filter out pairs where value is None
-    Example: If condition_pairs=[('batch', '1'), ('treatment', None)],
-    keeps only: [('batch', '1')]
-    """
+    # Filter out pairs where value is None
+    # Example: If condition_pairs=[('batch', '1'), ('treatment', None)],
+    # keeps only: [('batch', '1')]
     valid_pairs = [(col, val) for col, val in condition_pairs if val is not None]
     if not valid_pairs:
         return None
 
-    """
-    Construct and apply query for cell filtering
-    Example: If valid_pairs=[('batch', '1'), ('treatment', 'control')],
-    This creates query: "batch == '1' & treatment == 'control'"
-    """
+    # Construct and apply query for cell filtering
+    # Example: If valid_pairs=[('batch', '1'), ('treatment', 'control')],
+    # This creates query: "batch == '1' & treatment == 'control'"
     query = " & ".join([f"{col} == '{val}'" for col, val in valid_pairs])
 
     # Boolean mask
@@ -1567,11 +1521,9 @@ def _filter_anndata(
 
     filtered = adata[cell_mask].copy()
 
-    """
-    Apply cluster filter if provided
-    Example: If cluster_column='cell_type' and cluster_filter=['T-cell', 'B-cell'],
-    This will keep only cells where cell_type is either 'T-cell' or 'B-cell'
-    """
+    # Apply cluster filter if provided
+    # Example: If cluster_column='cell_type' and cluster_filter=['T-cell', 'B-cell'],
+    # This will keep only cells where cell_type is either 'T-cell' or 'B-cell'
     if cluster_filter is not None:
         cluster_filter = np.unique(cluster_filter)
         valid_clusters = set(cluster_filter).intersection(set(filtered.obs[cluster_column]))
@@ -1587,11 +1539,9 @@ def _filter_anndata(
 
         filtered = filtered[cluster_mask].copy()
 
-    """
-    Apply gene filter if provided
-    Example: If gene_filter=['CD4', 'CD8A', 'IL2RA'] and gene_column=None,
-    This will keep only genes with those IDs in the index
-    """
+    # Apply gene filter if provided
+    # Example: If gene_filter=['CD4', 'CD8A', 'IL2RA'] and gene_column=None,
+    # This will keep only genes with those IDs in the index
     if gene_filter is not None:
         gene_filter = np.unique(gene_filter)
 
@@ -1622,8 +1572,8 @@ def _filter_anndata(
         gene_index=gene_column,
         normalize=normalize,
         weight_by_ep=weight_by_ep,
-        inplace=True,
-        overwrite=True
+        inplace=inplace,
+        overwrite=inplace
     )
 
     return filtered
@@ -1645,9 +1595,9 @@ def _calculate_condition_difference(
     Parameters
     ----------
     adata_a : sc.AnnData
-        Annotated single-cell data matrices for the two conditions.
+        AnnData object with cells treated as condition A.
     adata_b : sc.AnnData
-        Annotated single-cell data matrices for the two conditions.
+        AnnData object with cells treated as condition B.
     condition_a_name : str
         Names of the conditions for column labeling.
     condition_b_name : str
@@ -1666,7 +1616,9 @@ def _calculate_condition_difference(
 
     Notes
     -----
-    Filters might introduce bias in the difference calculation.
+    Filter parameters (min_perc, interaction_score, interaction_perc) might
+    introduce bias in the difference calculation,
+    so they are recommended to be disabled (default).
 
     Examples
     --------
@@ -1697,27 +1649,21 @@ def _calculate_condition_difference(
         )
     }
 
-    """
-    Add condition labels and combine for ranking
-    This tags each interaction with its source condition for later identification
-    """
+    # Add condition labels and combine for ranking
+    # This tags each interaction with its source condition for later identification
     for cond, df in interactions.items():
         df['condition'] = cond
 
-    """
-    Combine datasets for uniform ranking across conditions
-    This is critical for fair comparison - we want to rank all interactions together
-    rather than separately within each condition so that there are no biases due to
-    differences in scale
-    """
+    # Combine datasets for uniform ranking across conditions
+    # This is critical for fair comparison - we want to rank all interactions together
+    # rather than separately within each condition so that there are no biases due to
+    # differences in scale
     combined = pd.concat(interactions.values(), ignore_index=True)
 
-    """
-    Calculate quantile rank (0-1) of interaction scores across all conditions
-    If records have the same rank, they will be ranked by the average rank of
-    this group. See here for more on that:
-    https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.rank.html
-    """
+    # Calculate quantile rank (0-1) of interaction scores across all conditions
+    # If records have the same rank, they will be ranked by the average rank of
+    # this group. See here for more on that:
+    # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.rank.html
     combined['quantile_rank'] = combined['interaction_score'].rank(method='average', pct=True)
 
     # Key columns for merging - used to identify unique receptor-ligand pairs
@@ -1737,11 +1683,9 @@ def _calculate_condition_difference(
         suffixes=(a_suffix, b_suffix)
     )
 
-    """
-    Calculate difference between condition ranks
-    Example: For treatment vs control, this would calculate:
-    'rank_diff_control_vs_treatment' = quantile_rank_control - quantile_rank_treatment
-    """
+    # Calculate difference between condition ranks
+    # Example: For treatment vs control, this would calculate:
+    # 'rank_diff_control_vs_treatment' = quantile_rank_control - quantile_rank_treatment
     diff_col = f'rank_diff_{condition_b_name}_vs_{condition_a_name}'
     abs_diff_col = f'abs_diff_{condition_b_name}_vs_{condition_a_name}'
 
@@ -1819,11 +1763,9 @@ def _process_condition_combinations(
     # Process inputs and setup
     condition_columns = np.array(condition_columns)
 
-    """
-    The first column is considered the "target" column that we want to compare values from
-    Example: If condition_columns=['treatment', 'batch', 'patient_id'],
-    then 'treatment' is the target condition we're comparing across batches and patient IDs
-    """
+    # The first column is considered the "target" column that we want to compare values from
+    # Example: If condition_columns=['treatment', 'batch', 'patient_id'],
+    # then 'treatment' is the target condition we're comparing across batches and patient IDs
     target_condition = condition_columns[0]
     target_values = condition_values_dict[target_condition]
 
@@ -1832,24 +1774,20 @@ def _process_condition_combinations(
         warnings.warn(f"Need at least 2 values for {target_condition} to compare")
         return {}
 
-    """
-    Generate all possible combinations of control conditions
-    Control conditions are all columns after the first (target) column
-    Example: If condition_columns=['treatment', 'batch', 'patient_id'],
-    control_conditions would be ['batch', 'patient_id']
-    """
+    # Generate all possible combinations of control conditions
+    # Control conditions are all columns after the first (target) column
+    # Example: If condition_columns=['treatment', 'batch', 'patient_id'],
+    # control_conditions would be ['batch', 'patient_id']
     control_conditions = condition_columns[1:]
 
     if not control_conditions.size:
         # If only one condition column, no additional controls
         control_combinations = [{}]
     else:
-        """
-        Generate all combinations of values for control conditions
-        Example: If control_conditions=['batch', 'patient_id'] with values {'batch': ['1', '2'], 'patient_id': ['A', 'B']},
-        This creates combinations: [{'batch': '1', 'patient_id': 'A'}, {'batch': '1', 'patient_id': 'B'},
-                                    {'batch': '2', 'patient_id': 'A'}, {'batch': '2', 'patient_id': 'B'}]
-        """
+        # Generate all combinations of values for control conditions
+        # Example: If control_conditions=['batch', 'patient_id'] with values {'batch': ['1', '2'], 'patient_id': ['A', 'B']},
+        # This creates combinations: [{'batch': '1', 'patient_id': 'A'}, {'batch': '1', 'patient_id': 'B'},
+        #                             {'batch': '2', 'patient_id': 'A'}, {'batch': '2', 'patient_id': 'B'}]
         control_values = [condition_values_dict[col] for col in control_conditions]
         control_combinations = [
             dict(zip(control_conditions, combo))
@@ -1861,31 +1799,23 @@ def _process_condition_combinations(
 
     # Process each control combination
     for control_dict in control_combinations:
-        """
-        Create a descriptive string for this control combination
-        Example: If control_dict={'batch': '1', 'patient_id': 'A'},
-        This creates "batch=1_patient_id=A
-        """
+        # Create a descriptive string for this control combination
+        # Example: If control_dict={'batch': '1', 'patient_id': 'A'},
+        # This creates "batch=1_patient_id=A
         control_desc = "_".join([f"{col}={val}" for col, val in control_dict.items()])
         filtered_datasets = {}
 
-        """
-        Filter data for each target value
-        This creates a filtered dataset for each target value within the current control combination
-        """
+        # Filter data for each target value
+        # This creates a filtered dataset for each target value within the current control combination
         for target_value in target_values:
-            """
-            Combine target and control values for filtering
-            Example: If target_value='treatment_A' and control_dict={'batch': '1', 'patient_id': 'A'},
-            filter_values would be ['treatment_A', '1', 'A']
-            """
+            # Combine target and control values for filtering
+            # Example: If target_value='treatment_A' and control_dict={'batch': '1', 'patient_id': 'A'},
+            # filter_values would be ['treatment_A', '1', 'A']
             filter_values = [target_value] + [control_dict.get(col) for col in condition_columns[1:]]
             logger.info(f"Filtering for {list(zip(condition_columns, filter_values))}")
 
-            """
-            Filter the AnnData object
-            This creates a subset of the data matching the current combination of conditions
-            """
+            # Filter the AnnData object
+            # This creates a subset of the data matching the current combination of conditions
             filtered = _filter_anndata(
                 adata=adata,
                 condition_values=filter_values,
@@ -1910,28 +1840,22 @@ def _process_condition_combinations(
             # Sort by the order in the original condition_values_dict to respect user-defined order
             ordered_targets = [t for t in condition_values_dict[target_condition] if t in valid_targets]
 
-            """
-            Create pairs of sequential timepoints only
-            Example: For timepoints ['day0', 'day3', 'day7', 'day14'],
-            This creates comparison pairs: [('day0', 'day3'), ('day3', 'day7'), ('day7', 'day14')]
-            """
+            # Create pairs of sequential timepoints only
+            # Example: For timepoints ['day0', 'day3', 'day7', 'day14'],
+            # This creates comparison pairs: [('day0', 'day3'), ('day3', 'day7'), ('day7', 'day14')]
             comparison_pairs = [(ordered_targets[i], ordered_targets[i + 1])
                                 for i in range(len(ordered_targets) - 1)]
         else:
-            """
-            Compare all combinations (default behavior)
-            Example: For targets ['control', 'treatment_A', 'treatment_B'],
-            This creates comparison pairs: [('control', 'treatment_A'), ('control', 'treatment_B'), ('treatment_A', 'treatment_B')]
-            """
+            # Compare all combinations (default behavior)
+            # Example: For targets ['control', 'treatment_A', 'treatment_B'],
+            # This creates comparison pairs: [('control', 'treatment_A'), ('control', 'treatment_B'), ('treatment_A', 'treatment_B')]
             comparison_pairs = list(itertools.combinations(valid_targets, 2))
 
         # Process each comparison pair
         for value_a, value_b in comparison_pairs:
-            """
-            Calculate differences between the two conditions
-            This computes how receptor-ligand interactions differ between the two conditions
-            by calculating the quantile rank differences
-            """
+            # Calculate differences between the two conditions
+            # This computes how receptor-ligand interactions differ between the two conditions
+            # by calculating the quantile rank differences
             diff_result = _calculate_condition_difference(
                 adata_a=filtered_datasets[value_a],
                 adata_b=filtered_datasets[value_b],
@@ -1946,10 +1870,8 @@ def _process_condition_combinations(
                 # Create key and store results
                 comp_key = f"{control_desc}_{value_b}_vs_{value_a}" if control_desc else f"{value_b}_vs_{value_a}"
 
-                """
-                Add control info to results
-                This allows tracking what control values were used for this comparison
-                """
+                # Add control info to results
+                # This allows tracking what control values were used for this comparison
                 for col, val in control_dict.items():
                     diff_result[f"control_{col}"] = val
 
@@ -2040,10 +1962,12 @@ def calculate_condition_differences(
 
     Returns
     -------
-    Optional[sc.AnnData | Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]
+    Optional[sc.AnnData]
         - If inplace=False: Returns a copy of AnnData with condition differences
         - If inplace=True: Returns None, modifies original AnnData
-        - Nested dictionary contains detailed condition difference calculations
+
+        In both cases, the differences are stored in:
+        adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
 
     Raises
     ------
@@ -2096,11 +2020,8 @@ def calculate_condition_differences(
     # Create modified_adata at the beginning
     modified_adata = adata if inplace else adata.copy()
 
-    # # Check if condition differences already exist
-    if (not overwrite
-            and 'sctoolbox' in modified_adata.uns
-            and 'receptor-ligand' in modified_adata.uns['sctoolbox']
-            and 'condition-differences' in modified_adata.uns['sctoolbox']['receptor-ligand']):
+    # Check if condition differences already exist
+    if not overwrite and in_uns(modified_adata, ['sctoolbox', 'receptor-ligand', 'condition-differences']):
         warnings.warn("Condition differences already exists! Skipping. Set `overwrite=True` to replace.")
 
         if inplace:
@@ -2170,25 +2091,19 @@ def calculate_condition_differences(
     # Start processing
     logger.info("Starting comparison processing   ")
 
-    """
-    The first column is the target condition to compare
-    Example: If condition_columns=['treatment', 'batch', 'patient_id'],
-    target_condition is 'treatment'
-    """
+    # The first column is the target condition to compare
+    # Example: If condition_columns=['treatment', 'batch', 'patient_id'],
+    # target_condition is 'treatment'
     target_condition = condition_columns[0]
 
-    """
-    Check if this is a time series analysis
-    This is true when the time_column is the first column in condition_columns
-    Example: condition_columns=['timepoint', 'treatment'] with time_column='timepoint'
-    """
+    # Check if this is a time series analysis
+    # This is true when the time_column is the first column in condition_columns
+    # Example: condition_columns=['timepoint', 'treatment'] with time_column='timepoint'
     is_time_series = time_column is not None and time_column == target_condition
 
-    """
-    Process all condition combinations
-    We pass the condition_values_dict containing the possible values for each condition
-    This will create filtered datasets for each combination and calculate differences
-    """
+    # Process all condition combinations
+    # We pass the condition_values_dict containing the possible values for each condition
+    # This will create filtered datasets for each combination and calculate differences
     all_results = {target_condition: _process_condition_combinations(
         adata=modified_adata,
         condition_columns=condition_columns,
@@ -2223,7 +2138,12 @@ def calculate_condition_differences(
             logger.info(f"Temporal analysis using '{time_column}' with order: {time_order}")
 
     # Store results in the AnnData object
-    _add_uns_info_rl(modified_adata, value=all_results, inplace=True)
+    add_uns_info(
+        modified_adata,
+        key=['receptor-ligand', 'condition-differences'],
+        value=all_results,
+        how="overwrite"
+    )
 
     if inplace:
         return None
@@ -2233,12 +2153,10 @@ def calculate_condition_differences(
 # ---------- DIFFERENCE PLOTTING -----------#
 
 
-"""
-Receptor-Ligand Difference Visualization
+# Receptor-Ligand Difference Visualization
 
-This section provides functions for visualizing receptor-ligand interaction differences
-between different cell populations across experimental conditions and timepoints.
-"""
+# This section provides functions for visualizing receptor-ligand interaction differences
+# between different cell populations across experimental conditions and timepoints.
 
 
 def _identify_hub_networks(
@@ -2563,7 +2481,10 @@ def condition_differences_network(
     Returns
     -------
     List[matplotlib.figure.Figure]
-        List of generated figures (note: if close_figs=True, these figures will be closed)
+        List of generated figures. If split_by_direction=True, returns up to two figures per comparison
+        (one for positive and one for negative differences). If split_by_direction=False, returns one
+        figure per comparison with all differences combined. Note: if close_figs=True, these figures
+        will be closed after saving.
 
     Raises
     ------
@@ -2592,10 +2513,8 @@ def condition_differences_network(
     # List to store all generated figures
     figures = []
 
-    """
-    Collect all cell types across all comparisons
-    This ensures consistent colors and shapes across all visualizations
-    """
+    # Collect all cell types across all comparisons
+    # This ensures consistent colors and shapes across all visualizations
     all_cell_types = set()
     for dimension_results in diff_results.values():
         for comparison_data in dimension_results.values():
@@ -2636,13 +2555,11 @@ def condition_differences_network(
         cell_colors[ct] = cmap(color_idx)
         cell_shapes[ct] = cluster_shapes[shape_idx]
 
-    """
-    Define colormap settings based on direction
-    These settings determine how the edge colors are displayed:
-     - positive differences: red scale (higher in condition B)
-     - negative differences: blue scale (higher in condition A)
-     - all differences: blue-to-red diverging scale
-    """
+    # Define colormap settings based on direction
+    # These settings determine how the edge colors are displayed:
+    #  - positive differences: red scale (higher in condition B)
+    #  - negative differences: blue scale (higher in condition A)
+    #  - all differences: blue-to-red diverging scale
     colormap_settings = {
         'positive': {'vmin': 0, 'vmax': vmax, 'cmap': 'Reds'},
         'negative': {'vmin': vmin, 'vmax': 0, 'cmap': 'Blues_r'},
@@ -2688,13 +2605,11 @@ def condition_differences_network(
                     pos_b = time_points.index(condition_b)
                     time_info = f" | {time_col}: {pos_a} → {pos_b}"
 
-            """
-            Determine directions to plot
-            This section handles whether to create separate plots for:
-             - positive differences (higher in condition B)
-             - negative differences (higher in condition A)
-             - or a single plot with all differences
-            """
+            # Determine directions to plot
+            # This section handles whether to create separate plots for:
+            #  - positive differences (higher in condition B)
+            #  - negative differences (higher in condition A)
+            #  - or a single plot with all differences
             directions = []
             if split_by_direction:
                 # Get top positive differences (higher in condition B)
@@ -2756,10 +2671,8 @@ def condition_differences_network(
                     interaction_a = row[interaction_a_col] if interaction_a_col else None
                     interaction_b = row[interaction_b_col] if interaction_b_col else None
 
-                    """
-                    The edge represents the ligand-receptor interaction with its difference score
-                    Direction is from ligand to receptor (l_node → r_node)
-                    """
+                    # The edge represents the ligand-receptor interaction with its difference score
+                    # Direction is from ligand to receptor (l_node → r_node)
                     edges.append((l_node, r_node, {
                         'weight': abs(row[diff_col]),
                         'diff': row[diff_col],
@@ -2792,30 +2705,24 @@ def condition_differences_network(
                 num_hubs = len(hub_networks)
                 has_non_hub = non_hub_subgraph is not None and len(non_hub_subgraph.edges) > 0
 
-                """
-                Calculate grid layout parameters
-                The layout accommodates:
-                 1. Non-hub network (if exists) - in the first row (stretching over defined or all cols)
-                 2. Hub networks - each in its own subplot
-                 3. Cluster Legend - in the last column
-                 4. At the bottom of the plots is
-                    4.1. The colorbar for the quantile differences
-                    4.2. A legend that describes that the graphs are directed from ligand to receptor
-                """
+                # Calculate grid layout parameters
+                # The layout accommodates:
+                #  1. Non-hub network (if exists) - in the first row (stretching over defined or all cols)
+                #  2. Hub networks - each in its own subplot
+                #  3. Cluster Legend - in the last column
+                #  4. At the bottom of the plots is
+                #     4.1. The colorbar for the quantile differences
+                #     4.2. A legend that describes that the graphs are directed from ligand to receptor
 
-                """
-                Calculate number of networks for layout
-                If non-hub exists, it uses space equivalent to non_hub_cols
-                Default non_hub_cols to 3 if None (equivalent to all content columns in a 4-column grid)
-                """
+                # Calculate number of networks for layout
+                # If non-hub exists, it uses space equivalent to non_hub_cols
+                # Default non_hub_cols to 3 if None (equivalent to all content columns in a 4-column grid)
                 non_hub_grid = (non_hub_cols if non_hub_cols is not None else 3) if has_non_hub else 0
                 number_of_networks = num_hubs + non_hub_grid
 
-                """
-                Calculate columns (including legend column)
-                For 0-2 networks: use number of networks + 1 columns (for legend)
-                For 3+ networks: use 4 columns total
-                """
+                # Calculate columns (including legend column)
+                # For 0-2 networks: use number of networks + 1 columns (for legend)
+                # For 3+ networks: use 4 columns total
                 cols = min(number_of_networks + 1, 4)
 
                 # Calculate rows
@@ -2842,10 +2749,8 @@ def condition_differences_network(
                 # Create figure with GridSpec for multi-grid layout
                 fig = plt.figure(figsize=figsize, dpi=dpi)
 
-                """
-                Create grid with the last column for legend and make it half size
-                This allocates more space for network visualizations and less for the legend
-                """
+                # Create grid with the last column for legend and make it half size
+                # This allocates more space for network visualizations and less for the legend
                 width_ratios = [1] * (cols - 1) + [0.5]
 
                 # Create the grid with correct spacing
@@ -2875,10 +2780,8 @@ def condition_differences_network(
                 # Tracking grid positions for dynamic allocation
                 current_row, current_col = 0, 0
 
-                """
-                Draw each plot in its position
-                This loop places each network in the respective grid cell
-                """
+                # Draw each plot in its position
+                # This loop places each network in the respective grid cell
                 for i, (plot_id, graph, title) in enumerate(plots_to_display):
                     # 2x1 grid for non-hub
                     if plot_id == 'non_hub':
@@ -3084,7 +2987,10 @@ def plot_all_condition_differences(
     Returns
     -------
     Optional[Dict[str, List[matplotlib.figure.Figure]]]
-        Dictionary of figures by dimension key if return_figures=True.
+        Dictionary of figures by dimension key if return_figures=True. For each comparison:
+        - If split_by_direction=True: Up to two figures (positive and negative differences)
+        - If split_by_direction=False: One figure with all differences combined
+        Returns None if return_figures=False.
 
     Raises
     ------

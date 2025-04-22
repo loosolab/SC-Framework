@@ -317,32 +317,6 @@ def test_connectionPlot(adata_inter):
 
 # ------------------------------ HELPER DIFFENRENCE FUNCTION TESTS -------------------------------- #
 
-@pytest.mark.parametrize("inplace", [True, False])
-def test_add_uns_info_rl(inplace):
-    """Test adding results to .uns."""
-    # Create test data
-    adata = sc.AnnData(np.random.rand(10, 10))
-    value = {'test': {'data': {'differences': pd.DataFrame()}}}
-
-    # Test the function
-    result = rl._add_uns_info_rl(adata, value, inplace=inplace)
-
-    if inplace:
-        # Check inplace modification
-        assert result is None
-        assert 'sctoolbox' in adata.uns
-        assert 'receptor-ligand' in adata.uns['sctoolbox']
-        assert 'condition-differences' in adata.uns['sctoolbox']['receptor-ligand']
-        assert adata.uns['sctoolbox']['receptor-ligand']['condition-differences'] == value
-    else:
-        # Check return of copy
-        assert result is not None
-        assert 'sctoolbox' not in adata.uns  # Original unchanged
-        assert 'sctoolbox' in result.uns
-        assert 'receptor-ligand' in result.uns['sctoolbox']
-        assert 'condition-differences' in result.uns['sctoolbox']['receptor-ligand']
-        assert result.uns['sctoolbox']['receptor-ligand']['condition-differences'] == value
-
 
 @pytest.mark.parametrize(
     "condition_values,condition_columns,expected_success",
