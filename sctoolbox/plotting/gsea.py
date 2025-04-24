@@ -542,9 +542,6 @@ def gsea_dot(adata: sc.AnnData,
             .reset_index(drop=True)
         ).reset_index(drop=True)
 
-    for i in get_uns(adata, _core_uns_path + ['overlap_col']):
-        print(i)
-
     # Calc percentage from overlap column
     term_table["% Genes in set"] = [
         int(round(eval(operation) * 100, 0))
