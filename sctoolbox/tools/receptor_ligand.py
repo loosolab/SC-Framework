@@ -3219,9 +3219,9 @@ def plot_interactions_overtime(
     for r_gene, r_cluster, l_gene, l_cluster in interactions:
         mask = (
             (interaction_df["receptor_gene"] == r_gene)
-            and (interaction_df["receptor_cluster"] == r_cluster)
-            and (interaction_df["ligand_gene"] == l_gene)
-            and (interaction_df["ligand_cluster"] == l_cluster)
+            & (interaction_df["receptor_cluster"] == r_cluster)
+            & (interaction_df["ligand_gene"] == l_gene)
+            & (interaction_df["ligand_cluster"] == l_cluster)
         )
         if mask.any():
             valid_interactions.append((r_gene, r_cluster, l_gene, l_cluster))
@@ -3327,7 +3327,7 @@ def plot_interactions_overtime(
                     y_offset = 0.02 * reference_max
                     ax.annotate(
                         f"{height:.2f}",
-                        xy=(bar.get_x() + bar.get_width()/2, height),
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
                         # Add extra vertical offset
                         xytext=(0, 3 + y_offset),
                         textcoords="offset points",
