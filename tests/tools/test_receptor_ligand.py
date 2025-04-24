@@ -315,8 +315,6 @@ def test_connectionPlot(adata_inter):
 
 # ----- Tests for receptor-ligand differences analysis functions. ----- #
 
-# ------------------------------ HELPER DIFFERENCE FUNCTION TESTS -------------------------------- #
-
 
 @pytest.mark.parametrize(
     "condition_values,condition_columns,expected_success",
@@ -413,14 +411,6 @@ def test_filter_anndata_with_filters(
             assert result is None
 
 
-def mock_filter_anndata_for_timepoints(args, kwargs, valid_timepoints):
-    """Mock implementation of _filter_anndata for time-based tests."""
-    values = kwargs.get('condition_values', [])
-    if not values or values[0] not in valid_timepoints:
-        return None
-    return args[0].copy()
-
-
 def test_process_condition_combinations(adata_with_conditions):
     """Test processing condition combinations."""
     with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
@@ -451,58 +441,6 @@ def test_process_condition_combinations(adata_with_conditions):
                 assert 'treatment_vs_control' in result
                 assert 'differences' in result['treatment_vs_control']
                 assert isinstance(result['treatment_vs_control']['differences'], pd.DataFrame)
-
-
-def mock_filter_anndata_for_timepoints(args, kwargs, valid_timepoints):
-    """Mock implementation of _filter_anndata for time-based tests."""
-    # Get adata from kwargs instead of args
-    adata = kwargs.get('adata')
-    values = kwargs.get('condition_values', [])
-    if not values or values[0] not in valid_timepoints:
-        return None
-    return adata.copy()
-
-@pytest.mark.parametrize(
-    "sequential,timepoints",
-    [
-        (True, ['day0', 'day3', 'day7']),
-        (False, ['day0', 'day3', 'day7']),
-        (True, ['invalid1', 'invalid2']),
-        (True, ['day0', 'day7']),
-        (True, ['day0']),
-    ]
-)
-def test_process_condition_combinations_time_analysis(
-    adata_with_conditions, sequential, timepoints
-):
-    """Test time analysis in process_condition_combinations."""
-    valid_timepoints = ['day0', 'day3', 'day7']
-
-    with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
-        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_diff:
-            with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table'):
-                # Setup mock filter function
-                mock_filter.side_effect = lambda **kwargs: mock_filter_anndata_for_timepoints(
-                    (), kwargs, valid_timepoints
-                )
-
-                # Setup mock diff function
-                mock_diff.return_value = pd.DataFrame({
-                    'receptor_gene': ['gene1'],
-                    'ligand_gene': ['gene10'],
-                    'rank_diff_dummy': [0.5],
-                    'abs_diff_dummy': [0.5]
-                })
-
-                with warnings.catch_warnings(record=True):
-                    rl._process_condition_combinations(
-                        adata=adata_with_conditions,
-                        condition_columns=['timepoint'],
-                        condition_values_dict={'timepoint': timepoints},
-                        cluster_column='cluster',
-                        sequential_time_analysis=sequential
-                    )
-# ------------------------------ MAIN FUNCTION DIFFERENCE TESTS -------------------------------- #
 
 
 @pytest.mark.parametrize("inplace,overwrite,has_existing", [
@@ -575,29 +513,6 @@ def test_calculate_condition_differences(
                 assert 'condition-differences' in result.uns['sctoolbox']['receptor-ligand']
 
 
-def test_calculate_condition_differences_time_analysis(adata_with_conditions):
-    """Test time series analysis functionality."""
-    # Mock _process_condition_combinations
-    with patch('sctoolbox.tools.receptor_ligand._process_condition_combinations') as mock_process:
-        # Set up mock return value
-        mock_process.return_value = {'test': {'differences': pd.DataFrame()}}
-
-        # Run with time series settings
-        rl.calculate_condition_differences(
-            adata=adata_with_conditions,
-            condition_columns=['timepoint', 'condition'],
-            cluster_column='cluster',
-            time_column='timepoint',
-            time_order=['day0', 'day3', 'day7']
-        )
-
-        # Verify mock_process was called with sequential_time_analysis=True
-        assert mock_process.called
-        assert mock_process.call_args[1]['sequential_time_analysis'] is True
-
-
-# ------------------------------ ERROR CASE TESTS -------------------------------- #
-
 @pytest.mark.parametrize("error_condition,expected_error", [
     # Missing time_order
     ({"time_column": "timepoint", "time_order": None}, "time_order must be provided"),
@@ -628,6 +543,79 @@ def test_calculate_condition_differences_errors(
         rl.calculate_condition_differences(**kwargs)
 
     assert expected_error in str(excinfo.value)
+
+
+def mock_filter_anndata_for_timepoints(kwargs, valid_timepoints):
+    """Mock implementation of _filter_anndata for time-based tests."""
+    # Get adata from kwargs
+    adata = kwargs.get('adata')
+    values = kwargs.get('condition_values', [])
+    if not values or values[0] not in valid_timepoints:
+        return None
+    return adata.copy()
+
+
+@pytest.mark.parametrize(
+    "sequential,timepoints",
+    [
+        (True, ['day0', 'day3', 'day7']),
+        (False, ['day0', 'day3', 'day7']),
+        (True, ['invalid1', 'invalid2']),
+        (True, ['day0', 'day7']),
+        (True, ['day0']),
+    ]
+)
+def test_process_condition_combinations_time_analysis(
+    adata_with_conditions, sequential, timepoints
+):
+    """Test time analysis in process_condition_combinations."""
+    valid_timepoints = ['day0', 'day3', 'day7']
+
+    with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
+        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_diff:
+            with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table'):
+                # Setup mock filter function with corrected side_effect
+                mock_filter.side_effect = lambda **kwargs: mock_filter_anndata_for_timepoints(
+                    kwargs, valid_timepoints
+                )
+
+                # Setup mock diff function
+                mock_diff.return_value = pd.DataFrame({
+                    'receptor_gene': ['gene1'],
+                    'ligand_gene': ['gene10'],
+                    'rank_diff_dummy': [0.5],
+                    'abs_diff_dummy': [0.5]
+                })
+
+                with warnings.catch_warnings(record=True):
+                    rl._process_condition_combinations(
+                        adata=adata_with_conditions,
+                        condition_columns=['timepoint'],
+                        condition_values_dict={'timepoint': timepoints},
+                        cluster_column='cluster',
+                        sequential_time_analysis=sequential
+                    )
+
+
+def test_calculate_condition_differences_time_analysis(adata_with_conditions):
+    """Test time series analysis functionality."""
+    # Mock _process_condition_combinations
+    with patch('sctoolbox.tools.receptor_ligand._process_condition_combinations') as mock_process:
+        # Set up mock return value
+        mock_process.return_value = {'test': {'differences': pd.DataFrame()}}
+
+        # Run with time series settings
+        rl.calculate_condition_differences(
+            adata=adata_with_conditions,
+            condition_columns=['timepoint', 'condition'],
+            cluster_column='cluster',
+            time_column='timepoint',
+            time_order=['day0', 'day3', 'day7']
+        )
+
+        # Verify mock_process was called with sequential_time_analysis=True
+        assert mock_process.called
+        assert mock_process.call_args[1]['sequential_time_analysis'] is True
 
 
 # ------------------------------ VISUALIZATION TESTS -------------------------------- #
