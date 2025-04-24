@@ -30,8 +30,8 @@ import itertools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
-from sctoolbox.utils import add_uns_info
-from sctoolbox.utils import in_uns
+from sctoolbox.utils.adata import add_uns_info
+from sctoolbox.utils.adata import in_uns
 
 logger = settings.logger
 
@@ -1780,7 +1780,7 @@ def _process_condition_combinations(
     # control_conditions would be ['batch', 'patient_id']
     control_conditions = condition_columns[1:]
 
-    if not control_conditions.size:
+    if not control_conditions:
         # If only one condition column, no additional controls
         control_combinations = [{}]
     else:
@@ -1904,7 +1904,7 @@ def calculate_condition_differences(
     inplace: bool = False,
     overwrite: bool = False,
     save_diff: bool = False
-) -> Optional[sc.AnnData | Dict[str, Dict[str, Dict[str, pd.DataFrame]]]]:
+) -> Optional[sc.AnnData]:
     """
     Calculate interaction quantile rank differences between conditions.
 
@@ -1918,6 +1918,8 @@ def calculate_condition_differences(
     condition_columns : List[str] | npt.ArrayLike
         Columns in adata.obs for hierarchical filtering, ordered sequentially.
         First column contains values to be compared within combinations of other columns.
+        The interaction score differences will be calculated between the values of the first
+        column given all combinations of the subsequent condition columns.
     cluster_column : str
         Name of the cluster column in adata.obs.
     min_perc : Optional[int | float], optional
@@ -2491,16 +2493,16 @@ def condition_differences_network(
     ValueError
         If no valid differences are found in the provided AnnData object.
 
-    Examples
-    --------
     .. plot::
         :context: close-figs
 
-        # Basic usage with standard condition comparison
-        figs = condition_differences_network(
-            adata=adata,
-            n_top=100,
-            save="condition_diff_network"
+        # Create differential interaction network plot
+        figs = rl.condition_differences_network(
+            adata=adata_diff,
+            n_top=30,
+            figsize=(16, 12),
+            hub_threshold=3,
+            close_figs=False
         )
     """
     # Get condition differences from adata
@@ -3000,14 +3002,17 @@ def plot_all_condition_differences(
     Examples
     --------
     .. plot::
-            :context: close-figs
+        :context: close-figs
 
-            # Generate and display all condition difference network plots
-            plot_all_condition_differences(
-                adata=adata,
-                n_top=100,
-                save_prefix="all_conditions"
-            )
+        # Generate all network plots at once
+        all_figures = rl.plot_all_condition_differences(
+            adata=time_diff,
+            n_top=25,
+            figsize=(18, 14),
+            split_by_direction=True,
+            hub_threshold=3,
+            close_figs=False
+        )
     """
     # Get condition differences from the AnnData object
     diff_results = adata.uns.get('sctoolbox', {}).get('receptor-ligand', {}).get("condition-differences", {})
@@ -3059,3 +3064,333 @@ def plot_all_condition_differences(
                 plt.show()
 
     return all_figures if return_figures else None
+
+
+@beartype
+def _get_gene_expression(
+    adata: sc.AnnData,
+    gene: str,
+    cluster: str,
+    timepoint: str,
+    timepoint_col: str,
+    cluster_col: str
+) -> float:
+    """
+    Get mean expression of a gene in a specific cluster at a specific timepoint.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        AnnData object containing gene expression data.
+    gene : str
+        Gene name or identifier to retrieve expression for.
+    cluster : str
+        Cluster identifier to filter cells by.
+    timepoint : str
+        Timepoint identifier to filter cells by.
+    timepoint_col : str
+        Column name in adata.obs that contains timepoint information.
+    cluster_col : str
+        Column name in adata.obs that contains cluster information.
+
+    Returns
+    -------
+    float
+        Mean expression value of the gene in the specified cluster at the specified timepoint.
+        Returns 0.0 if no cells match the criteria or if the gene is not found.
+
+    Notes
+    -----
+    - If no cells are found that match the timepoint and cluster, returns 0.0.
+    - If the gene is not found in the dataset, returns 0.0.
+    """
+    # Find cells that match the timepoint and cluster
+    mask = (adata.obs[timepoint_col] == timepoint) & (adata.obs[cluster_col] == cluster)
+    if not mask.any() or gene not in adata.var_names:
+        return 0.0
+
+    # Get gene index and cell indices
+    gene_idx = adata.var_names.get_loc(gene)
+    cell_indices = np.where(mask)[0]
+
+    if len(cell_indices) == 0:
+        return 0.0
+
+    # Get expression values
+    expr_values = adata.X[cell_indices, gene_idx]
+    if hasattr(expr_values, "toarray"):
+        expr_values = expr_values.toarray().flatten()
+
+    return float(np.mean(expr_values))
+
+
+@beartype
+def plot_interactions_overtime(
+    adata: sc.AnnData,
+    interactions: List[Tuple[str, str, str, str]],
+    timepoint_column: str,
+    cluster_column: str,
+    timepoints: Optional[List[str]] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: int = 100,
+    save: Optional[str] = None,
+    title: Optional[str] = None,
+    n_cols: int = 2,
+    receptor_color: Optional[str] = None,
+    ligand_color: Optional[str] = None,
+    use_global_ylim: bool = False,
+):
+    """
+    Plot receptor-ligand interaction expression levels over time as barplots.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        AnnData object containing the interaction table.
+    interactions : List[Tuple[str, str, str, str]]
+        List of (receptor_gene, receptor_cluster, ligand_gene, ligand_cluster) tuples.
+    timepoint_column : str
+        Column in adata.obs containing timepoints.
+    cluster_column : str
+        Column in adata.obs containing cluster names.
+    timepoints : Optional[List[str]], default None
+        Specific timepoints to include. If None, all timepoints are shown.
+    figsize : Optional[Tuple[float, float]], default None
+        Figure dimensions in inches.
+    dpi : int, default 100
+        Figure resolution.
+    save : Optional[str], default None
+        Output filename.
+    title : Optional[str], default None
+        Overall figure title.
+    n_cols : int, default 2
+        Number of columns in the grid layout.
+    receptor_color : Optional[str], default None
+        Color for receptor bars. If None, uses the first color from seaborn's default palette.
+    ligand_color : Optional[str], default None
+        Color for ligand bars. If None, uses the second color from seaborn's default palette.
+    use_global_ylim : bool, default False
+        Whether to use the same y-limit for all subplots based on the global maximum.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The figure object.
+
+    Examples
+    --------
+    .. plot::
+        :context: close-figs
+
+        # Plot interactions over time
+        fig = rl.plot_interactions_overtime(
+            adata=adata,
+            interactions=interaction_pairs,
+            timepoint_column='timepoint',
+            cluster_column='louvain',
+            timepoints=['Day0', 'Day3', 'Day7'],
+            figsize=(16, 6),
+            title="Top Interactions Over Time"
+        )
+    """
+    if timepoint_column not in adata.obs.columns:
+        raise ValueError(f"Timepoint column '{timepoint_column}' not found in adata.obs")
+
+    if cluster_column not in adata.obs.columns:
+        raise ValueError(f"Cluster column '{cluster_column}' not found in adata.obs")
+
+    # Check interaction data exists
+    if "receptor-ligand" not in adata.uns or "interactions" not in adata.uns["receptor-ligand"]:
+        raise ValueError("No receptor-ligand interaction data found in adata")
+
+    # Filter interactions that exist in data
+    interaction_df = adata.uns["receptor-ligand"]["interactions"]
+    valid_interactions = []
+
+    for r_gene, r_cluster, l_gene, l_cluster in interactions:
+        mask = (
+            (interaction_df["receptor_gene"] == r_gene) &
+            (interaction_df["receptor_cluster"] == r_cluster) &
+            (interaction_df["ligand_gene"] == l_gene) &
+            (interaction_df["ligand_cluster"] == l_cluster)
+        )
+        if mask.any():
+            valid_interactions.append((r_gene, r_cluster, l_gene, l_cluster))
+        else:
+            print(f"Warning: Interaction {r_gene}({r_cluster})-{l_gene}({l_cluster}) not found")
+
+    if not valid_interactions:
+        raise ValueError("None of the specified interactions were found in the data")
+
+    # Get timepoints
+    if timepoints is None:
+        timepoints = sorted(adata.obs[timepoint_column].unique())
+
+    # Set up figure dimensions
+    n_interactions = len(valid_interactions)
+    n_rows = math.ceil(n_interactions / n_cols)
+
+    # Get colors from seaborn
+    sns_colors = sns.color_palette()
+    if receptor_color is None:
+        receptor_color = sns_colors[0]
+    if ligand_color is None:
+        ligand_color = sns_colors[1]
+
+    # Set figsize with more space to prevent overlapping
+    if n_interactions == 1:
+        if figsize is None:
+            figsize = (10, 7)
+        n_cols, n_rows = 1, 1
+    elif figsize is None:
+        figsize = (8 * n_cols, 6 * n_rows)
+
+    # Create figure and axes
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, dpi=dpi, squeeze=False)
+
+    # Calculate all expression values first
+    expr_data = []
+    all_expr_values = [] if use_global_ylim else None
+
+    for idx, (r_gene, r_cluster, l_gene, l_cluster) in enumerate(valid_interactions):
+        # Get expression data for each timepoint
+        r_expr = [
+            _get_gene_expression(adata, r_gene, r_cluster, tp, timepoint_column, cluster_column)
+            for tp in timepoints
+        ]
+        l_expr = [
+            _get_gene_expression(adata, l_gene, l_cluster, tp, timepoint_column, cluster_column)
+            for tp in timepoints
+        ]
+
+        expr_data.append((r_expr, l_expr))
+
+        # Only collect all values if using global ylim
+        if use_global_ylim:
+            all_expr_values.extend(r_expr + l_expr)
+
+    # Calculate the global maximum for consistent y-axis scaling if requested
+    global_max = max(all_expr_values) if use_global_ylim and all_expr_values else None
+
+    # Plot each interaction with the global maximum y-limit
+    for idx, (r_gene, r_cluster, l_gene, l_cluster) in enumerate(valid_interactions):
+        row, col = idx // n_cols, idx % n_cols
+        ax = axes[row, col]
+
+        # Get the pre-calculated expression data
+        r_expr, l_expr = expr_data[idx]
+
+        # Plot bars with more spacing
+        x = np.arange(len(timepoints))
+        width = 0.3
+
+        # Draw bars
+        r_bars = ax.bar(
+            # More space between bar groups
+            x - width/2 - 0.05,
+            r_expr,
+            width,
+            facecolor=receptor_color,
+            edgecolor='black',
+            linewidth=0.5,
+            label=f"{r_gene} in {r_cluster}"
+        )
+
+        l_bars = ax.bar(
+            # More space between bar groups
+            x + width/2 + 0.05,
+            l_expr,
+            width,
+            facecolor=ligand_color,
+            edgecolor='black',
+            linewidth=0.5,
+            label=f"{l_gene} in {l_cluster}"
+        )
+
+        # Add value labels with offset to prevent overlap
+        for bars in [r_bars, l_bars]:
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0:
+                    # Determine reference value for scaling offset
+                    reference_max = global_max if use_global_ylim else max(r_expr + l_expr)
+                    # Scale offset based on appropriate max value
+                    y_offset = 0.02 * reference_max
+                    ax.annotate(
+                        f"{height:.2f}",
+                        xy=(bar.get_x() + bar.get_width()/2, height),
+                        # Add extra vertical offset
+                        xytext=(0, 3 + y_offset),
+                        textcoords="offset points",
+                        ha='center',
+                        va='bottom',
+                        fontsize=12,
+                        bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7)
+                    )
+
+        # Format axes
+        ax.set_xticks(x)
+        ax.set_xticklabels(timepoints, rotation=45, ha="right", fontsize=12)
+        ax.set_title(f"{r_gene} ({r_cluster}) - {l_gene} ({l_cluster})", fontsize=14)
+        ax.set_xlabel(timepoint_column, fontsize=12)
+        ax.set_ylabel("Expression level", fontsize=12)
+
+        # Set tick font size
+        ax.tick_params(axis='both', which='major', labelsize=12)
+
+        # Set y-limit based on configuration
+        if use_global_ylim:
+            # Use consistent y-limit based on global maximum
+            # Add 25% extra space for labels
+            y_max = global_max * 1.25
+        else:
+            # Use local maximum for this subplot
+            local_max = max(r_expr + l_expr) if r_expr + l_expr else 1.0
+            # Add 25% extra space for labels
+            y_max = local_max * 1.25
+
+        ax.set_ylim(0, y_max)
+
+        # Add individual legend below plot with additional space
+        ax.legend(
+            fontsize=12,
+            loc='upper center',
+            bbox_to_anchor=(0.5, -0.25),
+            ncol=2,
+            frameon=True
+        )
+
+    # Hide empty subplots
+    for empty_idx in range(n_interactions, n_rows * n_cols):
+        empty_row, empty_col = empty_idx // n_cols, empty_idx % n_cols
+        axes[empty_row, empty_col].set_visible(False)
+
+    # Add global legend for colors
+    legend_elements = [
+        plt.Rectangle((0, 0), 1, 1, facecolor=receptor_color, edgecolor='black', linewidth=0.5, label='Receptor'),
+        plt.Rectangle((0, 0), 1, 1, facecolor=ligand_color, edgecolor='black', linewidth=0.5, label='Ligand')
+    ]
+    fig.legend(
+        handles=legend_elements,
+        loc='lower center',
+        ncol=2,
+        bbox_to_anchor=(0.5, 0.01),
+        fontsize=12,
+        frameon=True
+    )
+
+    # Set title
+    if title is None:
+        title = "Receptor-Ligand Interaction" if n_interactions == 1 else "Receptor-Ligand Interactions"
+    fig.suptitle(title, fontsize=18, y=0.98)
+
+    # Adjust layout with more space
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
+    # More space between subplots
+    plt.subplots_adjust(hspace=0.6, wspace=0.4)
+
+    # Save figure
+    if save:
+        fig.savefig(f"{settings.figure_dir}/{save}")
+
+    return fig

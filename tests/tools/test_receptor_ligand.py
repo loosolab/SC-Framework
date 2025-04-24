@@ -2,6 +2,7 @@
 
 import pytest
 import os
+import math
 import pandas as pd
 import numpy as np
 import scanpy as sc
@@ -838,3 +839,224 @@ def test_plot_all_condition_differences(
                             save_was_used = True
                             break
                     assert save_was_used
+
+
+@pytest.mark.parametrize(
+    "gene,cluster,timepoint,expected_result,mock_mean",
+    [
+        # Valid parameters
+        (lambda adata: adata.var_names[0], "cluster 0", "day0", 0.75, True),
+        # Non-existent gene
+        ("non_existent_gene", "cluster 0", "day0", 0.0, False),
+        # Non-existent cluster
+        (lambda adata: adata.var_names[0], "non_existent_cluster", "day0", 0.0, False),
+        # Non-existent timepoint
+        (lambda adata: adata.var_names[0], "cluster 0", "non_existent_timepoint", 0.0, False),
+        # Empty mask (no cells match criteria)
+        (lambda adata: adata.var_names[0], "cluster 0", "day0", 0.0, None),
+    ]
+)
+def test__get_gene_expression(
+    adata_with_conditions, gene, cluster, timepoint, expected_result, mock_mean
+):
+    """Test the _get_gene_expression function with various parameters."""
+    # Resolve callable gene parameter (to handle adata-dependent values)
+    actual_gene = gene(adata_with_conditions) if callable(gene) else gene
+
+    if mock_mean is True:
+        # Mock numpy.mean to return a specific value
+        with patch('numpy.mean', return_value=expected_result):
+            expression = rl._get_gene_expression(
+                adata=adata_with_conditions,
+                gene=actual_gene,
+                cluster=cluster,
+                timepoint=timepoint,
+                timepoint_col="timepoint",
+                cluster_col="cluster"
+            )
+    elif mock_mean is None:
+        # Mock the mask to be empty (no cells match criteria)
+        with patch('numpy.where', return_value=(np.array([]),)):
+            expression = rl._get_gene_expression(
+                adata=adata_with_conditions,
+                gene=actual_gene,
+                cluster=cluster,
+                timepoint=timepoint,
+                timepoint_col="timepoint",
+                cluster_col="cluster"
+            )
+    else:
+        # No mocking, test the actual behavior
+        expression = rl._get_gene_expression(
+            adata=adata_with_conditions,
+            gene=actual_gene,
+            cluster=cluster,
+            timepoint=timepoint,
+            timepoint_col="timepoint",
+            cluster_col="cluster"
+        )
+
+    assert expression == expected_result
+
+
+@pytest.mark.parametrize(
+    "timepoints,n_cols,global_ylim,receptor_color,ligand_color,title,save",
+    [
+        # Test with default parameters
+        (None, 2, False, None, None, None, None),
+        # Test with specific timepoints
+        (["day0", "day3"], 2, False, None, None, None, None),
+        # Test with custom columns and colors
+        (None, 3, False, "red", "blue", "Test Title", None),
+        # Test with global y-limits and custom parameters
+        (None, 2, True, None, None, "Custom Title", "test_output.png"),
+    ]
+)
+def test_plot_interactions_overtime(
+    adata_with_conditions, timepoints, n_cols, global_ylim,
+    receptor_color, ligand_color, title, save
+):
+    """Test the plot_interactions_overtime function with various parameters."""
+    # Setup test interactions
+    interactions = [
+        # (receptor_gene, receptor_cluster, ligand_gene, ligand_cluster)
+        (adata_with_conditions.var_names[0], "cluster 0",
+         adata_with_conditions.var_names[1], "cluster 1"),
+    ]
+
+    # Mock the interaction lookup
+    with patch.object(
+        adata_with_conditions.uns["receptor-ligand"]["interactions"],
+        "copy",
+        return_value=pd.DataFrame({
+            "receptor_gene": [adata_with_conditions.var_names[0]],
+            "receptor_cluster": ["cluster 0"],
+            "ligand_gene": [adata_with_conditions.var_names[1]],
+            "ligand_cluster": ["cluster 1"]
+        })
+    ):
+        # Mock _get_gene_expression to return predictable values
+        with patch(
+            'sctoolbox.tools.receptor_ligand._get_gene_expression',
+            # Values for each timepoint/gene pair
+            side_effect=[0.5, 0.7, 0.6, 0.8]
+        ):
+            # Mock savefig to prevent actual file writes
+            with patch.object(Figure, 'savefig'):
+                fig = rl.plot_interactions_overtime(
+                    adata=adata_with_conditions,
+                    interactions=interactions,
+                    timepoint_column="timepoint",
+                    cluster_column="cluster",
+                    timepoints=timepoints,
+                    n_cols=n_cols,
+                    use_global_ylim=global_ylim,
+                    receptor_color=receptor_color,
+                    ligand_color=ligand_color,
+                    title=title,
+                    save=save,
+                    dpi=72
+                )
+
+                assert isinstance(fig, plt.Figure)
+
+                # Verify subplot configuration
+                n_rows = math.ceil(len(interactions) / n_cols)
+                # At least one axsis per interaction
+                assert len(fig.axes) >= len(interactions)
+
+                # Check figure was created with appropriate layout
+                if n_cols == 1 and len(interactions) == 1:
+                    # Special case for single plot
+                    assert fig.get_figwidth() == 10
+                    assert fig.get_figheight() == 7
+                else:
+                    # Multi-plot case
+                    assert fig.get_figwidth() == 8 * n_cols
+                    assert fig.get_figheight() == 6 * n_rows
+
+                # Verify title was set correctly
+                if title:
+                    assert fig._suptitle.get_text() == title
+
+                plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "column_to_invalidate,expected_error_message",
+    [
+        # Test invalid timepoint column
+        ("timepoint_column", "Timepoint column"),
+        # Test invalid cluster column
+        ("cluster_column", "Cluster column"),
+    ]
+)
+def test_plot_interactions_overtime_invalid_columns(
+    adata_with_conditions, column_to_invalidate, expected_error_message
+):
+    """Test error handling for invalid column names in plot_interactions_overtime."""
+    # Setup base parameters
+    params = {
+        "adata": adata_with_conditions,
+        "interactions": [(adata_with_conditions.var_names[0], "cluster 0",
+                         adata_with_conditions.var_names[1], "cluster 1")],
+        "timepoint_column": "timepoint",
+        "cluster_column": "cluster"
+    }
+
+    # Invalidate the specified column
+    params[column_to_invalidate] = "invalid_column"
+
+    # Test the error is raised with expected message
+    with pytest.raises(ValueError) as excinfo:
+        rl.plot_interactions_overtime(**params)
+
+    assert expected_error_message in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "mock_interaction_data,expected_error_message",
+    [
+        # No matching interactions found
+        (False, "None of the specified interactions were found"),
+        # No interaction data in AnnData
+        (None, "No receptor-ligand interaction data found"),
+    ]
+)
+def test_plot_interactions_overtime_invalid_interactions(
+    adata_with_conditions, mock_interaction_data, expected_error_message
+):
+    """Test error handling for invalid interactions in plot_interactions_overtime."""
+    # Setup test interactions
+    interactions = [("invalid_gene", "invalid_cluster",
+                     "invalid_gene2", "invalid_cluster2")]
+
+    # Different mocking strategies based on test case
+    if mock_interaction_data is None:
+        # Mock missing interaction data in AnnData
+        with patch.dict(adata_with_conditions.uns, {"receptor-ligand": {}}):
+            with pytest.raises(ValueError) as excinfo:
+                rl.plot_interactions_overtime(
+                    adata=adata_with_conditions,
+                    interactions=interactions,
+                    timepoint_column="timepoint",
+                    cluster_column="cluster"
+                )
+    else:
+        # Mock interaction_df with no matching data
+        with patch.object(
+            adata_with_conditions.uns["receptor-ligand"]["interactions"],
+            "__getitem__",
+            side_effect=lambda x: pd.Series([]) if x in [
+                "receptor_gene", "receptor_cluster", "ligand_gene", "ligand_cluster"
+            ] else pd.Series(["not_matching"])
+        ):
+            with pytest.raises(ValueError) as excinfo:
+                rl.plot_interactions_overtime(
+                    adata=adata_with_conditions,
+                    interactions=interactions,
+                    timepoint_column="timepoint",
+                    cluster_column="cluster"
+                )
+
+    assert expected_error_message in str(excinfo.value)
