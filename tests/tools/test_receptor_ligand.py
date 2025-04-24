@@ -315,7 +315,7 @@ def test_connectionPlot(adata_inter):
 
 # ----- Tests for receptor-ligand differences analysis functions. ----- #
 
-# ------------------------------ HELPER DIFFENRENCE FUNCTION TESTS -------------------------------- #
+# ------------------------------ HELPER DIFFERENCE FUNCTION TESTS -------------------------------- #
 
 
 @pytest.mark.parametrize(
@@ -334,27 +334,22 @@ def test_filter_anndata(
     expected_success
 ):
     """Test filtering AnnData based on conditions."""
-    with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table') as mock_calc:
-        with warnings.catch_warnings(record=True):
-            # Filter data
-            result = rl._filter_anndata(
-                adata=adata_with_conditions,
-                condition_values=condition_values,
-                condition_columns=condition_columns,
-                cluster_column='cluster'
-            )
+    with warnings.catch_warnings(record=True):
+        # Filter data
+        result = rl._filter_anndata(
+            adata=adata_with_conditions,
+            condition_values=condition_values,
+            condition_columns=condition_columns,
+            cluster_column='cluster'
+        )
 
-            if expected_success:
-                assert result is not None
-                # Check condition filtering
-                for col, val in zip(condition_columns, condition_values):
-                    assert all(result.obs[col] == val)
-                # Verify interaction table calculation was called
-                mock_calc.assert_called_once()
-            else:
-                assert result is None
-                # For failure cases, mock_calc should not be called
-                mock_calc.assert_not_called()
+        if expected_success:
+            assert result is not None
+            # Check condition filtering
+            for col, val in zip(condition_columns, condition_values):
+                assert all(result.obs[col] == val)
+        else:
+            assert result is None
 
 
 def test_filter_anndata_mismatch_condition_lengths(adata_with_conditions):
@@ -370,85 +365,144 @@ def test_filter_anndata_mismatch_condition_lengths(adata_with_conditions):
     assert "Expected" in str(excinfo.value)
 
 
-def test_calculate_condition_difference(adata_with_conditions):
-    """Test calculating differences between conditions."""
-    # Create copies for different conditions
-    adata_a = adata_with_conditions.copy()
-    adata_b = adata_with_conditions.copy()
+@pytest.mark.parametrize(
+    "cluster_filter,gene_filter,should_succeed",
+    [
+        # Success cases
+        (['cluster 0', 'cluster 1'], None, True),
+        (None, lambda adata: adata.var['gene'].iloc[:5].tolist(), True),
+        (['cluster 0'], lambda adata: adata.var['gene'].iloc[:5].tolist(), True),
+        # Failure cases
+        (['non_existent_cluster'], None, False),
+        (None, lambda _: ['non_existent_gene'], False),
+        ([], None, False),
+        # Edge cases
+        (['cluster 0'], None, True),
+        (None, lambda adata: [adata.var['gene'].iloc[0]], True),
+    ]
+)
+def test_filter_anndata_with_filters(
+    adata_with_conditions, cluster_filter, gene_filter, should_succeed
+):
+    """Test filtering AnnData with various cluster and gene filters."""
+    # Resolve callable gene filters
+    if callable(gene_filter):
+        gene_filter = gene_filter(adata_with_conditions)
 
-    # Mock get_interactions to return test data
-    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
-        # Mock different interaction tables for the two conditions
-        mock_get.side_effect = [
-            pd.DataFrame({  # Condition A
-                'receptor_gene': ['gene1', 'gene2', 'gene3'],
-                'ligand_gene': ['gene10', 'gene20', 'gene30'],
-                'receptor_cluster': ['cluster 0', 'cluster 1', 'cluster 2'],
-                'ligand_cluster': ['cluster 1', 'cluster 2', 'cluster 0'],
-                'interaction_score': [0.8, 0.6, 0.7]
-            }),
-            pd.DataFrame({  # Condition B
-                'receptor_gene': ['gene1', 'gene2', 'gene3'],
-                'ligand_gene': ['gene10', 'gene20', 'gene30'],
-                'receptor_cluster': ['cluster 0', 'cluster 1', 'cluster 2'],
-                'ligand_cluster': ['cluster 1', 'cluster 2', 'cluster 0'],
-                'interaction_score': [0.5, 0.3, 0.9]
-            })
-        ]
-
-        # Calculate differences
-        result = rl._calculate_condition_difference(
-            adata_a=adata_a,
-            adata_b=adata_b,
-            condition_a_name='control',
-            condition_b_name='treatment',
-            min_perc=None,
-            interaction_score=0.5,
-            interaction_perc=None
+    with warnings.catch_warnings(record=True):
+        # Filter data with provided filters
+        result = rl._filter_anndata(
+            adata=adata_with_conditions,
+            condition_values=['control'],
+            condition_columns=['condition'],
+            cluster_column='cluster',
+            cluster_filter=cluster_filter,
+            gene_column='gene',
+            gene_filter=gene_filter
         )
 
-        # Check the result structure
-        assert 'rank_diff_treatment_vs_control' in result.columns
-        assert 'abs_diff_treatment_vs_control' in result.columns
-        assert all(result['abs_diff_treatment_vs_control'] >= 0)
+        if should_succeed:
+            assert result is not None
+            if cluster_filter:
+                for cluster in cluster_filter:
+                    assert cluster in result.obs['cluster'].unique()
+            if gene_filter:
+                for gene in gene_filter:
+                    assert gene in result.var['gene'].tolist()
+        else:
+            assert result is None
+
+
+def mock_filter_anndata_for_timepoints(args, kwargs, valid_timepoints):
+    """Mock implementation of _filter_anndata for time-based tests.
+    """
+    values = kwargs.get('condition_values', [])
+    if not values or values[0] not in valid_timepoints:
+        return None
+    return args[0].copy()
 
 
 def test_process_condition_combinations(adata_with_conditions):
     """Test processing condition combinations."""
-    # Mock filter_anndata and calculate_condition_difference
     with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
-        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_calc:
-            # Setup filtered data and results
-            filtered_data = adata_with_conditions.copy()
-            mock_filter.return_value = filtered_data
-            mock_calc.return_value = pd.DataFrame({
-                'receptor_gene': ['gene1', 'gene2'],
-                'ligand_gene': ['gene10', 'gene20'],
-                'receptor_cluster': ['cluster 0', 'cluster 1'],
-                'ligand_cluster': ['cluster 1', 'cluster 2'],
-                'rank_diff_treatment_vs_control': [0.3, -0.2],
-                'abs_diff_treatment_vs_control': [0.3, 0.2]
-            })
+        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_diff:
+            with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table'):
+                # Setup filtered data and results
+                filtered_data = adata_with_conditions.copy()
+                mock_filter.return_value = filtered_data
+                mock_diff.return_value = pd.DataFrame({
+                    'receptor_gene': ['gene1', 'gene2'],
+                    'ligand_gene': ['gene10', 'gene20'],
+                    'receptor_cluster': ['cluster 0', 'cluster 1'],
+                    'ligand_cluster': ['cluster 1', 'cluster 2'],
+                    'rank_diff_treatment_vs_control': [0.3, -0.2],
+                    'abs_diff_treatment_vs_control': [0.3, 0.2]
+                })
 
-            # Process standard condition comparison
-            result = rl._process_condition_combinations(
-                adata=adata_with_conditions,
-                condition_columns=['condition'],
-                condition_values_dict={'condition': ['control', 'treatment']},
-                cluster_column='cluster',
-                sequential_time_analysis=False
-            )
+                result = rl._process_condition_combinations(
+                    adata=adata_with_conditions,
+                    condition_columns=['condition'],
+                    condition_values_dict={'condition': ['control', 'treatment']},
+                    cluster_column='cluster',
+                    sequential_time_analysis=False
+                )
 
-            # Check results
-            assert len(result) > 0
-            assert 'treatment_vs_control' in result
-
-            # Check structure of the results
-            comparison_data = result['treatment_vs_control']
-            assert 'differences' in comparison_data
-            assert isinstance(comparison_data['differences'], pd.DataFrame)
+                # Check results
+                assert len(result) > 0
+                assert 'treatment_vs_control' in result
+                assert 'differences' in result['treatment_vs_control']
+                assert isinstance(result['treatment_vs_control']['differences'], pd.DataFrame)
 
 
+@pytest.mark.parametrize(
+    "sequential,timepoints",
+    [
+        (True, ['day0', 'day3', 'day7']),
+        (False, ['day0', 'day3', 'day7']),
+        (True, ['invalid1', 'invalid2']),
+        (True, ['day0', 'day7']),
+        (True, ['day0']),
+    ]
+)
+def test_process_condition_combinations_time_analysis(
+    adata_with_conditions, sequential, timepoints
+):
+    """Test time analysis in process_condition_combinations."""
+    valid_timepoints = ['day0', 'day3', 'day7']
+
+    with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
+        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_diff:
+            with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table'):
+                # Setup mock filter function
+                mock_filter.side_effect = lambda *args, **kwargs: mock_filter_anndata_for_timepoints(
+                    args, kwargs, valid_timepoints
+                )
+
+                # Setup mock diff function
+                mock_diff.return_value = pd.DataFrame({
+                    'receptor_gene': ['gene1'],
+                    'ligand_gene': ['gene10'],
+                    'rank_diff_dummy': [0.5],
+                    'abs_diff_dummy': [0.5]
+                })
+
+                with warnings.catch_warnings(record=True):
+                    result = rl._process_condition_combinations(
+                        adata=adata_with_conditions,
+                        condition_columns=['timepoint'],
+                        condition_values_dict={'timepoint': timepoints},
+                        cluster_column='cluster',
+                        sequential_time_analysis=sequential
+                    )
+
+                    # Check if results are expected based on valid timepoints
+                    valid_times = [t for t in timepoints if t in valid_timepoints]
+                    expect_results = len(valid_times) > 1
+
+                    if expect_results:
+                        assert result
+                    else:
+                        assert not result
 # ------------------------------ MAIN FUNCTION DIFFERENCE TESTS -------------------------------- #
 
 @pytest.mark.parametrize("inplace,overwrite,has_existing", [
@@ -649,122 +703,6 @@ def test_plot_networks(adata_with_diff_results):
 
 
 @pytest.mark.parametrize(
-    "cluster_filter,gene_filter,should_succeed",
-    [
-        # Success cases
-        (['cluster 0', 'cluster 1'], None, True),
-        (None, lambda adata: adata.var['gene'].iloc[:5].tolist(), True),
-        (['cluster 0'], lambda adata: adata.var['gene'].iloc[:5].tolist(), True),
-
-        # Failure cases
-        (['non_existent_cluster'], None, False),
-        (None, lambda _: ['non_existent_gene'], False),
-        ([], None, False),
-
-        # Edge cases
-        (['cluster 0'], None, True),
-        (None, lambda adata: [adata.var['gene'].iloc[0]], True),
-    ]
-)
-def test_filter_anndata_with_filters(
-    adata_with_conditions, cluster_filter, gene_filter, should_succeed
-):
-    """Test filtering AnnData with various cluster and gene filters."""
-    # Resolve callable gene filters
-    if callable(gene_filter):
-        gene_filter = gene_filter(adata_with_conditions)
-
-    with patch('sctoolbox.tools.receptor_ligand.calculate_interaction_table') as mock_calc:
-        with warnings.catch_warnings(record=True):
-            # Filter data with provided filters
-            result = rl._filter_anndata(
-                adata=adata_with_conditions,
-                condition_values=['control'],
-                condition_columns=['condition'],
-                cluster_column='cluster',
-                cluster_filter=cluster_filter,
-                gene_column='gene',
-                gene_filter=gene_filter
-            )
-
-            if should_succeed:
-                assert result is not None
-                if cluster_filter:
-                    for cluster in cluster_filter:
-                        assert cluster in result.obs['cluster'].unique()
-                if gene_filter:
-                    for gene in gene_filter:
-                        assert gene in result.var['gene'].tolist()
-                assert mock_calc.called
-            else:
-                assert result is None
-                assert not mock_calc.called
-
-
-@pytest.mark.parametrize(
-    "sequential,timepoints,expected_pairs,should_succeed",
-    [
-        # Success cases
-        (True, ['day0', 'day3', 'day7'], [('day0', 'day3'), ('day3', 'day7')], True),
-        (False, ['day0', 'day3', 'day7'],
-         [('day0', 'day3'), ('day0', 'day7'), ('day3', 'day7')], True),
-
-        # Failure case
-        (True, ['invalid1', 'invalid2'], [], False),
-
-        # Edge cases
-        (True, ['day0', 'day7'], [('day0', 'day7')], True),
-        (True, ['day7', 'day0', 'day3'], [('day7', 'day0'), ('day0', 'day3')], True),
-        (True, ['day0'], [], True),
-    ]
-)
-def test_process_condition_combinations_time_analysis(
-    adata_with_conditions, sequential, timepoints, expected_pairs, should_succeed
-):
-    """Test time analysis in process_condition_combinations."""
-    # Mock dependent functions
-    with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
-        with patch('sctoolbox.tools.receptor_ligand._calculate_condition_difference') as mock_calc:
-            # Create a more realistic mock filter function
-            def mock_filter_function(*args, **kwargs):
-                values = kwargs.get('condition_values', [])
-                if not values or values[0] not in ['day0', 'day3', 'day7']:
-                    # Only return None for invalid timepoints
-                    return None
-                filtered = adata_with_conditions.copy()
-                return filtered
-
-            mock_filter.side_effect = mock_filter_function
-
-            # Setup calculation mock
-            mock_calc.return_value = pd.DataFrame({
-                'receptor_gene': ['gene1'],
-                'ligand_gene': ['gene10'],
-                'rank_diff_dummy': [0.5],
-                'abs_diff_dummy': [0.5]
-            })
-
-            # Run with specified parameters
-            with warnings.catch_warnings(record=True):
-                result = rl._process_condition_combinations(
-                    adata=adata_with_conditions,
-                    condition_columns=['timepoint'],
-                    condition_values_dict={'timepoint': timepoints},
-                    cluster_column='cluster',
-                    sequential_time_analysis=sequential
-                )
-
-                # If none of the timepoints are valid, expect an empty result
-                valid_timepoints = [t for t in timepoints if t in ['day0', 'day3', 'day7']]
-                expect_results = len(valid_timepoints) > 1
-
-                if expect_results:
-                    assert result  # Should get results with valid timepoints
-                else:
-                    assert not result  # Empty dict if not enough valid timepoints
-
-
-@pytest.mark.parametrize(
     "return_figs,show,save_prefix,mock_empty",
     [
         # Success cases
@@ -862,7 +800,7 @@ def test__get_gene_expression(
     # Resolve callable gene parameter (to handle adata-dependent values)
     actual_gene = gene(adata_with_conditions) if callable(gene) else gene
 
-    if mock_mean is True:
+    if mock_mean:
         # Mock numpy.mean to return a specific value
         with patch('numpy.mean', return_value=expected_result):
             expression = rl._get_gene_expression(

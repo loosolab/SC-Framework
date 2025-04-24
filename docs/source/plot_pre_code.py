@@ -4,8 +4,9 @@ import sctoolbox.tools.receptor_ligand as rl
 
 # Load example dataset
 import numpy as np
-np.random.seed(42)
 import scanpy as sc
+np.random.seed(42)
+
 
 adata = sc.datasets.pbmc68k_reduced()
 adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])

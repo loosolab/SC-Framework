@@ -1427,7 +1427,7 @@ def _check_interactions(anndata: sc.AnnData):
 def _filter_anndata(
     adata: sc.AnnData,
     condition_values: List[str] | npt.ArrayLike,
-    condition_columns: List[str] | npt.ArrayLike,
+    condition_columns: List[str],
     cluster_column: str,
     cluster_filter: Optional[List[str] | npt.ArrayLike] = None,
     gene_column: Optional[str] = None,
@@ -1445,7 +1445,7 @@ def _filter_anndata(
         Input annotated data matrix.
     condition_values : List[str] | npt.ArrayLike
         Values to filter on for each corresponding condition column.
-    condition_columns : List[str] | npt.ArrayLike
+    condition_columns : List[str]
         Column names in adata.obs to filter on.
     cluster_column : str
         Column name containing cluster information.
@@ -1495,8 +1495,8 @@ def _filter_anndata(
     # Example: If condition_columns=['batch', 'treatment'] and condition_values=['1', 'control'],
     # This creates: [('batch', '1'), ('treatment', 'control')]
     condition_pairs = list(zip(
-        np.array(condition_columns) if condition_columns is not None else [],
-        np.array(condition_values) if condition_values is not None else []
+        condition_columns if condition_columns is not None else [],
+        condition_values if condition_values is not None else []
     ))
 
     # Filter out pairs where value is None
@@ -1564,17 +1564,6 @@ def _filter_anndata(
             return None
 
         filtered = filtered[:, gene_mask].copy()
-
-    # Calculate interaction table for the filtered data
-    calculate_interaction_table(
-        adata=filtered,
-        cluster_column=cluster_column,
-        gene_index=gene_column,
-        normalize=normalize,
-        weight_by_ep=weight_by_ep,
-        inplace=inplace,
-        overwrite=inplace
-    )
 
     return filtered
 
@@ -1698,9 +1687,9 @@ def _calculate_condition_difference(
 @beartype
 def _process_condition_combinations(
     adata: sc.AnnData,
-    condition_columns: List[str] | npt.ArrayLike,
-    condition_values_dict: Dict[str, List[str] | npt.ArrayLike],
+    condition_columns: List[str],
     cluster_column: str,
+    condition_values_dict: Dict[str, List[str] | npt.ArrayLike] = None,
     min_perc: Optional[int | float] = None,
     interaction_score: Optional[float | int] = None,
     interaction_perc: Optional[float | int] = None,
@@ -1718,12 +1707,12 @@ def _process_condition_combinations(
     ----------
     adata : sc.AnnData
         Annotated single-cell data matrix.
-    condition_columns : List[str] | npt.ArrayLike
+    condition_columns : List[str]
         Columns in adata.obs for filtering.
-    condition_values_dict : Dict[str, List[str] | npt.ArrayLike]
-        Possible values for each condition column.
     cluster_column : str
         Column containing cluster information.
+    condition_values_dict : Dict[str, List[str] | npt.ArrayLike], default None
+        Possible values for each condition column.
     min_perc : Optional[int | float], default None
         Minimum percentage of cells in a cluster expressing a gene (0-100).
     interaction_score : Optional[float | int], default None
@@ -1760,8 +1749,10 @@ def _process_condition_combinations(
         cluster_column='leiden'
     )
     """
-    # Process inputs and setup
-    condition_columns = np.array(condition_columns)
+    # Check if condition_values_dict is None or empty
+    if condition_values_dict is None or not condition_values_dict:
+        warnings.warn("Empty condition_values_dict provided. Cannot perform comparisons.")
+        return {}
 
     # The first column is considered the "target" column that we want to compare values from
     # Example: If condition_columns=['treatment', 'batch', 'patient_id'],
@@ -1829,6 +1820,18 @@ def _process_condition_combinations(
             )
 
             if filtered is not None:
+
+                # Calculate interaction table for the filtered data
+                calculate_interaction_table(
+                    adata=filtered,
+                    cluster_column=cluster_column,
+                    gene_index=gene_column,
+                    normalize=normalize,
+                    weight_by_ep=weight_by_ep,
+                    inplace=True,
+                    overwrite=True
+                )
+
                 filtered_datasets[target_value] = filtered
                 logger.info(f"Filtered {target_condition}={target_value}: {filtered.n_obs} cells")
 
@@ -1888,7 +1891,7 @@ def _process_condition_combinations(
 @beartype
 def calculate_condition_differences(
     adata: sc.AnnData,
-    condition_columns: List[str] | npt.ArrayLike,
+    condition_columns: List[str],
     cluster_column: str,
     min_perc: Optional[int | float] = None,
     interaction_score: Optional[float | int] = None,
@@ -1915,7 +1918,7 @@ def calculate_condition_differences(
     ----------
     adata : sc.AnnData
         Annotated data matrix with expression values and metadata.
-    condition_columns : List[str] | npt.ArrayLike
+    condition_columns : List[str]
         Columns in adata.obs for hierarchical filtering, ordered sequentially.
         First column contains values to be compared within combinations of other columns.
         The interaction score differences will be calculated between the values of the first
@@ -2056,9 +2059,8 @@ def calculate_condition_differences(
         raise ValueError(f"Need at least one condition column, got {len(condition_columns)}")
 
     # Convert inputs to numpy arrays for consistent handling
-    condition_columns = np.array(condition_columns) if condition_columns is not None else None
-    cluster_filter = np.unique(cluster_filter) if cluster_filter is not None else None
-    gene_filter = np.unique(gene_filter) if gene_filter is not None else None
+    cluster_filter = list(set(cluster_filter)) if cluster_filter is not None else None
+    gene_filter = list(set(gene_filter)) if gene_filter is not None else None
 
     # Get all possible values for each condition
     condition_values_dict = {}
