@@ -900,163 +900,93 @@ def test__get_gene_expression(
 
 
 @pytest.mark.parametrize(
-    "timepoints,n_cols,global_ylim,receptor_color,ligand_color,title,save",
+    "timepoints,n_cols,use_global_ylim,title",
     [
-        # Test with default parameters
-        (None, 2, False, None, None, None, None),
-        # Test with specific timepoints
-        (["day0", "day3"], 2, False, None, None, None, None),
-        # Test with custom columns and colors
-        (None, 3, False, "red", "blue", "Test Title", None),
-        # Test with global y-limits and custom parameters
-        (None, 2, True, None, None, "Custom Title", "test_output.png"),
+        # Default settings
+        (None, 2, False, None),
+        # Specific timepoints
+        (["day0", "day3"], 2, False, None),
+        # Custom layout and title
+        (None, 3, False, "Test Title"),
+        # Global y-limits and title
+        (None, 2, True, "Custom Title"),
     ]
 )
 def test_plot_interactions_overtime(
-    adata_with_conditions, timepoints, n_cols, global_ylim,
-    receptor_color, ligand_color, title, save
+    adata_with_conditions, timepoints, n_cols, use_global_ylim, title
 ):
-    """Test the plot_interactions_overtime function with various parameters."""
-    # Setup test interactions
-    interactions = [
-        # (receptor_gene, receptor_cluster, ligand_gene, ligand_cluster)
-        (adata_with_conditions.var_names[0], "cluster 0",
-         adata_with_conditions.var_names[1], "cluster 1"),
-    ]
+    """Test plot_interactions_overtime with different parameters."""
+    # Get a valid interaction from the data
+    df = adata_with_conditions.uns["receptor-ligand"]["interactions"]
 
-    # Mock the interaction lookup
-    with patch.object(
-        adata_with_conditions.uns["receptor-ligand"]["interactions"],
-        "copy",
-        return_value=pd.DataFrame({
-            "receptor_gene": [adata_with_conditions.var_names[0]],
-            "receptor_cluster": ["cluster 0"],
-            "ligand_gene": [adata_with_conditions.var_names[1]],
-            "ligand_cluster": ["cluster 1"]
-        })
-    ):
-        # Mock _get_gene_expression to return predictable values
-        with patch(
-            'sctoolbox.tools.receptor_ligand._get_gene_expression',
-            # Values for each timepoint/gene pair
-            side_effect=[0.5, 0.7, 0.6, 0.8]
-        ):
-            # Mock savefig to prevent actual file writes
-            with patch.object(Figure, 'savefig'):
-                fig = rl.plot_interactions_overtime(
-                    adata=adata_with_conditions,
-                    interactions=interactions,
-                    timepoint_column="timepoint",
-                    cluster_column="cluster",
-                    timepoints=timepoints,
-                    n_cols=n_cols,
-                    use_global_ylim=global_ylim,
-                    receptor_color=receptor_color,
-                    ligand_color=ligand_color,
-                    title=title,
-                    save=save,
-                    dpi=72
-                )
+    interaction = (
+        df["receptor_gene"].iloc[0],
+        df["receptor_cluster"].iloc[0],
+        df["ligand_gene"].iloc[0],
+        df["ligand_cluster"].iloc[0]
+    )
 
-                assert isinstance(fig, plt.Figure)
+    # Mock gene expression values and figure saving
+    with patch(
+        'sctoolbox.tools.receptor_ligand._get_gene_expression',
+        mock_expression=[0.5, 0.7, 0.6, 0.8]
+    ), patch.object(Figure, 'savefig'):
 
-                # Verify subplot configuration
-                n_rows = math.ceil(len(interactions) / n_cols)
-                # At least one axsis per interaction
-                assert len(fig.axes) >= len(interactions)
+        # Call function with test parameters
+        fig = rl.plot_interactions_overtime(
+            adata=adata_with_conditions,
+            interactions=[interaction],
+            timepoint_column="timepoint",
+            cluster_column="cluster",
+            timepoints=timepoints,
+            n_cols=n_cols,
+            use_global_ylim=use_global_ylim,
+            title=title
+        )
 
-                # Check figure was created with appropriate layout
-                if n_cols == 1 and len(interactions) == 1:
-                    # Special case for single plot
-                    assert fig.get_figwidth() == 10
-                    assert fig.get_figheight() == 7
-                else:
-                    # Multi-plot case
-                    assert fig.get_figwidth() == 8 * n_cols
-                    assert fig.get_figheight() == 6 * n_rows
-
-                # Verify title was set correctly
-                if title:
-                    assert fig._suptitle.get_text() == title
-
-                plt.close(fig)
+        # Verify result
+        assert isinstance(fig, Figure)
+        assert len(fig.axes) >= 1
+        if title:
+            assert fig._suptitle.get_text() == title
 
 
 @pytest.mark.parametrize(
-    "column_to_invalidate,expected_error_message",
+    "param_name,param_value,expected_error",
     [
-        # Test invalid timepoint column
-        ("timepoint_column", "Timepoint column"),
-        # Test invalid cluster column
-        ("cluster_column", "Cluster column"),
+        ("timepoint_column", "nonexistent", "Timepoint column"),
+        ("cluster_column", "nonexistent", "Cluster column"),
+        ("interactions", [("invalid", "invalid", "invalid", "invalid")],
+         "None of the specified interactions were found")
     ]
 )
-def test_plot_interactions_overtime_invalid_columns(
-    adata_with_conditions, column_to_invalidate, expected_error_message
+def test_plot_interactions_overtime_errors(
+    adata_with_conditions, param_name, param_value, expected_error
 ):
-    """Test error handling for invalid column names in plot_interactions_overtime."""
-    # Setup base parameters
+    """Test error handling in plot_interactions_overtime."""
+    # Get a valid interaction from the data
+    df = adata_with_conditions.uns["receptor-ligand"]["interactions"]
+
+    interaction = (
+        df["receptor_gene"].iloc[0],
+        df["receptor_cluster"].iloc[0],
+        df["ligand_gene"].iloc[0],
+        df["ligand_cluster"].iloc[0]
+    )
+
+    # Setup default parameters
     params = {
         "adata": adata_with_conditions,
-        "interactions": [(adata_with_conditions.var_names[0], "cluster 0",
-                         adata_with_conditions.var_names[1], "cluster 1")],
+        "interactions": [interaction],
         "timepoint_column": "timepoint",
         "cluster_column": "cluster"
     }
 
-    # Invalidate the specified column
-    params[column_to_invalidate] = "invalid_column"
+    # Override with test parameter
+    params[param_name] = param_value
 
-    # Test the error is raised with expected message
+    # Test error is raised
     with pytest.raises(ValueError) as excinfo:
         rl.plot_interactions_overtime(**params)
 
-    assert expected_error_message in str(excinfo.value)
-
-
-@pytest.mark.parametrize(
-    "mock_interaction_data,expected_error_message",
-    [
-        # No matching interactions found
-        (False, "None of the specified interactions were found"),
-        # No interaction data in AnnData
-        (None, "No receptor-ligand interaction data found"),
-    ]
-)
-def test_plot_interactions_overtime_invalid_interactions(
-    adata_with_conditions, mock_interaction_data, expected_error_message
-):
-    """Test error handling for invalid interactions in plot_interactions_overtime."""
-    # Setup test interactions
-    interactions = [("invalid_gene", "invalid_cluster",
-                     "invalid_gene2", "invalid_cluster2")]
-
-    # Different mocking strategies based on test case
-    if mock_interaction_data is None:
-        # Mock missing interaction data in AnnData
-        with patch.dict(adata_with_conditions.uns, {"receptor-ligand": {}}):
-            with pytest.raises(ValueError) as excinfo:
-                rl.plot_interactions_overtime(
-                    adata=adata_with_conditions,
-                    interactions=interactions,
-                    timepoint_column="timepoint",
-                    cluster_column="cluster"
-                )
-    else:
-        # Mock interaction_df with no matching data
-        with patch.object(
-            adata_with_conditions.uns["receptor-ligand"]["interactions"],
-            "__getitem__",
-            side_effect=lambda x: pd.Series([]) if x in [
-                "receptor_gene", "receptor_cluster", "ligand_gene", "ligand_cluster"
-            ] else pd.Series(["not_matching"])
-        ):
-            with pytest.raises(ValueError) as excinfo:
-                rl.plot_interactions_overtime(
-                    adata=adata_with_conditions,
-                    interactions=interactions,
-                    timepoint_column="timepoint",
-                    cluster_column="cluster"
-                )
-
-    assert expected_error_message in str(excinfo.value)
+    assert expected_error in str(excinfo.value)

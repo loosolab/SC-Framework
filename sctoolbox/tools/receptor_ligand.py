@@ -2493,6 +2493,8 @@ def condition_differences_network(
     ValueError
         If no valid differences are found in the provided AnnData object.
 
+    Examples
+    --------
     .. plot::
         :context: close-figs
 
@@ -3139,7 +3141,7 @@ def plot_interactions_overtime(
     receptor_color: Optional[str] = None,
     ligand_color: Optional[str] = None,
     use_global_ylim: bool = False,
-):
+) -> matplotlib.figure.Figure:
     """
     Plot receptor-ligand interaction expression levels over time as barplots.
 
@@ -3177,6 +3179,13 @@ def plot_interactions_overtime(
     matplotlib.figure.Figure
         The figure object.
 
+    Raises
+    ------
+    ValueError
+        If the specified timepoint or cluster columns don't exist in adata.obs.
+        If no receptor-ligand interaction data is found in adata.
+        If none of the specified interactions are found in the data.
+
     Examples
     --------
     .. plot::
@@ -3209,10 +3218,10 @@ def plot_interactions_overtime(
 
     for r_gene, r_cluster, l_gene, l_cluster in interactions:
         mask = (
-            (interaction_df["receptor_gene"] == r_gene) &
-            (interaction_df["receptor_cluster"] == r_cluster) &
-            (interaction_df["ligand_gene"] == l_gene) &
-            (interaction_df["ligand_cluster"] == l_cluster)
+            (interaction_df["receptor_gene"] == r_gene)
+            and (interaction_df["receptor_cluster"] == r_cluster)
+            and (interaction_df["ligand_gene"] == l_gene)
+            and (interaction_df["ligand_cluster"] == l_cluster)
         )
         if mask.any():
             valid_interactions.append((r_gene, r_cluster, l_gene, l_cluster))
@@ -3287,7 +3296,7 @@ def plot_interactions_overtime(
         # Draw bars
         r_bars = ax.bar(
             # More space between bar groups
-            x - width/2 - 0.05,
+            x - width / 2 - 0.05,
             r_expr,
             width,
             facecolor=receptor_color,
@@ -3298,7 +3307,7 @@ def plot_interactions_overtime(
 
         l_bars = ax.bar(
             # More space between bar groups
-            x + width/2 + 0.05,
+            x + width / 2 + 0.05,
             l_expr,
             width,
             facecolor=ligand_color,
