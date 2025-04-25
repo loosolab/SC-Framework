@@ -411,6 +411,322 @@ def test_filter_anndata_with_filters(
             assert result is None
 
 
+@pytest.mark.parametrize(
+    "condition_a,condition_b",
+    [
+        ('treatment', 'control'),
+        ('day0', 'day7'),
+        ('group1', 'group2')
+    ]
+)
+def test_calculate_condition_difference_basic(adata_with_conditions, condition_a, condition_b):
+    """Test basic functionality of _calculate_condition_difference."""
+    # Extract two copies of the data to represent different conditions
+    adata_a = adata_with_conditions.copy()
+    adata_b = adata_with_conditions.copy()
+
+    # Create a simple mock of the interaction data
+    interactions_table = adata_with_conditions.uns["receptor-ligand"]["interactions"].copy()
+
+    # Slightly modify interaction scores for condition B to ensure differences
+    interactions_b = interactions_table.copy()
+    interactions_b['interaction_score'] = interactions_b['interaction_score'] * 1.2
+
+    # Mock get_interactions to return our test data
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
+        mock_get.side_effect = [interactions_table, interactions_b]
+
+        # Call the function
+        result = rl._calculate_condition_difference(
+            adata_a=adata_a,
+            adata_b=adata_b,
+            condition_a_name=condition_a,
+            condition_b_name=condition_b
+        )
+
+        # Verify basic structure of result
+        assert isinstance(result, pd.DataFrame)
+        assert f'rank_diff_{condition_b}_vs_{condition_a}' in result.columns
+        assert f'abs_diff_{condition_b}_vs_{condition_a}' in result.columns
+
+        # Verify key columns are preserved
+        assert all(col in result.columns for col in ['receptor_gene', 'ligand_gene',
+                                                     'receptor_cluster', 'ligand_cluster'])
+
+
+def test_calculate_condition_difference_empty_data(adata_with_conditions):
+    """Test behavior with empty interaction data."""
+    # Create two copies of the data
+    adata_a = adata_with_conditions.copy()
+    adata_b = adata_with_conditions.copy()
+
+    # Create an empty interactions DataFrame with the correct structure
+    empty_df = pd.DataFrame({
+        'receptor_gene': [], 'ligand_gene': [],
+        'receptor_cluster': [], 'ligand_cluster': [],
+        'interaction_score': []
+    })
+
+    # Mock get_interactions to return empty data
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
+        mock_get.side_effect = [empty_df, empty_df]
+
+        # Call the function
+        result = rl._calculate_condition_difference(
+            adata_a=adata_a,
+            adata_b=adata_b,
+            condition_a_name='treatment',
+            condition_b_name='control'
+        )
+
+        # Verify result is empty DataFrame
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+
+
+def test_calculate_condition_difference_disjoint_data(adata_with_conditions):
+    """Test behavior when conditions have completely different interactions."""
+    # Create two copies of the data
+    adata_a = adata_with_conditions.copy()
+    adata_b = adata_with_conditions.copy()
+
+    # Get the interaction table
+    interactions_table = adata_with_conditions.uns["receptor-ligand"]["interactions"].copy()
+
+    # Create a completely different interaction table for condition B
+    interactions_b = interactions_table.copy()
+    interactions_b['receptor_gene'] = interactions_b['receptor_gene'] + '_different'
+    interactions_b['ligand_gene'] = interactions_b['ligand_gene'] + '_different'
+
+    # Mock get_interactions to return disjoint data
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
+        mock_get.side_effect = [interactions_table, interactions_b]
+
+        # Call the function
+        result = rl._calculate_condition_difference(
+            adata_a=adata_a,
+            adata_b=adata_b,
+            condition_a_name='treatment',
+            condition_b_name='control'
+        )
+
+        # Verify result is empty DataFrame (no common interactions)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+
+
+@pytest.mark.parametrize(
+    "min_perc,interaction_score,interaction_perc",
+    [
+        (10, None, None),  # Only min_perc
+        (None, 0.5, None),  # Only interaction_score
+        (None, None, 75),   # Only interaction_perc
+        (5, 0.3, None),     # Both min_perc and interaction_score
+        (5, None, 80),      # Both min_perc and interaction_perc
+        (None, None, None)  # No filtering
+    ]
+)
+def test_calculate_condition_difference_filters(
+    adata_with_conditions, min_perc, interaction_score, interaction_perc
+):
+    """Test behavior with different filtering parameters."""
+    # Create two copies of the data
+    adata_a = adata_with_conditions.copy()
+    adata_b = adata_with_conditions.copy()
+
+    # Get the interaction table
+    interactions_table = adata_with_conditions.uns["receptor-ligand"]["interactions"].copy()
+
+    # Mock get_interactions to return our test data
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
+        mock_get.return_value = interactions_table
+
+        # Call the function with filtering parameters
+        rl._calculate_condition_difference(
+            adata_a=adata_a,
+            adata_b=adata_b,
+            condition_a_name='treatment',
+            condition_b_name='control',
+            min_perc=min_perc,
+            interaction_score=interaction_score,
+            interaction_perc=interaction_perc
+        )
+
+        # Verify get_interactions was called with correct parameters
+        assert mock_get.call_count == 2
+        for call in mock_get.call_args_list:
+            assert call.kwargs['min_perc'] == min_perc
+            assert call.kwargs['interaction_score'] == interaction_score
+            assert call.kwargs['interaction_perc'] == interaction_perc
+
+
+def test_calculate_condition_difference_ranking(adata_inter):
+    """Test the ranking calculation is performed correctly."""
+    # Create two copies of the data
+    adata_a = adata_inter.copy()
+    adata_b = adata_inter.copy()
+
+    # Get first few interactions from the existing data
+    interactions = adata_inter.uns["receptor-ligand"]["interactions"]
+    if len(interactions) >= 3:
+        subset = interactions.iloc[:3].copy()
+    else:
+        # Create synthetic data if not enough rows
+        subset = pd.DataFrame({
+            'receptor_gene': ['geneA', 'geneB', 'geneC'],
+            'ligand_gene': ['geneX', 'geneY', 'geneZ'],
+            'receptor_cluster': ['cluster1', 'cluster1', 'cluster1'],
+            'ligand_cluster': ['cluster2', 'cluster2', 'cluster2'],
+            'interaction_score': [0.1, 0.2, 0.3]
+        })
+
+    # Set predictable scores for condition A (ascending)
+    interactions_a = subset.copy()
+    interactions_a['interaction_score'] = [0.1, 0.2, 0.3]
+
+    # Set opposite scores for condition B (descending)
+    interactions_b = subset.copy()
+    interactions_b['interaction_score'] = [0.3, 0.2, 0.1]
+
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
+        mock_get.side_effect = [interactions_a, interactions_b]
+
+        # Call the function
+        result = rl._calculate_condition_difference(
+            adata_a=adata_a,
+            adata_b=adata_b,
+            condition_a_name='a',
+            condition_b_name='b'
+        )
+
+        # Sort by the first key column for consistent ordering
+        result = result.sort_values('interaction_score_a').reset_index(drop=True)
+
+        # Verify ranking logic
+        # The lowest score in 'a' should have the lowest rank, and highest in 'b'
+        # The highest score in 'a' should have the highest rank, and lowest in 'b'
+        assert result.loc[0, 'quantile_rank_a'] < result.loc[2, 'quantile_rank_a']
+        assert result.loc[0, 'quantile_rank_b'] > result.loc[2, 'quantile_rank_b']
+
+        # Verify difference calculation
+        for i in range(len(result)):
+            expected_diff = result.loc[i, 'quantile_rank_b'] - result.loc[i, 'quantile_rank_a']
+            assert result.loc[i, 'rank_diff_b_vs_a'] == expected_diff
+            assert result.loc[i, 'abs_diff_b_vs_a'] == abs(expected_diff)
+
+
+def test_calculate_condition_difference_error_handling(adata_with_conditions):
+    """Test error handling when get_interactions raises an exception."""
+    # Create two copies of the data
+    adata_a = adata_with_conditions.copy()
+    adata_b = adata_with_conditions.copy()
+
+    # Mock get_interactions to raise an error
+    with patch('sctoolbox.tools.receptor_ligand.get_interactions') as mock_get:
+        mock_get.side_effect = ValueError("Test error")
+
+        # Call the function and expect it to propagate the error
+        with pytest.raises(ValueError) as excinfo:
+            rl._calculate_condition_difference(
+                adata_a=adata_a,
+                adata_b=adata_b,
+                condition_a_name='treatment',
+                condition_b_name='control'
+            )
+
+        assert "Test error" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "condition_values,condition_columns",
+    [
+        # Case: Empty condition values list
+        ([], []),
+        # Case: All None values
+        ([None], ['cluster']),
+        # Case: Multiple None values
+        ([None, None], ['cluster', 'nonexistent']),
+    ]
+)
+def test_filter_anndata_empty_valid_pairs(adata, condition_values, condition_columns):
+    """Test specifically for: valid_pairs = [(col, val) for col, val in condition_pairs if val is not None]."""
+    result = rl._filter_anndata(
+        adata=adata,
+        condition_values=condition_values,
+        condition_columns=condition_columns,
+        cluster_column='cluster'
+    )
+
+    # This directly tests the "if not valid_pairs: return None" branch
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "gene_column",
+    [
+        'nonexistent_column',
+        '',  # Empty string
+    ]
+)
+def test_filter_anndata_invalid_gene_column(adata, gene_column):
+    """Test specifically for: if gene_column is not None and gene_column not in filtered.var.columns."""
+    with pytest.raises(ValueError) as excinfo:
+        rl._filter_anndata(
+            adata=adata,
+            condition_values=['cluster 0'],
+            condition_columns=['cluster'],
+            cluster_column='cluster',
+            gene_column=gene_column,
+            gene_filter=['any_gene']
+        )
+
+    # Verify the error message
+    assert "not available in adata.var.columns" in str(excinfo.value)
+
+
+def test_filter_anndata_gene_mask_zero_sum(adata):
+    """Test specifically for: if gene_mask.sum() == 0."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        # Using completely non-existent genes guarantees gene_mask.sum() == 0
+        result = rl._filter_anndata(
+            adata=adata,
+            condition_values=['cluster 0'],
+            condition_columns=['cluster'],
+            cluster_column='cluster',
+            gene_column='gene',
+            gene_filter=['nonexistent_gene1', 'nonexistent_gene2']
+        )
+
+        # Verify the function returns None
+        assert result is None
+
+        # Verify the warning was issued
+        assert any("No genes match the gene filter" in str(warning.message) for warning in w)
+
+
+def test_filter_anndata_cluster_mask_zero_sum(adata):
+    """Test specifically for: if cluster_mask.sum() == 0."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        # Using completely non-existent clusters guarantees cluster_mask.sum() == 0
+        result = rl._filter_anndata(
+            adata=adata,
+            condition_values=['cluster 0'],
+            condition_columns=['cluster'],
+            cluster_column='cluster',
+            cluster_filter=['nonexistent_cluster1', 'nonexistent_cluster2']
+        )
+
+        # Verify the function returns None
+        assert result is None
+
+        # Verify the warning was issued
+        assert any("No cells match" in str(warning.message) for warning in w)
+
+
 def test_process_condition_combinations(adata_with_conditions):
     """Test processing condition combinations."""
     with patch('sctoolbox.tools.receptor_ligand._filter_anndata') as mock_filter:
