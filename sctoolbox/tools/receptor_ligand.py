@@ -3396,9 +3396,14 @@ def plot_interactions_overtime(
     fig.suptitle(title, fontsize=18, y=0.98)
 
     # Adjust layout with more space
-    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
-    # More space between subplots
-    plt.subplots_adjust(hspace=0.6, wspace=0.4)
+    plt.subplots_adjust(
+        left=0.1,
+        right=0.9,
+        bottom=0.15,
+        top=0.9,
+        wspace=0.4,
+        hspace=0.6
+    )
 
     # Save figure
     if save:
