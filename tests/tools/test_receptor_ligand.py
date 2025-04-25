@@ -743,14 +743,14 @@ def test_filter_anndata_cluster_mask_zero_sum(adata):
             print(f"Warning message: {str(warning.message)}")
 
         assert any(
-            ("cluster" in str(warning.message).lower()
-                or "cell" in str(warning.message).lower())
+            ("cluster" in str(warning.message).lower() or "cell" in str(warning.message).lower())
             and (
-                "match" in str(warning.message).lower() or
-                "valid" in str(warning.message).lower() or
-                "found" in str(warning.message).lower()
+                "match" in str(warning.message).lower()
+                or "valid" in str(warning.message).lower()
+                or "found" in str(warning.message).lower()
             )
-            for warning in w)
+            for warning in w
+        )
 
 
 def test_process_condition_combinations(adata_with_conditions):
