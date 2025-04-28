@@ -1431,11 +1431,7 @@ def _filter_anndata(
     cluster_column: str,
     cluster_filter: Optional[List[str] | npt.ArrayLike] = None,
     gene_column: Optional[str] = None,
-    gene_filter: Optional[List[str] | npt.ArrayLike] = None,
-    normalize: Optional[int] = None,
-    weight_by_ep: bool = True,
-    inplace: bool = True,
-    overwrite: bool = True,
+    gene_filter: Optional[List[str] | npt.ArrayLike] = None
 ) -> Optional[sc.AnnData]:
     """Create a filtered AnnData object based on specified conditions.
 
@@ -1455,15 +1451,6 @@ def _filter_anndata(
         Column containing gene identifiers (uses index if None).
     gene_filter : Optional[List[str] | npt.ArrayLike], default None
         Specific genes to include (includes all if None).
-    normalize : Optional[int], default None
-        Size to normalize clusters to (no normalization if None).
-    weight_by_ep : bool, default True
-        Whether to weight expression by proportion.
-    inplace : bool, default False
-        If True, modifies adata in-place.
-        If False, returns a copy of adata with results.
-    overwrite : bool, default False
-        If True, overwrites existing interaction table.
 
     Returns
     -------
@@ -1942,6 +1929,7 @@ def calculate_condition_differences(
         If provided, analysis will respect time ordering. Default is None.
     time_order : Optional[List[str] | npt.ArrayLike], optional
         Order of timepoints to use in analysis.
+        Provide the unique timepoints in the correct order as a list.
         Required if time_column is specified. Default is None.
     gene_column : Optional[str], optional
         Column in adata.var containing gene symbols/IDs.
