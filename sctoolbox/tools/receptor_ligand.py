@@ -30,8 +30,8 @@ import itertools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
-from sctoolbox.utils.adata import add_uns_info
-from sctoolbox.utils.adata import in_uns
+from sctoolbox.utils.adata import add_uns_info, in_uns
+
 
 logger = settings.logger
 
@@ -339,7 +339,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 def interaction_violin_plot(adata: sc.AnnData,
                             min_perc: int | float,
                             save: Optional[str] = None,
-                            figsize: Tuple[int, int] = (5, 20),
+                            figsize: Tuple[int | float, int | float] = (5, 20),
                             dpi: int = 100) -> npt.ArrayLike:
     """
     Generate violin plot of pairwise cluster interactions.
@@ -352,7 +352,7 @@ def interaction_violin_plot(adata: sc.AnnData,
         Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
     save : str, default None
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
-    figsize : int tuple, default (5, 20)
+    figsize : Tuple[int | float, int | float], default (5, 20)
         Figure size
     dpi : float, default 100
         The resolution of the figure in dots-per-inch.
@@ -2418,7 +2418,7 @@ def _extract_diff_key_columns(
 def condition_differences_network(
     adata: sc.AnnData,
     n_top: int = 100,
-    figsize: Tuple[int, int] = (22, 16),
+    figsize: Tuple[int | float, int | float] = (22, 16),
     dpi: int = 300,
     save: Optional[str] = None,
     split_by_direction: bool = True,
@@ -2443,7 +2443,7 @@ def condition_differences_network(
         AnnData object containing results from calculate_condition_differences
     n_top : int, default 100
         Number of top differential interactions to display
-    figsize : Tuple[int, int], default (22, 16)
+    figsize : Tuple[int | float, int | float], default (22, 16)
         Size of the figure
     dpi : int, default 300
         The resolution of the figure
@@ -2924,7 +2924,7 @@ def condition_differences_network(
 def plot_all_condition_differences(
     adata: sc.AnnData,
     n_top: int = 100,
-    figsize: Tuple[int, int] = (22, 16),
+    figsize: Tuple[int | float, int | float] = (22, 16),
     dpi: int = 300,
     save_prefix: Optional[str] = None,
     split_by_direction: bool = True,
@@ -2949,7 +2949,7 @@ def plot_all_condition_differences(
         AnnData object containing condition differences data.
     n_top : int, default 100
         Number of top differential interactions to display.
-    figsize : Tuple[int, int], default (22, 16)
+    figsize : Tuple[int | float, int | float], default (22, 16)
         Size of the figure.
     dpi : int, default 300
         Resolution of the figure.
@@ -3093,10 +3093,12 @@ def _get_gene_expression(
     -----
     - If no cells are found that match the timepoint and cluster, returns 0.0.
     - If the gene is not found in the dataset, returns 0.0.
+    - A warning is issued when 0.0 is returned, specifying the reason.
     """
     # Find cells that match the timepoint and cluster
     mask = (adata.obs[timepoint_col] == timepoint) & (adata.obs[cluster_col] == cluster)
     if not mask.any() or gene not in adata.var_names:
+        warnings.warn(f"No cells found in cluster '{cluster}' at timepoint '{timepoint}'. Returning 0.0.")
         return 0.0
 
     # Get gene index and cell indices
@@ -3104,6 +3106,7 @@ def _get_gene_expression(
     cell_indices = np.where(mask)[0]
 
     if len(cell_indices) == 0:
+        warnings.warn(f"No cells found in cluster '{cluster}' at timepoint '{timepoint}'. Returning 0.0.")
         return 0.0
 
     # Get expression values
@@ -3115,13 +3118,13 @@ def _get_gene_expression(
 
 
 @beartype
-def plot_interactions_overtime(
+def plot_interaction_timeline(
     adata: sc.AnnData,
     interactions: List[Tuple[str, str, str, str]],
     timepoint_column: str,
     cluster_column: str,
-    timepoints: Optional[List[str]] = None,
-    figsize: Optional[Tuple[float, float]] = None,
+    time_order: List[str] | npt.ArrayLike,
+    figsize: Optional[Tuple[int | float, int | float]] = None,
     dpi: int = 100,
     save: Optional[str] = None,
     title: Optional[str] = None,
@@ -3143,9 +3146,11 @@ def plot_interactions_overtime(
         Column in adata.obs containing timepoints.
     cluster_column : str
         Column in adata.obs containing cluster names.
-    timepoints : Optional[List[str]], default None
-        Specific timepoints to include. If None, all timepoints are shown.
-    figsize : Optional[Tuple[float, float]], default None
+    time_order : List[str] | npt.ArrayLike
+        Order of timepoints to use in analysis.
+        Provide the unique timepoints in the correct order as a list.
+        All timepoints must exist in the data.
+    figsize : Optional[Tuple[int | float, int | float]], default None
         Figure dimensions in inches.
     dpi : int, default 100
         Figure resolution.
@@ -3173,6 +3178,8 @@ def plot_interactions_overtime(
         If the specified timepoint or cluster columns don't exist in adata.obs.
         If no receptor-ligand interaction data is found in adata.
         If none of the specified interactions are found in the data.
+        If time_order is not provided.
+        If any timepoint in time_order doesn't exist in the data.
 
     Examples
     --------
@@ -3180,12 +3187,12 @@ def plot_interactions_overtime(
         :context: close-figs
 
         # Plot interactions over time
-        fig = rl.plot_interactions_overtime(
+        fig = rl.plot_interaction_timeline(
             adata=adata,
             interactions=interaction_pairs,
             timepoint_column='timepoint',
             cluster_column='louvain',
-            timepoints=['Day0', 'Day3', 'Day7'],
+            time_order=['Day0', 'Day3', 'Day7'],
             figsize=(16, 6),
             title="Top Interactions Over Time"
         )
@@ -3196,8 +3203,21 @@ def plot_interactions_overtime(
     if cluster_column not in adata.obs.columns:
         raise ValueError(f"Cluster column '{cluster_column}' not found in adata.obs")
 
+    if time_order is None:
+        raise ValueError("time_order parameter is required. Please provide a list of timepoints in the desired order.")
+
+    # Check if all timepoints exist in the data
+    available_timepoints = set(adata.obs[timepoint_column].unique())
+    missing_timepoints = [tp for tp in time_order if tp not in available_timepoints]
+
+    if missing_timepoints:
+        raise ValueError(
+            f"The following timepoints specified in time_order do not exist in the data: {missing_timepoints}. "
+            f"Available timepoints are: {sorted(available_timepoints)}"
+        )
+
     # Check interaction data exists
-    if "receptor-ligand" not in adata.uns or "interactions" not in adata.uns["receptor-ligand"]:
+    if not in_uns(adata, ["receptor-ligand", "interactions"]):
         raise ValueError("No receptor-ligand interaction data found in adata")
 
     # Filter interactions that exist in data
@@ -3219,9 +3239,8 @@ def plot_interactions_overtime(
     if not valid_interactions:
         raise ValueError("None of the specified interactions were found in the data")
 
-    # Get timepoints
-    if timepoints is None:
-        timepoints = sorted(adata.obs[timepoint_column].unique())
+    # Use the provided timepoints order
+    timepoints = time_order
 
     # Set up figure dimensions
     n_interactions = len(valid_interactions)
@@ -3270,9 +3289,7 @@ def plot_interactions_overtime(
     global_max = max(all_expr_values) if use_global_ylim and all_expr_values else None
 
     # Plot each interaction with the global maximum y-limit
-    for idx, (r_gene, r_cluster, l_gene, l_cluster) in enumerate(valid_interactions):
-        row, col = idx // n_cols, idx % n_cols
-        ax = axes[row, col]
+    for idx, ((r_gene, r_cluster, l_gene, l_cluster), ax) in enumerate(zip(valid_interactions, axes.flatten())):
 
         # Get the pre-calculated expression data
         r_expr, l_expr = expr_data[idx]

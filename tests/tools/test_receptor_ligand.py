@@ -1167,25 +1167,24 @@ def test__get_gene_expression(
 
 
 @pytest.mark.parametrize(
-    "timepoints,n_cols,use_global_ylim,title",
+    "time_order,n_cols,use_global_ylim,title,expect_error",
     [
-        # Default settings
-        (None, 2, False, None),
-        # Specific timepoints
-        (["day0", "day3"], 2, False, None),
-        # Custom layout and title
-        (None, 3, False, "Test Title"),
-        # Global y-limits and title
-        (None, 2, True, "Custom Title"),
+        # Valid timepoints
+        (["day0", "day3", "day7"], 2, False, None, False),
+        # Missing timepoint - should raise ValueError
+        (["day0", "day3", "nonexistent_day"], 2, False, None, True),
+        # Valid with custom layout and title
+        (["day0", "day3"], 3, False, "Test Title", False),
+        # Valid with global y-limits and title
+        (["day0", "day3", "day7"], 2, True, "Custom Title", False),
     ]
 )
-def test_plot_interactions_overtime(
-    adata_with_conditions, timepoints, n_cols, use_global_ylim, title
+def test_plot_interaction_timeline(
+    adata_with_conditions, time_order, n_cols, use_global_ylim, title, expect_error
 ):
-    """Test plot_interactions_overtime with different parameters."""
+    """Test plot_interaction_timeline with different parameters, including invalid timepoints."""
     # Get a valid interaction from the data
     df = adata_with_conditions.uns["receptor-ligand"]["interactions"]
-
     interaction = (
         df["receptor_gene"].iloc[0],
         df["receptor_cluster"].iloc[0],
@@ -1195,7 +1194,7 @@ def test_plot_interactions_overtime(
 
     # Mock the gene expression function to return a constant value
     expression_mock = patch(
-        'sctoolbox.tools.receptor_ligand._get_gene_expression',
+        'sctoolbox.tools.receptor_ligand.get_gene_expression',
         return_value=0.5
     )
 
@@ -1212,24 +1211,36 @@ def test_plot_interactions_overtime(
         max_mock.start()
 
     try:
-        # Call function with test parameters
-        fig = rl.plot_interactions_overtime(
-            adata=adata_with_conditions,
-            interactions=[interaction],
-            timepoint_column="timepoint",
-            cluster_column="cluster",
-            timepoints=timepoints,
-            n_cols=n_cols,
-            use_global_ylim=use_global_ylim,
-            title=title
-        )
-
-        # Verify result
-        assert isinstance(fig, Figure)
-        assert len(fig.axes) >= 1
-        if title:
-            assert fig._suptitle.get_text() == title
-
+        if expect_error:
+            # Test case should raise ValueError
+            with pytest.raises(ValueError):
+                rl.plot_interaction_timeline(
+                    adata=adata_with_conditions,
+                    interactions=[interaction],
+                    timepoint_column="timepoint",
+                    cluster_column="cluster",
+                    time_order=time_order,
+                    n_cols=n_cols,
+                    use_global_ylim=use_global_ylim,
+                    title=title
+                )
+        else:
+            # Test case should succeed
+            fig = rl.plot_interaction_timeline(
+                adata=adata_with_conditions,
+                interactions=[interaction],
+                timepoint_column="timepoint",
+                cluster_column="cluster",
+                time_order=time_order,
+                n_cols=n_cols,
+                use_global_ylim=use_global_ylim,
+                title=title
+            )
+            # Verify result
+            assert isinstance(fig, Figure)
+            assert len(fig.axes) >= 1
+            if title:
+                assert fig._suptitle.get_text() == title
     finally:
         # Stop all mocks
         expression_mock.stop()
