@@ -1802,8 +1802,6 @@ def _process_condition_combinations(
                 cluster_filter=cluster_filter,
                 gene_column=gene_column,
                 gene_filter=gene_filter,
-                normalize=normalize,
-                weight_by_ep=weight_by_ep
             )
 
             if filtered is not None:
