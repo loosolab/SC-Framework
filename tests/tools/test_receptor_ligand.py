@@ -1194,7 +1194,7 @@ def test_plot_interaction_timeline(
 
     # Mock the gene expression function to return a constant value
     expression_mock = patch(
-        'sctoolbox.tools.receptor_ligand.get_gene_expression',
+        'sctoolbox.tools.receptor_ligand._get_gene_expression',
         return_value=0.5
     )
 
