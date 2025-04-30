@@ -429,8 +429,6 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        adata = sc.datasets.pbmc68k_reduced()
-
     .. plot::
         :context: close-figs
 
