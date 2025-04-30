@@ -1,6 +1,7 @@
 # Import the plotting module
 import sctoolbox.plotting as pl
 import sctoolbox.tools.receptor_ligand as rl
+import sctoolbox
 
 # Load example dataset
 import numpy as np
