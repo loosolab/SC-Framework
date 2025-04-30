@@ -70,12 +70,8 @@ def calculate_qc_metrics(adata: sc.AnnData,
     --------
     .. exec_code::
 
-        import scanpy as sc
-        import sctoolbox as sct
-
-        adata = sc.datasets.pbmc3k()
         print("Columns in .obs before 'calculate_qc_metrics':", adata.obs.columns.tolist())
-        sct.tools.qc_filter.calculate_qc_metrics(adata, inplace=True)
+        sctoolbox.tools.qc_filter.calculate_qc_metrics(adata, inplace=True)
         print("Columns in .obs after 'calculate_qc_metrics':", adata.obs.columns.tolist())
     """
 
