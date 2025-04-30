@@ -80,7 +80,7 @@ for f in notebooks:
         notebook_folder = "general-notebooks/"
     else:
         raise ValueError("Did not recoginze notebook type.")
-    
+
     os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
 
     f_name = os.path.basename(f).replace(".ipynb", "")
