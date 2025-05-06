@@ -80,7 +80,7 @@ for f in notebooks:
         notebook_folder = "general-notebooks/"
     else:
         raise ValueError("Did not recoginze notebook type.")
-    
+
     os.makedirs(notebook_folder, exist_ok=True)  # create folder if it doesn't exist
 
     f_name = os.path.basename(f).replace(".ipynb", "")
@@ -98,6 +98,8 @@ nbsphinx_execute = 'never'
 
 # copy folder
 shutil.copytree("../../tests/data", "API/data", dirs_exist_ok=True)  # dirs_exist_true only important when testing locally
+# copy folder
+shutil.copytree("../../image", "image", dirs_exist_ok=True)
 
 plot_include_source = True
 plot_html_show_source_link = False

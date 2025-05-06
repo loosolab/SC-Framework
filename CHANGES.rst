@@ -5,6 +5,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- velocity: Changed scvelo.read() to scanpy.read() in the velocity notebook due to deprecation (#344)
 - General: prepare_for_cellxgene: Set mampok version to 3.0.6
 - General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
 - General: prepare_for_cellxgene: Add delete column option for .obs and .var
