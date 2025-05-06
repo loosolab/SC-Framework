@@ -176,7 +176,7 @@ def calculate_interaction_table(adata: sc.AnnData,
     Returns
     -------
     Optional[sc.AnnData]
-        If not inpalce, return copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
+        If not inplace, return copy of adata with added interactions table to adata.uns['receptor-ligand']['interactions']
 
     Raises
     ------

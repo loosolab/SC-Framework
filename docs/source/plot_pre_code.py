@@ -1,7 +1,7 @@
 # Import the plotting module
 import sctoolbox.plotting as pl
+from sctoolbox import tools
 import sctoolbox.tools.receptor_ligand as rl
-import sctoolbox
 
 # Load example dataset
 import numpy as np
@@ -11,9 +11,18 @@ np.random.seed(42)
 
 adata = sc.datasets.pbmc68k_reduced()
 adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
-adata.obs["timepoint"] = np.random.choice(["Day0", "Day3", "Day7"], size=adata.shape[0])
+
+# Setup for GSEA plots
+tools.marker_genes.run_rank_genes(adata, "louvain")
+tools.gsea.gene_set_enrichment(adata,
+                               marker_key="rank_genes_louvain_filtered",
+                               organism="human",
+                               method="prerank",
+                               inplace=True)
 
 # Setup receptor-ligand database
+adata.obs["timepoint"] = np.random.choice(["Day0", "Day3", "Day7"], size=adata.shape[0])
+
 rl.download_db(
     adata=adata,
     db_path="celltalkdb",
