@@ -109,12 +109,15 @@ def test_wrap_corrections(adata):
     """Test if wrapper returns a dict, and that the keys contains the given methods."""
 
     methods = ["mnn", "scanorama"]  # two fastest methods
-    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods)
+    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods, keep_layer="test")
 
     assert isinstance(adata_dict, dict)
 
     keys = set(adata_dict.keys())
     assert len(set(methods) - keys) == 0
+
+    for a in adata_dict.values():
+        assert "test" in a.layers
 
 
 @pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])

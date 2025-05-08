@@ -60,7 +60,7 @@ def normalize_adata(adata: sc.AnnData,
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
     target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
-    keep_layer: Optional[str], default "raw"
+    keep_layer : Optional[str], default "raw"
         Will create a copy of the .X matrix with the given name before applying normalization.
 
     Returns
@@ -116,7 +116,7 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
     inplace : bool, default False
         If True, change the anndata object inplace. Otherwise return changed anndata object.
-    keep_layer: Optional[str], default "raw"
+    keep_layer : Optional[str], default "raw"
         Will create a copy of the .X matrix with the given name before applying normalization.
 
     Returns
@@ -252,7 +252,8 @@ def wrap_corrections(adata: sc.AnnData,
                      methods: Union[batch_methods,
                                     list[batch_methods],
                                     Callable] = ["bbknn", "mnn"],
-                     method_kwargs: dict = {}) -> dict[str, sc.AnnData]:
+                     method_kwargs: dict = {},
+                     keep_layer: Optional[str] = "norm") -> dict[str, sc.AnnData]:
     """
     Calculate multiple batch corrections for adata using the 'batch_correction' function.
 
@@ -272,6 +273,8 @@ def wrap_corrections(adata: sc.AnnData,
         Or provide a custom batch correction function. See `batch_correction(method)` for more information.
     method_kwargs : dict, default {}
         Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).
+    keep_layer : Optional[str], default "norm"
+        Will create a copy of the .X matrix with the given name before applying correction.
 
     Returns
     -------
@@ -300,6 +303,13 @@ def wrap_corrections(adata: sc.AnnData,
             f = io.StringIO()
             with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
                 utils.checker.check_module(required_packages[method])
+
+    # keep .X as layer; will propagate through the batch corrections
+    if keep_layer:
+        if keep_layer in adata.layers:
+            logger.warning(f"A layer with the name '{keep_layer}' already exists. Skipping to avoid layer overwrite.")
+        else:
+            adata.layers[keep_layer] = adata.X.copy()
 
     # Collect batch correction per method
     anndata_dict = {'uncorrected': adata}
