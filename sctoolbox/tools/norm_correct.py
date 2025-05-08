@@ -41,7 +41,8 @@ def normalize_adata(adata: sc.AnnData,
                     method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
-                    target_sum: Optional[int] = None) -> Union[dict[str, sc.AnnData], sc.AnnData]:
+                    target_sum: Optional[int] = None,
+                    keep_layer: Optional[str] = "raw") -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -59,6 +60,8 @@ def normalize_adata(adata: sc.AnnData,
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
     target_sum : Optional[int], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+    keep_layer: Optional[str], default "raw"
+        Will create a copy of the .X matrix with the given name before applying normalization.
 
     Returns
     -------
@@ -94,7 +97,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
                              exclude_highly_expressed: bool = True,
                              use_highly_variable: bool = False,
                              target_sum: Optional[int] = None,
-                             inplace: bool = False) -> Optional[sc.AnnData]:
+                             inplace: bool = False,
+                             keep_layer: Optional[str] = "raw") -> Optional[sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -112,6 +116,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
     inplace : bool, default False
         If True, change the anndata object inplace. Otherwise return changed anndata object.
+    keep_layer: Optional[str], default "raw"
+        Will create a copy of the .X matrix with the given name before applying normalization.
 
     Returns
     -------
@@ -120,6 +126,12 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
     """
 
     adata = anndata if inplace else anndata.copy()
+
+    if keep_layer:
+        if keep_layer in adata.layers:
+            logger.warning(f"A layer with the name '{keep_layer}' already exists. Skipping to avoid layer overwrite.")
+        else:
+            adata.layers[keep_layer] = adata.X.copy()
 
     if method == "total":  # perform total normalization and pca
         logger.info('Performing total normalization and PCA...')
