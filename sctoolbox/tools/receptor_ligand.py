@@ -230,7 +230,7 @@ def calculate_interaction_table(adata: sc.AnnData,
         clust_sizes[cluster] = len(cluster_adata)
 
         # select the data layer
-        cluster_layer = adata.layers[layer] if layer else adata.X
+        cluster_layer = cluster_adata.layers[layer] if layer else cluster_adata.X
 
         # -- compute expression percentage --
         # get nonzero expression count for all genes
