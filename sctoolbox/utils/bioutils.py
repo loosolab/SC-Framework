@@ -50,7 +50,16 @@ def pseudobulk_table(adata: sc.AnnData,
     -------
     pd.DataFrame
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
+
+    Raises
+    ------
+    KeyError
+        If the groupby column does not exist in adata.obs.
     """
+
+    # Check if groupby column exists
+    if groupby not in adata.obs.columns:
+        raise KeyError(f"Column '{groupby}' not found in adata.obs.")
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 

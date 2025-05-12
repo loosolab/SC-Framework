@@ -1,5 +1,6 @@
 0.13.0 (in progress)
 --------------------
+- Add column exists check to bioutils.pseudobulk_table (#356)
 - Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
 - GSEA: Revise gsea analysis: Bugfixes, save results into adata, rework plots (#345)
 
