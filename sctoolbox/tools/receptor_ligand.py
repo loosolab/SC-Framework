@@ -31,6 +31,7 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
 from sctoolbox.utils.adata import add_uns_info, in_uns
+from sctoolbox.utils.bioutils import pseudobulk_table
 
 
 logger = settings.logger
@@ -151,7 +152,8 @@ def calculate_interaction_table(adata: sc.AnnData,
                                 normalize: Optional[int] = None,
                                 weight_by_ep: Optional[bool] = True,
                                 inplace: bool = False,
-                                overwrite: bool = False) -> Optional[sc.AnnData]:
+                                overwrite: bool = False,
+                                layer: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Calculate an interaction table of the clusters defined in adata.
 
@@ -172,6 +174,8 @@ def calculate_interaction_table(adata: sc.AnnData,
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
         If True will overwrite existing interaction table.
+    layer : Optional[str], default None
+        The layer used for score computation. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
 
     Returns
     -------
@@ -183,12 +187,16 @@ def calculate_interaction_table(adata: sc.AnnData,
     ValueError
         1: If receptor-ligand database cannot be found.
         2: Id database genes do not match adata genes.
+        3: If the adata layer does not exist.
     Exception
         If not interactions were found.
     """
 
     if "receptor-ligand" not in adata.uns.keys():
         raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(   )` before running this function.")
+
+    if layer and layer not in adata.layers:
+        raise ValueError(f"Layer {layer} not found in adata.layers")
 
     # interaction table already exists?
     if not overwrite and "receptor-ligand" in adata.uns and "interactions" in adata.uns["receptor-ligand"]:
@@ -209,7 +217,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
-    cl_mean_expression = pd.DataFrame(index=index)
+    cl_mean_expression = pseudobulk_table(adata, groupby=cluster_column, layer=layer, gene_index=gene_index)
     # percent cells in cluster expressing gene
     cl_percent_expression = pd.DataFrame(index=index)
     # number of cells for each cluster
@@ -221,15 +229,12 @@ def calculate_interaction_table(adata: sc.AnnData,
         cluster_adata = adata[adata.obs[cluster_column] == cluster]
         clust_sizes[cluster] = len(cluster_adata)
 
-        # -- compute cluster means --
-        if gene_index is None:
-            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var.index), cluster] = cluster_adata.X.mean(axis=0).reshape(-1, 1)
-        else:
-            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var[gene_index]), cluster] = cluster_adata.X.mean(axis=0).reshape(-1, 1)
+        # select the data layer
+        cluster_layer = adata.layers[layer] if layer else adata.X
 
         # -- compute expression percentage --
         # get nonzero expression count for all genes
-        _, cols = cluster_adata.X.nonzero()
+        _, cols = cluster_layer.nonzero()
         gene_occurence = Counter(cols)
 
         cl_percent_expression[cluster] = 0
