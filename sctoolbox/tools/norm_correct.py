@@ -75,7 +75,8 @@ def normalize_adata(adata: sc.AnnData,
                                         method=method,
                                         exclude_highly_expressed=exclude_highly_expressed,
                                         use_highly_variable=use_highly_variable,
-                                        target_sum=target_sum)
+                                        target_sum=target_sum,
+                                        keep_layer=keep_layer)
 
     elif isinstance(method, list):
         adatas = {}
@@ -85,7 +86,8 @@ def normalize_adata(adata: sc.AnnData,
                                                           method=method_str,
                                                           exclude_highly_expressed=exclude_highly_expressed,
                                                           use_highly_variable=use_highly_variable,
-                                                          target_sum=target_sum)
+                                                          target_sum=target_sum,
+                                                          keep_layer=keep_layer)
 
         return adatas
 
