@@ -157,6 +157,10 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     logger.info(f"The adata object was loaded from: {adata_input}")
 
+    if adata.raw:
+        logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+
     return adata
 
 

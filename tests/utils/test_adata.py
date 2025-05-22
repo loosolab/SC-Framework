@@ -47,14 +47,31 @@ def test_get_adata_subsets(adata):
         assert sub_adata.obs["group"].nunique() == 1
 
 
-def test_save_h5ad(adata):
-    """Test if h5ad file is saved correctly."""
-
+@pytest.mark.parametrize("raw", [True, False])
+def test_save_and_load_h5ad(adata, raw, caplog):
+    """Test if h5ad file is saved correctly. Then test loading."""
     path = "test.h5ad"
-    utils.save_h5ad(adata, path)
 
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
+    # add raw layer
+    if raw:
+        adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+        adata.raw = adata
+
+    try:
+        utils.save_h5ad(adata, path)
+
+        assert os.path.isfile(path)
+
+        loaded = utils.load_h5ad(path)
+
+        assert isinstance(loaded, sc.AnnData)
+
+        # assume the last record is the warning
+        log_rec = caplog.records[-1]
+        assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+
+    finally:
+        os.remove(path)  # clean up after tests
 
 
 @pytest.fixture(scope="session")
