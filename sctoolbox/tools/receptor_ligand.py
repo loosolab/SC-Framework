@@ -30,7 +30,7 @@ import itertools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
-from sctoolbox.utils.adata import add_uns_info, in_uns
+from sctoolbox.utils.adata import add_uns_info, in_uns, get_uns
 from sctoolbox.utils.bioutils import pseudobulk_table
 
 
@@ -2428,6 +2428,45 @@ def _extract_diff_key_columns(
 
 
 @beartype
+def _format_control_conditions(diff_df: pd.DataFrame) -> str:
+    """Extract and format control conditions from a differences DataFrame.
+
+    Processes control columns (prefixed with 'control_') from a receptor-ligand
+    differences DataFrame and formats them into a string for
+    display in plot main title.
+
+    Parameters
+    ----------
+    diff_df : pd.DataFrame
+        Differences DataFrame from calculate_condition_differences containing
+        columns prefixed with 'control_' that specify the values of control
+        conditions used during the comparison. Expected columns include:
+        - control_timepoint: timepoint identifier (if timepoint was a control condition)
+        - Additional control_* columns for other controlled conditions
+
+    Returns
+    -------
+    str
+        Formatted string containing control conditions in the format:
+        " | condition1: value1, condition2: value2"
+        Returns empty string if no control columns are found.
+    """
+    control_cols = [col for col in diff_df.columns
+                    if col.startswith('control_')]
+
+    if not control_cols:
+        return ""
+
+    conditions = []
+    for col in control_cols:
+        value = diff_df[col].iloc[0]
+        name = col.replace('control_', '')
+        conditions.append(f"{name}: {value}")
+
+    return f" | {', '.join(conditions)}"
+
+
+@beartype
 def condition_differences_network(
     adata: sc.AnnData,
     n_top: int = 100,
@@ -2597,18 +2636,6 @@ def condition_differences_network(
             abs_diff_col = col_info.get('abs_diff_col')
             condition_a = col_info.get('condition_a', 'Condition A')
             condition_b = col_info.get('condition_b', 'Condition B')
-
-            # Check if this is a time series comparison
-            is_time_series = 'time_column' in col_info and 'time_order' in col_info
-            time_info = ""
-            if is_time_series:
-                time_col = col_info['time_column']
-                time_points = col_info['time_order']
-                # Find position of conditions in the time series
-                if condition_a in time_points and condition_b in time_points:
-                    pos_a = time_points.index(condition_a)
-                    pos_b = time_points.index(condition_b)
-                    time_info = f" | {time_col}: {pos_a} → {pos_b}"
 
             # Determine directions to plot
             # This section handles whether to create separate plots for:
@@ -2857,15 +2884,19 @@ def condition_differences_network(
                     ncol=1
                 )
 
-                # Add main title for the entire figure
-                if hub_networks:
-                    hub_info = f"{len(hub_networks)} Hubs (≥{hub_threshold} connections)"
-                else:
-                    hub_info = ""
+                # Extract control conditions
+                control_info = _format_control_conditions(diff_df)
 
-                main_title = f"{condition_b} - {condition_a}{time_info} | {direction_label}"
-                if hub_info:
-                    main_title += f" | {hub_info}"
+                # Build title components
+                hub_info = ""
+                if hub_networks:
+                    hub_info = f" | {len(hub_networks)} Hubs (≥{hub_threshold} connections)"
+
+                # Assemble final title
+                main_title = (
+                    f"{condition_b} - {condition_a}"
+                    f"{control_info} | {direction_label}{hub_info}"
+                )
 
                 fig.suptitle(main_title, fontsize=16, y=0.98)
                 plt.subplots_adjust(bottom=0.15)
@@ -3239,25 +3270,27 @@ def plot_interaction_timeline(
             f"Available timepoints are: {sorted(available_timepoints)}"
         )
 
-    # Check interaction data exists
-    if not in_uns(adata, ["receptor-ligand", "interactions"]):
-        raise ValueError("No receptor-ligand interaction data found in adata")
+    # Check interaction database exists
+    if not in_uns(adata, ["receptor-ligand", "database"]):
+        raise ValueError("No receptor-ligand database found in adata")
 
-    # Filter interactions that exist in data
-    interaction_df = adata.uns["receptor-ligand"]["interactions"]
+    # Filter interactions that exist in the database
+    interaction_df = get_uns(adata, ["receptor-ligand", "database"])
+    receptor_col = get_uns(adata, ["receptor-ligand", "receptor_column"])
+    ligand_col = get_uns(adata, ["receptor-ligand", "ligand_column"])
+
     valid_interactions = []
 
+    # check if the r-l combination exists in the database
     for r_gene, r_cluster, l_gene, l_cluster in interactions:
         mask = (
-            (interaction_df["receptor_gene"] == r_gene)
-            & (interaction_df["receptor_cluster"] == r_cluster)
-            & (interaction_df["ligand_gene"] == l_gene)
-            & (interaction_df["ligand_cluster"] == l_cluster)
+            (interaction_df[receptor_col] == r_gene)
+            & (interaction_df[ligand_col] == l_gene)
         )
         if mask.any():
             valid_interactions.append((r_gene, r_cluster, l_gene, l_cluster))
         else:
-            print(f"Warning: Interaction {r_gene}({r_cluster})-{l_gene}({l_cluster}) not found")
+            logger.warning(f"Warning: Interaction {l_gene}->{r_gene} not found")
 
     if not valid_interactions:
         raise ValueError("None of the specified interactions were found in the data")
