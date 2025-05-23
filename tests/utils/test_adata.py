@@ -97,6 +97,9 @@ def adata_icxg():
     obj.var["Int32"] = 1
     obj.var["Int32"] = obj.var["Int32"].astype("Int32")
 
+    # add layer
+    obj.layers["layer"] = obj.X.copy()
+
     return obj
 
 
@@ -239,6 +242,16 @@ def test_prepare_cellxgene_delete(adata2):
                                               inplace=False)
     assert obs_cols == list(prepare_out.obs.columns)
     assert var_cols == list(prepare_out.var.columns)
+
+
+@pytest.mark.parametrize("layer", ["layer", None, "invalid"])
+def test_prepare_cellxgene_layer(adata_icxg, layer):
+    """Test layer parameter."""
+    if layer == "invalid":
+        with pytest.raises(ValueError):
+            utils.prepare_for_cellxgene(adata_icxg, layer=layer)
+    else:
+        utils.prepare_for_cellxgene(adata_icxg, layer=layer)
 
 
 @pytest.mark.parametrize("adatas,label", [(["adata1", "adata2"], "list"), ({"a": "adata1", "b": "adata2"}, "dict")])

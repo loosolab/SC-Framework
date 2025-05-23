@@ -379,6 +379,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
                           cmap: Optional[str] = None,
                           palette: Optional[str | Sequence[str]] = None,
+                          layer: Optional[str] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -413,6 +414,8 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Color map to use for categorical annotation groups.
         Use this replacement color map for broken color maps.
         If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
+    layer : Optional[str], default None
+
     inplace : bool, default False
 
     Raises
@@ -420,16 +423,15 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     ValueError
         1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
         2. If not at least one of the named embeddings are found in the adata.
+        3. If there is no layer with the given name.
 
     Returns
     -------
     Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
-    if False:
-        # unreachable code to hide a raise ValueError placeholder for our linter to
-        # account for the raise ValueError of the inner function clean_section()
-        raise ValueError()
+    if layer and layer not in adata.layers:
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
     def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
@@ -491,6 +493,10 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     out.var_names_make_unique()
 
     # ----- .X -----
+    # overwrite .X with another layer
+    if layer:
+        out.X = out.layers[layer].copy()
+
     # convert .X to sparse matrix if needed
     if not scipy.sparse.isspmatrix(out.X):
         out.X = scipy.sparse.csc_matrix(out.X)
