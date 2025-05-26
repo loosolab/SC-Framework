@@ -4,6 +4,7 @@
 - GSEA: Revise gsea analysis: Bugfixes, save results into adata, rework plots (#345)
 - Add column exists check to bioutils.pseudobulk_table (#356)
 - Fix main title in receptor-ligand network plot (#358)
+- load_h5ad(): warn if adata.raw is found. (#352)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -12,6 +13,7 @@ Changes to notebooks
 - General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
 - General: prepare_for_cellxgene: Add delete column option for .obs and .var
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
+- add layer option to notebooks that utilize the matrix (#342)
 
 0.12.0 (19-12-24)
 -----------------
