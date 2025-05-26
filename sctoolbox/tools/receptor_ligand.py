@@ -31,6 +31,7 @@ import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
 from sctoolbox.utils.adata import add_uns_info, in_uns, get_uns
+from sctoolbox.utils.bioutils import pseudobulk_table
 
 
 logger = settings.logger
@@ -151,7 +152,8 @@ def calculate_interaction_table(adata: sc.AnnData,
                                 normalize: Optional[int] = None,
                                 weight_by_ep: Optional[bool] = True,
                                 inplace: bool = False,
-                                overwrite: bool = False) -> Optional[sc.AnnData]:
+                                overwrite: bool = False,
+                                layer: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Calculate an interaction table of the clusters defined in adata.
 
@@ -172,6 +174,8 @@ def calculate_interaction_table(adata: sc.AnnData,
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
         If True will overwrite existing interaction table.
+    layer : Optional[str], default None
+        The layer used for score computation. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
 
     Returns
     -------
@@ -183,12 +187,16 @@ def calculate_interaction_table(adata: sc.AnnData,
     ValueError
         1: If receptor-ligand database cannot be found.
         2: Id database genes do not match adata genes.
+        3: If the adata layer does not exist.
     Exception
         If not interactions were found.
     """
 
     if "receptor-ligand" not in adata.uns.keys():
         raise ValueError("Could not find receptor-ligand database. Please setup database with `download_db(   )` before running this function.")
+
+    if layer and layer not in adata.layers:
+        raise ValueError(f"Layer {layer} not found in adata.layers")
 
     # interaction table already exists?
     if not overwrite and "receptor-ligand" in adata.uns and "interactions" in adata.uns["receptor-ligand"]:
@@ -209,7 +217,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
-    cl_mean_expression = pd.DataFrame(index=index)
+    cl_mean_expression = pseudobulk_table(adata, groupby=cluster_column, layer=layer, gene_index=gene_index)
     # percent cells in cluster expressing gene
     cl_percent_expression = pd.DataFrame(index=index)
     # number of cells for each cluster
@@ -221,15 +229,12 @@ def calculate_interaction_table(adata: sc.AnnData,
         cluster_adata = adata[adata.obs[cluster_column] == cluster]
         clust_sizes[cluster] = len(cluster_adata)
 
-        # -- compute cluster means --
-        if gene_index is None:
-            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var.index), cluster] = cluster_adata.X.mean(axis=0).reshape(-1, 1)
-        else:
-            cl_mean_expression.loc[cl_mean_expression.index.isin(cluster_adata.var[gene_index]), cluster] = cluster_adata.X.mean(axis=0).reshape(-1, 1)
+        # select the data layer
+        cluster_layer = cluster_adata.layers[layer] if layer else cluster_adata.X
 
         # -- compute expression percentage --
         # get nonzero expression count for all genes
-        _, cols = cluster_adata.X.nonzero()
+        _, cols = cluster_layer.nonzero()
         gene_occurence = Counter(cols)
 
         cl_percent_expression[cluster] = 0
@@ -1686,7 +1691,8 @@ def _process_condition_combinations(
     normalize: Optional[int] = None,
     weight_by_ep: bool = True,
     save_diff: bool = False,
-    sequential_time_analysis: bool = True
+    sequential_time_analysis: bool = True,
+    layer: Optional[str] = None
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """Process and compare combinations of conditions for differential analysis.
 
@@ -1720,6 +1726,8 @@ def _process_condition_combinations(
         Save difference tables to disk.
     sequential_time_analysis : bool, default True
         If True, only compare sequential timepoints (t₁ vs t₀, t₂ vs t₁, etc.).
+    layer : Optional[str], default None
+        The layer used for score computation. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
 
     Returns
     -------
@@ -1814,7 +1822,8 @@ def _process_condition_combinations(
                     normalize=normalize,
                     weight_by_ep=weight_by_ep,
                     inplace=True,
-                    overwrite=True
+                    overwrite=True,
+                    layer=layer
                 )
 
                 filtered_datasets[target_value] = filtered
@@ -1891,7 +1900,8 @@ def calculate_condition_differences(
     weight_by_ep: Optional[bool] = True,
     inplace: bool = False,
     overwrite: bool = False,
-    save_diff: bool = False
+    save_diff: bool = False,
+    layer: Optional[str] = None
 ) -> Optional[sc.AnnData]:
     """
     Calculate interaction quantile rank differences between conditions.
@@ -1950,6 +1960,8 @@ def calculate_condition_differences(
         If True, overwrites existing interaction table.
     save_diff : bool, default False
         Whether to save the differences table.
+    layer : Optional[str], default None
+        The layer used for score computation. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
 
     Returns
     -------
@@ -2108,7 +2120,8 @@ def calculate_condition_differences(
         normalize=normalize,
         weight_by_ep=weight_by_ep,
         save_diff=save_diff,
-        sequential_time_analysis=is_time_series
+        sequential_time_analysis=is_time_series,
+        layer=layer
     )}
 
     # If time series analysis, add time metadata to the results
@@ -3094,7 +3107,8 @@ def _get_gene_expression(
     cluster: str,
     timepoint: str,
     timepoint_col: str,
-    cluster_col: str
+    cluster_col: str,
+    layer: Optional[str] = None
 ) -> float:
     """
     Get mean expression of a gene in a specific cluster at a specific timepoint.
@@ -3113,6 +3127,8 @@ def _get_gene_expression(
         Column name in adata.obs that contains timepoint information.
     cluster_col : str
         Column name in adata.obs that contains cluster information.
+    layer : Optional[str], default None
+        The layer used for score computation. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
 
     Returns
     -------
@@ -3141,7 +3157,11 @@ def _get_gene_expression(
         return 0.0
 
     # Get expression values
-    expr_values = adata.X[cell_indices, gene_idx]
+    if layer:
+        expr_values = adata.layers[layer][cell_indices, gene_idx]
+    else:
+        expr_values = adata.X[cell_indices, gene_idx]
+
     if hasattr(expr_values, "toarray"):
         expr_values = expr_values.toarray().flatten()
 
@@ -3163,6 +3183,7 @@ def plot_interaction_timeline(
     receptor_color: Optional[str] = None,
     ligand_color: Optional[str] = None,
     use_global_ylim: bool = False,
+    layer: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
     Plot receptor-ligand interaction expression levels over time as barplots.
@@ -3197,6 +3218,8 @@ def plot_interaction_timeline(
         Color for ligand bars. If None, uses the second color from seaborn's default palette.
     use_global_ylim : bool, default False
         Whether to use the same y-limit for all subplots based on the global maximum.
+    layer : Optional[str], default None
+        The layer used. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
 
     Returns
     -------
@@ -3304,11 +3327,11 @@ def plot_interaction_timeline(
     for idx, (r_gene, r_cluster, l_gene, l_cluster) in enumerate(valid_interactions):
         # Get expression data for each timepoint
         r_expr = [
-            _get_gene_expression(adata, r_gene, r_cluster, tp, timepoint_column, cluster_column)
+            _get_gene_expression(adata, r_gene, r_cluster, tp, timepoint_column, cluster_column, layer=layer)
             for tp in timepoints
         ]
         l_expr = [
-            _get_gene_expression(adata, l_gene, l_cluster, tp, timepoint_column, cluster_column)
+            _get_gene_expression(adata, l_gene, l_cluster, tp, timepoint_column, cluster_column, layer=layer)
             for tp in timepoints
         ]
 

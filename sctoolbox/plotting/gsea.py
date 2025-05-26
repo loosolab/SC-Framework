@@ -38,6 +38,7 @@ def term_dotplot(adata: sc.AnnData,
                  term_col: str = "Term",
                  groups: Optional[list[str] | str] = None,
                  hue: Literal["Mean Expression", "Zscore"] = "Zscore",
+                 layer: Optional[str] = None,
                  **kwargs: Any) -> NDArray[Axes]:
     """
     Plot mean expression and zscore of cluster for one GO-term.
@@ -61,6 +62,8 @@ def term_dotplot(adata: sc.AnnData,
         Set subset of group column.
     hue : Literal["Mean Expression", "Zscore"], default "Zscore"
         Choose dot coloring.
+    layer : Optional[str], default None
+        Name of an anndata layer to use instead of `adata.X`.
     **kwargs : Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
@@ -115,7 +118,7 @@ def term_dotplot(adata: sc.AnnData,
     logger.info("Subset AnnData object.")
     subset = adata[:, adata.var.index.str.upper().isin(active_genes)]
 
-    bulks = pseudobulk_table(subset, groupby=groupby)
+    bulks = pseudobulk_table(subset, groupby=groupby, layer=layer)
 
     if groups:
         bulks = bulks.loc[:, groups]

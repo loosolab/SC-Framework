@@ -47,14 +47,31 @@ def test_get_adata_subsets(adata):
         assert sub_adata.obs["group"].nunique() == 1
 
 
-def test_save_h5ad(adata):
-    """Test if h5ad file is saved correctly."""
-
+@pytest.mark.parametrize("raw", [True, False])
+def test_save_and_load_h5ad(adata, raw, caplog):
+    """Test if h5ad file is saved correctly. Then test loading."""
     path = "test.h5ad"
-    utils.save_h5ad(adata, path)
 
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
+    # add raw layer
+    if raw:
+        adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+        adata.raw = adata
+
+    try:
+        utils.save_h5ad(adata, path)
+
+        assert os.path.isfile(path)
+
+        loaded = utils.load_h5ad(path)
+
+        assert isinstance(loaded, sc.AnnData)
+
+        # assume the last record is the warning
+        log_rec = caplog.records[-1]
+        assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+
+    finally:
+        os.remove(path)  # clean up after tests
 
 
 @pytest.fixture(scope="session")
@@ -79,6 +96,9 @@ def adata_icxg():
     obj.obs["Int32"] = obj.obs["Int32"].astype("Int32")
     obj.var["Int32"] = 1
     obj.var["Int32"] = obj.var["Int32"].astype("Int32")
+
+    # add layer
+    obj.layers["layer"] = obj.X.copy()
 
     return obj
 
@@ -222,6 +242,16 @@ def test_prepare_cellxgene_delete(adata2):
                                               inplace=False)
     assert obs_cols == list(prepare_out.obs.columns)
     assert var_cols == list(prepare_out.var.columns)
+
+
+@pytest.mark.parametrize("layer", ["layer", None, "invalid"])
+def test_prepare_cellxgene_layer(adata_icxg, layer):
+    """Test layer parameter."""
+    if layer == "invalid":
+        with pytest.raises(ValueError):
+            utils.prepare_for_cellxgene(adata_icxg, layer=layer)
+    else:
+        utils.prepare_for_cellxgene(adata_icxg, layer=layer)
 
 
 @pytest.mark.parametrize("adatas,label", [(["adata1", "adata2"], "list"), ({"a": "adata1", "b": "adata2"}, "dict")])

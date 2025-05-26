@@ -60,7 +60,7 @@ if _is_notebook():
                     // get all code cells
                     let all_cells = document.querySelectorAll('.code_cell,.jp-CodeCell')
                     // define the cell selection
-                    let selection = Array({','.join(map(str, select))});
+                    let selection = [{','.join(map(str, select))}];
                     // select the cells
                     let sel_cells = selection.map(x=>all_cells[x]);
                     // select the parts of the cells that should be colored (code area)

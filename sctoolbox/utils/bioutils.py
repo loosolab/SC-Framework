@@ -26,7 +26,8 @@ def pseudobulk_table(adata: sc.AnnData,
                      how: Literal['mean', 'sum'] = "mean",
                      layer: Optional[str] = None,
                      percentile_range: Tuple[int, int] = (0, 100),
-                     chunk_size: int = 1000) -> pd.DataFrame:
+                     chunk_size: int = 1000,
+                     gene_index: Optional[str] = None) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -45,6 +46,8 @@ def pseudobulk_table(adata: sc.AnnData,
         Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.
     chunk_size : int, default 1000
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
+    gene_index : Optional[str], default None
+        Column in adata.var that holds gene symbols/ ids.
 
     Returns
     -------
@@ -69,7 +72,8 @@ def pseudobulk_table(adata: sc.AnnData,
         mat = adata.X
 
     # Fetch the mean/ sum counts across each category in cluster_by
-    res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
+    res = pd.DataFrame(index=adata.var[gene_index] if gene_index else adata.var_names,
+                       columns=groupby_categories)
     for column_i, clust in enumerate(groupby_categories):
 
         cluster_values = mat[list(adata.obs[groupby].isin([clust])), :]
