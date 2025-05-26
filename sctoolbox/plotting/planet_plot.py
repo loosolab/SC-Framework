@@ -490,8 +490,6 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        adata = sc.datasets.pbmc68k_reduced()
         selected_genes = ["MNDA", "TNFRSF4", "CD8B", "HSD17B11", "GOLGA7", "LGALS3"]
         x_col = "phase"
         y_col = "bulk_labels"

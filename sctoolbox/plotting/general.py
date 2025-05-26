@@ -17,6 +17,7 @@ from beartype.typing import Optional, Literal, Tuple, Union, Any
 from numpy.typing import NDArray
 
 from sctoolbox import settings
+logger = settings.logger
 
 
 ########################################################################################
@@ -65,6 +66,7 @@ def _save_figure(path: Optional[str],
             fig.set_size_inches(w / dpi, h / dpi)
 
         output_path = settings.full_figure_prefix + path
+        logger.info(f"Saving figure to {output_path}")
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
 
 
