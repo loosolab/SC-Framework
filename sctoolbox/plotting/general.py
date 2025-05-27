@@ -5,7 +5,7 @@ import numpy as np
 import warnings
 
 import seaborn as sns
-import matplotlib
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
@@ -13,9 +13,11 @@ import scipy.cluster.hierarchy as sciclust
 import seaborn
 
 from beartype import beartype
-from beartype.typing import Iterable, Optional, Literal, Tuple, Union, Any
+from beartype.typing import Optional, Literal, Tuple, Union, Any
+from numpy.typing import NDArray
 
 from sctoolbox import settings
+logger = settings.logger
 
 
 ########################################################################################
@@ -47,11 +49,12 @@ def _save_figure(path: Optional[str],
     # This moves the checking to the _save_figure function rather than each plotting function.
     if path is not None:
         output_path = settings.full_figure_prefix + path
+        logger.info(f"Saving figure to {output_path}")
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
 
 
 @beartype
-def _make_square(ax: matplotlib.axes.Axes) -> None:
+def _make_square(ax: Axes) -> None:
     """Force a plot to be square using aspect ratio regardless of the x/y ranges."""
 
     xrange = np.diff(ax.get_xlim())[0]
@@ -62,7 +65,7 @@ def _make_square(ax: matplotlib.axes.Axes) -> None:
 
 
 @beartype
-def _add_figure_title(axarr: Iterable[matplotlib.axes.Axes] | matplotlib.axes.Axes | seaborn.matrix.ClusterGrid,
+def _add_figure_title(axarr: list[Axes] | dict[str, Axes] | Axes | seaborn.matrix.ClusterGrid,
                       title: str,
                       y: float | int = 1.3,
                       fontsize: int = 16) -> None:
@@ -70,7 +73,7 @@ def _add_figure_title(axarr: Iterable[matplotlib.axes.Axes] | matplotlib.axes.Ax
 
     Parameters
     ----------
-    axarr : Iterable[matplotlib.axes.Axes] | matplotlib.axes.Axes
+    axarr : list[Axes] | dict[str, Axes] | Axes | seaborn.matrix.ClusterGrid
         List of axes to add the title to.
     title : str
         Title to add at the top of plot.
@@ -129,7 +132,7 @@ def _add_labels(data: pd.DataFrame,
                 x: str,
                 y: str,
                 label_col: Optional[str] = None,
-                ax: Optional[matplotlib.axes.Axes] = None,
+                ax: Optional[Axes] = None,
                 **kwargs: Any) -> list:
     """Add labels to a scatter plot.
 
@@ -143,10 +146,10 @@ def _add_labels(data: pd.DataFrame,
         Name of the column in data to use for y axis coordinates.
     label_col : str, default None
         Name of the column in data to use for labels. If `None`, the index of data is used.
-    ax : matplotlib.axes.Axes, default None
+    ax : Axes, default None
         Axis to plot on. If `None`, the current open figure axis is used.
     **kwargs : Any
-        Additional arguments to pass to matplotlib.axes.Axes.annotate.
+        Additional arguments to pass to Axes.annotate.
 
     Returns
     -------
@@ -194,7 +197,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                        x_rot: int = 45,
                        show_grid: bool = False,
                        save: Optional[str] = None,
-                       **kwargs: Any) -> list:
+                       **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
 
@@ -235,8 +238,8 @@ def clustermap_dotplot(table: pd.DataFrame,
 
     Returns
     -------
-    list
-        List of matplotlib.axes.Axes objects containing the dotplot and the dendrogram(s).
+    NDArray[Axes]
+        Array of Axes objects containing the dotplot and the dendrogram(s).
 
     Examples
     --------
@@ -365,7 +368,7 @@ def clustermap_dotplot(table: pd.DataFrame,
     # Save figure
     _save_figure(save)
 
-    return axes
+    return np.array(axes)
 
 
 ########################################################################################
@@ -377,7 +380,7 @@ def bidirectional_barplot(df: pd.DataFrame,
                           title: Optional[str] = None,
                           colors: Optional[dict[str, str]] = None,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
-                          save: Optional[str] = None) -> matplotlib.axes.Axes:
+                          save: Optional[str] = None) -> Axes:
     """Plot a bidirectional barplot.
 
     A vertical barplot where each position has one bar going left and one going right (bidirectional).
@@ -401,7 +404,7 @@ def bidirectional_barplot(df: pd.DataFrame,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         Axes containing the plot.
 
     Raises
@@ -491,8 +494,8 @@ def bidirectional_barplot(df: pd.DataFrame,
 @beartype
 def boxplot(dt: pd.DataFrame,
             show_median: bool = True,
-            ax: Optional[matplotlib.axes.Axes] = None,
-            **kwargs: Any) -> matplotlib.axes.Axes:
+            ax: Optional[Axes] = None,
+            **kwargs: Any) -> Axes:
     """Generate one plot containing one box per column. The median value is shown.
 
     Parameters
@@ -501,14 +504,14 @@ def boxplot(dt: pd.DataFrame,
         pandas datafame containing numerical values in every column.
     show_median : boolean, default True
         If True show median value as small box inside the boxplot.
-    ax : Optional[matplotlib.axes.Axes], default None
+    ax : Optional[Axes], default None
         Axes object to plot on. If None, a new figure is created.
     **kwargs : Any
         Additional arguments to pass to seaborn.boxplot.
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         containing boxplot for every column.
 
     Examples
@@ -562,10 +565,10 @@ def violinplot(table: pd.DataFrame,
                                       list[float | int],
                                       dict[str, Union[float | int, list[float | int]]]]] = None,
                colors: Optional[list[str]] = None,
-               ax: Optional[matplotlib.axes.Axes] = None,
+               ax: Optional[Axes] = None,
                title: Optional[str] = None,
                ylabel: bool = True,
-               **kwargs: Any) -> matplotlib.axes.Axes:
+               **kwargs: Any) -> Axes:
     """Plot a violinplot with optional horizontal lines for each violin.
 
     Parameters
@@ -581,7 +584,7 @@ def violinplot(table: pd.DataFrame,
         Define horizontal lines for each violin.
     colors : Optional[list[str]], default None
         List of colors to use for violins.
-    ax : Optional[matplotlib.axes.Axes], default None
+    ax : Optional[Axes], default None
         Axes object to draw the plot on. Otherwise use current axes.
     title : Optional[str], default None
         Title of the plot.
@@ -592,7 +595,7 @@ def violinplot(table: pd.DataFrame,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         Object containing the violinplot.
 
     Raises
@@ -781,7 +784,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
-                     **kwargs: Any) -> np.ndarray:
+                     **kwargs: Any) -> NDArray[Axes]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
     If thresholds are given, lines are drawn for each threshold and points outside of the thresholds are colored red.
@@ -797,12 +800,12 @@ def pairwise_scatter(table: pd.DataFrame,
     save : Optional[str], default None
         If given, the figure will be saved to this path.
     **kwargs : Any
-        Additional arguments to pass to matplotlib.axes.Axes.scatter.
+        Additional arguments to pass to Axes.scatter.
 
     Returns
     -------
-    np.ndarray
-        Array of matplotlib.axes.Axes objects.
+    NDArray[Axes]
+        Array of Axes objects.
 
     Raises
     ------

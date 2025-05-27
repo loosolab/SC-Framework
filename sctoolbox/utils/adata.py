@@ -157,6 +157,10 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     logger.info(f"The adata object was loaded from: {adata_input}")
 
+    if adata.raw:
+        logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+
     return adata
 
 
@@ -295,6 +299,41 @@ def in_uns(adata: sc.AnnData,
 
 
 @beartype
+def get_uns(adata: sc.AnnData,
+            key: str | list[str]) -> Any:
+    """
+    Get value from adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object.
+    key: str | list[str]
+        The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
+
+    Returns
+    -------
+    Any
+        Any value stored in adata.uns
+    """
+    d = adata.uns
+    path = ""
+    for k in key:
+        if k in d:
+            d = d[k]
+            path += f"['{k}']"
+        else:
+            raise ValueError(f"Key {k} not found in adata.uns{path}")
+    return d
+
+
+@beartype
 def get_cell_values(adata: sc.AnnData,
                     element: str) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
@@ -333,11 +372,14 @@ def get_cell_values(adata: sc.AnnData,
 def prepare_for_cellxgene(adata: sc.AnnData,
                           keep_obs: Optional[list[str]] = None,
                           keep_var: Optional[list[str]] = None,
+                          delete_obs: Optional[list[str]] = None,
+                          delete_var: Optional[list[str]] = None,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
                           cmap: Optional[str] = None,
                           palette: Optional[str | Sequence[str]] = None,
+                          layer: Optional[str] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -348,8 +390,16 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Anndata object.
     keep_obs : Optional[list[str]], default None
         adata.obs columns that should be kept. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
     keep_var : Optional[list[str]], default None
         adata.var columns that should be kept. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
+    delete_obs : Optional[list[str]], default None
+        adata.obs columns that should be deleted. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
+    delete_var : Optional[list[str]], default None
+        adata.var columns that should be deleted. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
     rename_obs : Optional[dict[str, str]], default None
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
     rename_var : Optional[dict[str, str]], default None
@@ -364,21 +414,30 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Color map to use for categorical annotation groups.
         Use this replacement color map for broken color maps.
         If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
+    layer : Optional[str], default None
+
     inplace : bool, default False
 
     Raises
     ------
     ValueError
-        If not at least one of the named embeddings are found in the adata.
+        1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
+        2. If not at least one of the named embeddings are found in the adata.
+        3. If there is no layer with the given name.
 
     Returns
     -------
     Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
+    if layer and layer not in adata.layers:
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
-    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
+    def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
+        if keep is not None and delete is not None:
+            raise ValueError(f"'keep_{axis}' and 'delete_{axis}' are mutually exclusive. Please configure only one to proceed.")
+
         if axis == "obs":
             sec_table = obj.obs
         elif axis == "var":
@@ -387,6 +446,12 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         # drop columns
         if keep is not None:
             drop = set(sec_table.columns) - set(keep)
+        elif delete is not None:
+            drop = set(delete)
+        else:
+            drop = False
+
+        if drop is not False:
             sec_table.drop(columns=drop, inplace=True)
 
             # drop matching color maps
@@ -420,13 +485,18 @@ def prepare_for_cellxgene(adata: sc.AnnData,
             raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
-    clean_section(out, axis="obs", keep=keep_obs, rename=rename_obs)
+    clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
+    out.obs_names_make_unique()
 
     # ----- .var -----
-    clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+    clean_section(out, axis="var", keep=keep_var, delete=delete_var, rename=rename_var)
     out.var_names_make_unique()
 
     # ----- .X -----
+    # overwrite .X with another layer
+    if layer:
+        out.X = out.layers[layer].copy()
+
     # convert .X to sparse matrix if needed
     if not scipy.sparse.isspmatrix(out.X):
         out.X = scipy.sparse.csc_matrix(out.X)

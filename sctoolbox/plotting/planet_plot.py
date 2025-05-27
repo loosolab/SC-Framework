@@ -4,10 +4,12 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.colors import rgb2hex
 from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
 from beartype.typing import Literal
+from numpy.typing import NDArray
 
 
 #############################################################################
@@ -38,18 +40,18 @@ def _count_greater_than_threshold(group: pd.Series,
 
 
 @beartype
-def _calculate_dot_sizes(values: np.ndarray,
+def _calculate_dot_sizes(values: pd.Series | NDArray,
                          min_value: int | float,
                          max_value: int | float,
                          min_dot_size: int,
                          max_dot_size: int,
-                         use_log_scale: bool = False) -> np.ndarray:
+                         use_log_scale: bool = False) -> NDArray:
     """
     Calculate the sizes of dots for plotting.
 
     Parameters
     ----------
-    values : pd.Series | np.ndarray
+    values : pd.Series | NDArray
         A series or an array containing the values to be plotted.
     min_value : int | float
         The smallest value observed to correspond to the min_dot_size.
@@ -64,7 +66,7 @@ def _calculate_dot_sizes(values: np.ndarray,
 
     Returns
     -------
-    sizes : np.ndarray
+    sizes : NDArray
         Returns a series or an array containing the sizes for the dots depending upon the input type for values.
 
     """
@@ -355,7 +357,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,
                        ORIENTATION_LEGEND_TITLE: str = 'Genes',
                        ORIENTATION_LEGEND_CENTER_LABEL: str = 'Aggregate value',
                        orientation_labels_array: list | None = None,
-                       save: str | None = None) -> list:
+                       save: str | None = None) -> NDArray[Axes]:
     r"""
     Render the planet plot on the basis of the preprocessed data.
 
@@ -475,8 +477,8 @@ def planet_plot_render(plot_vars: pd.DataFrame,
 
     Returns
     -------
-    list
-        A list of axis objects.
+    NDArray[Axes]
+        An array of axis objects.
 
     Raises
     ------
@@ -488,8 +490,6 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        adata = sc.datasets.pbmc68k_reduced()
         selected_genes = ["MNDA", "TNFRSF4", "CD8B", "HSD17B11", "GOLGA7", "LGALS3"]
         x_col = "phase"
         y_col = "bulk_labels"
@@ -1100,4 +1100,4 @@ def planet_plot_render(plot_vars: pd.DataFrame,
     # Save figure
     _save_figure(save)
 
-    return axarr
+    return np.array(axarr)

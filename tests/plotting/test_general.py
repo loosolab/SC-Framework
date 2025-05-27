@@ -115,7 +115,7 @@ def test_clustermap_dotplot():
                                  size="n_counts", palette="viridis",
                                  title="Title", show_grid=True)
 
-    assert isinstance(axes, list)
+    assert isinstance(axes, np.ndarray)
     ax_type = type(axes[0]).__name__
     assert ax_type.startswith("Axes")
 

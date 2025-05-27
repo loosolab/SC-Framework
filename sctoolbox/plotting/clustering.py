@@ -3,10 +3,12 @@
 import numpy as np
 import scanpy as sc
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import warnings
 
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Any
+from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -24,7 +26,7 @@ def search_clustering_parameters(adata: sc.AnnData,
                                  ncols: int = 3,
                                  verbose: bool = True,
                                  save: Optional[str] = None,
-                                 **kwargs: Any) -> np.ndarray:
+                                 **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -49,7 +51,7 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : np.ndarray
+    axarr : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -135,7 +137,7 @@ def marker_gene_clustering(adata: sc.AnnData,
                            show_umap: bool = True,
                            save: Optional[str] = None,
                            figsize: Optional[Tuple[float | int, float | int]] = None,
-                           **kwargs: Any) -> list:
+                           **kwargs: Any) -> NDArray[Axes]:
     """
     Plot an overview of marker genes and clustering.
 
@@ -158,8 +160,8 @@ def marker_gene_clustering(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : list
-        List of axes objects containing the plot(s).
+    axarr : NDArray[Axes]
+        Array of axes objects containing the plot(s).
 
     Examples
     --------
@@ -184,7 +186,7 @@ def marker_gene_clustering(adata: sc.AnnData,
     else:
         figsize = (6, 6) if figsize is None else figsize
         fig, axarr = plt.subplots(1, 1, figsize=figsize)
-        axarr = [axarr]  # Make sure axarr can be indexed
+        axarr = np.array([axarr])  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
     marker_genes_dict = utils.checker.check_marker_lists(adata, marker_genes_dict)
@@ -204,4 +206,4 @@ def marker_gene_clustering(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
-    return list(axarr)
+    return axarr

@@ -12,7 +12,7 @@ import warnings
 
 import upsetplot
 import seaborn as sns
-import matplotlib
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
@@ -21,8 +21,9 @@ from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
 
 # type hint imports
-from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Iterable, Any  # , Union, List
+from beartype.typing import Tuple, Dict, Optional, Literal, Callable, Any  # , Union, List
 from beartype import beartype
+from numpy.typing import NDArray
 
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -75,7 +76,7 @@ def plot_starsolo_quality(folder: str,
                           ncol: int = 3,
                           order: Optional[list[str]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> np.ndarray:
+                          **kwargs: Any) -> NDArray[Axes]:
     """Plot quality measures from starsolo as barplots per condition.
 
     Parameters
@@ -95,7 +96,7 @@ def plot_starsolo_quality(folder: str,
 
     Returns
     -------
-    axes : np.ndarray
+    axes : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -172,7 +173,7 @@ def plot_starsolo_quality(folder: str,
 @beartype
 def plot_starsolo_UMI(folder: str,
                       ncol: int = 3,
-                      save: Optional[str] = None) -> np.ndarray:
+                      save: Optional[str] = None) -> NDArray[Axes]:
     """Plot UMI distribution for each condition in a folder.
 
     Parameters
@@ -186,7 +187,7 @@ def plot_starsolo_UMI(folder: str,
 
     Returns
     -------
-    axes : np.ndarray
+    axes : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -278,7 +279,7 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
-                    **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
+                    **kwargs: Any) -> NDArray[Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
 
@@ -303,7 +304,7 @@ def n_cells_barplot(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : Iterable[matplotlib.axes.Axes]
+    axarr : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Examples
@@ -345,7 +346,7 @@ def n_cells_barplot(adata: sc.AnnData,
         _, axarr = plt.subplots(1, 2, figsize=figsize)
     else:
         _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
-        axarr = [axarr]
+        axarr = np.array([axarr])
 
     counts_wide.plot.bar(stacked=stacked, ax=axarr[0], legend=False, **kwargs)
     axarr[0].set_title("Number of cells")
@@ -422,17 +423,6 @@ def group_correlation(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        import scanpy as sc
-        import sctoolbox.plotting as pl
-
-    .. plot::
-        :context: close-figs
-
-        adata = sc.datasets.pbmc68k_reduced()
-
-    .. plot::
-        :context: close-figs
-
         pl.qc_filter.group_correlation(adata, "phase", method="spearman", save=None)
     """
 
@@ -475,7 +465,7 @@ def group_correlation(adata: sc.AnnData,
 @beartype
 def plot_insertsize(adata: sc.AnnData,
                     barcodes: Optional[list[str]] = None,
-                    **kwargs: Any) -> matplotlib.axes.Axes:
+                    **kwargs: Any) -> Axes:
     """
     Plot insertsize distribution for barcodes in adata. Requires adata.uns["insertsize_distribution"] to be set.
 
@@ -490,7 +480,7 @@ def plot_insertsize(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axes object containing the plot.
 
     Raises
@@ -556,7 +546,7 @@ def _link_sliders(sliders: list[ipywidgets.widgets.FloatRangeSlider]) -> list[ip
 def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox | traitlets.utils.bunch.Bunch,  # after first check, checkbox is a bunch object
                     linkage_dict: dict,
                     slider_list: list,
-                    key: str):
+                    key: str) -> None:
     """
     Either link or unlink sliders depending on the new value of the checkbox.
 
