@@ -295,7 +295,15 @@ def calculate_interaction_table(adata: sc.AnnData,
 
         # add interactions to dict
         for receptor_cluster in zscores.columns:
+
+            if np.isnan(zscores.loc[receptor, receptor_cluster]):
+                continue
+
             for ligand_cluster in zscores.columns:
+
+                if np.isnan(zscores.loc[ligand, ligand_cluster]):
+                    continue
+
                 interactions["receptor_gene"].append(receptor)
                 interactions["ligand_gene"].append(ligand)
                 interactions["receptor_cluster"].append(receptor_cluster)
