@@ -307,8 +307,8 @@ def from_single_mtx(mtx: Union[str, Path],
                     variables: Optional[Union[str, Path]] = None,
                     transpose: bool = True,
                     header: Union[int, list[int], Literal['infer'], None] = None,
-                    barcode_index: int = 0,
-                    genes_index: int = 0,
+                    barcode_index: Optional[int] = 0,
+                    variables_index: Optional[int] = None,
                     delimiter: str = "\t") -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
@@ -327,7 +327,7 @@ def from_single_mtx(mtx: Union[str, Path],
         Set header parameter for reading metadata tables using pandas.read_csv.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
-    genes_index : int, default 0
+    variables_index : Optional[int], default None
         Column which contains the gene IDs.
     delimiter : str, default '\t'
         delimiter of genes and barcodes table.
@@ -356,7 +356,7 @@ def from_single_mtx(mtx: Union[str, Path],
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
 
     if variables:
-        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
+        var_csv = pd.read_csv(variables, header=header, index_col=variables_index, delimiter=delimiter)
         var_csv.index.names = ['index']
         var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
