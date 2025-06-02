@@ -270,7 +270,7 @@ def calculate_interaction_table(adata: sc.AnnData,
     zscores = cl_mean_expression.progress_apply(lambda x: pd.Series(scipy.stats.zscore(x, nan_policy='omit'), index=cl_mean_expression.columns), axis=1)
 
     # nan to 0 to interpret static genes aka all with the same expression as "inactive"
-    zscores.filna(value=0, inplace=True)
+    zscores.fillna(value=0, inplace=True)
 
     interactions = {"receptor_cluster": [],
                     "ligand_cluster": [],
