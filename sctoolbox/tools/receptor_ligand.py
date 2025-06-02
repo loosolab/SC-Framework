@@ -169,7 +169,7 @@ def calculate_interaction_table(adata: sc.AnnData,
     normalize : Optional[int], default None
         Correct clusters to given size. If None, max clustersize is used.
     weight_by_ep : Optional[bool], default True
-        Whether to weight the expression Z-Score by the expression proprotion.
+        Whether to weight the expression Z-Score by the expression proportion.
     inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
@@ -318,9 +318,6 @@ def calculate_interaction_table(adata: sc.AnnData,
     if weight_by_ep:
         interactions["receptor_score"] = interactions["receptor_score"] * (interactions["receptor_percent"] / 100)
         interactions["ligand_score"] = interactions["ligand_score"] * (interactions["ligand_percent"] / 100)
-    else:
-        interactions["receptor_score"] = interactions["receptor_score"]
-        interactions["ligand_score"] = interactions["ligand_score"]
 
     interactions["interaction_score"] = interactions["receptor_score"] + interactions["ligand_score"]
 
