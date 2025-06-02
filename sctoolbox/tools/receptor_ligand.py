@@ -1379,14 +1379,12 @@ def get_interactions(anndata: sc.AnnData,
 
     # overwrite interaction_score
     if interaction_perc:
-        interaction_score = np.percentile(table["interaction_score"], interaction_perc)
-    elif interaction_score is None:
-        interaction_score = min(table["interaction_score"]) - 1
+        interaction_score = np.nanpercentile(table["interaction_score"], interaction_perc)
 
     subset = table[
-        (table["receptor_percent"] >= min_perc)
-        & (table["ligand_percent"] >= min_perc)
-        & (table["interaction_score"] > interaction_score)
+        (True if min_perc is None else table["receptor_percent"] >= min_perc)
+        & (True if min_perc is None else table["ligand_percent"] >= min_perc)
+        & (True if interaction_score is None else table["interaction_score"] > interaction_score)
     ]
 
     if group_a and group_b:
