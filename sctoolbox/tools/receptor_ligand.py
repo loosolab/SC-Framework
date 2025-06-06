@@ -694,7 +694,7 @@ def cyclone(
     cluster_to_size.drop_duplicates(inplace=True)
 
     # get a list of the available clusters
-    avail_clusters = set(filtered["receptor_cluster"].unique()).union(set(filtered["ligand_cluster"].unique()))
+    avail_clusters = sorted(list(set(filtered["receptor_cluster"].unique()).union(set(filtered["ligand_cluster"].unique()))))
 
     # set up for colormapping
     colormap_ = matplotlib.colormaps[colormap]
