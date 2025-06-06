@@ -169,7 +169,7 @@ def calculate_interaction_table(adata: sc.AnnData,
     normalize : Optional[int], default None
         Correct clusters to given size. If None, max clustersize is used.
     weight_by_ep : Optional[bool], default True
-        Whether to weight the expression Z-Score by the expression proprotion.
+        Whether to weight the expression Z-Score by the expression proportion.
     inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
@@ -269,6 +269,9 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     zscores = cl_mean_expression.progress_apply(lambda x: pd.Series(scipy.stats.zscore(x, nan_policy='omit'), index=cl_mean_expression.columns), axis=1)
 
+    # nan to 0 to interpret static genes aka all with the same expression as "inactive"
+    zscores.fillna(value=0, inplace=True)
+
     interactions = {"receptor_cluster": [],
                     "ligand_cluster": [],
                     "receptor_gene": [],
@@ -315,9 +318,6 @@ def calculate_interaction_table(adata: sc.AnnData,
     if weight_by_ep:
         interactions["receptor_score"] = interactions["receptor_score"] * (interactions["receptor_percent"] / 100)
         interactions["ligand_score"] = interactions["ligand_score"] * (interactions["ligand_percent"] / 100)
-    else:
-        interactions["receptor_score"] = interactions["receptor_score"]
-        interactions["ligand_score"] = interactions["ligand_score"]
 
     interactions["interaction_score"] = interactions["receptor_score"] + interactions["ligand_score"]
 
@@ -694,7 +694,7 @@ def cyclone(
     cluster_to_size.drop_duplicates(inplace=True)
 
     # get a list of the available clusters
-    avail_clusters = set(filtered["receptor_cluster"].unique()).union(set(filtered["ligand_cluster"].unique()))
+    avail_clusters = sorted(list(set(filtered["receptor_cluster"].unique()).union(set(filtered["ligand_cluster"].unique()))))
 
     # set up for colormapping
     colormap_ = matplotlib.colormaps[colormap]
@@ -1376,14 +1376,12 @@ def get_interactions(anndata: sc.AnnData,
 
     # overwrite interaction_score
     if interaction_perc:
-        interaction_score = np.percentile(table["interaction_score"], interaction_perc)
-    elif interaction_score is None:
-        interaction_score = min(table["interaction_score"]) - 1
+        interaction_score = np.nanpercentile(table["interaction_score"], interaction_perc)
 
     subset = table[
-        (table["receptor_percent"] >= min_perc)
-        & (table["ligand_percent"] >= min_perc)
-        & (table["interaction_score"] > interaction_score)
+        (True if min_perc is None else table["receptor_percent"] >= min_perc)
+        & (True if min_perc is None else table["ligand_percent"] >= min_perc)
+        & (True if interaction_score is None else table["interaction_score"] > interaction_score)
     ]
 
     if group_a and group_b:
