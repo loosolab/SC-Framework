@@ -9,6 +9,7 @@
   figure_dir: "../figures/02_QC/"
   log_file: "../logs/02_log.txt"
   overwrite_log: True
+  report_dir: "../report/02_QC/"
 
 "03":
   adata_input_dir: "../adatas/"
@@ -16,6 +17,7 @@
   figure_dir: "../figures/03_batch_correction/"
   log_file: "../logs/03_log.txt"
   overwrite_log: True
+  report_dir: "../report/03_batch_correction/"
 
 "04":
   adata_input_dir: "../adatas/"
@@ -23,6 +25,7 @@
   figure_dir: "../figures/04_clustering/"
   log_file: "../logs/04_log.txt"
   overwrite_log: True
+  report_dir: "../report/04_clustering/"
 
 "0A1":
   adata_input_dir: "../adatas/"
@@ -31,6 +34,7 @@
   table_dir: "../tables/0A1_receptor_ligand/"
   log_file: "../logs/0A1_log.txt"
   overwrite_log: True
+  report_dir: "../report/0A1_receptor_ligand/"
 
 "0A2":
   adata_input_dir: "../adatas/"
@@ -39,6 +43,7 @@
   table_dir: "../tables/0A2_receptor_ligand_differences/"
   log_file: "../logs/0A2_log.txt"
   overwrite_log: True
+  report_dir: "../report/0A2_receptor_ligand_differences/"
 
 "0B":
   adata_input_dir: "../adatas/"
@@ -46,3 +51,4 @@
   figure_dir: "../figures/0B_velocity_analysis/"
   log_file: "../logs/0B_velocity_log.txt"
   overwrite_log: True
+  report_dir: "../report/0B_velocity/"
