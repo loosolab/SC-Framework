@@ -423,6 +423,7 @@ def predict_sex(adata: sc.AnnData,
                 threshold: float = 0.3,
                 plot: bool = True,
                 save: Optional[str] = None,
+                report: Optional[str] = None,
                 **kwargs: Any) -> None:
     """
     Predict sex based on expression of Xist (or another gene).
@@ -443,6 +444,8 @@ def predict_sex(adata: sc.AnnData,
         Whether to plot the distribution of gene expression per group.
     save : Optional[str], default None
         If provided, the plot will be saved to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments are passed to scanpy.pl.violin.
 
@@ -533,6 +536,10 @@ def predict_sex(adata: sc.AnnData,
         axarr[1].set_title("Prediction of female groups")
 
         _save_figure(save)
+
+        # report
+        if settings.report_dir and report:
+            _save_figure(report, report=True)
 
 
 ###############################################################################
@@ -777,7 +784,8 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]],
+                        report: Optional[str] = None) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
@@ -785,6 +793,8 @@ def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | 
     ----------
     threshold_dict : dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]
         Dictionary with thresholds.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -814,6 +824,10 @@ def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | 
 
         # Remove duplicate rows
         df.drop_duplicates(inplace=True)
+
+    # report
+    if settings.report_dir and report:
+        df.to_csv(Path(settings.report_dir) / report, sep="\t", index=False)
 
     return df
 
@@ -1090,7 +1104,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
                         thresholds: Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]],
                         which: Literal["obs", "var"] = "obs",
                         inplace: bool = True,
-                        overwrite: bool = False) -> Optional[sc.AnnData]:
+                        overwrite: bool = False,
+                        report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Apply QC thresholds to anndata object.
 
@@ -1106,6 +1121,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
         Change adata inplace or return a changed copy.
     overwrite : bool, default False
         Set to overwrite previously applied filters.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1162,7 +1179,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
                           inplace=inplace,
                           name="threshold",
                           value=thresholds,
-                          overwrite=overwrite)
+                          overwrite=overwrite,
+                          report=report)
 
 
 ###############################################################################
@@ -1177,7 +1195,8 @@ def _filter_object(adata: sc.AnnData,
                    inplace: bool = True,
                    name: Optional[str | list[str]] = None,
                    value: Optional[Dict] = None,
-                   overwrite: bool = False
+                   overwrite: bool = False,
+                   report: Optional[str] = None
                    ) -> Optional[sc.AnnData]:
     """
     Filter an adata object based on a filter.
@@ -1209,6 +1228,8 @@ def _filter_object(adata: sc.AnnData,
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Raises
     ------
@@ -1292,7 +1313,13 @@ def _filter_object(adata: sc.AnnData,
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    logger.info(f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after}).")
+    msg = f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after})."
+    logger.info(msg)
+
+    # report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report, "w") as f:
+            f.write(msg)
 
     # store thresholds and statistics
     if name:
@@ -1315,7 +1342,9 @@ def filter_cells(adata: sc.AnnData,
                  inplace: bool = True,
                  name: Optional[str | list[str]] = None,
                  value: Optional[Dict] = None,
-                 overwrite: bool = False) -> Optional[sc.AnnData]:
+                 overwrite: bool = False,
+                 report: Optional[str] = None
+                 ) -> Optional[sc.AnnData]:
     """
     Remove cells from the AnnData object.
 
@@ -1338,6 +1367,8 @@ def filter_cells(adata: sc.AnnData,
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1345,7 +1376,7 @@ def filter_cells(adata: sc.AnnData,
         If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
+    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite, report=report)
 
 
 @deco.log_anndata
@@ -1356,7 +1387,8 @@ def filter_genes(adata: sc.AnnData,
                  inplace: bool = True,
                  name: Optional[str | list[str]] = None,
                  value: Optional[Dict] = None,
-                 overwrite: bool = False) -> Optional[sc.AnnData]:
+                 overwrite: bool = False,
+                 report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Remove genes from adata object.
 
@@ -1379,6 +1411,8 @@ def filter_genes(adata: sc.AnnData,
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1386,7 +1420,7 @@ def filter_genes(adata: sc.AnnData,
         If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
+    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite, report=report)
 
 
 @deco.log_anndata
@@ -1420,6 +1454,8 @@ def denoise_data(adata: sc.AnnData,
         Enable scAR status messages.
     overwrite : bool, default False
         Set to perform denoising on top of existing denoising.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1484,6 +1520,10 @@ def denoise_data(adata: sc.AnnData,
     )
 
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     end_time = time.time() - start_time
 

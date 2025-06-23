@@ -18,6 +18,7 @@ from beartype.typing import Optional, Tuple, Any, Literal
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
+from sctoolbox.plotting.general import _save_figure
 logger = settings.logger
 
 # path to the internal gene lists (gender, cellcycle, mito, ...)
@@ -99,7 +100,10 @@ def label_genes(adata: sc.AnnData,
                 r_regex: Optional[str] = "^rps|rpl",
                 # gender args
                 g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
-                g_regex: Optional[str] = None) -> list[str]:
+                g_regex: Optional[str] = None,
+                # report args
+                report: Optional[str] = None
+                ) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
 
@@ -127,6 +131,8 @@ def label_genes(adata: sc.AnnData,
         Either a list of gender genes, a file containing one gender gene name per line or 'internal' to use an sctoolbox provided list.
     g_regex : Optional[str]
         A regex to identify gender genes if 'g_genes' is not available or failing.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Raises
     ------
@@ -217,6 +223,10 @@ def label_genes(adata: sc.AnnData,
                 ha="right",
                 bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
                 )
+
+    # report
+    if settings.report_dir and report:
+       _save_figure(report, report=True)
 
     return var_cols
 

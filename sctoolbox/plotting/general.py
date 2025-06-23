@@ -11,6 +11,7 @@ from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sciclust
 import seaborn
+from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Optional, Literal, Tuple, Union, Any
@@ -27,6 +28,7 @@ logger = settings.logger
 @beartype
 def _save_figure(path: Optional[str],
                  dpi: int = 600,
+                 report: bool = False,
                  **kwargs: Any) -> None:
     """Save the current figure to a file.
 
@@ -38,6 +40,8 @@ def _save_figure(path: Optional[str],
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
+    report : bool, default False
+        Set true to silently add plot to sctoolbox.settings.report_dir instead of 'figure_dir' + 'figure_prefix' (see above).
     **kwargs : Any
         Additional arguments to pass to matplotlib.pyplot.savefig.
     """
@@ -48,8 +52,12 @@ def _save_figure(path: Optional[str],
     # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
     # This moves the checking to the _save_figure function rather than each plotting function.
     if path is not None:
-        output_path = settings.full_figure_prefix + path
-        logger.info(f"Saving figure to {output_path}")
+        if not report:
+            output_path = settings.full_figure_prefix + path
+            logger.info(f"Saving figure to {output_path}")
+        else:
+            output_path = Path(settings.report_dir) / path
+
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
 
 
@@ -784,6 +792,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
+                     report: Optional[str] = None,
                      **kwargs: Any) -> NDArray[Axes]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
@@ -799,6 +808,8 @@ def pairwise_scatter(table: pd.DataFrame,
         Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
     save : Optional[str], default None
         If given, the figure will be saved to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments to pass to Axes.scatter.
 
@@ -907,5 +918,9 @@ def pairwise_scatter(table: pd.DataFrame,
 
     # Save plot
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return axarr
