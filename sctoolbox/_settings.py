@@ -36,6 +36,8 @@ class SctoolboxConfig(object):
         Directory to write adata objects to, default "".
     adata_output_prefix : str
         Prefix for all adata objects to write (within adata_output_dir), default "".
+    report_dir : str
+        Directory to collect everything for the final report, default "" to disable.
     threads : int
         Default number of threads to use when multiprocessing is available, default 4.
     create_dirs : bool
@@ -59,6 +61,7 @@ class SctoolboxConfig(object):
                  adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_dir)
                  adata_output_dir: str = "",     # Directory to write adata objects to
                  adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_dir)
+                 report_dir: str = "",           # Directory to collect everything for the final report.
                  threads: int = 4,               # default number of threads to use when multiprocessing is available
                  create_dirs: bool = True,       # create output directories if they do not exist
                  verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
@@ -109,7 +112,7 @@ class SctoolboxConfig(object):
             self._validate_string(value)
 
         # Additionally check specific attributes for validity
-        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir"]:
+        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir", "report_dir"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._create_dir(value)
 
