@@ -170,7 +170,9 @@ rna_analysis/adatas/
 rna_analysis/figures/
 rna_analysis/logs/
 rna_analysis/tables/
+rna_analysis/report/
 atac_analysis/adatas/
 atac_analysis/figures/
 atac_analysis/logs/
 atac_analysis/tables/
+atac_analysis/report/
