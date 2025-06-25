@@ -6,6 +6,9 @@
 - Fix main title in receptor-ligand network plot (#358)
 - load_h5ad(): warn if adata.raw is found. (#352)
 - receptor-ligand: nan zscore to 0 (#302)
+- pptreport integration:
+    - 02-RNA
+    - 03-RNA
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
