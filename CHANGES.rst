@@ -15,6 +15,7 @@ Changes to notebooks
 - General: prepare_for_cellxgene: Add delete column option for .obs and .var
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
+- add report output to clustering notebook 04
 
 0.12.0 (19-12-24)
 -----------------
