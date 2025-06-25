@@ -266,8 +266,7 @@ def plot_embedding(adata: sc.AnnData,
                    square: bool = True,
                    save: Optional[str] = None,
                    report: Optional[str] = None,
-                   **kwargs,
-                   ) -> NDArray[Axes]:
+                   **kwargs) -> NDArray[Axes]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -1197,7 +1196,7 @@ def plot_group_embeddings(adata: sc.AnnData,
     # report
     if settings.report_dir and report:
         _save_figure(report, report=True)
-        
+
     return axarr
 
 
