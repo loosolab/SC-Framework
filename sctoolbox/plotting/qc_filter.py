@@ -279,6 +279,7 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
+                    report: Optional[str] = None,
                     **kwargs: Any) -> NDArray[Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
@@ -299,6 +300,8 @@ def n_cells_barplot(adata: sc.AnnData,
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
@@ -386,6 +389,11 @@ def n_cells_barplot(adata: sc.AnnData,
         ax.spines['top'].set_visible(False)
 
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+       _save_figure(report, report=True)
+
 
     return axarr
 
