@@ -1582,6 +1582,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      max_clusters: int = 20,
                      output: Optional[str] = None,
                      dpi: int = 300,
+                     report: Optional[str] = None,
                      **kwargs: Any) -> NDArray[Axes]:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
@@ -1609,6 +1610,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         Path to plot output file.
     dpi : int, default 300
         Dots per inch for output
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.pl.umap`, :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
@@ -1811,6 +1814,10 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     # save
     _save_figure(output, dpi=dpi)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return axs
 
 
@@ -1829,7 +1836,8 @@ def plot_pca_variance(adata: sc.AnnData,
                       ax: Optional[Axes] = None,
                       save: Optional[str] = None,
                       sel_col: str = "grey",
-                      om_col: str = "lightgrey"
+                      om_col: str = "lightgrey",
+                      report: Optional[str] = None,
                       ) -> Axes:
     """Plot the pca variance explained by each component as a barplot.
 
@@ -1864,6 +1872,8 @@ def plot_pca_variance(adata: sc.AnnData,
         Bar color of selected bars.
     om_col : str, default "lightgrey"
         Bar color of omitted bars.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -2024,6 +2034,10 @@ def plot_pca_variance(adata: sc.AnnData,
 
     # Save figure
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return ax
 
