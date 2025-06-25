@@ -124,7 +124,7 @@ setup(
         'packaging',
         'throttler',
         'upsetplot',
-         # 'pptreport'
+        'pptreport'
     ],
     include_package_data=True,
     extras_require=extras_require
