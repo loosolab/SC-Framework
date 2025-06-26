@@ -32,7 +32,7 @@ from sctoolbox._settings import settings
 
 from sctoolbox.utils.adata import add_uns_info, in_uns, get_uns
 from sctoolbox.utils.bioutils import pseudobulk_table
-
+from sctoolbox.plotting.general import _save_figure
 
 logger = settings.logger
 
@@ -572,7 +572,8 @@ def cyclone(
     gene_amount: int = 5,
     figsize: Tuple[int | float, int | float] = (10, 10),
     dpi: int | float = 100,
-    save: Optional[str] = None
+    save: Optional[str] = None,
+    report: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
     Generate network graph of interactions between clusters. See the hairball plot as an alternative.
@@ -613,6 +614,8 @@ def cyclone(
         The resolution of the figure in dots-per-inch.
     save : str, default None
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -877,6 +880,10 @@ def cyclone(
     if save:
         fig.savefig(f"{settings.figure_dir}/{save}", dpi=dpi)
 
+    # report
+    if settings.report_dir and report:
+       _save_figure(report, report=True)
+
     return fig
 
 
@@ -948,6 +955,7 @@ def interaction_progress(datalist: list[sc.AnnData],
                          ligand_cluster: str,
                          figsize: Tuple[int | float, int | float] = (4, 4),
                          dpi: int = 100,
+                         report: Optional[str] = None,
                          save: Optional[str] = None) -> matplotlib.axes.Axes:
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
@@ -974,7 +982,8 @@ def interaction_progress(datalist: list[sc.AnnData],
         Dots per inch.
     save : Optional[str], default None
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
-
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     Returns
     -------
     matplotlib.axes.Axes
@@ -1027,6 +1036,10 @@ def interaction_progress(datalist: list[sc.AnnData],
     if save:
         plt.savefig(f"{settings.figure_dir}/{save}")
 
+    # report
+    if settings.report_dir and report:
+       _save_figure(report, report=True)
+       
     return plot
 
 
@@ -1059,6 +1072,7 @@ def connectionPlot(adata: sc.AnnData,
                    line_colors: Optional[str] = "rainbow",
                    dot_colors: str = "flare",
                    xlabel_order: Optional[list[str]] = None,
+                   report: Optional[str] = None, 
                    alpha_range: Optional[Tuple[int | float, int | float]] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
@@ -1313,6 +1327,10 @@ def connectionPlot(adata: sc.AnnData,
 
     if save:
         plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')
+    
+    # report
+    if settings.report_dir and report:
+       _save_figure(report, report=True)
 
     return axs
 
