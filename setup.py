@@ -105,7 +105,7 @@ setup(
         'qnorm',
         'plotly',
         'scipy>=1.14',
-        'statsmodels @ git+https://github.com/statsmodels/statsmodels', # remove once statsmodels 0.15 is released
+        'statsmodels @ git+https://github.com/statsmodels/statsmodels',  # remove once statsmodels 0.15 is released
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
