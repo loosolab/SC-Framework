@@ -12,8 +12,8 @@ RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 RUN chmod +x scripts/bedGraphToBigWig 
 
 # Clear the local repository of retrieved package files
-RUN apt-get update --assume-yes && \
-    apt-get clean
+RUN apt-get clean && \
+    apt-get update --assume-yes
 
 # install Fortran compiler 
 RUN apt-get install --assume-yes gfortran
