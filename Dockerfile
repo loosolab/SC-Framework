@@ -11,10 +11,11 @@ RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
-# Clear the local repository of retrieved package files
-RUN rm -rf /var/lib/apt/lists/* && \
-    apt-get clean && \
-    apt-get update --assume-yes
+# Install keyring so repos can be verified
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      ubuntu-keyring gnupg ca-certificates wget && \
+    rm -rf /var/lib/apt/lists/*
 
 # install Fortran compiler 
 RUN apt-get install --assume-yes gfortran
