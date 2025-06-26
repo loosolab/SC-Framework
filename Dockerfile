@@ -1,3 +1,5 @@
+FROM ubuntu:noble AS keyring
+
 FROM condaforge/mambaforge
 
 LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
@@ -5,18 +7,18 @@ LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 COPY . /home/sc_framework/
 COPY scripts /scripts/
 
+# Copy all of Ubuntu’s trusted keys into your image
+COPY --from=keyring /etc/apt/trusted.gpg.d/ /etc/apt/trusted.gpg.d/
+
 # Set the time zone (before installing any packages)
 RUN echo 'Europe/Berlin' > apt-get install -y tzdata
 
 # make scripts executeable
 RUN chmod +x scripts/bedGraphToBigWig 
 
-# Install keyring so repos can be verified
-RUN apt-get clean && \
-    rm -r /var/lib/apt/lists/* &&\
-    mkdir -p /var/lib/apt/lists/partial &&\
-    apt-get clean &&\
-    apt-get update
+# Clear the local repository of retrieved package files
+RUN apt-get update --assume-yes && \
+    apt-get clean
 
 # install Fortran compiler 
 RUN apt-get install --assume-yes gfortran
