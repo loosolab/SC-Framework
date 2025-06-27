@@ -25,8 +25,7 @@ def _make_adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
+    adata = sc.datasets.pbmc3k_processed()
 
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
