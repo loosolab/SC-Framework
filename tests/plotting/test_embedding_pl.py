@@ -143,6 +143,7 @@ def test_embedding(adata, style, kwargs):
     if style != "hexbin":
         colors.append("clustering")  # categorical obs variable; only available for dots/density
 
+# call plot_embedding
     axes_list = pl.plot_embedding(adata, color=colors, style=style, **kwargs)
 
     # Assert number of plots
