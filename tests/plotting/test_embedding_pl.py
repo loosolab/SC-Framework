@@ -42,7 +42,7 @@ def _make_adata():
     # sc.pp.normalize_total(adata, target_sum=None)
     # sc.pp.log1p(adata)
 
-    # sc.tl.umap(adata, n_components=3)
+    sc.tl.umap(adata, n_components=3)  # to have more than two components available
     # sc.tl.tsne(adata)
     # sc.tl.pca(adata)
     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
