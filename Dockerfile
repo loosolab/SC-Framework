@@ -1,14 +1,9 @@
-FROM ubuntu:noble AS keyring
-
 FROM condaforge/mambaforge
 
 LABEL maintainer="Jan Detleffsen <jan.detleffsen@mpi-bn.mpg.de>"
 
 COPY . /home/sc_framework/
 COPY scripts /scripts/
-
-# Copy all of Ubuntu’s trusted keys into your image
-COPY --from=keyring /etc/apt/trusted.gpg.d/ /etc/apt/trusted.gpg.d/
 
 # Set the time zone (before installing any packages)
 RUN echo 'Europe/Berlin' > apt-get install -y tzdata
