@@ -329,11 +329,11 @@ def from_single_mtx(mtx: Union[str, Path],
     barcode_index : int, default 0
         Column which contains the cell barcodes.
     var_index : Optional[int], default 0
-        Column which contains the gene IDs.
+        Column containing the variable IDs e.g. gene IDs or peak IDs.
     delimiter : str, default '\t'
-        delimiter of genes and barcodes table.
+        delimiter of the variable and barcode tables.
     comment_flag : str, default '#'
-        Comment flag for the genes and barcodes table.
+        Comment flag for the variable and barcode tables. Lines starting with this character will be ignored.
 
     Returns
     -------
