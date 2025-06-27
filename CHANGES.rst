@@ -18,6 +18,8 @@ Changes to notebooks
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
 - General: annotation: add min_hits parameter
+- RNA/ ATAC 03: allow to choose the number of computed PCs
+- RNA/ ATAC 01: allow to choose batch name
 
 0.12.0 (19-12-24)
 -----------------
