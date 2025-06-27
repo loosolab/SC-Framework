@@ -2,6 +2,11 @@
 --------------------
 - Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
 - set scanpy>=1.11 to fix run_rank_genes error (#331)
+- GSEA: Revise gsea analysis: Bugfixes, save results into adata, rework plots (#345)
+- Add column exists check to bioutils.pseudobulk_table (#356)
+- Fix main title in receptor-ligand network plot (#358)
+- load_h5ad(): warn if adata.raw is found. (#352)
+- receptor-ligand: nan zscore to 0 (#302)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -10,6 +15,8 @@ Changes to notebooks
 - General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
 - General: prepare_for_cellxgene: Add delete column option for .obs and .var
 - RNA 02 QC: fixed bug causing initial var thresholds to be ignored
+- General: pseudotime_analysis: color dendrogram for clustering instead of segment
+- add layer option to notebooks that utilize the matrix (#342)
 
 0.12.0 (19-12-24)
 -----------------
