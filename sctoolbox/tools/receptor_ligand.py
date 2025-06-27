@@ -882,7 +882,7 @@ def cyclone(
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
 
     return fig
 
@@ -955,8 +955,8 @@ def interaction_progress(datalist: list[sc.AnnData],
                          ligand_cluster: str,
                          figsize: Tuple[int | float, int | float] = (4, 4),
                          dpi: int = 100,
-                         report: Optional[str] = None,
-                         save: Optional[str] = None) -> matplotlib.axes.Axes:
+                         save: Optional[str] = None,
+                         report: Optional[str] = None) -> matplotlib.axes.Axes:
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
 
@@ -984,6 +984,7 @@ def interaction_progress(datalist: list[sc.AnnData],
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+
     Returns
     -------
     matplotlib.axes.Axes
@@ -1038,8 +1039,8 @@ def interaction_progress(datalist: list[sc.AnnData],
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
-       
+        _save_figure(report, report=True)
+
     return plot
 
 
@@ -1072,8 +1073,8 @@ def connectionPlot(adata: sc.AnnData,
                    line_colors: Optional[str] = "rainbow",
                    dot_colors: str = "flare",
                    xlabel_order: Optional[list[str]] = None,
-                   report: Optional[str] = None, 
-                   alpha_range: Optional[Tuple[int | float, int | float]] = None) -> npt.ArrayLike:
+                   alpha_range: Optional[Tuple[int | float, int | float]] = None,
+                   report: Optional[str] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -1130,6 +1131,8 @@ def connectionPlot(adata: sc.AnnData,
     alpha_range : Optional[Tuple[int | float, int | float]], default None
         Sets the minimum and maximum value for the `connection_alpha` legend. Values outside this range will be set to the min or max value.
         Minimum is mapped to transparent (alpha=0) and maximum to opaque (alpha=1). Will use the min and max values of the data by default (None).
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1327,10 +1330,10 @@ def connectionPlot(adata: sc.AnnData,
 
     if save:
         plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')
-    
+
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
 
     return axs
 

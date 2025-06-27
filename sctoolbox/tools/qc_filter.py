@@ -1432,7 +1432,8 @@ def denoise_data(adata: sc.AnnData,
                  prob: float = 0.995,
                  save: Optional[str] = None,
                  verbose: bool = False,
-                 overwrite: bool = False) -> sc.AnnData:
+                 overwrite: bool = False,
+                 report: Optional[str] = None) -> sc.AnnData:
     """
     Use scAR and the raw feature counts to remove ambient RNA.
 

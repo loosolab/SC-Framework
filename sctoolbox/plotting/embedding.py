@@ -295,10 +295,10 @@ def plot_embedding(adata: sc.AnnData,
         Whether to make the plot square.
     save : Optional[str], default None
         Filename to save the figure.
-    **kwargs : arguments
-        Additional keyword arguments are passed to :func:`scanpy.pl.plot_embedding`.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    **kwargs : arguments
+        Additional keyword arguments are passed to :func:`scanpy.pl.plot_embedding`.
 
     Returns
     -------
@@ -611,7 +611,7 @@ def plot_embedding(adata: sc.AnnData,
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
 
     return np.array(axarr)
 
