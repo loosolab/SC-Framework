@@ -42,7 +42,8 @@ def normalize_adata(adata: sc.AnnData,
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
                     target_sum: Optional[int] = None,
-                    keep_layer: Optional[str] = "raw") -> Union[dict[str, sc.AnnData], sc.AnnData]:
+                    keep_layer: Optional[str] = "raw",
+                    n_comps: int = 50) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -62,6 +63,8 @@ def normalize_adata(adata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
     keep_layer : Optional[str], default "raw"
         Will create a copy of the .X matrix with the given name before applying normalization.
+    n_comps : int, default 50
+        The number of components to calculate.
 
     Returns
     -------
@@ -76,7 +79,8 @@ def normalize_adata(adata: sc.AnnData,
                                         exclude_highly_expressed=exclude_highly_expressed,
                                         use_highly_variable=use_highly_variable,
                                         target_sum=target_sum,
-                                        keep_layer=keep_layer)
+                                        keep_layer=keep_layer,
+                                        n_comps=n_comps)
 
     elif isinstance(method, list):
         adatas = {}
@@ -87,7 +91,8 @@ def normalize_adata(adata: sc.AnnData,
                                                           exclude_highly_expressed=exclude_highly_expressed,
                                                           use_highly_variable=use_highly_variable,
                                                           target_sum=target_sum,
-                                                          keep_layer=keep_layer)
+                                                          keep_layer=keep_layer,
+                                                          n_comps=n_comps)
 
         return adatas
 
@@ -100,7 +105,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
                              use_highly_variable: bool = False,
                              target_sum: Optional[int] = None,
                              inplace: bool = False,
-                             keep_layer: Optional[str] = "raw") -> Optional[sc.AnnData]:
+                             keep_layer: Optional[str] = "raw",
+                             n_comps: int = 50) -> Optional[sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -120,6 +126,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         If True, change the anndata object inplace. Otherwise return changed anndata object.
     keep_layer : Optional[str], default "raw"
         Will create a copy of the .X matrix with the given name before applying normalization.
+    n_comps : int, default 50
+        The number of components to calculate.
 
     Returns
     -------
@@ -139,12 +147,12 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         logger.info('Performing total normalization and PCA...')
         sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
         sc.pp.log1p(adata)
-        sc.pp.pca(adata, mask_var="highly_variable" if use_highly_variable else None)
+        sc.pp.pca(adata, mask_var="highly_variable" if use_highly_variable else None, n_comps=n_comps)
 
     elif method == "tfidf":
         logger.info('Performing TFIDF and LSI...')
         tfidf(adata, inplace=True)
-        lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
+        lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
 
     if not inplace:
         return adata
