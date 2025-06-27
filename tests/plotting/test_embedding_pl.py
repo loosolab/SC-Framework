@@ -322,7 +322,7 @@ def test_get_3d_dotsize(n, res):
     assert pl._get_3d_dotsize(int(n)) == res
 
 
-@pytest.mark.parametrize("color", ["ENSMUSG00000102693", "clustering", "qc_float"])
+@pytest.mark.parametrize("color", ["C1orf86", "clustering", "qc_float"])
 def test_plot_3D_UMAP(adata, color):
     """Test if 3d plot is written to html."""
 
@@ -340,8 +340,8 @@ def test_invalid_color_plot_3D_UMAP(adata):
         pl.plot_3D_UMAP(adata, color="invalid", save="3D_test")
 
 
-@pytest.mark.parametrize("marker", ["ENSMUSG00000103377",
-                                    ["ENSMUSG00000103377", 'ENSMUSG00000104428']])
+@pytest.mark.parametrize("marker", ["TNFRSF1B",
+                                    ["TNFRSF1B", 'PRDM2']])
 def test_umap_marker_overview(adata, marker):
     """Test umap_marker_overview."""
     axes_list = pl.umap_marker_overview(adata, marker)
