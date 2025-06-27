@@ -394,7 +394,6 @@ def n_cells_barplot(adata: sc.AnnData,
     if settings.report_dir and report:
         _save_figure(report, report=True)
 
-
     return axarr
 
 
