@@ -26,6 +26,7 @@ def _make_adata():
     np.random.seed(1)  # set seed for reproducibility
 
     adata = sc.datasets.pbmc3k_processed()
+    adata.raw = None
 
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
@@ -38,11 +39,11 @@ def _make_adata():
     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
-    sc.pp.normalize_total(adata, target_sum=None)
-    sc.pp.log1p(adata)
+    # sc.pp.normalize_total(adata, target_sum=None)
+    # sc.pp.log1p(adata)
 
-    sc.tl.umap(adata, n_components=3)
-    sc.tl.tsne(adata)
+    # sc.tl.umap(adata, n_components=3)
+    # sc.tl.tsne(adata)
     # sc.tl.pca(adata)
     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
     # sc.tl.dendrogram(adata, groupby='clustering')
