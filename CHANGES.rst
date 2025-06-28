@@ -1,6 +1,7 @@
 0.13.0 (in progress)
 --------------------
 - Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
+- Add ability to use a peaks BED file to assemble var of ATAC-data (#346)
 - set scanpy>=1.11 to fix run_rank_genes error (#331)
 - GSEA: Revise gsea analysis: Bugfixes, save results into adata, rework plots (#345)
 - Add column exists check to bioutils.pseudobulk_table (#356)
