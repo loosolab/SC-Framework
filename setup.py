@@ -17,7 +17,7 @@ pre_deps = [
 ]
 
 # get a clean bash path (not altered by the pip build process)
-# Pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
+# pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
 # This is circumvented by installing the pre-dependencies globally. Which is similar to doing "pip install <pre-deps>" before "pip install sctoolbox".
 # TODO only works on Linux based systems
 clean_path = subprocess.check_output(["echo $PATH"], shell=True).decode("utf-8").strip()
