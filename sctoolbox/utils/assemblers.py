@@ -310,8 +310,9 @@ def from_single_mtx(mtx: Union[str, Path],
                     transpose: bool = True,
                     header: Union[int, list[int], Literal['infer'], None] = None,
                     barcode_index: int = 0,
-                    genes_index: int = 0,
-                    delimiter: str = "\t") -> sc.AnnData:
+                    var_index: Optional[int] = 0,
+                    delimiter: str = "\t",
+                    comment_flag: str = '#') -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -329,10 +330,12 @@ def from_single_mtx(mtx: Union[str, Path],
         Set header parameter for reading metadata tables using pandas.read_csv.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
-    genes_index : int, default 0
-        Column which contains the gene IDs.
+    var_index : Optional[int], default 0
+        Column containing the variable IDs e.g. gene IDs or peak IDs.
     delimiter : str, default '\t'
-        delimiter of genes and barcodes table.
+        delimiter of the variable and barcode tables.
+    comment_flag : str, default '#'
+        Comment flag for the variable and barcode tables. Lines starting with this character will be ignored.
 
     Returns
     -------
@@ -353,12 +356,13 @@ def from_single_mtx(mtx: Union[str, Path],
         adata = adata.transpose()
 
     # Read in gene and cell annotation
-    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
+    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter, comment=comment_flag)
     barcode_csv.index.names = ['index']
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
 
     if variables:
-        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
+        # Read in var table
+        var_csv = pd.read_csv(variables, header=header, index_col=var_index, delimiter=delimiter, comment=comment_flag)
         var_csv.index.names = ['index']
         var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
