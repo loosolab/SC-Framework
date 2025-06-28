@@ -41,7 +41,7 @@ def normalize_adata(adata: sc.AnnData,
                     method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
-                    target_sum: Optional[int] = None,
+                    target_sum: Optional[float] = None,
                     keep_layer: Optional[str] = "raw",
                     n_comps: int = 50) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
@@ -59,7 +59,7 @@ def normalize_adata(adata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
     use_highly_variable : bool, default False
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
-    target_sum : Optional[int], default None
+    target_sum : Optional[float], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
     keep_layer : Optional[str], default "raw"
         Will create a copy of the .X matrix with the given name before applying normalization.
@@ -103,7 +103,7 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
                              method: Literal["total", "tfidf"],
                              exclude_highly_expressed: bool = True,
                              use_highly_variable: bool = False,
-                             target_sum: Optional[int] = None,
+                             target_sum: Optional[float] = None,
                              inplace: bool = False,
                              keep_layer: Optional[str] = "raw",
                              n_comps: int = 50) -> Optional[sc.AnnData]:
@@ -120,7 +120,7 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
     use_highly_variable : bool, default False
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
-    target_sum : Optional[int], default None
+    target_sum : Optional[float], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
     inplace : bool, default False
         If True, change the anndata object inplace. Otherwise return changed anndata object.
