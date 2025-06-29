@@ -1,5 +1,8 @@
 0.13.0 (in progress)
---------------------
+-----------------
+- predict_cell_cycle: implemented "gene_column" parameter
+- restrict the maximum size of a figure (2^16 pixle)
+- from_h5ad: expose concadata "label" parameter
 - Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
 - Add ability to use a peaks BED file to assemble var of ATAC-data (#346)
 - set scanpy>=1.11 to fix run_rank_genes error (#331)
@@ -19,6 +22,9 @@ Changes to notebooks
 - RNA 02 QC: fixed bug causing initial var thresholds to be ignored
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
+- General: annotation: add min_hits parameter
+- RNA/ ATAC 03: allow to choose the number of computed PCs
+- RNA/ ATAC 01: allow to choose batch name
 
 0.12.0 (19-12-24)
 -----------------

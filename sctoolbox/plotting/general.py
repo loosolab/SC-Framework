@@ -27,6 +27,7 @@ logger = settings.logger
 @beartype
 def _save_figure(path: Optional[str],
                  dpi: int = 600,
+                 max_pixle: int = 2**16,
                  **kwargs: Any) -> None:
     """Save the current figure to a file.
 
@@ -38,6 +39,9 @@ def _save_figure(path: Optional[str],
         The lack of extension indicates the figure will be saved as .png.
     dpi : int, default 600
         Dots per inch. Higher value increases resolution.
+    max_pixle : int, default 2**16
+        The maximum of pixles a figure can have in each direction. Figures exceeding this value will be resized to this maximum and a warning will be shown.
+        2**16 is the maximum the jpeg-format can handle.
     **kwargs : Any
         Additional arguments to pass to matplotlib.pyplot.savefig.
     """
@@ -48,6 +52,19 @@ def _save_figure(path: Optional[str],
     # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
     # This moves the checking to the _save_figure function rather than each plotting function.
     if path is not None:
+        # calculate the figure dimensions
+        fig = plt.gcf()  # get current figure
+        w, h = (int(s * dpi) for s in fig.get_size_inches())
+
+        if w > max_pixle or h > max_pixle:
+            warnings.warn(f"Image size of {w}x{h} pixels is too large. It must be less than {max_pixle} in each direction. Shrinking image...")
+
+            if w > max_pixle:
+                w = max_pixle - 1
+            if h > max_pixle:
+                h = max_pixle - 1
+            fig.set_size_inches(w / dpi, h / dpi)
+
         output_path = settings.full_figure_prefix + path
         logger.info(f"Saving figure to {output_path}")
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
