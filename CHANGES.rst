@@ -21,6 +21,8 @@ Changes to notebooks
 - pptreport integration:
     - 02-RNA
     - 03-RNA
+    - 04-RNA
+    - 0A1-RNA receptor-ligand
 
 0.12.0 (19-12-24)
 -----------------

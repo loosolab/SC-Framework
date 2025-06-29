@@ -1103,6 +1103,7 @@ def plot_group_embeddings(adata: sc.AnnData,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
                           save: Optional[str] = None,
+                          report: Optional[str] = None,
                           **kwargs: Any) -> NDArray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
@@ -1122,6 +1123,8 @@ def plot_group_embeddings(adata: sc.AnnData,
         Number of columns in the figure.
     save : Optional[str], default None
         Path to save the figure.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.pl.umap` or :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
@@ -1189,6 +1192,10 @@ def plot_group_embeddings(adata: sc.AnnData,
 
     # Save figure
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return axarr
 
