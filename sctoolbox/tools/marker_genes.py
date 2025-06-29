@@ -226,7 +226,7 @@ def label_genes(adata: sc.AnnData,
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
 
     return var_cols
 

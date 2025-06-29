@@ -17,7 +17,7 @@ pre_deps = [
 ]
 
 # get a clean bash path (not altered by the pip build process)
-# Pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
+# pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
 # This is circumvented by installing the pre-dependencies globally. Which is similar to doing "pip install <pre-deps>" before "pip install sctoolbox".
 # TODO only works on Linux based systems
 clean_path = subprocess.check_output(["echo $PATH"], shell=True).decode("utf-8").strip()
@@ -97,7 +97,7 @@ setup(
         'pysam',
         'matplotlib',
         'matplotlib_venn',
-        'scanpy[louvain,leiden]>=1.10.2',  # 'colorbar_loc' not available before 1.9; also install community detection (louvain & leiden)
+        'scanpy[louvain,leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
@@ -105,7 +105,7 @@ setup(
         'qnorm',
         'plotly',
         'scipy>=1.14',
-        'statsmodels',
+        'statsmodels @ git+https://github.com/statsmodels/statsmodels',  # remove once statsmodels 0.15 is released
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
@@ -124,7 +124,7 @@ setup(
         'packaging',
         'throttler',
         'upsetplot',
-        #'pptreport'
+        'pptreport'
     ],
     include_package_data=True,
     extras_require=extras_require
