@@ -18,7 +18,11 @@ Changes to notebooks
 - RNA 02 QC: fixed bug causing initial var thresholds to be ignored
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
-- RNA: add report output to clustering notebook 04
+- pptreport integration:
+    - 02-RNA
+    - 03-RNA
+    - 04-RNA
+    - 0A1-RNA receptor-ligand
 
 0.12.0 (19-12-24)
 -----------------
