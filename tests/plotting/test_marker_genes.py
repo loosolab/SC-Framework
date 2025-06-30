@@ -23,8 +23,8 @@ def adata():
 
     np.random.seed(1)  # set seed for reproducibility
 
-    f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
-    adata = sc.read_h5ad(f)
+    adata = sc.datasets.pbmc3k_processed()
+    adata.raw = None
 
     adata.obs["condition"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
     adata.obs["clustering"] = np.random.choice(["1", "2", "3", "4"], size=adata.shape[0])
@@ -37,11 +37,11 @@ def adata():
     adata.obs["qcvar1"] = np.random.normal(size=adata.shape[0])
     adata.obs["qcvar2"] = np.random.normal(size=adata.shape[0])
 
-    sc.pp.normalize_total(adata, target_sum=None)
-    sc.pp.log1p(adata)
+    # sc.pp.normalize_total(adata, target_sum=None)
+    # sc.pp.log1p(adata)
 
-    sc.tl.umap(adata, n_components=3)
-    sc.tl.tsne(adata)
+    # sc.tl.umap(adata, n_components=3)  # to have more than two components available
+    # sc.tl.tsne(adata)
     # sc.tl.pca(adata)
     sc.tl.rank_genes_groups(adata, groupby='clustering', method='t-test_overestim_var', n_genes=250)
     # sc.tl.dendrogram(adata, groupby='clustering')
@@ -68,12 +68,8 @@ def pairwise_ranked_genes_nosig():
 
 
 # ------------------------------ TESTS --------------------------------- #
-
-
 @pytest.mark.parametrize("dendrogram,genes,key,swap_axes",
-                         [(True, ['ENSMUSG00000102851',
-                                  'ENSMUSG00000102272',
-                                  'ENSMUSG00000101571'], None, True),
+                         [(True, ['TNFRSF4', 'CPSF3L', 'ATAD3C'], None, True),
                           (False, None, 'rank_genes_groups', False)])
 @pytest.mark.parametrize("style", ["dots", "heatmap"])
 def test_rank_genes_plot(adata, style, dendrogram, genes, key, swap_axes):
@@ -99,11 +95,11 @@ def test_rank_genes_plot_fail(adata):
                            genes=["A", "B", "C"])  # invalid genes given
     with pytest.raises(ValueError, match="The parameter 'groupby' is needed if 'genes' is given."):
         pl.rank_genes_plot(adata, groupby=None,
-                           genes=['ENSMUSG00000102851', 'ENSMUSG00000102272'])
+                           genes=['RER1', 'TNFRSF25'])
 
 
-@pytest.mark.parametrize("x,y,norm", [("clustering", "ENSMUSG00000102693", True),
-                                      ("ENSMUSG00000102693", None, False),
+@pytest.mark.parametrize("x,y,norm", [("clustering", "C1orf86", True),
+                                      ("SRM", None, False),
                                       ("clustering", "qc_float", True)])
 @pytest.mark.parametrize("style", ["violin", "boxplot", "bar"])
 def test_grouped_violin(adata, x, y, norm, style):
@@ -122,13 +118,13 @@ def test_grouped_violin_fail(adata):
     with pytest.raises(ValueError, match='is not a column in adata.obs or a gene in adata.var.index'):
         pl.grouped_violin(adata, x="Invalid", y=None, groupby="condition")
     with pytest.raises(ValueError, match='x must be either a column in adata.obs or all genes in adata.var.index'):
-        pl.grouped_violin(adata, x=["clustering", "ENSMUSG00000102693"], y=None, groupby="condition")
+        pl.grouped_violin(adata, x=["clustering", "UBIAD1"], y=None, groupby="condition")
     with pytest.raises(ValueError, match='was not found in either adata.obs or adata.var.index'):
         pl.grouped_violin(adata, x="clustering", y="Invalid", groupby="condition")
     with pytest.raises(ValueError, match="Because 'x' is a column in obs, 'y' must be given as parameter"):
         pl.grouped_violin(adata, x="clustering", y=None, groupby="condition")
     with pytest.raises(BeartypeCallHintParamViolation):
-        pl.grouped_violin(adata, x="ENSMUSG00000102693", y=None, groupby="condition", style="Invalid")
+        pl.grouped_violin(adata, x="PRDM2", y=None, groupby="condition", style="Invalid")
 
 
 def test_group_expression_boxplot(adata):
@@ -181,19 +177,11 @@ def test_plot_differential_genes_fail(pairwise_ranked_genes_nosig):
 
 
 @pytest.mark.parametrize("gene_list,save,figsize",
-                         [(["Gm18956", "Gm37143", "Gm7512"], None, (2, 2)),
-                          ("Gm18956", "out.png", None)])
+                         [(['EFHD2', 'DDI2', 'SPEN'], None, (2, 2)),
+                          ("SDHB", "out.png", None)])
 def test_plot_gene_correlation(adata, gene_list, save, figsize):
     """Test gene correlation."""
-
-    adata_c = adata.copy()
-    # set gene names as index instead of ensemble ids
-    adata_c.var.reset_index(inplace=True)
-    adata_c.var['gene'] = adata_c.var['gene'].astype('str')
-    adata_c.var.set_index('gene', inplace=True)
-    adata_c.var_names_make_unique()
-
-    axes = pl.plot_gene_correlation(adata_c, "Xkr4", gene_list,
+    axes = pl.plot_gene_correlation(adata, "TNFRSF4", gene_list,
                                     save=save, figsize=figsize)
     assert type(axes).__name__ == "ndarray"
     assert type(axes[0]).__name__.startswith("Axes")

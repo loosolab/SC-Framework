@@ -108,6 +108,7 @@ def predict_cell_cycle(adata: sc.AnnData,
                        groupby: Optional[str] = None,
                        plot: bool = True,
                        save: Optional[str] = None,
+                       report: Optional[str] = None,
                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -137,6 +138,8 @@ def predict_cell_cycle(adata: sc.AnnData,
         Plot a bar plot to show counts of cells in each phase.
     save : Optional[str], default None
         Path to save the plot.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     inplace : bool, default True
         if True, add new columns to the original anndata object.
 
@@ -233,8 +236,10 @@ def predict_cell_cycle(adata: sc.AnnData,
 
     # plot a bar plot showing counts (and proportions) of cells in each phase
     if plot:
-        pl.qc_filter.n_cells_barplot(adata, x="phase", groupby=groupby,
-                                     save=save)
+        pl.qc_filter.n_cells_barplot(adata, x="phase",
+                                     groupby=groupby,
+                                     save=save,
+                                     report=report)
 
     if not inplace:
         return adata
@@ -1432,7 +1437,8 @@ def denoise_data(adata: sc.AnnData,
                  prob: float = 0.995,
                  save: Optional[str] = None,
                  verbose: bool = False,
-                 overwrite: bool = False) -> sc.AnnData:
+                 overwrite: bool = False,
+                 report: Optional[str] = None) -> sc.AnnData:
     """
     Use scAR and the raw feature counts to remove ambient RNA.
 
