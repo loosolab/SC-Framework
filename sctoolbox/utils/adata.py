@@ -177,6 +177,8 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> Non
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
