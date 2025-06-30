@@ -202,10 +202,10 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> Non
         with open(Path(settings.report_dir) / report, "w") as f:
             f.write("\n".join([
                 "## Dataset",
-                f"{adata.shape[0]} cells x {adata.shape[1]} genes",
-                f"Cell information: {', '.join(adata.obs.columns)}",
-                f"Gene information: {', '.join(adata.var.columns)}",
-                f"Additional data layers: {', '.join(adata.layers.keys())}"
+                f"{adata.shape[0]} observations x {adata.shape[1]} variables",
+                f"Observation information: {', '.join(adata.obs.columns)}",
+                f"Variable information: {', '.join(adata.var.columns)}",
+                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
             ]))
 
     logger.info(f"The adata object was saved to: {adata_output}")
