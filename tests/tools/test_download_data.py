@@ -2,13 +2,14 @@
 
 import pytest
 import os
-import shutil 
+import shutil
 import botocore
 
 from sctoolbox.tools import download_data
 
+
 def test_run_downloaddata():
-    """ Test data download. """
+    """Test data download."""
 
     download_data.run_downloaddata(pattern="danioheart_atlas.h5ad")
 
@@ -19,7 +20,7 @@ def test_run_downloaddata():
 
 
 def test_run_downloaddata_fail():
-    """ Test data download. """
+    """Test data download."""
 
     with pytest.raises(FileNotFoundError):
         download_data.run_downloaddata(pattern="invalid_file")
