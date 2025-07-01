@@ -9,6 +9,7 @@
   figure_dir: "../figures/02_QC/"
   log_file: "../logs/02_log.txt"
   overwrite_log: True
+  report_dir: "../report/02_QC/"
 
 "03":
   adata_input_dir: "../adatas/"
