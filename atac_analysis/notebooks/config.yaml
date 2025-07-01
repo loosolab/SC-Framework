@@ -23,3 +23,4 @@
   figure_dir: "../figures/04_clustering/"
   log_file: "../logs/04_log.txt"
   overwrite_log: True
+  report_dir: "../report/04_clustering/"
