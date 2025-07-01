@@ -628,6 +628,7 @@ def feature_per_group(adata: sc.AnnData,
                       binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
+                      report:Optional[str] = None,
                       **kwargs) -> NDArray[Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
@@ -661,6 +662,8 @@ def feature_per_group(adata: sc.AnnData,
         Figure size. Default is (4.8 * number of columns, 3.8 * number of rows).
     save : Optional[str], default None
         Filename to save the figure.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.    
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
@@ -749,13 +752,17 @@ def feature_per_group(adata: sc.AnnData,
 
     # save figure
     _save_figure(save)
+    
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return axs
 
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> NDArray[Axes]:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, **kwargs) -> NDArray[Axes]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -774,6 +781,8 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         numpy.sum, numpy.mean (re-creates the cellxgene gene set), numpy.median, etc.
     fun_kwargs : dict, default {"axis": 1}
         Additional arguments for the aggregation function.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     layer : Optional[str], default None
         Name of the adata layer used for the calculation. Defaults to `adata.X`.
     **kwargs : arguments
@@ -823,8 +832,9 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         # calculate score and add as obs column
         adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
 
+        
         # plot
-        return plot_embedding(adata, color=fname, **kwargs)
+        return plot_embedding(adata, color=fname, report=report, **kwargs)
     finally:
         if not keep_score:
             adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
