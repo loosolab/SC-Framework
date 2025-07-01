@@ -16,6 +16,7 @@
   figure_dir: "../figures/03_batch_correction/"
   log_file: "../logs/03_log.txt"
   overwrite_log: True
+  report_dir: "../report/03_batch_correction/"
 
 "04":
   adata_input_dir: "../adatas/"
