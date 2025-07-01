@@ -16,6 +16,8 @@ Changes to notebooks
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
 - RNA: add report output to clustering notebook 04
+- RNA: add report output to 0B velocity notebook 
+- General: add report output to annotaions notebook 
 
 0.12.0 (19-12-24)
 -----------------
