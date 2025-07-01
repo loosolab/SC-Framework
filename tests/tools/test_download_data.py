@@ -12,9 +12,9 @@ def test_run_downloaddata():
 
     download_data.run_downloaddata(pattern="danioheart_atlas.h5ad")
 
-    is_downloaded = os.path.isfile("bcu-sc-framework-2025/danioheart_atlas.h5ad")
+    is_downloaded = os.path.isfile("data-sc-framework-2025/danioheart_atlas.h5ad")
     if is_downloaded:
-        shutil.rmtree("bcu-sc-framework-2025")
+        shutil.rmtree("data-sc-framework-2025")
     assert is_downloaded
 
 

@@ -97,7 +97,7 @@ def s3_client(
 @beartype
 def run_downloaddata(
     endpoint: str = "https://s3.mpi-bn.mpg.de",
-    bucket: str = "bcu-sc-framework-2025",
+    bucket: str = "data-sc-framework-2025",
     pattern: str = "*",
     path: Optional[str] = None,
     force: bool = False):
@@ -108,7 +108,7 @@ def run_downloaddata(
     ----------
     endpoint : str, default "https://s3.mpi-bn.mpg.de"
         Link to the s3 server (default: The loosolab s3 server)
-    bucket : str, default "bcu-sc-framework-2025"
+    bucket : str, default "data-sc-framework-2025"
         Name of bucket to download from
     pattern : str, default "*"
         Pattern for files to download e.g. '*.txt' (default: *)
