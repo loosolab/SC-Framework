@@ -189,7 +189,7 @@ def get_variable_features(adata: sc.AnnData,
 
     # text box
     text = "\n".join((
-        f"Number of HVFs: {sum(adata.var["highly_variable"])}",
+        f"Number of HVFs: {sum(adata.var['highly_variable'])}",
         "(features between lines)"
     ))
     ax.text(0.95, 0.95, s=text, transform=ax.transAxes, fontsize=10,
