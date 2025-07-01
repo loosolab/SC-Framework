@@ -107,6 +107,7 @@ def predict_cell_cycle(adata: sc.AnnData,
                        g2m_genes: Optional[str | list[str]] = None,
                        groupby: Optional[str] = None,
                        plot: bool = True,
+                       gene_column: Optional[str] = None,
                        save: Optional[str] = None,
                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
@@ -135,6 +136,8 @@ def predict_cell_cycle(adata: sc.AnnData,
         If None, the plot shows cell counts per phase.
     plot : bool, default True
         Plot a bar plot to show counts of cells in each phase.
+    gene_column : Optional[str], default None
+        Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
     save : Optional[str], default None
         Path to save the plot.
     inplace : bool, default True
@@ -222,6 +225,12 @@ def predict_cell_cycle(adata: sc.AnnData,
 
     # Scale the data before scoring
     sdata = sc.pp.scale(adata, copy=True)
+
+    # replace the index with gene symbols if neccessary
+    if gene_column:
+        sdata.var.set_index(gene_column, inplace=True)
+        sdata.var.index = sdata.var.index.astype("string")
+        sdata.var_names_make_unique()
 
     # Score the cells by s phase or g2m phase
     sc.tl.score_genes_cell_cycle(sdata, s_genes=s_genes, g2m_genes=g2m_genes)
