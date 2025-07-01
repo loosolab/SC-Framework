@@ -22,7 +22,7 @@ from numpy.typing import NDArray
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import bidirectional_barplot, _save_figure, _make_square
 import sctoolbox.utils.decorator as deco
-
+from sctoolbox._settings import settings
 
 @deco.log_anndata
 @beartype
@@ -36,6 +36,7 @@ def rank_genes_plot(adata: sc.AnnData,
                     style: Literal["dots", "heatmap"] = "dots",
                     measure: str = "expression",
                     save: Optional[str] = None,
+                    report: Optional[str] = None,
                     **kwargs: Any) -> dict:
     """
     Plot expression of genes from rank_genes_groups or from a gene list/dict.
@@ -62,6 +63,8 @@ def rank_genes_plot(adata: sc.AnnData,
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
     save : Optional[str], default None
         If given, save the figure to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
 
@@ -178,7 +181,11 @@ def rank_genes_plot(adata: sc.AnnData,
 
     # Save figure
     _save_figure(save)
-
+    
+    # report
+    if settings.report_dir and report:
+       _save_figure(report, report=True)
+    
     return g
 
 
