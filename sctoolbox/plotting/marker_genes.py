@@ -24,6 +24,7 @@ from sctoolbox.plotting.general import bidirectional_barplot, _save_figure, _mak
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
+
 @deco.log_anndata
 @beartype
 def rank_genes_plot(adata: sc.AnnData,
@@ -181,11 +182,11 @@ def rank_genes_plot(adata: sc.AnnData,
 
     # Save figure
     _save_figure(save)
-    
+
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
-    
+        _save_figure(report, report=True)
+
     return g
 
 

@@ -41,6 +41,7 @@ def term_dotplot(adata: sc.AnnData,
                  layer: Optional[str] = None,
                  report: Optional[str] = None,
                  **kwargs: Any) -> NDArray[Axes]:
+
     """
     Plot mean expression and zscore of cluster for one GO-term.
 
@@ -145,10 +146,10 @@ def term_dotplot(adata: sc.AnnData,
 
     # combine expression and zscores
     comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
-    
+
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
     
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
 
@@ -219,6 +220,7 @@ def gsea_network(adata: sc.AnnData,
 
         pl.gsea.gsea_network(adata, cutoff=0.5)
     """
+    
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -369,7 +371,8 @@ def gsea_network(adata: sc.AnnData,
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
+
 
 def cluster_dotplot(adata: sc.AnnData,
                     cluster_col: str = "Cluster",
@@ -422,6 +425,7 @@ def cluster_dotplot(adata: sc.AnnData,
 
         pl.gsea.cluster_dotplot(adata)
     """
+
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -484,6 +488,7 @@ def gsea_dot(adata: sc.AnnData,
              title_size: int = 16,
              report: Optional[str] = None,
              save: Optional[str] = None) -> Axes:
+
     """
     Plot up/down regulated pathways.
 
@@ -515,10 +520,10 @@ def gsea_dot(adata: sc.AnnData,
         Figure title
     title_size : int, default 16
         Title font size.
-    save : Optional[str], default None
-        Filename suffix to save the figure.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    save : Optional[str], default None
+        Filename suffix to save the figure.
     Returns
     -------
     Axes
@@ -536,6 +541,7 @@ def gsea_dot(adata: sc.AnnData,
 
         pl.gsea.gsea_dot(adata, x="Cluster")
     """
+
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -605,6 +611,6 @@ def gsea_dot(adata: sc.AnnData,
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
+        _save_figure(report, report=True)
 
     return ax
