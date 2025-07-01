@@ -24,6 +24,9 @@ Changes to notebooks
     - 03-RNA
     - 04-RNA
     - 0A1-RNA receptor-ligand
+    - group_markers
+    - pseudotime
+    - proportion
 
 0.12.0 (19-12-24)
 -----------------
