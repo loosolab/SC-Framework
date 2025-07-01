@@ -105,7 +105,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report: Optional[str] = None) -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -116,6 +116,8 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
     h5ad_file : Union[str, Collection[str], Mapping[str, str]]
         Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
         In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -123,13 +125,34 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
         The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
     """
     if isinstance(h5ad_file, str):
-        return sc.read_h5ad(filename=h5ad_file)
+        adata = sc.read_h5ad(filename=h5ad_file)
     elif isinstance(h5ad_file, Mapping):
         # load then combine anndata objects
-        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+        adata = utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
     else:
         # load then combine anndata objects
-        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+        adata = utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        if isinstance(h5ad_file, str):
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(h5ad_file)
+        elif isinstance(h5ad_file, Mapping):
+            for k, v in h5ad_file.items():
+                info_table.setdefault("Name", []).append(k)
+                info_table.setdefault("Source", []).append(v)
+        else:
+            for v in h5ad_file:
+                info_table.setdefault("Name", []).append("NA")
+                info_table.setdefault("Source", []).append(v)
+
+        # save table
+        pd.DataFrame(info_table).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
+
+    return adata
 
 
 #####################################################################
@@ -206,6 +229,7 @@ def from_quant(path: str,
                configuration: list = [],
                use_samples: Optional[list] = None,
                dtype: Literal["raw", "filtered"] = "filtered",
+               report: Optional[str] = None,
                **kwargs: Any) -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
@@ -222,6 +246,8 @@ def from_quant(path: str,
         List of samples to use. If None, all samples will be used.
     dtype : Literal["raw", "filtered"], default 'filtered'
         The type of Solo data to choose.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Contains additional arguments for the sctoolbox.utils.assemblers.from_single_starsolo method.
 
@@ -293,6 +319,17 @@ def from_quant(path: str,
 
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
+
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        for sample_name, sample_dir in zip(sample_names, sample_dirs):
+            info_table.setdefault("Name", []).append(sample_name)
+            info_table.setdefault("Source", []).append(sample_dir)
+
+        # save table
+        pd.DataFrame(info_table).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
 
     return adata
 
@@ -384,6 +421,7 @@ def from_mtx(path: str,
              barcodes: str = "*barcodes.tsv*",
              variables: str = "*genes.tsv*",
              var_error: bool = True,
+             report: Optional[str] = None,
              **kwargs: Any) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and variables files.
@@ -403,6 +441,8 @@ def from_mtx(path: str,
         String for glob to find e.g. gene label files (RNA).
     var_error : bool, default True
         Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Contains additional arguments for the sctoolbox.utils.assemblers.from_single_mtx method.
 
@@ -463,6 +503,17 @@ def from_mtx(path: str,
     else:
         adata = adata_objects[0]
 
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        for m in mtx_files:
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(str(m.parents[0]))
+
+        # save table
+        pd.DataFrame(info_table).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
+
     return adata
 
 
@@ -470,7 +521,8 @@ def from_mtx(path: str,
 def convertToAdata(file: str,
                    output: Optional[str] = None,
                    r_home: Optional[str] = None,
-                   layer: Optional[str] = None) -> Optional[sc.AnnData]:
+                   layer: Optional[str] = None,
+                   report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -488,6 +540,8 @@ def convertToAdata(file: str,
     layer : Optional[str], default None
         Provide name of layer to be stored in anndata. By default the main layer is stored.
         In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -587,6 +641,13 @@ def convertToAdata(file: str,
 
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
+
+    # generate and save report
+    if settings.report_dir and report:
+        pd.DataFrame({
+            "Name": ["NA"],
+            "Source": [os.path.abspath(file)]
+        }).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
 
     if output:
         # Saving adata.h5ad

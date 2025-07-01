@@ -290,7 +290,12 @@ def grouped_violin(adata: sc.AnnData,
     for element in x + [y]:
         if element in adata.var.index:
             gene_idx = np.argwhere(adata.var.index == element)[0][0]
-            vals = adata.X[:, gene_idx].todense().A1
+
+            try:
+                vals = adata.X[:, gene_idx].todense().A1  # try sparse-matrix
+            except AttributeError:
+                vals = adata.X[:, gene_idx].ravel()  # try dense-matrix/ numpy array
+
             obs_table[element] = vals
 
     # Convert table to long format if the x-axis contains gene expressions

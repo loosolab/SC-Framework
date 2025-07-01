@@ -392,8 +392,7 @@ def n_cells_barplot(adata: sc.AnnData,
 
     # report
     if settings.report_dir and report:
-       _save_figure(report, report=True)
-
+        _save_figure(report, report=True)
 
     return axarr
 
@@ -626,7 +625,6 @@ def quality_violin(adata: sc.AnnData,
                    title: Optional[str] = None,
                    thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
                    global_threshold: bool = True,
-                   interactive: bool = True,
                    save: Optional[str] = None,
                    report: Optional[str] = None,
                    **kwargs: Any
@@ -660,8 +658,6 @@ def quality_violin(adata: sc.AnnData,
         Dictionary containing initial min/max thresholds to show in plot.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
-    interactive : bool, default True
-        Whether to show interactive sliders. If False, the static matplotlib plot is shown.
     save : Optional[str], optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
     report : Optional[str]
