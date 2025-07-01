@@ -24,6 +24,7 @@ Changes to notebooks
     - 03-RNA
     - 04-RNA
     - 0A1-RNA receptor-ligand
+    - 04-ATAC
 
 0.12.0 (19-12-24)
 -----------------
