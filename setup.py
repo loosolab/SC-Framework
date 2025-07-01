@@ -123,7 +123,8 @@ setup(
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
         'throttler',
-        'upsetplot'
+        'upsetplot',
+        'boto3'
     ],
     include_package_data=True,
     extras_require=extras_require

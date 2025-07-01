@@ -9,6 +9,7 @@ __all__ = [
     "celltype_annotation",
     "clustering",
     "dim_reduction",
+    "download_data",
     "embedding",
     "frip",
     "gene_correlation",
