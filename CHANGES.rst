@@ -21,10 +21,12 @@ Changes to notebooks
 - pptreport integration:
     - 01-RNA
     - 02-RNA
-    - 03-RNA add report output to 0B velocity notebook 
-    - 04-RNA add report output to clustering notebook 04
+    - 03-RNA 
+    - 04-RNA 
     - 0A1-RNA receptor-ligand
-    - General: add report output to annotaions notebook 
+    - general 0B velocity notebook 
+    - general GSEA
+    - general annotation
 
 0.12.0 (19-12-24)
 -----------------

@@ -70,6 +70,7 @@ def term_dotplot(adata: sc.AnnData,
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+
     Notes
     -----
     All genes will be converted to uppercase for comparison.
@@ -220,7 +221,7 @@ def gsea_network(adata: sc.AnnData,
 
         pl.gsea.gsea_network(adata, cutoff=0.5)
     """
-    
+
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -524,6 +525,7 @@ def gsea_dot(adata: sc.AnnData,
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     save : Optional[str], default None
         Filename suffix to save the figure.
+
     Returns
     -------
     Axes
