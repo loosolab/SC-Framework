@@ -1,4 +1,4 @@
-SC-Framework Tutorials
+Tutorials
 ----------------
 
 This is the tutorial page for the SC-Framework scRNA and scATAC analysis notebooks.
@@ -6,12 +6,12 @@ This is the tutorial page for the SC-Framework scRNA and scATAC analysis noteboo
 **scRNA-seq Tutorial**
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
-    scRNA-seq Analysis/Core Analysis/index.rst
+    scRNA-seq Analysis/index.rst
 
 **scATAC-seq Tutorial**
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
-    scATAC-seq Analysis/Core Analysis/index.rst
+    scATAC-seq Analysis/index.rst

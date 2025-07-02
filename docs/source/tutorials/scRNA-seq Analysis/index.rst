@@ -5,6 +5,12 @@ and go through quality control, cell and gene filtering, batch correction, embed
 
 .. toctree::
     :maxdepth: 1
-    :glob:
+    
+    Core Analysis/index.rst
 
-    *
+The advanced analysis will cover marker genes, cell-type annotation, receptor-ligand analysis and velocity analysis.
+
+.. toctree::
+    :maxdepth: 1
+    
+    Advanced Analysis/index.rst
