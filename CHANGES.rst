@@ -26,6 +26,9 @@ Changes to notebooks
     - 0A1-RNA receptor-ligand
     - 0A2-RNA receptor-ligand differences
     - 0B-RNA velocity notebook 
+    - general group_markers
+    - general pseudotime
+    - general proportion
     - general GSEA
     - general annotation
     - 01-ATAC
