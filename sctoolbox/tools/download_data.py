@@ -50,8 +50,8 @@ def s3_downloader(client: Client,
         if target_path.is_file():
             # If file exists and force is off
             if force is False:
-                warnings.warn("File already exists: " + str(target_path) +
-                              ". Skipping download. Use force=True to overwrite.")
+                warnings.warn("File already exists: " + str(target_path)
+                              + ". Skipping download. Use force=True to overwrite.")
                 continue
 
         # Download file
