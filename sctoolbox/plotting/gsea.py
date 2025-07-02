@@ -41,7 +41,6 @@ def term_dotplot(adata: sc.AnnData,
                  layer: Optional[str] = None,
                  report: Optional[str] = None,
                  **kwargs: Any) -> NDArray[Axes]:
-
     """
     Plot mean expression and zscore of cluster for one GO-term.
 
@@ -66,10 +65,10 @@ def term_dotplot(adata: sc.AnnData,
         Choose dot coloring.
     layer : Optional[str], default None
         Name of an anndata layer to use instead of `adata.X`.
-    **kwargs : Any
-        Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    **kwargs : Any
+        Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
     Notes
     -----
@@ -151,7 +150,7 @@ def term_dotplot(adata: sc.AnnData,
     # report
     if settings.report_dir and report:
         _save_figure(report, report=True)
-    
+
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
 
 
@@ -489,7 +488,6 @@ def gsea_dot(adata: sc.AnnData,
              title_size: int = 16,
              report: Optional[str] = None,
              save: Optional[str] = None) -> Axes:
-
     """
     Plot up/down regulated pathways.
 
