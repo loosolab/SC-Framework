@@ -100,7 +100,9 @@ def get_variable_features(adata: sc.AnnData,
                           max_cells: Optional[float | int] = None,
                           min_cells: Optional[float | int] = 0,
                           show: bool = True,
-                          inplace: bool = True) -> Optional[sc.AnnData]:
+                          inplace: bool = True,
+                          save: Optional[str] = None,
+                          report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Get the highly variable features of anndata object. Adds the column "highly_variable" to adata.var. If show is True, the plot is shown.
 
@@ -116,6 +118,10 @@ def get_variable_features(adata: sc.AnnData,
         Show plot of variability scores and thresholds.
     inplace : bool, default True
         If True, the anndata object is modified. Otherwise, a new anndata object is returned.
+    save: Optional[str]
+        Path to save figure. Uses `sctoolbox.settings.figdir`.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Notes
     -----
@@ -166,20 +172,37 @@ def get_variable_features(adata: sc.AnnData,
     adata.var["highly_variable"] = (adata.var['n_cells_by_counts'] <= max_cells) & (adata.var['n_cells_by_counts'] >= min_cells)
 
     # Create plot
-    if show is True:
-        fig, ax = plt.subplots()
-        ax.set_xlabel("Ranked features")
-        ax.set_ylabel("Number of cells")
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Ranked features")
+    ax.set_ylabel("Number of cells")
+    ax.set_title("Highly variable feature (HVF) detection")
 
-        ax.plot(x, n_cells)
+    ax.plot(x, n_cells)
 
-        # Horizontal line at knee
-        ax.axhline(max_cells, linestyle="--", color="r")
-        xlim = ax.get_xlim()
-        ax.text(xlim[1], max_cells, " {0:.2f}".format(max_cells), fontsize=12, ha="left", va="center", color="red")
+    # Horizontal line at knee
+    ax.axhline(max_cells, linestyle="--", color="r")
+    xlim = ax.get_xlim()
+    ax.text(xlim[1], max_cells, " {0:.0f}".format(max_cells), fontsize=12, ha="left", va="center", color="red")
 
-        ax.axhline(min_cells, linestyle="--", color="b")
-        ax.text(xlim[1], min_cells, " {0:.2f}".format(min_cells), fontsize=12, ha="left", va="center", color="blue")
+    ax.axhline(min_cells, linestyle="--", color="b")
+    ax.text(xlim[1], min_cells, " {0:.0f}".format(min_cells), fontsize=12, ha="left", va="center", color="blue")
+
+    # text box
+    text = "\n".join((
+        f"Number of HVFs: {sum(adata.var['highly_variable'])}",
+        "(features between lines)"
+    ))
+    ax.text(0.95, 0.95, s=text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', horizontalalignment='right')
+
+    if save:
+        _save_figure(save)
+
+    if report:
+        _save_figure(report, report=True)
+
+    if show:
+        plt.show()
 
     # Return the copy of the adata
     if inplace is False:
