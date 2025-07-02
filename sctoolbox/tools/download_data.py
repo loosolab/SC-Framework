@@ -18,7 +18,7 @@ Client = Annotated[object, Is[
 def s3_downloader(client: Client,
                   bucket: str,
                   download_list: list[str],
-                  force: bool,
+                  force: bool = False,
                   download_path: Optional[str] = None):
     """
     Target is the name of the folder to save files to.
@@ -94,7 +94,7 @@ def download_dataset(pattern: str,
                              aws_access_key_id=None,
                              aws_secret_access_key=None)
 
-    # Disable sigin with credentials for public buckets
+    # Disable sign-in with credentials for public buckets
     client.meta.events.register('choose-signer.s3.*', botocore.handlers.disable_signing)
     bucket_objects = [obj['Key'] for obj in client.list_objects_v2(Bucket=bucket)['Contents']]
 
