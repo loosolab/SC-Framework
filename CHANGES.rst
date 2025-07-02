@@ -32,6 +32,8 @@ Changes to notebooks
     - general GSEA
     - general annotation
     - 01-ATAC
+    - 02-ATAC
+    - 03-ATAC
 
 0.12.0 (19-12-24)
 -----------------
