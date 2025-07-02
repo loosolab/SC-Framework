@@ -8,6 +8,7 @@ Welcome to the documentation of the single cell framework!
    :maxdepth: 2
    :caption: Contents:
 
+   Tutorials/index
    CHANGES
    rna-notebooks/index
    atac-notebooks/index
