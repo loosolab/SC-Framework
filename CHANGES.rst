@@ -19,10 +19,14 @@ Changes to notebooks
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
 - pptreport integration:
+    - 01-RNA
     - 02-RNA
-    - 03-RNA
-    - 04-RNA
+    - 03-RNA 
+    - 04-RNA 
     - 0A1-RNA receptor-ligand
+    - general 0B velocity notebook 
+    - general GSEA
+    - general annotation
 
 0.12.0 (19-12-24)
 -----------------

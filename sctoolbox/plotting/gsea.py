@@ -39,7 +39,9 @@ def term_dotplot(adata: sc.AnnData,
                  groups: Optional[list[str] | str] = None,
                  hue: Literal["Mean Expression", "Zscore"] = "Zscore",
                  layer: Optional[str] = None,
+                 report: Optional[str] = None,
                  **kwargs: Any) -> NDArray[Axes]:
+
     """
     Plot mean expression and zscore of cluster for one GO-term.
 
@@ -66,6 +68,8 @@ def term_dotplot(adata: sc.AnnData,
         Name of an anndata layer to use instead of `adata.X`.
     **kwargs : Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Notes
     -----
@@ -144,6 +148,10 @@ def term_dotplot(adata: sc.AnnData,
     # combine expression and zscores
     comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+    
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
 
 
@@ -158,6 +166,7 @@ def gsea_network(adata: sc.AnnData,
                  figsize: Optional[Tuple[int | float, int | float]] = None,
                  ncols: int = 3,
                  save: Optional[str] = None,
+                 report: Optional[str] = None,
                  ) -> None:
     """
     Plot GO network per cluster.
@@ -192,6 +201,8 @@ def gsea_network(adata: sc.AnnData,
     save : Optional[str], default None
         Filename suffix to save the figure.
         The cluster name is added as prefix to the name.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Notes
     -----
@@ -210,6 +221,7 @@ def gsea_network(adata: sc.AnnData,
 
         pl.gsea.gsea_network(adata, cutoff=0.5)
     """
+
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -358,6 +370,10 @@ def gsea_network(adata: sc.AnnData,
     fig.tight_layout()
     _save_figure(save)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
 
 def cluster_dotplot(adata: sc.AnnData,
                     cluster_col: str = "Cluster",
@@ -410,6 +426,7 @@ def cluster_dotplot(adata: sc.AnnData,
 
         pl.gsea.cluster_dotplot(adata)
     """
+
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -470,7 +487,9 @@ def gsea_dot(adata: sc.AnnData,
              cmap: str = "viridis",
              title: str = "Top regulated pathways",
              title_size: int = 16,
+             report: Optional[str] = None,
              save: Optional[str] = None) -> Axes:
+
     """
     Plot up/down regulated pathways.
 
@@ -502,6 +521,8 @@ def gsea_dot(adata: sc.AnnData,
         Figure title
     title_size : int, default 16
         Title font size.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     save : Optional[str], default None
         Filename suffix to save the figure.
 
@@ -522,6 +543,7 @@ def gsea_dot(adata: sc.AnnData,
 
         pl.gsea.gsea_dot(adata, x="Cluster")
     """
+
     if not in_uns(adata, _core_uns_path):
         msg = "Could not find gsea results. Please run 'tools.gsea.gene_set_enrichment' before running this function."
         logger.error(msg)
@@ -588,5 +610,9 @@ def gsea_dot(adata: sc.AnnData,
     # save plot
     fig.tight_layout()
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return ax

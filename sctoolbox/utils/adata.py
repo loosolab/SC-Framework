@@ -8,6 +8,7 @@ import scipy
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 import pandas as pd
+from pathlib import Path
 
 from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
@@ -166,7 +167,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -176,6 +177,8 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
@@ -193,6 +196,17 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
+
+    # generate report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report, "w") as f:
+            f.write("\n".join([
+                "## Dataset",
+                f"{adata.shape[0]} cells x {adata.shape[1]} genes",
+                f"Cell information: {', '.join(adata.obs.columns)}",
+                f"Gene information: {', '.join(adata.var.columns)}",
+                f"Additional data layers: {', '.join(adata.layers.keys())}"
+            ]))
 
     logger.info(f"The adata object was saved to: {adata_output}")
 
