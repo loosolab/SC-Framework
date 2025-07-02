@@ -21,8 +21,8 @@ Changes to notebooks
 - pptreport integration:
     - 01-RNA
     - 02-RNA
-    - 03-RNA 
-    - 04-RNA 
+    - 03-RNA
+    - 04-RNA
     - 0A1-RNA receptor-ligand
     - 0A2-RNA receptor-ligand differences
     - 0B-RNA velocity notebook 
