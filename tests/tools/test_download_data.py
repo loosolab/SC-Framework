@@ -13,10 +13,8 @@ def test_download_dataset():
 
     try:
         download_data.download_dataset("danioheart_atlas.h5ad")
-        assert True
-    except Exception as e:
-        print(f"Failed to download data: {e}")
-        assert False
+        is_downloaded = os.path.isfile("data-sc-framework-2025/danioheart_atlas.h5ad")
+        assert is_downloaded
     finally:
         is_downloaded = os.path.isfile("data-sc-framework-2025/danioheart_atlas.h5ad")
         if is_downloaded:
