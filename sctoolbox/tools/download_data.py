@@ -14,12 +14,11 @@ Client = Annotated[object, Is[
 
 
 @beartype
-def s3_downloader(
-        client: Client,
-        bucket: str,
-        download_list: list[str],
-        force: bool,
-        path: Optional[str] = None):
+def s3_downloader(client: Client,
+                  bucket: str,
+                  download_list: list[str],
+                  force: bool,
+                  path: Optional[str] = None):
     """
     Target is the name of the folder to save files to.
 
@@ -57,9 +56,8 @@ def s3_downloader(
 
 
 @beartype
-def s3_client(
-    config_dict: dict,
-    force: bool = False):
+def s3_client(config_dict: dict,
+              force: bool = False):
     """
     Create S3 client.
 
@@ -89,7 +87,7 @@ def s3_client(
                              aws_secret_access_key=None)
 
     client.meta.events.register('choose-signer.s3.*', botocore.handlers.disable_signing)  # disable sigin with credentials for public buckets
-    bucket_objects = [obj['Key'] for obj in client.list_objects_v2(Bucket = config_dict['bucket'])['Contents']]
+    bucket_objects = [obj['Key'] for obj in client.list_objects_v2(Bucket=config_dict['bucket'])['Contents']]
 
     # Download files
     # Check if bucket has files which match the pattern
@@ -102,12 +100,11 @@ def s3_client(
 
 
 @beartype
-def run_downloaddata(
-    endpoint: str = "https://s3.mpi-bn.mpg.de",
-    bucket: str = "data-sc-framework-2025",
-    pattern: str = "*",
-    path: Optional[str] = None,
-    force: bool = False):
+def run_downloaddata(endpoint: str = "https://s3.mpi-bn.mpg.de",
+                     bucket: str = "data-sc-framework-2025",
+                     pattern: str = "*",
+                     path: Optional[str] = None,
+                     force: bool = False):
     """
     Download data from an S3 storage.
 
@@ -120,7 +117,7 @@ def run_downloaddata(
     pattern : str, default "*"
         Pattern for files to download e.g. '*.txt' (default: *)
     path : Optional[str], default None
-        Download path. Creates directory with same name as bucket in current directory if None.
+        Download path. Creates directory with same name as bucket in current directory if None
     force : bool, default False
         Force download of already exisiting files
     """
