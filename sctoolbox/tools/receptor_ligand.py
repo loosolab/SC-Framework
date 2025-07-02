@@ -2500,7 +2500,8 @@ def condition_differences_network(
     n_cols: int = 4,
     n_rows: Optional[int] = None,
     non_hub_cols: Optional[int] = None,
-    close_figs: bool = True
+    close_figs: bool = True,
+    report: Optional[Tuple[str, str]] = None
 ) -> List[matplotlib.figure.Figure]:
     """
     Visualize differences between conditions as a receptor-ligand network with hubs separated.
@@ -2538,6 +2539,9 @@ def condition_differences_network(
         Number of columns for the non-hub network. If None, then uses all available columns (n_cols - 1)
     close_figs : bool, default True
         Whether to close figures after saving to free up memory
+    report : Optional[Tuple[str, str]]
+        Tuple of file prefix and filextension e.g. ('01_network', '.png') used to construct the report files.
+        Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -2967,9 +2971,11 @@ def condition_differences_network(
 
                 # Save if requested
                 if save:
-                    output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.png"
-                    output_path = f"{settings.figure_dir}/{output_filename}"
-                    plt.savefig(output_path, bbox_inches='tight')
+                    _save_figure(f"{save}_{dimension_key}_{comparison_key}_{direction_name}.png")
+
+                # report
+                if settings.report_dir and report:
+                    _save_figure(f"{report[0]}_{dimension_key}_{comparison_key}_{direction_name}{report[1]}", report=True)
 
                 # Store the figure for return
                 figures.append(fig)
@@ -2999,7 +3005,8 @@ def plot_all_condition_differences(
     n_rows: Optional[int] = None,
     show: bool = True,
     return_figures: bool = False,
-    close_figs: bool = True
+    close_figs: bool = True,
+    report: Optional[Tuple[str, str]] = None
 ) -> Optional[Dict[str, List[matplotlib.figure.Figure]]]:
     """Generate network plots for all condition difference comparisons.
 
@@ -3038,6 +3045,9 @@ def plot_all_condition_differences(
         Return the generated figures.
     close_figs : bool, default True
         Close figures after processing to free memory.
+    report : Optional[Tuple[str, str]]
+        Tuple of file prefix and filextension e.g. ('01_network', '.png') used to construct the report files.
+        Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -3086,16 +3096,13 @@ def plot_all_condition_differences(
             'receptor-ligand': {'condition-differences': {dimension_key: dimension_results}}
         }
 
-        # Generate filename with dimension if saving
-        save_name = f"{save_prefix}_{dimension_key}" if save_prefix else None
-
         # Generate figures for this dimension
         figures = condition_differences_network(
             adata=temp_adata,
             n_top=n_top,
             figsize=figsize,
             dpi=dpi,
-            save=save_name,
+            save=save_prefix,
             split_by_direction=split_by_direction,
             hub_threshold=hub_threshold,
             color_palette=color_palette,
@@ -3103,7 +3110,8 @@ def plot_all_condition_differences(
             vmax=vmax,
             n_cols=n_cols,
             n_rows=n_rows,
-            close_figs=close_figs and not show
+            close_figs=close_figs and not show,
+            report=report
         )
 
         # Store figures if requested
@@ -3202,7 +3210,8 @@ def plot_interaction_timeline(
     receptor_color: Optional[str] = None,
     ligand_color: Optional[str] = None,
     use_global_ylim: bool = False,
-    layer: Optional[str] = None
+    layer: Optional[str] = None,
+    report: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
     Plot receptor-ligand interaction expression levels over time as barplots.
@@ -3239,6 +3248,8 @@ def plot_interaction_timeline(
         Whether to use the same y-limit for all subplots based on the global maximum.
     layer : Optional[str], default None
         The layer used. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -3485,6 +3496,10 @@ def plot_interaction_timeline(
 
     # Save figure
     if save:
-        fig.savefig(f"{settings.figure_dir}/{save}")
+        _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return fig

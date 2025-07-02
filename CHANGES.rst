@@ -24,7 +24,8 @@ Changes to notebooks
     - 03-RNA 
     - 04-RNA 
     - 0A1-RNA receptor-ligand
-    - general 0B velocity notebook 
+    - 0A2-RNA receptor-ligand differences
+    - 0B-RNA velocity notebook 
     - general GSEA
     - general annotation
 
