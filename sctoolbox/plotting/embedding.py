@@ -628,7 +628,7 @@ def feature_per_group(adata: sc.AnnData,
                       binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
-                      report:Optional[str] = None,
+                      report: Optional[str] = None,
                       **kwargs) -> NDArray[Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
@@ -663,7 +663,7 @@ def feature_per_group(adata: sc.AnnData,
     save : Optional[str], default None
         Filename to save the figure.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.    
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
@@ -752,7 +752,7 @@ def feature_per_group(adata: sc.AnnData,
 
     # save figure
     _save_figure(save)
-    
+
     # report
     if settings.report_dir and report:
         _save_figure(report, report=True)
@@ -832,7 +832,6 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         # calculate score and add as obs column
         adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
 
-        
         # plot
         return plot_embedding(adata, color=fname, report=report, **kwargs)
     finally:
