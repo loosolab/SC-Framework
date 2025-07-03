@@ -34,6 +34,7 @@ Changes to notebooks
     - 01-ATAC
     - 02-ATAC
     - 03-ATAC
+    - 04-ATAC
 
 0.12.0 (19-12-24)
 -----------------
