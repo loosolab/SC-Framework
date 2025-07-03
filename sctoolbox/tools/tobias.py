@@ -120,7 +120,7 @@ def prepare_tobias(adata: sc.AnnData,
                    gtf: str = None,
                    blacklist: str = None,
                    organism: str = 'human',
-                   yaml: str = "TOBIAS_config.yml",
+                   yml: str = "TOBIAS_config.yml",
                    plot_comparison: bool = True,
                    plot_correction: bool = True,
                    plot_venn: bool = True,
@@ -154,7 +154,7 @@ def prepare_tobias(adata: sc.AnnData,
         Path to the blacklist file.
     organism : str
         Organism. options = ["mouse", "human", "zebrafish"]
-    yaml : str
+    yml : str
         Name of TOBIAS config yaml. Cannot be named "config.yml" or it will be overwritten when running TOBIAS.
     plot_comparison : bool
         TOBIAS flag for plotting comparison between condition.
@@ -247,17 +247,17 @@ def prepare_tobias(adata: sc.AnnData,
     print("Writing TOBIAS config yaml.")
 
     # Call function to write TOBIAS config yml
-    write_TOBIAS_config(os.path.join(path_TOBIAS_in, yaml),
-                               bams=bams,
-                               fasta=fasta,
-                               gtf=gtf,
-                               motifs=motifs,
-                               blacklist=blacklist,
-                               organism=organism,
-                               output=path_TOBIAS_out,
-                               plot_comparison=plot_comparison,
-                               plot_correction=plot_correction,
-                               plot_venn=plot_venn,
-                               coverage=coverage,
-                               wilson=wilson)
+    write_TOBIAS_config(os.path.join(path_TOBIAS_in, yml),
+                        bams=bams,
+                        fasta=fasta,
+                        gtf=gtf,
+                        motifs=motifs,
+                        blacklist=blacklist,
+                        organism=organism,
+                        output=path_TOBIAS_out,
+                        plot_comparison=plot_comparison,
+                        plot_correction=plot_correction,
+                        plot_venn=plot_venn,
+                        coverage=coverage,
+                        wilson=wilson)
 
