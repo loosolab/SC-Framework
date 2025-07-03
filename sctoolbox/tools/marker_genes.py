@@ -475,7 +475,8 @@ def get_rank_genes_tables(adata: sc.AnnData,
                           n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
-                          save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
+                          save_excel: Optional[str] = None,
+                          report: Optional[str] = None) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -493,6 +494,8 @@ def get_rank_genes_tables(adata: sc.AnnData,
         List of adata.var columns, which will be added to pandas.DataFrame.
     save_excel : Optional[str], default None
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -587,25 +590,36 @@ def get_rank_genes_tables(adata: sc.AnnData,
         for group in group_tables:
             group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
-    # If chosen: Save tables to joined excel
-    if save_excel is not None:
+    # save table
+    if save_excel is not None or (settings.report_dir and report):
+        # prepare excel table for saving
+        sheets = {}
+        for group in group_tables:
+            sheet = group_tables[group].copy()
 
-        if not isinstance(save_excel, str):
-            raise ValueError("'save_excel' must be a string.")
+            # Round values of scores/foldchanges
+            sheet["scores"] = sheet["scores"].round(3)
+            sheet["logfoldchanges"] = sheet["logfoldchanges"].round(3)
 
-        filename = settings.full_table_prefix + save_excel
+        # If chosen: Save tables to joined excel
+        if save_excel is not None:
+            filename = Path(settings.full_table_prefix) / save_excel
 
-        with pd.ExcelWriter(filename) as writer:
-            for group in group_tables:
-                table = group_tables[group].copy()
+            with pd.ExcelWriter(filename) as writer:
+                for sheet_name in sheets:
+                    sheet = sheets[sheet_name]
 
-                # Round values of scores/foldchanges
-                table["scores"] = table["scores"].round(3)
-                table["logfoldchanges"] = table["logfoldchanges"].round(3)
+                    sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
-                table.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{group}'), index=False)
+            logger.info(f"Saved marker gene tables to '{filename}'")
 
-        logger.info(f"Saved marker gene tables to '{filename}'")
+        # TODO report --> should think about pushing the excel table to a S3 later?
+        if settings.report_dir and report:
+            with pd.ExcelWriter(Path(settings.report_dir) / report) as writer:
+                for sheet_name in sheets:
+                    sheet = sheets[sheet_name]
+
+                    sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
     return group_tables
 
