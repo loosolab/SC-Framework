@@ -105,7 +105,7 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], label: Optional[str] = "batch") -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -116,6 +116,8 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
     h5ad_file : Union[str, Collection[str], Mapping[str, str]]
         Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
         In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
 
     Returns
     -------
@@ -126,10 +128,10 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
         return sc.read_h5ad(filename=h5ad_file)
     elif isinstance(h5ad_file, Mapping):
         # load then combine anndata objects
-        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()}, label=label)
     else:
         # load then combine anndata objects
-        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file], label=label)
 
 
 #####################################################################
@@ -308,8 +310,9 @@ def from_single_mtx(mtx: Union[str, Path],
                     transpose: bool = True,
                     header: Union[int, list[int], Literal['infer'], None] = None,
                     barcode_index: int = 0,
-                    genes_index: int = 0,
-                    delimiter: str = "\t") -> sc.AnnData:
+                    var_index: Optional[int] = 0,
+                    delimiter: str = "\t",
+                    comment_flag: str = '#') -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -327,10 +330,12 @@ def from_single_mtx(mtx: Union[str, Path],
         Set header parameter for reading metadata tables using pandas.read_csv.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
-    genes_index : int, default 0
-        Column which contains the gene IDs.
+    var_index : Optional[int], default 0
+        Column containing the variable IDs e.g. gene IDs or peak IDs.
     delimiter : str, default '\t'
-        delimiter of genes and barcodes table.
+        delimiter of the variable and barcode tables.
+    comment_flag : str, default '#'
+        Comment flag for the variable and barcode tables. Lines starting with this character will be ignored.
 
     Returns
     -------
@@ -351,12 +356,13 @@ def from_single_mtx(mtx: Union[str, Path],
         adata = adata.transpose()
 
     # Read in gene and cell annotation
-    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
+    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter, comment=comment_flag)
     barcode_csv.index.names = ['index']
     barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
 
     if variables:
-        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
+        # Read in var table
+        var_csv = pd.read_csv(variables, header=header, index_col=var_index, delimiter=delimiter, comment=comment_flag)
         var_csv.index.names = ['index']
         var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
 
