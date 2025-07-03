@@ -108,6 +108,7 @@ def write_TOBIAS_config(out_path: str,
 
     print(f"Wrote TOBIAS config yaml to '{out_path}'")
 
+
 @beartype
 def prepare_tobias(adata: sc.AnnData,
                    groupby: str,
@@ -168,6 +169,20 @@ def prepare_tobias(adata: sc.AnnData,
         TOBIAS flag for wilson calculation.
     threads : int
         Number of threads to use.
+
+    Returns
+    -------
+    path_TOBIAS_in : str
+        Path to the TOBIAS input directory.
+    path_TOBIAS_out : str
+        Path to the TOBIAS output directory.
+    yml : str
+        Name of the TOBIAS config yaml file.
+
+    Raises
+    ------
+    ValueError
+        If the groupby column is not found in adata.obs.
     """
     # Check if directory for TOBIAS run exists, if not create it
     if os.path.exists(output):
@@ -209,15 +224,15 @@ def prepare_tobias(adata: sc.AnnData,
             parallel = False
 
         tools.bam.split_bam_clusters(adata,
-                               bams=path_bam,
-                               groupby=groupby,
-                               barcode_col=barcode_column,
-                               read_tag=barcode_tag,
-                               output_prefix=path_TOBIAS_in,
-                               reader_threads=threads,
-                               writer_threads=threads,
-                               parallel=parallel,
-                               pysam_threads=threads)
+                                     bams=path_bam,
+                                     groupby=groupby,
+                                     barcode_col=barcode_column,
+                                     read_tag=barcode_tag,
+                                     output_prefix=path_TOBIAS_in,
+                                     reader_threads=threads,
+                                     writer_threads=threads,
+                                     parallel=parallel,
+                                     pysam_threads=threads)
 
     # Handle single condition
     else:
@@ -260,5 +275,8 @@ def prepare_tobias(adata: sc.AnnData,
                         plot_venn=plot_venn,
                         coverage=coverage,
                         wilson=wilson)
+
+    # Make yml path absolute
+    yml = os.path.abspath(os.path.join(path_TOBIAS_in, yml))
 
     return path_TOBIAS_in, path_TOBIAS_out, yml
