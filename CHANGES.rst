@@ -11,8 +11,8 @@
 - Fix main title in receptor-ligand network plot (#358)
 - load_h5ad(): warn if adata.raw is found. (#352)
 - receptor-ligand: nan zscore to 0 (#302)
-- Add function to download tutorial data
 - adjust to altered scanpy.normalize_total behavior (#370)
+- Add function to download tutorial data
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
