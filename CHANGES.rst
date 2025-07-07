@@ -11,8 +11,8 @@
 - Fix main title in receptor-ligand network plot (#358)
 - load_h5ad(): warn if adata.raw is found. (#352)
 - receptor-ligand: nan zscore to 0 (#302)
-- Add function to download tutorial data
 - adjust to altered scanpy.normalize_total behavior (#370)
+- Add function to download tutorial data
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -26,6 +26,7 @@ Changes to notebooks
 - General: annotation: add min_hits parameter
 - RNA/ ATAC 03: allow to choose the number of computed PCs
 - RNA/ ATAC 01: allow to choose batch name
+- General: Move settings to config file
 
 0.12.0 (19-12-24)
 -----------------
