@@ -206,9 +206,9 @@ def test_pairwise_scatter(adata, thresholds):
     assert type(axarr[0, 0]).__name__.startswith("Axes")
 
 
-@pytest.mark.parametrize("ax", [None, plt.subplots()[1]])
+@pytest.mark.parametrize("ax, crop", [(None, None), (plt.subplots()[1], 2)])
 def test_plot_table(df, ax):
     """Test plot_table with and without predefined ax."""
-    ax = pl.plot_table(table=df)
+    ax = pl.plot_table(table=df, crop=crop)
 
     assert isinstance(ax, plt.Axes)
