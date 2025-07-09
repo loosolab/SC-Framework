@@ -12,6 +12,7 @@ from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -150,7 +151,7 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report:
                 info_table.setdefault("Source", []).append(v)
 
         # save table
-        pd.DataFrame(info_table).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
+        plot_table(table=pd.DataFrame(info_table), report=report)
 
     return adata
 
