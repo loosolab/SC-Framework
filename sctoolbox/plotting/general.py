@@ -945,6 +945,7 @@ def plot_table(table: pd.DataFrame,
                show_index: bool = True,
                show_header: bool = True,
                fontsize: int = 14,
+               crop: Optional[int] = 10,
                **kwargs: Any) -> Axes:
     """
     Plot a pandas DataFrame.
@@ -984,6 +985,8 @@ def plot_table(table: pd.DataFrame,
         Whether to show the column header.
     fontsize : default 14
         The table fontsize.
+    crop : default 10
+        Crop the table to the `crop / 2` top and bottom rows.
     **kwargs
         Additional arguments are forwarded to `matplotlib.pyplot.table`
 
@@ -992,10 +995,26 @@ def plot_table(table: pd.DataFrame,
     Axes
         Object containing the plot.
     """
+    if crop and len(table) > crop:
+        top = table.head(crop // 2)
+        bottom = table.tail(crop // 2)
+
+        # create row of '...'
+        sep_row = pd.DataFrame([['...'] * len(table.columns)], columns=table.columns, index=['...'])
+        sep_row.index.name = top.index.name  # NOTE: doesn't work with multi-index
+        # combine top, a row of '...' and bottom entries to a truncated table
+        table = pd.concat([top, sep_row, bottom])
+
+    # if the table is empty but has an index
+    # convert index to a normal column
+    if len(table.columns) < 1:
+        show_index = False
+        table.reset_index(inplace=True)
+
     if ax is None:
         # compute figure size based on column and row width
-        size = ((len(table.columns) + table.columns.nlevels) * col_width,
-                (len(table.index) + table.index.nlevels) * row_height)
+        size = ((len(table.columns) + table.index.nlevels) * col_width,
+                (len(table.index) + table.columns.nlevels) * row_height)
 
         _, ax = plt.subplots(figsize=size)
         ax.axis('off')
@@ -1004,6 +1023,7 @@ def plot_table(table: pd.DataFrame,
                          rowLabels=table.index if show_index else None,
                          colLabels=table.columns if show_header else None,
                          bbox=bbox,
+                         colWidths=[1 / (len(table.columns) + table.index.nlevels)] * (len(table.columns) + table.index.nlevels),
                          **kwargs)
 
     # set fontsize
@@ -1027,5 +1047,7 @@ def plot_table(table: pd.DataFrame,
     # report
     if settings.report_dir and report:
         _save_figure(report, report=True, **save_kwargs)
+
+    plt.close()
 
     return ax
