@@ -14,7 +14,7 @@ import seaborn
 from pathlib import Path
 
 from beartype import beartype
-from beartype.typing import Optional, Literal, Tuple, Union, Any
+from beartype.typing import Optional, Literal, Tuple, Union, Any, Dict, List
 from numpy.typing import NDArray
 
 from sctoolbox import settings
@@ -924,3 +924,108 @@ def pairwise_scatter(table: pd.DataFrame,
         _save_figure(report, report=True)
 
     return axarr
+
+
+########################################################################################
+# --------------------------------------- Table -------------------------------------- #
+########################################################################################
+
+@beartype
+def plot_table(table: pd.DataFrame,
+               ax: Optional[Axes] = None,
+               save: Optional[str] = None,
+               report: Optional[str] = None,
+               save_kwargs: Dict = {},
+               col_width: int | float = 3,
+               row_height: int | float = 0.625,
+               row_colors: str | List[str] = ['#f1f1f2', 'white'],
+               edge_color: str = 'white',
+               bbox: Tuple[int | float, int | float, int | float, int | float] = (0, 0, 1, 1),
+               index_color: str = '#40466e',
+               show_index: bool = True,
+               show_header: bool = True,
+               fontsize: int = 14,
+               **kwargs: Any) -> Axes:
+    """
+    Plot a pandas DataFrame.
+
+    Template: https://stackoverflow.com/a/39358722
+
+    Parameters
+    ----------
+    table : pd.DataFrame
+        The table to plot.
+    ax : Optional[Axes]
+        Add the plot to this ax-object or create a new one.
+    save : Optional[str]
+        Path to save the plot. Uses `sctoolbox.settings.figure_dir`.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    save_kwargs : default {}
+        Additional saving arguments. Will be used by `save` and `report`.
+    col_width : default 3
+        Width of each column in inches. Ignored if `ax` is used.
+    row_height : default 0.625
+        Height of each row in inches. Ignored if `ax` is used.
+    row_colors : default ['#f1f1f2', 'white']
+        The row background color(s). Multiple colors will be in alternating fashion.
+    edge_color : default 'white'
+        Color of the border of each cell.
+    bbox : default (0, 0, 1, 1)
+        A matplotlib bounding box. Forwarded to `matplotlib.pyplot.table`. Defines the spacing and position of the table.
+        Provide a Tuple of (xmin, ymin, width, height). See https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.table.html
+    header_cols : default 1
+        The number of top rows considered as header. Will be colored according to `header_color`.
+    index_color : default '#40466e'
+        Background color for the column and row index cells.
+    show_index : default True
+        Whether to show the row index.
+    show_header : default True
+        Whether to show the column header.
+    fontsize : default 14
+        The table fontsize.
+    **kwargs
+        Additional arguments are forwarded to `matplotlib.pyplot.table`
+
+    Returns
+    -------
+    Axes
+        Object containing the plot.
+    """
+    if ax is None:
+        # compute figure size based on column and row width
+        size = ((len(table.columns) + table.columns.nlevels) * col_width,
+                (len(table.index) + table.index.nlevels) * row_height)
+
+        _, ax = plt.subplots(figsize=size)
+        ax.axis('off')
+
+    mpl_table = ax.table(cellText=table.values,
+                         rowLabels=table.index if show_index else None,
+                         colLabels=table.columns if show_header else None,
+                         bbox=bbox,
+                         **kwargs)
+
+    # set fontsize
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(fontsize)
+
+    # color cell background
+    for (row, col), cell in  mpl_table.get_celld().items():
+        cell.set_edgecolor(edge_color)
+
+        # col ids start to count at 0 but the index has negative numbers
+        # row ids start to count at 0 and include the index (no negative numbers)
+        if row < table.index.nlevels and show_header or col < 0:
+            cell.set_text_props(weight='bold', color='w')  # TODO make header text options accessible
+            cell.set_facecolor(index_color)
+        else:
+            cell.set_facecolor(row_colors[row % len(row_colors)])
+
+    _save_figure(save, **save_kwargs)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True, **save_kwargs)
+
+    return ax
