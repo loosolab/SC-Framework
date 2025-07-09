@@ -14,6 +14,7 @@ from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -167,7 +168,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -177,8 +178,9 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> Non
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
-    report : Optional[str]
+    report : Optional[list[str]]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
@@ -199,7 +201,7 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> Non
 
     # generate report
     if settings.report_dir and report:
-        with open(Path(settings.report_dir) / report, "w") as f:
+        with open(Path(settings.report_dir) / report[0], "w") as f:
             f.write("\n".join([
                 "## Dataset",
                 f"{adata.shape[0]} observations x {adata.shape[1]} variables",
@@ -207,6 +209,9 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[str] = None) -> Non
                 f"Variable information: {', '.join(adata.var.columns)}",
                 f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
             ]))
+
+        plot_table(adata.obs, report=report[1], crop=4)
+        plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
 
