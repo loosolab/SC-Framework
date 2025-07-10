@@ -151,7 +151,7 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report:
                 info_table.setdefault("Source", []).append(v)
 
         # save table
-        plot_table(table=pd.DataFrame(info_table), report=report)
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
 
     return adata
 
@@ -330,7 +330,7 @@ def from_quant(path: str,
             info_table.setdefault("Source", []).append(sample_dir)
 
         # save table
-        pd.DataFrame(info_table).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
 
     return adata
 
@@ -513,7 +513,7 @@ def from_mtx(path: str,
             info_table.setdefault("Source", []).append(str(m.parents[0]))
 
         # save table
-        pd.DataFrame(info_table).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
 
     return adata
 
@@ -645,10 +645,13 @@ def convertToAdata(file: str,
 
     # generate and save report
     if settings.report_dir and report:
-        pd.DataFrame({
+        info_table = {
             "Name": ["NA"],
             "Source": [os.path.abspath(file)]
-        }).to_csv(Path(settings.report_dir) / report, index=False, sep="\t")
+        }
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
 
     if output:
         # Saving adata.h5ad
