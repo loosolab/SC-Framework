@@ -1867,6 +1867,7 @@ def plot_pca_variance(adata: sc.AnnData,
                       save: Optional[str] = None,
                       sel_col: str = "grey",
                       om_col: str = "lightgrey",
+                      suptitle: Optional[str] = "PCA Component Selection",
                       report: Optional[str] = None,
                       ) -> Axes:
     """Plot the pca variance explained by each component as a barplot.
@@ -1902,6 +1903,8 @@ def plot_pca_variance(adata: sc.AnnData,
         Bar color of selected bars.
     om_col : str, default "lightgrey"
         Bar color of omitted bars.
+    suptitle : Optional[str], default "PCA Component Selection"
+        The title of the figure.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
@@ -1943,6 +1946,15 @@ def plot_pca_variance(adata: sc.AnnData,
 
     # Cumulative variance
     var_cumulative = np.cumsum(var_explained)
+    # cumulative variance for the selected PCs
+    if selected:
+        sel_var_cumulative = [0]
+        for i, var in enumerate(var_explained, start=1):
+            if i in selected:
+                sel_var_cumulative.append(var + sel_var_cumulative[i-1])
+            else:
+                sel_var_cumulative.append(sel_var_cumulative[i-1])
+        sel_var_cumulative = sel_var_cumulative[1:]
 
     if corr_plot:
         # compute correlation coefficients
@@ -1967,6 +1979,9 @@ def plot_pca_variance(adata: sc.AnnData,
 
     # get the figure where the plots will be drawn on
     fig = ax.get_figure()
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize="x-large")
 
     # create a gridspec (a manual subplot grid) and position it at the location of the ax object
     upper_left, bottom_right = ax.get_position().get_points()
@@ -2001,11 +2016,41 @@ def plot_pca_variance(adata: sc.AnnData,
     # Plot cumulative variance
     if show_cumulative:
         ax2 = axs[0].twinx()
-        ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
+
+        # add cumulative variance line
+        var_lines = [ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)[0]]
+        # add line showing selected cumulative variance
+        if selected:
+            var_lines.append(ax2.plot(range(len(sel_var_cumulative)), sel_var_cumulative, color="blue", marker="x", linewidth=1, markersize=4)[0])
+
         ax2.set_ylabel("Cumulative\nvariance explained (%)", color="blue", fontsize=12)
         ax2.spines['right'].set_color('blue')
         ax2.yaxis.label.set_color('blue')
         ax2.tick_params(axis='y', colors='blue')
+        # add more than needed to the top to make space for the textbox
+        ax2.set_ylim(bottom=0,
+                     top=int(var_cumulative[-1] + (var_cumulative[-1] / 3)))
+
+        # add variance legend
+        var_labels = [f"Total var.: {var_cumulative[-1]:.2f}%"]
+        if selected:
+            var_labels.append(f"\nSelected var.: {sel_var_cumulative[-1]:.2f}%")
+
+        ax2.legend(
+            handles=var_lines,
+            labels=var_labels,
+            loc="upper right",
+            fontsize=12,
+            framealpha=0.5,
+            facecolor="#c8c8ff",
+            edgecolor="blue",
+            bbox_transform=ax2.transAxes,
+            labelspacing=-1,
+            handlelength=1,
+            handletextpad=0.2,
+            markerscale=1.3,
+            borderpad=0.2
+        )
 
     # Add number of selected as line
     if n_thresh:
