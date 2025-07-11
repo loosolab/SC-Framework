@@ -1118,6 +1118,7 @@ def plot_group_embeddings(adata: sc.AnnData,
                           col: Optional[str] = None,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
+                          suptitle: Optional[str] = None,
                           save: Optional[str] = None,
                           report: Optional[str] = None,
                           **kwargs: Any) -> NDArray:
@@ -1137,6 +1138,8 @@ def plot_group_embeddings(adata: sc.AnnData,
         Embedding to plot. Must be one of "umap", "tsne", "pca".
     ncols : int, default 4
         Number of columns in the figure.
+    suptitle : Optional[str]
+        The title of the figure.
     save : Optional[str], default None
         Path to save the figure.
     report : Optional[str]
@@ -1173,6 +1176,9 @@ def plot_group_embeddings(adata: sc.AnnData,
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr
     axes_list = axarr.flatten()
     n_plots = len(axes_list)
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize="x-large")
 
     # Plot UMAP/tSNE/pca per group
     for i, group in enumerate(groups):
