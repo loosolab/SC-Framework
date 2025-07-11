@@ -13,6 +13,7 @@
 - receptor-ligand: nan zscore to 0 (#302)
 - adjust to altered scanpy.normalize_total behavior (#370)
 - Add function to download tutorial data
+- plot_pca_variance: add selected variance line; allow log-scale
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^

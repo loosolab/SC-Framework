@@ -1868,6 +1868,7 @@ def plot_pca_variance(adata: sc.AnnData,
                       sel_col: str = "grey",
                       om_col: str = "lightgrey",
                       suptitle: Optional[str] = "PCA Component Selection",
+                      log_var_exp: bool = False,
                       report: Optional[str] = None,
                       ) -> Axes:
     """Plot the pca variance explained by each component as a barplot.
@@ -1905,6 +1906,8 @@ def plot_pca_variance(adata: sc.AnnData,
         Bar color of omitted bars.
     suptitle : Optional[str], default "PCA Component Selection"
         The title of the figure.
+    log_var_exp : bool, default False
+        Wether to apply log-scale to the "variance explained" (left) y-axis.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
@@ -2012,6 +2015,10 @@ def plot_pca_variance(adata: sc.AnnData,
                 ax=axs[0])
 
     axs[0].set_ylabel("Variance explained (%)", fontsize=12)
+
+    # apply log-scale
+    if log_var_exp:
+        axs[0].set_yscale("log")
 
     # Plot cumulative variance
     if show_cumulative:
