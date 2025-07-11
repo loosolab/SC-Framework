@@ -9,7 +9,7 @@ import glob
 import subprocess
 import sys
 
-# install these dependencies before everything else
+# Install these dependencies before everything else
 # do this here (not in conda) to make this package buildable without prior steps
 pre_deps = [
     "cmake>=3.18",  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
@@ -124,7 +124,8 @@ setup(
         'packaging',
         'throttler',
         'upsetplot',
-        'pptreport'
+        'pptreport',
+        'boto3'
     ],
     include_package_data=True,
     extras_require=extras_require

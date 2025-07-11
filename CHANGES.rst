@@ -1,6 +1,10 @@
 0.13.0 (in progress)
---------------------
+-----------------
+- predict_cell_cycle: implemented "gene_column" parameter
+- restrict the maximum size of a figure (2^16 pixle)
+- from_h5ad: expose concadata "label" parameter
 - Add delete_obs and delete_var parameters to prepare_for_cellxgene() (#287)
+- Add ability to use a peaks BED file to assemble var of ATAC-data (#346)
 - set scanpy>=1.11 to fix run_rank_genes error (#331)
 - GSEA: Revise gsea analysis: Bugfixes, save results into adata, rework plots (#345)
 - Add column exists check to bioutils.pseudobulk_table (#356)
@@ -8,6 +12,7 @@
 - load_h5ad(): warn if adata.raw is found. (#352)
 - receptor-ligand: nan zscore to 0 (#302)
 - adjust to altered scanpy.normalize_total behavior (#370)
+- Add function to download tutorial data
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -35,6 +40,10 @@ Changes to notebooks
     - 02-ATAC
     - 03-ATAC
     - 04-ATAC
+- General: annotation: add min_hits parameter
+- RNA/ ATAC 03: allow to choose the number of computed PCs
+- RNA/ ATAC 01: allow to choose batch name
+- General: Move settings to config file
 
 0.12.0 (19-12-24)
 -----------------

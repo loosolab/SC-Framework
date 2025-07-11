@@ -53,3 +53,51 @@
   log_file: "../logs/0B_velocity_log.txt"
   overwrite_log: True
   report_dir: "../report/0B_velocity/"
+
+"GSEA":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/GSEA/"
+  log_file: "../logs/GSEA_log.txt"
+  overwrite_log: True
+  report: "../report/GSEA/"
+
+"annoation":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/annotation/"
+  table_dir: "../tables/annotation/"
+  log_file: "../logs/annotation_log.txt"
+  overwrite_log: True
+  report_dir: "../report/annotation/"
+
+"group_markers":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/markers/"
+  table_dir: "../tables/markers/"
+  log_file: "../logs/marker_log.txt"
+  overwrite_log: True
+  report_dir: "../report/group_markers/"
+
+"prepare_for_cellxgene":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/cellxgene/"
+  log_file: "../logs/prepare_for_cellxgene_log.txt"
+  overwrite_log: True
+
+"proportion_analysis":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/proportion_analysis/"
+  log_file: "../logs/scanpro_analysis_log.txt"
+  overwrite_log: True
+  report_dir: "../report/proportion_analysis/"
+
+"pseudotime_analysis":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/pseudotime/"
+  log_file: "../logs/pseudotime_analysis_log.txt"
+  overwrite_log: True
+  report_dir: "../report/pseudotime_analysis/"
