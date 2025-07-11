@@ -832,7 +832,8 @@ def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | 
 
     # report
     if settings.report_dir and report:
-        df.to_csv(Path(settings.report_dir) / report, sep="\t", index=False)
+        # save table
+        pl.general.plot_table(table=df, report=report, show_index=False)
 
     return df
 
@@ -1318,7 +1319,8 @@ def _filter_object(adata: sc.AnnData,
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    msg = f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after})."
+    label = f" {', '.join(name)}" if name else ""
+    msg = f"Filtered {filtered}{label} elements from AnnData.{which} ({n_before} -> {n_after})."
     logger.info(msg)
 
     # report
