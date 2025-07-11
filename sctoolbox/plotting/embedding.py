@@ -1905,7 +1905,7 @@ def plot_pca_variance(adata: sc.AnnData,
     om_col : str, default "lightgrey"
         Bar color of omitted bars.
     suptitle : Optional[str], default "PCA Component Selection"
-        The title of the figure.
+        The title of the figure. Ignored when `ax` is used.
     log_var_exp : bool, default False
         Wether to apply log-scale to the "variance explained" (left) y-axis.
     report : Optional[str]
@@ -1936,7 +1936,9 @@ def plot_pca_variance(adata: sc.AnnData,
 
     if ax is None:
         _, ax = plt.subplots()
+        is_subplot = False
     else:
+        is_subplot = True
         if not type(ax).__name__.startswith("Axes"):
             raise ValueError("'ax' parameter needs to be an Axes object. Please check your input.")
 
@@ -1983,7 +1985,7 @@ def plot_pca_variance(adata: sc.AnnData,
     # get the figure where the plots will be drawn on
     fig = ax.get_figure()
 
-    if suptitle:
+    if suptitle and not is_subplot:
         fig.suptitle(suptitle, fontsize="x-large")
 
     # create a gridspec (a manual subplot grid) and position it at the location of the ax object
