@@ -264,6 +264,7 @@ def plot_embedding(adata: sc.AnnData,
                    hexbin_gridsize: int = 30,
                    shrink_colorbar: float | int = 0.3,
                    square: bool = True,
+                   suptitle: Optional[str] = None,
                    save: Optional[str] = None,
                    report: Optional[str] = None,
                    **kwargs) -> NDArray[Axes]:
@@ -293,6 +294,8 @@ def plot_embedding(adata: sc.AnnData,
         Shrink the height of the colorbar by this factor.
     square : bool, default True
         Whether to make the plot square.
+    suptitle : Optional[str], default None
+        The title for the whole figure.
     save : Optional[str], default None
         Filename to save the figure.
     report : Optional[str]
@@ -382,6 +385,10 @@ def plot_embedding(adata: sc.AnnData,
     kwargs.update(parameters)
 
     axarr = sc.pl.embedding(adata, **kwargs)
+
+    # add figure title
+    if suptitle:
+        axarr[0].get_figure().suptitle(suptitle, fontsize="x-large")
 
     # add dedicated legend ax to make it uniform with colorbar
     leg_ax = None

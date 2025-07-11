@@ -279,6 +279,7 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
+                    title: Optional[str] = None,
                     report: Optional[str] = None,
                     **kwargs: Any) -> NDArray[Axes]:
     """
@@ -300,6 +301,8 @@ def n_cells_barplot(adata: sc.AnnData,
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
+    title : Optional[str]
+        The title of the figure.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
@@ -346,10 +349,13 @@ def n_cells_barplot(adata: sc.AnnData,
         figsize = (5 + 5 * (groupby is not None), 3)  # if groupby is not None, add 5 to width
 
     if groupby is not None:
-        _, axarr = plt.subplots(1, 2, figsize=figsize)
+        fig, axarr = plt.subplots(1, 2, figsize=figsize)
     else:
-        _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
+        fig, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
         axarr = np.array([axarr])
+
+    if title:
+        fig.suptitle(title, fontsize="x-large")
 
     counts_wide.plot.bar(stacked=stacked, ax=axarr[0], legend=False, **kwargs)
     axarr[0].set_title("Number of cells")

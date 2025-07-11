@@ -238,6 +238,7 @@ def predict_cell_cycle(adata: sc.AnnData,
     if plot:
         pl.qc_filter.n_cells_barplot(adata, x="phase",
                                      groupby=groupby,
+                                     title="Cell Cycle Predition",
                                      save=save,
                                      report=report)
 
