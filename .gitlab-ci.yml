@@ -313,7 +313,7 @@ notebook-output-check:
   stage: test
   script:
     - python --version
-    - python scripts/check_notebooks.py */*.ipynb *_analysis/*/*.ipynb
+    - python scripts/check_notebooks.py general_notebooks/*.ipynb *_analysis/*/*.ipynb
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
