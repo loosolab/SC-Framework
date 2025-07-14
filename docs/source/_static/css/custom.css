@@ -13,8 +13,3 @@
 .nboutput .prompt {
     display: none;
 }
-
-/*h1:has(center) + div.nbinput.nblast div.input_area > div.highlight {
- *       background-color: powderblue;
- * }
- */
