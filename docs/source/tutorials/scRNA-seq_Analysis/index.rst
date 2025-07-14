@@ -1,5 +1,5 @@
-scRNA Analysis
---------------
+scRNA-seq Analysis
+------------------
 
 For this tutorial we will be processing the Danioheart Atlas dataset from Tarasco et al.
 For the core analysis, we will download the data, load and save our first anndata object, 
