@@ -6,6 +6,7 @@ from collections import Counter
 from itertools import combinations_with_replacement
 import scipy
 from sklearn.preprocessing import minmax_scale
+from pathlib import Path
 import scanpy as sc
 import matplotlib
 import matplotlib.pyplot as plt
@@ -32,7 +33,7 @@ from sctoolbox._settings import settings
 
 from sctoolbox.utils.adata import add_uns_info, in_uns, get_uns
 from sctoolbox.utils.bioutils import pseudobulk_table
-from sctoolbox.plotting.general import _save_figure
+from sctoolbox.plotting.general import _save_figure, plot_table
 
 logger = settings.logger
 
@@ -48,7 +49,8 @@ def download_db(adata: sc.AnnData,
                 sep: str = "\t",
                 inplace: bool = False,
                 overwrite: bool = False,
-                remove_duplicates: bool = True) -> Optional[sc.AnnData]:
+                remove_duplicates: bool = True,
+                report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
     r"""
     Download table of receptor-ligand interactions and store in adata.
 
@@ -77,6 +79,8 @@ def download_db(adata: sc.AnnData,
         If True will overwrite existing database.
     remove_duplicates : bool, default True
         If True, removes duplicate receptor-ligand combinations.
+    report : Optional[Tuple[str, str]]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Notes
     -----
@@ -107,6 +111,7 @@ def download_db(adata: sc.AnnData,
 
     try:
         database = pd.read_csv(db_path, sep=sep)
+        liana = False
     except FileNotFoundError:
         # Check if a LIANA resource
         if db_path in liana_res.show_resources():
@@ -114,6 +119,7 @@ def download_db(adata: sc.AnnData,
             database = liana_res.select_resource(db_path)
             # explode protein complexes interactions into single protein interactions
             database = liana_res.explode_complexes(database)
+            liana = True
         else:
             raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
 
@@ -139,6 +145,12 @@ def download_db(adata: sc.AnnData,
     modified_adata.uns['receptor-ligand']['database'] = database
     modified_adata.uns['receptor-ligand']['ligand_column'] = ligand_column
     modified_adata.uns['receptor-ligand']['receptor_column'] = receptor_column
+
+    # report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report[0], "w") as file:
+            file.write('Used database: ' + (f"LIANA - {db_path}" if liana else db_path))
+        plot_table(table=database, report=report[1], crop=10)
 
     if not inplace:
         return modified_adata
@@ -2634,10 +2646,10 @@ def condition_differences_network(
     }
 
     # Process each condition dimension
-    for dimension_key, dimension_results in diff_results.items():
+    for i, (dimension_key, dimension_results) in enumerate(diff_results.items()):
 
         # Process each comparison in this dimension
-        for comparison_key, comparison_data in dimension_results.items():
+        for j, (comparison_key, comparison_data) in enumerate(dimension_results.items(), start=i):
             # Skip non-dictionary entries or entries without differences
             if not isinstance(comparison_data, dict) or 'differences' not in comparison_data:
                 continue
@@ -2975,7 +2987,8 @@ def condition_differences_network(
 
                 # report
                 if settings.report_dir and report:
-                    _save_figure(f"{report[0]}_{dimension_key}_{comparison_key}_{direction_name}{report[1]}", report=True)
+                    prefix, rest = report[0].split("_")  # add number to prefix to handle multiplot output
+                    _save_figure(f"{prefix}{j:02d}_{rest}_{dimension_key}_{comparison_key}_{direction_name}{report[1]}", report=True)
 
                 # Store the figure for return
                 figures.append(fig)
