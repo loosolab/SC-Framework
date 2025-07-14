@@ -8,11 +8,11 @@ This is the tutorial page for the SC-Framework scRNA and scATAC analysis noteboo
 .. toctree::
    :maxdepth: 2
 
-   scRNA-seq Analysis/index
+   scRNA-seq_Analysis/index
 
 **scATAC-seq Tutorial**
 
 .. toctree::
    :maxdepth: 2
 
-   scATAC-seq Analysis/index
+   scATAC-seq_Analysis/index

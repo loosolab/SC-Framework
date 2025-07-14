@@ -5,6 +5,9 @@ and go through quality control, cell and gene filtering, batch correction, embed
 
 .. toctree::
     :maxdepth: 1
-    :glob:
 
-    *
+    Tutorial_00
+    Tutorial_01
+    Tutorial_02
+    Tutorial_03
+    Tutorial_04

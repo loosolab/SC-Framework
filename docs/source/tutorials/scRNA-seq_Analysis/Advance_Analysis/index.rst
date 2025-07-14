@@ -1,4 +1,4 @@
-Advanced Analysis
+Advance Analysis
 ----------------
 
 COMING SOON!

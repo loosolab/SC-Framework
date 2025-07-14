@@ -393,6 +393,8 @@ build-pages:
   stage: deploy
   before_script:
     - pip install .[all]
+    - git submodule init
+    - git submodule update
   script:
     - apt-get autoclean  # fix "You don't have enough free space in /var/cache/apt/archives/."
     - apt-get update -qq && apt-get install -qq -y pandoc  # system install of pandoc is needed
