@@ -48,6 +48,10 @@ class SctoolboxConfig(object):
         Path to log file, default None.
     overwrite_log : bool
         Overwrite log file if it already exists; default is to append, default False.
+    dpi : float
+        The resolution in dots per inch used when saving plots.
+    report_dpi : float
+        The resolution in dots per inch used when saving report plots.
     """
 
     __frozen: bool = False
@@ -67,6 +71,8 @@ class SctoolboxConfig(object):
                  verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
+                 dpi: float = 600,                # The resolution in dots per inch, used to save figures.
+                 report_dpi: float = 300         # The resolution in dots per inch, used for report figures.
                  ):
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories

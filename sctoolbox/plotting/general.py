@@ -27,7 +27,7 @@ logger = settings.logger
 
 @beartype
 def _save_figure(path: Optional[str],
-                 dpi: int = 600,
+                 dpi: Optional[int | float] = None,
                  report: bool = False,
                  max_pixle: int = 2**16,
                  **kwargs: Any) -> None:
@@ -39,8 +39,8 @@ def _save_figure(path: Optional[str],
         Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_dir' + 'sctoolbox.settings.figure_prefix' as prefix.
         Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff.
         The lack of extension indicates the figure will be saved as .png.
-    dpi : int, default 600
-        Dots per inch. Higher value increases resolution.
+    dpi : Optional[int, float]
+        Dots per inch. Higher value increases resolution. Uses either `sctoolbox.settings.dpi` or `sctoolbox.settings.report_dpi` if not set.
     report : bool, default False
         Set true to silently add plot to sctoolbox.settings.report_dir instead of 'figure_dir' + 'figure_prefix' (see above).
     max_pixle : int, default 2**16
@@ -52,6 +52,12 @@ def _save_figure(path: Optional[str],
 
     savefig_kwargs = {"bbox_inches": "tight", "facecolor": "white"}  # defaults
     savefig_kwargs.update(kwargs)
+
+    if dpi is None:
+        if report:
+            dpi = settings.report_dpi
+        else:
+            dpi = settings.dpi
 
     # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
     # This moves the checking to the _save_figure function rather than each plotting function.
