@@ -27,6 +27,7 @@ Changes to notebooks
 - RNA/ ATAC 03: allow to choose the number of computed PCs
 - RNA/ ATAC 01: allow to choose batch name
 - General: Move settings to config file
+- velocity: Add missing save/embedding options
 
 0.12.0 (19-12-24)
 -----------------
