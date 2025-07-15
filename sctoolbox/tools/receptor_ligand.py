@@ -3404,7 +3404,7 @@ def plot_interaction_timeline(
             facecolor=receptor_color,
             edgecolor='black',
             linewidth=0.5,
-            label=f"{r_gene} in {r_cluster}"
+            label=f"Receptor {r_gene} in {r_cluster}"
         )
 
         l_bars = ax.bar(
@@ -3415,7 +3415,7 @@ def plot_interaction_timeline(
             facecolor=ligand_color,
             edgecolor='black',
             linewidth=0.5,
-            label=f"{l_gene} in {l_cluster}"
+            label=f"Ligand {l_gene} in {l_cluster}"
         )
 
         # Add value labels with offset to prevent overlap
@@ -3463,32 +3463,12 @@ def plot_interaction_timeline(
         ax.set_ylim(0, y_max)
 
         # Add individual legend below plot with additional space
-        ax.legend(
-            fontsize=12,
-            loc='upper center',
-            bbox_to_anchor=(0.5, -0.25),
-            ncol=2,
-            frameon=True
-        )
+        ax.legend(fontsize=12, loc='upper right')
 
     # Hide empty subplots
     for empty_idx in range(n_interactions, n_rows * n_cols):
         empty_row, empty_col = empty_idx // n_cols, empty_idx % n_cols
         axes[empty_row, empty_col].set_visible(False)
-
-    # Add global legend for colors
-    legend_elements = [
-        plt.Rectangle((0, 0), 1, 1, facecolor=receptor_color, edgecolor='black', linewidth=0.5, label='Receptor'),
-        plt.Rectangle((0, 0), 1, 1, facecolor=ligand_color, edgecolor='black', linewidth=0.5, label='Ligand')
-    ]
-    fig.legend(
-        handles=legend_elements,
-        loc='lower center',
-        ncol=2,
-        bbox_to_anchor=(0.5, 0.01),
-        fontsize=12,
-        frameon=True
-    )
 
     # Set title
     if title is None:
