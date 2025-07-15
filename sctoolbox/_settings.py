@@ -72,7 +72,7 @@ class SctoolboxConfig(object):
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
                  dpi: float = 600,                # The resolution in dots per inch, used to save figures.
-                 report_dpi: float = 300         # The resolution in dots per inch, used for report figures.
+                 report_dpi: float = 200         # The resolution in dots per inch, used for report figures.
                  ):
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
