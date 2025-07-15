@@ -1033,12 +1033,13 @@ def test_plot_networks(adata_with_diff_results):
 
 
 @pytest.mark.parametrize(
-    "return_figs,show,save_prefix,mock_empty",
+    "return_figs,show,save,mock_empty",
     [
         # Success cases
         (True, False, None, False),
         (False, False, None, False),
         (True, False, "test_prefix", False),
+        (True, False, ("test_prefix", "png"), False),
 
         # Failure case
         (True, False, None, True),
@@ -1048,7 +1049,7 @@ def test_plot_networks(adata_with_diff_results):
     ]
 )
 def test_plot_all_condition_differences(
-    adata_with_diff_results, return_figs, show, save_prefix, mock_empty
+    adata_with_diff_results, return_figs, show, save, mock_empty
 ):
     """Test plot_all_condition_differences function."""
     # Prepare test data
@@ -1072,7 +1073,7 @@ def test_plot_all_condition_differences(
                             adata=adata,
                             show=show,
                             return_figures=return_figs,
-                            save_prefix=save_prefix
+                            save=save
                         )
                     assert "No condition differences found" in str(excinfo.value)
                     return
@@ -1086,7 +1087,7 @@ def test_plot_all_condition_differences(
                     adata=adata,
                     show=show,
                     return_figures=return_figs,
-                    save_prefix=save_prefix
+                    save=save
                 )
 
                 # Verify results
@@ -1099,10 +1100,10 @@ def test_plot_all_condition_differences(
                 assert mock_show.called == show
 
                 # Check save parameter passed correctly
-                if save_prefix and mock_network.called:
+                if save and mock_network.called:
                     save_was_used = False
                     for call in mock_network.call_args_list:
-                        if 'save' in call[1] and save_prefix in call[1]['save']:
+                        if 'save' in call[1] and save in call[1]['save']:
                             save_was_used = True
                             break
                     assert save_was_used
