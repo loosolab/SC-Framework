@@ -21,7 +21,7 @@ import warnings
 import logging
 import liana.resource as liana_res
 import networkx as nx
-from beartype.typing import Optional, Tuple, List, Dict
+from beartype.typing import Optional, Tuple, List, Dict, Literal
 import numpy.typing as npt
 from beartype import beartype
 
@@ -2479,7 +2479,8 @@ def condition_differences_network(
     n_cols: int = 4,
     n_rows: Optional[int] = None,
     non_hub_cols: Optional[int] = None,
-    close_figs: bool = True
+    close_figs: bool = True,
+    save_type: Literal['png', 'pdf'] = 'pdf'
 ) -> List[matplotlib.figure.Figure]:
     """
     Visualize differences between conditions as a receptor-ligand network with hubs separated.
@@ -2517,6 +2518,8 @@ def condition_differences_network(
         Number of columns for the non-hub network. If None, then uses all available columns (n_cols - 1)
     close_figs : bool, default True
         Whether to close figures after saving to free up memory
+    save_type : Literal['png', 'pdf']
+        Save plot as 'png' or 'pdf'
 
     Returns
     -------
@@ -2946,7 +2949,7 @@ def condition_differences_network(
 
                 # Save if requested
                 if save:
-                    output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.png"
+                    output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.{save_type}"
                     output_path = f"{settings.figure_dir}/{output_filename}"
                     plt.savefig(output_path, bbox_inches='tight')
 
@@ -2978,7 +2981,8 @@ def plot_all_condition_differences(
     n_rows: Optional[int] = None,
     show: bool = True,
     return_figures: bool = False,
-    close_figs: bool = True
+    close_figs: bool = True,
+    save_type: Literal['png', 'pdf'] = 'pdf'
 ) -> Optional[Dict[str, List[matplotlib.figure.Figure]]]:
     """Generate network plots for all condition difference comparisons.
 
@@ -3017,6 +3021,8 @@ def plot_all_condition_differences(
         Return the generated figures.
     close_figs : bool, default True
         Close figures after processing to free memory.
+    save_type : Literal['png', 'pdf']
+        Save plot as 'png' or 'pdf'
 
     Returns
     -------
@@ -3082,7 +3088,8 @@ def plot_all_condition_differences(
             vmax=vmax,
             n_cols=n_cols,
             n_rows=n_rows,
-            close_figs=close_figs and not show
+            close_figs=close_figs and not show,
+            save_type=save_type
         )
 
         # Store figures if requested
