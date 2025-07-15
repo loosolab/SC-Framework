@@ -2470,7 +2470,7 @@ def condition_differences_network(
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
     dpi: int = 300,
-    save: Optional[str] = None,
+    save: Optional[str | Tuple[str, str]] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
     color_palette: str = 'tab20',
@@ -2479,8 +2479,7 @@ def condition_differences_network(
     n_cols: int = 4,
     n_rows: Optional[int] = None,
     non_hub_cols: Optional[int] = None,
-    close_figs: bool = True,
-    save_type: Literal['png', 'pdf'] = 'pdf'
+    close_figs: bool = True
 ) -> List[matplotlib.figure.Figure]:
     """
     Visualize differences between conditions as a receptor-ligand network with hubs separated.
@@ -2498,8 +2497,10 @@ def condition_differences_network(
         Size of the figure
     dpi : int, default 300
         The resolution of the figure
-    save : Optional[str], default None
-        Output filename base. Uses the internal 'sctoolbox.settings.figure_dir'
+    save : Optional[str | Tuple[str, str]], default None
+        Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
+        string with output filename base. When a string is given the file format is set to 'pdf'.
+        Uses the internal 'sctoolbox.settings.figure_dir'
     split_by_direction : bool, default True
         Whether to create separate networks for positive and negative differences
     hub_threshold : int, default 4
@@ -2518,8 +2519,6 @@ def condition_differences_network(
         Number of columns for the non-hub network. If None, then uses all available columns (n_cols - 1)
     close_figs : bool, default True
         Whether to close figures after saving to free up memory
-    save_type : Literal['png', 'pdf']
-        Save plot as 'png' or 'pdf'
 
     Returns
     -------
@@ -2949,7 +2948,10 @@ def condition_differences_network(
 
                 # Save if requested
                 if save:
-                    output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.{save_type}"
+                    if isinstance(save, tuple):
+                        output_filename = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
+                    else:
+                        output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.pdf"
                     output_path = f"{settings.figure_dir}/{output_filename}"
                     plt.savefig(output_path, bbox_inches='tight')
 
@@ -2971,7 +2973,7 @@ def plot_all_condition_differences(
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
     dpi: int = 300,
-    save_prefix: Optional[str] = None,
+    save: Optional[str | Tuple[str, str]] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
     color_palette: str = 'tab20',
@@ -2981,8 +2983,7 @@ def plot_all_condition_differences(
     n_rows: Optional[int] = None,
     show: bool = True,
     return_figures: bool = False,
-    close_figs: bool = True,
-    save_type: Literal['png', 'pdf'] = 'pdf'
+    close_figs: bool = True
 ) -> Optional[Dict[str, List[matplotlib.figure.Figure]]]:
     """Generate network plots for all condition difference comparisons.
 
@@ -2999,8 +3000,9 @@ def plot_all_condition_differences(
         Size of the figure.
     dpi : int, default 300
         Resolution of the figure.
-    save_prefix : Optional[str], default None
-        Prefix for saved image filenames.
+    save : Optional[str | Tuple[str, str]], default None
+        Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
+        string with output filename base. When a string is given the file format is set to 'pdf'.
     split_by_direction : bool, default True
         Create separate plots for positive and negative differences.
     hub_threshold : int, default 4
@@ -3021,8 +3023,6 @@ def plot_all_condition_differences(
         Return the generated figures.
     close_figs : bool, default True
         Close figures after processing to free memory.
-    save_type : Literal['png', 'pdf']
-        Save plot as 'png' or 'pdf'
 
     Returns
     -------
@@ -3072,7 +3072,10 @@ def plot_all_condition_differences(
         }
 
         # Generate filename with dimension if saving
-        save_name = f"{save_prefix}_{dimension_key}" if save_prefix else None
+        if save:
+            save_name = (f"{save[0]}_{dimension_key}", save[1]) if isinstance(save, tuple) else f"{save}_{dimension_key}"
+        else:
+            save_name = None
 
         # Generate figures for this dimension
         figures = condition_differences_network(
@@ -3088,8 +3091,7 @@ def plot_all_condition_differences(
             vmax=vmax,
             n_cols=n_cols,
             n_rows=n_rows,
-            close_figs=close_figs and not show,
-            save_type=save_type
+            close_figs=close_figs and not show
         )
 
         # Store figures if requested
