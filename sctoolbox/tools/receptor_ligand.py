@@ -21,7 +21,7 @@ import warnings
 import logging
 import liana.resource as liana_res
 import networkx as nx
-from beartype.typing import Optional, Tuple, List, Dict, Literal
+from beartype.typing import Optional, Tuple, List, Dict
 import numpy.typing as npt
 from beartype import beartype
 
