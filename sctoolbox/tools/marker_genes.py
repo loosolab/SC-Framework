@@ -475,8 +475,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
                           n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
-                          save_excel: Optional[str] = None,
-                          report: Optional[str] = None) -> dict[str, pd.DataFrame]:
+                          save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -494,8 +493,6 @@ def get_rank_genes_tables(adata: sc.AnnData,
         List of adata.var columns, which will be added to pandas.DataFrame.
     save_excel : Optional[str], default None
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
-    report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -612,14 +609,6 @@ def get_rank_genes_tables(adata: sc.AnnData,
                     sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
             logger.info(f"Saved marker gene tables to '{filename}'")
-
-        # TODO report --> should think about pushing the excel table to a S3 later?
-        if settings.report_dir and report:
-            with pd.ExcelWriter(Path(settings.report_dir) / report) as writer:
-                for sheet_name in sheets:
-                    sheet = sheets[sheet_name]
-
-                    sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
     return group_tables
 
