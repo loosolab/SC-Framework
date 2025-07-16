@@ -1103,7 +1103,8 @@ def test_plot_all_condition_differences(
                 if save and mock_network.called:
                     save_was_used = False
                     for call in mock_network.call_args_list:
-                        if 'save' in call[1] and save in call[1]['save']:
+                        save_param, save_call = [save[0], call[1]['save'][0]] if isinstance(save, tuple) else [save, call[1]['save']]
+                        if 'save' in call[1] and save_param in save_call:
                             save_was_used = True
                             break
                     assert save_was_used
