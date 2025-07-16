@@ -969,6 +969,7 @@ def plot_table(table: pd.DataFrame,
                show_header: bool = True,
                fontsize: int = 14,
                crop: Optional[int] = 10,
+               round: Optional[int] = None,
                **kwargs: Any) -> Axes:
     """
     Plot a pandas DataFrame.
@@ -985,31 +986,31 @@ def plot_table(table: pd.DataFrame,
         Path to save the plot. Uses `sctoolbox.settings.figure_dir`.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
-    save_kwargs : default {}
+    save_kwargs : Dict, default {}
         Additional saving arguments. Will be used by `save` and `report`.
-    col_width : default 3
+    col_width : int | float, default 3
         Width of each column in inches. Ignored if `ax` is used.
-    row_height : default 0.625
+    row_height : int | float, default 0.625
         Height of each row in inches. Ignored if `ax` is used.
-    row_colors : default ['#f1f1f2', 'white']
+    row_colors : str | List[str], default ['#f1f1f2', 'white']
         The row background color(s). Multiple colors will be in alternating fashion.
-    edge_color : default 'white'
+    edge_color : str, default 'white'
         Color of the border of each cell.
-    bbox : default (0, 0, 1, 1)
+    bbox : Tuple[int | float, int | float, int | float, int | float], default (0, 0, 1, 1)
         A matplotlib bounding box. Forwarded to `matplotlib.pyplot.table`. Defines the spacing and position of the table.
         Provide a Tuple of (xmin, ymin, width, height). See https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.table.html
-    header_cols : default 1
-        The number of top rows considered as header. Will be colored according to `header_color`.
-    index_color : default '#40466e'
+    index_color : str, default '#40466e'
         Background color for the column and row index cells.
-    show_index : default True
+    show_index : bool, default True
         Whether to show the row index.
-    show_header : default True
+    show_header : bool, default True
         Whether to show the column header.
-    fontsize : default 14
+    fontsize : int, default 14
         The table fontsize.
-    crop : default 10
+    crop : Optional[int], default 10
         Crop the table to the `crop / 2` top and bottom rows.
+    round : Optional[int]
+        The number of decimal places each number in the table should be rounded to.
     **kwargs
         Additional arguments are forwarded to `matplotlib.pyplot.table`
 
@@ -1018,6 +1019,11 @@ def plot_table(table: pd.DataFrame,
     Axes
         Object containing the plot.
     """
+    table = table.copy()  # ensure not to change the original table
+
+    if round is not None:
+        table = table.round(round)
+
     if crop and len(table) > crop:
         top = table.head(crop // 2)
         bottom = table.tail(crop // 2)
