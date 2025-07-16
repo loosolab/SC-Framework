@@ -588,7 +588,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
     # save table
-    if save_excel is not None or (settings.report_dir and report):
+    if save_excel is not None:
         # prepare excel table for saving
         sheets = {}
         for group in group_tables:
@@ -598,17 +598,16 @@ def get_rank_genes_tables(adata: sc.AnnData,
             sheet["scores"] = sheet["scores"].round(3)
             sheet["logfoldchanges"] = sheet["logfoldchanges"].round(3)
 
-        # If chosen: Save tables to joined excel
-        if save_excel is not None:
-            filename = Path(settings.full_table_prefix) / save_excel
+        #Save tables to joined excel
+        filename = Path(settings.full_table_prefix) / save_excel
 
-            with pd.ExcelWriter(filename) as writer:
-                for sheet_name in sheets:
-                    sheet = sheets[sheet_name]
+        with pd.ExcelWriter(filename) as writer:
+            for sheet_name in sheets:
+                sheet = sheets[sheet_name]
 
-                    sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
+                sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
-            logger.info(f"Saved marker gene tables to '{filename}'")
+        logger.info(f"Saved marker gene tables to '{filename}'")
 
     return group_tables
 
