@@ -8,7 +8,7 @@ import sctoolbox.utils as utils
 import sctoolbox.tools as tools
 
 from beartype import beartype
-from beartype.typing import Optional, Literal
+from beartype.typing import Optional, Literal, Tuple
 
 
 # from: https://github.com/yaml/pyyaml/issues/127#issuecomment-525800484
@@ -127,7 +127,7 @@ def prepare_tobias(adata: sc.AnnData,
                    plot_venn: bool = True,
                    coverage: bool = False,
                    wilson: bool = False,
-                   threads: int = 4):
+                   threads: int = 4) -> Tuple[str, str, str]:
     """
     Split ATAC-seq bamfile by adata.obs column and prepare TOBIAS run.
 
