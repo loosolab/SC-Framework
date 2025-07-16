@@ -10,6 +10,9 @@ import sctoolbox.tools as tools
 from beartype import beartype
 from beartype.typing import Optional, Literal, Tuple
 
+from sctoolbox._settings import settings
+logger = settings.logger
+
 
 # from: https://github.com/yaml/pyyaml/issues/127#issuecomment-525800484
 class _SpaceDumper(yaml.SafeDumper):
@@ -114,13 +117,13 @@ def prepare_tobias(adata: sc.AnnData,
                    groupby: str,
                    output: str,
                    path_bam: str,
+                   organism: Literal['human', 'mouse', 'zebrafish'],
                    barcode_column: Optional[str] = None,
                    barcode_tag: str = 'CB',
                    fasta: Optional[str] = None,
                    motifs: Optional[str] = None,
                    gtf: Optional[str] = None,
                    blacklist: Optional[str] = None,
-                   organism: str = 'human',
                    yml: str = "TOBIAS_config.yml",
                    plot_comparison: bool = True,
                    plot_correction: bool = True,
@@ -130,6 +133,9 @@ def prepare_tobias(adata: sc.AnnData,
                    threads: int = 4) -> Tuple[str, str, str]:
     """
     Split ATAC-seq bamfile by adata.obs column and prepare TOBIAS run.
+
+    The function will create a TOBIAS config yaml which can be used to run the TOBIAS Snakemake pipeline with the single cell data.
+    Comparisons, for example between conditions can be made using the groupby column in adata.obs table.
 
     Parameters
     ----------
@@ -141,33 +147,33 @@ def prepare_tobias(adata: sc.AnnData,
         Path to save the output files.
     path_bam : str
         Path
-    barcode_column : str
-        Column in adata.obs that contains the barcode information. If None adata.obs.index is used.
-    barcode_tag : str
-        Tag to extract the barcode from the read name.
-    fasta : str
-        Path to the organism fasta file.
-    motifs : str
-        Path to the motifs file or directory.
-    gtf : str
-        Path to the organisms gtf file (genes).
-    blacklist : str
-        Path to the blacklist file.
-    organism : str
+    organism : Literal['human', 'mouse', 'zebrafish']
         Organism. options = ["mouse", "human", "zebrafish"]
-    yml : str
+    barcode_column : Optional[str], default None
+        Column in adata.obs that contains the barcode information. If None adata.obs.index is used.
+    barcode_tag : str, default 'CB'
+        Tag to extract the barcode from the read name.
+    fasta : Optional[str], default None
+        Path to the organism fasta file.
+    motifs : Optional[str], default None
+        Path to the motifs file or directory.
+    gtf : Optional[str], default None
+        Path to the organisms gtf file (genes).
+    blacklist : Optional[str], default None
+        Path to the blacklist file.
+    yml : str, default "TOBIAS_config.yml"
         Name of TOBIAS config yaml. Cannot be named "config.yml" or it will be overwritten when running TOBIAS.
-    plot_comparison : bool
+    plot_comparison : bool, default True
         TOBIAS flag for plotting comparison between condition.
-    plot_correction : bool
+    plot_correction : bool, default True
         TOBIAS flag for plotting correction.
-    plot_venn : bool
+    plot_venn : bool, default True
         TOBIAS flag for plotting venn diagrams.
-    coverage : bool
+    coverage : bool, default False
         TOBIAS flag for coverage calculation.
-    wilson : bool
+    wilson : bool, default False
         TOBIAS flag for wilson calculation.
-    threads : int
+    threads : int, default 4
         Number of threads to use.
 
     Returns
@@ -186,8 +192,7 @@ def prepare_tobias(adata: sc.AnnData,
     """
     # Check if directory for TOBIAS run exists, if not create it
     if os.path.exists(output):
-        print(
-            f"WARNING: The directory \'{output}\' already exists. Any files in this directory may be overwritten, which can cause inconsistencies.")
+        logger.warning(f"WARNING: The directory \'{output}\' already exists. Any files in this directory may be overwritten, which can cause inconsistencies.")
     else:
         utils.io.create_dir(output)
 
