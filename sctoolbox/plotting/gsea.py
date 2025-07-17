@@ -147,11 +147,7 @@ def term_dotplot(adata: sc.AnnData,
     # combine expression and zscores
     comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
 
-    # report
-    if settings.report_dir and report:
-        _save_figure(report, report=True)
-
-    return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, **kwargs)
+    return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, report=report, **kwargs)
 
 
 @beartype
