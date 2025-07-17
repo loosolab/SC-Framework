@@ -10,6 +10,8 @@ import getpass
 from datetime import datetime
 import numpy as np
 import pandas as pd
+import logging
+import contextlib
 
 
 # type hint imports
@@ -475,3 +477,34 @@ def scale_values(array: npt.ArrayLike, mini: int | float, maxi: int | float) -> 
     val_range = array.max() - array.min()
     a = (array - array.min()) / val_range
     return a * (maxi - mini) + mini
+
+
+# ---------------- Logging functions ---------------- #
+
+@contextlib.contextmanager
+@beartype
+def suppress_logging(level: int = logging.CRITICAL):
+    """
+    Temporarily disable all logging.
+
+    Note: AI supported implementation
+
+    Parameter
+    ---------
+    level:
+        Supress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with supress_logging(level=50):
+            function_to_silence()
+    """
+    # disable logging for ALL loggers
+    logging.disable(level=level)
+    try:
+        yield
+    finally:
+        # enable logging for ALL loggers
+        logging.disable(logging.NOTSET)
