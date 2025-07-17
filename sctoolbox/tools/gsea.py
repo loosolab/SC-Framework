@@ -22,7 +22,6 @@ def gene_set_enrichment(adata: sc.AnnData,
                         marker_key: str,
                         organism: str,
                         method: Literal["prerank", "enrichr"] = "prerank",
-                        pvals_adj_tresh: float = 0.05,
                         library_name: str = "GO_Biological_Process_2023",
                         overwrite: bool = False,
                         inplace: bool = False,
@@ -43,8 +42,6 @@ def gene_set_enrichment(adata: sc.AnnData,
         Source organism.
     method : Literal["prerank", "enrichr"], default "prerank"
         Choose between enrichr and prerank(gsea) method.
-    pvals_adj_tresh : float, default 0.05
-        Threshold for adjusted p-value.
     library_name : str, default GO_Biological_Process_2023
         Name of public GO library.
         Get gene sets from public GO library.
