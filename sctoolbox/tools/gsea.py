@@ -2,7 +2,6 @@
 import pandas as pd
 import gseapy as gp
 import scanpy as sc
-import tqdm
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox.tools.marker_genes import get_rank_genes_tables
@@ -143,37 +142,39 @@ def gene_set_enrichment(adata: sc.AnnData,
     gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
 
     path_enr = {}
-    for ct, deg in tqdm.tqdm(marker_tables.items()):
-        logger.info(f"Running {method} for cluster {ct}.")
+    for i, (ct, deg) in enumerate(marker_tables.items(), start=1):
+        logger.info(f"Running {method} for cluster {ct} ({i}/{len(marker_tables)}).")
         enr_list = list()
         # enrichr API
         if len(deg) > 0:
-            if method == "enrichr":
-                enr = gp.enrichr(list(deg["names"].str.upper()),
-                                 gene_sets=gene_sets,
-                                 organism=organism,
-                                 background=background,
-                                 outdir=None,
-                                 no_plot=True,
-                                 verbose=False)
-                enr_list.append(enr.res2d)
-            elif method == "prerank":
-                # Set default kwargs
-                defaultKwargs = {"threads": 4,
-                                 "min_size": 5,
-                                 "max_size": 1000,
-                                 "permutation_num": 1000,
-                                 "outdir": None,
-                                 "seed": 6,
-                                 "verbose": True}
-                kwargs = {**defaultKwargs, **kwargs}
+            # briefly silence all loggers to disable gseapy logging
+            with utils.general.suppress_logging():
+                if method == "enrichr":
+                    enr = gp.enrichr(list(deg["names"].str.upper()),
+                                    gene_sets=gene_sets,
+                                    organism=organism,
+                                    background=background,
+                                    outdir=None,
+                                    no_plot=True,
+                                    verbose=False)
+                    enr_list.append(enr.res2d)
+                elif method == "prerank":
+                    # Set default kwargs
+                    defaultKwargs = {"threads": 4,
+                                    "min_size": 5,
+                                    "max_size": 1000,
+                                    "permutation_num": 1000,
+                                    "outdir": None,
+                                    "seed": 6,
+                                    "verbose": True}
+                    kwargs = {**defaultKwargs, **kwargs}
 
-                deg["names"] = deg["names"].str.upper()
-                deg.index = deg["names"]
-                enr = gp.prerank(rnk=deg["scores"],
-                                 gene_sets=gene_sets,
-                                 **kwargs)
-                enr_list.append(enr.res2d)
+                    deg["names"] = deg["names"].str.upper()
+                    deg.index = deg["names"]
+                    enr = gp.prerank(rnk=deg["scores"],
+                                    gene_sets=gene_sets,
+                                    **kwargs)
+                    enr_list.append(enr.res2d)
 
         # concat results
         if not all(x is None for x in enr_list):
