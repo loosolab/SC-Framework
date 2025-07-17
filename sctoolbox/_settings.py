@@ -223,6 +223,7 @@ class SctoolboxConfig(object):
         self._logger = logging.getLogger("sctoolbox")
         self._logger.setLevel(logging.DEBUG)  # always log everything to logger, handlers will filter
         self._logger.handlers = []  # remove any existing handlers
+        self._logger.propagate = False  # ensure no other handlers are used
 
         # Add stream handler
         H = logging.StreamHandler(sys.stdout)
