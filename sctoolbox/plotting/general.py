@@ -228,6 +228,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                        x_rot: int = 45,
                        show_grid: bool = False,
                        save: Optional[str] = None,
+                       report: Optional[str] = None,
                        **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
@@ -264,6 +265,8 @@ def clustermap_dotplot(table: pd.DataFrame,
         Show grid behind dots in plot.
     save : Optional[str], default None
         Save the figure to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments to pass to seaborn.scatterplot.
 
@@ -398,6 +401,9 @@ def clustermap_dotplot(table: pd.DataFrame,
 
     # Save figure
     _save_figure(save)
+
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return np.array(axes)
 
