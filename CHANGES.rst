@@ -13,6 +13,7 @@
 - receptor-ligand: nan zscore to 0 (#302)
 - adjust to altered scanpy.normalize_total behavior (#370)
 - Add function to download tutorial data
+- receptor-ligand: adjust minimum line width in connectionPlot
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
