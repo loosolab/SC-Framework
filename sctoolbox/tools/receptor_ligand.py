@@ -1246,6 +1246,7 @@ def connectionPlot(adata: sc.AnnData,
         data["alpha"] = minmax_scale(alpha_values, feature_range=(0, 1))[2 if alpha_range else 0:]
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
+        # Set minimum alpha to 0.2; if set below this, the lines in connectionPlot are very hard to see.
         data.loc[data["alpha"] < 0.2, "alpha"] = 0.2
     else:
         data["alpha"] = 1
