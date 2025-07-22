@@ -501,6 +501,27 @@ cleanup-orphan-tags:
     - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - |
+     # Handle broken API TOKENS
+      api() {
+        url="$1"
+        # capture body + status in one go
+        resp="$(curl -sS --retry 3 --retry-connrefused \
+                -H "PRIVATE-TOKEN: $API_TOKEN" \
+                -w '\n%{http_code}' "$url")" || { echo "curl failed"; return 1; }
+
+        status="${resp##*$'\n'}"
+        body="${resp%$'\n'$status}"
+
+        if [ "$status" -ge 400 ]; then
+          # Try to extract a useful message from JSON, fall back to raw body
+          msg="$(printf '%s' "$body" | jq -r '.message? // .error? // .[]? // empty' 2>/dev/null)"
+          echo "GitLab API error $status for $url: ${msg:-$body}" >&2
+          return 1
+        fi
+
+        printf '%s' "$body"
+      }
+
       # Fetch all branch names
       BRANCHES=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches" | jq -r '.[].name')
       echo "Branches:"
