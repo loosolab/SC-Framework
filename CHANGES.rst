@@ -14,6 +14,8 @@
 - adjust to altered scanpy.normalize_total behavior (#370)
 - Add function to download tutorial data
 - Allow differential R-L plots to be asved as PDF
+- Added new notebook testdata and references. (partly #338)
+- Improved flexibility in adata creation from mtx. (#365)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -29,6 +31,7 @@ Changes to notebooks
 - RNA/ ATAC 01: allow to choose batch name
 - General: Move settings to config file
 - velocity: Add missing save/embedding options
+- atac_analysis: assembling: Changed to new testdata.
 
 0.12.0 (19-12-24)
 -----------------
