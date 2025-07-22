@@ -1246,6 +1246,8 @@ def connectionPlot(adata: sc.AnnData,
         data["alpha"] = minmax_scale(alpha_values, feature_range=(0, 1))[2 if alpha_range else 0:]
         # fix values >1
         data.loc[data["alpha"] > 1, "alpha"] = 1
+        # Set minimum alpha to 0.2; if set below this, the lines in connectionPlot are very hard to see.
+        data.loc[data["alpha"] < 0.2, "alpha"] = 0.2
     else:
         data["alpha"] = 1
 
@@ -1293,7 +1295,7 @@ def connectionPlot(adata: sc.AnnData,
     # create legend for connection lines
     if connection_alpha:
         step_num = 5
-        s_steps, a_steps = np.linspace(min(alpha_values), max(alpha_values), step_num), np.linspace(0, 1, step_num)
+        s_steps, a_steps = np.linspace(min(alpha_values), max(alpha_values), step_num), np.linspace(0.2, 1, step_num)
 
         # create proxy actors https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#proxy-legend-handles
         line_list = [lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)]
