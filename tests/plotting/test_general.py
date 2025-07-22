@@ -207,7 +207,7 @@ def test_pairwise_scatter(adata, thresholds):
 
 
 @pytest.mark.parametrize("ax, crop", [(None, None), (plt.subplots()[1], 2)])
-def test_plot_table(df, ax):
+def test_plot_table(df, ax, crop):
     """Test plot_table with and without predefined ax."""
     ax = pl.plot_table(table=df, crop=crop)
 
