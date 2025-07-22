@@ -4,6 +4,7 @@ import scanpy as sc
 import os
 import sctoolbox.tools.tobias as tobias
 import yaml
+import shutil
 
 
 # ----------------------------- FIXTURES ------------------------------- #
@@ -79,4 +80,4 @@ def test_prepare_tobias(adata, bam_file):
     assert os.path.isdir(output_dir)
 
     # cleanup
-    os.rmdir('./tobias')
+    shutil.rmtree('./tobias')
