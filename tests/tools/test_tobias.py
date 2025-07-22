@@ -41,7 +41,7 @@ def test_prepare_tobias(adata, bam_file):
     """Test prepare_tobias success."""
 
     input_dir, output_dir, yml = tobias.prepare_tobias(adata,
-                                                       groupby='sample',
+                                                       groupby='Sample',
                                                        output='./tobias',
                                                        path_bam=bam_file,
                                                        barcode_column=None,
