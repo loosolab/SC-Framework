@@ -15,7 +15,7 @@
 - Add function to download tutorial data
 - plot_pca_variance: add selected variance line; allow log-scale
 - add global dpi setting
-- implemented suppress_logging
+- implemented suppress_logging, get_version_report
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
