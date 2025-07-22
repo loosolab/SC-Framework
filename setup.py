@@ -27,8 +27,7 @@ for dep in pre_deps:
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['episcanpy',
-                           'uropa',
+                  "atac": ['uropa',
                            'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
                            'pygenometracks>=3.8',
                            'peakqc',
