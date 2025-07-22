@@ -36,6 +36,7 @@ def test_write_TOBIAS_config():
 
     assert yml["data"]["1"] == "bam1.bam"
 
+
 def test_prepare_tobias(adata, bam_file):
     """Test prepare_tobias success."""
 
