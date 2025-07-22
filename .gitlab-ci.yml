@@ -523,7 +523,9 @@ cleanup-orphan-tags:
       }
 
       # Fetch all branch names
-      BRANCHES=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches" | jq -r '.[].name')
+      branches_json="$(api "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches?per_page=100")"
+      BRANCHES="$(printf '%s' "$branches_json" | jq -er 'if type=="array" then .[].name else empty end')"
+
       echo "Branches:"
       echo "$BRANCHES"
       
