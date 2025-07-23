@@ -965,7 +965,7 @@ def plot_table(table: pd.DataFrame,
                save: Optional[str] = None,
                report: Optional[str] = None,
                save_kwargs: Dict = {},
-               col_width: int | float = 3,
+               col_width: int | float | List[int | float] = 3,
                row_height: int | float = 0.625,
                row_colors: str | List[str] = ['#f1f1f2', 'white'],
                edge_color: str = 'white',
@@ -994,8 +994,9 @@ def plot_table(table: pd.DataFrame,
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     save_kwargs : Dict, default {}
         Additional saving arguments. Will be used by `save` and `report`.
-    col_width : int | float, default 3
-        Width of each column in inches. Ignored if `ax` is used.
+    col_width : int | float | List[int | float], default 3
+        Width of each column in inches. Use a list to define individual column widths. The list has to be of length 'number of columns' + 'number of index columns'.
+        Ignored if `ax` is used.
     row_height : int | float, default 0.625
         Height of each row in inches. Ignored if `ax` is used.
     row_colors : str | List[str], default ['#f1f1f2', 'white']
@@ -1020,12 +1021,21 @@ def plot_table(table: pd.DataFrame,
     **kwargs
         Additional arguments are forwarded to `matplotlib.pyplot.table`
 
+    Raises
+    ------
+    ValueError
+        When the number of col_widths doesn't match the number of columns + indices.
+
     Returns
     -------
     Axes
         Object containing the plot.
     """
     table = table.copy()  # ensure not to change the original table
+
+    index_num = table.index.nlevels if show_index else 0
+    if isinstance(col_width, list) and len(col_width) != len(table.columns) + index_num:
+        raise ValueError(f"The table has {len(table.columns) + index_num} column(s){'+index' if index_num else ''} but {len(col_width)} widths where given.")
 
     if round is not None:
         table = table.round(round)
@@ -1046,9 +1056,13 @@ def plot_table(table: pd.DataFrame,
         show_index = False
         table.reset_index(inplace=True)
 
+    # set column widths
+    if not isinstance(col_width, list):
+        col_width = [1 / (len(table.columns) + index_num)] * (len(table.columns) + index_num)
+
     if ax is None:
         # compute figure size based on column and row width
-        size = ((len(table.columns) + table.index.nlevels) * col_width,
+        size = (sum(col_width),
                 (len(table.index) + table.columns.nlevels) * row_height)
 
         _, ax = plt.subplots(figsize=size)
@@ -1058,7 +1072,7 @@ def plot_table(table: pd.DataFrame,
                          rowLabels=table.index if show_index else None,
                          colLabels=table.columns if show_header else None,
                          bbox=bbox,
-                         colWidths=[1 / (len(table.columns) + table.index.nlevels)] * (len(table.columns) + table.index.nlevels),
+                         colWidths=col_width,
                          **kwargs)
 
     # set fontsize
