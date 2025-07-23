@@ -43,23 +43,23 @@ def test_prepare_tobias(adata, bam_file):
 
     try:
         input_dir, output_dir, yml = tobias.prepare_tobias(adata,
-                                                        groupby='Sample',
-                                                        output='./tobias',
-                                                        path_bam=bam_file,
-                                                        barcode_column=None,
-                                                        barcode_tag='CB',
-                                                        fasta='some.fa',
-                                                        motifs=None,
-                                                        gtf='genes.gtf',
-                                                        blacklist=None,
-                                                        organism='human',
-                                                        yml="TOBIAS_config.yml",
-                                                        plot_comparison=True,
-                                                        plot_correction=True,
-                                                        plot_venn=True,
-                                                        coverage=False,
-                                                        wilson=False,
-                                                        threads=4)
+                                                           groupby='Sample',
+                                                           output='./tobias',
+                                                           path_bam=bam_file,
+                                                           barcode_column=None,
+                                                           barcode_tag='CB',
+                                                           fasta='some.fa',
+                                                           motifs=None,
+                                                           gtf='genes.gtf',
+                                                           blacklist=None,
+                                                           organism='human',
+                                                           yml="TOBIAS_config.yml",
+                                                           plot_comparison=True,
+                                                           plot_correction=True,
+                                                           plot_venn=True,
+                                                           coverage=False,
+                                                           wilson=False,
+                                                           threads=4)
 
         with open(yml, 'r') as file:
             tobias_yaml = yaml.safe_load(file)
