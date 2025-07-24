@@ -24,6 +24,12 @@
   log_file: "../logs/04_log.txt"
   overwrite_log: True
 
+"0A":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  log_file: "../logs/tobias_log.txt"
+  overwrite_log: True
+
 "GSEA":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"

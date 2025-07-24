@@ -32,6 +32,7 @@ Changes to notebooks
 - General: Move settings to config file
 - velocity: Add missing save/embedding options
 - atac_analysis: assembling: Changed to new testdata.
+- ATAC: Implemented TOBIAS footprinting notebook
 
 0.12.0 (19-12-24)
 -----------------
