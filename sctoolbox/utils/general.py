@@ -20,7 +20,7 @@ from sctoolbox._settings import settings
 
 
 # type hint imports
-from beartype.typing import Any, TYPE_CHECKING, Optional, Union, Sequence, Literal
+from beartype.typing import Any, TYPE_CHECKING, Optional, Union, Sequence, Literal, Generator
 from beartype import beartype
 import numpy.typing as npt
 
@@ -559,20 +559,20 @@ def scale_values(array: npt.ArrayLike, mini: int | float, maxi: int | float) -> 
 
 @contextlib.contextmanager
 @beartype
-def suppress_logging(level: int = logging.CRITICAL):
+def suppress_logging(level: int = logging.CRITICAL) -> Generator:
     """
     Temporarily disable all logging.
 
     Note: AI supported implementation
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     level : int, default logging.CRITICAL
         Supress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
 
-    Yield
-    -----
-    None
+    Yields
+    ------
+    Generator
 
     Examples
     --------

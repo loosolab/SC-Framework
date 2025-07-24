@@ -126,7 +126,7 @@ def generate_report(
 
     # add dataset title slide
     report.add_title_slide(title=f"Dataset {dataset_name}",
-                        subtitle="SC-Framework Analysis")
+                           subtitle="SC-Framework Analysis")
 
     # create section for each folder (notebook)
     for sec, title in tqdm.tqdm(section_titles.items()):
