@@ -43,6 +43,7 @@ Changes to notebooks
     - 02-ATAC
     - 03-ATAC
     - 04-ATAC
+- RNA: implemented report notebook
 - General: annotation: add min_hits parameter
 - RNA/ ATAC 03: allow to choose the number of computed PCs
 - RNA/ ATAC 01: allow to choose batch name
