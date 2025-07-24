@@ -148,29 +148,29 @@ def gene_set_enrichment(adata: sc.AnnData,
             with utils.general.suppress_logging():
                 if method == "enrichr":
                     enr = gp.enrichr(list(deg["names"].str.upper()),
-                                    gene_sets=gene_sets,
-                                    organism=organism,
-                                    background=background,
-                                    outdir=None,
-                                    no_plot=True,
-                                    verbose=False)
+                                     gene_sets=gene_sets,
+                                     organism=organism,
+                                     background=background,
+                                     outdir=None,
+                                     no_plot=True,
+                                     verbose=False)
                     enr_list.append(enr.res2d)
                 elif method == "prerank":
                     # Set default kwargs
                     defaultKwargs = {"threads": 4,
-                                    "min_size": 5,
-                                    "max_size": 1000,
-                                    "permutation_num": 1000,
-                                    "outdir": None,
-                                    "seed": 6,
-                                    "verbose": True}
+                                     "min_size": 5,
+                                     "max_size": 1000,
+                                     "permutation_num": 1000,
+                                     "outdir": None,
+                                     "seed": 6,
+                                     "verbose": True}
                     kwargs = {**defaultKwargs, **kwargs}
 
                     deg["names"] = deg["names"].str.upper()
                     deg.index = deg["names"]
                     enr = gp.prerank(rnk=deg["scores"],
-                                    gene_sets=gene_sets,
-                                    **kwargs)
+                                     gene_sets=gene_sets,
+                                     **kwargs)
                     enr_list.append(enr.res2d)
 
         # concat results

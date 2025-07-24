@@ -598,7 +598,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             sheet["scores"] = sheet["scores"].round(3)
             sheet["logfoldchanges"] = sheet["logfoldchanges"].round(3)
 
-        #Save tables to joined excel
+        # Save tables to joined excel
         filename = Path(settings.full_table_prefix) / save_excel
 
         with pd.ExcelWriter(filename) as writer:

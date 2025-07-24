@@ -8,14 +8,14 @@ import tqdm
 from sctoolbox.plotting.general import plot_table
 from sctoolbox import settings
 
-from beartype.typing import Optional, Dict, List, Any, Tuple, Literal, Union, Collection, Mapping
+from beartype.typing import Optional, Dict, List, Any, Tuple, Literal
 from beartype import beartype
 
 
 @beartype
 def _get_slide_kwargs(section: str, slide_section_dict: Dict[str, Dict[str, Any] | List[Dict[str, Any]]], slide_num: Optional[int] = None) -> Dict[str, Any]:
     """
-    Returns the kwargs for the respective slide.
+    Return the kwargs for the respective slide.
 
     Note: intended for use in `generate_report`
 
@@ -87,7 +87,7 @@ def generate_report(
         Set None to use `sctoolbox.settings.report_dir`.
     max_pixels: int, default 1e7
         Images with more pixels will be resized.
-    ppr_kwargs: Any
+    **ppr_kwargs: Any
         Keyword arguments forwarded to `pptreport.PowerPointReport`.
 
     Returns
@@ -100,7 +100,7 @@ def generate_report(
     if isinstance(report_dir, str):
         report_dir = Path(report_dir)
 
-    #Initialize presentation
+    # Initialize presentation
     report = ppt.PowerPointReport(template=template, size=slide_format, **ppr_kwargs)
 
     # add tool version slide
@@ -131,7 +131,7 @@ def generate_report(
     # create section for each folder (notebook)
     for sec, title in tqdm.tqdm(section_titles.items()):
         sec_dir = report_dir / sec
-        
+
         if not sec_dir.is_dir():
             report.logger.warning(f"Skipping invalid section named '{sec}'.")
             continue
@@ -141,24 +141,24 @@ def generate_report(
         files = [f for f in files if not f.name.startswith("version")]  # skip versions.yml
         # extract prefixes to define the order
         prefixes = sorted(set(f.name.rsplit("_")[0] for f in files))
-        
+
         report.add_title_slide(title=title)
-        
+
         # create one slide for each prefix
         for prefix in prefixes:
             current_files = [f for f in files if f.name.startswith(prefix)]
-            
+
             kwargs = _get_slide_kwargs(
                 section=sec,
                 slide_num=int(prefix[:2]) - 1,
                 slide_section_dict=slide_sec_kwargs
             )
-            
-            if not "content" in kwargs:
+
+            if "content" not in kwargs:
                 kwargs["content"] = [str(f) for f in current_files]
-            if not "max_pixels" in kwargs:
+            if "max_pixels" not in kwargs:
                 kwargs["max_pixels"] = max_pixels
-            
+
             # add slide per prefix
             report.add_slide(
                 **kwargs

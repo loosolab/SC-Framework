@@ -99,10 +99,14 @@ def get_package_versions() -> dict[str, str]:
 _vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", "scFates", "gseapy",
                  "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias"]
 
+
 @beartype
 def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"] | list[str]] = "vip", table: bool = True, report: Optional[str] = None) -> dict[str, str] | pd.DataFrame:
     """
     Report important packages and versions loaded after the sctoolbox was imported.
+
+    Note: The package version will be "NA" if `importlib.metadata.version` raises a PackageNotFoundError.
+          For example, because no metadata was found.
 
     Parameters
     ----------
@@ -117,9 +121,6 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
         Whether to return a DataFrame or a dict.
     report : Optional[str]
         Name of the output yaml used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
-
-    Note: The package version will be "NA" if `importlib.metadata.version` raises a PackageNotFoundError.
-          For example, because no metadata was found.
 
     Returns
     -------
@@ -566,8 +567,12 @@ def suppress_logging(level: int = logging.CRITICAL):
 
     Parameter
     ---------
-    level:
+    level : int, default logging.CRITICAL
         Supress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
+
+    Yield
+    -----
+    None
 
     Examples
     --------

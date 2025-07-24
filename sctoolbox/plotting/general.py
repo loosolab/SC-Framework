@@ -1080,7 +1080,7 @@ def plot_table(table: pd.DataFrame,
     mpl_table.set_fontsize(fontsize)
 
     # color cell background
-    for (row, col), cell in  mpl_table.get_celld().items():
+    for (row, col), cell in mpl_table.get_celld().items():
         cell.set_edgecolor(edge_color)
 
         # col ids start to count at 0 but the index has negative numbers

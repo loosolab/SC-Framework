@@ -1962,9 +1962,9 @@ def plot_pca_variance(adata: sc.AnnData,
         sel_var_cumulative = [0]
         for i, var in enumerate(var_explained, start=1):
             if i in selected:
-                sel_var_cumulative.append(var + sel_var_cumulative[i-1])
+                sel_var_cumulative.append(var + sel_var_cumulative[i - 1])
             else:
-                sel_var_cumulative.append(sel_var_cumulative[i-1])
+                sel_var_cumulative.append(sel_var_cumulative[i - 1])
         sel_var_cumulative = sel_var_cumulative[1:]
 
     if corr_plot:
