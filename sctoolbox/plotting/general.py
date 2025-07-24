@@ -1058,7 +1058,7 @@ def plot_table(table: pd.DataFrame,
 
     # set column widths
     if not isinstance(col_width, list):
-        col_width = [1 / (len(table.columns) + index_num)] * (len(table.columns) + index_num)
+        col_width = [col_width] * (len(table.columns) + index_num)
 
     if ax is None:
         # compute figure size based on column and row width
