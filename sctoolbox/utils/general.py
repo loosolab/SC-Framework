@@ -97,7 +97,7 @@ def get_package_versions() -> dict[str, str]:
 
 
 _vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", "scFates", "gseapy",
-                 "pydeseq2", "scvelo", "markerrepo", "scanpro"]
+                 "pydeseq2", "scvelo", "markerrepo", "scanpro", "uropa", "tobias"]
 
 @beartype
 def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"] | list[str]] = "vip", table: bool = True, report: Optional[str] = None) -> dict[str, str] | pd.DataFrame:
