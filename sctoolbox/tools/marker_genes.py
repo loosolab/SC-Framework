@@ -808,7 +808,7 @@ def run_deseq2(adata: sc.AnnData,
         # Rename and add to deseq_table
         df = ds.results_df
         df.drop(columns=["lfcSE", "stat"], inplace=True)
-        df.columns = [C2 + "/" + C1 + "_" + col for col in df.columns]
+        df.columns = [C2 + "|" + C1 + "_" + col for col in df.columns]
         deseq_table = deseq_table.merge(df, left_index=True, right_index=True)
 
     # Add normalized individual sample counts to the back of table
@@ -818,7 +818,7 @@ def run_deseq2(adata: sc.AnnData,
 
     # Sort by p-value of first contrast
     C1, C2 = contrasts[0]
-    deseq_table.sort_values(by=C2 + "/" + C1 + "_pvalue", inplace=True)
+    deseq_table.sort_values(by=C2 + "|" + C1 + "_pvalue", inplace=True)
 
     # Add to adata uns
     utils.adata.add_uns_info(adata, "deseq_result", deseq_table)

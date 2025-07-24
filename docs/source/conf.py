@@ -42,7 +42,7 @@ extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in doc
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',
               "nbsphinx",
-              "nbsphinx_link",
+              "nbsphinx_link"
               ]
 
 napoleon_numpy_docstring = True
@@ -122,4 +122,11 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+html_css_files = [
+    'css/custom.css',
+]
+
+html_js_files = [
+    'js/custom.js',
+]

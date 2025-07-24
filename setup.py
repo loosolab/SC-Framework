@@ -27,11 +27,11 @@ for dep in pre_deps:
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['episcanpy',
-                           'uropa',
+                  "atac": ['uropa',
                            'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
                            'pygenometracks>=3.8',
-                           'peakqc'],
+                           'peakqc',
+                           'tobias'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1

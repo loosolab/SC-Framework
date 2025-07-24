@@ -29,7 +29,7 @@ for notebook in rna_notebooks:
 # Run ATAC notebooks
 notebook_dir = script_dir + "/../atac_analysis/notebooks/"
 atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
-atac_notebooks = [nb for nb in atac_notebooks if "05" not in nb and "06" not in nb]  # 05 is not tested yet; 06 uses the output of 05
+atac_notebooks = [nb for nb in atac_notebooks]
 print("\n\n")
 print("--------------------------------------- ATAC ---------------------------------------")
 print(f"Notebook directory: {notebook_dir}")
