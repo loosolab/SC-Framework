@@ -59,7 +59,7 @@ def generate_report(
     report_dir: Optional[str | Path] = None,
     max_pixels: int | float = 1e7,
     **ppr_kwargs: Any
-) -> ppt.PowerPoint:
+) -> ppt.PowerPointReport:
     """
     Generate a PowerPoint report summarizing the current analysis.
 
@@ -75,6 +75,8 @@ def generate_report(
         The top-level key corresponds to the section id (see `section_titles`). The top-level value is either a dictionary
         to provide a template for all slides in a section or a list of dicts providing a template for each slide of a section.
         The most inner dictionary defines keyword arguments for the `pptreport.PowerPointReport.add_slide` function.
+        The slides are filled using the file prefix (e.g. 01_*) if there is no `content` parameter. Each prefix results in one slide,
+        multiple files with the same prefix are put on the same slide.
     file_ext: List[str], default ["png", "md", "txt"]
     template: Optional[str]
         A PowerPoint template.
@@ -90,7 +92,7 @@ def generate_report(
 
     Returns
     -------
-    ppt.PowerPoint
+    ppt.PowerPointReport
         The fully populated PowerPoint object ready to be rendered and saved as a PowerPoint.
     """
     if report_dir is None:
@@ -100,8 +102,6 @@ def generate_report(
 
     #Initialize presentation
     report = ppt.PowerPointReport(template=template, size=slide_format, **ppr_kwargs)
-
-    #report._slides.clear()
 
     # add tool version slide
     versions = {}
