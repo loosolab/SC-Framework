@@ -118,7 +118,13 @@ def lsi(data: sc.AnnData,
             axis=0
         )
 
-    var_explained = np.round(svalues ** 2 / np.sum(svalues ** 2), decimals=3)
+    # try for dense then sparse matrix
+    try:
+        power = adata_comp.X ** 2
+    except TypeError:
+        power = adata_comp.X.power(2)
+
+    var_explained = np.round(svalues ** 2 / np.sum(power), decimals=3)
     stdev = svalues / np.sqrt(adata_comp.X.shape[0] - 1)
 
     # Add results to adata

@@ -19,6 +19,7 @@
 - receptor-ligand: adjust minimum line width in connectionPlot
 - Added new notebook testdata and references. (partly #338)
 - Improved flexibility in adata creation from mtx. (#365)
+- lsi: fixed bug scaling the total variance explained to 100%
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
