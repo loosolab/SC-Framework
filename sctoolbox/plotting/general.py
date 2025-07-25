@@ -969,12 +969,12 @@ def plot_table(table: pd.DataFrame,
                row_height: int | float = 0.625,
                row_colors: str | List[str] = ['#f1f1f2', 'white'],
                edge_color: str = 'white',
-               bbox: Tuple[int | float, int | float, int | float, int | float] = (0, 0, 1, 1),
+               bbox: Optional[Tuple[int | float, int | float, int | float, int | float]] = (0, 0, 1, 1),
                index_color: str = '#40466e',
                show_index: bool = True,
                show_header: bool = True,
                fontsize: int = 14,
-               char_hw_ratio: int | float = 0.75,
+               char_hw_ratio: int | float = 0.8,
                crop: Optional[int] = 10,
                round: Optional[int] = None,
                show: bool = False,
@@ -1005,9 +1005,10 @@ def plot_table(table: pd.DataFrame,
         The row background color(s). Multiple colors will be in alternating fashion.
     edge_color : str, default 'white'
         Color of the border of each cell.
-    bbox : Tuple[int | float, int | float, int | float, int | float], default (0, 0, 1, 1)
+    bbox : Optional[Tuple[int | float, int | float, int | float, int | float]], default (0, 0, 1, 1)
         A matplotlib bounding box. Forwarded to `matplotlib.pyplot.table`. Defines the spacing and position of the table.
-        Provide a Tuple of (xmin, ymin, width, height). See https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.table.html
+        Provide a Tuple of (xmin, ymin, width, height). See https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.table.html.
+        Note: Changing this greatly affects all width and height related parameters.
     index_color : str, default '#40466e'
         Background color for the column and row index cells.
     show_index : bool, default True
@@ -1016,9 +1017,9 @@ def plot_table(table: pd.DataFrame,
         Whether to show the column header.
     fontsize : int, default 14
         The table fontsize.
-    char_hw_ratio : int | float, default 0.75
-        Proportion of character width to height. I.e. 0.75 means, the character width is 75% of the characters height.
-        This is an approximation and may change with different fonts, sizes, etc.
+    char_hw_ratio : int | float, default 0.8
+        Proportion of character width to height. I.e. 0.8 means, the character width is 80% of the characters height.
+        This is an approximation and may change with different fonts, fontsizes, bold, etc.
         Used for automatic column width and cell padding.
     crop : Optional[int], default 10
         Crop the table to the `crop / 2` top and bottom rows.
@@ -1058,11 +1059,8 @@ def plot_table(table: pd.DataFrame,
         # combine top, a row of '...' and bottom entries to a truncated table
         table = pd.concat([top, sep_row, bottom])
 
-    # if the table is empty but has an index
-    # convert index to a normal column
-    if len(table.columns) < 1:
-        show_index = False
-        table.reset_index(inplace=True)
+    # convert index to a normal column to gain width control
+    table.reset_index(inplace=True)
 
     # font properties
     # fontsize (height of the characters) is defined as 1/72 inch
@@ -1075,18 +1073,19 @@ def plot_table(table: pd.DataFrame,
         col_width = [col_width] * (len(table.columns) + index_num)
     # set automatic column width for each column based on the maximum text width
     elif col_width == "auto":
-        # get the longest string in each column (includes index) + header name
-        if show_index and len(table.columns) > 1:
-            auto_width = [max(['' if table.index.name is None else str(table.index.name)] + table.index.astype(str).tolist(), key=len)]
-        else:
-            auto_width = []
-
+        auto_width = []
         for col in table.columns:
             auto_width.append(max(table[col].astype(str).tolist() + [col], key=len))
 
         col_width = []
-        for txt in auto_width:
-            col_width.append(len(txt) * approx_f_width + 2 * approx_f_width)  # add one character width padding on both sides
+        for i, txt in enumerate(auto_width):
+            if i < index_num:
+                # increased size for index column as index is bold
+                f_bold_width = approx_f_width * 1.3
+                col_width.append(len(txt) * f_bold_width + 2 * f_bold_width)
+            else:
+                # add one character width padding on both sides
+                col_width.append(len(txt) * approx_f_width + 2 * approx_f_width)
 
     if ax is None:
         # compute figure size based on column and row width
@@ -1097,7 +1096,7 @@ def plot_table(table: pd.DataFrame,
         ax.axis('off')
 
     mpl_table = ax.table(cellText=table.values,
-                         rowLabels=table.index if show_index else None,
+                         rowLabels=None,
                          colLabels=table.columns if show_header else None,
                          bbox=bbox,
                          colWidths=col_width,
@@ -1111,12 +1110,18 @@ def plot_table(table: pd.DataFrame,
     for (row, col), cell in mpl_table.get_celld().items():
         cell.set_edgecolor(edge_color)
 
-        # col ids start to count at 0 but the index has negative numbers
+        # col ids start to count at 0 but the index has negative numbers (doesn't matter index is converted to column)
         # row ids start to count at 0 and include the index (no negative numbers)
-        if row < table.index.nlevels and show_header or col < 0:
+        if row < 1 and col < index_num and show_header:
+            # color index headers
+            cell.set_text_props(weight='bold')
+            cell.set_facecolor('white')
+        elif row < 1 and show_header or col < index_num:
+            # color header and index
             cell.set_text_props(weight='bold', color='w')  # TODO make header text options accessible
             cell.set_facecolor(index_color)
         else:
+            # color data cells
             cell.set_facecolor(row_colors[row % len(row_colors)])
 
         # spacing between text and cell border
