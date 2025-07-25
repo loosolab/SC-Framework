@@ -965,7 +965,7 @@ def plot_table(table: pd.DataFrame,
                save: Optional[str] = None,
                report: Optional[str] = None,
                save_kwargs: Dict = {},
-               col_width: int | float | List[int | float] = 3,
+               col_width: Literal["auto"] | int | float | List[int | float] = "auto",
                row_height: int | float = 0.625,
                row_colors: str | List[str] = ['#f1f1f2', 'white'],
                edge_color: str = 'white',
@@ -974,8 +974,10 @@ def plot_table(table: pd.DataFrame,
                show_index: bool = True,
                show_header: bool = True,
                fontsize: int = 14,
+               char_hw_ratio: int | float = 0.75,
                crop: Optional[int] = 10,
                round: Optional[int] = None,
+               show: bool = False,
                **kwargs: Any) -> Axes:
     """
     Plot a pandas DataFrame.
@@ -994,7 +996,7 @@ def plot_table(table: pd.DataFrame,
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     save_kwargs : Dict, default {}
         Additional saving arguments. Will be used by `save` and `report`.
-    col_width : int | float | List[int | float], default 3
+    col_width : Literal["auto"] | int | float | List[int | float], default "auto"
         Width of each column in inches. Use a list to define individual column widths. The list has to be of length 'number of columns' + 'number of index columns'.
         Ignored if `ax` is used.
     row_height : int | float, default 0.625
@@ -1014,10 +1016,16 @@ def plot_table(table: pd.DataFrame,
         Whether to show the column header.
     fontsize : int, default 14
         The table fontsize.
+    char_hw_ratio : int | float, default 0.75
+        Proportion of character width to height. I.e. 0.75 means, the character width is 75% of the characters height.
+        This is an approximation and may change with different fonts, sizes, etc.
+        Used for automatic column width and cell padding.
     crop : Optional[int], default 10
         Crop the table to the `crop / 2` top and bottom rows.
     round : Optional[int]
         The number of decimal places each number in the table should be rounded to.
+    show : bool, default False
+        Whether to show the plot. If not closes the plot.
     **kwargs
         Additional arguments are forwarded to `matplotlib.pyplot.table`
 
@@ -1056,9 +1064,29 @@ def plot_table(table: pd.DataFrame,
         show_index = False
         table.reset_index(inplace=True)
 
+    # font properties
+    # fontsize (height of the characters) is defined as 1/72 inch
+    # approximate width as `char_hw_ratio` of that
+    f_height = fontsize * (1 / 72)
+    approx_f_width = f_height * char_hw_ratio
+
     # set column widths
-    if not isinstance(col_width, list):
+    if col_width != "auto" and not isinstance(col_width, list):
         col_width = [col_width] * (len(table.columns) + index_num)
+    # set automatic column width for each column based on the maximum text width
+    elif col_width == "auto":
+        # get the longest string in each column (includes index) + header name
+        if show_index and len(table.columns) > 1:
+            auto_width = [max(['' if table.index.name is None else str(table.index.name)] + table.index.astype(str).tolist(), key=len)]
+        else:
+            auto_width = []
+
+        for col in table.columns:
+            auto_width.append(max(table[col].astype(str).tolist() + [col], key=len))
+
+        col_width = []
+        for txt in auto_width:
+            col_width.append(len(txt) * approx_f_width + 2 * approx_f_width)  # add one character width padding on both sides
 
     if ax is None:
         # compute figure size based on column and row width
@@ -1091,12 +1119,21 @@ def plot_table(table: pd.DataFrame,
         else:
             cell.set_facecolor(row_colors[row % len(row_colors)])
 
+        # spacing between text and cell border
+        # this affects every direction (left, right, top, bottom)
+        # however height effect is minimal so I ignore it
+        # approximate padding as one character on each side for each column
+        cell.PAD = approx_f_width * len(col_width) / sum(col_width)
+
     _save_figure(save, **save_kwargs)
 
     # report
     if settings.report_dir and report:
         _save_figure(report, report=True, **save_kwargs)
 
-    plt.close()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     return ax
