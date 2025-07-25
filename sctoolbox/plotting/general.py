@@ -1060,7 +1060,8 @@ def plot_table(table: pd.DataFrame,
         table = pd.concat([top, sep_row, bottom])
 
     # convert index to a normal column to gain width control
-    table.reset_index(inplace=True)
+    if show_index:
+        table.reset_index(inplace=True)
 
     # font properties
     # fontsize (height of the characters) is defined as 1/72 inch
