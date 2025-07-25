@@ -115,7 +115,6 @@ def generate_report(
         table=pd.DataFrame(versions, index=["Version"]).transpose().reset_index(names="Name"),
         show_index=False,
         crop=None,
-        col_width=[2, 12],
         save=versions_file
     )
 
