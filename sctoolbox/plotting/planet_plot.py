@@ -10,7 +10,8 @@ from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
 from beartype.typing import Literal
 from numpy.typing import NDArray
-
+from sctoolbox._settings import settings
+logger = settings.logger
 
 #############################################################################
 #                                  Utilities                                #
@@ -244,6 +245,14 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
             all_thresholds = [*([expression_threshold] * (len(genes) + len(obs_columns)))]
 
     # get the genex values and obs values from the adata
+    if len(adata.var) > len(set(adata.var[gene_symbols])):
+        # if the var columns contains duplicates use the first entry
+        logger.warning(f"Adata.var['{gene_symbols}'] contains duplicates. Using the first entry for each duplicate.")
+
+        adata = adata.copy()  # ensure the original adata isn't overwritten
+        # make the column unique same as .make_var_names_unique
+        adata.var[gene_symbols] = sc.anndata.utils.make_index_unique(adata.var[gene_symbols].astype(str))
+
     df_values = sc.get.obs_df(adata, [*all_columns, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
 
     # get the count from the adata
