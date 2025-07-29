@@ -356,12 +356,11 @@ def run_rank_genes(adata: sc.AnnData,
     if variable is not None:
         # remove na
         adata_copy = adata_copy[:, ~adata_copy.var[variable].isna()].copy()
-        adata_copy.var[variable] = adata_copy.var[variable].astype(str)  # AnnData expects string-index
+        # make the column unique same as .make_var_names_unique
+        adata_copy.var[variable] = sc.anndata.utils.make_index_unique(adata_copy.var[variable].astype(str), join="_")
 
         # set the variable as index
         adata_copy.var.set_index(variable, inplace=True)
-
-        adata_copy.var_names_make_unique()
 
     # Catch ImplicitModificationWarning from scanpy
     params = {'method': 't-test',  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
@@ -545,12 +544,12 @@ def get_rank_genes_tables(adata: sc.AnnData,
     if key not in adata.uns:
         raise ValueError(f"Key '{key}' not found in adata.uns. Please use 'run_rank_genes' first.")
 
-    # change var.index if neccessary
+    # change var.index if necessary
     if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
         adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
-        adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str)  # AnnData expects string-index
+        # make the column unique same as .make_var_names_unique
+        adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = sc.anndata.utils.make_index_unique(adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str), join="_")
         adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True, drop=False)
-        adata.var_names_make_unique()
 
     # Read structure in .uns to pandas dataframes
     tables = {}
