@@ -352,6 +352,13 @@ def plot_embedding(adata: sc.AnnData,
     else:
         raise KeyError(f"The given method '{method}' or 'X_{method}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
 
+    # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
+    # The suffix is equivalent .var_names_make_unique(join="_")
+    if "gene_symbols" in kwargs:
+        adata = adata.copy()  # ensure the original adata isn't overwritten
+        # make the column unique same as .make_var_names_unique
+        adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+
     # ---- Plot embedding for chosen colors ---- #
 
     # get embedding dimensions if passed as a kwarg
@@ -451,7 +458,8 @@ def plot_embedding(adata: sc.AnnData,
             if ax_color is None:
                 color_values = None
             else:
-                color_values = utils.adata.get_cell_values(adata, ax_color)
+                # use an alternative to adata.var.index when gene_symbols is set
+                color_values = utils.adata.get_cell_values(adata, ax_color, var_col=kwargs.setdefault("gene_symbols"))
 
             # Determine colors to use
             cmap = kwargs["color_map"]
