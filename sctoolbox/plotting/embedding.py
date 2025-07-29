@@ -824,13 +824,25 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
     """
     try:
+        # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
+        # The suffix is equivalent .var_names_make_unique(join="_")
+        if "gene_symbols" in kwargs:
+            adata = adata.copy()  # ensure the original adata isn't overwritten
+            # make the column unique same as .make_var_names_unique
+            adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+
         # check for missing features
-        missing = set(features) - set(adata.var.index)
+        missing = set(features) - set(adata.var[kwargs["gene_symbols"]] if kwargs.setdefault("gene_symbols") else adata.var.index)
         if missing:
-            raise ValueError(f"Features {missing} are not found in adata.var.index!")
+            col = kwargs.setdefault("gene_symbols")
+            raise ValueError(f"Features {missing} are not found in adata.var{f'[{col}]' if kwargs.setdefault('gene_symbols') else '.index'}!")
 
         # create subset of features
-        subset = adata[:, features]
+        if kwargs.setdefault("gene_symbols"):
+            var_filter = adata.var.index[adata.var[kwargs.setdefault("gene_symbols")].isin(features)]
+        else:
+            var_filter = features
+        subset = adata[:, var_filter]
 
         # select layer
         if layer:
