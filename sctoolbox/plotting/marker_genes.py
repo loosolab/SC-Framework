@@ -105,9 +105,9 @@ def rank_genes_plot(adata: sc.AnnData,
         # change var.index if neccessary
         if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
             adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
-            adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str)  # AnnData expects string-index
+             # make the column unique same as .make_var_names_unique
+            adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = sc.anndata.utils.make_index_unique(adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str), join="_")
             adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True)
-            adata.var_names_make_unique()
 
 
         if style == "dots":
