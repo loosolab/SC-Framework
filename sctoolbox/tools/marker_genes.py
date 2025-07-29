@@ -598,13 +598,13 @@ def get_rank_genes_tables(adata: sc.AnnData,
             sheet["scores"] = sheet["scores"].round(3)
             sheet["logfoldchanges"] = sheet["logfoldchanges"].round(3)
 
+            sheets[group] = sheet
+
         # Save tables to joined excel
         filename = Path(settings.full_table_prefix) / save_excel
 
         with pd.ExcelWriter(filename) as writer:
-            for sheet_name in sheets:
-                sheet = sheets[sheet_name]
-
+            for sheet_name, sheet in sheets.items():
                 sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
         logger.info(f"Saved marker gene tables to '{filename}'")
