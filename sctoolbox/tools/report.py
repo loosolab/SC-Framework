@@ -136,8 +136,14 @@ def generate_report(
             continue
 
         # collect files
-        files = list(Path(sec_dir).glob(f"*[{'|'.join(file_ext)}]"))
-        files = [f for f in files if not f.name.startswith("version")]  # skip versions.yml
+        file_ext = [ext.lower() for ext in file_ext]  # make case-insensetive
+        files = []
+        for f in Path(sec_dir).iterdir():
+            # iterate over all files only keep the ones with allowed extensions
+            # skip the version file
+            if f.suffix.lower()[1:] in file_ext and not f.name.startswith("version"):
+                files.append(f)
+
         # extract prefixes to define the order
         prefixes = sorted(set(f.name.rsplit("_")[0] for f in files))
 
