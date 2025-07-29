@@ -354,7 +354,8 @@ def get_uns(adata: sc.AnnData,
 
 @beartype
 def get_cell_values(adata: sc.AnnData,
-                    element: str) -> np.ndarray:
+                    element: str,
+                    var_col: Optional[str] = None) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
 
     Parameters
@@ -363,6 +364,9 @@ def get_cell_values(adata: sc.AnnData,
         Anndata object.
     element : str
         The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+    var_col : Optional[str], default None
+        Use the given column of adata.var instead of the index.
+        Adata.obs is skipped when this is set.
 
     Returns
     -------
@@ -373,12 +377,20 @@ def get_cell_values(adata: sc.AnnData,
     ------
     ValueError
         If element is not found in adata.obs or adata.var.
+        If var_col is not a column name of adata.var.
     """
 
-    if element in adata.obs:
+    if element in adata.obs and var_col is None:
         values = np.array(adata.obs[element].values)
-    elif element in adata.var.index:
-        idx = list(adata.var.index).index(element)
+    elif element in adata.var.index or var_col is not None:
+        if var_col is None:
+            idx = list(adata.var.index).index(element)
+        else:
+            try:
+                idx = list(adata.var[var_col]).index(element)
+            except ValueError:
+                raise ValueError(f"{var_col} is not a column of adata.var.")
+
         values = adata.X[:, idx]
         values = values.todense().A1 if issparse(values) else values
     else:
