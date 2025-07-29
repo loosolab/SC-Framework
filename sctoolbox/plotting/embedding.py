@@ -200,7 +200,8 @@ def _add_legend_ax(ax_obj: Axes, ax_label: str = "<legend>") -> Optional[Axes]:
 def _binarize_expression(adata: sc.AnnData,
                          features: list[str],
                          threshold: Optional[float] = 0,
-                         percentile_threshold: Optional[float] = None):
+                         percentile_threshold: Optional[float] = None,
+                         var_col: Optional[str] = None):
     """
     Binarize the expression of a list of features based on a threshold and store the results in adata.obs.
 
@@ -216,6 +217,8 @@ def _binarize_expression(adata: sc.AnnData,
         The expression threshold for binarization. Only one of the threshold parameters may be given.
     percentile_threshold : Optional[float]
         The expression threshold as a percentile of the features expression. Only one of the threshold parameters may be given.
+    var_col : Optional[str]
+        Use the given column of adata.var instead of the index.
 
     Raises
     ------
@@ -227,18 +230,8 @@ def _binarize_expression(adata: sc.AnnData,
     if threshold is not None and percentile_threshold is not None:
         raise ValueError("The usage of 'threshold' excludes the usage of 'percentile_threshold' and vice versa. Set one or both of the parameters to None.")
 
-    # Check if all features are present in the adata object
-    missing_features = [feature for feature in features if feature not in adata.var_names]
-    if missing_features:
-        raise ValueError(f"Features not found in adata.var_names: {', '.join(missing_features)}")
-
     for feature in features:
-        feature_expr = adata[:, feature].X
-
-        if not isinstance(feature_expr, np.ndarray):
-            feature_expr = feature_expr.toarray()
-
-        feature_expr = feature_expr.flatten()
+        feature_expr = utils.adata.get_cell_values(adata=adata, element=feature, var_col=var_col)
 
         if percentile_threshold is not None:
             threshold = np.percentile(feature_expr, percentile_threshold)
@@ -707,6 +700,13 @@ def feature_per_group(adata: sc.AnnData,
     # fetch the groups
     grps = set(adata.obs[y])
 
+    # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
+    # The suffix is equivalent .var_names_make_unique(join="_")
+    if "gene_symbols" in kwargs:
+        adata = adata.copy()  # ensure the original adata isn't overwritten
+        # make the column unique same as .make_var_names_unique
+        adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+
     if top_n:
         # get the top n markers for each group
         x = tools.marker_genes.get_rank_genes_tables(adata,
@@ -735,7 +735,7 @@ def feature_per_group(adata: sc.AnnData,
         # collect all feature names and extend all names in x
         for grp in grps:
             features += x[grp]
-        _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold)
+        _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold, var_col=kwargs.setdefault("gene_symbols"))
 
     # create plot
     fig, axs = plt.subplots(nrows=len(grps),
