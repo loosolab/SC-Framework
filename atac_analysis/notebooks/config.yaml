@@ -40,7 +40,7 @@
   figure_dir: "../figures/GSEA/"
   log_file: "../logs/GSEA_log.txt"
   overwrite_log: True
-  report: "../report/GSEA/"
+  report_dir: "../report/GSEA/"
 
 "annoation":
   adata_input_dir: "../adatas/"
