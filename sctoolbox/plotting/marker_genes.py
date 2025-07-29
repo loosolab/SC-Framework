@@ -102,6 +102,14 @@ def rank_genes_plot(adata: sc.AnnData,
     parameters.update(kwargs)
     if key is not None:  # from rank_genes_groups output
 
+        # change var.index if neccessary
+        if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
+            adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
+            adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str)  # AnnData expects string-index
+            adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True)
+            adata.var_names_make_unique()
+
+
         if style == "dots":
             g = sc.pl.rank_genes_groups_dotplot(adata,
                                                 key=key,
@@ -182,10 +190,6 @@ def rank_genes_plot(adata: sc.AnnData,
 
     # Save figure
     _save_figure(save)
-
-    # report
-    if settings.report_dir and report:
-        _save_figure(report, report=True)
 
     # report
     if settings.report_dir and report:

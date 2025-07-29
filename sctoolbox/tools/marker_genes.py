@@ -301,6 +301,7 @@ def add_gene_expression(adata: sc.AnnData,
 @beartype
 def run_rank_genes(adata: sc.AnnData,
                    groupby: str,
+                   variable: Optional[str] = None,
                    min_in_group_fraction: float = 0.25,
                    min_fold_change: float = 0.5,
                    max_out_group_fraction: float = 0.8,
@@ -314,6 +315,9 @@ def run_rank_genes(adata: sc.AnnData,
         Anndata object containing gene expression/counts.
     groupby : str
         Column by which the cells in adata should be grouped.
+    variable : Optional[str]
+        The adata.var column providing the marker labels. Set None to use `adata.var.index`.
+        This parameter is incompatible with scanpy. Requires sctoolbox functions e.g. `sctoolbox.plotting.marker_genes.rank_genes_plot` for subsequent steps.
     min_in_group_fraction : float, default 0.25
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
         Parameter forwarded to scanpy.tl.filter_rank_genes_groups.
@@ -330,7 +334,12 @@ def run_rank_genes(adata: sc.AnnData,
     ------
     ValueError
         If number of groups defined by the groupby parameter is < 2.
+    ValueError
+        If the variable is not a column in `adata.var`.
     """
+
+    if not variable is None and not variable in adata.var.columns:
+        raise ValueError(f"Argument `variable={variable}` is not a valid column in `adata.var`.")
 
     if adata.obs[groupby].dtype.name != "category":
         adata.obs[groupby] = adata.obs[groupby].astype("category")
@@ -342,6 +351,18 @@ def run_rank_genes(adata: sc.AnnData,
     if adata.obs[groupby].nunique() < 2:
         raise ValueError("groupby must contain at least two groups.")
 
+    adata_copy = adata.copy()
+    # prepare adata to use markers provided from a adata.var column
+    if variable is not None:
+        # remove na
+        adata_copy = adata_copy[:, ~adata_copy.var[variable].isna()].copy()
+        adata_copy.var[variable] = adata_copy.var[variable].astype(str)  # AnnData expects string-index
+
+        # set the variable as index
+        adata_copy.var.set_index(variable, inplace=True)
+
+        adata_copy.var_names_make_unique()
+
     # Catch ImplicitModificationWarning from scanpy
     params = {'method': 't-test',  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
               'key_added': f'rank_genes_{groupby}'}  # set default key_added
@@ -349,15 +370,23 @@ def run_rank_genes(adata: sc.AnnData,
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
-        sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
+        sc.tl.rank_genes_groups(adata_copy, groupby=groupby, **params)
 
-    sc.tl.filter_rank_genes_groups(adata,
+    if variable is not None:
+        # internally track the alternative index
+        adata_copy.uns[params["key_added"]]["sctoolbox_params"] = {"index": variable}
+
+    sc.tl.filter_rank_genes_groups(adata_copy,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
                                    max_out_group_fraction=max_out_group_fraction,
                                    key=params["key_added"],
                                    key_added=f"{params['key_added']}_filtered"
                                    )
+
+    # add the results to the original adata
+    adata.uns[params["key_added"]] = adata_copy.uns[params["key_added"]]
+    adata.uns[f"{params['key_added']}_filtered"] = adata_copy.uns[f"{params['key_added']}_filtered"]
 
 
 @deco.log_anndata
@@ -515,6 +544,13 @@ def get_rank_genes_tables(adata: sc.AnnData,
     # Check that key is in adata.uns
     if key not in adata.uns:
         raise ValueError(f"Key '{key}' not found in adata.uns. Please use 'run_rank_genes' first.")
+
+    # change var.index if neccessary
+    if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
+        adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
+        adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str)  # AnnData expects string-index
+        adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True, drop=False)
+        adata.var_names_make_unique()
 
     # Read structure in .uns to pandas dataframes
     tables = {}
