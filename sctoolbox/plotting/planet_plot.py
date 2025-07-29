@@ -251,7 +251,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
 
         adata = adata.copy()  # ensure the original adata isn't overwritten
         # make the column unique same as .make_var_names_unique
-        adata.var[gene_symbols] = sc.anndata.utils.make_index_unique(adata.var[gene_symbols].astype(str))
+        adata.var[gene_symbols] = sc.anndata.utils.make_index_unique(adata.var[gene_symbols].astype(str), join="_")
 
     df_values = sc.get.obs_df(adata, [*all_columns, x_col, y_col], gene_symbols=gene_symbols, layer=input_layer, use_raw=defaultargs['use_raw'])
 
