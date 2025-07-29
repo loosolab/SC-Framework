@@ -13,6 +13,7 @@
 - receptor-ligand: nan zscore to 0 (#302)
 - adjust to altered scanpy.normalize_total behavior (#370)
 - Add function to download tutorial data
+- Allow differential R-L plots to be asved as PDF
 - receptor-ligand: adjust minimum line width in connectionPlot
 - Added new notebook testdata and references. (partly #338)
 - Improved flexibility in adata creation from mtx. (#365)
