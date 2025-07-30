@@ -115,6 +115,11 @@ def gene_set_enrichment(adata: sc.AnnData,
                                               out_group_fractions=True,
                                               key=marker_key,
                                               n_genes=None)
+
+        # remove potential "_1", "_2" suffixes
+        # TODO I'm assuming that this pattern is uniquely created by .var_names_make_unique and no genes are actually named that way.
+        for table in marker_tables.values():
+            table.iloc[:, 0] = table.iloc[:, 0].str.replace(r'_\d+$', '', regex=True)
     else:
         msg = "Marker key not found! Please check parameter!"
         logger.error(msg)
