@@ -27,7 +27,8 @@ def pseudobulk_table(adata: sc.AnnData,
                      layer: Optional[str] = None,
                      percentile_range: Tuple[int, int] = (0, 100),
                      chunk_size: int = 1000,
-                     gene_index: Optional[str] = None) -> pd.DataFrame:
+                     gene_index: Optional[str] = None,
+                     clean: bool = True) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -48,6 +49,9 @@ def pseudobulk_table(adata: sc.AnnData,
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
     gene_index : Optional[str], default None
         Column in adata.var that holds gene symbols/ ids.
+    clean : bool, default True
+        Removes NaN indexes and adds a suffix to duplicated indexes (e.g. 'gene_1', 'gene_2'). Especially important in combination with `gene_index`.
+        Changes index type to str.
 
     Returns
     -------
@@ -111,6 +115,11 @@ def pseudobulk_table(adata: sc.AnnData,
                     vals = np.nansum(chunk_values, axis=0)
 
                 res.iloc[i:i + chunk_size, column_i] = vals
+
+    # remove NA and add suffix to duplicate indexes
+    if clean:
+        res = res.loc[res.index.dropna()]
+        res.index = sc.anndata.utils.make_index_unique(res.index.astype(str), join="_")
 
     return res
 
