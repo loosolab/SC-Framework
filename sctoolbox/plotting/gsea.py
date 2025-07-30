@@ -528,7 +528,8 @@ def gsea_dot(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If gsea results cannot be found in adata.uns.
+        1. If gsea results cannot be found in adata.uns.
+        2. If the cutoff is to strict.
 
     Examples
     --------
@@ -566,6 +567,9 @@ def gsea_dot(adata: sc.AnnData,
         int(round(eval(operation) * 100, 0))
         for operation in term_table[get_uns(adata, _core_uns_path + ['overlap_col'])]
     ]
+
+    if len(term_table) < 1:
+        raise ValueError(f"A cutoff of {cutoff} filters everything. Set a more lenient cutoff to plot.")
 
     logger.info("Generating dotplot...")
     norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
