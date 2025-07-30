@@ -2504,7 +2504,7 @@ def condition_differences_network(
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
     dpi: Optional[int | float] = None,
-    save: Optional[str] = None,
+    save: Optional[str | Tuple[str, str]] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
     color_palette: str = 'tab20',
@@ -2532,8 +2532,10 @@ def condition_differences_network(
         Size of the figure
     dpi : Optional[int | float], default None
         The resolution of the figure. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
-    save : Optional[str], default None
-        Output filename base. Uses the internal 'sctoolbox.settings.figure_dir'
+    save : Optional[str | Tuple[str, str]], default None
+        Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
+        string with output filename base. When a string is given the file format is set to 'pdf'.
+        Uses the internal 'sctoolbox.settings.figure_dir'
     split_by_direction : bool, default True
         Whether to create separate networks for positive and negative differences
     hub_threshold : int, default 4
@@ -2983,7 +2985,11 @@ def condition_differences_network(
                 )
 
                 # Save if requested
-                _save_figure(f"{save}_{dimension_key}_{comparison_key}_{direction_name}.png", dpi=dpi)
+                if isinstance(save, tuple):
+                    save = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
+                elif isinstance(save, str)
+                    save = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.pdf"
+                _save_figure(save, dpi=dpi)
 
                 # report
                 if settings.report_dir and report:
@@ -3008,7 +3014,7 @@ def plot_all_condition_differences(
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
     dpi: Optional[int | float] = None,
-    save_prefix: Optional[str] = None,
+    save: Optional[str | Tuple[str, str]] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
     color_palette: str = 'tab20',
@@ -3036,8 +3042,10 @@ def plot_all_condition_differences(
         Size of the figure.
     dpi : Optional[int | float], default None
         Resolution of the figure. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
-    save_prefix : Optional[str], default None
-        Prefix for saved image filenames.
+    save : Optional[str | Tuple[str, str]], default None
+        Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
+        string with output filename base. When a string is given the file format is set to 'pdf'.
+        The string is used as the prefix of the final filname.
     split_by_direction : bool, default True
         Create separate plots for positive and negative differences.
     hub_threshold : int, default 4
@@ -3109,13 +3117,17 @@ def plot_all_condition_differences(
             'receptor-ligand': {'condition-differences': {dimension_key: dimension_results}}
         }
 
+        # Generate filename with dimension if saving
+        if save is not None:
+            save = (f"{save[0]}_{dimension_key}", save[1]) if isinstance(save, tuple) else f"{save}_{dimension_key}"
+
         # Generate figures for this dimension
         figures = condition_differences_network(
             adata=temp_adata,
             n_top=n_top,
             figsize=figsize,
             dpi=dpi,
-            save=save_prefix,
+            save=save,
             split_by_direction=split_by_direction,
             hub_threshold=hub_threshold,
             color_palette=color_palette,
