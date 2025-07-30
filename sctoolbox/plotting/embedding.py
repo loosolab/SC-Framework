@@ -347,7 +347,7 @@ def plot_embedding(adata: sc.AnnData,
 
     # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
     # The suffix is equivalent .var_names_make_unique(join="_")
-    if "gene_symbols" in kwargs:
+    if kwargs.setdefault("gene_symbols") is not None:
         adata = adata.copy()  # ensure the original adata isn't overwritten
         # make the column unique same as .make_var_names_unique
         adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
@@ -702,7 +702,7 @@ def feature_per_group(adata: sc.AnnData,
 
     # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
     # The suffix is equivalent .var_names_make_unique(join="_")
-    if "gene_symbols" in kwargs:
+    if kwargs.setdefault("gene_symbols") is not None:
         adata = adata.copy()  # ensure the original adata isn't overwritten
         # make the column unique same as .make_var_names_unique
         adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
@@ -826,7 +826,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     try:
         # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
         # The suffix is equivalent .var_names_make_unique(join="_")
-        if "gene_symbols" in kwargs:
+        if kwargs.setdefault("gene_symbols") is not None:
             adata = adata.copy()  # ensure the original adata isn't overwritten
             # make the column unique same as .make_var_names_unique
             adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
