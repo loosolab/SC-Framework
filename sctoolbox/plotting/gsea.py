@@ -109,8 +109,14 @@ def term_dotplot(adata: sc.AnnData,
     active_genes = list(set(term_table.loc[term_table[term_col] == term][gene_col].str.split(";").explode()))
     active_genes = list(map(str.upper, active_genes))
 
-    # get index name
-    index_name = "index" if not adata.var.index.name else adata.var.index.name
+    # infer the adata.var column
+    marker_key = get_uns(adata, _core_uns_path + ["marker_key"])
+    gene_index = get_uns(adata, [marker_key, "sctoolbox_params", "index"]) if in_uns(adata, [marker_key, "sctoolbox_params", "index"]) else None
+    if gene_index is not None:
+        index_name = gene_index
+    else:
+        # get index name
+        index_name = "index" if not adata.var.index.name else adata.var.index.name
 
     if not active_genes:
         msg = f"No genes matching the term '{term}' found in term_table"
@@ -119,9 +125,12 @@ def term_dotplot(adata: sc.AnnData,
 
     # subset adata to active genes
     logger.info("Subset AnnData object.")
-    subset = adata[:, adata.var.index.str.upper().isin(active_genes)]
+    if gene_index is not None:
+        subset = adata[:, adata.var[gene_index].str.upper().isin(active_genes)]
+    else:
+        subset = adata[:, adata.var.index.str.upper().isin(active_genes)]
 
-    bulks = pseudobulk_table(subset, groupby=groupby, layer=layer)
+    bulks = pseudobulk_table(subset, groupby=groupby, layer=layer, gene_index=gene_index, clean=False)
 
     if groups:
         bulks = bulks.loc[:, groups]
@@ -146,6 +155,11 @@ def term_dotplot(adata: sc.AnnData,
 
     # combine expression and zscores
     comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
+
+    # make duplicate indexes unique by adding a suffix
+    if len(comb["Gene"].unique()) < len(comb):
+        logger.warning("Found duplicated genes, adding suffixes to compensate. This may happen when e.g. multiple ATAC peaks are annotated to the same gene.")
+        comb["Gene"] = sc.anndata.utils.make_index_unique(comb["Gene"].astype(str), join="_")
 
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, report=report, **kwargs)
 
