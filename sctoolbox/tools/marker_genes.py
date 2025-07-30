@@ -708,7 +708,8 @@ def run_deseq2(adata: sc.AnnData,
                contrasts: Optional[list[Tuple]] = None,
                min_counts: int = 5,
                percentile_range: Tuple[int, int] = (0, 100),
-               threads: Optional[int] = None) -> pd.DataFrame:
+               threads: Optional[int] = None,
+               gene_symbols: Optional[str] = None) -> pd.DataFrame:
     """
     Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
@@ -733,6 +734,8 @@ def run_deseq2(adata: sc.AnnData,
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
     threads : Optional[int]
         The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
+    gene_symbols : Optional[str]
+        Column in adata.var that contains the gene names. Uses adata.var.index if None.
 
     Returns
     -------
@@ -746,6 +749,7 @@ def run_deseq2(adata: sc.AnnData,
         1. If any given column name is not found in adata.obs.
         2. Invalid contrasts are supplied.
         3. Negative counts are encountered.
+        4. If sample and condition do not have a 1:1 relation.
 
     Notes
     -----
@@ -779,6 +783,16 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)
 
+    # check if sample and condition have a 1:1 relation
+    multiple_relations = {}
+    for i in set(sample_df.index):
+        conds = list(sample_df.loc[i].values.flatten())
+        if len(conds) > 1:
+            multiple_relations[i] = conds
+
+    if multiple_relations:
+        raise ValueError(f"Relation between selected sample ({sample_col}) and condition ({condition_col}) must be 1 to 1. Found 1 to n: {multiple_relations}.")
+
     logger.debug("sample_df:")
     logger.debug(sample_df)
 
@@ -806,7 +820,7 @@ def run_deseq2(adata: sc.AnnData,
     # Build count matrix
     logger.debug("Building count matrix")
     counts_df = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                                percentile_range=percentile_range)
+                                                percentile_range=percentile_range, gene_index=gene_symbols)
     counts_df = counts_df.astype(int)  # pyDESeq2 requires integer counts
     counts_df = counts_df.transpose()  # pyDESeq2 requires genes as columns
     if counts_df.min().min() < 0:
