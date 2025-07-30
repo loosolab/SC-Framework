@@ -463,7 +463,7 @@ def cluster_dotplot(adata: sc.AnnData,
                      key=["gsea", "enrichment_table"],
                      value=tmp)
         # Plotting
-        axes = gsea_dot(empty_adata, save=save, top_term=None,
+        axes = gsea_dot(empty_adata, save=save, top_term=None, cutoff=cutoff,
                         title=f"Top regulated pathways of cluster {c}", **kwargs)
         dotplots[c] = axes
 
