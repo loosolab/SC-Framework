@@ -186,7 +186,7 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) 
     # https://github.com/scverse/scanpy/issues/61
     rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
     for unk in adata.uns.keys():
-        if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
+        if isinstance(adata.uns[unk], dict) and rank_keys.issubset(set(adata.uns[unk].keys())):
             names = list()
             dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
             for i in adata.uns[unk]["names"]:
