@@ -105,6 +105,9 @@ def gene_set_enrichment(adata: sc.AnnData,
     utils.adata.add_uns_info(modified_adata,
                              key=['gsea', 'overlap_col'],
                              value=overlap_col)
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'marker_key'],
+                             value=marker_key)
 
     logger.info("Getting gene rank tables.")
     if marker_key in adata.uns:
