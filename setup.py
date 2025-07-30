@@ -35,7 +35,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
-                  "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is fixed: https://github.com/theislab/scvelo/issues/1241
+                  "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
