@@ -603,7 +603,7 @@ def gsea_dot(adata: sc.AnnData,
     # set additional labels and title
     ax.set_ylabel("")
     ax.set_title(title, **{"fontsize": title_size})
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=x_label_rotation, ha='right')
+    ax.tick_params(axis='x', labelrotation=x_label_rotation)
     ax.grid(True, axis="y")
     # save plot
     fig.tight_layout()
