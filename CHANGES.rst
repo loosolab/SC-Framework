@@ -34,6 +34,7 @@ Changes to notebooks
 - velocity: Add missing save/embedding options
 - atac_analysis: assembling: Changed to new testdata.
 - ATAC: Implemented TOBIAS footprinting notebook
+- General: Pseudotime: Remove threads parameter from dendrogram function
 
 0.12.0 (19-12-24)
 -----------------
