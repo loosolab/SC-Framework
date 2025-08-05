@@ -358,10 +358,13 @@ def estimate_doublets(adata: sc.AnnData,
         obs_table, uns_dict = _run_scrublet(adata, threshold=threshold, **kwargs)
 
     # Save scores to object
-    adata = adata.copy()  # initialize view as actual; prevents ImplicitModificationWarning
-    adata.obs["doublet_score"] = obs_table["doublet_score"]
-    adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
-    adata.uns["scrublet"] = uns_dict
+    # ignore ImplicitModificationWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", anndata.ImplicitModificationWarning)
+
+        adata.obs["doublet_score"] = obs_table["doublet_score"]
+        adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
+        adata.uns["scrublet"] = uns_dict
 
     if fill_na:
         adata.obs[["doublet_score", "predicted_doublet"]] = (
