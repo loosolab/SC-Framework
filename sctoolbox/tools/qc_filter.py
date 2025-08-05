@@ -1154,6 +1154,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
     ValueError
         1: If the keys in thresholds do not match with the columns in adata.<which>.
     """
+    global_ = True  # False if there are any group based filters
+
     # get the table which contains the filter metrics
     table = getattr(adata, which)
 
@@ -1177,6 +1179,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
                 )
 
         else:
+            global_ = False
             # group based filtering
             tmp_bool = []
             for _, grp_dict in _dict.items():
@@ -1190,6 +1193,20 @@ def apply_qc_thresholds(adata: sc.AnnData,
 
     # create an union from the boolean filters of all metrics
     include = [all(row) for row in zip(*inclusion_bools)]
+
+    # add info to method report
+    if settings.report_dir and report:
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({f"{which}_global": global_})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
 
     # apply the filter
     return _filter_object(adata=adata,
