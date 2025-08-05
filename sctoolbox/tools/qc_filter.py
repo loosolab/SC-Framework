@@ -1581,6 +1581,18 @@ def denoise_data(adata: sc.AnnData,
     if settings.report_dir and report:
         _save_figure(report, report=True)
 
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({f"ambient": True})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
+
     end_time = time.time() - start_time
 
     logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
