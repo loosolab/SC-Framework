@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 import pandas as pd
 from pathlib import Path
+import yaml
 
 from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
@@ -209,6 +210,18 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) 
                 f"Variable information: {', '.join(adata.var.columns)}",
                 f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
             ]))
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({"var_count": len(adata.var), "obs_count": len(adata.obs)})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
 
         plot_table(adata.obs, report=report[1], crop=4)
         plot_table(adata.var, report=report[2], crop=4)
