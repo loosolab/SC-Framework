@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import scrublet as scr
 import scipy.stats as stats
 from scipy.sparse import csr_matrix
+import yaml
 
 from beartype import beartype
 import numpy.typing as npt
@@ -1332,14 +1333,31 @@ def _filter_object(adata: sc.AnnData,
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    label = f" {', '.join(name)}" if name else ""
-    msg = f"Filtered {filtered}{label} elements from AnnData.{which} ({n_before} -> {n_after})."
+    label = f"{', '.join(name)}" if name else ""
+    msg = f"Filtered {filtered} {label} elements from AnnData.{which} ({n_before} -> {n_after})."
     logger.info(msg)
 
     # report
     if settings.report_dir and report:
         with open(Path(settings.report_dir) / report, "w") as f:
             f.write(msg)
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        if label == "threshold":
+            m_label = "gene" if which == "var" else "cell"
+        else:
+            m_label = label
+
+        with open(meth_file, "w") as f:
+            method.update({m_label: filtered})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
 
     # store thresholds and statistics
     if name:
