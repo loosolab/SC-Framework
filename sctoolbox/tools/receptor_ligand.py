@@ -2990,10 +2990,10 @@ def condition_differences_network(
 
                 # Save if requested
                 if isinstance(save, tuple):
-                    save = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
-                elif isinstance(save, str)
-                    save = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.pdf"
-                _save_figure(save, dpi=dpi)
+                    save_file = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
+                elif isinstance(save, str):
+                    save_file = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.pdf"
+                _save_figure(save_file, dpi=dpi)
 
                 # report
                 if settings.report_dir and report:
