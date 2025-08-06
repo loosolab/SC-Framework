@@ -383,9 +383,12 @@ def run_rank_genes(adata: sc.AnnData,
                                    key_added=f"{params['key_added']}_filtered"
                                    )
 
-    # add the results to the original adata
-    adata.uns[params["key_added"]] = adata_copy.uns[params["key_added"]]
-    adata.uns[f"{params['key_added']}_filtered"] = adata_copy.uns[f"{params['key_added']}_filtered"]
+    # ignore ImplicitModificationWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", anndata.ImplicitModificationWarning)
+        # add the results to the original adata
+        adata.uns[params["key_added"]] = adata_copy.uns[params["key_added"]]
+        adata.uns[f"{params['key_added']}_filtered"] = adata_copy.uns[f"{params['key_added']}_filtered"]
 
 
 @deco.log_anndata
