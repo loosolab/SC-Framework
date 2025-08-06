@@ -17,6 +17,7 @@ logger = settings.logger
 #                                  Utilities                                #
 #############################################################################
 
+
 @beartype
 def _count_greater_than_threshold(group: pd.Series,
                                   threshold: int | float) -> np.int64:

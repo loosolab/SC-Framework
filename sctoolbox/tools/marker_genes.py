@@ -333,12 +333,11 @@ def run_rank_genes(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If number of groups defined by the groupby parameter is < 2.
-    ValueError
-        If the variable is not a column in `adata.var`.
+        1. If number of groups defined by the groupby parameter is < 2.
+        2. If the variable is not a column in `adata.var`.
     """
 
-    if not variable is None and not variable in adata.var.columns:
+    if variable is not None and not variable in adata.var.columns:
         raise ValueError(f"Argument `variable={variable}` is not a valid column in `adata.var`.")
 
     if adata.obs[groupby].dtype.name != "category":

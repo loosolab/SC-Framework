@@ -105,10 +105,9 @@ def rank_genes_plot(adata: sc.AnnData,
         # change var.index if neccessary
         if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
             adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
-             # make the column unique same as .make_var_names_unique
+            # make the column unique same as .make_var_names_unique
             adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = sc.anndata.utils.make_index_unique(adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str), join="_")
             adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True)
-
 
         if style == "dots":
             g = sc.pl.rank_genes_groups_dotplot(adata,
