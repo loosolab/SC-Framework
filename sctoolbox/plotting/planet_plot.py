@@ -245,7 +245,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
             all_thresholds = [*([expression_threshold] * (len(genes) + len(obs_columns)))]
 
     # get the genex values and obs values from the adata
-    if len(adata.var) > len(set(adata.var[gene_symbols])):
+    if gene_symbols is not None and len(adata.var) > len(set(adata.var[gene_symbols])):
         # if the var columns contains duplicates use the first entry
         logger.warning(f"Adata.var['{gene_symbols}'] contains duplicates. Using the first entry for each duplicate.")
 
