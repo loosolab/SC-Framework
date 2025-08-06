@@ -731,11 +731,11 @@ def feature_per_group(adata: sc.AnnData,
 
     if binarize:
         adata = adata.copy()  # _binarize_expression will change the adata, we want to keep the original, but plot the changed.
-        features = list()
+        features = set()
         # collect all feature names and extend all names in x
         for grp in grps:
-            features += x[grp]
-        _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold, var_col=kwargs.setdefault("gene_symbols"))
+            features |= set(x[grp])
+        _binarize_expression(adata, list(features), binarize_threshold, binarize_percentile_threshold, var_col=kwargs.setdefault("gene_symbols"))
 
     # create plot
     fig, axs = plt.subplots(nrows=len(grps),
