@@ -31,6 +31,7 @@ import itertools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
+from sctoolbox.utils.io import update_yaml
 from sctoolbox.utils.adata import add_uns_info, in_uns, get_uns
 from sctoolbox.utils.bioutils import pseudobulk_table
 from sctoolbox.plotting.general import _save_figure, plot_table
@@ -151,6 +152,9 @@ def download_db(adata: sc.AnnData,
         with open(Path(settings.report_dir) / report[0], "w") as file:
             file.write('Used database: ' + (f"LIANA - {db_path}" if liana else db_path))
         plot_table(table=database, report=report[1], crop=10)
+
+        # write method report
+        update_yaml(d={"database": f"LIANA - {db_path}" if liana else db_path}, yml="method.yml", path_prefix="report")
 
     if not inplace:
         return modified_adata
