@@ -125,7 +125,8 @@ setup(
         'throttler',
         'upsetplot',
         'pptreport',
-        'boto3'
+        'boto3',
+        'Jinja2'
     ],
     include_package_data=True,
     extras_require=extras_require
