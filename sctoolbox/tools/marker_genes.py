@@ -789,7 +789,7 @@ def run_deseq2(adata: sc.AnnData,
     # check if sample and condition have a 1:1 relation
     multiple_relations = {}
     for i in set(sample_df.index):
-        conds = list(sample_df.loc[i].values.flatten())
+        conds = list(sample_df.loc[i].tolist())
         if len(conds) > 1:
             multiple_relations[i] = conds
 
