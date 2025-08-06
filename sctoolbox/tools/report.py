@@ -5,8 +5,10 @@ import pptreport as ppt
 import yaml
 import pandas as pd
 import tqdm
+import sctoolbox
 from sctoolbox.plotting.general import plot_table
 from sctoolbox import settings
+from jinja2 import Environment, PackageLoader, select_autoescape
 
 from beartype.typing import Optional, Dict, List, Any, Tuple, Literal
 from beartype import beartype
@@ -58,6 +60,7 @@ def generate_report(
     slide_format: Literal["widescreen", "standard", "a4-portait", "a4-landscape"] | Tuple[int | float, int | float] = "widescreen",
     report_dir: Optional[str | Path] = None,
     max_pixels: int | float = 1e7,
+    method_template: Optional[str | Literal["RNA", "ATAC"]] = None,
     **ppr_kwargs: Any
 ) -> ppt.PowerPointReport:
     """
@@ -87,6 +90,8 @@ def generate_report(
         Set None to use `sctoolbox.settings.report_dir`.
     max_pixels: int, default 1e7
         Images with more pixels will be resized.
+    method_template: Optional[str | Literal["RNA", "ATAC"]]
+        A file with text and placeholders to generate a method slide.
     **ppr_kwargs: Any
         Keyword arguments forwarded to `pptreport.PowerPointReport`.
 
@@ -105,8 +110,8 @@ def generate_report(
 
     # add tool version slide
     versions = {}
-    for yml in report_dir.glob("**/versions.yml"):
-        with open(yml, "r") as file:
+    for sec in section_titles.keys():
+        with open(report_dir / sec / "versions.yml", "r") as file:
             versions |= yaml.safe_load(file)
 
     versions_file = str(report_dir / "versions.png")
@@ -122,6 +127,36 @@ def generate_report(
         title="Tool Versions",
         content=versions_file
     )
+
+    # Method section
+    if method_template:
+        env = Environment(
+            loader=PackageLoader("sctoolbox", "data/method_templates"),
+            autoescape=select_autoescape()
+        )
+
+        m_template_map = {"RNA": "RNA-methods.md", "ATAC": "ATAC-methods.md"}
+        m_template = env.get_template(m_template_map[method_template])
+
+        # collect render args
+        method_args = {
+            "sctoolbox": {"version": sctoolbox.__version__}
+        }
+        for sec in section_titles.keys():
+            with open(report_dir / sec / "method.yml", "r") as file:
+                method_args |= {sec: yaml.safe_load(file)}
+        method_args = {"args": method_args}  # put everything into another dict to allow variables starting with numbers
+
+        # render slide content
+        method_content = m_template.render(**method_args)
+
+        # add slide
+        report.add_slide(
+            title="Methods",
+            content=method_content,
+            content_alignment="upper left",
+            fontsize=11  # None = auto-adjust
+        )
 
     # add dataset title slide
     report.add_title_slide(title=f"Dataset {dataset_name}",
@@ -140,12 +175,18 @@ def generate_report(
         files = []
         for f in Path(sec_dir).iterdir():
             # iterate over all files only keep the ones with allowed extensions
-            # skip the version file
-            if f.suffix.lower()[1:] in file_ext and not f.name.startswith("version"):
+            # skip the version and method file
+            if f.suffix.lower()[1:] in file_ext and not f.name.startswith("version") and not f.name.startswith("method"):
                 files.append(f)
 
-        # extract prefixes to define the order
-        prefixes = sorted(set(f.name.rsplit("_")[0] for f in files))
+        # extract prefixes to define the order (ignores prefixes that are not a number)
+        prefixes = []
+        for f in files:
+            prefix = f.name.rsplit("_")[0]
+            if prefix.isnumeric():
+                prefixes.append(prefix)
+
+        prefixes = sorted(set(prefixes))
 
         report.add_title_slide(title=title)
 
