@@ -132,6 +132,11 @@ def term_dotplot(adata: sc.AnnData,
 
     bulks = pseudobulk_table(subset, groupby=groupby, layer=layer, gene_index=gene_index, clean=False)
 
+    # make duplicate indexes unique by adding a suffix
+    if len(bulks.index.unique()) < len(bulks):
+        logger.warning("Found duplicated genes, adding suffixes to compensate. This may happen when e.g. multiple ATAC peaks are annotated to the same gene.")
+        bulks.index = sc.anndata.utils.make_index_unique(bulks.index.astype(str), join="_")
+
     if groups:
         bulks = bulks.loc[:, groups]
     # convert from wide to long format
@@ -155,11 +160,6 @@ def term_dotplot(adata: sc.AnnData,
 
     # combine expression and zscores
     comb = pd.merge(long_bulks, long_zscore, on=["Gene", groupby], how="outer")
-
-    # make duplicate indexes unique by adding a suffix
-    if len(comb["Gene"].unique()) < len(comb):
-        logger.warning("Found duplicated genes, adding suffixes to compensate. This may happen when e.g. multiple ATAC peaks are annotated to the same gene.")
-        comb["Gene"] = sc.anndata.utils.make_index_unique(comb["Gene"].astype(str), join="_")
 
     return clustermap_dotplot(comb, x=groupby, y="Gene", title=term, size="Mean Expression", hue=hue, report=report, **kwargs)
 
