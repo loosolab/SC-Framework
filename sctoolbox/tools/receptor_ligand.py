@@ -2989,6 +2989,7 @@ def condition_differences_network(
                 )
 
                 # Save if requested
+                save_file = None
                 if isinstance(save, tuple):
                     save_file = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
                 elif isinstance(save, str):
