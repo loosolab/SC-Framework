@@ -111,6 +111,9 @@ def generate_report(
     # add tool version slide
     versions = {}
     for sec in section_titles.keys():
+        if not (report_dir / sec).is_dir():
+            continue
+
         with open(report_dir / sec / "versions.yml", "r") as file:
             versions |= yaml.safe_load(file)
 
@@ -143,6 +146,9 @@ def generate_report(
             "sctoolbox": {"version": sctoolbox.__version__}
         }
         for sec in section_titles.keys():
+            if not (report_dir / sec).is_dir():
+                continue
+
             with open(report_dir / sec / "method.yml", "r") as file:
                 method_args |= {sec: yaml.safe_load(file)}
         method_args = {"args": method_args}  # put everything into another dict to allow variables starting with numbers
