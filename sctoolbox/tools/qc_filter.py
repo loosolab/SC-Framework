@@ -1590,7 +1590,7 @@ def denoise_data(adata: sc.AnnData,
             method = {} if method is None else method
 
         with open(meth_file, "w") as f:
-            method.update({f"ambient": True})
+            method.update({"ambient": True})
             yaml.safe_dump(method, stream=f, sort_keys=False)
 
     end_time = time.time() - start_time

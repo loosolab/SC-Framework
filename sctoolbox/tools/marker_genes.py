@@ -337,7 +337,7 @@ def run_rank_genes(adata: sc.AnnData,
         2. If the variable is not a column in `adata.var`.
     """
 
-    if variable is not None and not variable in adata.var.columns:
+    if variable is not None and variable not in adata.var.columns:
         raise ValueError(f"Argument `variable={variable}` is not a valid column in `adata.var`.")
 
     if adata.obs[groupby].dtype.name != "category":

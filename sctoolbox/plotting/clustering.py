@@ -131,8 +131,8 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     if settings.report_dir and report:
         utils.io.update_yaml(d={
-            "cluster_name": method,
-            "cluster_cite": "Traag et al., https://arxiv.org/abs/1810.08473" if method == "leiden" else "Blondel et al., http://dx.doi.org/10.1088/1742-5468/2008/10/P10008"
+                "cluster_name": method,
+                "cluster_cite": "Traag et al., https://arxiv.org/abs/1810.08473" if method == "leiden" else "Blondel et al., http://dx.doi.org/10.1088/1742-5468/2008/10/P10008"
             },
             yml="method.yml",
             path_prefix="report")
