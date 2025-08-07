@@ -233,7 +233,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
-    cl_mean_expression = pseudobulk_table(adata, groupby=cluster_column, layer=layer, gene_index=gene_index)
+    cl_mean_expression = pseudobulk_table(adata, groupby=cluster_column, layer=layer, gene_index=gene_index, clean=False)
     # percent cells in cluster expressing gene
     cl_percent_expression = pd.DataFrame(index=index)
     # number of cells for each cluster
