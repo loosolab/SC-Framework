@@ -8,9 +8,21 @@ import logging
 import scanpy as sc
 import random
 import re
+from contextlib import contextmanager
 
 import sctoolbox.tools.bam as stb
 
+# ---------------------------- HELPER ------------------------------- #
+
+
+@contextmanager
+def add_logger_handler(logger, handler):
+    """Temporarily add a handler to the given logger."""
+    logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
 
 # ----------------------------- FIXTURES ------------------------------- #
 
@@ -77,53 +89,53 @@ def test_bam_adata_ov(adata_atac, bam_file):
 
 def test_check_barcode_tag(adata, bam_file, mocker, caplog):
     """Tests the barcode overlap amount between adata and bam file."""
-    caplog.set_level(logging.INFO)
-
-    # test overlap == 0%
-    mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0)
-    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
-    assert 'None of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column cb-tag or bamfile.' in caplog.text
-
-    # test overlap <= 5%
-    mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.05)
-    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
-    assert 'Only 5% or less of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bamfile.' in caplog.text
-
-    # test overlap > 5%
-    mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.8)
-    stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
-    assert 'Barcode tag: OK' in caplog.text
-
-    # test overlap error (TODO don't know how this could be triggered)
-    with pytest.raises(ValueError):
-        mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=float("nan"))
+    with caplog.at_level(logging.INFO), add_logger_handler(stb.logger, caplog.handler):
+        # test overlap == 0%
+        mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0)
         stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+        assert 'None of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column cb-tag or bamfile.' in caplog.text
+
+        # test overlap <= 5%
+        mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.05)
+        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+        assert 'Only 5% or less of the barcodes from the bamfile found in the .obs table.\nConsider if you are using the wrong column for cb-tag or bamfile.' in caplog.text
+
+        # test overlap > 5%
+        mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=0.8)
+        stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
+        assert 'Barcode tag: OK' in caplog.text
+
+        # test overlap error (TODO don't know how this could be triggered)
+        with pytest.raises(ValueError):
+            mocker.patch('sctoolbox.tools.bam.bam_adata_ov', return_value=float("nan"))
+            stb.check_barcode_tag(adata=adata, bamfile=bam_file, cb_tag="CB")
 
 
 def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
     """Check the subset_bam function."""
     outfile = tmpdir / "subset.bam"
 
-    # check success
-    stb.subset_bam(bam_in=bam_file,
-                   bam_out=str(outfile),
-                   barcodes=barcodes,
-                   read_tag="CB",
-                   pysam_threads=4,
-                   overwrite=False)
+    with add_logger_handler(stb.logger, caplog.handler):
+        # check success
+        stb.subset_bam(bam_in=bam_file,
+                    bam_out=str(outfile),
+                    barcodes=barcodes,
+                    read_tag="CB",
+                    pysam_threads=4,
+                    overwrite=False)
 
-    assert bool(re.match(r"Wrote \d+ reads to output bam", caplog.messages[-1]))
-    assert outfile.isfile()
+        assert bool(re.match(r"Wrote \d+ reads to output bam", caplog.messages[-1]))
+        assert outfile.isfile()
 
-    # check overwrite warning
-    stb.subset_bam(bam_in=bam_file,
-                   bam_out=str(outfile),
-                   barcodes=barcodes,
-                   read_tag="CB",
-                   pysam_threads=4,
-                   overwrite=False)
+        # check overwrite warning
+        stb.subset_bam(bam_in=bam_file,
+                    bam_out=str(outfile),
+                    barcodes=barcodes,
+                    read_tag="CB",
+                    pysam_threads=4,
+                    overwrite=False)
 
-    assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
+        assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
 
 
 @pytest.mark.parametrize("parallel,sort_bams,index_bams", [(True, True, True), (False, False, False)])
