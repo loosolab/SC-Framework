@@ -22,6 +22,7 @@ __all__ = [
     "peak_annotation",
     "qc_filter",
     "receptor_ligand",
+    "report",
     "tobias",
     "tsse"
 ]

@@ -26,6 +26,7 @@ def search_clustering_parameters(adata: sc.AnnData,
                                  ncols: int = 3,
                                  verbose: bool = True,
                                  save: Optional[str] = None,
+                                 report: bool = False,
                                  **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a grid of different resolution parameters for clustering.
@@ -46,6 +47,8 @@ def search_clustering_parameters(adata: sc.AnnData,
         Print progress to console.
     save : Optional[str], default None
         Path to save figure.
+    report : bool, default False
+        Whether to add information to the method report. Ignored if `sctoolbox.settings.report_dir` is not set.
     **kwargs : Any
         Keyword arguments to be passed to sc.pl.embedding.
 
@@ -105,7 +108,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     for i, res in enumerate(resolutions):
 
         if verbose is True:
-            logger.info(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
+            logger.info(f"Plotting umap for resolution={res} ({i + 1} / {len(resolutions)})")
 
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
@@ -125,6 +128,16 @@ def search_clustering_parameters(adata: sc.AnnData,
 
     plt.tight_layout()
     _save_figure(save)
+
+    if settings.report_dir and report:
+        utils.io.update_yaml(
+            d={
+                "cluster_name": method,
+                "cluster_cite": "Traag et al., https://arxiv.org/abs/1810.08473" if method == "leiden" else "Blondel et al., http://dx.doi.org/10.1088/1742-5468/2008/10/P10008"
+            },
+            yml="method.yml",
+            path_prefix="report"
+        )
 
     return axarr
 

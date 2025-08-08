@@ -36,6 +36,8 @@ class SctoolboxConfig(object):
         Directory to write adata objects to, default "".
     adata_output_prefix : str
         Prefix for all adata objects to write (within adata_output_dir), default "".
+    report_dir : str
+        Directory to collect everything for the final report, default "" to disable.
     threads : int
         Default number of threads to use when multiprocessing is available, default 4.
     create_dirs : bool
@@ -46,6 +48,10 @@ class SctoolboxConfig(object):
         Path to log file, default None.
     overwrite_log : bool
         Overwrite log file if it already exists; default is to append, default False.
+    dpi : float
+        The resolution in dots per inch used when saving plots.
+    report_dpi : float
+        The resolution in dots per inch used when saving report plots.
     """
 
     __frozen: bool = False
@@ -59,11 +65,14 @@ class SctoolboxConfig(object):
                  adata_input_prefix: str = "",   # Prefix for all adata objects to read (within adata_input_dir)
                  adata_output_dir: str = "",     # Directory to write adata objects to
                  adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_dir)
+                 report_dir: str = "",           # Directory to collect everything for the final report.
                  threads: int = 4,               # default number of threads to use when multiprocessing is available
                  create_dirs: bool = True,       # create output directories if they do not exist
                  verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
+                 dpi: float = 600,                # The resolution in dots per inch, used to save figures.
+                 report_dpi: float = 200         # The resolution in dots per inch, used for report figures.
                  ):
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
@@ -109,7 +118,7 @@ class SctoolboxConfig(object):
             self._validate_string(value)
 
         # Additionally check specific attributes for validity
-        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir"]:
+        if key in ["figure_dir", "table_dir", "adata_input_dir", "adata_output_dir", "report_dir"]:
             value = os.path.join(value, '')  # add trailing slash if not present
             self._create_dir(value)
 
@@ -214,6 +223,7 @@ class SctoolboxConfig(object):
         self._logger = logging.getLogger("sctoolbox")
         self._logger.setLevel(logging.DEBUG)  # always log everything to logger, handlers will filter
         self._logger.handlers = []  # remove any existing handlers
+        self._logger.propagate = False  # ensure no other handlers are used
 
         # Add stream handler
         H = logging.StreamHandler(sys.stdout)

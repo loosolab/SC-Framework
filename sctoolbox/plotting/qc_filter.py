@@ -279,6 +279,8 @@ def n_cells_barplot(adata: sc.AnnData,
                     save: Optional[str] = None,
                     figsize: Optional[Tuple[int | float, int | float]] = None,
                     add_labels: bool = False,
+                    title: Optional[str] = None,
+                    report: Optional[str] = None,
                     **kwargs: Any) -> NDArray[Axes]:
     """
     Plot number and percentage of cells per group in a barplot.
@@ -299,6 +301,10 @@ def n_cells_barplot(adata: sc.AnnData,
         Size of figure, e.g. (4, 8). If None, size is determined automatically depending on whether groupby is None or not.
     add_labels : bool, default False
         Whether to add labels to the bars giving the number/percentage of cells.
+    title : Optional[str]
+        The title of the figure.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments passed to pandas.DataFrame.plot.bar.
 
@@ -343,10 +349,13 @@ def n_cells_barplot(adata: sc.AnnData,
         figsize = (5 + 5 * (groupby is not None), 3)  # if groupby is not None, add 5 to width
 
     if groupby is not None:
-        _, axarr = plt.subplots(1, 2, figsize=figsize)
+        fig, axarr = plt.subplots(1, 2, figsize=figsize)
     else:
-        _, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
+        fig, axarr = plt.subplots(1, 1, figsize=figsize)  # axarr is a single axes
         axarr = np.array([axarr])
+
+    if title:
+        fig.suptitle(title, fontsize="x-large")
 
     counts_wide.plot.bar(stacked=stacked, ax=axarr[0], legend=False, **kwargs)
     axarr[0].set_title("Number of cells")
@@ -386,6 +395,10 @@ def n_cells_barplot(adata: sc.AnnData,
         ax.spines['top'].set_visible(False)
 
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return axarr
 
@@ -618,8 +631,8 @@ def quality_violin(adata: sc.AnnData,
                    title: Optional[str] = None,
                    thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
                    global_threshold: bool = True,
-                   interactive: bool = True,
                    save: Optional[str] = None,
+                   report: Optional[str] = None,
                    **kwargs: Any
                    ) -> Tuple[Any, Dict[str, Any]]:
     """
@@ -651,10 +664,10 @@ def quality_violin(adata: sc.AnnData,
         Dictionary containing initial min/max thresholds to show in plot.
     global_threshold : bool, default True
         Whether to use global thresholding as the initial setting. If False, thresholds are set per group.
-    interactive : bool, default True
-        Whether to show interactive sliders. If False, the static matplotlib plot is shown.
     save : Optional[str], optional
         Save the figure to the path given in 'save'. Default: None (figure is not saved).
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments passed to seaborn.violinplot.
 
@@ -862,6 +875,10 @@ def quality_violin(adata: sc.AnnData,
     fig.tight_layout()
     _save_figure(save)  # save plot; can be overwritten if thresholds are changed
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     # Assemble accordion with different measures
     if is_interactive:
 
@@ -987,7 +1004,8 @@ def _upset_select_cells(adata: sc.AnnData,
 def upset_plot_filter_impacts(adata: sc.AnnData,
                               thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
                               limit_combinations: Optional[int] = None,
-                              groupby: Optional[int] = None) -> Optional[dict]:
+                              groupby: Optional[int] = None,
+                              report: Optional[str] = None) -> Optional[dict]:
     """
     Plot the impact of filtering cells based on thresholds in an UpSet Plot.
 
@@ -1001,6 +1019,8 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
         Limit the number of combinations to show in the plot.
     groupby : Optional[str], default None
         Name of the column in adata.obs to group cells by.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1065,6 +1085,13 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
         plot_result = upsetplot.plot(combinations_df['counts'], totals_plot_elements=0)
 
     plot_result["intersections"].set_ylabel("Cells Filtered")
+
+    # TODO implement save parameter
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     plt.show()
 
     return plot_result

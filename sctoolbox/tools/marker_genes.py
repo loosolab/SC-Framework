@@ -18,6 +18,7 @@ from beartype.typing import Optional, Tuple, Any, Literal
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
+from sctoolbox.plotting.general import _save_figure
 logger = settings.logger
 
 # path to the internal gene lists (gender, cellcycle, mito, ...)
@@ -99,7 +100,10 @@ def label_genes(adata: sc.AnnData,
                 r_regex: Optional[str] = "^rps|rpl",
                 # gender args
                 g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
-                g_regex: Optional[str] = None) -> list[str]:
+                g_regex: Optional[str] = None,
+                # report args
+                report: Optional[str] = None
+                ) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
 
@@ -127,6 +131,8 @@ def label_genes(adata: sc.AnnData,
         Either a list of gender genes, a file containing one gender gene name per line or 'internal' to use an sctoolbox provided list.
     g_regex : Optional[str]
         A regex to identify gender genes if 'g_genes' is not available or failing.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Raises
     ------
@@ -218,6 +224,10 @@ def label_genes(adata: sc.AnnData,
                 bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
                 )
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return var_cols
 
 
@@ -291,6 +301,7 @@ def add_gene_expression(adata: sc.AnnData,
 @beartype
 def run_rank_genes(adata: sc.AnnData,
                    groupby: str,
+                   variable: Optional[str] = None,
                    min_in_group_fraction: float = 0.25,
                    min_fold_change: float = 0.5,
                    max_out_group_fraction: float = 0.8,
@@ -304,6 +315,9 @@ def run_rank_genes(adata: sc.AnnData,
         Anndata object containing gene expression/counts.
     groupby : str
         Column by which the cells in adata should be grouped.
+    variable : Optional[str]
+        The adata.var column providing the marker labels. Set None to use `adata.var.index`.
+        This parameter is incompatible with scanpy. Requires sctoolbox functions e.g. `sctoolbox.plotting.marker_genes.rank_genes_plot` for subsequent steps.
     min_in_group_fraction : float, default 0.25
         Minimum fraction of cells in a group that must express a gene to be considered as a marker gene.
         Parameter forwarded to scanpy.tl.filter_rank_genes_groups.
@@ -319,8 +333,12 @@ def run_rank_genes(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If number of groups defined by the groupby parameter is < 2.
+        1. If number of groups defined by the groupby parameter is < 2.
+        2. If the variable is not a column in `adata.var`.
     """
+
+    if variable is not None and variable not in adata.var.columns:
+        raise ValueError(f"Argument `variable={variable}` is not a valid column in `adata.var`.")
 
     if adata.obs[groupby].dtype.name != "category":
         adata.obs[groupby] = adata.obs[groupby].astype("category")
@@ -332,6 +350,17 @@ def run_rank_genes(adata: sc.AnnData,
     if adata.obs[groupby].nunique() < 2:
         raise ValueError("groupby must contain at least two groups.")
 
+    adata_copy = adata.copy()
+    # prepare adata to use markers provided from a adata.var column
+    if variable is not None:
+        # remove na
+        adata_copy = adata_copy[:, ~adata_copy.var[variable].isna()].copy()
+        # make the column unique same as .make_var_names_unique
+        adata_copy.var[variable] = sc.anndata.utils.make_index_unique(adata_copy.var[variable].astype(str), join="_")
+
+        # set the variable as index
+        adata_copy.var.set_index(variable, inplace=True)
+
     # Catch ImplicitModificationWarning from scanpy
     params = {'method': 't-test',  # prevents warning message "Default of the method has been changed to 't-test' from 't-test_overestim_var'"
               'key_added': f'rank_genes_{groupby}'}  # set default key_added
@@ -339,15 +368,26 @@ def run_rank_genes(adata: sc.AnnData,
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=anndata.ImplicitModificationWarning, message="Trying to modify attribute.*")
-        sc.tl.rank_genes_groups(adata, groupby=groupby, **params)
+        sc.tl.rank_genes_groups(adata_copy, groupby=groupby, **params)
 
-    sc.tl.filter_rank_genes_groups(adata,
+    if variable is not None:
+        # internally track the alternative index
+        adata_copy.uns[params["key_added"]]["sctoolbox_params"] = {"index": variable}
+
+    sc.tl.filter_rank_genes_groups(adata_copy,
                                    min_in_group_fraction=min_in_group_fraction,
                                    min_fold_change=min_fold_change,
                                    max_out_group_fraction=max_out_group_fraction,
                                    key=params["key_added"],
                                    key_added=f"{params['key_added']}_filtered"
                                    )
+
+    # ignore ImplicitModificationWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", anndata.ImplicitModificationWarning)
+        # add the results to the original adata
+        adata.uns[params["key_added"]] = adata_copy.uns[params["key_added"]]
+        adata.uns[f"{params['key_added']}_filtered"] = adata_copy.uns[f"{params['key_added']}_filtered"]
 
 
 @deco.log_anndata
@@ -506,6 +546,13 @@ def get_rank_genes_tables(adata: sc.AnnData,
     if key not in adata.uns:
         raise ValueError(f"Key '{key}' not found in adata.uns. Please use 'run_rank_genes' first.")
 
+    # change var.index if necessary
+    if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
+        adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
+        # make the column unique same as .make_var_names_unique
+        adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = sc.anndata.utils.make_index_unique(adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str), join="_")
+        adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True, drop=False)
+
     # Read structure in .uns to pandas dataframes
     tables = {}
     for col in ["names", "scores", "pvals", "pvals_adj", "logfoldchanges"]:
@@ -577,23 +624,25 @@ def get_rank_genes_tables(adata: sc.AnnData,
         for group in group_tables:
             group_tables[group] = group_tables[group].merge(adata.var[var_columns], left_on="names", right_index=True, how="left")
 
-    # If chosen: Save tables to joined excel
+    # save table
     if save_excel is not None:
+        # prepare excel table for saving
+        sheets = {}
+        for group in group_tables:
+            sheet = group_tables[group].copy()
 
-        if not isinstance(save_excel, str):
-            raise ValueError("'save_excel' must be a string.")
+            # Round values of scores/foldchanges
+            sheet["scores"] = sheet["scores"].round(3)
+            sheet["logfoldchanges"] = sheet["logfoldchanges"].round(3)
 
-        filename = settings.full_table_prefix + save_excel
+            sheets[group] = sheet
+
+        # Save tables to joined excel
+        filename = Path(settings.full_table_prefix) / save_excel
 
         with pd.ExcelWriter(filename) as writer:
-            for group in group_tables:
-                table = group_tables[group].copy()
-
-                # Round values of scores/foldchanges
-                table["scores"] = table["scores"].round(3)
-                table["logfoldchanges"] = table["logfoldchanges"].round(3)
-
-                table.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{group}'), index=False)
+            for sheet_name, sheet in sheets.items():
+                sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
 
         logger.info(f"Saved marker gene tables to '{filename}'")
 
@@ -661,7 +710,8 @@ def run_deseq2(adata: sc.AnnData,
                contrasts: Optional[list[Tuple]] = None,
                min_counts: int = 5,
                percentile_range: Tuple[int, int] = (0, 100),
-               threads: Optional[int] = None) -> pd.DataFrame:
+               threads: Optional[int] = None,
+               gene_symbols: Optional[str] = None) -> pd.DataFrame:
     """
     Run pyDESeq2 on counts within adata. Must be run on the raw counts per sample. If the adata contains normalized counts in .X, 'layer' can be used to specify raw counts.
 
@@ -686,6 +736,8 @@ def run_deseq2(adata: sc.AnnData,
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
     threads : Optional[int]
         The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
+    gene_symbols : Optional[str]
+        Column in adata.var that contains the gene names. Uses adata.var.index if None.
 
     Returns
     -------
@@ -699,6 +751,7 @@ def run_deseq2(adata: sc.AnnData,
         1. If any given column name is not found in adata.obs.
         2. Invalid contrasts are supplied.
         3. Negative counts are encountered.
+        4. If sample and condition do not have a 1:1 relation.
 
     Notes
     -----
@@ -732,6 +785,16 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)
 
+    # check if sample and condition have a 1:1 relation
+    multiple_relations = {}
+    for i in set(sample_df.index):
+        conds = list(sample_df.loc[i].tolist())
+        if len(conds) > 1:
+            multiple_relations[i] = conds
+
+    if multiple_relations:
+        raise ValueError(f"Relation between selected sample ({sample_col}) and condition ({condition_col}) must be 1 to 1. Found 1 to n: {multiple_relations}.")
+
     logger.debug("sample_df:")
     logger.debug(sample_df)
 
@@ -759,7 +822,7 @@ def run_deseq2(adata: sc.AnnData,
     # Build count matrix
     logger.debug("Building count matrix")
     counts_df = utils.bioutils.pseudobulk_table(adata, sample_col, how="sum", layer=layer,
-                                                percentile_range=percentile_range)
+                                                percentile_range=percentile_range, gene_index=gene_symbols)
     counts_df = counts_df.astype(int)  # pyDESeq2 requires integer counts
     counts_df = counts_df.transpose()  # pyDESeq2 requires genes as columns
     if counts_df.min().min() < 0:

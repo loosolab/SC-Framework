@@ -11,9 +11,10 @@ from matplotlib.lines import Line2D
 from matplotlib_venn import venn2, venn3
 import scipy.cluster.hierarchy as sciclust
 import seaborn
+from pathlib import Path
 
 from beartype import beartype
-from beartype.typing import Optional, Literal, Tuple, Union, Any
+from beartype.typing import Optional, Literal, Tuple, Union, Any, Dict, List
 from numpy.typing import NDArray
 
 from sctoolbox import settings
@@ -26,7 +27,8 @@ logger = settings.logger
 
 @beartype
 def _save_figure(path: Optional[str],
-                 dpi: int = 600,
+                 dpi: Optional[int | float] = None,
+                 report: bool = False,
                  max_pixle: int = 2**16,
                  **kwargs: Any) -> None:
     """Save the current figure to a file.
@@ -37,8 +39,10 @@ def _save_figure(path: Optional[str],
         Path to the file to be saved. NOTE: Uses the internal 'sctoolbox.settings.figure_dir' + 'sctoolbox.settings.figure_prefix' as prefix.
         Add the extension (e.g. .tiff) you want save your figure in to the end of the path, e.g., /some/path/plot.tiff.
         The lack of extension indicates the figure will be saved as .png.
-    dpi : int, default 600
-        Dots per inch. Higher value increases resolution.
+    dpi : Optional[int, float]
+        Dots per inch. Higher value increases resolution. Uses either `sctoolbox.settings.dpi` or `sctoolbox.settings.report_dpi` if not set.
+    report : bool, default False
+        Set true to silently add plot to sctoolbox.settings.report_dir instead of 'figure_dir' + 'figure_prefix' (see above).
     max_pixle : int, default 2**16
         The maximum of pixles a figure can have in each direction. Figures exceeding this value will be resized to this maximum and a warning will be shown.
         2**16 is the maximum the jpeg-format can handle.
@@ -48,6 +52,12 @@ def _save_figure(path: Optional[str],
 
     savefig_kwargs = {"bbox_inches": "tight", "facecolor": "white"}  # defaults
     savefig_kwargs.update(kwargs)
+
+    if dpi is None:
+        if report:
+            dpi = settings.report_dpi
+        else:
+            dpi = settings.dpi
 
     # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
     # This moves the checking to the _save_figure function rather than each plotting function.
@@ -65,8 +75,12 @@ def _save_figure(path: Optional[str],
                 h = max_pixle - 1
             fig.set_size_inches(w / dpi, h / dpi)
 
-        output_path = settings.full_figure_prefix + path
-        logger.info(f"Saving figure to {output_path}")
+        # save either at report or standard figure location
+        if not report:
+            output_path = settings.full_figure_prefix + path
+            logger.info(f"Saving figure to {output_path}")
+        else:
+            output_path = Path(settings.report_dir) / path
         plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
 
 
@@ -214,6 +228,7 @@ def clustermap_dotplot(table: pd.DataFrame,
                        x_rot: int = 45,
                        show_grid: bool = False,
                        save: Optional[str] = None,
+                       report: Optional[str] = None,
                        **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a heatmap with dots (instead of squares), which can contain the dimension of "size".
@@ -250,6 +265,8 @@ def clustermap_dotplot(table: pd.DataFrame,
         Show grid behind dots in plot.
     save : Optional[str], default None
         Save the figure to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments to pass to seaborn.scatterplot.
 
@@ -384,6 +401,9 @@ def clustermap_dotplot(table: pd.DataFrame,
 
     # Save figure
     _save_figure(save)
+
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
 
     return np.array(axes)
 
@@ -801,6 +821,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
+                     report: Optional[str] = None,
                      **kwargs: Any) -> NDArray[Axes]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
@@ -816,6 +837,8 @@ def pairwise_scatter(table: pd.DataFrame,
         Dictionary containing thresholds for each column. Keys are column names and values are dictionaries with keys "min" and "max".
     save : Optional[str], default None
         If given, the figure will be saved to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments to pass to Axes.scatter.
 
@@ -925,4 +948,198 @@ def pairwise_scatter(table: pd.DataFrame,
     # Save plot
     _save_figure(save)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return axarr
+
+
+########################################################################################
+# --------------------------------------- Table -------------------------------------- #
+########################################################################################
+
+@beartype
+def plot_table(table: pd.DataFrame,
+               ax: Optional[Axes] = None,
+               save: Optional[str] = None,
+               report: Optional[str] = None,
+               save_kwargs: Dict = {},
+               col_width: Literal["auto"] | int | float | List[int | float] = "auto",
+               row_height: int | float = 0.625,
+               row_colors: str | List[str] = ['#f1f1f2', 'white'],
+               edge_color: str = 'white',
+               bbox: Optional[Tuple[int | float, int | float, int | float, int | float]] = (0, 0, 1, 1),
+               index_color: str = '#40466e',
+               show_index: bool = True,
+               show_header: bool = True,
+               fontsize: int = 14,
+               char_hw_ratio: int | float = 0.8,
+               crop: Optional[int] = 10,
+               round: Optional[int] = None,
+               show: bool = False,
+               **kwargs: Any) -> Axes:
+    """
+    Plot a pandas DataFrame.
+
+    Template: https://stackoverflow.com/a/39358722
+
+    Parameters
+    ----------
+    table : pd.DataFrame
+        The table to plot.
+    ax : Optional[Axes]
+        Add the plot to this ax-object or create a new one.
+    save : Optional[str]
+        Path to save the plot. Uses `sctoolbox.settings.figure_dir`.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    save_kwargs : Dict, default {}
+        Additional saving arguments. Will be used by `save` and `report`.
+    col_width : Literal["auto"] | int | float | List[int | float], default "auto"
+        Width of each column in inches. Use a list to define individual column widths. The list has to be of length 'number of columns' + 'number of index columns'.
+        Ignored if `ax` is used.
+    row_height : int | float, default 0.625
+        Height of each row in inches. Ignored if `ax` is used.
+    row_colors : str | List[str], default ['#f1f1f2', 'white']
+        The row background color(s). Multiple colors will be in alternating fashion.
+    edge_color : str, default 'white'
+        Color of the border of each cell.
+    bbox : Optional[Tuple[int | float, int | float, int | float, int | float]], default (0, 0, 1, 1)
+        A matplotlib bounding box. Forwarded to `matplotlib.pyplot.table`. Defines the spacing and position of the table.
+        Provide a Tuple of (xmin, ymin, width, height). See https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.table.html.
+        Note: Changing this greatly affects all width and height related parameters.
+    index_color : str, default '#40466e'
+        Background color for the column and row index cells.
+    show_index : bool, default True
+        Whether to show the row index.
+    show_header : bool, default True
+        Whether to show the column header.
+    fontsize : int, default 14
+        The table fontsize.
+    char_hw_ratio : int | float, default 0.8
+        Proportion of character width to height. I.e. 0.8 means, the character width is 80% of the characters height.
+        This is an approximation and may change with different fonts, fontsizes, bold, etc.
+        Used for automatic column width and cell padding.
+    crop : Optional[int], default 10
+        Crop the table to the `crop / 2` top and bottom rows.
+    round : Optional[int]
+        The number of decimal places each number in the table should be rounded to.
+    show : bool, default False
+        Whether to show the plot. If not closes the plot.
+    **kwargs
+        Additional arguments are forwarded to `matplotlib.pyplot.table`
+
+    Raises
+    ------
+    ValueError
+        When the number of col_widths doesn't match the number of columns + indices.
+
+    Returns
+    -------
+    Axes
+        Object containing the plot.
+    """
+    table = table.copy()  # ensure not to change the original table
+
+    index_num = table.index.nlevels if show_index else 0
+    if isinstance(col_width, list) and len(col_width) != len(table.columns) + index_num:
+        raise ValueError(f"The table has {len(table.columns) + index_num} column(s){'+index' if index_num else ''} but {len(col_width)} widths where given.")
+
+    if round is not None:
+        table = table.round(round)
+
+    if crop and len(table) > crop:
+        top = table.head(crop // 2)
+        bottom = table.tail(crop // 2)
+
+        # create row of '...'
+        sep_row = pd.DataFrame([['...'] * len(table.columns)], columns=table.columns, index=['...'])
+        sep_row.index.name = top.index.name  # NOTE: doesn't work with multi-index
+        # combine top, a row of '...' and bottom entries to a truncated table
+        table = pd.concat([top, sep_row, bottom])
+
+    # convert index to a normal column to gain width control
+    if show_index:
+        table.reset_index(inplace=True)
+
+    # font properties
+    # fontsize (height of the characters) is defined as 1/72 inch
+    # approximate width as `char_hw_ratio` of that
+    f_height = fontsize * (1 / 72)
+    approx_f_width = f_height * char_hw_ratio
+
+    # set column widths
+    if col_width != "auto" and not isinstance(col_width, list):
+        col_width = [col_width] * (len(table.columns) + index_num)
+    # set automatic column width for each column based on the maximum text width
+    elif col_width == "auto":
+        auto_width = []
+        for col in table.columns:
+            auto_width.append(max(table[col].astype(str).tolist() + [col], key=len))
+
+        col_width = []
+        for i, txt in enumerate(auto_width):
+            if i < index_num:
+                # increased size for index column as index is bold
+                f_bold_width = approx_f_width * 1.3
+                col_width.append(len(txt) * f_bold_width + 2 * f_bold_width)
+            else:
+                # add one character width padding on both sides
+                col_width.append(len(txt) * approx_f_width + 2 * approx_f_width)
+
+    if ax is None:
+        # compute figure size based on column and row width
+        size = (sum(col_width),
+                (len(table.index) + table.columns.nlevels) * row_height)
+
+        _, ax = plt.subplots(figsize=size)
+        ax.axis('off')
+
+    mpl_table = ax.table(cellText=table.values,
+                         rowLabels=None,
+                         colLabels=table.columns if show_header else None,
+                         bbox=bbox,
+                         colWidths=col_width,
+                         **kwargs)
+
+    # set fontsize
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(fontsize)
+
+    # color cell background
+    for (row, col), cell in mpl_table.get_celld().items():
+        cell.set_edgecolor(edge_color)
+
+        # col ids start to count at 0 but the index has negative numbers (doesn't matter index is converted to column)
+        # row ids start to count at 0 and include the index (no negative numbers)
+        if row < 1 and col < index_num and show_header:
+            # color index headers
+            cell.set_text_props(weight='bold')
+            cell.set_facecolor('white')
+        elif row < 1 and show_header or col < index_num:
+            # color header and index
+            cell.set_text_props(weight='bold', color='w')  # TODO make header text options accessible
+            cell.set_facecolor(index_color)
+        else:
+            # color data cells
+            cell.set_facecolor(row_colors[row % len(row_colors)])
+
+        # spacing between text and cell border
+        # this affects every direction (left, right, top, bottom)
+        # however height effect is minimal so I ignore it
+        # approximate padding as one character on each side for each column
+        cell.PAD = approx_f_width * len(col_width) / sum(col_width)
+
+    _save_figure(save, **save_kwargs)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True, **save_kwargs)
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return ax

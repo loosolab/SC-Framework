@@ -2,3 +2,4 @@ include sctoolbox/data/*
 include sctoolbox/data/gene_lists/*.txt
 include sctoolbox/data/promoters_gtf/*.gtf
 include sctoolbox/data/celltype_markers/*.tsv
+include sctoolbox/data/method_templates/*.md

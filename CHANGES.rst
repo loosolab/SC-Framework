@@ -13,10 +13,14 @@
 - receptor-ligand: nan zscore to 0 (#302)
 - adjust to altered scanpy.normalize_total behavior (#370)
 - Add function to download tutorial data
+- plot_pca_variance: add selected variance line; allow log-scale
+- add global dpi setting
+- implemented suppress_logging, get_version_report, plot_table, update_yml, generate_report
 - Allow differential R-L plots to be asved as PDF
 - receptor-ligand: adjust minimum line width in connectionPlot
 - Added new notebook testdata and references. (partly #338)
 - Improved flexibility in adata creation from mtx. (#365)
+- lsi: fixed bug scaling the total variance explained to 100%
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
@@ -27,6 +31,24 @@ Changes to notebooks
 - RNA 02 QC: fixed bug causing initial var thresholds to be ignored
 - General: pseudotime_analysis: color dendrogram for clustering instead of segment
 - add layer option to notebooks that utilize the matrix (#342)
+- pptreport integration:
+    - 01-RNA
+    - 02-RNA
+    - 03-RNA
+    - 04-RNA
+    - 0A1-RNA receptor-ligand
+    - 0A2-RNA receptor-ligand differences
+    - 0B-RNA velocity notebook 
+    - general group_markers
+    - general pseudotime
+    - general proportion
+    - general GSEA
+    - general annotation
+    - 01-ATAC
+    - 02-ATAC
+    - 03-ATAC
+    - 04-ATAC
+- RNA: implemented report notebook
 - General: annotation: add min_hits parameter
 - RNA/ ATAC 03: allow to choose the number of computed PCs
 - RNA/ ATAC 01: allow to choose batch name

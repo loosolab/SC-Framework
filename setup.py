@@ -35,7 +35,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
-                  "velocity": ['scvelo @ git+https://github.com/theislab/scvelo.git'],
+                  "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
@@ -105,7 +105,7 @@ setup(
         'qnorm',
         'plotly',
         'scipy>=1.14',
-        'statsmodels',
+        'statsmodels @ git+https://github.com/statsmodels/statsmodels',  # remove once statsmodels 0.15 is released
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
@@ -124,7 +124,9 @@ setup(
         'packaging',
         'throttler',
         'upsetplot',
-        'boto3'
+        'pptreport',
+        'boto3',
+        'Jinja2'
     ],
     include_package_data=True,
     extras_require=extras_require

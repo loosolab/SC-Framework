@@ -6,6 +6,7 @@ from collections import Counter
 from itertools import combinations_with_replacement
 import scipy
 from sklearn.preprocessing import minmax_scale
+from pathlib import Path
 import scanpy as sc
 import matplotlib
 import matplotlib.pyplot as plt
@@ -30,9 +31,10 @@ import itertools
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 
+from sctoolbox.utils.io import update_yaml
 from sctoolbox.utils.adata import add_uns_info, in_uns, get_uns
 from sctoolbox.utils.bioutils import pseudobulk_table
-
+from sctoolbox.plotting.general import _save_figure, plot_table
 
 logger = settings.logger
 
@@ -48,7 +50,8 @@ def download_db(adata: sc.AnnData,
                 sep: str = "\t",
                 inplace: bool = False,
                 overwrite: bool = False,
-                remove_duplicates: bool = True) -> Optional[sc.AnnData]:
+                remove_duplicates: bool = True,
+                report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
     r"""
     Download table of receptor-ligand interactions and store in adata.
 
@@ -77,6 +80,8 @@ def download_db(adata: sc.AnnData,
         If True will overwrite existing database.
     remove_duplicates : bool, default True
         If True, removes duplicate receptor-ligand combinations.
+    report : Optional[Tuple[str, str]]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Notes
     -----
@@ -107,6 +112,7 @@ def download_db(adata: sc.AnnData,
 
     try:
         database = pd.read_csv(db_path, sep=sep)
+        liana = False
     except FileNotFoundError:
         # Check if a LIANA resource
         if db_path in liana_res.show_resources():
@@ -114,6 +120,7 @@ def download_db(adata: sc.AnnData,
             database = liana_res.select_resource(db_path)
             # explode protein complexes interactions into single protein interactions
             database = liana_res.explode_complexes(database)
+            liana = True
         else:
             raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
 
@@ -139,6 +146,15 @@ def download_db(adata: sc.AnnData,
     modified_adata.uns['receptor-ligand']['database'] = database
     modified_adata.uns['receptor-ligand']['ligand_column'] = ligand_column
     modified_adata.uns['receptor-ligand']['receptor_column'] = receptor_column
+
+    # report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report[0], "w") as file:
+            file.write('Used database: ' + (f"LIANA - {db_path}" if liana else db_path))
+        plot_table(table=database, report=report[1], crop=10)
+
+        # write method report
+        update_yaml(d={"database": f"LIANA - {db_path}" if liana else db_path}, yml="method.yml", path_prefix="report")
 
     if not inplace:
         return modified_adata
@@ -217,7 +233,7 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
-    cl_mean_expression = pseudobulk_table(adata, groupby=cluster_column, layer=layer, gene_index=gene_index)
+    cl_mean_expression = pseudobulk_table(adata, groupby=cluster_column, layer=layer, gene_index=gene_index, clean=False)
     # percent cells in cluster expressing gene
     cl_percent_expression = pd.DataFrame(index=index)
     # number of cells for each cluster
@@ -345,7 +361,7 @@ def interaction_violin_plot(adata: sc.AnnData,
                             min_perc: int | float,
                             save: Optional[str] = None,
                             figsize: Tuple[int | float, int | float] = (5, 20),
-                            dpi: int = 100) -> npt.ArrayLike:
+                            dpi: Optional[int | float] = None) -> npt.ArrayLike:
     """
     Generate violin plot of pairwise cluster interactions.
 
@@ -359,14 +375,16 @@ def interaction_violin_plot(adata: sc.AnnData,
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
     figsize : Tuple[int | float, int | float], default (5, 20)
         Figure size
-    dpi : float, default 100
-        The resolution of the figure in dots-per-inch.
+    dpi : Optional[int | float], default None
+        The resolution of the figure in dots-per-inch. Overwrites `sctoolbox.settings.dpi`.
 
     Returns
     -------
     npt.ArrayLike
         Object containing all plots. As returned by matplotlib.pyplot.subplots
     """
+    if dpi is None:
+        dpi = settings.dpi
 
     # check if data is available
     _check_interactions(adata)
@@ -403,8 +421,7 @@ def interaction_violin_plot(adata: sc.AnnData,
         flat_axs[i].set_title(f"Cluster {cluster}")
 
     # save plot
-    if save:
-        fig.savefig(f"{settings.figure_dir}/{save}")
+    _save_figure(save, dpi=dpi)
 
     return axs
 
@@ -571,8 +588,9 @@ def cyclone(
     show_genes: bool = True,
     gene_amount: int = 5,
     figsize: Tuple[int | float, int | float] = (10, 10),
-    dpi: int | float = 100,
-    save: Optional[str] = None
+    dpi: Optional[int | float] = None,
+    save: Optional[str] = None,
+    report: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
     Generate network graph of interactions between clusters. See the hairball plot as an alternative.
@@ -609,10 +627,12 @@ def cyclone(
         The amount of genes per receptor and ligand to display on the outer track (displayed genes per sector = gene_amount *2).
     figsize : Tuple[int | float, int | float], default (10, 10)
         Figure size
-    dpi : int | float, default 100
-        The resolution of the figure in dots-per-inch.
+    dpi : Optional[int | float], default None
+        The resolution of the figure in dots-per-inch. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
     save : str, default None
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -863,7 +883,7 @@ def cyclone(
         )
 
     # needed to access ax
-    fig = circos.plotfig(dpi=dpi, figsize=figsize)
+    fig = circos.plotfig(dpi=int(dpi if dpi else settings.dpi), figsize=figsize)
 
     # add custom legend to plot
     patch_legend = circos.ax.legend(
@@ -874,8 +894,11 @@ def cyclone(
     )
     circos.ax.add_artist(patch_legend)
 
-    if save:
-        fig.savefig(f"{settings.figure_dir}/{save}", dpi=dpi)
+    _save_figure(save, dpi=dpi)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True, dpi=dpi)
 
     return fig
 
@@ -947,8 +970,9 @@ def interaction_progress(datalist: list[sc.AnnData],
                          receptor_cluster: str,
                          ligand_cluster: str,
                          figsize: Tuple[int | float, int | float] = (4, 4),
-                         dpi: int = 100,
-                         save: Optional[str] = None) -> matplotlib.axes.Axes:
+                         dpi: Optional[int | float] = None,
+                         save: Optional[str] = None,
+                         report: Optional[str] = None) -> matplotlib.axes.Axes:
     """
     Barplot that shows the interaction score of a single interaction between two given clusters over multiple datasets.
 
@@ -970,10 +994,12 @@ def interaction_progress(datalist: list[sc.AnnData],
         Name of the ligand cluster.
     figsize : Tuple[int | float, int | float], default (4, 4)
         Figure size in inch.
-    dpi : int, default 100
-        Dots per inch.
+    dpi : Optional[int | float], default None
+        Dots per inch. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
     save : Optional[str], default None
         Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1003,7 +1029,7 @@ def interaction_progress(datalist: list[sc.AnnData],
     table = pd.concat(table)
 
     # plot
-    with plt.rc_context({"figure.figsize": figsize, "figure.dpi": dpi}):
+    with plt.rc_context({"figure.figsize": figsize, "figure.dpi": dpi if dpi else settings.dpi}):
         plot = sns.barplot(
             data=table,
             x="name",
@@ -1025,7 +1051,11 @@ def interaction_progress(datalist: list[sc.AnnData],
     plt.tight_layout()
 
     if save:
-        plt.savefig(f"{settings.figure_dir}/{save}")
+        _save_figure(save, dpi=dpi)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True, dpi=dpi)
 
     return plot
 
@@ -1035,7 +1065,7 @@ def interaction_progress(datalist: list[sc.AnnData],
 def connectionPlot(adata: sc.AnnData,
                    restrict_to: Optional[list[str]] = None,
                    figsize: Tuple[int | float, int | float] = (10, 15),
-                   dpi: int = 100,
+                   dpi: Optional[int | float] = None,
                    connection_alpha: Optional[str] = "interaction_score",
                    save: Optional[str] = None,
                    title: Optional[str] = None,
@@ -1059,7 +1089,8 @@ def connectionPlot(adata: sc.AnnData,
                    line_colors: Optional[str] = "rainbow",
                    dot_colors: str = "flare",
                    xlabel_order: Optional[list[str]] = None,
-                   alpha_range: Optional[Tuple[int | float, int | float]] = None) -> npt.ArrayLike:
+                   alpha_range: Optional[Tuple[int | float, int | float]] = None,
+                   report: Optional[str] = None) -> npt.ArrayLike:
     """
     Show specific receptor-ligand connections between clusters.
 
@@ -1071,8 +1102,8 @@ def connectionPlot(adata: sc.AnnData,
         Restrict plot to given cluster names.
     figsize : Tuple[int | float, int | float], default (10, 15)
         Figure size
-    dpi : float, default 100
-        The resolution of the figure in dots-per-inch.
+    dpi : Optional[int | float], default None
+        The resolution of the figure in dots-per-inch. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
     connection_alpha : str, default 'interaction_score'
         Name of column that sets alpha value of lines between plots. None to disable.
     save : Optional[str], default None
@@ -1116,6 +1147,8 @@ def connectionPlot(adata: sc.AnnData,
     alpha_range : Optional[Tuple[int | float, int | float]], default None
         Sets the minimum and maximum value for the `connection_alpha` legend. Values outside this range will be set to the min or max value.
         Minimum is mapped to transparent (alpha=0) and maximum to opaque (alpha=1). Will use the min and max values of the data by default (None).
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1161,7 +1194,7 @@ def connectionPlot(adata: sc.AnnData,
         raise Exception(f"No interactions between clusters {restrict_to}")
 
     # setup subplot
-    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi, gridspec_kw={'wspace': wspace})
+    fig, axs = plt.subplots(1, 2, figsize=figsize, dpi=dpi if dpi else settings.dpi, gridspec_kw={'wspace': wspace})
     fig.suptitle(title)
 
     try:
@@ -1313,8 +1346,11 @@ def connectionPlot(adata: sc.AnnData,
                       loc='upper left',
                       title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
 
-    if save:
-        plt.savefig(f"{settings.figure_dir}/{save}", bbox_inches='tight')
+    _save_figure(save, dpi=dpi)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True, dpi=dpi)
 
     return axs
 
@@ -2471,7 +2507,7 @@ def condition_differences_network(
     adata: sc.AnnData,
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
-    dpi: int = 300,
+    dpi: Optional[int | float] = None,
     save: Optional[str | Tuple[str, str]] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
@@ -2481,7 +2517,8 @@ def condition_differences_network(
     n_cols: int = 4,
     n_rows: Optional[int] = None,
     non_hub_cols: Optional[int] = None,
-    close_figs: bool = True
+    close_figs: bool = True,
+    report: Optional[Tuple[str, str]] = None
 ) -> List[matplotlib.figure.Figure]:
     """
     Visualize differences between conditions as a receptor-ligand network with hubs separated.
@@ -2497,8 +2534,8 @@ def condition_differences_network(
         Number of top differential interactions to display
     figsize : Tuple[int | float, int | float], default (22, 16)
         Size of the figure
-    dpi : int, default 300
-        The resolution of the figure
+    dpi : Optional[int | float], default None
+        The resolution of the figure. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
     save : Optional[str | Tuple[str, str]], default None
         Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
         string with output filename base. When a string is given the file format is set to 'pdf'.
@@ -2521,6 +2558,9 @@ def condition_differences_network(
         Number of columns for the non-hub network. If None, then uses all available columns (n_cols - 1)
     close_figs : bool, default True
         Whether to close figures after saving to free up memory
+    report : Optional[Tuple[str, str]]
+        Tuple of file prefix and filextension e.g. ('01_network', '.png') used to construct the report files.
+        Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -2613,10 +2653,10 @@ def condition_differences_network(
     }
 
     # Process each condition dimension
-    for dimension_key, dimension_results in diff_results.items():
+    for i, (dimension_key, dimension_results) in enumerate(diff_results.items()):
 
         # Process each comparison in this dimension
-        for comparison_key, comparison_data in dimension_results.items():
+        for j, (comparison_key, comparison_data) in enumerate(dimension_results.items(), start=i):
             # Skip non-dictionary entries or entries without differences
             if not isinstance(comparison_data, dict) or 'differences' not in comparison_data:
                 continue
@@ -2781,7 +2821,7 @@ def condition_differences_network(
                     plt.close('all')
 
                 # Create figure with GridSpec for multi-grid layout
-                fig = plt.figure(figsize=figsize, dpi=dpi)
+                fig = plt.figure(figsize=figsize, dpi=dpi if dpi else settings.dpi)
 
                 # Create grid with the last column for legend and make it half size
                 # This allocates more space for network visualizations and less for the legend
@@ -2949,13 +2989,17 @@ def condition_differences_network(
                 )
 
                 # Save if requested
-                if save:
-                    if isinstance(save, tuple):
-                        output_filename = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
-                    else:
-                        output_filename = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.pdf"
-                    output_path = f"{settings.figure_dir}/{output_filename}"
-                    plt.savefig(output_path, bbox_inches='tight')
+                save_file = None
+                if isinstance(save, tuple):
+                    save_file = f"{save[0]}_{dimension_key}_{comparison_key}_{direction_name}.{save[1]}"
+                elif isinstance(save, str):
+                    save_file = f"{save}_{dimension_key}_{comparison_key}_{direction_name}.pdf"
+                _save_figure(save_file, dpi=dpi)
+
+                # report
+                if settings.report_dir and report:
+                    prefix, rest = report[0].split("_")  # add number to prefix to handle multiplot output
+                    _save_figure(f"{prefix}{j:02d}_{rest}_{dimension_key}_{comparison_key}_{direction_name}{report[1]}", report=True, dpi=dpi)
 
                 # Store the figure for return
                 figures.append(fig)
@@ -2974,7 +3018,7 @@ def plot_all_condition_differences(
     adata: sc.AnnData,
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
-    dpi: int = 300,
+    dpi: Optional[int | float] = None,
     save: Optional[str | Tuple[str, str]] = None,
     split_by_direction: bool = True,
     hub_threshold: int = 4,
@@ -2985,7 +3029,8 @@ def plot_all_condition_differences(
     n_rows: Optional[int] = None,
     show: bool = True,
     return_figures: bool = False,
-    close_figs: bool = True
+    close_figs: bool = True,
+    report: Optional[Tuple[str, str]] = None
 ) -> Optional[Dict[str, List[matplotlib.figure.Figure]]]:
     """Generate network plots for all condition difference comparisons.
 
@@ -3000,11 +3045,12 @@ def plot_all_condition_differences(
         Number of top differential interactions to display.
     figsize : Tuple[int | float, int | float], default (22, 16)
         Size of the figure.
-    dpi : int, default 300
-        Resolution of the figure.
+    dpi : Optional[int | float], default None
+        Resolution of the figure. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
     save : Optional[str | Tuple[str, str]], default None
         Tuple with output filename base on index 0 and file format (e.g. PDF) on index 1 or
         string with output filename base. When a string is given the file format is set to 'pdf'.
+        The string is used as the prefix of the final filname.
     split_by_direction : bool, default True
         Create separate plots for positive and negative differences.
     hub_threshold : int, default 4
@@ -3025,6 +3071,9 @@ def plot_all_condition_differences(
         Return the generated figures.
     close_figs : bool, default True
         Close figures after processing to free memory.
+    report : Optional[Tuple[str, str]]
+        Tuple of file prefix and filextension e.g. ('01_network', '.png') used to construct the report files.
+        Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -3074,10 +3123,8 @@ def plot_all_condition_differences(
         }
 
         # Generate filename with dimension if saving
-        if save:
-            save_name = (f"{save[0]}_{dimension_key}", save[1]) if isinstance(save, tuple) else f"{save}_{dimension_key}"
-        else:
-            save_name = None
+        if save is not None:
+            save = (f"{save[0]}_{dimension_key}", save[1]) if isinstance(save, tuple) else f"{save}_{dimension_key}"
 
         # Generate figures for this dimension
         figures = condition_differences_network(
@@ -3085,7 +3132,7 @@ def plot_all_condition_differences(
             n_top=n_top,
             figsize=figsize,
             dpi=dpi,
-            save=save_name,
+            save=save,
             split_by_direction=split_by_direction,
             hub_threshold=hub_threshold,
             color_palette=color_palette,
@@ -3093,7 +3140,8 @@ def plot_all_condition_differences(
             vmax=vmax,
             n_cols=n_cols,
             n_rows=n_rows,
-            close_figs=close_figs and not show
+            close_figs=close_figs and not show,
+            report=report
         )
 
         # Store figures if requested
@@ -3185,14 +3233,15 @@ def plot_interaction_timeline(
     cluster_column: str,
     time_order: List[str] | npt.ArrayLike,
     figsize: Optional[Tuple[int | float, int | float]] = None,
-    dpi: int = 100,
+    dpi: Optional[int | float] = None,
     save: Optional[str] = None,
     title: Optional[str] = None,
     n_cols: int = 2,
     receptor_color: Optional[str] = None,
     ligand_color: Optional[str] = None,
     use_global_ylim: bool = False,
-    layer: Optional[str] = None
+    layer: Optional[str] = None,
+    report: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
     Plot receptor-ligand interaction expression levels over time as barplots.
@@ -3213,8 +3262,8 @@ def plot_interaction_timeline(
         All timepoints must exist in the data.
     figsize : Optional[Tuple[int | float, int | float]], default None
         Figure dimensions in inches.
-    dpi : int, default 100
-        Figure resolution.
+    dpi : Optional[int | float], default None
+        Figure resolution. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
     save : Optional[str], default None
         Output filename.
     title : Optional[str], default None
@@ -3229,6 +3278,8 @@ def plot_interaction_timeline(
         Whether to use the same y-limit for all subplots based on the global maximum.
     layer : Optional[str], default None
         The layer used. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -3327,7 +3378,7 @@ def plot_interaction_timeline(
         figsize = (8 * n_cols, 6 * n_rows)
 
     # Create figure and axes
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, dpi=dpi, squeeze=False)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, dpi=dpi if dpi else settings.dpi, squeeze=False)
 
     # Calculate all expression values first
     expr_data = []
@@ -3372,7 +3423,7 @@ def plot_interaction_timeline(
             facecolor=receptor_color,
             edgecolor='black',
             linewidth=0.5,
-            label=f"{r_gene} in {r_cluster}"
+            label=f"Receptor {r_gene} in {r_cluster}"
         )
 
         l_bars = ax.bar(
@@ -3383,7 +3434,7 @@ def plot_interaction_timeline(
             facecolor=ligand_color,
             edgecolor='black',
             linewidth=0.5,
-            label=f"{l_gene} in {l_cluster}"
+            label=f"Ligand {l_gene} in {l_cluster}"
         )
 
         # Add value labels with offset to prevent overlap
@@ -3431,32 +3482,12 @@ def plot_interaction_timeline(
         ax.set_ylim(0, y_max)
 
         # Add individual legend below plot with additional space
-        ax.legend(
-            fontsize=12,
-            loc='upper center',
-            bbox_to_anchor=(0.5, -0.25),
-            ncol=2,
-            frameon=True
-        )
+        ax.legend(fontsize=12, loc='upper right')
 
     # Hide empty subplots
     for empty_idx in range(n_interactions, n_rows * n_cols):
         empty_row, empty_col = empty_idx // n_cols, empty_idx % n_cols
         axes[empty_row, empty_col].set_visible(False)
-
-    # Add global legend for colors
-    legend_elements = [
-        plt.Rectangle((0, 0), 1, 1, facecolor=receptor_color, edgecolor='black', linewidth=0.5, label='Receptor'),
-        plt.Rectangle((0, 0), 1, 1, facecolor=ligand_color, edgecolor='black', linewidth=0.5, label='Ligand')
-    ]
-    fig.legend(
-        handles=legend_elements,
-        loc='lower center',
-        ncol=2,
-        bbox_to_anchor=(0.5, 0.01),
-        fontsize=12,
-        frameon=True
-    )
 
     # Set title
     if title is None:
@@ -3474,7 +3505,10 @@ def plot_interaction_timeline(
     )
 
     # Save figure
-    if save:
-        fig.savefig(f"{settings.figure_dir}/{save}")
+    _save_figure(save, dpi=dpi)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True, dpi=dpi)
 
     return fig

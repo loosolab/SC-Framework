@@ -8,11 +8,14 @@ import scipy
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 import pandas as pd
+from pathlib import Path
+import yaml
 
 from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -166,7 +169,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -176,12 +179,15 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
+    report : Optional[list[str]]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
     rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
     for unk in adata.uns.keys():
-        if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
+        if isinstance(adata.uns[unk], dict) and rank_keys.issubset(set(adata.uns[unk].keys())):
             names = list()
             dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
             for i in adata.uns[unk]["names"]:
@@ -193,6 +199,32 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
+
+    # generate report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report[0], "w") as f:
+            f.write("\n".join([
+                "## Dataset",
+                f"{adata.shape[0]} observations x {adata.shape[1]} variables",
+                f"Observation information: {', '.join(adata.obs.columns)}",
+                f"Variable information: {', '.join(adata.var.columns)}",
+                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+            ]))
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({"var_count": len(adata.var), "obs_count": len(adata.obs)})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
+
+        plot_table(adata.obs, report=report[1], crop=4)
+        plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
 
@@ -335,7 +367,8 @@ def get_uns(adata: sc.AnnData,
 
 @beartype
 def get_cell_values(adata: sc.AnnData,
-                    element: str) -> np.ndarray:
+                    element: str,
+                    var_col: Optional[str] = None) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
 
     Parameters
@@ -344,6 +377,9 @@ def get_cell_values(adata: sc.AnnData,
         Anndata object.
     element : str
         The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+    var_col : Optional[str], default None
+        Use the given column of adata.var instead of the index.
+        Adata.obs is skipped when this is set.
 
     Returns
     -------
@@ -354,12 +390,20 @@ def get_cell_values(adata: sc.AnnData,
     ------
     ValueError
         If element is not found in adata.obs or adata.var.
+        If var_col is not a column name of adata.var.
     """
 
-    if element in adata.obs:
+    if element in adata.obs and var_col is None:
         values = np.array(adata.obs[element].values)
-    elif element in adata.var.index:
-        idx = list(adata.var.index).index(element)
+    elif element in adata.var.index or var_col is not None:
+        if var_col is None:
+            idx = list(adata.var.index).index(element)
+        else:
+            try:
+                idx = list(adata.var[var_col]).index(element)
+            except ValueError:
+                raise ValueError(f"{var_col} is not a column of adata.var.")
+
         values = adata.X[:, idx]
         values = values.todense().A1 if issparse(values) else values
     else:

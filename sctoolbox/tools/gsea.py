@@ -2,7 +2,6 @@
 import pandas as pd
 import gseapy as gp
 import scanpy as sc
-import tqdm
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox.tools.marker_genes import get_rank_genes_tables
@@ -23,7 +22,6 @@ def gene_set_enrichment(adata: sc.AnnData,
                         marker_key: str,
                         organism: str,
                         method: Literal["prerank", "enrichr"] = "prerank",
-                        pvals_adj_tresh: float = 0.05,
                         library_name: str = "GO_Biological_Process_2023",
                         overwrite: bool = False,
                         inplace: bool = False,
@@ -44,8 +42,6 @@ def gene_set_enrichment(adata: sc.AnnData,
         Source organism.
     method : Literal["prerank", "enrichr"], default "prerank"
         Choose between enrichr and prerank(gsea) method.
-    pvals_adj_tresh : float, default 0.05
-        Threshold for adjusted p-value.
     library_name : str, default GO_Biological_Process_2023
         Name of public GO library.
         Get gene sets from public GO library.
@@ -109,6 +105,9 @@ def gene_set_enrichment(adata: sc.AnnData,
     utils.adata.add_uns_info(modified_adata,
                              key=['gsea', 'overlap_col'],
                              value=overlap_col)
+    utils.adata.add_uns_info(modified_adata,
+                             key=['gsea', 'marker_key'],
+                             value=marker_key)
 
     logger.info("Getting gene rank tables.")
     if marker_key in adata.uns:
@@ -116,6 +115,11 @@ def gene_set_enrichment(adata: sc.AnnData,
                                               out_group_fractions=True,
                                               key=marker_key,
                                               n_genes=None)
+
+        # remove potential "_1", "_2" suffixes
+        # TODO I'm assuming that this pattern is uniquely created by .var_names_make_unique and no genes are actually named that way.
+        for table in marker_tables.values():
+            table.iloc[:, 0] = table.iloc[:, 0].str.replace(r'_\d+$', '', regex=True)
     else:
         msg = "Marker key not found! Please check parameter!"
         logger.error(msg)
@@ -143,37 +147,39 @@ def gene_set_enrichment(adata: sc.AnnData,
     gene_sets = {key: list(map(str.upper, value)) for key, value in gene_sets.items()}
 
     path_enr = {}
-    for ct, deg in tqdm.tqdm(marker_tables.items()):
-        logger.info(f"Running {method} for cluster {ct}.")
+    for i, (ct, deg) in enumerate(marker_tables.items(), start=1):
+        logger.info(f"Running {method} for cluster {ct} ({i}/{len(marker_tables)}).")
         enr_list = list()
         # enrichr API
         if len(deg) > 0:
-            if method == "enrichr":
-                enr = gp.enrichr(list(deg["names"].str.upper()),
-                                 gene_sets=gene_sets,
-                                 organism=organism,
-                                 background=background,
-                                 outdir=None,
-                                 no_plot=True,
-                                 verbose=False)
-                enr_list.append(enr.res2d)
-            elif method == "prerank":
-                # Set default kwargs
-                defaultKwargs = {"threads": 4,
-                                 "min_size": 5,
-                                 "max_size": 1000,
-                                 "permutation_num": 1000,
-                                 "outdir": None,
-                                 "seed": 6,
-                                 "verbose": True}
-                kwargs = {**defaultKwargs, **kwargs}
+            # briefly silence all loggers to disable gseapy logging
+            with utils.general.suppress_logging():
+                if method == "enrichr":
+                    enr = gp.enrichr(list(deg["names"].str.upper()),
+                                     gene_sets=gene_sets,
+                                     organism=organism,
+                                     background=background,
+                                     outdir=None,
+                                     no_plot=True,
+                                     verbose=False)
+                    enr_list.append(enr.res2d)
+                elif method == "prerank":
+                    # Set default kwargs
+                    defaultKwargs = {"threads": 4,
+                                     "min_size": 5,
+                                     "max_size": 1000,
+                                     "permutation_num": 1000,
+                                     "outdir": None,
+                                     "seed": 6,
+                                     "verbose": True}
+                    kwargs = {**defaultKwargs, **kwargs}
 
-                deg["names"] = deg["names"].str.upper()
-                deg.index = deg["names"]
-                enr = gp.prerank(rnk=deg["scores"],
-                                 gene_sets=gene_sets,
-                                 **kwargs)
-                enr_list.append(enr.res2d)
+                    deg["names"] = deg["names"].str.upper()
+                    deg.index = deg["names"]
+                    enr = gp.prerank(rnk=deg["scores"],
+                                     gene_sets=gene_sets,
+                                     **kwargs)
+                    enr_list.append(enr.res2d)
 
         # concat results
         if not all(x is None for x in enr_list):

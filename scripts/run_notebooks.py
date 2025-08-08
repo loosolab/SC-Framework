@@ -7,10 +7,12 @@ script_dir = os.path.dirname(__file__)
 print(f"Script location: {script_dir}")
 rna_notebook_path_suffix = "/../rna_analysis/notebooks/"
 
+# notebook sorting key
+key = lambda x: "zz" if x.startswith("99") else str.lower(x)  # put the 99-report.ipynb notebook last
+
 # Run RNA notebooks
 notebook_dir = script_dir + rna_notebook_path_suffix
-rna_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"), key=str.lower)  # sort as glob output is not ordered
-rna_notebooks = [nb for nb in rna_notebooks if "0B" not in nb]  # 0B cannot be tested due to missing input file (vdata has to be added in the future).
+rna_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"), key=key)  # sort as glob output is not ordered
 print("\n\n")
 print("--------------------------------------- RNA ---------------------------------------")
 print(f"Notebook directory: {notebook_dir}")

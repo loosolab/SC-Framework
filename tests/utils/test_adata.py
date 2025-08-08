@@ -5,9 +5,21 @@ import scanpy as sc
 import scipy
 import os
 import numpy as np
+from contextlib import contextmanager
 
 import sctoolbox.utils.adata as utils
 
+# ---------------------------- HELPER ------------------------------- #
+
+
+@contextmanager
+def add_logger_handler(logger, handler):
+    """Temporarily add a handler to the given logger."""
+    logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -58,17 +70,18 @@ def test_save_and_load_h5ad(adata, raw, caplog):
         adata.raw = adata
 
     try:
-        utils.save_h5ad(adata, path)
+        with add_logger_handler(utils.logger, caplog.handler):
+            utils.save_h5ad(adata, path)
 
-        assert os.path.isfile(path)
+            assert os.path.isfile(path)
 
-        loaded = utils.load_h5ad(path)
+            loaded = utils.load_h5ad(path)
 
-        assert isinstance(loaded, sc.AnnData)
+            assert isinstance(loaded, sc.AnnData)
 
-        # assume the last record is the warning
-        log_rec = caplog.records[-1]
-        assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+            # assume the last record is the warning
+            log_rec = caplog.records[-1]
+            assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
 
     finally:
         os.remove(path)  # clean up after tests
