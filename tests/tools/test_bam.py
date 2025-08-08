@@ -118,22 +118,22 @@ def test_subset_bam(bam_file, barcodes, caplog, tmpdir):
     with add_logger_handler(stb.logger, caplog.handler):
         # check success
         stb.subset_bam(bam_in=bam_file,
-                    bam_out=str(outfile),
-                    barcodes=barcodes,
-                    read_tag="CB",
-                    pysam_threads=4,
-                    overwrite=False)
+                       bam_out=str(outfile),
+                       barcodes=barcodes,
+                       read_tag="CB",
+                       pysam_threads=4,
+                       overwrite=False)
 
         assert bool(re.match(r"Wrote \d+ reads to output bam", caplog.messages[-1]))
         assert outfile.isfile()
 
         # check overwrite warning
         stb.subset_bam(bam_in=bam_file,
-                    bam_out=str(outfile),
-                    barcodes=barcodes,
-                    read_tag="CB",
-                    pysam_threads=4,
-                    overwrite=False)
+                       bam_out=str(outfile),
+                       barcodes=barcodes,
+                       read_tag="CB",
+                       pysam_threads=4,
+                       overwrite=False)
 
         assert f"Output file {str(outfile)} exists. Skipping." in caplog.text
 
