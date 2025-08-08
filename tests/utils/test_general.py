@@ -49,7 +49,7 @@ def test_version_report(python_version, keep, output):
     except ModuleNotFoundError:
         pass
 
-    report = general.get_version_report(python_version=python_version, keep=keep)
+    report = general.get_version_report(python_version=python_version, keep=keep, table=False)
 
     if python_version:
         assert "Python" in report.keys()
