@@ -15,7 +15,7 @@
 - Add function to download tutorial data
 - plot_pca_variance: add selected variance line; allow log-scale
 - add global dpi setting
-- implemented suppress_logging, get_version_report
+- implemented suppress_logging, get_version_report, plot_table, update_yml, generate_report
 - Allow differential R-L plots to be asved as PDF
 - receptor-ligand: adjust minimum line width in connectionPlot
 - Added new notebook testdata and references. (partly #338)
