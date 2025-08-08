@@ -583,7 +583,7 @@ def gsea_dot(adata: sc.AnnData,
     ]
 
     if len(term_table) < 1:
-        raise ValueError(f"A cutoff of {cutoff} filters everything. Set a more lenient cutoff to plot.")
+        raise ValueError(f"A cutoff of {cutoff} filters every entry in the enrichment table. Set a more lenient cutoff to plot.")
 
     logger.info("Generating dotplot...")
     norm = plt.Normalize(term_table[sig_col].min(), term_table[sig_col].max())
