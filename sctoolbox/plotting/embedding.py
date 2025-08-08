@@ -10,8 +10,8 @@ from scipy.sparse import issparse
 import itertools
 
 import seaborn as sns
-import matplotlib
-import matplotlib as mpl
+from matplotlib import __version__ as mpl_version, rcParams
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
@@ -25,7 +25,7 @@ from numba import errors as numba_errors
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Union, Any, List, Annotated, Callable
 from beartype.vale import Is
-import numpy.typing as npt
+from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 import sctoolbox.tools as tools
@@ -40,12 +40,12 @@ logger = settings.logger
 #############################################################################
 
 @beartype
-def sc_colormap() -> matplotlib.colors.ListedColormap:
+def sc_colormap() -> ListedColormap:
     """Get a colormap with 0-count cells colored grey (to use for embeddings).
 
     Returns
     -------
-    cmap : matplotlib.colors.ListedColormap
+    cmap : ListedColormap
         Colormap with 0-count cells colored grey.
     """
 
@@ -58,12 +58,12 @@ def sc_colormap() -> matplotlib.colors.ListedColormap:
     return sc_cmap
 
 
-def grey_colormap() -> matplotlib.colors.ListedColormap:
+def grey_colormap() -> ListedColormap:
     """Get a colormap with grey-scale colors, but without white to still show cells.
 
     Returns
     -------
-    cmap : matplotlib.colors.ListedColormap
+    cmap : ListedColormap
         Grey-scale colormap.
     """
     color_cmap = cm.get_cmap('Greys', 200)
@@ -111,18 +111,18 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 #####################################################################
 
 @beartype
-def _add_contour(x: np.ndarray,
-                 y: np.ndarray,
-                 ax: matplotlib.axes.Axes):
+def _add_contour(x: NDArray,
+                 y: NDArray,
+                 ax: Axes):
     """Add contour plot to a scatter plot.
 
     Parameters
     ----------
-    x : np.ndarray
+    x : NDArray
         x-coordinates of the scatter plot.
-    y : np.ndarray
+    y : NDArray
         y-coordinates of the scatter plot.
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axis object to add the contour plot to.
     """
 
@@ -141,7 +141,7 @@ def _add_contour(x: np.ndarray,
 
 
 @beartype
-def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> Optional[matplotlib.axes.Axes]:
+def _add_legend_ax(ax_obj: Axes, ax_label: str = "<legend>") -> Optional[Axes]:
     """
     Create a dedicated ax-object and move the legend of the given ax to it.
 
@@ -150,14 +150,14 @@ def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> 
 
     Parameters
     ----------
-    ax_obj : matplotlib.axes.Axes
+    ax_obj : Axes
         The ax-object with the legend to move.
     ax_label : str, default '<legend>'
         The label of the legend-ax.
 
     Returns
     -------
-    Optional[matplotlib.axes.Axes]
+    Optional[Axes]
         Either the newly created legend-ax or None if there is no legend within the provided ax.
     """
     handles, labels = ax_obj.get_legend_handles_labels()
@@ -200,7 +200,8 @@ def _add_legend_ax(ax_obj: matplotlib.axes.Axes, ax_label: str = "<legend>") -> 
 def _binarize_expression(adata: sc.AnnData,
                          features: list[str],
                          threshold: Optional[float] = 0,
-                         percentile_threshold: Optional[float] = None):
+                         percentile_threshold: Optional[float] = None,
+                         var_col: Optional[str] = None):
     """
     Binarize the expression of a list of features based on a threshold and store the results in adata.obs.
 
@@ -216,6 +217,8 @@ def _binarize_expression(adata: sc.AnnData,
         The expression threshold for binarization. Only one of the threshold parameters may be given.
     percentile_threshold : Optional[float]
         The expression threshold as a percentile of the features expression. Only one of the threshold parameters may be given.
+    var_col : Optional[str]
+        Use the given column of adata.var instead of the index.
 
     Raises
     ------
@@ -227,18 +230,8 @@ def _binarize_expression(adata: sc.AnnData,
     if threshold is not None and percentile_threshold is not None:
         raise ValueError("The usage of 'threshold' excludes the usage of 'percentile_threshold' and vice versa. Set one or both of the parameters to None.")
 
-    # Check if all features are present in the adata object
-    missing_features = [feature for feature in features if feature not in adata.var_names]
-    if missing_features:
-        raise ValueError(f"Features not found in adata.var_names: {', '.join(missing_features)}")
-
     for feature in features:
-        feature_expr = adata[:, feature].X
-
-        if not isinstance(feature_expr, np.ndarray):
-            feature_expr = feature_expr.toarray()
-
-        feature_expr = feature_expr.flatten()
+        feature_expr = utils.adata.get_cell_values(adata=adata, element=feature, var_col=var_col)
 
         if percentile_threshold is not None:
             threshold = np.percentile(feature_expr, percentile_threshold)
@@ -264,8 +257,10 @@ def plot_embedding(adata: sc.AnnData,
                    hexbin_gridsize: int = 30,
                    shrink_colorbar: float | int = 0.3,
                    square: bool = True,
+                   suptitle: Optional[str] = None,
                    save: Optional[str] = None,
-                   **kwargs) -> npt.ArrayLike:
+                   report: Optional[str] = None,
+                   **kwargs) -> NDArray[Axes]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -292,14 +287,18 @@ def plot_embedding(adata: sc.AnnData,
         Shrink the height of the colorbar by this factor.
     square : bool, default True
         Whether to make the plot square.
+    suptitle : Optional[str], default None
+        The title for the whole figure.
     save : Optional[str], default None
         Filename to save the figure.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`scanpy.pl.plot_embedding`.
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[Axes]
         Array of axis objects
 
     Raises
@@ -346,6 +345,13 @@ def plot_embedding(adata: sc.AnnData,
     else:
         raise KeyError(f"The given method '{method}' or 'X_{method}' cannot be found in adata.obsm. The available keys are: {list(adata.obsm.keys())}.")
 
+    # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
+    # The suffix is equivalent .var_names_make_unique(join="_")
+    if kwargs.setdefault("gene_symbols") is not None:
+        adata = adata.copy()  # ensure the original adata isn't overwritten
+        # make the column unique same as .make_var_names_unique
+        adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+
     # ---- Plot embedding for chosen colors ---- #
 
     # get embedding dimensions if passed as a kwarg
@@ -379,6 +385,10 @@ def plot_embedding(adata: sc.AnnData,
     kwargs.update(parameters)
 
     axarr = sc.pl.embedding(adata, **kwargs)
+
+    # add figure title
+    if suptitle:
+        axarr[0].get_figure().suptitle(suptitle, fontsize="x-large")
 
     # add dedicated legend ax to make it uniform with colorbar
     leg_ax = None
@@ -441,11 +451,12 @@ def plot_embedding(adata: sc.AnnData,
             if ax_color is None:
                 color_values = None
             else:
-                color_values = utils.adata.get_cell_values(adata, ax_color)
+                # use an alternative to adata.var.index when gene_symbols is set
+                color_values = utils.adata.get_cell_values(adata, ax_color, var_col=kwargs.setdefault("gene_symbols"))
 
             # Determine colors to use
             cmap = kwargs["color_map"]
-            cmap = mpl.rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
+            cmap = rcParams["image.cmap"] if cmap is None else cmap  # if cmap is None, scanpy uses default cmap for matplotlib
             if color_values is None:
                 cmap = grey_colormap()  # if no color values are given, use greyscale to show density
 
@@ -606,7 +617,11 @@ def plot_embedding(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
-    return axarr
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
+    return np.array(axarr)
 
 
 @deco.log_anndata
@@ -621,7 +636,8 @@ def feature_per_group(adata: sc.AnnData,
                       binarize_percentile_threshold: Optional[float] = None,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
-                      **kwargs) -> npt.ArrayLike:
+                      report: Optional[str] = None,
+                      **kwargs) -> NDArray[Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
 
@@ -654,6 +670,8 @@ def feature_per_group(adata: sc.AnnData,
         Figure size. Default is (4.8 * number of columns, 3.8 * number of rows).
     save : Optional[str], default None
         Filename to save the figure.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
@@ -665,7 +683,7 @@ def feature_per_group(adata: sc.AnnData,
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[Axes]
         Array of axis objects
     """
     if x and top_n:
@@ -681,6 +699,13 @@ def feature_per_group(adata: sc.AnnData,
 
     # fetch the groups
     grps = set(adata.obs[y])
+
+    # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
+    # The suffix is equivalent .var_names_make_unique(join="_")
+    if kwargs.setdefault("gene_symbols") is not None:
+        adata = adata.copy()  # ensure the original adata isn't overwritten
+        # make the column unique same as .make_var_names_unique
+        adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
 
     if top_n:
         # get the top n markers for each group
@@ -706,11 +731,11 @@ def feature_per_group(adata: sc.AnnData,
 
     if binarize:
         adata = adata.copy()  # _binarize_expression will change the adata, we want to keep the original, but plot the changed.
-        features = list()
+        features = set()
         # collect all feature names and extend all names in x
         for grp in grps:
-            features += x[grp]
-        _binarize_expression(adata, features, binarize_threshold, binarize_percentile_threshold)
+            features |= set(x[grp])
+        _binarize_expression(adata, list(features), binarize_threshold, binarize_percentile_threshold, var_col=kwargs.setdefault("gene_symbols"))
 
     # create plot
     fig, axs = plt.subplots(nrows=len(grps),
@@ -743,12 +768,16 @@ def feature_per_group(adata: sc.AnnData,
     # save figure
     _save_figure(save)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return axs
 
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, layer: str = None, **kwargs) -> npt.ArrayLike:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, **kwargs) -> NDArray[Axes]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -767,6 +796,8 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         numpy.sum, numpy.mean (re-creates the cellxgene gene set), numpy.median, etc.
     fun_kwargs : dict, default {"axis": 1}
         Additional arguments for the aggregation function.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     layer : Optional[str], default None
         Name of the adata layer used for the calculation. Defaults to `adata.X`.
     **kwargs : arguments
@@ -779,7 +810,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
 
     Returns
     -------
-    axes : npt.ArrayLike
+    axes : NDArray[Axes]
         Array of axis objects
 
     Examples
@@ -793,13 +824,25 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         pl.embedding.agg_feature_embedding(adata=adata, features=features, fname=f"Mean expression of {features}")
     """
     try:
+        # Add a suffix to duplicated entries when names other than adata.var_names (adata.var.index) are used.
+        # The suffix is equivalent .var_names_make_unique(join="_")
+        if kwargs.setdefault("gene_symbols") is not None:
+            adata = adata.copy()  # ensure the original adata isn't overwritten
+            # make the column unique same as .make_var_names_unique
+            adata.var[kwargs["gene_symbols"]] = sc.anndata.utils.make_index_unique(adata.var[kwargs["gene_symbols"]].astype(str), join="_")
+
         # check for missing features
-        missing = set(features) - set(adata.var.index)
+        missing = set(features) - set(adata.var[kwargs["gene_symbols"]] if kwargs.setdefault("gene_symbols") else adata.var.index)
         if missing:
-            raise ValueError(f"Features {missing} are not found in adata.var.index!")
+            col = kwargs.setdefault("gene_symbols")
+            raise ValueError(f"Features {missing} are not found in adata.var{f'[{col}]' if kwargs.setdefault('gene_symbols') else '.index'}!")
 
         # create subset of features
-        subset = adata[:, features]
+        if kwargs.setdefault("gene_symbols"):
+            var_filter = adata.var.index[adata.var[kwargs.setdefault("gene_symbols")].isin(features)]
+        else:
+            var_filter = features
+        subset = adata[:, var_filter]
 
         # select layer
         if layer:
@@ -817,7 +860,7 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
         adata.obs[fname] = np.array(fun(matrix, **fun_kwargs)).flatten()
 
         # plot
-        return plot_embedding(adata, color=fname, **kwargs)
+        return plot_embedding(adata, color=fname, report=report, **kwargs)
     finally:
         if not keep_score:
             adata.obs.drop(columns=[fname], errors="ignore", inplace=True)
@@ -832,7 +875,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            n_components: int = 2,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs: Any) -> np.ndarray:
+                           **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
     Parameters
@@ -856,7 +899,7 @@ def search_umap_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Examples
@@ -884,7 +927,7 @@ def search_tsne_parameters(adata: sc.AnnData,
                            color: Optional[str] = None,
                            threads: int = 4,
                            save: Optional[str] = None,
-                           **kwargs: Any) -> np.ndarray:
+                           **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
     Parameters
@@ -907,7 +950,7 @@ def search_tsne_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Examples
@@ -937,7 +980,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
                                color: Optional[str] = None,
                                threads: int = 4,
                                save: Optional[str] = None,
-                               **kwargs: Any) -> np.ndarray:
+                               **kwargs: Any) -> NDArray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
     Parameters
@@ -966,7 +1009,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
     """
 
@@ -1095,8 +1138,10 @@ def plot_group_embeddings(adata: sc.AnnData,
                           col: Optional[str] = None,
                           embedding: Literal["umap", "tsne", "pca"] = "umap",
                           ncols: int = 4,
+                          suptitle: Optional[str] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> np.ndarray:
+                          report: Optional[str] = None,
+                          **kwargs: Any) -> NDArray:
     """
     Plot a grid of embeddings (UMAP/tSNE/PCA) per group of cells within 'groupby'.
 
@@ -1113,14 +1158,18 @@ def plot_group_embeddings(adata: sc.AnnData,
         Embedding to plot. Must be one of "umap", "tsne", "pca".
     ncols : int, default 4
         Number of columns in the figure.
+    suptitle : Optional[str]
+        The title of the figure.
     save : Optional[str], default None
         Path to save the figure.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.pl.umap` or :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
     Returns
     -------
-    np.ndarray
+    NDArray
         Flat numpy array of axis objects
 
     Examples
@@ -1147,6 +1196,9 @@ def plot_group_embeddings(adata: sc.AnnData,
     axarr = np.array(axarr).reshape((1, -1)) if nrows == 1 else axarr
     axes_list = axarr.flatten()
     n_plots = len(axes_list)
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize="x-large")
 
     # Plot UMAP/tSNE/pca per group
     for i, group in enumerate(groups):
@@ -1183,6 +1235,10 @@ def plot_group_embeddings(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return axarr
 
 
@@ -1191,7 +1247,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
                        var_list: list[str] | str,
                        embedding: Literal["umap", "tsne", "pca"] = "umap",
                        adata_names: Optional[list[str]] = None,
-                       **kwargs: Any) -> np.ndarray:
+                       **kwargs: Any) -> NDArray:
     """Compare embeddings across different adata objects.
 
     Plots a grid of embeddings with the different adatas on the x-axis, and colored variables on the y-axis.
@@ -1211,7 +1267,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
 
     Returns
     -------
-    np.ndarray
+    NDArray
         2D numpy array of axis objects
 
     Raises
@@ -1582,7 +1638,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      max_clusters: int = 20,
                      output: Optional[str] = None,
                      dpi: int = 300,
-                     **kwargs: Any) -> npt.ArrayLike:
+                     report: Optional[str] = None,
+                     **kwargs: Any) -> NDArray[Axes]:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
     Parameters
@@ -1609,13 +1666,15 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         Path to plot output file.
     dpi : int, default 300
         Dots per inch for output
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.pl.umap`, :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
     Returns
     -------
-    axes : npt.ArrayLike
-        Array of matplotlib.axes.Axes objects created by matplotlib.
+    axes : NDArray[Axes]
+        Array of Axes objects created by matplotlib.
 
     Raises
     ------
@@ -1674,7 +1733,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     cols = len(adatas)
     figsize = figsize if figsize is not None else (2 + cols * 4, rows * 4)
     fig, axs = plt.subplots(nrows=rows, ncols=cols, figsize=figsize)  # , constrained_layout=True)
-    axs = axs.flatten() if rows > 1 or cols > 1 else [axs]  # flatten to 1d array per row
+    axs = axs.flatten() if rows > 1 or cols > 1 else np.array([axs])  # flatten to 1d array per row
 
     # Fill in plots for every adata across plot type and color_by
     ax_idx = 0
@@ -1766,7 +1825,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                     n_clusters = min(max_clusters, len(lines))
                     n_cols = int(np.ceil(n_clusters / per_column))
 
-                    if mpl.__version__ > '3.6.0':
+                    if mpl_version > '3.6.0':
                         ax.legend(lines[:max_clusters], labels[:max_clusters],
                                   title=color, ncols=n_cols, frameon=False,
                                   bbox_to_anchor=(1.05, 0.5),
@@ -1811,6 +1870,10 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
     # save
     _save_figure(output, dpi=dpi)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return axs
 
 
@@ -1826,11 +1889,14 @@ def plot_pca_variance(adata: sc.AnnData,
                       corr_on: Literal["obs", "var"] = "obs",
                       corr_thresh: Optional[float] = None,
                       ignore: Optional[list[str]] = None,
-                      ax: Optional[matplotlib.axes.Axes] = None,
+                      ax: Optional[Axes] = None,
                       save: Optional[str] = None,
                       sel_col: str = "grey",
-                      om_col: str = "lightgrey"
-                      ) -> matplotlib.axes.Axes:
+                      om_col: str = "lightgrey",
+                      suptitle: Optional[str] = "PCA Component Selection",
+                      log_var_exp: bool = False,
+                      report: Optional[str] = None,
+                      ) -> Axes:
     """Plot the pca variance explained by each component as a barplot.
 
     Parameters
@@ -1856,7 +1922,7 @@ def plot_pca_variance(adata: sc.AnnData,
     ignore : Optional[list[str]], default None
         List of column names to ignore for correlation. By default (None) all numeric columns are used.
         All non numeric columns are ignored by default and cannot be used for correlation.
-    ax : Optional[matplotlib.axes.Axes], default None
+    ax : Optional[Axes], default None
         Axes object to plot on. If None, a new figure is created.
     save : Optional[str], default None (not saved)
         Filename to save the figure. If None, the figure is not saved.
@@ -1864,10 +1930,16 @@ def plot_pca_variance(adata: sc.AnnData,
         Bar color of selected bars.
     om_col : str, default "lightgrey"
         Bar color of omitted bars.
+    suptitle : Optional[str], default "PCA Component Selection"
+        The title of the figure. Ignored when `ax` is used.
+    log_var_exp : bool, default False
+        Wether to apply log-scale to the "variance explained" (left) y-axis.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         Axes object containing the plot.
 
     Raises
@@ -1890,7 +1962,9 @@ def plot_pca_variance(adata: sc.AnnData,
 
     if ax is None:
         _, ax = plt.subplots()
+        is_subplot = False
     else:
+        is_subplot = True
         if not type(ax).__name__.startswith("Axes"):
             raise ValueError("'ax' parameter needs to be an Axes object. Please check your input.")
 
@@ -1903,6 +1977,15 @@ def plot_pca_variance(adata: sc.AnnData,
 
     # Cumulative variance
     var_cumulative = np.cumsum(var_explained)
+    # cumulative variance for the selected PCs
+    if selected:
+        sel_var_cumulative = [0]
+        for i, var in enumerate(var_explained, start=1):
+            if i in selected:
+                sel_var_cumulative.append(var + sel_var_cumulative[i - 1])
+            else:
+                sel_var_cumulative.append(sel_var_cumulative[i - 1])
+        sel_var_cumulative = sel_var_cumulative[1:]
 
     if corr_plot:
         # compute correlation coefficients
@@ -1927,6 +2010,9 @@ def plot_pca_variance(adata: sc.AnnData,
 
     # get the figure where the plots will be drawn on
     fig = ax.get_figure()
+
+    if suptitle and not is_subplot:
+        fig.suptitle(suptitle, fontsize="x-large")
 
     # create a gridspec (a manual subplot grid) and position it at the location of the ax object
     upper_left, bottom_right = ax.get_position().get_points()
@@ -1958,14 +2044,48 @@ def plot_pca_variance(adata: sc.AnnData,
 
     axs[0].set_ylabel("Variance explained (%)", fontsize=12)
 
+    # apply log-scale
+    if log_var_exp:
+        axs[0].set_yscale("log")
+
     # Plot cumulative variance
     if show_cumulative:
         ax2 = axs[0].twinx()
-        ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)
+
+        # add cumulative variance line
+        var_lines = [ax2.plot(range(len(var_cumulative)), var_cumulative, color="blue", marker="o", linewidth=1, markersize=3)[0]]
+        # add line showing selected cumulative variance
+        if selected:
+            var_lines.append(ax2.plot(range(len(sel_var_cumulative)), sel_var_cumulative, color="blue", marker="x", linewidth=1, markersize=4)[0])
+
         ax2.set_ylabel("Cumulative\nvariance explained (%)", color="blue", fontsize=12)
         ax2.spines['right'].set_color('blue')
         ax2.yaxis.label.set_color('blue')
         ax2.tick_params(axis='y', colors='blue')
+        # add more than needed to the top to make space for the textbox
+        ax2.set_ylim(bottom=0,
+                     top=int(var_cumulative[-1] + (var_cumulative[-1] / 3)))
+
+        # add variance legend
+        var_labels = [f"Total var.: {var_cumulative[-1]:.2f}%"]
+        if selected:
+            var_labels.append(f"\nSelected var.: {sel_var_cumulative[-1]:.2f}%")
+
+        ax2.legend(
+            handles=var_lines,
+            labels=var_labels,
+            loc="upper right",
+            fontsize=12,
+            framealpha=0.5,
+            facecolor="#c8c8ff",
+            edgecolor="blue",
+            bbox_transform=ax2.transAxes,
+            labelspacing=-1,
+            handlelength=1,
+            handletextpad=0.2,
+            markerscale=1.3,
+            borderpad=0.2
+        )
 
     # Add number of selected as line
     if n_thresh:
@@ -2025,6 +2145,10 @@ def plot_pca_variance(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return ax
 
 
@@ -2041,7 +2165,7 @@ def plot_pca_correlation(adata: sc.AnnData,
                          figsize: Optional[Tuple[int, int]] = None,
                          title: Optional[str] = None,
                          save: Optional[str] = None,
-                         **kwargs: Any) -> matplotlib.axes.Axes:
+                         **kwargs: Any) -> Axes:
     """
     Plot a heatmap of the correlation between dimensionality reduction coordinates (e.g. umap or pca) and the given columns.
 
@@ -2076,7 +2200,7 @@ def plot_pca_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axes object containing the heatmap.
 
     Examples

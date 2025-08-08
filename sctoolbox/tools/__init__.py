@@ -9,6 +9,7 @@ __all__ = [
     "celltype_annotation",
     "clustering",
     "dim_reduction",
+    "download_data",
     "embedding",
     "frip",
     "gene_correlation",
@@ -21,6 +22,7 @@ __all__ = [
     "peak_annotation",
     "qc_filter",
     "receptor_ligand",
+    "report",
     "tobias",
     "tsse"
 ]

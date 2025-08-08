@@ -5,9 +5,21 @@ import scanpy as sc
 import scipy
 import os
 import numpy as np
+from contextlib import contextmanager
 
 import sctoolbox.utils.adata as utils
 
+# ---------------------------- HELPER ------------------------------- #
+
+
+@contextmanager
+def add_logger_handler(logger, handler):
+    """Temporarily add a handler to the given logger."""
+    logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -47,14 +59,32 @@ def test_get_adata_subsets(adata):
         assert sub_adata.obs["group"].nunique() == 1
 
 
-def test_save_h5ad(adata):
-    """Test if h5ad file is saved correctly."""
-
+@pytest.mark.parametrize("raw", [True, False])
+def test_save_and_load_h5ad(adata, raw, caplog):
+    """Test if h5ad file is saved correctly. Then test loading."""
     path = "test.h5ad"
-    utils.save_h5ad(adata, path)
 
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
+    # add raw layer
+    if raw:
+        adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+        adata.raw = adata
+
+    try:
+        with add_logger_handler(utils.logger, caplog.handler):
+            utils.save_h5ad(adata, path)
+
+            assert os.path.isfile(path)
+
+            loaded = utils.load_h5ad(path)
+
+            assert isinstance(loaded, sc.AnnData)
+
+            # assume the last record is the warning
+            log_rec = caplog.records[-1]
+            assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+
+    finally:
+        os.remove(path)  # clean up after tests
 
 
 @pytest.fixture(scope="session")
@@ -79,6 +109,9 @@ def adata_icxg():
     obj.obs["Int32"] = obj.obs["Int32"].astype("Int32")
     obj.var["Int32"] = 1
     obj.var["Int32"] = obj.var["Int32"].astype("Int32")
+
+    # add layer
+    obj.layers["layer"] = obj.X.copy()
 
     return obj
 
@@ -114,6 +147,18 @@ def test_in_uns(adata, key):
         utils.add_uns_info(adata=adata, key=key, value="placeholder")
 
         assert utils.in_uns(adata, ["sctoolbox"] + key)
+
+
+@pytest.mark.parametrize("key", ["a", ["a", "b", "c"]])
+def test_get_uns(adata, key):
+    """Test get_uns success."""
+    if isinstance(key, str):
+        adata.uns[key] = "placeholder"
+        res = utils.get_uns(adata, key)
+    else:
+        utils.add_uns_info(adata=adata, key=key, value="placeholder")
+        res = utils.get_uns(adata, ['sctoolbox'] + key)
+    assert res == "placeholder"
 
 
 def test_prepare_for_cellxgene(adata_icxg):
@@ -193,6 +238,33 @@ def test_prepare_cellxgene_emb(adata_icxg, inplace, embedding_names):
             assert len(out.var.columns) == 1
             assert len(adata.obs.columns) > 1
             assert len(adata.var.columns) > 1
+
+
+def test_prepare_cellxgene_delete(adata2):
+    """Test delete_obs and delete_var parameters."""
+    with pytest.raises(ValueError):
+        utils.prepare_for_cellxgene(adata2, delete_obs=[], keep_obs=[])
+    with pytest.raises(ValueError):
+        utils.prepare_for_cellxgene(adata2, delete_var=[], keep_var=[])
+
+    obs_cols = list(adata2.obs.columns)[:-1]
+    var_cols = list(adata2.var.columns)[:-1]
+    prepare_out = utils.prepare_for_cellxgene(adata2,
+                                              delete_obs=[adata2.obs.columns[-1]],
+                                              delete_var=[adata2.var.columns[-1]],
+                                              inplace=False)
+    assert obs_cols == list(prepare_out.obs.columns)
+    assert var_cols == list(prepare_out.var.columns)
+
+
+@pytest.mark.parametrize("layer", ["layer", None, "invalid"])
+def test_prepare_cellxgene_layer(adata_icxg, layer):
+    """Test layer parameter."""
+    if layer == "invalid":
+        with pytest.raises(ValueError):
+            utils.prepare_for_cellxgene(adata_icxg, layer=layer)
+    else:
+        utils.prepare_for_cellxgene(adata_icxg, layer=layer)
 
 
 @pytest.mark.parametrize("adatas,label", [(["adata1", "adata2"], "list"), ({"a": "adata1", "b": "adata2"}, "dict")])

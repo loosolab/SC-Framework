@@ -14,6 +14,7 @@ from beartype import beartype
 import sctoolbox.tools.embedding as scem
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
+from sctoolbox.utils.io import update_yaml
 logger = settings.logger
 
 
@@ -26,6 +27,7 @@ logger = settings.logger
 def compute_PCA(anndata: sc.AnnData,
                 mask_var: Optional[str | List] = "highly_variable",
                 inplace: bool = False,
+                report: bool = False,
                 **kwargs: Any) -> Optional[sc.AnnData]:
     """
     Compute a principal component analysis.
@@ -38,6 +40,8 @@ def compute_PCA(anndata: sc.AnnData,
         To run only on a certain set of genes given by a boolean array or a string referring to an array in var. By default, uses .var['highly_variable'] if available, else everything.
     inplace : bool, default False
         Whether the anndata object is modified inplace.
+    report : bool, default False
+        Will add information to the report methods if `sctoolbox.settings.report_dir` is set.
     **kwargs : Any
         Additional parameters forwarded to scanpy.pp.pca().
 
@@ -53,8 +57,11 @@ def compute_PCA(anndata: sc.AnnData,
     logger.info("Computing PCA")
     sc.pp.pca(adata_m, mask_var=mask_var, **kwargs)
 
-    # Adding info in anndata.uns["infoprocess"]
-    # cr.build_infor(adata_m, "Scanpy computed PCA", "use_highly_variable= " + str(use_highly_variable), inplace=True)
+    # generate method report
+    if settings.report_dir and report:
+        # method
+        update_yaml(d={"hvg": int(adata_m.var["highly_variable"].sum()), "pc_count": adata_m.obsm["X_pca"].shape[1]},
+                    yml="method.yml", path_prefix="report")
 
     if not inplace:
         return adata_m
@@ -118,7 +125,13 @@ def lsi(data: sc.AnnData,
             axis=0
         )
 
-    var_explained = np.round(svalues ** 2 / np.sum(svalues ** 2), decimals=3)
+    # try for dense then sparse matrix
+    try:
+        power = adata_comp.X ** 2
+    except TypeError:
+        power = adata_comp.X.power(2)
+
+    var_explained = np.round(svalues ** 2 / np.sum(power), decimals=3)
     stdev = svalues / np.sqrt(adata_comp.X.shape[0] - 1)
 
     # Add results to adata
@@ -343,7 +356,8 @@ def subset_PCA(adata: sc.AnnData,
                n_pcs: Optional[int] = None,
                start: int = 0,
                select: Optional[List[int]] = None,
-               inplace: bool = True) -> Optional[sc.AnnData]:
+               inplace: bool = True,
+               report: bool = False) -> Optional[sc.AnnData]:
     """
     Subset the PCA coordinates in adata.obsm["X_pca"] to the given number of pcs.
 
@@ -361,6 +375,8 @@ def subset_PCA(adata: sc.AnnData,
         Provide a list of PC numbers to keep. E.g. [2, 3, 5] will select the second, third and fifth PC. Will overwrite the n_pcs and start parameter.
     inplace : bool, default True
         Whether to work inplace on the anndata object.
+    report : bool, default False
+        Will add information to the report methods if `sctoolbox.settings.report_dir` is set.
 
     Returns
     -------
@@ -386,6 +402,12 @@ def subset_PCA(adata: sc.AnnData,
 
         if "variance_ratio" in adata.uns.get("pca", {}):
             adata.uns["pca"]["variance_ratio"] = adata.uns["pca"]["variance_ratio"][start:n_pcs]
+
+    # generate method report
+    if settings.report_dir and report:
+        # method
+        update_yaml(d={"pc_count": len(select) if select else n_pcs - start},
+                    yml="method.yml", path_prefix="report")
 
     if inplace is False:
         return adata

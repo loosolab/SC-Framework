@@ -10,15 +10,17 @@ import re
 
 # for plotting
 import seaborn as sns
-import matplotlib
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from beartype.typing import Optional, Tuple, Literal, Iterable, Any
+from beartype.typing import Optional, Tuple, Literal, Any
 from beartype import beartype
+from numpy.typing import NDArray
 
 # sctoolbox functions
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
 from sctoolbox.plotting.general import bidirectional_barplot, _save_figure, _make_square
 import sctoolbox.utils.decorator as deco
 
@@ -35,6 +37,7 @@ def rank_genes_plot(adata: sc.AnnData,
                     style: Literal["dots", "heatmap"] = "dots",
                     measure: str = "expression",
                     save: Optional[str] = None,
+                    report: Optional[str] = None,
                     **kwargs: Any) -> dict:
     """
     Plot expression of genes from rank_genes_groups or from a gene list/dict.
@@ -61,6 +64,8 @@ def rank_genes_plot(adata: sc.AnnData,
         Measure to write in colorbar label. For example, `expression` or `accessibility`.
     save : Optional[str], default None
         If given, save the figure to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
 
@@ -96,6 +101,13 @@ def rank_genes_plot(adata: sc.AnnData,
     parameters = {"swap_axes": False}  # default parameters
     parameters.update(kwargs)
     if key is not None:  # from rank_genes_groups output
+
+        # change var.index if neccessary
+        if "sctoolbox_params" in adata.uns[key] and "index" in adata.uns[key]["sctoolbox_params"]:
+            adata = adata[:, ~adata.var[adata.uns[key]["sctoolbox_params"]["index"]].isna()].copy()  # remove na
+            # make the column unique same as .make_var_names_unique
+            adata.var[adata.uns[key]["sctoolbox_params"]["index"]] = sc.anndata.utils.make_index_unique(adata.var[adata.uns[key]["sctoolbox_params"]["index"]].astype(str), join="_")
+            adata.var.set_index(adata.uns[key]["sctoolbox_params"]["index"], inplace=True)
 
         if style == "dots":
             g = sc.pl.rank_genes_groups_dotplot(adata,
@@ -178,6 +190,10 @@ def rank_genes_plot(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
     return g
 
 
@@ -195,9 +211,9 @@ def grouped_violin(adata: sc.AnnData,
                    title: Optional[str] = None,
                    style: Literal["violin", "boxplot", "bar"] = "violin",
                    normalize: bool = False,
-                   ax: Optional[matplotlib.axes.Axes] = None,
+                   ax: Optional[Axes] = None,
                    save: Optional[str] = None,
-                   **kwargs: Any) -> matplotlib.axes.Axes:
+                   **kwargs: Any) -> Axes:
     """
     Create violinplot of values across cells in an adata object grouped by x and 'groupby'.
 
@@ -223,7 +239,7 @@ def grouped_violin(adata: sc.AnnData,
         Plot style. Either "violin" or "boxplot" or "bar".
     normalize : bool, default False
         If True, normalize the values in 'y' to the range [0, 1] per group in 'x'.
-    ax : Optional[matplotlib.axes.Axes], default None
+    ax : Optional[Axes], default None
         A matplotlib axes object to plot violinplots in. If None, a new figure and axes is created.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
@@ -232,7 +248,7 @@ def grouped_violin(adata: sc.AnnData,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
 
     Raises
     ------
@@ -282,7 +298,12 @@ def grouped_violin(adata: sc.AnnData,
     for element in x + [y]:
         if element in adata.var.index:
             gene_idx = np.argwhere(adata.var.index == element)[0][0]
-            vals = adata.X[:, gene_idx].todense().A1
+
+            try:
+                vals = adata.X[:, gene_idx].todense().A1  # try sparse-matrix
+            except AttributeError:
+                vals = adata.X[:, gene_idx].ravel()  # try dense-matrix/ numpy array
+
             obs_table[element] = vals
 
     # Convert table to long format if the x-axis contains gene expressions
@@ -349,7 +370,7 @@ def group_expression_boxplot(adata: sc.AnnData,
                              gene_list: list[str],
                              groupby: str,
                              figsize: Optional[Tuple[int | float, int | float]] = None,
-                             **kwargs: Any) -> matplotlib.axes.Axes:
+                             **kwargs: Any) -> Axes:
     """
     Plot a boxplot showing summarized gene expression of genes in `gene_list` across the groups in `groupby`.
 
@@ -370,7 +391,7 @@ def group_expression_boxplot(adata: sc.AnnData,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
 
     Examples
     --------
@@ -603,7 +624,7 @@ def gene_expression_heatmap(adata: sc.AnnData,
 def plot_differential_genes(rank_table: pd.DataFrame,
                             title: str = "Differentially expressed genes",
                             save: Optional[str] = None,
-                            **kwargs: Any) -> matplotlib.axes.Axes:
+                            **kwargs: Any) -> Axes:
     """
     Plot number of differentially expressed genes per contrast in a barplot.
 
@@ -625,7 +646,7 @@ def plot_differential_genes(rank_table: pd.DataFrame,
 
     Returns
     -------
-    matplotlib.axes.Axes
+    Axes
         Axes object.
 
     Examples
@@ -669,7 +690,7 @@ def plot_gene_correlation(adata: sc.AnnData,
                           ncols: int = 3,
                           figsize: Optional[Tuple[int | float, int | float]] = None,
                           save: Optional[str] = None,
-                          **kwargs: Any) -> Iterable[matplotlib.axes.Axes]:
+                          **kwargs: Any) -> NDArray[Axes]:
     """
     Plot the gene expression of one reference gene against the expression of a set of genes.
 
@@ -692,7 +713,7 @@ def plot_gene_correlation(adata: sc.AnnData,
 
     Returns
     -------
-    Iterable[matplotlib.axes.Axes]
+    NDArray[Axes]
         List containing all axis objects.
 
     Examples

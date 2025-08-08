@@ -5,9 +5,11 @@ import tempfile
 import warnings
 import glob
 import deprecation
+import yaml
+from pathlib import Path
 
 from beartype import beartype
-from beartype.typing import Optional
+from beartype.typing import Optional, Literal
 
 import sctoolbox
 from sctoolbox._settings import settings
@@ -126,3 +128,35 @@ def rm_tmp(temp_dir: Optional[str] = None,
 
     except OSError as error:
         print(error)
+
+
+@beartype
+def update_yaml(d: dict, yml: str, path_prefix: Optional[Literal["report", "table"]] = None):
+    """
+    Add/ update entries in the given yaml file.
+
+    Parameters
+    ----------
+    d : dict
+        The dict that will be added to the yaml file.
+    yml : str
+        Path to the yaml file. Will create a new file if necessary.
+    path_prefix : str, default None
+        Either add `sctoolbox.settings.report_dir`, `sctoolbox.settings.table_dir` or no path as prefix.
+    """
+    if path_prefix == "report":
+        file = Path(settings.report_dir) / yml
+    elif path_prefix == "table":
+        file = Path(settings.table_dir) / yml
+
+    update_dict = {}
+    # read if yaml already exists
+    if file.is_file():
+        with open(file, "r") as f:
+            update_dict = yaml.safe_load(f)
+        update_dict = {} if update_dict is None else update_dict
+
+    # write updated dict
+    with open(file, "w") as f:
+        update_dict.update(d)
+        yaml.safe_dump(update_dict, stream=f, sort_keys=False)

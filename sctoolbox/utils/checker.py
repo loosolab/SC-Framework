@@ -11,9 +11,9 @@ import shutil
 import scanpy as sc
 import pandas as pd
 
-from beartype.typing import Optional, Tuple, Any, Iterable, Union, Literal
+from beartype.typing import Optional, Tuple, Any, Iterable, Union, Literal, Sequence
 from beartype import beartype
-import numpy.typing as npt
+from numpy.typing import ArrayLike, NDArray
 
 import sctoolbox.utils as utils
 from sctoolbox._settings import settings
@@ -393,7 +393,7 @@ def validate_regions(adata: sc.AnnData,
 
 @beartype
 def var_index_to_column(adata: sc.AnnData,
-                        coordinate_columns: Iterable[str] = ["chr", "start", "end"]) -> None:
+                        coordinate_columns: NDArray[str] | Sequence[str] | pd.core.indexes.base.Index = ["chr", "start", "end"]) -> None:
     """
     Format the index of adata.var and adds peak location columns (chr, start, end) to adata.var if needed.
 
@@ -410,7 +410,7 @@ def var_index_to_column(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         The anndata object containing features to annotate.
-    coordinate_columns : Iterable[str], default ['chr', 'start', 'end']
+    coordinate_columns : NDArray[str] | Sequence[str] | pd.core.indexes.base.Index, default ['chr', 'start', 'end']
         List of length 3 for column names in adata.var containing chr, start, end coordinates.
 
     Raises
@@ -508,13 +508,13 @@ def in_range(value: int | float, limits: Tuple[int | float, int | float],
 
 
 @beartype
-def is_integer_array(arr: npt.ArrayLike) -> bool:
+def is_integer_array(arr: ArrayLike) -> bool:
     """
     Check if all values of arr are integers.
 
     Parameters
     ----------
-    arr : npt.ArrayLike
+    arr : ArrayLike
         Array of values to be checked.
 
     Returns

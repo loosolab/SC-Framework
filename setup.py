@@ -9,7 +9,7 @@ import glob
 import subprocess
 import sys
 
-# install these dependencies before everything else
+# Install these dependencies before everything else
 # do this here (not in conda) to make this package buildable without prior steps
 pre_deps = [
     "cmake>=3.18",  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
@@ -17,7 +17,7 @@ pre_deps = [
 ]
 
 # get a clean bash path (not altered by the pip build process)
-# Pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
+# pip installs each package using separate build environment. So the pre-dependencies would be only available during sctoolbox installation.
 # This is circumvented by installing the pre-dependencies globally. Which is similar to doing "pip install <pre-deps>" before "pip install sctoolbox".
 # TODO only works on Linux based systems
 clean_path = subprocess.check_output(["echo $PATH"], shell=True).decode("utf-8").strip()
@@ -27,15 +27,15 @@ for dep in pre_deps:
 
 # Module requirements
 extras_require = {"converter": ['rpy2', 'anndata2ri'],
-                  "atac": ['episcanpy',
-                           'uropa',
+                  "atac": ['uropa',
                            'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
                            'pygenometracks>=3.8',
-                           'peakqc'],
+                           'peakqc',
+                           'tobias'],
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
-                  "velocity": ['scvelo @ git+https://github.com/theislab/scvelo.git'],
+                  "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
@@ -97,7 +97,7 @@ setup(
         'pysam',
         'matplotlib',
         'matplotlib_venn',
-        'scanpy[louvain,leiden]>=1.10.2',  # 'colorbar_loc' not available before 1.9; also install community detection (louvain & leiden)
+        'scanpy[louvain,leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy',
@@ -105,7 +105,7 @@ setup(
         'qnorm',
         'plotly',
         'scipy>=1.14',
-        'statsmodels',
+        'statsmodels @ git+https://github.com/statsmodels/statsmodels',  # remove once statsmodels 0.15 is released
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
@@ -123,7 +123,10 @@ setup(
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
         'throttler',
-        'upsetplot'
+        'upsetplot',
+        'pptreport',
+        'boto3',
+        'Jinja2'
     ],
     include_package_data=True,
     extras_require=extras_require

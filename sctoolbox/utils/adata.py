@@ -8,11 +8,14 @@ import scipy
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 import pandas as pd
+from pathlib import Path
+import yaml
 
 from beartype.typing import Optional, Any, Union, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -157,12 +160,16 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     logger.info(f"The adata object was loaded from: {adata_input}")
 
+    if adata.raw:
+        logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+
     return adata
 
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -172,12 +179,15 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
+    report : Optional[list[str]]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
     rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
     for unk in adata.uns.keys():
-        if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
+        if isinstance(adata.uns[unk], dict) and rank_keys.issubset(set(adata.uns[unk].keys())):
             names = list()
             dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
             for i in adata.uns[unk]["names"]:
@@ -189,6 +199,32 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output)
+
+    # generate report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report[0], "w") as f:
+            f.write("\n".join([
+                "## Dataset",
+                f"{adata.shape[0]} observations x {adata.shape[1]} variables",
+                f"Observation information: {', '.join(adata.obs.columns)}",
+                f"Variable information: {', '.join(adata.var.columns)}",
+                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+            ]))
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({"var_count": len(adata.var), "obs_count": len(adata.obs)})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
+
+        plot_table(adata.obs, report=report[1], crop=4)
+        plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
 
@@ -295,8 +331,44 @@ def in_uns(adata: sc.AnnData,
 
 
 @beartype
+def get_uns(adata: sc.AnnData,
+            key: str | list[str]) -> Any:
+    """
+    Get value from adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object.
+    key: str | list[str]
+        The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
+
+    Returns
+    -------
+    Any
+        Any value stored in adata.uns
+    """
+    d = adata.uns
+    path = ""
+    for k in key:
+        if k in d:
+            d = d[k]
+            path += f"['{k}']"
+        else:
+            raise ValueError(f"Key {k} not found in adata.uns{path}")
+    return d
+
+
+@beartype
 def get_cell_values(adata: sc.AnnData,
-                    element: str) -> np.ndarray:
+                    element: str,
+                    var_col: Optional[str] = None) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
 
     Parameters
@@ -305,6 +377,9 @@ def get_cell_values(adata: sc.AnnData,
         Anndata object.
     element : str
         The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+    var_col : Optional[str], default None
+        Use the given column of adata.var instead of the index.
+        Adata.obs is skipped when this is set.
 
     Returns
     -------
@@ -315,12 +390,20 @@ def get_cell_values(adata: sc.AnnData,
     ------
     ValueError
         If element is not found in adata.obs or adata.var.
+        If var_col is not a column name of adata.var.
     """
 
-    if element in adata.obs:
+    if element in adata.obs and var_col is None:
         values = np.array(adata.obs[element].values)
-    elif element in adata.var.index:
-        idx = list(adata.var.index).index(element)
+    elif element in adata.var.index or var_col is not None:
+        if var_col is None:
+            idx = list(adata.var.index).index(element)
+        else:
+            try:
+                idx = list(adata.var[var_col]).index(element)
+            except ValueError:
+                raise ValueError(f"{var_col} is not a column of adata.var.")
+
         values = adata.X[:, idx]
         values = values.todense().A1 if issparse(values) else values
     else:
@@ -333,11 +416,14 @@ def get_cell_values(adata: sc.AnnData,
 def prepare_for_cellxgene(adata: sc.AnnData,
                           keep_obs: Optional[list[str]] = None,
                           keep_var: Optional[list[str]] = None,
+                          delete_obs: Optional[list[str]] = None,
+                          delete_var: Optional[list[str]] = None,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
                           cmap: Optional[str] = None,
                           palette: Optional[str | Sequence[str]] = None,
+                          layer: Optional[str] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -348,8 +434,16 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Anndata object.
     keep_obs : Optional[list[str]], default None
         adata.obs columns that should be kept. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
     keep_var : Optional[list[str]], default None
         adata.var columns that should be kept. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
+    delete_obs : Optional[list[str]], default None
+        adata.obs columns that should be deleted. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
+    delete_var : Optional[list[str]], default None
+        adata.var columns that should be deleted. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
     rename_obs : Optional[dict[str, str]], default None
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
     rename_var : Optional[dict[str, str]], default None
@@ -364,21 +458,30 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Color map to use for categorical annotation groups.
         Use this replacement color map for broken color maps.
         If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
+    layer : Optional[str], default None
+
     inplace : bool, default False
 
     Raises
     ------
     ValueError
-        If not at least one of the named embeddings are found in the adata.
+        1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
+        2. If not at least one of the named embeddings are found in the adata.
+        3. If there is no layer with the given name.
 
     Returns
     -------
     Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
+    if layer and layer not in adata.layers:
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
-    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
+    def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
+        if keep is not None and delete is not None:
+            raise ValueError(f"'keep_{axis}' and 'delete_{axis}' are mutually exclusive. Please configure only one to proceed.")
+
         if axis == "obs":
             sec_table = obj.obs
         elif axis == "var":
@@ -387,6 +490,12 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         # drop columns
         if keep is not None:
             drop = set(sec_table.columns) - set(keep)
+        elif delete is not None:
+            drop = set(delete)
+        else:
+            drop = False
+
+        if drop is not False:
             sec_table.drop(columns=drop, inplace=True)
 
             # drop matching color maps
@@ -420,13 +529,18 @@ def prepare_for_cellxgene(adata: sc.AnnData,
             raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
-    clean_section(out, axis="obs", keep=keep_obs, rename=rename_obs)
+    clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
+    out.obs_names_make_unique()
 
     # ----- .var -----
-    clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+    clean_section(out, axis="var", keep=keep_var, delete=delete_var, rename=rename_var)
     out.var_names_make_unique()
 
     # ----- .X -----
+    # overwrite .X with another layer
+    if layer:
+        out.X = out.layers[layer].copy()
+
     # convert .X to sparse matrix if needed
     if not scipy.sparse.isspmatrix(out.X):
         out.X = scipy.sparse.csc_matrix(out.X)

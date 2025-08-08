@@ -3,6 +3,7 @@
 import pytest
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import scanpy as sc
@@ -115,7 +116,7 @@ def test_clustermap_dotplot():
                                  size="n_counts", palette="viridis",
                                  title="Title", show_grid=True)
 
-    assert isinstance(axes, list)
+    assert isinstance(axes, np.ndarray)
     ax_type = type(axes[0]).__name__
     assert ax_type.startswith("Axes")
 
@@ -203,3 +204,11 @@ def test_pairwise_scatter(adata, thresholds):
 
     assert axarr.shape == (2, 2)
     assert type(axarr[0, 0]).__name__.startswith("Axes")
+
+
+@pytest.mark.parametrize("ax, crop", [(None, None), (plt.subplots()[1], 2)])
+def test_plot_table(df, ax, crop):
+    """Test plot_table with and without predefined ax."""
+    ax = pl.plot_table(table=df, crop=crop)
+
+    assert isinstance(ax, plt.Axes)

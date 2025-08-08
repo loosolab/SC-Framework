@@ -13,7 +13,7 @@ from sctoolbox.plotting.general import _save_figure
 # type hint imports
 from beartype.typing import Optional, Tuple, Any
 from beartype import beartype
-import matplotlib
+from matplotlib.axes import Axes
 
 
 ####################################################################################################
@@ -30,7 +30,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
                        shrink_cbar: int | float = 0.5,
                        title: Optional[str] = None,
                        save: Optional[str] = None,
-                       **kwargs: Any) -> matplotlib.axes.Axes:
+                       **kwargs: Any) -> Axes:
     """
     Plot heatmap of genes along pseudotime sorted by 'sortby' column in adata.obs.
 
@@ -57,7 +57,7 @@ def pseudotime_heatmap(adata: sc.AnnData,
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
+    ax : Axes
         Axes object containing the plot.
     """
 
