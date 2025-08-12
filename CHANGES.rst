@@ -1,3 +1,7 @@
+0.13.1 (in progress)
+--------------------
+- scrublet: use forkserver to start separte processes to enable multiprocessing (#380)
+
 0.13.0 (08-08-25)
 -----------------
 - predict_cell_cycle: implemented "gene_column" parameter
