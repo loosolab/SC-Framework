@@ -169,7 +169,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -182,6 +182,8 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) 
     report : Optional[list[str]]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
         Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
+    **kwargs : Any
+        Parameters forwarded to sc.AnnData.write
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
@@ -196,9 +198,14 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None) 
             tmp.dtype.names = dnames  # set old names back in place
             adata.uns[unk]["names"] = tmp
 
+    # add file compression if not already present
+    # this was default prior to version 0.6.16
+    if "compression" not in kwargs:
+        kwargs["compression"] = "gzip"
+
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
-    adata.write(filename=adata_output)
+    adata.write(filename=adata_output, **kwargs)
 
     # generate report
     if settings.report_dir and report:

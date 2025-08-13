@@ -316,24 +316,22 @@ def estimate_doublets(adata: sc.AnnData,
 
         all_groups = adata.obs[groupby].astype("category").cat.categories.tolist()
         if threads > 1:
-            pool = mp.Pool(threads, maxtasksperchild=1)  # maxtasksperchild to avoid memory leaks
+            ctx_in_main = mp.get_context('forkserver')
+            with ctx_in_main.Pool(processes=threads, maxtasksperchild=1) as pool:
+                # Run scrublet for each sub data
+                logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
+                jobs = []
+                for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
 
-            # Run scrublet for each sub data
-            logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
-            jobs = []
-            for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
+                    # Clean up adata before sending to thread
+                    sub.uns = {}
+                    sub.layers = None
 
-                # Clean up adata before sending to thread
-                sub.uns = {}
-                sub.layers = None
+                    job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
+                    jobs.append(job)
 
-                job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
-                jobs.append(job)
-            pool.close()
-
-            utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
-            results = [job.get() for job in jobs]
-
+                utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
+                results = [job.get() for job in jobs]
         else:
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
