@@ -1,4 +1,4 @@
-0.13.1 (in progress)
+0.13.1 (13-08-25)
 --------------------
 - scrublet: use forkserver to start separte processes to enable multiprocessing (#380)
 - enable AnnData write compression (this was default prior to AnnData version 0.6.16)
