@@ -1,3 +1,6 @@
+0.13.2 (14-08-25)
+- set bbknn(computation="cKDTree") and scanorama(approx=False) to fix issue with annoy package and processor architecture
+
 0.13.1 (13-08-25)
 --------------------
 - scrublet: use forkserver to start separte processes to enable multiprocessing (#380)
