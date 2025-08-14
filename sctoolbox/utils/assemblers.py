@@ -346,7 +346,7 @@ def from_single_mtx(mtx: Union[str, Path],
                     barcodes: Union[str, Path],
                     variables: Optional[Union[str, Path]] = None,
                     transpose: bool = True,
-                    header: Union[int, list[int], Literal['infer'], None] = None,
+                    header: Union[int, list[int], Literal['infer'], None] = 'infer',
                     barcode_index: int = 0,
                     var_index: Optional[int] = 0,
                     delimiter: str = "\t",
@@ -366,6 +366,7 @@ def from_single_mtx(mtx: Union[str, Path],
         Set True to transpose mtx matrix.
     header : Union[int, list[int], Literal['infer'], None], default None
         Set header parameter for reading metadata tables using pandas.read_csv.
+        Automatically tries to enable/disable the header if the length of the mtx is one different to either variables or barcodes.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
     var_index : Optional[int], default 0
@@ -402,10 +403,10 @@ def from_single_mtx(mtx: Union[str, Path],
         # check if the size is expected; try to fix when the size is one of
         if len(table) - 1 == expected_size:
             logger.warning(f"{name} file is one less than expected. Trying to fix by disabling the header.")
-            table = pd.read_csv(file, header=None, index_col=index_col, delimiter=delimiter, comment=comment)
+            table = pd.read_csv(file, header=0, index_col=index_col, delimiter=delimiter, comment=comment)
         elif len(table) + 1 == expected_size:
             logger.warning(f"{name} file is one more than expected. Trying to fix by enabling the header.")
-            table = pd.read_csv(file, header=0, index_col=index_col, delimiter=delimiter, comment=comment)
+            table = pd.read_csv(file, header=None, index_col=index_col, delimiter=delimiter, comment=comment)
 
         if len(table) != expected_size:
             raise ValueError(f"{name} file is of size {len(table)} but AnnData expects {expected_size}. Try to toggle the transpose argument.")
