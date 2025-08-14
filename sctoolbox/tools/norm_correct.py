@@ -363,6 +363,10 @@ def batch_correction(adata: sc.AnnData,
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     **kwargs : Any
         Additional arguments will be forwarded to the method function.
+        The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
+        - bbknn: `computation="cKDTree"`
+        - scanorama: `approx=False`
+        See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
 
     Returns
     -------
@@ -396,6 +400,10 @@ def batch_correction(adata: sc.AnnData,
             n_pcs = adata.obsm["X_pca"].shape[1]
         except KeyError:
             raise KeyError("PCA has not been calculated. Please run sc.pp.pca() before running bbknn.")
+
+        # to avoid annoy issues
+        if "computation" not in kwargs:
+            kwargs["computation"] = "cKDTree"
 
         # Run bbknn
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
@@ -442,6 +450,10 @@ def batch_correction(adata: sc.AnnData,
         # therefore anndata.obs should be sorted based on batch column before this method.
         original_order = adata.obs.index
         adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
+
+        # to avoid annoy issues
+        if "approx" not in kwargs:
+            kwargs["approx"] = False
 
         sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
