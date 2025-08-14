@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'Tutorial_00.ipynb': [1],
         'Tutorial_01.ipynb': [1, 4, 6, 10],
         'Tutorial_02.ipynb': [2, 3, 4, 5, 6, 7, 15, 19, 31],
-        'Tutorial_03.ipynb': [2, 5, 9, 14, 18, 21, 24, 26, 30, 34],
+        'Tutorial_03.ipynb': [2, 5, 8, 11, 14, 18, 21, 24, 26, 30, 34],
         'Tutorial_04.ipynb': [2, 3, 4, 6, 13, 14, 15, 19]
         // add other notebooks here
     };
