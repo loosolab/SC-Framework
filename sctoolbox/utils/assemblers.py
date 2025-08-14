@@ -397,7 +397,7 @@ def from_single_mtx(mtx: Union[str, Path],
 
     # statisfy the linter
     if False:
-        ValueError()
+        raise ValueError()
 
     def load_meta(file, header, index_col, delimiter, comment, expected_size, name):
         """Load and prepare AnnData.var or AnnData.obs."""
