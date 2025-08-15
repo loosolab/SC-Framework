@@ -839,6 +839,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
                      report: Optional[str] = None,
+                     rasterize: bool = True,
                      **kwargs: Any) -> NDArray[Axes]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
@@ -856,6 +857,8 @@ def pairwise_scatter(table: pd.DataFrame,
         If given, the figure will be saved to this path.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    rasterize : bool, default True
+        Whether to rasterize the plot before saving.
     **kwargs : Any
         Additional arguments to pass to Axes.scatter.
 
@@ -963,11 +966,11 @@ def pairwise_scatter(table: pd.DataFrame,
     plt.subplots_adjust(wspace=0.08, hspace=0.08)
 
     # Save plot
-    _save_figure(save)
+    _save_figure(save, rasterize=rasterize)
 
     # report
     if settings.report_dir and report:
-        _save_figure(report, report=True)
+        _save_figure(report, report=True, rasterize=rasterize)
 
     return axarr
 
