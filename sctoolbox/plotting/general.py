@@ -30,6 +30,7 @@ def _save_figure(path: Optional[str],
                  dpi: Optional[int | float] = None,
                  report: bool = False,
                  max_pixle: int = 2**16,
+                 rasterize: bool = False,
                  **kwargs: Any) -> None:
     """Save the current figure to a file.
 
@@ -46,6 +47,8 @@ def _save_figure(path: Optional[str],
     max_pixle : int, default 2**16
         The maximum of pixles a figure can have in each direction. Figures exceeding this value will be resized to this maximum and a warning will be shown.
         2**16 is the maximum the jpeg-format can handle.
+    rasterize : bool, default False
+        Rasterize the figure before saving to increase memory efficiency and runtime at the cost of quality.
     **kwargs : Any
         Additional arguments to pass to matplotlib.pyplot.savefig.
     """
@@ -81,7 +84,21 @@ def _save_figure(path: Optional[str],
             logger.info(f"Saving figure to {output_path}")
         else:
             output_path = Path(settings.report_dir) / path
-        plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
+
+        original_state = []
+        if rasterize:
+            # rasterize all axes
+            for ax in fig.axes:
+                original_state.append(ax.get_rasterized())
+                ax.set_rasterized(True)
+
+        try:
+            plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
+        finally:
+            if rasterize:
+                # restore rasterization
+                for ax, raster in zip(fig.axes, original_state):
+                    ax.set_rasterized(raster)
 
 
 @beartype
