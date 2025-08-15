@@ -1,3 +1,7 @@
+0.13.3 (15-08-25)
+- from_single_mtx: auto-adjust if the var/ obs file is one line of from the expected mtx
+- add rasterization to reduce resource demand for big figures (plot_embedding, feature_per_group, search_umap-/ search_tnse_parameters, anndata_overview, pairwise_scatter)
+
 0.13.2 (14-08-25)
 - set bbknn(computation="cKDTree") and scanorama(approx=False) to fix issue with annoy package and processor architecture
 
