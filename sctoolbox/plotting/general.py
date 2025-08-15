@@ -30,6 +30,7 @@ def _save_figure(path: Optional[str],
                  dpi: Optional[int | float] = None,
                  report: bool = False,
                  max_pixle: int = 2**16,
+                 rasterize: bool = False,
                  **kwargs: Any) -> None:
     """Save the current figure to a file.
 
@@ -46,6 +47,8 @@ def _save_figure(path: Optional[str],
     max_pixle : int, default 2**16
         The maximum of pixles a figure can have in each direction. Figures exceeding this value will be resized to this maximum and a warning will be shown.
         2**16 is the maximum the jpeg-format can handle.
+    rasterize : bool, default False
+        Rasterize the figure before saving to increase memory efficiency and runtime at the cost of quality.
     **kwargs : Any
         Additional arguments to pass to matplotlib.pyplot.savefig.
     """
@@ -81,7 +84,21 @@ def _save_figure(path: Optional[str],
             logger.info(f"Saving figure to {output_path}")
         else:
             output_path = Path(settings.report_dir) / path
-        plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
+
+        original_state = []
+        if rasterize:
+            # rasterize all axes
+            for ax in fig.axes:
+                original_state.append(ax.get_rasterized())
+                ax.set_rasterized(True)
+
+        try:
+            plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
+        finally:
+            if rasterize:
+                # restore rasterization
+                for ax, raster in zip(fig.axes, original_state):
+                    ax.set_rasterized(raster)
 
 
 @beartype
@@ -822,6 +839,7 @@ def pairwise_scatter(table: pd.DataFrame,
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
                      report: Optional[str] = None,
+                     rasterize: bool = True,
                      **kwargs: Any) -> NDArray[Axes]:
     """Plot a grid of scatterplot comparing column values pairwise.
 
@@ -839,6 +857,8 @@ def pairwise_scatter(table: pd.DataFrame,
         If given, the figure will be saved to this path.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    rasterize : bool, default True
+        Whether to rasterize the plot before saving.
     **kwargs : Any
         Additional arguments to pass to Axes.scatter.
 
@@ -946,11 +966,11 @@ def pairwise_scatter(table: pd.DataFrame,
     plt.subplots_adjust(wspace=0.08, hspace=0.08)
 
     # Save plot
-    _save_figure(save)
+    _save_figure(save, rasterize=rasterize)
 
     # report
     if settings.report_dir and report:
-        _save_figure(report, report=True)
+        _save_figure(report, report=True, rasterize=rasterize)
 
     return axarr
 
