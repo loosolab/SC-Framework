@@ -1,3 +1,6 @@
+0.13.3 (in progress)
+- from_single_mtx: auto-adjust if the var/ obs file is one line of from the expected mtx
+
 0.13.2 (14-08-25)
 - set bbknn(computation="cKDTree") and scanorama(approx=False) to fix issue with annoy package and processor architecture
 

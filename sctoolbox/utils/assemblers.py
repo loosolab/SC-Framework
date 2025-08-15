@@ -346,7 +346,7 @@ def from_single_mtx(mtx: Union[str, Path],
                     barcodes: Union[str, Path],
                     variables: Optional[Union[str, Path]] = None,
                     transpose: bool = True,
-                    header: Union[int, list[int], Literal['infer'], None] = None,
+                    header: Union[int, list[int], Literal['infer'], None] = 'infer',
                     barcode_index: int = 0,
                     var_index: Optional[int] = 0,
                     delimiter: str = "\t",
@@ -366,6 +366,7 @@ def from_single_mtx(mtx: Union[str, Path],
         Set True to transpose mtx matrix.
     header : Union[int, list[int], Literal['infer'], None], default None
         Set header parameter for reading metadata tables using pandas.read_csv.
+        Automatically tries to enable/disable the header if the length of the mtx is one different to either variables or barcodes.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
     var_index : Optional[int], default 0
@@ -383,7 +384,8 @@ def from_single_mtx(mtx: Union[str, Path],
     Raises
     ------
     ValueError
-        If barcode or gene files contain duplicates.
+        1. If barcode or gene files contain duplicates.
+        2. Variables or barcodes does not fit mtx size.
     """
 
     # Read mtx file
@@ -393,27 +395,39 @@ def from_single_mtx(mtx: Union[str, Path],
     if transpose:
         adata = adata.transpose()
 
-    # Read in gene and cell annotation
-    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter, comment=comment_flag)
-    barcode_csv.index.names = ['index']
-    barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
+    # statisfy the linter
+    if False:
+        raise ValueError()
 
-    if variables:
-        # Read in var table
-        var_csv = pd.read_csv(variables, header=header, index_col=var_index, delimiter=delimiter, comment=comment_flag)
-        var_csv.index.names = ['index']
-        var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
+    def load_meta(file, header, index_col, delimiter, comment, expected_size, name):
+        """Load and prepare AnnData.var or AnnData.obs."""
+        # load the file
+        table = pd.read_csv(file, header=header, index_col=index_col, delimiter=delimiter, comment=comment)
 
-    # Test if they are unique
-    if not barcode_csv.index.is_unique:
-        raise ValueError("Barcode index column does not contain unique values")
-    if variables and not var_csv.index.is_unique:
-        raise ValueError("Genes index column does not contain unique values")
+        # check if the size is expected; try to fix when the size is one of
+        if len(table) - 1 == expected_size:
+            logger.warning(f"{name} file is one less than expected. Trying to fix by disabling the header.")
+            table = pd.read_csv(file, header=0, index_col=index_col, delimiter=delimiter, comment=comment)
+        elif len(table) + 1 == expected_size:
+            logger.warning(f"{name} file is one more than expected. Trying to fix by enabling the header.")
+            table = pd.read_csv(file, header=None, index_col=index_col, delimiter=delimiter, comment=comment)
+
+        if len(table) != expected_size:
+            raise ValueError(f"{name} file is of size {len(table)} but AnnData expects {expected_size}. Try to toggle the transpose argument.")
+
+        table.index.names = ["index"]
+        table.columns = [str(c) for c in table.columns]  # conver to string
+
+        # Test if they are unique
+        if not table.index.is_unique:
+            raise ValueError(f"{name} index column does not contain unique values")
+
+        return table
 
     # Add tables to anndata object
-    adata.obs = barcode_csv
+    adata.obs = load_meta(barcodes, header, barcode_index, delimiter, comment_flag, len(adata.obs), "Barcodes")
     if variables:
-        adata.var = var_csv
+        adata.var = load_meta(variables, header, var_index, delimiter, comment_flag, len(adata.var), "Variables")
 
     # Add filename to .obs
     adata.obs["filename"] = os.path.basename(mtx)
