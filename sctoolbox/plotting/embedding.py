@@ -260,6 +260,7 @@ def plot_embedding(adata: sc.AnnData,
                    suptitle: Optional[str] = None,
                    save: Optional[str] = None,
                    report: Optional[str] = None,
+                   rasterize: bool = False,
                    **kwargs) -> NDArray[Axes]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
@@ -293,6 +294,8 @@ def plot_embedding(adata: sc.AnnData,
         Filename to save the figure.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    rasterize : bool, default False
+        Whether to rasterize the plot before saving.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`scanpy.pl.plot_embedding`.
 
@@ -615,11 +618,11 @@ def plot_embedding(adata: sc.AnnData,
             cbar_ax.remove()
 
     # Save figure
-    _save_figure(save)
+    _save_figure(save, rasterize=rasterize)
 
     # report
     if settings.report_dir and report:
-        _save_figure(report, report=True)
+        _save_figure(report, report=True, rasterize=rasterize)
 
     return np.array(axarr)
 
@@ -637,6 +640,7 @@ def feature_per_group(adata: sc.AnnData,
                       figsize: Optional[Tuple[int | float, int | float]] = None,
                       save: Optional[str] = None,
                       report: Optional[str] = None,
+                      rasterize: bool = True,
                       **kwargs) -> NDArray[Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
@@ -672,6 +676,8 @@ def feature_per_group(adata: sc.AnnData,
         Filename to save the figure.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    rasterize : bool, default True
+        Whether to rasterize the plot before saving.
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
@@ -766,11 +772,11 @@ def feature_per_group(adata: sc.AnnData,
                 fig.delaxes(axs[i][j])
 
     # save figure
-    _save_figure(save)
+    _save_figure(save, rasterize=rasterize)
 
     # report
     if settings.report_dir and report:
-        _save_figure(report, report=True)
+        _save_figure(report, report=True, rasterize=rasterize)
 
     return axs
 
@@ -875,6 +881,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            n_components: int = 2,
                            threads: int = 4,
                            save: Optional[str] = None,
+                           rasterize: bool = True,
                            **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of min_dist and spread variables for UMAP plots.
 
@@ -894,6 +901,8 @@ def search_umap_parameters(adata: sc.AnnData,
         Number of threads to use for UMAP calculation.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
+    rasterize : bool, default True
+        Whether to rasterize plot before saving.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.tl.umap`.
 
@@ -927,6 +936,7 @@ def search_tsne_parameters(adata: sc.AnnData,
                            color: Optional[str] = None,
                            threads: int = 4,
                            save: Optional[str] = None,
+                           rasterize: bool = True,
                            **kwargs: Any) -> NDArray:
     """Plot a grid of different combinations of perplexity and learning_rate variables for tSNE plots.
 
@@ -945,6 +955,8 @@ def search_tsne_parameters(adata: sc.AnnData,
         This may be fixed in the future.
     save : Optional[str], default None (not saved)
         Path to save the figure to.
+    rasterize : bool, default True
+        Whether to rasterize plot before saving.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.tl.tsne`.
 
@@ -980,6 +992,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
                                color: Optional[str] = None,
                                threads: int = 4,
                                save: Optional[str] = None,
+                               rasterize: bool = True,
                                **kwargs: Any) -> NDArray:
     """Search different combinations of parameters for UMAP or tSNE and plot a grid of the embeddings.
 
@@ -1004,6 +1017,8 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         For tSNE, the embeddings are calculated serially, but each calculation uses 'threads' as 'n_jobs' within sc.tl.tsne.
     save : Optional[str], default None
         Path to save the figure to.
+    rasterize : bool, default True
+        Whether to rasterize plot before saving.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.tl.umap` or :func:`scanpy.tl.tsne`.
 
@@ -1122,7 +1137,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
             axes[i, j].set_xlabel("")
 
     plt.tight_layout()
-    _save_figure(save)
+    _save_figure(save, rasterize=rasterize)
 
     return axes
 
@@ -1639,6 +1654,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
                      output: Optional[str] = None,
                      dpi: int = 300,
                      report: Optional[str] = None,
+                     rasterize: bool = True,
                      **kwargs: Any) -> NDArray[Axes]:
     """Create a multipanel plot comparing PCA/UMAP/tSNE/(...) plots for different adata objects.
 
@@ -1668,6 +1684,8 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         Dots per inch for output
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    rasterize : bool, default True
+        Whether to rasterize plot before saving.
     **kwargs : Any
         Additional keyword arguments are passed to :func:`scanpy.pl.umap`, :func:`scanpy.pl.tsne` or :func:`scanpy.pl.pca`.
 
@@ -1868,11 +1886,11 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
         axs[i].set_title(name, size=fontsize, fontweight='bold')  # first rows should have the adata names
 
     # save
-    _save_figure(output, dpi=dpi)
+    _save_figure(output, dpi=dpi, rasterize=rasterize)
 
     # report
     if settings.report_dir and report:
-        _save_figure(report, report=True)
+        _save_figure(report, report=True, rasterize=rasterize)
 
     return axs
 
