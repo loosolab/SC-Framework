@@ -1,3 +1,7 @@
+0.13.4
+_________________
+- fixed spelling mistake in title of predict cell cycle plot (tools.qc_filter.predict_cell_cycle)
+
 0.13.3 (15-08-25)
 -----------------
 - from_single_mtx: auto-adjust if the var/ obs file is one line of from the expected mtx
