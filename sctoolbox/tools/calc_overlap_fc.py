@@ -1,16 +1,13 @@
 """Module to calculate fold change of reads or fragments from a BAM or fragments file that overlap specified regions."""
 
 import os
-import pkg_resources
 import pandas as pd
 from pathlib import Path
 import scanpy as sc
 
 from beartype import beartype
-from beartype.typing import Optional, Tuple, Literal
+from beartype.typing import Optional, Tuple
 
-import deprecation
-import sctoolbox
 import sctoolbox.utils as utils
 from sctoolbox.tools.bam import create_fragment_file
 import sctoolbox.utils.decorator as deco

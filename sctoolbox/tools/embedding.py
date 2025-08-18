@@ -12,6 +12,7 @@ from beartype.typing import Iterable, Any, Literal, Optional, Tuple
 from beartype import beartype
 
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
 
 
 @beartype
