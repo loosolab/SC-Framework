@@ -40,6 +40,8 @@ class SctoolboxConfig(object):
         Directory to collect everything for the final report, default "" to disable.
     threads : int
         Default number of threads to use when multiprocessing is available, default 4.
+    k8s_threads : int
+        Default number of threads to use on a kubernetes cluster, default 1.
     create_dirs : bool
         Create output directories if they do not exist, default True.
     verbosity : int
@@ -67,11 +69,12 @@ class SctoolboxConfig(object):
                  adata_output_prefix: str = "",  # Prefix for all adata objects to write (within adata_output_dir)
                  report_dir: str = "",           # Directory to collect everything for the final report.
                  threads: int = 4,               # default number of threads to use when multiprocessing is available
+                 k8s_threads: int = 1,           # default number of threads to use on a kubernetes cluster
                  create_dirs: bool = True,       # create output directories if they do not exist
                  verbosity: int = 1,             # logging verbosity: 0 = error, 1 = info, 2 = debug
                  log_file: str = None,           # Path to log file
                  overwrite_log: bool = False,    # Overwrite log file if it already exists; default is to append
-                 dpi: float = 600,                # The resolution in dots per inch, used to save figures.
+                 dpi: float = 600,               # The resolution in dots per inch, used to save figures.
                  report_dpi: float = 200         # The resolution in dots per inch, used for report figures.
                  ):
 
