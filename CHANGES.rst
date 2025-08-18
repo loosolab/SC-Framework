@@ -1,6 +1,6 @@
-0.13.4
+0.13.4 (in progress)
 _________________
-- fixed spelling mistake in title of predict cell cycle plot (tools.qc_filter.predict_cell_cycle)
+- fixed spelling mistake in title of predict cell cycle plot (#382)
 
 0.13.3 (15-08-25)
 -----------------
