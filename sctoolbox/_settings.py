@@ -301,5 +301,11 @@ class SctoolboxConfig(object):
         for key, value in sorted(config_dict.items(), key=lambda x: preferred_order.index(x[0]) if x[0] in preferred_order else 999):
             setattr(settings, key, value)
 
+    def get_threads(self):
+        """Return the number of threads. Either self.threads or self.k8s_threads."""
+        if "KUBERNETES_SERVICE_HOST" in os.environ["KUBERNETES_SERVICE_HOST"]:
+            return self.k8s_threads
+        return self.threads
+
 
 settings = SctoolboxConfig()
