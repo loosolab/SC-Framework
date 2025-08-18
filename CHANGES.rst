@@ -1,3 +1,7 @@
+0.13.4 (in progress)
+-----------------
+- implemented global thread settings
+
 0.13.3 (15-08-25)
 -----------------
 - from_single_mtx: auto-adjust if the var/ obs file is one line of from the expected mtx
