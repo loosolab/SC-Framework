@@ -555,7 +555,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
                           batch_key: str,
                           obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
-                          threads: int = 1,
+                          threads: Optional[int] = 1,
                           max_dims: int = 5,
                           inplace: bool = False) -> Optional[dict[str, sc.AnnData]]:
     """
@@ -571,7 +571,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
     obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
     threads : int, default 1
-        Number of threads to use for parallelization.
+        Number of threads to use for parallelization. Set None to use settings.get_threads().
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     inplace : bool, default False
@@ -582,6 +582,9 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
     Optional[dict[str, sc.AnnData]]
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
+
+    if threads is None:
+        threads = settings.get_threads()
 
     if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm
