@@ -82,7 +82,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
                             cb_col: Optional[str] = None,
                             cb_tag: str = 'CB',
                             regions_name: str = 'list',
-                            threads: int = 4,
+                            threads: Optional[int] = 4,
                             temp_dir: Optional[str] = None) -> None:
     """
     Calculate the fold change of fragments in a region against the background.
@@ -109,8 +109,8 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     regions_name : str, default 'list'
         The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name
         added to the anndata object (e.g. pct_fragments_in_{regions_name}).
-    threads : int, default 1
-        Number of threads for parallelization. Will be used to convert BAM to fragments file.
+    threads : Optional[int], default 4
+        Number of threads for parallelization. Will be used to convert BAM to fragments file. None to use settings.get_threads.
     temp_dir : Optional[str], default None
         Path to temporary directory. Will use the current working directory by default.
 
@@ -119,6 +119,9 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     ValueError
         If bam_file and fragment file is not provided.
     """
+    if threads is None:
+        threads = settings.get_threads()
+
     if temp_dir:
         utils.io.create_dir(temp_dir)
     else:
