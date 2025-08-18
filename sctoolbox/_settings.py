@@ -303,7 +303,7 @@ class SctoolboxConfig(object):
 
     def get_threads(self):
         """Return the number of threads. Either self.threads or self.k8s_threads."""
-        if "KUBERNETES_SERVICE_HOST" in os.environ["KUBERNETES_SERVICE_HOST"]:
+        if "KUBERNETES_SERVICE_HOST" in os.environ:
             return self.k8s_threads
         return self.threads
 
