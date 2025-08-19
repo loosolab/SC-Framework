@@ -165,7 +165,7 @@ def gene_set_enrichment(adata: sc.AnnData,
                     enr_list.append(enr.res2d)
                 elif method == "prerank":
                     # Set default kwargs
-                    defaultKwargs = {"threads": 4,
+                    defaultKwargs = {"threads": settings.get_threads(),
                                      "min_size": 5,
                                      "max_size": 1000,
                                      "permutation_num": 1000,

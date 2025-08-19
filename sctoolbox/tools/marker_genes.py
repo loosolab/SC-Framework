@@ -735,7 +735,7 @@ def run_deseq2(adata: sc.AnnData,
         Percentile range of cells to be used for calculating pseudobulks. Setting (0,95) will restrict calculation
         to the cells in the 0-95% percentile ranges. Default is (0, 100), which means all cells are used.
     threads : Optional[int]
-        The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.threads is used
+        The number of threads to use for parallelizable calculations. If None is given, sctoolbox.settings.get_threads is used.
     gene_symbols : Optional[str]
         Column in adata.var that contains the gene names. Uses adata.var.index if None.
 
@@ -768,7 +768,7 @@ def run_deseq2(adata: sc.AnnData,
     from pydeseq2.default_inference import DefaultInference
 
     if threads is None:
-        threads = settings.threads
+        threads = settings.get_threads()
 
     # Setup the design factors
     if confounders is None:

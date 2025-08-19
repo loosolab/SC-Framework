@@ -264,7 +264,7 @@ def estimate_doublets(adata: sc.AnnData,
                       inplace: bool = True,
                       plot: bool = True,
                       groupby: Optional[str] = None,
-                      threads: int = 4,
+                      threads: Optional[int] = 4,
                       fill_na: bool = True,
                       **kwargs: Any) -> Optional[sc.AnnData]:
     """
@@ -288,8 +288,8 @@ def estimate_doublets(adata: sc.AnnData,
     groupby : Optional[str], default None
         Key in adata.obs to use for batching during doublet estimation. If threads > 1,
         the adata is split into separate runs across threads. Otherwise each batch is run separately.
-    threads : int, default 4
-        Number of threads to use.
+    threads : Optional[int], default 4
+        Number of threads to use. None to use settings.get_threads.
     fill_na : bool, default True
         If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
         a doublet score. Keep in mind that this does not mean that it is no doublet.
@@ -307,6 +307,9 @@ def estimate_doublets(adata: sc.AnnData,
         If inplace is False, the function returns a copy of the adata object.
         If inplace is True, the function returns None.
     """
+
+    if threads is None:
+        threads = settings.get_threads()
 
     if inplace is False:
         adata = adata.copy()
