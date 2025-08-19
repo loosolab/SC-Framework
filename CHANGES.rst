@@ -1,5 +1,5 @@
-0.13.4 (in progress)
------------------
+0.13.4 (19-08-2025)
+-------------------
 - implemented global thread settings
 - fixed spelling mistake in title of predict cell cycle plot (#382)
 
