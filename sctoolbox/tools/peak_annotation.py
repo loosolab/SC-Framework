@@ -27,7 +27,7 @@ def annotate_adata(adata: sc.AnnData,
                    gtf: str,
                    config: Optional[dict[str, Any]] = None,
                    best: bool = True,
-                   threads: int = 1,
+                   threads: Optional[int] = 1,
                    coordinate_cols: Optional[list[str]] = None,
                    temp_dir: str = "",
                    remove_temp: bool = True,
@@ -51,8 +51,8 @@ def annotate_adata(adata: sc.AnnData,
         See 'Examples' of how to set up a custom configuration dictionary.
     best : bool, default True
         Whether to return the best annotation or all valid annotations.
-    threads : int, default 1
-        Number of threads to use for multiprocessing.
+    threads : Optional[int], default 1
+        Number of threads to use for multiprocessing. None to use settings.get_threads.
     coordinate_cols : Optional[list[str]], default None
         A list of column names in the regions DataFrame that contain the chromosome, start and end coordinates.
         If None the first three columns are taken.
@@ -84,6 +84,9 @@ def annotate_adata(adata: sc.AnnData,
     >>> annotate_regions(adata, gtf="genes.gtf",
                                 config=custom_config)
     """
+
+    if threads is None:
+        threads = settings.get_threads()
 
     # Make temporary directory if needed
     utils.io.create_dir(temp_dir)
@@ -198,7 +201,7 @@ def annotate_narrowPeak(filepath: str,
                         gtf: str,
                         config: Optional[dict[str, Any]] = None,
                         best: bool = True,
-                        threads: int = 1,
+                        threads: Optional[int] = 1,
                         temp_dir: str = "",
                         remove_temp: bool = True) -> pd.DataFrame:
     """
@@ -216,8 +219,8 @@ def annotate_narrowPeak(filepath: str,
         See 'Examples' of how to set up a custom configuration dictionary.
     best : bool, default True
         Whether to return the best annotation or all valid annotations.
-    threads : int, default 1
-        Number of threads to perform the annotation.
+    threads : Optional[int], default 1
+        Number of threads to perform the annotation. None to use settings.get_threads
     temp_dir : str, default ''
         Path to the directory where the temporary files should be written.
     remove_temp : bool, default True
@@ -228,6 +231,9 @@ def annotate_narrowPeak(filepath: str,
     pd.DataFrame
         Dataframe containing the annotations.
     """
+
+    if threads is None:
+        threads = settings.get_threads()
 
     # Make temporary directory
     utils.io.create_dir(temp_dir)

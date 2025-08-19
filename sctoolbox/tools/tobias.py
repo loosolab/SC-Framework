@@ -130,7 +130,7 @@ def prepare_tobias(adata: sc.AnnData,
                    plot_venn: bool = True,
                    coverage: bool = False,
                    wilson: bool = False,
-                   threads: int = 4) -> Tuple[str, str, str]:
+                   threads: Optional[int] = 4) -> Tuple[str, str, str]:
     """
     Split ATAC-seq bamfile by adata.obs column and prepare TOBIAS run.
 
@@ -173,8 +173,8 @@ def prepare_tobias(adata: sc.AnnData,
         TOBIAS flag for coverage calculation.
     wilson : bool, default False
         TOBIAS flag for wilson calculation.
-    threads : int, default 4
-        Number of threads to use.
+    threads : Optional[int], default 4
+        Number of threads to use. Set None to use settings.get_threads.
 
     Returns
     -------
@@ -190,6 +190,9 @@ def prepare_tobias(adata: sc.AnnData,
     ValueError
         If the groupby column is not found in adata.obs.
     """
+    if threads is None:
+        threads = settings.get_threads()
+
     # Check if directory for TOBIAS run exists, if not create it
     if os.path.exists(output):
         logger.warning(f"WARNING: The directory \'{output}\' already exists. Any files in this directory may be overwritten, which can cause inconsistencies.")

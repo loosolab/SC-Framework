@@ -879,7 +879,7 @@ def search_umap_parameters(adata: sc.AnnData,
                            spread_range: Tuple[float | int, float | int, float | int] = (0.5, 2.0, 0.5),    # 0.5, 1.0, 1.5
                            color: Optional[str] = None,
                            n_components: int = 2,
-                           threads: int = 4,
+                           threads: Optional[int] = 4,
                            save: Optional[str] = None,
                            rasterize: bool = True,
                            **kwargs: Any) -> NDArray:
@@ -897,8 +897,8 @@ def search_umap_parameters(adata: sc.AnnData,
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
     n_components : int, default 2
         Number of components in UMAP calculation.
-    threads : int, default 4
-        Number of threads to use for UMAP calculation.
+    threads : Optional[int], default 4
+        Number of threads to use for UMAP calculation. Set None to use settings.get_threads.
     save : Optional[str], default None
         Path to save the figure to. If None, the figure is not saved.
     rasterize : bool, default True
@@ -990,7 +990,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
                                perplexity_range: Optional[Tuple[int, int, int]] = None,  # for tSNE
                                learning_rate_range: Optional[Tuple[int, int, int]] = None,  # for tSNE
                                color: Optional[str] = None,
-                               threads: int = 4,
+                               threads: Optional[int] = 4,
                                save: Optional[str] = None,
                                rasterize: bool = True,
                                **kwargs: Any) -> NDArray:
@@ -1012,9 +1012,10 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         tSNE parameter: Range of 'learning_rate' parameter values to test. Must be a tuple in the form (min, max, step).
     color : Optional[str], default None
         Name of the column in adata.obs to color plots by. If None, plots are not colored.
-    threads : int, default 4
+    threads : Optional[int], default 4
         Number of threads to use for calculating embeddings. In case of UMAP, the embeddings will be calculated in parallel with each job using 1 thread.
         For tSNE, the embeddings are calculated serially, but each calculation uses 'threads' as 'n_jobs' within sc.tl.tsne.
+        Set None to use settings.get_threads.
     save : Optional[str], default None
         Path to save the figure to.
     rasterize : bool, default True
@@ -1027,6 +1028,9 @@ def _search_dim_red_parameters(adata: sc.AnnData,
     NDArray
         2D numpy array of axis objects
     """
+
+    if threads is None:
+        threads = settings.get_threads()
 
     def get_loop_params(r):
         """Get parameters to loop over."""
