@@ -570,7 +570,7 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         The column in adata.obs containing batch information.
     obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
-    threads : int, default 1
+    threads : Optional[int], default 1
         Number of threads to use for parallelization. Set None to use settings.get_threads().
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).

@@ -173,7 +173,7 @@ def prepare_tobias(adata: sc.AnnData,
         TOBIAS flag for coverage calculation.
     wilson : bool, default False
         TOBIAS flag for wilson calculation.
-    threads : Optinal[int], default 4
+    threads : Optional[int], default 4
         Number of threads to use. Set None to use settings.get_threads.
 
     Returns
