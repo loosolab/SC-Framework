@@ -1,3 +1,7 @@
+0.13.5 (20-08-2025)
+-------------------
+- fix pydeseq2 bug
+
 0.13.4 (19-08-2025)
 -------------------
 - implemented global thread settings
