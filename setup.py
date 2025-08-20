@@ -38,7 +38,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy"],
-                  "deseq2": ["pydeseq2>=0.4.11"],
+                  "deseq2": ["pydeseq2>=0.5.2"],  # https://github.com/owkin/PyDESeq2/issues/242
                   "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
                   }
 
