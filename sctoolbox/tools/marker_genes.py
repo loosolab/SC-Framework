@@ -751,7 +751,8 @@ def run_deseq2(adata: sc.AnnData,
         1. If any given column name is not found in adata.obs.
         2. Invalid contrasts are supplied.
         3. Negative counts are encountered.
-        4. If sample and condition do not have a 1:1 relation.
+        4. If the samples have more than one condition.
+        5. If there are no replicates.
 
     Notes
     -----
@@ -785,15 +786,25 @@ def run_deseq2(adata: sc.AnnData,
     sample_df.set_index(sample_col, inplace=True)
     sample_df.sort_index(inplace=True)
 
-    # check if sample and condition have a 1:1 relation
+    # check if each sample has at most one condition, i.e. a n:1 relation
     multiple_relations = {}
     for i in set(sample_df.index):
-        conds = list(sample_df.loc[i].tolist())
-        if len(conds) > 1:
+        val = sample_df.loc[i]
+        if len(val) > 1:
+            conds = list(val[condition_col].tolist())
             multiple_relations[i] = conds
 
     if multiple_relations:
-        raise ValueError(f"Relation between selected sample ({sample_col}) and condition ({condition_col}) must be 1 to 1. Found 1 to n: {multiple_relations}.")
+        raise ValueError(f"Relation between selected sample ({sample_col}) and condition ({condition_col}) must be n to 1, i.e. each sample has to have one condition. Found: {multiple_relations}.")
+
+    # check for replicates, i.e. multiple samples with the same condition
+    replicates = []
+    for i in set(sample_df[condition_col]):
+        if (sample_df[condition_col] == i).sum() < 2:
+            replicates.append(i)
+
+    if replicates :
+        raise ValueError("No replicates detected! At least one condition has to have replicates, i.e. multiple samples.")
 
     logger.debug("sample_df:")
     logger.debug(sample_df)
