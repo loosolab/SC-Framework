@@ -798,12 +798,12 @@ def run_deseq2(adata: sc.AnnData,
         raise ValueError(f"Relation between selected sample ({sample_col}) and condition ({condition_col}) must be n to 1, i.e. each sample has to have one condition. Found: {multiple_relations}.")
 
     # check for replicates, i.e. multiple samples with the same condition
-    replicates = []
+    no_replicates = []
     for i in set(sample_df[condition_col]):
         if (sample_df[condition_col] == i).sum() < 2:
-            replicates.append(i)
+            no_replicates.append(i)
 
-    if replicates:
+    if len(no_replicates) >= len(set(sample_df[condition_col])):
         raise ValueError("No replicates detected! At least one condition has to have replicates, i.e. multiple samples.")
 
     logger.debug("sample_df:")
