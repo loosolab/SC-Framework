@@ -803,7 +803,7 @@ def run_deseq2(adata: sc.AnnData,
         if (sample_df[condition_col] == i).sum() < 2:
             replicates.append(i)
 
-    if replicates :
+    if replicates:
         raise ValueError("No replicates detected! At least one condition has to have replicates, i.e. multiple samples.")
 
     logger.debug("sample_df:")
