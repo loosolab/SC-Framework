@@ -8,7 +8,7 @@ print(f"Script location: {script_dir}")
 rna_notebook_path_suffix = "/../rna_analysis/notebooks/"
 
 # notebook sorting key
-key = lambda x: "zz" if x.startswith("99") else str.lower(x)  # put the 99-report.ipynb notebook last
+key = lambda x: "zzzz" if x.startswith("99") else str.lower(x)  # put the 99-report.ipynb notebook last
 
 # Run RNA notebooks
 notebook_dir = script_dir + rna_notebook_path_suffix
@@ -31,7 +31,7 @@ for notebook in rna_notebooks:
 
 # Run ATAC notebooks
 notebook_dir = script_dir + "/../atac_analysis/notebooks/"
-atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"))  # sort as glob output is not ordered
+atac_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"), key=key)  # sort as glob output is not ordered
 atac_notebooks = [nb for nb in atac_notebooks]
 print("\n\n")
 print("--------------------------------------- ATAC ---------------------------------------")
