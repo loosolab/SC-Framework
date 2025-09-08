@@ -1,3 +1,11 @@
+0.14.0 (in progress)
+-------------------
+
+Changes to notebooks
+^^^^^^^^^^^^^^^^^^^^
+- move gene annotation (clustering -> QC; #357)
+- move HFV (QC -> normalization; #355)
+
 0.13.5 (20-08-2025)
 -------------------
 - fix pydeseq2 bug
