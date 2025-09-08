@@ -8,7 +8,7 @@ print(f"Script location: {script_dir}")
 rna_notebook_path_suffix = "/../rna_analysis/notebooks/"
 
 # notebook sorting key
-key = lambda x: "zzzz" if x.startswith("99") else str.lower(x)  # put the 99-report.ipynb notebook last
+key = lambda x: "zzzz" if os.path.basename(x).startswith("99") else str.lower(os.path.basename(x))  # put the 99-report.ipynb notebook last
 
 # Run RNA notebooks
 notebook_dir = script_dir + rna_notebook_path_suffix
