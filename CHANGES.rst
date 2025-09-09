@@ -1,6 +1,7 @@
 0.14.0 (in progress)
 -------------------
 - fix error making assembly notebook mandatory when generating report (#383)
+- replace "/" in AnnData before saving to avoid errors (#388)
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
