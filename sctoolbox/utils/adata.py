@@ -11,7 +11,7 @@ import pandas as pd
 from pathlib import Path
 import yaml
 
-from beartype.typing import Optional, Any, Union, Collection, Mapping
+from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
@@ -203,6 +203,11 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
     if "compression" not in kwargs:
         kwargs["compression"] = "gzip"
 
+    # check var/obs/uns and replace any "/" with "|" as anndata does not allow "/" in any keys
+    # as of anndata>=0.12
+    for attr in ["obs", "var", "uns"]:
+        _rec_search(getattr(adata, attr), path=[attr], repl=("/", "|"))
+
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output, **kwargs)
@@ -234,6 +239,49 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
         plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
+
+@beartype
+def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")):
+    """
+    Helper to search and replace characters in keys in nested dicts and pd.DataFrames column names.
+
+    Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
+    Note: The function operates inplace.
+
+    Parameters
+    ----------
+    var : Union[Dict, pd.DataFrame]
+        The variable that will be searched. Either a dict or a pd.DataFrame.
+        In case of dict all keys will be searched and given characters are replaced (also for nested dicts).
+        In case of pd.DataFrame column names with given characters are updated (also if the DataFrame is nested inside a dict).
+    path : List[str]
+        The nesting path as a list. First element should be the name of an AnnData attribute e.g. 'obs'.
+    repl : Tuple[str, str], default ("/", "|")
+        Search for the first string and replace every occurrence with the second string.
+    """
+    # check DataFrame column names
+    if isinstance(var, pd.DataFrame):
+        col_names = [n for n in var.columns if "/" in n]
+
+        if col_names:
+            # first element is an adata attribute
+            path_str = f".{path[0]}{''.join([f'[\'{e}\']' for e in path[1:]]) if len(path) > 1 else ''}"
+            
+            logger.warning(f"Found pd.DataFrame in {path_str} with '{repl[0]}' in column name(s) ({col_names}), which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            var.rename(columns={n: n.replace(*repl) for n in col_names}, inplace=True)
+    else:
+        # recursively check dict
+        # go through all items
+        for k, v in list(var.items()):
+            if repl[0] in k:
+                var[k.replace(*repl)] = var.pop(k)
+                
+                # first element is an adata attribute
+                path_str = f".{path[0]}{''.join([f'[\'{e}\']' for e in path[1:]]) if len(path) > 1 else ''}"
+                logger.warning(f"Found '{repl[0]}' in {path_str}['{k}'], which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            # open a nested dict
+            if isinstance(v, dict) or isinstance(v, pd.DataFrame):
+                _rec_search(v, repl=repl, path=path + [k])
 
 
 @beartype
