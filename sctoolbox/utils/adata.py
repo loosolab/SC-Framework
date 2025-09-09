@@ -265,7 +265,8 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
 
         if col_names:
             # first element is an adata attribute
-            path_str = f".{path[0]}{''.join([f'[\'{e}\']' for e in path[1:]]) if len(path) > 1 else ''}"
+            tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+            path_str = f".{path[0]}{tmp_path}"
             
             logger.warning(f"Found pd.DataFrame in {path_str} with '{repl[0]}' in column name(s) ({col_names}), which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
             var.rename(columns={n: n.replace(*repl) for n in col_names}, inplace=True)
@@ -277,7 +278,8 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
                 var[k.replace(*repl)] = var.pop(k)
                 
                 # first element is an adata attribute
-                path_str = f".{path[0]}{''.join([f'[\'{e}\']' for e in path[1:]]) if len(path) > 1 else ''}"
+                tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+                path_str = f".{path[0]}{tmp_path}"
                 logger.warning(f"Found '{repl[0]}' in {path_str}['{k}'], which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
             # open a nested dict
             if isinstance(v, dict) or isinstance(v, pd.DataFrame):
