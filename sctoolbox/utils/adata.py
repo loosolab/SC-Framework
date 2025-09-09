@@ -240,10 +240,11 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
     logger.info(f"The adata object was saved to: {adata_output}")
 
+
 @beartype
 def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")):
     """
-    Helper to search and replace characters in keys in nested dicts and pd.DataFrames column names.
+    Help to search and replace characters in keys in nested dicts and pd.DataFrames column names.
 
     Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
     Note: The function operates inplace.
@@ -267,7 +268,7 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
             # first element is an adata attribute
             tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
             path_str = f".{path[0]}{tmp_path}"
-            
+
             logger.warning(f"Found pd.DataFrame in {path_str} with '{repl[0]}' in column name(s) ({col_names}), which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
             var.rename(columns={n: n.replace(*repl) for n in col_names}, inplace=True)
     else:
@@ -276,7 +277,7 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
         for k, v in list(var.items()):
             if repl[0] in k:
                 var[k.replace(*repl)] = var.pop(k)
-                
+
                 # first element is an adata attribute
                 tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
                 path_str = f".{path[0]}{tmp_path}"
