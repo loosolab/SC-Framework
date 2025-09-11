@@ -2,6 +2,7 @@
 -------------------
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
+- sctoolbox.utils.bioutils._bed_is_sorted account for comment lines.
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
