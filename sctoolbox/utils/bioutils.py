@@ -571,7 +571,7 @@ def _read_bedfile(bedfile: str) -> list:
 
 
 @beartype
-def _bed_is_sorted(bedfile: str) -> bool:
+def _bed_is_sorted(bedfile: str, comment: str = "#") -> bool:
     """
     Check if a bedfile is sorted by the start position.
 
@@ -579,6 +579,8 @@ def _bed_is_sorted(bedfile: str) -> bool:
     ----------
     bedfile : str
         path to bedfile
+    comment : str, default #
+        Ignore lines starting with the given characters.
 
     Returns
     -------
@@ -589,6 +591,10 @@ def _bed_is_sorted(bedfile: str) -> bool:
         counter = 0
         previous = 0
         for row in file:
+            # skip comment lines
+            if row.startswith(comment):
+                continue
+
             row = row.split('\t')
             if previous > int(row[1]):
                 file.close()
