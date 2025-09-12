@@ -342,7 +342,7 @@ notebooks:
     - pip install python-ldap pyOpenSSL
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb # ./general_notebooks/pseudotime_analysis.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb
     - python scripts/run_notebooks.py
   after_script:
     - pwd
