@@ -34,7 +34,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                            'tobias>=0.17.2'],  # to avoid installation error
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1'],  # anndata>=10.9 requires mudata>=0.3.1
+                  "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1', 'networkx>=3.5'],  # anndata>=10.9 requires mudata>=0.3.1; networkx>=3.5 for numpy 2 support
                   "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy"],
@@ -100,7 +100,7 @@ setup(
         'scanpy[louvain,leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (louvain & leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
-        'numpy',
+        'numpy>=2',
         'kneed',
         'qnorm',
         'plotly',
