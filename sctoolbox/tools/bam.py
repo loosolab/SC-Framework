@@ -62,7 +62,7 @@ def bam_adata_ov(adata: sc.AnnData,
     barcodes_df = pd.DataFrame(adata.obs.index)
     count_table = barcodes_df.isin(sample)
     hits = count_table.sum()
-    hitrate = hits[0] / iterations
+    hitrate = hits.iloc[0] / iterations
 
     return hitrate
 
