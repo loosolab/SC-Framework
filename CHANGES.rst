@@ -4,6 +4,7 @@
 - replace "/" in AnnData before saving to avoid errors (#388)
 - sctoolbox.utils.bioutils._bed_is_sorted and _read_bedfile account for comment lines.
 - migrate to numpy 2
+- Fix error in bam_adata_ov if some reads do not contain the tag
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
