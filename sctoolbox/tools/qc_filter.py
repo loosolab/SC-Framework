@@ -596,7 +596,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, Union[int, float]]
+    dict[str, Union[int, np.int_, float, np.floating]]
         Dictionary with min and max thresholds.
     """
 
