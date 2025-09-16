@@ -2,6 +2,7 @@
 import yaml
 import os
 import glob
+import re
 
 import scanpy as sc
 import sctoolbox.utils as utils
@@ -81,6 +82,15 @@ def write_TOBIAS_config(out_path: str,
         suffix = utils.general.longest_common_suffix(bams)
         names = [utils.general.remove_prefix(s, prefix) for s in bams]
         names = [utils.general.remove_suffix(s, suffix) for s in names]
+
+    # Check names for forbidden characters
+    # This is a TOBIAS_snakemake limitation
+    # https://github.com/loosolab/TOBIAS_snakemake/blob/45a9c5e6fd34dbe070df4778f7ccb61dbfac8fdd/Snakefile#L83
+    for i in range(len(names)):
+        if re.search(r"[^a-zA-Z0-9\-_\.]+", names[i]):
+            logger.warning(f"Condition name {names[i]} contains characters not in '[a-zA-Z0-9\-_\.]'. Replacing with '_'.")
+
+            names[i] = re.sub(r"[^a-zA-Z0-9\-_\.]", "_", names[i])
 
     # Start building yaml
     data = {}
