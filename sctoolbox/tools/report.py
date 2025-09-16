@@ -213,7 +213,6 @@ def generate_report(
 
             # add slide per prefix
             report.add_slide(
-                split=True,
                 **kwargs
             )
 
