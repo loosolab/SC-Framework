@@ -13,6 +13,8 @@ key = lambda x: "zzzz" if os.path.basename(x).startswith("99") else str.lower(os
 # Run RNA notebooks
 notebook_dir = script_dir + rna_notebook_path_suffix
 rna_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"), key=key)  # sort as glob output is not ordered
+# TODO remove the pseudotime notebook due to version conflict with scFates
+rna_notebooks = [n for n in rna_notebooks if os.path.basename(n) != "pseudotime_analysis.ipynb"]
 print("\n\n")
 print("--------------------------------------- RNA ---------------------------------------")
 print(f"Notebook directory: {notebook_dir}")

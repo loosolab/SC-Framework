@@ -545,7 +545,7 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> 
 
 
 @beartype
-def _read_bedfile(bedfile: str) -> list:
+def _read_bedfile(bedfile: str, comment: str = "#") -> list:
     """
     Read in a bedfile and returns a list of the rows.
 
@@ -553,6 +553,8 @@ def _read_bedfile(bedfile: str) -> list:
     ----------
     bedfile : str
         path to bedfile
+    comment : str, default "#"
+        Ignore lines starting with the given characters.
 
     Returns
     -------
@@ -563,15 +565,20 @@ def _read_bedfile(bedfile: str) -> list:
     with open(bedfile, 'rb') as file:
         for row in file:
             row = row.decode("utf-8")
+
+            # skip comment lines
+            if row.startswith(comment):
+                continue
+
             row = row.split('\t')
             line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
             bed_list.append(line)
-    file.close()
+
     return bed_list
 
 
 @beartype
-def _bed_is_sorted(bedfile: str) -> bool:
+def _bed_is_sorted(bedfile: str, comment: str = "#") -> bool:
     """
     Check if a bedfile is sorted by the start position.
 
@@ -579,6 +586,8 @@ def _bed_is_sorted(bedfile: str) -> bool:
     ----------
     bedfile : str
         path to bedfile
+    comment : str, default "#"
+        Ignore lines starting with the given characters.
 
     Returns
     -------
@@ -589,6 +598,10 @@ def _bed_is_sorted(bedfile: str) -> bool:
         counter = 0
         previous = 0
         for row in file:
+            # skip comment lines
+            if row.startswith(comment):
+                continue
+
             row = row.split('\t')
             if previous > int(row[1]):
                 file.close()

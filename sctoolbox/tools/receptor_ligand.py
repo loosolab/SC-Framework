@@ -259,8 +259,8 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     # combine duplicated genes through mean (can happen due to mapping between organisms)
     if len(set(cl_mean_expression.index)) != len(cl_mean_expression):
-        cl_mean_expression = cl_mean_expression.groupby(cl_mean_expression.index).mean()
-        cl_percent_expression = cl_percent_expression.groupby(cl_percent_expression.index).mean()
+        cl_mean_expression = cl_mean_expression.groupby(cl_mean_expression.index, observed=False).mean()
+        cl_percent_expression = cl_percent_expression.groupby(cl_percent_expression.index, observed=False).mean()
 
     # if user does not provide normalization factor - use max clustersize
     max_clust_size = np.max(list(clust_sizes.values()))
