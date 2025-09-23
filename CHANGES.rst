@@ -2,6 +2,7 @@
 -------------------
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
+- CI/CD split notebook job into ATAC and RNA
 - sctoolbox.utils.bioutils._bed_is_sorted and _read_bedfile account for comment lines.
 - migrate to numpy 2
 - Fix error in bam_adata_ov if some reads do not contain the tag
