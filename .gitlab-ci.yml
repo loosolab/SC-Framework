@@ -327,6 +327,7 @@ notebooks:
   tags:
       - sctoolbox
   artifacts:
+    when: always
     paths:
       - rna_analysis/logs/*.txt
       - rna_analysis/*.ipynb
