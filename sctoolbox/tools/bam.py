@@ -322,7 +322,7 @@ def split_bam_clusters(adata: sc.AnnData,
         output_files = []
         for cluster in clusters:
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
-            save_cluster_name = re.sub(r'[\\/*?:"<>| ]', '_', cluster)
+            save_cluster_name = re.sub(r'[\\/*?:"<>| ()]', '_', cluster)
             out_paths[cluster] = f"{output_prefix}{save_cluster_name}.bam"
             output_files.append(f"{output_prefix}{save_cluster_name}.bam")
 
