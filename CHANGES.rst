@@ -2,6 +2,7 @@
 -------------------
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
+- CI/CD split notebook job into ATAC and RNA
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
