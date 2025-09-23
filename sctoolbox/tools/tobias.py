@@ -88,7 +88,7 @@ def write_TOBIAS_config(out_path: str,
     # https://github.com/loosolab/TOBIAS_snakemake/blob/45a9c5e6fd34dbe070df4778f7ccb61dbfac8fdd/Snakefile#L83
     for i in range(len(names)):
         if re.search(r"[^a-zA-Z0-9\-_\.]+", names[i]):
-            logger.warning(f"Condition name {names[i]} contains characters not in '[a-zA-Z0-9\-_\.]'. Replacing with '_'.")
+            logger.warning(f"Condition name {names[i]} contains characters not in '[a-zA-Z0-9-_.]'. Replacing with '_'.")
 
             names[i] = re.sub(r"[^a-zA-Z0-9\-_\.]", "_", names[i])
 

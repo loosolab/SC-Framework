@@ -36,7 +36,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1', 'networkx>=3.5'],  # anndata>=10.9 requires mudata>=0.3.1; networkx>=3.5 for numpy 2 support
                   "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
-                  "pseudotime": ["scFates"],  # omit scFates due to version conflict https://github.com/LouisFaure/scFates/issues/50 
+                  "pseudotime": ["scFates"],  # omit scFates due to version conflict https://github.com/LouisFaure/scFates/issues/50
                   "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.5.2"],  # https://github.com/owkin/PyDESeq2/issues/242
                   "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
