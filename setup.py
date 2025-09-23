@@ -6,8 +6,8 @@ import re
 import os
 import glob
 
-import subprocess
 import sys
+import subprocess
 
 # Install these dependencies before everything else
 # do this here (not in conda) to make this package buildable without prior steps
