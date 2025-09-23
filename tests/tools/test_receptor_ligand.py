@@ -1014,22 +1014,17 @@ def test_identify_hub_networks(graph_data, hub_threshold, expected_hubs):
 def test_plot_networks(adata_with_diff_results):
     """Test network plotting functionality."""
     # Test with mocked figure
-    with patch('matplotlib.pyplot.figure') as mock_fig:
-        with patch('matplotlib.pyplot.close'):
-            # Mock figure and axis
-            mock_fig.return_value = MagicMock(spec=Figure)
-            mock_fig.return_value.add_subplot.return_value = MagicMock()
+    with patch('matplotlib.pyplot.close') as mock_close:
+        # Call plotting function
+        rl.condition_differences_network(
+            adata=adata_with_diff_results,
+            n_top=10,
+            split_by_direction=False,
+            close_figs=True
+        )
 
-            # Call plotting function
-            rl.condition_differences_network(
-                adata=adata_with_diff_results,
-                n_top=10,
-                split_by_direction=False,
-                close_figs=True
-            )
-
-            # Just check that the function runs without errors
-            assert mock_fig.called
+        # Just check that the function runs without errors
+        assert mock_close.called
 
 
 @pytest.mark.parametrize(

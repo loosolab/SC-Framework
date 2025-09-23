@@ -571,7 +571,7 @@ def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
                   min_n: Union[int, float] = 3,
                   max_n: Union[int, float] = 3,
-                  plot: bool = False) -> dict[str, Union[int, float]]:
+                  plot: bool = False) -> dict[str, Union[int, np.int_, float, np.floating]]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -596,7 +596,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, Union[int, float]]
+    dict[str, Union[int, np.int_, float, np.floating]]
         Dictionary with min and max thresholds.
     """
 

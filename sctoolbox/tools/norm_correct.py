@@ -243,9 +243,9 @@ def tfidf(anndata: sc.AnnData,
         tf_idf = np.log1p(tf_idf)
 
     if layer:
-        adata.layers[layer] = np.nan_to_num(tf_idf, 0)
+        adata.layers[layer] = np.nan_to_num(tf_idf, nan=0)
     else:
-        adata.X = np.nan_to_num(tf_idf, 0)
+        adata.X = np.nan_to_num(tf_idf, nan=0)
 
     if not inplace:
         return adata
