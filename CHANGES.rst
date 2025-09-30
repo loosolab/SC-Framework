@@ -1,5 +1,6 @@
 0.14.0 (in progress)
 -------------------
+- implemented sctoolbox.utils.adata.tidy_layers
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
 - CI/CD split notebook job into ATAC and RNA
