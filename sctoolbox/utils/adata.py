@@ -11,7 +11,7 @@ import pandas as pd
 from pathlib import Path
 import yaml
 
-from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List
+from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
@@ -672,3 +672,95 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
     adata.var = var.loc[adata.var_names]
 
     return adata
+
+
+@deco.log_anndata
+@beartype
+def tidy_layers(adata: sc.AnnData, allow_raw: bool | str = False, rename: Optional[Dict[str, str]] = None, keep_X: Optional[str] = None, replace_X: Optional[str] = None, keep: Literal['all'] | list[str] = 'all', inplace: bool = True) -> Optional[sc.AnnData]:
+    """
+    Clean up AnnData layers and special layers (X, raw).
+
+    The parameters are executed in the following order:
+    "allow_raw" -> "rename" -> "keep_X" -> "replace_X" -> "keep"
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object to edit.
+    allow_raw : bool | str, default False
+        Whether to keep AnnData.raw. Provide a string to move AnnData.raw.X to a layer with the given name.
+        Note: Moving the raw matrix to a layer creates a subset on var to match adata.var.
+    rename : Optional[Dict[str, str]]
+        Rename AnnData.layers. In the form of `{"old_name": "new_name"}`.
+    keep_X : Optional[str]
+        Copy AnnData.X to the given name (AnnData.layers[keep_X]).
+    replace_X : Optional[str]
+        Overwrite the AnnData.X layer with on of the AnnData.layer layers.
+    keep : Literal['all'] | list[str], default 'all'
+        Name(s) of AnnData.layer layers to keep, others will be removed. Use 'all' to keep all layers.
+    inplace : bool, default True
+        Modify the AnnData inplace or return a modified copy.
+
+    Raises
+    ------
+    KeyError
+        1. If the new name already exists. During renaming or when raw is saved as a layer.
+        2. If the layer to replace X with is not found.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The modified AnnData object.
+    """
+    if not inplace:
+        adata = adata.copy()
+
+    # ----- raw ----- #
+    # move raw to adata.layer
+    if isinstance(allow_raw, str):
+        if allow_raw in adata.layers:
+            raise KeyError(f"{allow_raw} is already a layer name.")
+        # Filter adata.raw to var to ensure the dimensions match (obs subset is automatic)
+        adata.layers[allow_raw] = adata.raw[:, adata.var.index].X.copy()
+    # delete raw
+    if not allow_raw or isinstance(allow_raw, str):
+        adata.raw = None
+
+    # ----- rename ----- #
+    if rename:
+        no_match = []
+        for old, new in rename.items():
+            if old in adata.layers:
+                if new in adata.layers:
+                    raise KeyError(f"{new} is already a layer name.")
+
+                adata.layers[new] = adata.layers[old].copy()
+                del adata.layers[old]
+            else:
+                no_match.append(old)
+
+        if no_match:
+            logger.warning(f"Can not rename name(s) {no_match}. Not found in `AnnData.layers`. Skipped.")
+
+    # ----- keep_X ----- #
+    if keep_X:
+        if not keep_X in adata.layers:
+            adata.layers[keep_X] = adata.X.copy()
+        else:
+            raise KeyError(f"{keep_X} is already a layer name.")
+
+    # ----- replace_X ----- #
+    if replace_X:
+        if replace_X in adata.layers:
+            adata.X = adata.layers[replace_X].copy()
+        else:
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+
+    # ----- keep ----- #
+    if keep != "all":
+        for l in list(adata.layers.keys()):
+            if l not in keep:
+                del adata.layers[l]
+
+    if not inplace:
+        return adata
