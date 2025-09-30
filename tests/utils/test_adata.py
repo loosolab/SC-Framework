@@ -69,9 +69,11 @@ def test_save_and_load_h5ad(adata, raw, caplog):
     path = "test.h5ad"
 
     # add raw layer
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
     if raw:
-        adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
         adata.raw = adata
+    else:
+        adata.raw = None
 
     try:
         with add_logger_handler(utils.logger, caplog.handler):
