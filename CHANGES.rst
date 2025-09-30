@@ -12,6 +12,7 @@ Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
 - move gene annotation (clustering -> QC; #357)
 - move HFV (QC -> normalization; #355)
+- ATAC & RNA assembly: add section to adjust layers (#363)
 
 0.13.5 (20-08-2025)
 -------------------
