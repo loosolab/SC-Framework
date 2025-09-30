@@ -330,11 +330,11 @@ def test_tidy_layer_rename(adata, rename):
         adata_out = utils.tidy_layers(adata, rename=rename, inplace=False)
 
         # check that old names don't and new names don't exist in the input
-        assert all(l in adata.layers for l in rename.keys())
+        assert all(layer in adata.layers for layer in rename.keys())
         assert all(new not in adata.layers for new in rename.values())
 
         # check that old names are removed and replaced with new names
-        assert all(l not in adata_out.layers for l in rename.keys())
+        assert all(layer not in adata_out.layers for layer in rename.keys())
         assert all(new in adata_out.layers for new in rename.values())
 
 
@@ -355,7 +355,7 @@ def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
         if keep == "all":
             assert len(adata.layers) <= len(adata_out.layers)  # assert that no layers are removed
         else:
-            assert len(adata_out.layers) == len(keep) and all(l in keep for l in adata_out.layers.keys())  # assert the correct layers are removed
+            assert len(adata_out.layers) == len(keep) and all(layer in keep for layer in adata_out.layers.keys())  # assert the correct layers are removed
 
         if replace_X:
             # assert the original .X is replaced with the right layer

@@ -744,7 +744,7 @@ def tidy_layers(adata: sc.AnnData, allow_raw: bool | str = False, rename: Option
 
     # ----- keep_X ----- #
     if keep_X:
-        if not keep_X in adata.layers:
+        if keep_X not in adata.layers:
             adata.layers[keep_X] = adata.X.copy()
         else:
             raise KeyError(f"{keep_X} is already a layer name.")
@@ -758,9 +758,9 @@ def tidy_layers(adata: sc.AnnData, allow_raw: bool | str = False, rename: Option
 
     # ----- keep ----- #
     if keep != "all":
-        for l in list(adata.layers.keys()):
-            if l not in keep:
-                del adata.layers[l]
+        for layer in list(adata.layers.keys()):
+            if layer not in keep:
+                del adata.layers[layer]
 
     if not inplace:
         return adata
