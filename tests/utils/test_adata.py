@@ -43,6 +43,10 @@ def adata():
     adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
+    # add some layers for testing
+    adata.raw = adata.copy()
+    adata.layers["layer"] = adata.X.copy() * 2
+
     return adata
 
 
@@ -291,3 +295,70 @@ def test_concadata(adatas, label, request):
     assert len(set(result.obs[label])) == len(adatas)
     if label == "dict":
         assert all(result.obs[label].isin([k]).any() for k in adatas.keys())
+
+
+@pytest.mark.parametrize("allow_raw,inplace", [(True, True),
+                                               (False, False),
+                                               ("raw", False)])
+def test_tidy_layer_raw(adata, allow_raw, inplace):
+    """Test the 'allow_raw' and 'inplace' parameter."""
+    adata_in = adata.copy() if inplace else adata
+
+    adata_out = utils.tidy_layers(adata_in, allow_raw=allow_raw, inplace=inplace)
+
+    # make sure there is a raw in the input
+    assert adata_in.raw is not None
+
+    if allow_raw is True:
+        assert adata_out is None  # assert no return if inplace
+    elif allow_raw is False:
+        assert adata_out.raw is None  # is raw deleted?
+    elif isinstance(allow_raw, str):
+        assert adata_out.raw is None and allow_raw in adata_out.layers  # is raw stored in a new layer?
+
+
+@pytest.mark.parametrize("rename", [
+    {"layer": "new_name"},  # success
+    {"layer": "layer"}  # fail (pre-existing layer)
+])
+def test_tidy_layer_rename(adata, rename):
+    """Test the 'rename' parameter."""
+    if list(rename.keys())[0] == list(rename.values())[0]:
+        with pytest.raises(KeyError):  # fail if a layer with the name already exists
+            adata_out = utils.tidy_layers(adata, rename=rename, inplace=False)
+    else:
+        adata_out = utils.tidy_layers(adata, rename=rename, inplace=False)
+
+        # check that old names don't and new names don't exist in the input
+        assert all(l in adata.layers for l in rename.keys())
+        assert all(new not in adata.layers for new in rename.values())
+
+        # check that old names are removed and replaced with new names
+        assert all(l not in adata_out.layers for l in rename.keys())
+        assert all(new in adata_out.layers for new in rename.values())
+
+
+@pytest.mark.parametrize("keep_X,replace_X,keep", [
+    ("layer", None, "all"),  # fail (pre-existing layer)
+    ("x_backup", "layer", "all"),
+    ("x_backup", None, ["x_backup"])
+])
+def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
+    """Test the 'keep_X', 'replace_X', 'keep' parameters."""
+    if keep_X in adata.layers:
+        with pytest.raises(KeyError):  # fail if a layer with the name already exists
+            adata_out = utils.tidy_layers(adata, keep_X=keep_X, replace_X=replace_X, keep=keep, inplace=False)
+    else:
+        adata_out = utils.tidy_layers(adata, keep_X=keep_X, replace_X=replace_X, keep=keep, inplace=False)
+
+        assert keep_X in adata_out.layers  # assert the new layer is created
+        if keep == "all":
+            assert len(adata.layers) <= len(adata_out.layers)  # assert that no layers are removed
+        else:
+            assert len(adata_out.layers) == len(keep) and all(l in keep for l in adata_out.layers.keys())  # assert the correct layers are removed
+
+        if replace_X:
+            # assert the original .X is replaced with the right layer
+            # this expects dense matrices
+            assert not np.array_equal(adata_out.layers[replace_X], adata.X)
+            assert np.array_equal(adata_out.layers[replace_X], adata_out.X)
