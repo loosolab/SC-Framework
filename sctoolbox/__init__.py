@@ -1,5 +1,10 @@
 """Single Cell Toolbox (sctoolbox)."""
 
+# get all loaded modules
+from sys import modules as _modules
+__cached_modules = set(_modules.keys())
+__cached_modules.remove("sctoolbox")  # to include the sctoolbox as a newly loaded package
+
 # import with prefix _ to hide them
 from ._version import __version__
 from ._settings import settings
@@ -14,7 +19,8 @@ submodules = [
 # define what is exported in this module
 __all__ = submodules + [
     "__version__",
-    "settings"
+    "settings",
+    "__cached_modules"
 ]
 
 

@@ -56,7 +56,7 @@ def adata_batch_dict(adata):
 @pytest.mark.parametrize("method", ["tfidf", "total"])
 def test_atac_norm(adata_mm10, method):
     """Test atac_norm success."""
-    adata_norm = tools.norm_correct.atac_norm(adata_mm10, method=method)  # return from function is a dict
+    adata_norm = tools.norm_correct.atac_norm(adata_mm10, method=method, target_sum=1e6)  # return from function is a dict
 
     if method == "tfidf":
         assert "X_lsi" in adata_norm.obsm and "lsi" in adata_norm.uns and "LSI" in adata_norm.varm
@@ -64,11 +64,11 @@ def test_atac_norm(adata_mm10, method):
         assert "X_pca" in adata_norm.obsm and "pca" in adata_norm.uns and "PCs" in adata_norm.varm
 
 
-@pytest.mark.parametrize("method", [["total", "tfidf"], "total", "tfidf"])
-def test_normalize_adata(adata, method):
+@pytest.mark.parametrize("method, keep_layer", [(["total", "tfidf"], "raw"), ("total", None), ("tfidf", "test")])
+def test_normalize_adata(adata, method, keep_layer):
     """Test that data was normalized."""
     # Execute function
-    result = tools.norm_correct.normalize_adata(adata, method=method)
+    result = tools.norm_correct.normalize_adata(adata, method=method, keep_layer=keep_layer, target_sum=1e6)
     # If method is a list, get the first element of the resulting dictionary
     if isinstance(method, list):
         method = method[0]
@@ -76,6 +76,10 @@ def test_normalize_adata(adata, method):
     # If method is a string, get the resulting anndata object
     elif isinstance(method, str):
         adata = result
+
+    # check for the layers
+    if keep_layer:
+        assert keep_layer in adata.layers
 
     # Check if the data was normalized
     mat = adata.X.todense()
@@ -105,12 +109,15 @@ def test_wrap_corrections(adata):
     """Test if wrapper returns a dict, and that the keys contains the given methods."""
 
     methods = ["mnn", "scanorama"]  # two fastest methods
-    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods)
+    adata_dict = tools.norm_correct.wrap_corrections(adata, batch_key="batch", methods=methods, keep_layer="test")
 
     assert isinstance(adata_dict, dict)
 
     keys = set(adata_dict.keys())
     assert len(set(methods) - keys) == 0
+
+    for a in adata_dict.values():
+        assert "test" in a.layers
 
 
 @pytest.mark.parametrize("method", ["bbknn", "mnn", "harmony", "scanorama", "combat"])

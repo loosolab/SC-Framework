@@ -1,0 +1,3 @@
+[submodule "tutorials"]
+	path = tutorials
+	url = https://gitlab.gwdg.de/loosolab/software/sc_framework_tutorials

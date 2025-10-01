@@ -12,10 +12,11 @@ from beartype.typing import Iterable, Any, Literal, Optional, Tuple
 from beartype import beartype
 
 import sctoolbox.utils as utils
+from sctoolbox._settings import settings
 
 
 @beartype
-def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> None:
+def wrap_umap(adatas: Iterable[sc.AnnData], threads: Optional[int] = None, **kwargs: Any) -> None:
     """
     Compute umap for a list of adatas in parallel.
 
@@ -23,11 +24,13 @@ def wrap_umap(adatas: Iterable[sc.AnnData], threads: int = 4, **kwargs: Any) -> 
     ----------
     adatas : Iterable[sc.AnnData]
         List of anndata objects to compute umap on.
-    threads : int, default 4
-        Number of threads to use.
+    threads : Optional[int], default None
+        Number of threads to use. None to use settings.get_threads.
     **kwargs : Any
         Additional arguments to be passed to sc.tl.umap.
     """
+    if threads is None:
+        threads = settings.get_threads()
 
     pool = mp.Pool(threads)
 
