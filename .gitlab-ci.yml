@@ -9,10 +9,15 @@
 #           If yes then a new docker image will be build and pushed to the container registry.
 #           The newly build image is then used for testing later.
 #           If no changes were made to the enviroment nothing is build and the latest image is used later on.
+#           In addition the python package is build and pushed to the Gitlab package registry but only when on the main branch.
 # 3. setup: This stage is used to get the container tag for the testing stage.
 # 4. test: This stage is used to lint the code and docstrings, to test if the minimal sctoolbox package can still be imported without additional dependencies,
 #          to run tests and to test if the notebooks contain output.
 # 5. deploy: This stage is used to build and deploy the documentation to the public pages if it was the main branch.
+# 6. publish: This stage is used to publish the package to PyPi.
+#             Also a GitLab release and tag is created.
+# 7. .post: This stage is used to delete orphan tags from the registry.
+#           It is used to delete tags that are not associated with a branch or a semantic version.
 
 stages:
   - .pre
@@ -20,6 +25,7 @@ stages:
   - setup
   - test
   - deploy
+#  - publish
   - .post
 
 # ############################################################################################################################################################
@@ -53,10 +59,10 @@ extract-version:
 
 
 # ############################################################################################################################################################
-# ######################################################### build docker image ###############################################################################
+# ###################################################################### build ###############################################################################
 # ############################################################################################################################################################
 
-# The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
+# The build job below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
@@ -101,9 +107,29 @@ build:
         - pyproject.toml
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_SLUG == 'main'  # all MR to main
 
+# Build the python wheel and push it to the Gitlab package registry
+build-package:
+  stage: build
+  image: python:latest
+  needs: [extract-version]
+  tags:
+    - sctoolbox
+  variables:
+    TWINE_USERNAME: gitlab-ci-token  # used for authentication to the Gitlab package registry
+    TWINE_PASSWORD: $CI_JOB_TOKEN
+  before_script:
+    - echo $BUILD_VERSION
+    - pip install build twine
+  script:
+    - python -m build --sdist --wheel  # build the package
+    - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
+  rules:
+    - if: $CI
+      when: manual
+
 
 # ############################################################################################################################################################
-# ######################################################### setup #############################################################################################
+# ######################################################### setup ############################################################################################
 # ############################################################################################################################################################
 
 # The setup stage is used to get the container tag for the testing stage.
