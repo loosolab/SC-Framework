@@ -111,7 +111,6 @@ build:
 build-package:
   stage: build
   image: python:latest
-  needs: [extract-version]
   tags:
     - sctoolbox
   variables:
@@ -124,8 +123,8 @@ build-package:
     - python -m build --sdist --wheel  # build the package
     - python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
   rules:
-    - if: $CI
-      when: manual
+    - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
+      allow_failure: false
 
 
 # ############################################################################################################################################################
@@ -488,7 +487,7 @@ build-pages:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
       allow_failure: false
-    - if: $CI_COMMIT_BRANCH == "main"  # always for commits to dev
+    - if: $CI_COMMIT_BRANCH == "main"  # always for commits to main
       allow_failure: false
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # all MR
       when: manual
