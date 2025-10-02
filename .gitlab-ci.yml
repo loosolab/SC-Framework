@@ -583,9 +583,9 @@ GitLab-release:
   before_script:
     - pip install python-gitlab
   script:
-    - echo "Creating release $BUILD_VERSION"
-    - # collecting changelog entries for the release description
     - |
+      echo "Creating release $BUILD_VERSION"
+      # collecting changelog entries for the release description
       changelog=$(python scripts/collect_changes.py CHANGES.rst $BUILD_VERSION)
       echo "Changelog entries:"
       echo "$changelog"
