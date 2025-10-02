@@ -1,5 +1,6 @@
 0.14.0 (in progress)
--------------------
+====================
+- automate PyPi release
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
 - CI/CD split notebook job into ATAC and RNA
@@ -8,35 +9,41 @@
 - Fix error in bam_adata_ov if some reads do not contain the tag
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - move gene annotation (clustering -> QC; #357)
 - move HFV (QC -> normalization; #355)
 
+
 0.13.5 (20-08-2025)
--------------------
+===================
 - fix pydeseq2 bug
 
+
 0.13.4 (19-08-2025)
--------------------
+===================
 - implemented global thread settings
 - fixed spelling mistake in title of predict cell cycle plot (#382)
 
+
 0.13.3 (15-08-25)
------------------
+=================
 - from_single_mtx: auto-adjust if the var/ obs file is one line of from the expected mtx
 - add rasterization to reduce resource demand for big figures (plot_embedding, feature_per_group, search_umap-/ search_tnse_parameters, anndata_overview, pairwise_scatter)
 
+
 0.13.2 (14-08-25)
------------------
+=================
 - set bbknn(computation="cKDTree") and scanorama(approx=False) to fix issue with annoy package and processor architecture
 
+
 0.13.1 (13-08-25)
------------------
+=================
 - scrublet: use forkserver to start separte processes to enable multiprocessing (#380)
 - enable AnnData write compression (this was default prior to AnnData version 0.6.16)
 
+
 0.13.0 (08-08-25)
------------------
+=================
 - predict_cell_cycle: implemented "gene_column" parameter
 - restrict the maximum size of a figure (2^16 pixle)
 - from_h5ad: expose concadata "label" parameter
@@ -60,7 +67,7 @@ Changes to notebooks
 - lsi: fixed bug scaling the total variance explained to 100%
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - velocity: Changed scvelo.read() to scanpy.read() in the velocity notebook due to deprecation (#344)
 - General: prepare_for_cellxgene: Set mampok version to 3.0.6
 - General: prepare_for_cellxgene: Add metadata parameter for mamplan correlation
@@ -95,21 +102,23 @@ Changes to notebooks
 - ATAC: Implemented TOBIAS footprinting notebook
 - General: Pseudotime: Remove threads parameter from dendrogram function
 
+
 0.12.0 (19-12-24)
------------------
+=================
 - add contrasts parameter to tools.marker_genes.run_deseq2
 - tools.marker_genes.pairwise_rank_genes check minimum amount of groups
 - cyclone fix shown top receptor/ligand genes
 - hairball add node_size & node_label_size
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - General: group_marker: set n_genes as top_n for get_rank_genes_tables
 - ATAC 01 assembly: fix error when selecting the path_mtx (3rd) option (#326)
 - General: prepare_for_cellxgene: set required mampok version to 3.0.5
 
+
 0.11.0 (08-11-24)
------------------
+=================
 - fix pl.embedding.plot_pca_variance() does not select all PCs using thr 100% (#309)
 - feature_per_group remove empty axis (#312)
 - fix get_rank_genes_tables return less than n_genes for filtered ranking
@@ -123,25 +132,27 @@ Changes to notebooks
 - add a bar plot to predict_cell_cycle (#301)
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - add agg_feature_embedding to the group_marker notebook
 - fix RNA:02 zebrafish gender suggestion (#311)
 - revise 03_normalization_batch_correction notebook
 - prepare_for_cellxgene: Add auth parameter
 - use the bgcolor cell-selection in all notebooks
 
+
 0.10.1 (17-09-24)
------------------
+=================
 - temp fix pycirclize KeyError (until this is done https://github.com/moshi4/pyCirclize/issues/75)
 - fix .A1 deprecated
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - rna/qc: add use_native parameter
 - annotation: fix marker repo clone cell
 
+
 0.10.0 (10-09-24)
------------------
+=================
 - deseq2 (R) -> pydeseq2 (python)
 - add MAD filtering as alternative to gaussian-mixture model (#261)
 - enhance gene labelling (#38)
@@ -157,7 +168,7 @@ Changes to notebooks
 - fixed env issue
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - expand marker_genes notebook for atac & move to general_notebooks
 - add option to choose filter method in rna/qc notebook
 - add alternative to interactive thresholds (#38)
@@ -172,8 +183,9 @@ Changes to notebooks
 - ATAC: 01_assembling_anndata: Move ATAC metric to notebook 2
 - RNA: 03_normalization_batch_correction revise docu and description (#298)
 
+
 0.9.0 (02-08-24)
-----------------
+================
 - Added denoising function using scAR to QC notebook
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
@@ -197,7 +209,7 @@ Changes to notebooks
 - expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - improvments in description and structure of atac and general notebooks (#144)
 - added header parameter to option 2 in notebook 01_assembling_anndata (#280)
 - added notebook versioning (#115)
@@ -207,8 +219,9 @@ Changes to notebooks
 - RNA: Notebook 4: Replaced sc.pl.embedding from scanpy with pl.embedding.plot_embedding from sctoolbox
 - Cleanup internal notebook structure
 
+
 0.8.0 (14-06-24)
-----------------
+================
 - from_mtx: support more folder structures and variable file now optional (#234, #240)
 - ligand-receptor: download_db added support for LIANA resources
 - revised tsse scoring and fixed matplotlib version conflict (#257)
@@ -221,14 +234,15 @@ Changes to notebooks
 - removed cleanup temp for the selfservice container (#258)
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - rna/ atac more subset PC description
 - rna/ atac clustering renamed "recluster" -> "revise cluster"
 - Add GSEA notebook (#172)
 - rna/atac assembly notebook update from_mtx (#234, #240)
 
+
 0.7.0 (23-04-24)
-----------------
+================
 - Added code examples for tools and utils (#140)
     - recluster 
     - group_heatmap
@@ -240,17 +254,19 @@ Changes to notebooks
 - fixed PCA-var plot not fitting into anndata_overview (#232)
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - Overhaul RNA & ATAC notebooks structure (includes #207)
 - Revise RNA notebook 4 recluster section (#201)
 
+
 0.6.1 (28-03-24)
-----------------
+================
 - Fix release pages by renaming the release-pages: job to pages:
 - refactor move clean-orphaned-tags to new stage .post (#229)
 
+
 0.6 (27-03-24)
---------------
+==============
 - Fix unable to determine R_HOME error (#190)
 - implemented propose_pcs to automatically select PCA components (#187)
 - add correlation barplot to plot_pca_variance
@@ -260,7 +276,7 @@ Changes to notebooks
 - fixed notebook version in the env to 6.5.2 (#199, partly #44)
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - Move proportion_analysis notebooks to general notebooks (#195 and #214)
 - replace scanpy pseudotime with scFates in pseudotime_analysis notebook
 - prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
@@ -268,9 +284,9 @@ Changes to notebooks
 - rna 03_batch revision (#209, #202, #200, #152)
 - 05_marker_genes: Complete Overhaul (#181)
 
-0.5 (04-03-24)
---------------
 
+0.5 (04-03-24)
+==============
 - add receptor_genes & ligand_genes parameters to connectionPlot and decreased runtime
 - readme update(#188)
 - Fix error when writing adata converted from an R object (#205, #180)
@@ -284,7 +300,7 @@ Changes to notebooks
 - start change log
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - rna assembly: refactor
 - prepare_for_cellxgene: Added BN_public as possible deployment cluster (#192)
 - 14_velocity_analysis: Remove duplicate parameter (#194)
@@ -293,7 +309,7 @@ Changes to notebooks
 
 
 0.4 (31-1-24)
--------------
+=============
 - Fix get_rank_genes_tables for groups without marker genes (#179)
 - Bugfixes for CI jobs
 - Fix check_changes pipeline
@@ -307,13 +323,14 @@ Changes to notebooks
 - gerneral text revisions
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - Add pseudotime & velocity analysis notebooks (#164)
 - Update receptor-ligand notebook (#176)
 - Refactored annotate_genes() from ATAC-notebook 05 to 04 and removed 05 (#175)
 
+
 0.3 (30-11-2023)
-----------------
+================
 - Add parameter type hinting including runtime type checking (#46)
 - Fixed prepare_for_cellxgene color issue (#145, #146)
 - Add CI/CD container build pipeline for testing (#135)
@@ -332,20 +349,20 @@ Changes to notebooks
 - changed typing to beartype.typing
 - Added GenomeTracks plotting
 - Fix batch evaluation for small datasets (#148)
-- Added **kwargs to functions which are wrappers for other functions
+- Added \*\*kwargs to functions which are wrappers for other functions
 - added RAGI cluster validation to clustering.py (!201)
 - started disintegrating fld scoring (!201)
 - reorganised ATAC-notebooks (!201)
 
 Changes to notebooks
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 - Added prepare for cellxgene notebook (#139)
 - Added plot of highly expressed genes to RNA notebook 03 (#43)
 - Changed structure of notebooks in directory; added "notebooks" subdirectories for RNA and ATAC
 
 
 0.2 (30-08-2023)
-----------------
+================
 - fix error in prepare_for_cellxgene caused by .uns[_color] not matching .obs column. (#176)
 - implemented prepare_for_cellxgene (#147)
 - fixed raw value copy issue in rna/02-batch notebook
@@ -379,19 +396,20 @@ Changes to notebooks
 - Fixed issues with clustered dotplot with new code (#122)
 
 Changes to RNA notebooks
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 - Added display of 3D UMAP html in notebook 04 (#119)
 
 Changes to ATAC notebooks
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
 - Added custome cwt implementation
 - Added additional parameters to add_insertsize_metrics
 - Revised nucleosomal score scoring
 
+
 0.1.1 (24-05-2023)
-------------------
+==================
 - Fixed import issue
 - Make version accessible
 - Added check for CHANGES.rst in gitlab-ci
@@ -399,6 +417,7 @@ Changes to ATAC notebooks
 - Fixed bug in tools.norm_correct.atac_norm
 - Added check for sctoolbox/_version.py file in gitlab-ci
 
+
 0.1 (22-05-2023)
-----------------
+================
 - First version
