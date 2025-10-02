@@ -92,7 +92,7 @@ setup(
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3.9',  # dict type hints as we use it require python 3.9
+    python_requires='>=3.9,<3.13',  # dict type hints as we use it require python 3.9; 3.13 not supported by cmake # https://github.com/python-cmake-buildsystem/python-cmake-buildsystem/issues/350
     install_requires=[
         'pysam',
         'matplotlib',
