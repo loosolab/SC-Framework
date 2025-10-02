@@ -591,14 +591,14 @@ GitLab-release:
       echo "$changelog"
       export CHANGELOG="$changelog"
   release:
-  name: 'Release $BUILD_VERSION'
-  description: '$CHANGELOG'
-  tag_name: 'v$BUILD_VERSION'
-  ref: '$CI_COMMIT_SHA'
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
-    - if: $CI  # TODO remove 
-      when: manual  # TODO remove
+    name: 'Release $BUILD_VERSION'
+    description: '$CHANGELOG'
+    tag_name: 'v$BUILD_VERSION'
+    ref: '$CI_COMMIT_SHA'
+    rules:
+      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
+      - if: $CI  # TODO remove 
+        when: manual  # TODO remove
 
 
 # ############################################################################################################################################################
