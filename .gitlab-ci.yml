@@ -122,11 +122,14 @@ build-package:
   script:
     - python -m build --sdist --wheel  # build the package
     - python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
+  artifacts:
+    paths:
+      - dist/*
   rules:
     - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
       allow_failure: false
-      if: $CI
-      when: manual
+      if: $CI  # TODO remove 
+      when: manual  # TODO remove
 
 # ############################################################################################################################################################
 # ######################################################### setup ############################################################################################
@@ -545,7 +548,35 @@ pages:
       allow_failure: false  # main not allowed to fail
 
 # ############################################################################################################################################################
-# ######################################################### .post #############################################################################################
+# ########################################################################## Publish #########################################################################
+# ############################################################################################################################################################
+
+# Publish the package that was build in the build stage to PyPI.
+PyPI:
+  stage: publish
+  image: python:latest
+  needs:
+    - job: build-package
+      artifacts: true
+  tags:
+    - sctoolbox
+  variables:
+    TWINE_USERNAME: __token__  # used for authentication to PyPI
+    TWINE_PASSWORD: $PYPI_API_TOKEN
+  before_script:
+    - echo $BUILD_VERSION
+    - pip install build twine
+  script:
+    - ls -lah dist/  # to check if the package is there
+    - python -m twine upload --verbose --repository pypi dist/*  # upload the package to PyPI
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
+      allow_failure: false
+
+# TODO create GitLab release and tag
+
+# ############################################################################################################################################################
+# ######################################################### .post ############################################################################################
 # ############################################################################################################################################################
 
 # clean up
