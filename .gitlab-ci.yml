@@ -595,10 +595,10 @@ GitLab-release:
     description: '$CHANGELOG'
     tag_name: 'v$BUILD_VERSION'
     ref: '$CI_COMMIT_SHA'
-    rules:
-      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
-      - if: $CI  # TODO remove 
-        when: manual  # TODO remove
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
+    - if: $CI  # TODO remove 
+      when: manual  # TODO remove
 
 
 # ############################################################################################################################################################
