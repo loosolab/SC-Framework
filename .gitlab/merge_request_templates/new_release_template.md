@@ -18,3 +18,6 @@ The main and dev branch are automatically mirrored.
 A Github release automatically triggers a Zenodo release.
 - [ ] check if the Github release triggered Zenodo (may take a few minuts)
 - [ ] adjust the authors in Zenodo (see the prior release)
+### PyPI
+The final step in the CI/CD pipeline creates a new PyPI release (after ~1.5 hrs).
+- [ ] check if the release was sucessful
