@@ -128,12 +128,11 @@ build-package:
     - changelog=$(python scripts/collect_changes.py CHANGES.rst $BUILD_VERSION)
     - echo "Changelog entries:"
     - echo "$changelog"
-    - echo "CHANGELOG=$changelog" >> build.env
+    - echo "$changelog" >> release.description
   artifacts:
     paths:
       - dist/*
-    reports:
-      dotenv: build.env
+      - release.description
   rules:
     - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
       allow_failure: false
@@ -565,7 +564,7 @@ GitLab-release:
   stage: publish
   image: registry.gitlab.com/gitlab-org/cli:latest
   needs:
-    - job: extract-version  # so $BUILD_VERSION and $CHANGELOG is available
+    - job: extract-version  # so $BUILD_VERSION and release.description is available
       artifacts: true
     - job: build-package  # so the build package is available
       artifacts: true
@@ -578,7 +577,7 @@ GitLab-release:
     - echo "Running $BUILD_VERSION release"
   release:
     name: 'Release $BUILD_VERSION'
-    description: '$CHANGELOG'
+    description: ./release.description
     tag_name: 'v$BUILD_VERSION'
     ref: '$CI_COMMIT_SHA'
   rules:
