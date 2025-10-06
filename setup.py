@@ -13,7 +13,7 @@ import subprocess
 # do this here (not in conda) to make this package buildable without prior steps
 pre_deps = [
     "cmake>=3.18",  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
-    "setuptools_scm==8.0.4"  # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
+    "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
 ]
 
 # get a clean bash path (not altered by the pip build process)
