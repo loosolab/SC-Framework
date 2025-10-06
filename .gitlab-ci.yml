@@ -582,7 +582,7 @@ GitLab-release:
       artifacts: true
   before_script:
     # install the GitLab CLI tool
-    - curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository | sudo bash
+    - curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository | bash
     - apt install -y glab
     - glab --version
     - glab auth login --job-token $CI_JOB_TOKEN --hostname $CI_SERVER_HOST --api-protocol $CI_SERVER_PROTOCOL
