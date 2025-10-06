@@ -22,7 +22,7 @@ for i, line in enumerate(lines):
         start = i
         break
 if start == -1:
-    raise ValueError(f"Version {version} not found in changelog")
+    raise ValueError(f"Version {version} not found in changelog. Are the versions in sctoolbox/_version.py and CHANGES.rst matching?")
 
 # search for the end
 for i in range(start + 2, len(lines)):
