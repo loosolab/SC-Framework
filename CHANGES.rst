@@ -1,4 +1,4 @@
-0.14.0 (in progress)
+0.14.0b (in progress)
 ====================
 - automate PyPi release
 - fix error making assembly notebook mandatory when generating report (#383)
