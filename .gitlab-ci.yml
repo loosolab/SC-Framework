@@ -574,6 +574,8 @@ GitLab-release:
     #- job: check-changes
     #- job: lint
     #- job:test import
+  script:
+    - echo "Running $BUILD_VERSION release"
   release:
     name: 'Release $BUILD_VERSION'
     description: '$CHANGELOG'
