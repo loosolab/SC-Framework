@@ -560,6 +560,33 @@ pages:
 # ########################################################################## Publish #########################################################################
 # ############################################################################################################################################################
 
+# TODO create GitLab release and tag
+GitLab-release:
+  stage: publish
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs:
+    - job: extract-version  # so $BUILD_VERSION and $CHANGELOG is available
+      artifacts: true
+    - job: build-package  # so the build package is available
+      artifacts: true
+    # wait until the tests are done
+    #- job: test coverage
+    #- job: check-changes
+    #- job: lint
+    #- job:test import
+  release:
+    name: 'Release $BUILD_VERSION'
+    description: '$CHANGELOG'
+    tag_name: 'v$BUILD_VERSION'
+    ref: '$CI_COMMIT_SHA'
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
+    - if: $CI_COMMIT_TAG
+      when: never  # don't run this job for tags, only for commits to main
+    - if: $CI  # TODO remove 
+      when: manual  # TODO remove
+  
+
 # Publish the package that was build in the build stage to PyPI.
 PyPI:
   stage: publish
@@ -567,6 +594,8 @@ PyPI:
   needs:
     - job: build-package
       artifacts: true
+    # release a fully tested package to PyPI
+    - job: GitLab-release
   tags:
     - sctoolbox
   variables:
@@ -581,27 +610,6 @@ PyPI:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
       allow_failure: false
-
-# TODO create GitLab release and tag
-GitLab-release:
-  stage: publish
-  image: registry.gitlab.com/gitlab-org/cli:latest
-  needs:
-    - job: extract-version  # so $BUILD_VERSION and $CHANGELOG is available
-      artifacts: true
-    - job: build-package  # so the build package is available
-      artifacts: true
-  release:
-    name: 'Release $BUILD_VERSION'
-    description: '$CHANGELOG'
-    tag_name: 'v$BUILD_VERSION'
-    ref: '$CI_COMMIT_SHA'
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
-    - if: $CI_COMMIT_TAG
-      when: never  # don't run this job for tags, only for commits to main
-    - if: $CI  # TODO remove 
-      when: manual  # TODO remove
 
 
 # ############################################################################################################################################################
