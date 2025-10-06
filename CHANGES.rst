@@ -9,6 +9,7 @@
 
 Changes to notebooks
 ^^^^^^^^^^^^^^^^^^^^
+- update proportion_analysis notebook to be compatible with scanpro 0.4.0
 - move gene annotation (clustering -> QC; #357)
 - move HFV (QC -> normalization; #355)
 
