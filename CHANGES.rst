@@ -1,6 +1,7 @@
 0.14.0 (in progress)
 ====================
 - automate PyPi release
+- implemented sctoolbox.utils.adata.tidy_layers (#363)
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
 - CI/CD split notebook job into ATAC and RNA
@@ -13,6 +14,7 @@ Changes to notebooks
 - update proportion_analysis notebook to be compatible with scanpro 0.4.0
 - move gene annotation (clustering -> QC; #357)
 - move HFV (QC -> normalization; #355)
+- ATAC & RNA assembly: add section to adjust layers (#363)
 
 
 0.13.5 (20-08-2025)
