@@ -569,10 +569,10 @@ GitLab-release:
     - job: build-package  # so the build package is available
       artifacts: true
     # wait until the tests are done
-    #- job: test coverage
-    #- job: check-changes
-    #- job: lint
-    #- job:test import
+    - job: test coverage
+    - job: check-changes
+    - job: lint
+    - job: test import
   script:
     - echo "Running $BUILD_VERSION release"
   release:
