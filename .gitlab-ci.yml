@@ -586,7 +586,6 @@ GitLab-release:
     - apt install -y glab
     - glab --version
     - glab auth login --job-token $CI_JOB_TOKEN --hostname $CI_SERVER_HOST --api-protocol $CI_SERVER_PROTOCOL
-
   script:
     - |
       echo "Creating release $BUILD_VERSION"
