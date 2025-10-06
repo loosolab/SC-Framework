@@ -576,12 +576,17 @@ PyPI:
 # TODO create GitLab release and tag
 GitLab-release:
   stage: publish
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  image: python:latest
   needs:
     - job: build-package
       artifacts: true
   before_script:
-    - pip install python-gitlab
+    # install the GitLab CLI tool
+    - curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository | sudo bash
+    - apt install -y glab
+    - glab --version
+    - glab auth login --job-token $CI_JOB_TOKEN --hostname $CI_SERVER_HOST --api-protocol $CI_SERVER_PROTOCOL
+
   script:
     - |
       echo "Creating release $BUILD_VERSION"
