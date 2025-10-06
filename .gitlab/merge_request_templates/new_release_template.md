@@ -6,7 +6,7 @@
 - [ ] Update Notebook versions by running ./scripts/change_notebook_versions.py
 
 ## After merge:
-### Gitlab (automated pipeline takes ~1.5 hrs)
+### Gitlab (automated; pipeline takes ~1.5 hrs)
 - [ ] Create new release
 - [ ] Add new version tag
 ### Github (https://github.com/loosolab/SC-Framework)
