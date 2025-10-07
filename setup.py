@@ -85,11 +85,19 @@ packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. pr
 modules = glob.glob("sctoolbox/*.py")
 modules = [m.replace("/", ".")[:-3] for m in modules if not m.endswith("__init__.py")]  # omit file ending and adjust path to import format e.g. sctoolbox._modules
 
+# Readme from git
+def readme():
+    """Collect the readme file content."""
+    with open('README.md') as f:
+        return f.read()
+
 setup(
     # This is the name of the package important in PyPI, important during installation "pip install SC-Framework".
     # The package is imported using "import sctoolbox" defined by the folder name.
     name='SC-Framework',
     description='Custom modules for single cell analysis',
+    long_description=readme(),
+    long_description_content_type='text/markdown',
     version=find_version(os.path.join("sctoolbox", "_version.py")),
     license='MIT',
     packages=packages,
