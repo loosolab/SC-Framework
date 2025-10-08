@@ -105,3 +105,50 @@ def download_dataset(pattern: str,
 
     # Download files which match the pattern
     s3_downloader(client, bucket, pattern_files, force, download_path)
+
+
+# ---------------------------------------- Datasets ----------------------------------------
+# Functions to download specific datasets from S3.
+
+@beartype
+def rna_fabian22():
+    """
+    Download the scRNA zebrafish cranial neural crest data of `Fabian et al.`_ , which was used in the SC-Framework paper.
+
+    .. _Fabian et al.: https://doi.org/10.1038/s41467-021-27594-w
+    .. _GEO: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE178969
+
+    .. note::
+        The total size is ~260 MB.
+
+    Downloads a folder containing one .h5ad per sample/replicate. The .h5ad files are assembled from the supplementary files of each sample provided in `GEO`_.
+    The files were assembled using :func:`~sctoolbox.utils.assemblers.from_single_mtx`.
+    """
+    pass
+
+
+@beartype
+def atac_pbmc10k():
+    """
+    Download the snATAC `human peripheral mononuclear cells of 10X Genomics`_ and additional data, which was used in the SC-Framework paper.
+
+    .. _human peripheral mononuclear cells of 10X Genomics: https://www.10xgenomics.com/datasets/10k-human-pbmcs-atac-v2-chromium-controller-2-standard
+    .. _source: https://doi.org/10.5281/zenodo.1491733
+    .. _JASPAR: https://doi.org/10.1093/nar/gkad1059
+    .. _ENSEMBL: https://doi.org/10.1093/nar/gkac958
+
+    .. note::
+        The total size is ~52 GB.
+
+    Files/ folders originating from 10X Genomics are:
+        - filtered_peak_bc_matrix
+        - 10k_pbmc_ATACv2_nextgem_Chromium_Controller_fragments.tsv
+        - 10k_pbmc_ATACv2_nextgem_Chromium_Controller_possorted_bam.bam
+    Additional files:
+        - hg38.blacklist.v2.bed (source_)
+        - JASPAR2024_CORE_vertebrates_non-redundant_pfms_jaspar.txt (JASPAR_)
+        - homo_sapiens.110.mainChr.fa (ENSEMBL_)
+        - homo_sapiens.110.genes.gtf (ENSEMBL_)
+        - homo_sapiens.110.promoters2000.gtf (corresponds to the genes of the above file. Assigns the 2000bp upstream of each gene as promoter.)
+    """
+    pass
