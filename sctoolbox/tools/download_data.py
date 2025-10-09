@@ -111,7 +111,7 @@ def download_dataset(pattern: str,
 # Functions to download specific datasets from S3.
 
 @beartype
-def rna_fabian22():
+def rna_fabian22(path: str = ".") -> None:
     """
     Download the scRNA zebrafish cranial neural crest data of `Fabian et al.`_ , which was used in the SC-Framework paper.
 
@@ -123,12 +123,18 @@ def rna_fabian22():
 
     Downloads a folder containing one .h5ad per sample/replicate. The .h5ad files are assembled from the supplementary files of each sample provided in `GEO`_.
     The files were assembled using :func:`~sctoolbox.utils.assemblers.from_single_mtx`.
+
+    Parameters
+    ----------
+    path : str, default "."
+        Download the files to this directory.
     """
+    # should I create a folder within path or should the files be directly in path?
     pass
 
 
 @beartype
-def atac_pbmc10k():
+def atac_pbmc10k(path: str = ".") -> None:
     """
     Download the snATAC `human peripheral mononuclear cells of 10X Genomics`_ and additional data, which was used in the SC-Framework paper.
 
@@ -147,8 +153,13 @@ def atac_pbmc10k():
     Additional files:
         - hg38.blacklist.v2.bed (source_)
         - JASPAR2024_CORE_vertebrates_non-redundant_pfms_jaspar.txt (JASPAR_)
-        - homo_sapiens.110.mainChr.fa (ENSEMBL_)
-        - homo_sapiens.110.genes.gtf (ENSEMBL_)
+        - homo_sapiens.110.mainChr.fa (ENSEMBL_ 110)
+        - homo_sapiens.110.genes.gtf (ENSEMBL_ 110)
         - homo_sapiens.110.promoters2000.gtf (corresponds to the genes of the above file. Assigns the 2000bp upstream of each gene as promoter.)
+
+    Parameters
+    ----------
+    path : str, default "."
+        Download the files to this directory.
     """
     pass
