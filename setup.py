@@ -39,7 +39,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "pseudotime": ["scFates"],
                   "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
-                  "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
+                  "scar": ["scar @ git+https://github.com/Novartis/scar.git"],
                   "pilotpy" : ["pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git"]
                   }
 
