@@ -1,5 +1,7 @@
 0.14.0 (in progress)
 -------------------
+- sctoolbox.tools.download_data s3_downloader, download_data add option to display progress bar
+- add functions to download exemplary RNA and ATAC datasets (#376)
 - implemented sctoolbox.utils.adata.tidy_layers
 - fix error making assembly notebook mandatory when generating report (#383)
 - replace "/" in AnnData before saving to avoid errors (#388)
