@@ -528,7 +528,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
         Alternative names to be used as sheet names. Needed when sanitized names are not unique, which can happen when names are shortened to the first 30 charachter.
         Only relevant when saving to excel.
         E.g. ["Truncated_reeeeeally_long_name_1", "Truncated_reeeeeally_long_name_2"] would be shortened to "Truncated_reeeeeally_long_name" in both cases so names are duplicated.
-        This is solved with alternate names: {"Truncated_reeeeeally_long_name_1": "Unique_1", "Truncated_reeeeeally_long_name_2": "Unique_2"}. 
+        This is solved with alternate names: {"Truncated_reeeeeally_long_name_1": "Unique_1", "Truncated_reeeeeally_long_name_2": "Unique_2"}.
 
     Returns
     -------
