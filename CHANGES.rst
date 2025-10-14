@@ -1,5 +1,6 @@
 0.14.0 (in progress)
 ====================
+- fix tools.marker_genes.get_rank_genes_tables may overwrite sheets (#332)
 - automate PyPi release
 - implemented sctoolbox.utils.adata.tidy_layers (#363)
 - fix error making assembly notebook mandatory when generating report (#383)
