@@ -7,13 +7,13 @@ from pathlib import Path
 import tarfile
 import tqdm
 
-from sctoolbox._settings import settings
-logger = settings.logger
-
 from beartype import beartype
 from typing import Annotated
 from beartype.vale import Is
 from beartype.typing import Optional
+
+from sctoolbox._settings import settings
+logger = settings.logger
 
 Client = Annotated[object, Is[
     lambda obj: obj.__class__.__name__ == "S3"]]
@@ -184,6 +184,7 @@ def _download_and_unpack(archive_name: str, path: str | Path = ".", keep_archive
 
 # ---------------------------------------- Datasets ----------------------------------------
 # Functions to download specific datasets from S3.
+
 
 @beartype
 def rna_fabian22(path: str | Path = ".", keep_archive: bool = False) -> None:
