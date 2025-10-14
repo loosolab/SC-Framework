@@ -541,7 +541,6 @@ def get_rank_genes_tables(adata: sc.AnnData,
         1. If not all columns given in var_columns are in adata.var.
         2. If key cannot be found in adata.uns.
     """
-
     # Check that all given columns are valid
     if len(var_columns) > 0:
         for col in var_columns:
@@ -642,7 +641,7 @@ def get_rank_genes_tables(adata: sc.AnnData,
             sheet["logfoldchanges"] = sheet["logfoldchanges"].round(3)
 
             sheets[group] = sheet
-        
+
         # sanitize sheet names and check for duplicated names
         sani_names_dupl = {}  # key: sanitized name, value: list of full names
         sani_names = {}  # key: full name, value: sanitized name
@@ -659,7 +658,6 @@ def get_rank_genes_tables(adata: sc.AnnData,
                 logger.error(f"Group names {full_list} are the same after sheet name sanitazion ({sani}).")
         if duplicates:
             raise ValueError("Found duplicate sheet names after normalization. Use the 'alt_name' parameter to provide alternate names for the affected groups.")
-
 
         # Save tables to joined excel
         filename = Path(settings.full_table_prefix) / save_excel
