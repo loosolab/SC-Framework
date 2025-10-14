@@ -540,12 +540,10 @@ def from_mtx(path: str,
 
 @beartype
 def convertToAdata(file: str,
-                   output: Optional[str] = None,
                    r_home: Optional[str] = None,
-                   layer: Optional[str] = None,
-                   report: Optional[str] = None) -> Optional[sc.AnnData]:
+                   layer: Optional[str] = None) -> Optional[sc.AnnData]:
     """
-    Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert .rds file containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
@@ -553,21 +551,17 @@ def convertToAdata(file: str,
     ----------
     file : str
         Path to the .rds or .robj file.
-    output : Optional[str], default None
-        Path to output .h5ad file. Won't save if None.
     r_home : Optional[str], default None
         Path to the R home directory. If None will construct path based on location of python executable.
         E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
     layer : Optional[str], default None
         Provide name of layer to be stored in anndata. By default the main layer is stored.
         In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
-    report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
-    Optional[sc.AnnData]
-        Returns converted anndata object if output is None.
+    sc.AnnData
+        Returns converted anndata object.
     """
 
     # Setup R
@@ -663,16 +657,74 @@ def convertToAdata(file: str,
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
+    return adata
+
+
+def from_rds(
+        rds_file: Union[str, Collection[str], Mapping[str, str]],
+        output: Optional[str] = None,
+        label: Optional[str] = None,
+        report: Optional[str] = None,
+        **kwargs: Any) -> Optional[sc.AnnData]:
+    """
+    Convert .rds file(s) containing Seurat or SingleCellExperiment to scanpy anndata.
+
+    In order to work an R installation with Seurat & SingleCellExperiment is required.
+
+    Parameters
+    ----------
+    rds_file : Union[str, Collection[str], Mapping[str, str]]
+        Path or list of phts to the .rds or .robj file(s).
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in.
+        Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+    output : Optional[str], default None
+        Path to output .h5ad file. Won't save if None.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    **kwargs : Any
+        Contains additional arguments for the sctoolbox.utils.assemblers.convertToAdata method.
+
+    Returns
+    -------
+    sc.AnnData
+        Returns converted (and merged) anndata object.
+    """
+
+    anndata_list = list()
+    # Convert all given files to anndata objects and store in list
+    for f in rds_file:
+        anndata_list.append()
+    adata = utils.concadata(anndata_list, label="rds_batch")
+
+    if isinstance(rds_file, str):
+        adata = convertToAdata(rds_file, **kwargs)
+    elif isinstance(rds_file, Mapping):
+        # load then combine anndata objects
+        adata = utils.adata.concadata({k: convertToAdata(f, **kwargs) for k, f in rds_file.items()}, label=label)
+    else:
+        # load then combine anndata objects
+        adata = utils.adata.concadata([convertToAdata(f, **kwargs) for f in rds_file], label=label)
+
     # generate and save report
     if settings.report_dir and report:
-        info_table = {
-            "Name": ["NA"],
-            "Source": [os.path.abspath(file)]
-        }
+        info_table = {}
+
+        if isinstance(rds_file, str):
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(rds_file)
+        elif isinstance(rds_file, Mapping):
+            for k, v in rds_file.items():
+                info_table.setdefault("Name", []).append(k)
+                info_table.setdefault("Source", []).append(v)
+        else:
+            for v in rds_file:
+                info_table.setdefault("Name", []).append("NA")
+                info_table.setdefault("Source", []).append(v)
 
         # save table
         plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
-
+    
     if output:
         # Saving adata.h5ad
         adata.write(filename=output, compression='gzip')
