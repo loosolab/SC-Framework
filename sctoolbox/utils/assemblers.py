@@ -691,12 +691,6 @@ def from_rds(
         Returns converted (and merged) anndata object.
     """
 
-    anndata_list = list()
-    # Convert all given files to anndata objects and store in list
-    for f in rds_file:
-        anndata_list.append()
-    adata = utils.concadata(anndata_list, label="rds_batch")
-
     if isinstance(rds_file, str):
         adata = convertToAdata(rds_file, **kwargs)
     elif isinstance(rds_file, Mapping):
