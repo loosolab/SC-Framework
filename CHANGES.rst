@@ -3,6 +3,9 @@
 - sctoolbox.tools.download_data: s3_downloader, download_data add option to display progress bar
 - add functions to download exemplary RNA and ATAC datasets (#376)
 - implemented sctoolbox.utils.adata.tidy_layers
+- prepare_atac_anndata: remove "path_h5ad" parameter (#335)
+- fix pl.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
+- fix tools.marker_genes.get_rank_genes_tables may overwrite sheets (#332)
 - automate PyPi release
 - implemented sctoolbox.utils.adata.tidy_layers (#363)
 - fix error making assembly notebook mandatory when generating report (#383)
