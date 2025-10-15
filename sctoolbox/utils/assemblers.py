@@ -543,7 +543,7 @@ def convertToAdata(file: str,
                    r_home: Optional[str] = None,
                    layer: Optional[str] = None) -> sc.AnnData:
     """
-    Convert .rds file containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert one .rds or .robj file containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
@@ -667,14 +667,14 @@ def from_rds(
         report: Optional[str] = None,
         **kwargs: Any) -> Optional[sc.AnnData]:
     """
-    Convert .rds file(s) containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert one or more .rds/.robj file(s) containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
     Parameters
     ----------
     rds_file : Union[str, Collection[str], Mapping[str, str]]
-        Path or list of phts to the .rds or .robj file(s).
+        Path or list of paths to the .rds or .robj file(s).
     label: Optional[str], default "batch"
         Name of the `adata.obs` column to place the batch information in.
         Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
