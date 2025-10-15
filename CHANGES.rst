@@ -1,5 +1,6 @@
 0.14.0 (in progress)
 ====================
+- prepare_atac_anndata: remove "path_h5ad" parameter (#335)
 - fix pl.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - fix tools.marker_genes.get_rank_genes_tables may overwrite sheets (#332)
 - automate PyPi release
