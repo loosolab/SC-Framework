@@ -91,6 +91,7 @@ def download_dataset(pattern: str,
                      progress: bool = False):
     """
     Prepare and download data from an S3 storage.
+
     This initiates the S3 client and select files based on a regex like pattern.
     Subsequently the selected files are downloaded by s3_downloader.
 
