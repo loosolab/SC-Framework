@@ -541,7 +541,7 @@ def from_mtx(path: str,
 @beartype
 def convertToAdata(file: str,
                    r_home: Optional[str] = None,
-                   layer: Optional[str] = None) -> Optional[sc.AnnData]:
+                   layer: Optional[str] = None) -> sc.AnnData:
     """
     Convert .rds file containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -662,8 +662,8 @@ def convertToAdata(file: str,
 
 def from_rds(
         rds_file: Union[str, Collection[str], Mapping[str, str]],
-        output: Optional[str] = None,
         label: Optional[str] = None,
+        output: Optional[str] = None,
         report: Optional[str] = None,
         **kwargs: Any) -> Optional[sc.AnnData]:
     """
@@ -687,8 +687,8 @@ def from_rds(
 
     Returns
     -------
-    sc.AnnData
-        Returns converted (and merged) anndata object.
+    Optional[sc.AnnData]
+        Returns converted (and merged) anndata object or None when output is set.
     """
 
     if isinstance(rds_file, str):
@@ -718,7 +718,7 @@ def from_rds(
 
         # save table
         plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
-    
+
     if output:
         # Saving adata.h5ad
         adata.write(filename=output, compression='gzip')
