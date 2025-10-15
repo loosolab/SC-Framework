@@ -27,7 +27,7 @@ def s3_downloader(client: Client,
                   download_path: Optional[str] = None,
                   progress: bool = False):
     """
-    Target is the name of the folder to save files to.
+    Download selected files from the given client's S3 storage.
 
     Parameters
     ----------
@@ -90,7 +90,9 @@ def download_dataset(pattern: str,
                      force: bool = False,
                      progress: bool = False):
     """
-    Download data from an S3 storage.
+    Prepare and download data from an S3 storage.
+    This initiates the S3 client and select files based on a regex like pattern.
+    Subsequently the selected files are downloaded by s3_downloader.
 
     Parameters
     ----------
