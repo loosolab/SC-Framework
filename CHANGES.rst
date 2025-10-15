@@ -1,6 +1,7 @@
 0.14.0 (in progress)
 ====================
-- fix pl.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
+- fix sctoolbox.plotting.qc_filter.quality_violin warning (#347)
+- fix sctoolbox.plotting.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - fix tools.marker_genes.get_rank_genes_tables may overwrite sheets (#332)
 - automate PyPi release
 - implemented sctoolbox.utils.adata.tidy_layers (#363)
