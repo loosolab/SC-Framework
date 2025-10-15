@@ -30,7 +30,7 @@ import sctoolbox.utils.decorator as deco
 def rank_genes_plot(adata: sc.AnnData,
                     key: Optional[str] = "rank_genes_groups",
                     genes: Optional[list[str] | dict[str, list[str]]] = None,
-                    n_genes: int = 15,
+                    n_genes: Optional[int] = 15,
                     dendrogram: bool = False,
                     groupby: Optional[str] = None,
                     title: Optional[str] = None,
@@ -50,7 +50,7 @@ def rank_genes_plot(adata: sc.AnnData,
         Key from `adata.uns` to plot. For example, `rank_genes_groups` or `rank_genes_groups_filtered`.
     genes : Optional[list[str] | dict[str, list[str]]], default None
         List of genes to plot across groups in 'groupby'. If a dict is passed, the keys are the group names and the values are lists of genes. Setting 'genes' overrides the 'key' parameter.
-    n_genes : int, default 15
+    n_genes : Optional[int], default 15
         Number of genes to plot if `key` is specified.
     dendrogram : bool, default False
         Whether to show the dendrogram for groups.
