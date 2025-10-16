@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping, Callable
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -127,35 +127,9 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report:
     sc.AnnData
         The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
     """
-    if isinstance(h5ad_file, str):
-        adata = sc.read_h5ad(filename=h5ad_file)
-    elif isinstance(h5ad_file, Mapping):
-        # load then combine anndata objects
-        adata = utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()}, label=label)
-    else:
-        # load then combine anndata objects
-        adata = utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file], label=label)
 
-    # generate and save report
-    if settings.report_dir and report:
-        info_table = {}
+    return _read_and_merge(h5ad_file, sc.read_h5ad, label, report)
 
-        if isinstance(h5ad_file, str):
-            info_table.setdefault("Name", []).append("NA")
-            info_table.setdefault("Source", []).append(h5ad_file)
-        elif isinstance(h5ad_file, Mapping):
-            for k, v in h5ad_file.items():
-                info_table.setdefault("Name", []).append(k)
-                info_table.setdefault("Source", []).append(v)
-        else:
-            for v in h5ad_file:
-                info_table.setdefault("Name", []).append("NA")
-                info_table.setdefault("Source", []).append(v)
-
-        # save table
-        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
-
-    return adata
 
 
 #####################################################################
@@ -540,10 +514,12 @@ def from_mtx(path: str,
 
 @beartype
 def convertToAdata(file: str,
+                   output: Optional[str] = None,
                    r_home: Optional[str] = None,
-                   layer: Optional[str] = None) -> sc.AnnData:
+                   layer: Optional[str] = None,
+                   report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
-    Convert one .rds or .robj file containing Seurat or SingleCellExperiment to scanpy anndata.
+    Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
     In order to work an R installation with Seurat & SingleCellExperiment is required.
 
@@ -551,17 +527,21 @@ def convertToAdata(file: str,
     ----------
     file : str
         Path to the .rds or .robj file.
+    output : Optional[str], default None
+        Path to output .h5ad file. Won't save if None.
     r_home : Optional[str], default None
         Path to the R home directory. If None will construct path based on location of python executable.
         E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
     layer : Optional[str], default None
         Provide name of layer to be stored in anndata. By default the main layer is stored.
         In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
-    sc.AnnData
-        Returns converted anndata object.
+    Optional[sc.AnnData]
+        Returns converted anndata object if output is None.
     """
 
     # Setup R
@@ -657,15 +637,31 @@ def convertToAdata(file: str,
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
 
-    return adata
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {
+            "Name": ["NA"],
+            "Source": [os.path.abspath(file)]
+        }
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+
+    if output:
+        # Saving adata.h5ad
+        adata.write(filename=output, compression='gzip')
+    else:
+        return adata
 
 
-def from_rds(
+@beartype
+def from_R(
         rds_file: Union[str, Collection[str], Mapping[str, str]],
         label: Optional[str] = None,
         output: Optional[str] = None,
         report: Optional[str] = None,
-        **kwargs: Any) -> Optional[sc.AnnData]:
+        layer: Optional[Union[str, Collection[str], Mapping[str, str]]] = None,
+        r_home: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Convert one or more .rds/.robj file(s) containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -682,8 +678,13 @@ def from_rds(
         Path to output .h5ad file. Won't save if None.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
-    **kwargs : Any
-        Contains additional arguments for the sctoolbox.utils.assemblers.convertToAdata method.
+    layer : Optional[Union[str, Collection[str], Mapping[str, str]]], default None
+        Provide name of layer to be stored in anndata. By default the main layer is stored.
+        In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
+        Must be string or match type of rds_file.
+    r_home : Optional[str], default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
 
     Returns
     -------
@@ -691,36 +692,116 @@ def from_rds(
         Returns converted (and merged) anndata object or None when output is set.
     """
 
-    if isinstance(rds_file, str):
-        adata = convertToAdata(rds_file, **kwargs)
-    elif isinstance(rds_file, Mapping):
-        # load then combine anndata objects
-        adata = utils.adata.concadata({k: convertToAdata(f, **kwargs) for k, f in rds_file.items()}, label=label)
-    else:
-        # load then combine anndata objects
-        adata = utils.adata.concadata([convertToAdata(f, **kwargs) for f in rds_file], label=label)
-
-    # generate and save report
-    if settings.report_dir and report:
-        info_table = {}
-
-        if isinstance(rds_file, str):
-            info_table.setdefault("Name", []).append("NA")
-            info_table.setdefault("Source", []).append(rds_file)
-        elif isinstance(rds_file, Mapping):
-            for k, v in rds_file.items():
-                info_table.setdefault("Name", []).append(k)
-                info_table.setdefault("Source", []).append(v)
-        else:
-            for v in rds_file:
-                info_table.setdefault("Name", []).append("NA")
-                info_table.setdefault("Source", []).append(v)
-
-        # save table
-        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+    adata = _read_and_merge(rds_file, convertToAdata, label, report, layer=layer, r_home=r_home)
 
     if output:
         # Saving adata.h5ad
         adata.write(filename=output, compression='gzip')
     else:
         return adata
+
+
+@beartype
+def _read_and_merge(
+        path: Union[str, Collection[str], Mapping[str, str]],
+        method: Callable,
+        label: Optional[str],
+        report: Optional[str] = None,
+        **kwargs: Any
+        ) -> sc.AnnData:
+    """
+    Read in one or multiple files and convert/merge them to one anndata object.
+
+    Parameters
+    ----------
+    path : Union[str, Collection[str], Mapping[str, str]]
+        Path or list of paths to the input file(s).
+    method : Callable
+        Method for reading individual files. Set depending on file format e.g.
+        scanpy.read_h5ad for h5ad files.
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in.
+        Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    **kwargs : Any
+        Contains additional arguments for reading method.
+
+    Raises
+    ------
+    ValueError
+        1. layer datatype and path datatype do not match (if layer is not string).
+        2. if path and layer are lists with different lengths.
+        3. if not all keys in path dict match with keys in layer dict.
+
+    Returns
+    -------
+    sc.AnnData
+        Returns converted (and merged) anndata object.
+    """
+    
+    # Checks for layer option used by convertToAdata method
+    has_layer = False
+    if "layer" in kwargs:
+        has_layer = True
+        layer_is_not_string = not isinstance(kwargs["layer"], str)
+        layer_has_matching_type = type(kwargs["layer"]) == type(path)
+        if not layer_has_matching_type and layer_is_not_string:
+            raise ValueError("layer datatype must match input datatype or be of type str")
+        elif layer_has_matching_type and layer_is_not_string:
+            if isinstance(path, list):
+                if len(path) != len(kwargs["layer"]):
+                    raise ValueError("When giving a list path and layer must be of same length.")
+            elif isinstance(path, dict):
+                if not all(key in kwargs["layer"] for key in path):
+                    raise ValueError("Missing keys in layer dict.")
+
+    # source is stored in adata.uns["sctoolbox"]["source"]
+    # TODO move for-loop/kwargs handling into seperate function
+    if isinstance(path, str):
+        adata = method(path, **kwargs)
+        source = os.path.abspath(path)
+    elif isinstance(path, Mapping):
+        # load then combine anndata objects
+        sub_kwargs = kwargs.copy()
+        adatas, source = dict(), dict()
+        for k, f in path.items():
+            if has_layer and layer_is_not_string:
+                sub_kwargs = {"layer": kwargs["layer"][k]}  
+            adatas[k] = method(f, **sub_kwargs)
+            source[k] = os.path.abspath(f)
+        adata = utils.adata.concadata(adatas, label=label)
+    else:
+        # load then combine anndata objects
+        adatas, source = list(), list()
+        sub_kwargs = kwargs.copy()
+        for i, f in enumerate(path):
+            if has_layer and layer_is_not_string:
+                sub_kwargs = {"layer": kwargs["layer"][i]}
+            adatas.append(method(f, **sub_kwargs))
+            source.append(os.path.abspath(f))
+        adata = utils.adata.concadata(adatas, label=label)
+
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        if isinstance(path, str):
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(path)
+        elif isinstance(path, Mapping):
+            for k, v in path.items():
+                info_table.setdefault("Name", []).append(k)
+                info_table.setdefault("Source", []).append(v)
+        else:
+            for v in path:
+                info_table.setdefault("Name", []).append("NA")
+                info_table.setdefault("Source", []).append(v)
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+    
+    # Add information to uns
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], source)
+
+    return adata
