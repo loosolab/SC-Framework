@@ -695,6 +695,10 @@ def cyclone(
     else:
         interactions = interactions_directed
 
+    # get color_max value
+    if color_max is None:
+        color_max = interactions.max()["count"]
+
     # gets the size of the clusters and saves it in cluster_to_size
     receptor_cluster_to_size = filtered[["receptor_cluster", "receptor_cluster_size"]]
     ligand_cluster_to_size = filtered[["ligand_cluster", "ligand_cluster_size"]]
@@ -724,7 +728,7 @@ def cyclone(
     # set up for colormapping
     colormap_ = matplotlib.colormaps[colormap]
 
-    norm = matplotlib.colors.Normalize(interactions["count"].min(), interactions["count"].max())
+    norm = matplotlib.colors.Normalize(color_min, color_max)
 
     # --------------------------- setting up for the plot -----------------------------
 
@@ -870,7 +874,7 @@ def cyclone(
     circos.colorbar(
         bounds=(1.1, 0.2, 0.02, 0.5),
         vmin=0 if color_min is None else color_min,
-        vmax=color_max if color_max else interactions.max()["count"],
+        vmax=color_max,
         cmap=colormap_
     )
 
