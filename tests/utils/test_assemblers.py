@@ -65,6 +65,7 @@ def adata_rna():
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
+
 @pytest.fixture()
 def rds_file():
     """Return path to rds file."""
