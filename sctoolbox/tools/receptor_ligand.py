@@ -1088,13 +1088,17 @@ def connectionPlot(adata: sc.AnnData,
                    receptor_cluster_col: str = "receptor_cluster",
                    receptor_col: str = "receptor_gene",
                    receptor_hue: str = "receptor_score",
+                   receptor_hue_range: Optional[Tuple[int | float, int | float]] = None,
                    receptor_size: str = "receptor_percent",
+                   receptor_size_range: Optional[Tuple[int | float, int | float]] = None,
                    receptor_genes: Optional[list[str]] = None,
                    # ligand params
                    ligand_cluster_col: str = "ligand_cluster",
                    ligand_col: str = "ligand_gene",
                    ligand_hue: str = "ligand_score",
+                   ligand_hue_range: Optional[Tuple[int | float, int | float]] = None,
                    ligand_size: str = "ligand_percent",
+                   ligand_size_range: Optional[Tuple[int | float, int | float]] = None,
                    ligand_genes: Optional[list[str]] = None,
                    # additional plot params
                    filter: Optional[str] = None,
@@ -1131,8 +1135,14 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing gene names of receptors. Shown on y-axis.
     receptor_hue : str, default 'receptor_score'
         Name of column containing receptor scores. Shown as point color.
+    receptor_hue_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `receptor_hue` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     receptor_size : str, default 'receptor_percent'
         Name of column containing receptor expression percentage. Shown as point size.
+    receptor_size_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `receptor_size` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     receptor_genes : Optional[list[str]], default None
             Restrict receptors to given genes.
     ligand_cluster_col : str, default 'ligand_cluster'
@@ -1141,8 +1151,14 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing gene names of ligands. Shown on y-axis.
     ligand_hue : str, default 'ligand_score'
         Name of column containing ligand scores. Shown as point color.
+    ligand_hue_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `ligand_hue` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     ligand_size : str, default 'ligand_percent'
         Name of column containing ligand expression percentage. Shown as point size.
+    ligand_size_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `ligand_size` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     ligand_genes : Optional[list[str]], default None
             Restrict ligands to given genes.
     filter : Optional[str], default None
@@ -1223,10 +1239,12 @@ def connectionPlot(adata: sc.AnnData,
                                  y=receptor_col,
                                  x=receptor_cluster_col,
                                  hue=receptor_hue,
+                                 hue_norm=receptor_hue_range,
                                  size=receptor_size,
+                                 size_norm=receptor_size_range,
                                  palette=dot_colors,
                                  sizes=dot_size,
-                                 legend="brief",
+                                 legend=False,  # build a custom legend to define the displayed min-max values
                                  ax=axs[0])
     finally:
         logging.getLogger("matplotlib").setLevel(former_level)
@@ -1246,10 +1264,12 @@ def connectionPlot(adata: sc.AnnData,
                                  y=ligand_col,
                                  x=ligand_cluster_col,
                                  hue=ligand_hue,
+                                 hue_norm=ligand_hue_range,
                                  size=ligand_size,
+                                 size_norm=ligand_size_range,
                                  palette=dot_colors,
                                  sizes=dot_size,
-                                 legend="brief",
+                                 legend=False,  # build a custom legend to define the displayed min-max values
                                  ax=axs[1])
     finally:
         logging.getLogger("matplotlib").setLevel(former_level)
@@ -1337,35 +1357,86 @@ def connectionPlot(adata: sc.AnnData,
             axs[1].add_artist(con)
 
     # ----- legends -----
-    # left (receptor) plot legend
-    # set legend position
+    step_num = 5  # the number of steps in all legends
+
+    # custom legend creation for the receptor plot
+    rec_handles = []
+
+    def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
+        """Creates a custom handle list for the legend."""
+        handles = []
+
+        # define the hue and size ranges
+        # hue
+        hue_steps = np.linspace(*hue_range, num=step_num)
+        # set colormap
+        colormap = plt.cm.ScalarMappable(cmap=palette, norm=plt.Normalize(*hue_range))
+
+        # size
+        size_steps = np.linspace(*(size_range), num=step_num)
+
+        # size normalization
+        size_norm = lambda x: minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
+
+        if hue != size:
+            # create one legend for hue and one for size
+            # add hue legend entries
+            handles.append(plt.scatter([], [], alpha=0, label=hue))  # add title
+            handles.extend([plt.scatter([], [], s=50, color=colormap.cmap(s), label=f"{s:.2f}") for s in hue_steps])
+
+            # add size legend entries
+            handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
+            handles.extend([plt.scatter([], [], s=size_norm(s), color='black', label=f"{s:.2f}") for s in size_steps])
+        else:
+            # create a combined legend if hue and size show the same data
+            # add combined legend entries
+            handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
+            handles.extend([plt.scatter([], [], s=size_norm(color), color=colormap.cmap(color), label=f"{color:.2f}") for color in hue_steps])
+
+        return handles
+
+    rec_handles = _create_handle_list(
+        hue=receptor_hue,
+        hue_range=receptor_hue_range if receptor_hue_range else [data[receptor_hue].min(), data[receptor_hue].max()],
+        palette=dot_colors,
+        size=receptor_size,
+        size_range=receptor_size_range if receptor_size_range else [data[receptor_size].min(), data[receptor_size].max()],
+        dot_size=dot_size,
+        step_num=step_num
+    )
+
+    # place the custom legend in the receptor plot
     axs[0].legend(
+        handles=rec_handles,
         loc='upper right',
-        bbox_to_anchor=(-1, 1, 0, 0),
-        title=receptor_hue if receptor_hue == receptor_size else None  # fix missing legend label
+        bbox_to_anchor=(-1, 1, 0, 0)
     )
 
     # right (ligand) plot legend
+    lig_handles = _create_handle_list(
+        hue=ligand_hue,
+        hue_range=ligand_hue_range if ligand_hue_range else [data[ligand_hue].min(), data[ligand_hue].max()],
+        palette=dot_colors,
+        size=ligand_size,
+        size_range=ligand_size_range if ligand_size_range else [data[ligand_size].min(), data[ligand_size].max()],
+        dot_size=dot_size,
+        step_num=step_num
+    )
+
     # create legend for connection lines
     if connection_alpha:
-        step_num = 5
         s_steps, a_steps = np.linspace(min(alpha_values), max(alpha_values), step_num), np.linspace(0.2, 1, step_num)
 
         # create proxy actors https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#proxy-legend-handles
-        line_list = [lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)]
-        line_list.insert(0, lines.Line2D([], [], alpha=0, label=connection_alpha))
+        lig_handles.append(lines.Line2D([], [], alpha=0, label=connection_alpha))  # add title
+        lig_handles.extend([lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)])
 
-        # add to current legend
-        handles, _ = axs[1].get_legend_handles_labels()
-        axs[1].legend(handles=handles + line_list,
-                      bbox_to_anchor=(2, 1, 0, 0),
-                      loc='upper left',
-                      title=ligand_hue if ligand_hue == ligand_size else None)  # fix missing legend label
-    else:
-        # set ligand plot legend position
-        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0),
-                      loc='upper left',
-                      title=ligand_hue if ligand_hue == ligand_size else None)  # fix missing legend label
+    # set ligand plot legend position
+    axs[1].legend(
+        handles=lig_handles,
+        bbox_to_anchor=(2, 1, 0, 0),
+        loc='upper left'
+    )
 
     _save_figure(save, dpi=dpi)
 
