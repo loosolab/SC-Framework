@@ -587,6 +587,7 @@ def cyclone(
     sector_size_is_cluster_size: bool = False,
     show_genes: bool = True,
     gene_amount: int = 5,
+    restrict_to: Optional[list[str]] = None,
     figsize: Tuple[int | float, int | float] = (10, 10),
     dpi: Optional[int | float] = None,
     save: Optional[str] = None,
@@ -625,6 +626,8 @@ def cyclone(
         Determines whether to display the top genes as an additional track.
     gene_amount: int = 5
         The amount of genes per receptor and ligand to display on the outer track (displayed genes per sector = gene_amount *2).
+    restrict_to : Optional[list[str]], default None
+        Only show given clusters provided in list.
     figsize : Tuple[int | float, int | float], default (10, 10)
         Figure size
     dpi : Optional[int | float], default None
@@ -650,7 +653,9 @@ def cyclone(
     filtered = get_interactions(anndata=adata,
                                 min_perc=min_perc,
                                 interaction_score=interaction_score,
-                                interaction_perc=interaction_perc)
+                                interaction_perc=interaction_perc,
+                                group_a=restrict_to,
+                                group_b=restrict_to)
 
     # sort data by interaction score for top gene selection
     if show_genes:
