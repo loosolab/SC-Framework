@@ -1337,9 +1337,15 @@ def connectionPlot(adata: sc.AnnData,
             axs[1].add_artist(con)
 
     # ----- legends -----
-    # set receptor plot legend position
-    sns.move_legend(r_plot, loc='upper right', bbox_to_anchor=(-1, 1, 0, 0))
+    # left (receptor) plot legend
+    # set legend position
+    axs[0].legend(
+        loc='upper right',
+        bbox_to_anchor=(-1, 1, 0, 0),
+        title=receptor_hue if receptor_hue == receptor_size else None  # fix missing legend label
+    )
 
+    # right (ligand) plot legend
     # create legend for connection lines
     if connection_alpha:
         step_num = 5
@@ -1354,12 +1360,12 @@ def connectionPlot(adata: sc.AnnData,
         axs[1].legend(handles=handles + line_list,
                       bbox_to_anchor=(2, 1, 0, 0),
                       loc='upper left',
-                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
+                      title=ligand_hue if ligand_hue == ligand_size else None)  # fix missing legend label
     else:
         # set ligand plot legend position
         axs[1].legend(bbox_to_anchor=(2, 1, 0, 0),
                       loc='upper left',
-                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
+                      title=ligand_hue if ligand_hue == ligand_size else None)  # fix missing legend label
 
     _save_figure(save, dpi=dpi)
 
