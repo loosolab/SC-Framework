@@ -1363,7 +1363,7 @@ def connectionPlot(adata: sc.AnnData,
     rec_handles = []
 
     def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
-        """Creates a custom handle list for the legend."""
+        """Create a custom handle list for the legend."""
         handles = []
 
         # define the hue and size ranges
