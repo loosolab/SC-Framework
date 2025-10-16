@@ -542,8 +542,8 @@ def hairball(adata: sc.AnnData,
     norm = matplotlib.colors.Normalize(0 if color_min is None else color_min, max_weight)
 
     for e in graph.es:
-        e["color"] = colormap_(norm(e["weight"], e["weight"]))  # e["weight"] / max_weight, e["weight"] / max_weight
-        e["width"] = norm(e["weight"])  # (e["weight"] / max_weight)  # * 10
+        e["color"] = colormap_(norm(e["weight"], e["weight"]))
+        e["width"] = norm(e["weight"])
         # show weights in plot
         if show_count and e["weight"] > 0:
             e["label"] = e["weight"]
@@ -1359,9 +1359,6 @@ def connectionPlot(adata: sc.AnnData,
     # ----- legends -----
     step_num = 5  # the number of steps in all legends
 
-    # custom legend creation for the receptor plot
-    rec_handles = []
-
     def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
         """Create a custom handle list for the legend."""
         handles = []
@@ -1397,6 +1394,7 @@ def connectionPlot(adata: sc.AnnData,
 
         return handles
 
+    # left (receptor) plot legend
     rec_handles = _create_handle_list(
         hue=receptor_hue,
         hue_range=receptor_hue_range if receptor_hue_range else [data[receptor_hue].min(), data[receptor_hue].max()],
@@ -1433,7 +1431,7 @@ def connectionPlot(adata: sc.AnnData,
         lig_handles.append(lines.Line2D([], [], alpha=0, label=connection_alpha))  # add title
         lig_handles.extend([lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)])
 
-    # set ligand plot legend position
+    # place the custom legend in the ligand plot
     axs[1].legend(
         handles=lig_handles,
         bbox_to_anchor=(2, 1, 0, 0),
