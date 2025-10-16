@@ -700,8 +700,7 @@ def _read_and_merge(
         method: Callable,
         label: Optional[str],
         report: Optional[str] = None,
-        **kwargs: Any
-        ) -> sc.AnnData:
+        **kwargs: Any) -> sc.AnnData:
     """
     Read in one or multiple files and convert/merge them to one anndata object.
 
@@ -732,13 +731,13 @@ def _read_and_merge(
     sc.AnnData
         Returns converted (and merged) anndata object.
     """
-    
+
     # Checks for layer option used by convertToAdata method
     has_layer = False
     if "layer" in kwargs and kwargs["layer"] is not None:
         has_layer = True
         layer_is_not_string = not isinstance(kwargs["layer"], str)
-        layer_has_matching_type = type(kwargs["layer"]) == type(path)
+        layer_has_matching_type = isinstance(kwargs["layer"], type(path))
         if not layer_has_matching_type and layer_is_not_string:
             raise ValueError("layer datatype must match input datatype or be of type str")
         elif layer_has_matching_type and layer_is_not_string:
@@ -760,7 +759,7 @@ def _read_and_merge(
         adatas, source = dict(), dict()
         for k, f in path.items():
             if has_layer and layer_is_not_string:
-                sub_kwargs = {"layer": kwargs["layer"][k]}  
+                sub_kwargs = {"layer": kwargs["layer"][k]}
             adatas[k] = method(f, **sub_kwargs)
             source[k] = os.path.abspath(f)
         adata = utils.adata.concadata(adatas, label=label)
@@ -793,7 +792,7 @@ def _read_and_merge(
 
         # save table
         plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
-    
+
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], source)
 
