@@ -437,6 +437,7 @@ def hairball(adata: sc.AnnData,
              color_min: float | int = 0,
              color_max: Optional[float | int] = None,
              cbar_label: str = "Interaction count",
+             colormap: str = 'viridis',
              show_count: bool = False,
              restrict_to: Optional[list[str]] = None,
              additional_nodes: Optional[list[str]] = None,
@@ -466,6 +467,8 @@ def hairball(adata: sc.AnnData,
         Max value for color range.
     cbar_label : str, default 'Interaction count'
         Label above the colorbar.
+    colormap : str, default "viridis"
+        The colormap to be used when plotting.
     show_count : bool, default False
         Show the interaction count in the hairball.
     restrict_to : Optional[list[str]], default None
@@ -532,11 +535,15 @@ def hairball(adata: sc.AnnData,
         graph.add_edge(a, b, weight=len(subset))
 
     # set edge colors/ width based on weight
-    colormap = matplotlib.cm.get_cmap('viridis', len(graph.es))
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
+
+    # set up colormap
+    colormap_ = matplotlib.colormaps[colormap]
+    norm = matplotlib.colors.Normalize(0 if color_min is None else color_min, max_weight)
+
     for e in graph.es:
-        e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
-        e["width"] = (e["weight"] / max_weight)  # * 10
+        e["color"] = colormap_(norm(e["weight"], e["weight"]))  # e["weight"] / max_weight, e["weight"] / max_weight
+        e["width"] = norm(e["weight"])  # (e["weight"] / max_weight)  # * 10
         # show weights in plot
         if show_count and e["weight"] > 0:
             e["label"] = e["weight"]
@@ -552,9 +559,8 @@ def hairball(adata: sc.AnnData,
     # add colorbar
     cb = matplotlib.colorbar.ColorbarBase(axes[1],
                                           orientation='vertical',
-                                          cmap=colormap,
-                                          norm=matplotlib.colors.Normalize(0 if color_min is None else color_min,
-                                                                           max_weight)
+                                          cmap=colormap_,
+                                          norm=norm
                                           )
 
     cb.ax.tick_params(labelsize=10)
