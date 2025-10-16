@@ -1,5 +1,7 @@
 0.14.0 (in progress)
 ====================
+- fix sctoolbox.plotting.qc_filter.quality_violin warning (#347)
+- fix sctoolbox.plotting.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - sctoolbox.tools.download_data: s3_downloader, download_data add option to display progress bar
 - add functions to download exemplary RNA and ATAC datasets (#376)
 - implemented sctoolbox.utils.adata.tidy_layers
