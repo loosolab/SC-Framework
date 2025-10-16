@@ -761,20 +761,8 @@ def cyclone(
     # set link width to 1 so it can be scaled up later
     interactions_for_matrix["count"] = 1
 
-    # TODO remove when this is fixed: https://github.com/moshi4/pyCirclize/issues/75
-    interactions_for_matrix[cluster_col_list] = interactions_for_matrix[cluster_col_list] + "_"
-
     # create the links in pycirclize format
     matrix = pycirclize.parser.Matrix.parse_fromto_table(interactions_for_matrix)
-
-    # TODO remove when this is fixed: https://github.com/moshi4/pyCirclize/issues/75
-    matrix._row_names = [r[:-1] for r in matrix.row_names]
-    matrix._col_names = [c[:-1] for c in matrix.col_names]
-    matrix._matrix.columns = [c[:-1] for c in matrix._matrix.columns]
-    matrix._matrix.index = [r[:-1] for r in matrix._matrix.index]
-    matrix._name2size = {k[:-1]: v for k, v in matrix._name2size.items()}
-    matrix._links = [((l1[0][:-1], *l1[1:]), (l2[0][:-1], *l2[1:])) for l1, l2 in matrix._links]
-    interactions_for_matrix[cluster_col_list] = interactions_for_matrix[cluster_col_list].map(lambda x: x[:-1])
 
     link_list = matrix.to_links()
 
