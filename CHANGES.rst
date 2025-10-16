@@ -1,5 +1,8 @@
 0.14.0 (in progress)
 ====================
+- sctoolbox.tools.download_data: s3_downloader, download_data add option to display progress bar
+- add functions to download exemplary RNA and ATAC datasets (#376)
+- implemented sctoolbox.utils.adata.tidy_layers
 - prepare_atac_anndata: remove "path_h5ad" parameter (#335)
 - fix pl.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - fix tools.marker_genes.get_rank_genes_tables may overwrite sheets (#332)
