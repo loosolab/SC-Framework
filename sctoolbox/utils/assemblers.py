@@ -742,7 +742,7 @@ def _read_and_merge(
     
     # Checks for layer option used by convertToAdata method
     has_layer = False
-    if "layer" in kwargs:
+    if "layer" in kwargs and kwargs["layer"] is not None:
         has_layer = True
         layer_is_not_string = not isinstance(kwargs["layer"], str)
         layer_has_matching_type = type(kwargs["layer"]) == type(path)
