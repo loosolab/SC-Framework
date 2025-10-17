@@ -664,7 +664,7 @@ def from_R(
     ----------
     rds_file : Union[str, Collection[str], Mapping[str, str]]
         Path or list of paths to the .rds or .robj file(s).
-    label: Optional[str], default "batch"
+    label: Optional[str], default None
         Name of the `adata.obs` column to place the batch information in.
         Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
     output : Optional[str], default None
@@ -698,7 +698,7 @@ def from_R(
 def _read_and_merge(
         path: Union[str, Collection[str], Mapping[str, str]],
         method: Callable,
-        label: Optional[str],
+        label: Optional[str] = None,
         report: Optional[str] = None,
         **kwargs: Any) -> sc.AnnData:
     """
@@ -711,7 +711,7 @@ def _read_and_merge(
     method : Callable
         Method for reading individual files. Set depending on file format e.g.
         scanpy.read_h5ad for h5ad files.
-    label: Optional[str], default "batch"
+    label: Optional[str], default None
         Name of the `adata.obs` column to place the batch information in.
         Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
     report : Optional[str]
@@ -725,6 +725,12 @@ def _read_and_merge(
         1. layer datatype and path datatype do not match (if layer is not string).
         2. if path and layer are lists with different lengths.
         3. if not all keys in path dict match with keys in layer dict.
+
+    Notes
+    -----
+    This function is designed to work with function that returns a h5ad file and does not require file specific input.
+    Special cases:
+        utils.assemblers.convertToAdata: the layer parameter needs to be handled individually
 
     Returns
     -------
