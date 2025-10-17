@@ -322,7 +322,7 @@ def wrap_corrections(adata: sc.AnnData,
             adata.layers[keep_layer] = adata.X.copy()
 
     # Collect batch correction per method
-    anndata_dict = {'uncorrected': adata}
+    anndata_dict = {'uncorrected': adata.copy()}
     for method in methods:
         anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
 
@@ -410,6 +410,9 @@ def batch_correction(adata: sc.AnnData,
     # Check that batch_key is in adata object
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
+
+    # ensure no sideeffects
+    adata = adata.copy()
 
     # Run batch correction depending on method
     if method == "bbknn":
