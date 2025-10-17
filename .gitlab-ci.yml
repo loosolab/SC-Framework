@@ -397,6 +397,7 @@ notebooks-RNA:
         - sctoolbox/_version.py
         - rna_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
+        - scripts/run_notebooks.py
 
 # Test notebooks
 notebooks-ATAC:
@@ -443,6 +444,7 @@ notebooks-ATAC:
         - sctoolbox/_version.py
         - atac_analysis/notebooks/*.ipynb
         #- general_notebooks/*.ipynb
+        - scripts/run_notebooks.py
 
 # In addition to CHANGES.rst and the _version.py file the notebook version for every notebook
 # must be changed in merge requests to main in order to make a new version
