@@ -728,7 +728,7 @@ def _read_and_merge(
 
     Notes
     -----
-    This function is designed to work with function that returns a h5ad file and does not require file specific input.
+    This function is designed to work with functions that return a h5ad file and does not require file specific input.
     Special cases:
         utils.assemblers.convertToAdata: the layer parameter needs to be handled individually
 
