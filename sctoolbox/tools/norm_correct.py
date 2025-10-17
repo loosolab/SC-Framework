@@ -343,6 +343,26 @@ def batch_correction(adata: sc.AnnData,
     """
     Perform batch correction on the adata object using the 'method' given.
 
+    Different correction methods will perform the batch correction on different aspects of the data,
+    meaning calculations prior to the corrected data are not affected. Here is an overview on the analysis
+    steps until batch correction and where each of the methods is applied:
+
+    Matrix (adata.X) -> PCA -> Nearest neighbor
+
+    +-----------+----------------------+
+    | Method    | Applied to/ replaces |
+    +===========+======================+
+    | bbknn     | Nearest neighbor     |
+    +-----------+----------------------+
+    | mnn       | Matrix               |
+    +-----------+----------------------+
+    | harmony   | PCA                  |
+    +-----------+----------------------+
+    | scanorama | PCA                  |
+    +-----------+----------------------+
+    | combat    | Matrix               |
+    +-----------+----------------------+
+
     Parameters
     ----------
     adata : sc.AnnData
@@ -432,7 +452,7 @@ def batch_correction(adata: sc.AnnData,
         adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example
-        sc.tl.pca(adata)  # rerun pca
+        sc.tl.pca(adata)  # rerun pca # TODO
         sc.pp.neighbors(adata)
 
     elif method == "harmony":
@@ -440,7 +460,7 @@ def batch_correction(adata: sc.AnnData,
         adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
 
         sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
-        adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]
+        adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]  # TODO
         sc.pp.neighbors(adata)
 
     elif method == "scanorama":
@@ -455,7 +475,7 @@ def batch_correction(adata: sc.AnnData,
         if "approx" not in kwargs:
             kwargs["approx"] = False
 
-        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
+        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)  # TODO
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
         sc.pp.neighbors(adata)
 
@@ -468,7 +488,7 @@ def batch_correction(adata: sc.AnnData,
         # run combat
         sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
-        sc.pp.pca(adata)
+        sc.pp.pca(adata)  # TODO
         sc.pp.neighbors(adata)
 
     elif callable(method):
