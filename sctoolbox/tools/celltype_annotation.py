@@ -260,6 +260,7 @@ def run_scsa(adata: sc.AnnData,
         SCSA parameter: Path to the user defined marker database.
         Must contain at least two columns, one named "cell_name" (or set via celltype_column) for the cell type annotation,
         and at least one more column with gene names or ids (selected automatically from best gene overlap).
+        Gene names/ ids have to be upper case!
     celltype_column : str, default 'cell_name'
         SCSA parameter: The column name in the user_db that contains the cell type annotation.
 
@@ -324,7 +325,7 @@ def run_scsa(adata: sc.AnnData,
                 result["names"][i][j] = idx2name[result["names"][i][j]]
 
     # ---- Find out which gene symbol to use ---- #
-    all_genes = _get_rank_genes(result)
+    all_genes = [g.upper() for g in _get_rank_genes(result)]
     logger.info("Found {} genes from input ranked genes".format(len(all_genes)))
     logger.info("Checking if genes are in the database...")
 
@@ -334,6 +335,10 @@ def run_scsa(adata: sc.AnnData,
     # ---- Setup table for SCSA input ---- #
     groups = result['names'].dtype.names
     dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges', 'scores', 'pvals']})
+    # set gene name columns to uppercase
+    for col in dat.columns:
+        if col.endswith('_n'):
+            dat[col] = dat[col].str.upper()
 
     # Fill duplicate genes with _NA
     name_columns = [col for col in dat if col.endswith("_n")]
@@ -358,7 +363,11 @@ def run_scsa(adata: sc.AnnData,
     p = subprocess.run(scsa_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderr = p.stderr
     stdout = p.stdout
+
+    logger.debug(stdout.decode('utf-8'))
+
     if p.returncode != 0:
+        logger.error(stdout.decode('utf-8'))
         raise ValueError(f"SCSA failed with error: {stderr.decode('utf-8')}")
 
     # ---- read results_path and assign to adata.obs ---- #

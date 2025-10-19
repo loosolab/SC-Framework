@@ -1,0 +1,15 @@
+.nboutput {
+    width: 800px;         /* fixed width container */
+    overflow-x: auto;     /* horizontal scrollbar if image overflows */
+}
+
+.nboutput .output_area img {
+    width: 100% !important;      /* scale image to half its size */
+    height: auto !important;
+    display: block;
+}
+
+.nbinput .prompt,
+.nboutput .prompt {
+    display: none;
+}

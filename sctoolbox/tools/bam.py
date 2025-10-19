@@ -46,19 +46,23 @@ def bam_adata_ov(adata: sc.AnnData,
     bam_obj = open_bam(bamfile, "rb")
 
     sample = []
-    counter = 0
     iterations = 1000
-    for read in bam_obj:
-        tag = read.get_tag(cb_tag)
-        sample.append(tag)
+
+    for counter, read in enumerate(bam_obj, start=1):
+        if read.has_tag(cb_tag):
+            tag = read.get_tag(cb_tag)
+            sample.append(tag)
         if counter == iterations:
             break
-        counter += 1
+
+    if iterations != len(sample):
+        no_tag = iterations - len(sample)
+        logger.warning(f"{no_tag} ({no_tag / iterations * 100:.2f}%) of the first {iterations} reads did not have a '{cb_tag}' tag.")
 
     barcodes_df = pd.DataFrame(adata.obs.index)
     count_table = barcodes_df.isin(sample)
     hits = count_table.sum()
-    hitrate = hits[0] / iterations
+    hitrate = hits.iloc[0] / iterations
 
     return hitrate
 
@@ -107,7 +111,7 @@ def subset_bam(bam_in: str,
                bam_out: str,
                barcodes: Iterable[str],
                read_tag: str = "CB",
-               pysam_threads: int = 4,
+               pysam_threads: Optional[int] = 4,
                overwrite: bool = False) -> None:
     """
     Subset a bam file based on a list of barcodes.
@@ -122,11 +126,14 @@ def subset_bam(bam_in: str,
         List of barcodes to keep.
     read_tag : str, default "CB"
         Tag in bam file to use for barcode.
-    pysam_threads : int, default 4
-        Number of threads to use for pysam.
+    pysam_threads : Optional[int], default 4
+        Number of threads to use for pysam. Set None to use settings.get_threads.
     overwrite : bool, default False
         Overwrite output file if it exists.
     """
+
+    if pysam_threads is None:
+        pysam_threads = settings.get_threads()
 
     # check then load modules
     utils.checker.check_module("tqdm")
@@ -201,10 +208,10 @@ def split_bam_clusters(adata: sc.AnnData,
                        barcode_col: Optional[str] = None,
                        read_tag: str = "CB",
                        output_prefix: str = "split_",
-                       reader_threads: int = 1,
-                       writer_threads: int = 1,
+                       reader_threads: Optional[int] = 1,
+                       writer_threads: Optional[int] = 1,
                        parallel: bool = False,
-                       pysam_threads: int = 4,
+                       pysam_threads: Optional[int] = 4,
                        buffer_size: int = 10000,
                        max_queue_size: int = 1000,
                        individual_pbars: bool = False,
@@ -227,14 +234,14 @@ def split_bam_clusters(adata: sc.AnnData,
         Tag to use to identify the reads to split. Must match the barcodes of the barcode_col.
     output_prefix : str, default `split_`
         Prefix to use for the output files.
-    reader_threads : int, default 1
-        Number of threads to use for reading.
-    writer_threads : int, default 1
-        Number of threads to use for writing.
+    reader_threads : Optional[int], default 1
+        Number of threads to use for reading. Set None to use settings.get_threads.
+    writer_threads : Optional[int], default 1
+        Number of threads to use for writing. Set None to use settings.get_threads.
     parallel : bool, default False
         Whether to enable parallel processsing.
-    pysam_threads : int, default 4
-        Number of threads for pysam.
+    pysam_threads : Optional[int], default 4
+        Number of threads for pysam. Set None to use settings.get_threads.
     buffer_size : int, default 10000
         The size of the buffer between readers and writers.
     max_queue_size : int, default 1000
@@ -315,7 +322,7 @@ def split_bam_clusters(adata: sc.AnnData,
         output_files = []
         for cluster in clusters:
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
-            save_cluster_name = re.sub(r'[\\/*?:"<>| ]', '_', cluster)
+            save_cluster_name = re.sub(r'[\\/*?:"<>| ()]', '_', cluster)
             out_paths[cluster] = f"{output_prefix}{save_cluster_name}.bam"
             output_files.append(f"{output_prefix}{save_cluster_name}.bam")
 
@@ -662,7 +669,7 @@ def _buffered_reader(path: str,
     Raises
     ------
     Exception
-        Exception, if buffered reader failes.
+        If buffered reader failes.
     """
 
     # Test parameter types not covered by beartype
@@ -751,7 +758,7 @@ def _writer(read_queue: Any,
     Raises
     ------
     Exception
-        Exception, if buffered reader failes.
+        If buffered reader failes.
     """
 
     # Check parameter that are not covered by beartype
@@ -913,7 +920,7 @@ def create_fragment_file(bam: str,
                          barcode_tag: Optional[str] = 'CB',
                          barcode_regex: Optional[str] = None,
                          outdir: Optional[str] = None,
-                         nproc: int = 1,
+                         nproc: Optional[int] = 1,
                          index: bool = False,
                          min_dist: int = 10,
                          max_dist: int = 5000,
@@ -937,8 +944,8 @@ def create_fragment_file(bam: str,
         Regex to extract barcodes from read names. Set to None if barcodes are stored in a tag.
     outdir : Optional[str], default None
         Path to save fragments file. If None, the file will be saved in the same folder as the .bam file. Temporary intermediate files are also written to this directory.
-    nproc : int, default 1
-        Number of threads for parallelization.
+    nproc : Optional[int], default 1
+        Number of threads for parallelization. Set None to use settings.get_threads.
     index : bool, default False
         If True, index fragments file. Requires bgzip and tabix.
     min_dist : int, default 10
@@ -966,11 +973,14 @@ def create_fragment_file(bam: str,
     FileNotFoundError
         If the input bam file does not exist.
     Exception
-        Exception, on unkown error while sorting .bam
+        On unkown error while sorting .bam
     """
 
     utils.checker.check_module("pysam")
     import pysam
+
+    if nproc is None:
+        nproc = settings.get_threads()
 
     # Establish output filename
     if not outdir:

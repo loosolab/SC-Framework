@@ -12,6 +12,7 @@ from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
 from beartype import beartype
 
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -23,7 +24,6 @@ logger = settings.logger
 @beartype
 def prepare_atac_anndata(adata: sc.AnnData,
                          coordinate_cols: Optional[Union[list[str], str]] = None,
-                         h5ad_path: Optional[str] = None,
                          remove_var_index_prefix: bool = True,
                          keep_original_index: Optional[str] = None,
                          coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
@@ -41,8 +41,6 @@ def prepare_atac_anndata(adata: sc.AnnData,
         1. A list of 3 adata.var column names e.g. ['chr', 'start', 'end'] that will be used to create the index.
         2. A string (adata.var column name) that contains all three coordinates to create the index.
         3. And if None, the coordinates will be created from the index.
-    h5ad_path : Optional[str], default None
-        Path to the h5ad file.
     remove_var_index_prefix : bool, default True
         If True, the prefix ("chr") of the index will be removed.
     keep_original_index : Optional[str], default None
@@ -98,14 +96,11 @@ def prepare_atac_anndata(adata: sc.AnnData,
     # check if the barcode is the index otherwise set it
     utils.bioutils.barcode_index(adata)
 
-    if h5ad_path is not None:
-        adata.obs = adata.obs.assign(file=h5ad_path)
-
     return adata
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report: Optional[str] = None, label: Optional[str] = "batch") -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -116,20 +111,52 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]]) -> sc.A
     h5ad_file : Union[str, Collection[str], Mapping[str, str]]
         Path to one or more .h5ad files. Multiple .h5ad files will cause a "batch" column being added to adata.obs.
         In case of a mapping (dict) the function will populate the "batch" column using the dict-keys.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in. Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
 
     Returns
     -------
     sc.AnnData
         The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
     """
+    # source is stored in adata.uns["sctoolbox"]["source"]
     if isinstance(h5ad_file, str):
-        return sc.read_h5ad(filename=h5ad_file)
+        adata = sc.read_h5ad(filename=h5ad_file)
+        source = os.path.abspath(h5ad_file)
     elif isinstance(h5ad_file, Mapping):
         # load then combine anndata objects
-        return utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()})
+        adata = utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()}, label=label)
+        source = {k: os.path.abspath(f) for k, f in h5ad_file.items()}
     else:
         # load then combine anndata objects
-        return utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file])
+        adata = utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file], label=label)
+        source = [os.path.abspath(f) for f in h5ad_file]
+
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        if isinstance(h5ad_file, str):
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(h5ad_file)
+        elif isinstance(h5ad_file, Mapping):
+            for k, v in h5ad_file.items():
+                info_table.setdefault("Name", []).append(k)
+                info_table.setdefault("Source", []).append(v)
+        else:
+            for v in h5ad_file:
+                info_table.setdefault("Name", []).append("NA")
+                info_table.setdefault("Source", []).append(v)
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+
+    # Add information to uns
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], source)
+
+    return adata
 
 
 #####################################################################
@@ -206,6 +233,7 @@ def from_quant(path: str,
                configuration: list = [],
                use_samples: Optional[list] = None,
                dtype: Literal["raw", "filtered"] = "filtered",
+               report: Optional[str] = None,
                **kwargs: Any) -> sc.AnnData:
     """
     Assemble an adata object from data in the 'quant' folder of the snakemake pipeline.
@@ -222,6 +250,8 @@ def from_quant(path: str,
         List of samples to use. If None, all samples will be used.
     dtype : Literal["raw", "filtered"], default 'filtered'
         The type of Solo data to choose.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Contains additional arguments for the sctoolbox.utils.assemblers.from_single_starsolo method.
 
@@ -294,6 +324,17 @@ def from_quant(path: str,
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(path))
 
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        for sample_name, sample_dir in zip(sample_names, sample_dirs):
+            info_table.setdefault("Name", []).append(sample_name)
+            info_table.setdefault("Source", []).append(sample_dir)
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+
     return adata
 
 
@@ -306,10 +347,11 @@ def from_single_mtx(mtx: Union[str, Path],
                     barcodes: Union[str, Path],
                     variables: Optional[Union[str, Path]] = None,
                     transpose: bool = True,
-                    header: Union[int, list[int], Literal['infer'], None] = None,
+                    header: Union[int, list[int], Literal['infer'], None] = 'infer',
                     barcode_index: int = 0,
-                    genes_index: int = 0,
-                    delimiter: str = "\t") -> sc.AnnData:
+                    var_index: Optional[int] = 0,
+                    delimiter: str = "\t",
+                    comment_flag: str = '#') -> sc.AnnData:
     r"""
     Build an adata object from single mtx and two tsv/csv files.
 
@@ -325,12 +367,15 @@ def from_single_mtx(mtx: Union[str, Path],
         Set True to transpose mtx matrix.
     header : Union[int, list[int], Literal['infer'], None], default None
         Set header parameter for reading metadata tables using pandas.read_csv.
+        Automatically tries to enable/disable the header if the length of the mtx is one different to either variables or barcodes.
     barcode_index : int, default 0
         Column which contains the cell barcodes.
-    genes_index : int, default 0
-        Column which contains the gene IDs.
+    var_index : Optional[int], default 0
+        Column containing the variable IDs e.g. gene IDs or peak IDs.
     delimiter : str, default '\t'
-        delimiter of genes and barcodes table.
+        delimiter of the variable and barcode tables.
+    comment_flag : str, default '#'
+        Comment flag for the variable and barcode tables. Lines starting with this character will be ignored.
 
     Returns
     -------
@@ -340,7 +385,8 @@ def from_single_mtx(mtx: Union[str, Path],
     Raises
     ------
     ValueError
-        If barcode or gene files contain duplicates.
+        1. If barcode or gene files contain duplicates.
+        2. Variables or barcodes does not fit mtx size.
     """
 
     # Read mtx file
@@ -350,26 +396,39 @@ def from_single_mtx(mtx: Union[str, Path],
     if transpose:
         adata = adata.transpose()
 
-    # Read in gene and cell annotation
-    barcode_csv = pd.read_csv(barcodes, header=header, index_col=barcode_index, delimiter=delimiter)
-    barcode_csv.index.names = ['index']
-    barcode_csv.columns = [str(c) for c in barcode_csv.columns]  # convert to string
+    # statisfy the linter
+    if False:
+        raise ValueError()
 
-    if variables:
-        var_csv = pd.read_csv(variables, header=header, index_col=genes_index, delimiter=delimiter)
-        var_csv.index.names = ['index']
-        var_csv.columns = [str(c) for c in var_csv.columns]  # convert to string
+    def load_meta(file, header, index_col, delimiter, comment, expected_size, name):
+        """Load and prepare AnnData.var or AnnData.obs."""
+        # load the file
+        table = pd.read_csv(file, header=header, index_col=index_col, delimiter=delimiter, comment=comment)
 
-    # Test if they are unique
-    if not barcode_csv.index.is_unique:
-        raise ValueError("Barcode index column does not contain unique values")
-    if variables and not var_csv.index.is_unique:
-        raise ValueError("Genes index column does not contain unique values")
+        # check if the size is expected; try to fix when the size is one of
+        if len(table) - 1 == expected_size:
+            logger.warning(f"{name} file is one less than expected. Trying to fix by disabling the header.")
+            table = pd.read_csv(file, header=0, index_col=index_col, delimiter=delimiter, comment=comment)
+        elif len(table) + 1 == expected_size:
+            logger.warning(f"{name} file is one more than expected. Trying to fix by enabling the header.")
+            table = pd.read_csv(file, header=None, index_col=index_col, delimiter=delimiter, comment=comment)
+
+        if len(table) != expected_size:
+            raise ValueError(f"{name} file is of size {len(table)} but AnnData expects {expected_size}. Try to toggle the transpose argument.")
+
+        table.index.names = ["index"]
+        table.columns = [str(c) for c in table.columns]  # conver to string
+
+        # Test if they are unique
+        if not table.index.is_unique:
+            raise ValueError(f"{name} index column does not contain unique values")
+
+        return table
 
     # Add tables to anndata object
-    adata.obs = barcode_csv
+    adata.obs = load_meta(barcodes, header, barcode_index, delimiter, comment_flag, len(adata.obs), "Barcodes")
     if variables:
-        adata.var = var_csv
+        adata.var = load_meta(variables, header, var_index, delimiter, comment_flag, len(adata.var), "Variables")
 
     # Add filename to .obs
     adata.obs["filename"] = os.path.basename(mtx)
@@ -384,6 +443,7 @@ def from_mtx(path: str,
              barcodes: str = "*barcodes.tsv*",
              variables: str = "*genes.tsv*",
              var_error: bool = True,
+             report: Optional[str] = None,
              **kwargs: Any) -> sc.AnnData:
     """
     Build an adata object from list of mtx, barcodes and variables files.
@@ -403,6 +463,8 @@ def from_mtx(path: str,
         String for glob to find e.g. gene label files (RNA).
     var_error : bool, default True
         Will raise an error when there is no variables file found next to any .mtx file. Set the parameter to False will consider the variable file optional.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Contains additional arguments for the sctoolbox.utils.assemblers.from_single_mtx method.
 
@@ -463,6 +525,17 @@ def from_mtx(path: str,
     else:
         adata = adata_objects[0]
 
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        for m in mtx_files:
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(str(m.parents[0]))
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+
     return adata
 
 
@@ -470,7 +543,8 @@ def from_mtx(path: str,
 def convertToAdata(file: str,
                    output: Optional[str] = None,
                    r_home: Optional[str] = None,
-                   layer: Optional[str] = None) -> Optional[sc.AnnData]:
+                   layer: Optional[str] = None,
+                   report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Convert .rds files containing Seurat or SingleCellExperiment to scanpy anndata.
 
@@ -488,6 +562,8 @@ def convertToAdata(file: str,
     layer : Optional[str], default None
         Provide name of layer to be stored in anndata. By default the main layer is stored.
         In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -587,6 +663,16 @@ def convertToAdata(file: str,
 
     # Add information to uns
     utils.adata.add_uns_info(adata, ["sctoolbox", "source"], os.path.abspath(file))
+
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {
+            "Name": ["NA"],
+            "Source": [os.path.abspath(file)]
+        }
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
 
     if output:
         # Saving adata.h5ad

@@ -5,6 +5,7 @@ import os
 import subprocess
 import numpy as np
 import pandas as pd
+from importlib import import_module
 import sctoolbox.utils.general as general
 
 
@@ -34,6 +35,25 @@ def na_dataframe():
 
 
 # --------------------------- TESTS --------------------------------- #
+
+
+@pytest.mark.parametrize("python_version,keep,output", [
+    (False, ["invalid_name"], {}),
+    (True, ["wave"], {"Python": "", "wave": ""})])  # import wave as it is part of the standard library but unlikely to be used by us
+def test_version_report(python_version, keep, output):
+    """Test if packages are reported."""
+    assert keep[0] not in general.get_version_report().keys()
+
+    try:
+        import_module(keep[0])
+    except ModuleNotFoundError:
+        pass
+
+    report = general.get_version_report(python_version=python_version, keep=keep, table=False)
+
+    if python_version:
+        assert "Python" in report.keys()
+    assert output.keys() == report.keys()
 
 
 def test_run_cmd_valid():

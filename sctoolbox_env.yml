@@ -12,7 +12,7 @@ dependencies:
 # Dependencies used within the notebooks (but not the sctoolbox package)
   - pip>=24.2  # for installing additional packages
   - pip:
-    - scanpro>=0.3.1  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+    - scanpro>=0.4.0  # scanpro < 0.3.1 needs statannotations which causes versioning issues
     - git+https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
 # sctoolbox related dependency exemptions
 # R dependencies (needed to enable data R->Python conversion)

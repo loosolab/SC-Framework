@@ -10,10 +10,22 @@ import tempfile
 import matplotlib.pyplot as plt
 import logging
 from scipy.sparse import csr_matrix
+from contextlib import contextmanager
 
 # Prevent figures from being shown, we just check that they are created
 plt.switch_backend("Agg")
 
+# ---------------------------- HELPER ------------------------------- #
+
+
+@contextmanager
+def add_logger_handler(logger, handler):
+    """Temporarily add a handler to the given logger."""
+    logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -272,12 +284,13 @@ def test_match_columns(adata, which, caplog):
     # add an invalid name
     test_dict["invalid"] = "placeholder"
 
-    result = qc._match_columns(adata=adata, d=test_dict, which=which)
+    with add_logger_handler(qc.logger, caplog.handler):
+        result = qc._match_columns(adata=adata, d=test_dict, which=which)
 
-    assert len(cols) == len(result)
-    assert all(c in result for c in cols)
-    assert "invalid" not in result
-    assert caplog.record_tuples[-1] == ('sctoolbox', logging.WARNING, f'column invalid not found in adata.{which}')
+        assert len(cols) == len(result)
+        assert all(c in result for c in cols)
+        assert "invalid" not in result
+        assert caplog.record_tuples[-1] == ('sctoolbox', logging.WARNING, f'column invalid not found in adata.{which}')
 
 
 @pytest.mark.parametrize("invert", [True, False])
@@ -323,9 +336,11 @@ def test_filter_object_overwrite(adata, caplog):
     # apply a filter to create a report
     out = qc._filter_object(adata_copy, "is_bool", name="filter", inplace=False)
 
-    # try to overwrite the report created above
-    qc._filter_object(out, "is_bool", name="filter", overwrite=True)
-    assert "Applying filter on top of previous filter." in caplog.text
+    # manually add caplog handler since our logger does not propagate to root
+    with add_logger_handler(qc.logger, caplog.handler):
+        # try to overwrite the report created above
+        qc._filter_object(out, "is_bool", name="filter", overwrite=True)
+        assert "Applying filter on top of previous filter." in caplog.text
 
 
 def test_filter_object_fail(adata):
@@ -379,7 +394,7 @@ def test_predict_sex(caplog, adata, threshold):
     adata = adata.copy()  # copy adata to avoid inplace changes
 
     # gene not in data
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.INFO), add_logger_handler(qc.logger, caplog.handler):
         qc.predict_sex(adata, groupby='sample')
         assert "Selected gene is not present in the data. Prediction is skipped." in caplog.records[1].message
 
