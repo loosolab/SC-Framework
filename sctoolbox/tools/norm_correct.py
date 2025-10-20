@@ -345,10 +345,10 @@ def batch_correction(adata: sc.AnnData,
     Perform batch correction on the adata object using the 'method' given.
 
     Different correction methods will perform the batch correction on different aspects of the data,
-    meaning calculations prior to the corrected data are not affected. Here is an overview on the analysis
+    meaning calculations following the correction have to be redone. Here is an overview on the analysis
     steps until batch correction and where each of the methods is applied:
 
-    Matrix (adata.X) -> PCA -> Nearest neighbor
+    Matrix (adata.X) -> Dimension reduction (e.g. PCA) -> Nearest neighbor
 
     +-----------+----------------------+
     | Method    | Applied to/ replaces |
@@ -357,9 +357,9 @@ def batch_correction(adata: sc.AnnData,
     +-----------+----------------------+
     | mnn       | Matrix               |
     +-----------+----------------------+
-    | harmony   | PCA                  |
+    | harmony   | Dimension reduction  |
     +-----------+----------------------+
-    | scanorama | PCA                  |
+    | scanorama | Dimension reduction  |
     +-----------+----------------------+
     | combat    | Matrix               |
     +-----------+----------------------+
@@ -382,6 +382,8 @@ def batch_correction(adata: sc.AnnData,
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
+    dim_red_kwargs : dict, default {}
+        Arguments to redo the steps following the selected batch correction (see table above). Forwarded to :func:`sctoolbox.tools.dim_reduction.dim_red`.
     **kwargs : Any
         Additional arguments will be forwarded to the method function.
         The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
@@ -461,25 +463,22 @@ def batch_correction(adata: sc.AnnData,
         # mnn dim_red default
         mnn_dim_def = {
             "method": "PCA",  # TODO allow lsi
-            "method_kwargs": {"mask_var": "highly_variable" if highly_variable else None},
-            "subset": [],
-            "neighbor_kwargs": {}
+            "method_kwargs": {"mask_var": "highly_variable" if highly_variable else None}
         }
         mnn_dim_def.update(dim_red_kwargs)
 
         dim_red.dim_red(anndata=adata, inplace=True, **mnn_dim_def)
 
     elif method == "harmony":
-        adata = adata.copy()  # there is no copy option for harmony
         adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
 
         sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
-        adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]  # TODO
-        sc.pp.neighbors(adata)
+        adata.obsm["X_pca"] = adata.obsm.pop("X_pca_harmony")
+
+        # don't redo dimension reduction but apply subset
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
 
     elif method == "scanorama":
-        adata = adata.copy()  # there is no copy option for scanorama
-
         # scanorama expect the batch key in a sorted format
         # therefore anndata.obs should be sorted based on batch column before this method.
         original_order = adata.obs.index
@@ -490,8 +489,10 @@ def batch_correction(adata: sc.AnnData,
             kwargs["approx"] = False
 
         sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)  # TODO
-        adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
-        sc.pp.neighbors(adata)
+        adata.obsm["X_pca"] = adata.obsm.pop("X_scanorama")
+
+        # don't redo dimension reduction but apply subset
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
 
         # sort the adata back to the original order
         adata = adata[original_order]
