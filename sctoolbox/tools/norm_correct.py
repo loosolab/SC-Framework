@@ -490,7 +490,7 @@ def batch_correction(adata: sc.AnnData,
         if "approx" not in kwargs:
             kwargs["approx"] = False
 
-        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)  # TODO
+        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm.pop("X_scanorama")
 
         # don't redo dimension reduction but apply subset
