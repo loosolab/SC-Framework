@@ -24,7 +24,6 @@ logger = settings.logger
 @beartype
 def prepare_atac_anndata(adata: sc.AnnData,
                          coordinate_cols: Optional[Union[list[str], str]] = None,
-                         h5ad_path: Optional[str] = None,
                          remove_var_index_prefix: bool = True,
                          keep_original_index: Optional[str] = None,
                          coordinate_regex: str = r"chr[0-9XYM]+[\_\:\-]+[0-9]+[\_\:\-]+[0-9]+") -> sc.AnnData:
@@ -42,8 +41,6 @@ def prepare_atac_anndata(adata: sc.AnnData,
         1. A list of 3 adata.var column names e.g. ['chr', 'start', 'end'] that will be used to create the index.
         2. A string (adata.var column name) that contains all three coordinates to create the index.
         3. And if None, the coordinates will be created from the index.
-    h5ad_path : Optional[str], default None
-        Path to the h5ad file.
     remove_var_index_prefix : bool, default True
         If True, the prefix ("chr") of the index will be removed.
     keep_original_index : Optional[str], default None
@@ -99,9 +96,6 @@ def prepare_atac_anndata(adata: sc.AnnData,
     # check if the barcode is the index otherwise set it
     utils.bioutils.barcode_index(adata)
 
-    if h5ad_path is not None:
-        adata.obs = adata.obs.assign(file=h5ad_path)
-
     return adata
 
 
@@ -127,14 +121,18 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report:
     sc.AnnData
         The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
     """
+    # source is stored in adata.uns["sctoolbox"]["source"]
     if isinstance(h5ad_file, str):
         adata = sc.read_h5ad(filename=h5ad_file)
+        source = os.path.abspath(h5ad_file)
     elif isinstance(h5ad_file, Mapping):
         # load then combine anndata objects
         adata = utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()}, label=label)
+        source = {k: os.path.abspath(f) for k, f in h5ad_file.items()}
     else:
         # load then combine anndata objects
         adata = utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file], label=label)
+        source = [os.path.abspath(f) for f in h5ad_file]
 
     # generate and save report
     if settings.report_dir and report:
@@ -154,6 +152,9 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report:
 
         # save table
         plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+
+    # Add information to uns
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], source)
 
     return adata
 

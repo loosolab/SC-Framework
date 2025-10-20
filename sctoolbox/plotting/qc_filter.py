@@ -775,8 +775,7 @@ def quality_violin(adata: sc.AnnData,
                        y=column,
                        ax=ax,
                        order=groups,
-                       palette=color_list if len(color_list) > 1 else None,  # fixes palette without hue warning
-                       color=color_list[0] if len(color_list) == 1 else None,  # ^
+                       palette=color_list,
                        cut=0,
                        legend=False,
                        **kwargs)
