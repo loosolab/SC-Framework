@@ -19,6 +19,7 @@
 - sctoolbox.utils.bioutils._bed_is_sorted and _read_bedfile account for comment lines.
 - migrate to numpy 2
 - Fix error in bam_adata_ov if some reads do not contain the tag
+- Add function from_R (#395)
 
 Changes to notebooks
 --------------------
@@ -27,6 +28,7 @@ Changes to notebooks
 - move gene annotation (clustering -> QC; #357)
 - move HFV (QC -> normalization; #355)
 - ATAC & RNA assembly: add section to adjust layers (#363)
+- Allow multiple .rds/r.obj files to be read and merged into one adata (#395)
 
 
 0.13.5 (20-08-2025)

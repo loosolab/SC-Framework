@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping, Callable
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -100,7 +100,9 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report: Optional[str] = None, label: Optional[str] = "batch") -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]],
+              report: Optional[str] = None,
+              label: Optional[str] = "batch") -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -121,42 +123,8 @@ def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report:
     sc.AnnData
         The loaded anndata object. Multiple files will be combined into one object with a "batch" column in adata.obs.
     """
-    # source is stored in adata.uns["sctoolbox"]["source"]
-    if isinstance(h5ad_file, str):
-        adata = sc.read_h5ad(filename=h5ad_file)
-        source = os.path.abspath(h5ad_file)
-    elif isinstance(h5ad_file, Mapping):
-        # load then combine anndata objects
-        adata = utils.adata.concadata({k: sc.read_h5ad(f) for k, f in h5ad_file.items()}, label=label)
-        source = {k: os.path.abspath(f) for k, f in h5ad_file.items()}
-    else:
-        # load then combine anndata objects
-        adata = utils.adata.concadata([sc.read_h5ad(f) for f in h5ad_file], label=label)
-        source = [os.path.abspath(f) for f in h5ad_file]
 
-    # generate and save report
-    if settings.report_dir and report:
-        info_table = {}
-
-        if isinstance(h5ad_file, str):
-            info_table.setdefault("Name", []).append("NA")
-            info_table.setdefault("Source", []).append(h5ad_file)
-        elif isinstance(h5ad_file, Mapping):
-            for k, v in h5ad_file.items():
-                info_table.setdefault("Name", []).append(k)
-                info_table.setdefault("Source", []).append(v)
-        else:
-            for v in h5ad_file:
-                info_table.setdefault("Name", []).append("NA")
-                info_table.setdefault("Source", []).append(v)
-
-        # save table
-        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
-
-    # Add information to uns
-    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], source)
-
-    return adata
+    return _read_and_merge(h5ad_file, sc.read_h5ad, label, report)
 
 
 #####################################################################
@@ -579,83 +547,82 @@ def convertToAdata(file: str,
     import anndata2ri
     utils.checker.check_module("rpy2")
     from rpy2.robjects import r, default_converter, conversion, globalenv
-    anndata2ri.activate()
 
     # create rpy2 None to NULL converter
     # https://stackoverflow.com/questions/65783033/how-to-convert-none-to-r-null
     none_converter = conversion.Converter("None converter")
     none_converter.py2rpy.register(type(None), utils.general._none2null)
 
-    # check if Seurat and SingleCellExperiment are installed
-    r("""
-        if (!suppressPackageStartupMessages(require(Seurat))) {
-            stop("R dependency Seurat not found.")
-        }
-        if (!suppressPackageStartupMessages(require(SingleCellExperiment))) {
-            stop("R dependecy SingleCellExperiment not found.")
-        }
-    """)
-
-    # add variables into R
     with conversion.localconverter(default_converter + none_converter):
+        # check if Seurat and SingleCellExperiment are installed
+        r("""
+            if (!suppressPackageStartupMessages(require(Seurat))) {
+                stop("R dependency Seurat not found.")
+            }
+            if (!suppressPackageStartupMessages(require(SingleCellExperiment))) {
+                stop("R dependecy SingleCellExperiment not found.")
+            }
+        """)
+
         globalenv["file"] = file
         globalenv["layer"] = layer
 
-    # ----- convert to anndata ----- #
-    r("""
-        # ----- load object ----- #
-        # try loading .robj
-        object <- try({
-            # load file; returns vector of created variables
-            new_vars <- load(file)
-            # store new variable into another variable to work on
-            get(new_vars[1])
-        }, silent = TRUE)
+        # ----- convert to anndata ----- #
+        r("""
+            # ----- load object ----- #
+            # try loading .robj
+            object <- try({
+                # load file; returns vector of created variables
+                new_vars <- load(file)
+                # store new variable into another variable to work on
+                get(new_vars[1])
+            }, silent = TRUE)
 
-        # if .robj failed try .rds
-        if (class(object) == "try-error") {
-            # load object
-            object <- try(readRDS(file), silent = TRUE)
-        }
-
-        # if both .robj and .rds failed throw error
-        if (class(object) == "try-error") {
-            stop("Unknown file. Expected '.robj' or '.rds' got", file)
-        }
-
-        # update/validate SeuratObject to match newer versions
-        object = UpdateSeuratObject(object)
-
-        # ----- convert to SingleCellExperiment ----- #
-        # can only convert Seurat -> SingleCellExperiment -> anndata
-        if (class(object) == "Seurat") {
-            object <- as.SingleCellExperiment(object)
-        } else if (class(object) == "SingleCellExperiment") {
-            object <- object
-        } else {
-            stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
-        }
-
-        # ----- change layer ----- #
-        # adata can only store a single layer
-        if (!is.null(layer)) {
-            layers <- c(mainExpName(object), altExpNames(object))
-
-            # check if layer is valid
-            if (!layer %in% layers) {
-                stop("Invalid layer! Expected one of ", paste(layers, collapse = ", "), " got ", layer)
+            # if .robj failed try .rds
+            if (class(object) == "try-error") {
+                # load object
+                object <- try(readRDS(file), silent = TRUE)
             }
 
-            # select layer
-            if (layer != mainExpName(object)) {
-                object <- swapAltExp(object, layer, saved = mainExpName(object), withColData = TRUE)
+            # if both .robj and .rds failed throw error
+            if (class(object) == "try-error") {
+                stop("Unknown file. Expected '.robj' or '.rds' got", file)
             }
-        }
-    """)
 
-    # pull SingleCellExperiment into python
-    # this also converts to anndata
-    adata = globalenv["object"]
+            # update/validate SeuratObject to match newer versions
+            object <- UpdateSeuratObject(object)
+
+            # ----- convert to SingleCellExperiment ----- #
+            # can only convert Seurat -> SingleCellExperiment -> anndata
+            if (class(object) == "Seurat") {
+                object <- as.SingleCellExperiment(object)
+            } else if (class(object) == "SingleCellExperiment") {
+                object <- object
+            } else {
+                stop("Unknown object! Expected class 'Seurat' or 'SingleCellExperiment' got ", class(object))
+            }
+
+            # ----- change layer ----- #
+            # adata can only store a single layer
+            if (!is.null(layer)) {
+                layers <- c(mainExpName(object), altExpNames(object))
+
+                # check if layer is valid
+                if (!layer %in% layers) {
+                    stop("Invalid layer! Expected one of ", paste(layers, collapse = ", "), " got ", layer)
+                }
+
+                # select layer
+                if (layer != mainExpName(object)) {
+                    object <- swapAltExp(object, layer, saved = mainExpName(object), withColData = TRUE)
+                }
+            }
+        """)
+
+    with conversion.localconverter(anndata2ri.converter):
+        # pull SingleCellExperiment into python
+        # this also converts to anndata
+        adata = globalenv["object"]
 
     # fixes https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/205
     adata.obs.index = adata.obs.index.astype('object')
@@ -679,3 +646,163 @@ def convertToAdata(file: str,
         adata.write(filename=output, compression='gzip')
     else:
         return adata
+
+
+@beartype
+def from_R(
+        rds_file: Union[str, Collection[str], Mapping[str, str]],
+        label: Optional[str] = "batch",
+        output: Optional[str] = None,
+        report: Optional[str] = None,
+        layer: Optional[Union[str, Collection[str], Mapping[str, str]]] = None,
+        r_home: Optional[str] = None) -> Optional[sc.AnnData]:
+    """
+    Convert one or more .rds/.robj file(s) containing Seurat or SingleCellExperiment to scanpy anndata.
+
+    In order to work an R installation with Seurat & SingleCellExperiment is required.
+
+    Parameters
+    ----------
+    rds_file : Union[str, Collection[str], Mapping[str, str]]
+        Path or list of paths to the .rds or .robj file(s).
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in.
+        Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+    output : Optional[str], default None
+        Path to output .h5ad file. Won't save if None.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    layer : Optional[Union[str, Collection[str], Mapping[str, str]]], default None
+        Provide name of layer to be stored in anndata. By default the main layer is stored.
+        In case of multiome data multiple layers are present e.g. RNA and ATAC. But anndata can only store a single layer.
+        Must be string or match type of rds_file.
+    r_home : Optional[str], default None
+        Path to the R home directory. If None will construct path based on location of python executable.
+        E.g for ".conda/scanpy/bin/python" will look at ".conda/scanpy/lib/R"
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Returns converted (and merged) anndata object or None when output is set.
+    """
+
+    adata = _read_and_merge(rds_file, convertToAdata, label, report, layer=layer, r_home=r_home)
+
+    if output:
+        # Saving adata.h5ad
+        adata.write(filename=output, compression='gzip')
+    else:
+        return adata
+
+
+@beartype
+def _read_and_merge(
+        path: Union[str, Collection[str], Mapping[str, str]],
+        method: Callable,
+        label: Optional[str] = "batch",
+        report: Optional[str] = None,
+        **kwargs: Any) -> sc.AnnData:
+    """
+    Read in one or multiple files and convert/merge them to one anndata object.
+
+    Parameters
+    ----------
+    path : Union[str, Collection[str], Mapping[str, str]]
+        Path or list of paths to the input file(s).
+    method : Callable
+        Method for reading individual files. Set depending on file format e.g. scanpy.read_h5ad for h5ad files.
+        The method is expected to receive a file path as the first parameter and to return a single AnnData object.
+    label: Optional[str], default "batch"
+        Name of the `adata.obs` column to place the batch information in.
+        Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+    **kwargs : Any
+        Contains additional arguments for the reading method.
+
+        Note: The keyword "layer" is a special case, which, depending on the type, can result in three different behaviors:
+            1. Type string, e.g. :code:`{"layer": "raw"}`.
+                Standard kwargs behavior. The same value will be applied to each function call.
+            2. Type list, e.g. :code:`{"layer": ["raw", "norm"]}`.
+                List length has to be the same as :code:`path`. Will apply the values in the given order.
+            3. Type dict, e.g. :code:`{"layer": {"first": "raw", "second": "norm"}}`.
+                Applies the values to files matching the dict of :code:`path`.
+
+    Raises
+    ------
+    ValueError
+        1. layer datatype and path datatype do not match (if layer is not string).
+        2. if path and layer are lists with different lengths.
+        3. if not all keys in path dict match with keys in layer dict.
+
+    Returns
+    -------
+    sc.AnnData
+        Returns converted (and merged) anndata object.
+    """
+
+    # Checks for layer option used by convertToAdata method
+    has_layer = False
+    if "layer" in kwargs and kwargs["layer"] is not None:
+        has_layer = True
+        layer_is_not_string = not isinstance(kwargs["layer"], str)
+        layer_has_matching_type = isinstance(kwargs["layer"], type(path))
+        if not layer_has_matching_type and layer_is_not_string:
+            raise ValueError("layer datatype must match input datatype or be of type str")
+        elif layer_has_matching_type and layer_is_not_string:
+            if isinstance(path, list):
+                if len(path) != len(kwargs["layer"]):
+                    raise ValueError("When giving a list path and layer must be of same length.")
+            elif isinstance(path, dict):
+                if not all(key in kwargs["layer"] for key in path):
+                    raise ValueError("Missing keys in layer dict.")
+
+    # source is stored in adata.uns["sctoolbox"]["source"]
+    # TODO move for-loop/kwargs handling into seperate function
+    if isinstance(path, str):
+        adata = method(path, **kwargs)
+        source = os.path.abspath(path)
+    elif isinstance(path, Mapping):
+        # load then combine anndata objects
+        sub_kwargs = kwargs.copy()
+        adatas, source = dict(), dict()
+        for k, f in path.items():
+            if has_layer and layer_is_not_string:
+                sub_kwargs = {"layer": kwargs["layer"][k]}
+            adatas[k] = method(f, **sub_kwargs)
+            source[k] = os.path.abspath(f)
+        adata = utils.adata.concadata(adatas, label=label)
+    else:
+        # load then combine anndata objects
+        adatas, source = list(), list()
+        sub_kwargs = kwargs.copy()
+        for i, f in enumerate(path):
+            if has_layer and layer_is_not_string:
+                sub_kwargs = {"layer": kwargs["layer"][i]}
+            adatas.append(method(f, **sub_kwargs))
+            source.append(os.path.abspath(f))
+        adata = utils.adata.concadata(adatas, label=label)
+
+    # generate and save report
+    if settings.report_dir and report:
+        info_table = {}
+
+        if isinstance(path, str):
+            info_table.setdefault("Name", []).append("NA")
+            info_table.setdefault("Source", []).append(path)
+        elif isinstance(path, Mapping):
+            for k, v in path.items():
+                info_table.setdefault("Name", []).append(k)
+                info_table.setdefault("Source", []).append(v)
+        else:
+            for v in path:
+                info_table.setdefault("Name", []).append("NA")
+                info_table.setdefault("Source", []).append(v)
+
+        # save table
+        plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
+
+    # Add information to uns
+    utils.adata.add_uns_info(adata, ["sctoolbox", "source"], source)
+
+    return adata
