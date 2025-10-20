@@ -40,7 +40,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                   "gsea": ["gseapy"],
                   "deseq2": ["pydeseq2>=0.4.11"],
                   "deseq2": ["pydeseq2>=0.5.2"],  # https://github.com/owkin/PyDESeq2/issues/242
-                  "pilotpy" : ["pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git"]
+                  "pilotpy": ["pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git"]
                   }
 
 # contains all requirements aka a full installation
