@@ -435,7 +435,6 @@ def batch_correction(adata: sc.AnnData,
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
-
         var_table = adata.var  # var_table before batch correction
 
         # split adata on batch_key
@@ -498,16 +497,15 @@ def batch_correction(adata: sc.AnnData,
         adata = adata[original_order]
 
     elif method == "combat":
-
-        adata = adata.copy()  # make sure adata is not modified
         # run combat
         sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
-        sc.pp.pca(adata)  # TODO
-        sc.pp.neighbors(adata)
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif callable(method):
-        adata = method(adata.copy(), **kwargs)
+        adata = method(adata, **kwargs)
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
 
