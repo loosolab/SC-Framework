@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import scrublet as scr
 import scipy.stats as stats
 from scipy.sparse import csr_matrix
+import yaml
 
 from beartype import beartype
 import numpy.typing as npt
@@ -107,7 +108,9 @@ def predict_cell_cycle(adata: sc.AnnData,
                        g2m_genes: Optional[str | list[str]] = None,
                        groupby: Optional[str] = None,
                        plot: bool = True,
+                       gene_column: Optional[str] = None,
                        save: Optional[str] = None,
+                       report: Optional[str] = None,
                        inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Assign a score and a phase to each cell depending on the expression of cell cycle genes.
@@ -135,8 +138,12 @@ def predict_cell_cycle(adata: sc.AnnData,
         If None, the plot shows cell counts per phase.
     plot : bool, default True
         Plot a bar plot to show counts of cells in each phase.
+    gene_column : Optional[str], default None
+        Name of the column in adata.var that contains the gene names. Uses adata.var.index as default.
     save : Optional[str], default None
         Path to save the plot.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     inplace : bool, default True
         if True, add new columns to the original anndata object.
 
@@ -223,6 +230,12 @@ def predict_cell_cycle(adata: sc.AnnData,
     # Scale the data before scoring
     sdata = sc.pp.scale(adata, copy=True)
 
+    # replace the index with gene symbols if neccessary
+    if gene_column:
+        sdata.var.set_index(gene_column, inplace=True)
+        sdata.var.index = sdata.var.index.astype("string")
+        sdata.var_names_make_unique()
+
     # Score the cells by s phase or g2m phase
     sc.tl.score_genes_cell_cycle(sdata, s_genes=s_genes, g2m_genes=g2m_genes)
 
@@ -233,8 +246,11 @@ def predict_cell_cycle(adata: sc.AnnData,
 
     # plot a bar plot showing counts (and proportions) of cells in each phase
     if plot:
-        pl.qc_filter.n_cells_barplot(adata, x="phase", groupby=groupby,
-                                     save=save)
+        pl.qc_filter.n_cells_barplot(adata, x="phase",
+                                     groupby=groupby,
+                                     title="Cell Cycle Prediction",
+                                     save=save,
+                                     report=report)
 
     if not inplace:
         return adata
@@ -248,7 +264,7 @@ def estimate_doublets(adata: sc.AnnData,
                       inplace: bool = True,
                       plot: bool = True,
                       groupby: Optional[str] = None,
-                      threads: int = 4,
+                      threads: Optional[int] = 4,
                       fill_na: bool = True,
                       **kwargs: Any) -> Optional[sc.AnnData]:
     """
@@ -272,8 +288,8 @@ def estimate_doublets(adata: sc.AnnData,
     groupby : Optional[str], default None
         Key in adata.obs to use for batching during doublet estimation. If threads > 1,
         the adata is split into separate runs across threads. Otherwise each batch is run separately.
-    threads : int, default 4
-        Number of threads to use.
+    threads : Optional[int], default 4
+        Number of threads to use. None to use settings.get_threads.
     fill_na : bool, default True
         If True, replaces NA values returned by scrublet with 0 and False. Scrublet returns NA if it cannot calculate
         a doublet score. Keep in mind that this does not mean that it is no doublet.
@@ -292,6 +308,9 @@ def estimate_doublets(adata: sc.AnnData,
         If inplace is True, the function returns None.
     """
 
+    if threads is None:
+        threads = settings.get_threads()
+
     if inplace is False:
         adata = adata.copy()
 
@@ -300,24 +319,22 @@ def estimate_doublets(adata: sc.AnnData,
 
         all_groups = adata.obs[groupby].astype("category").cat.categories.tolist()
         if threads > 1:
-            pool = mp.Pool(threads, maxtasksperchild=1)  # maxtasksperchild to avoid memory leaks
+            ctx_in_main = mp.get_context('forkserver')
+            with ctx_in_main.Pool(processes=threads, maxtasksperchild=1) as pool:
+                # Run scrublet for each sub data
+                logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
+                jobs = []
+                for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
 
-            # Run scrublet for each sub data
-            logger.info("Sending {0} batches to {1} threads".format(len(all_groups), threads))
-            jobs = []
-            for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
+                    # Clean up adata before sending to thread
+                    sub.uns = {}
+                    sub.layers = None
 
-                # Clean up adata before sending to thread
-                sub.uns = {}
-                sub.layers = None
+                    job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
+                    jobs.append(job)
 
-                job = pool.apply_async(_run_scrublet, (sub, use_native, threshold), {"verbose": False, **kwargs})
-                jobs.append(job)
-            pool.close()
-
-            utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
-            results = [job.get() for job in jobs]
-
+                utils.multiprocessing.monitor_jobs(jobs, "Scrublet per group")
+                results = [job.get() for job in jobs]
         else:
             results = []
             for i, sub in enumerate([adata[adata.obs[groupby] == group] for group in all_groups]):
@@ -343,10 +360,13 @@ def estimate_doublets(adata: sc.AnnData,
         obs_table, uns_dict = _run_scrublet(adata, threshold=threshold, **kwargs)
 
     # Save scores to object
-    # ImplicitModificationWarning
-    adata.obs["doublet_score"] = obs_table["doublet_score"]
-    adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
-    adata.uns["scrublet"] = uns_dict
+    # ignore ImplicitModificationWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", anndata.ImplicitModificationWarning)
+
+        adata.obs["doublet_score"] = obs_table["doublet_score"]
+        adata.obs["predicted_doublet"] = obs_table["predicted_doublet"]
+        adata.uns["scrublet"] = uns_dict
 
     if fill_na:
         adata.obs[["doublet_score", "predicted_doublet"]] = (
@@ -423,6 +443,7 @@ def predict_sex(adata: sc.AnnData,
                 threshold: float = 0.3,
                 plot: bool = True,
                 save: Optional[str] = None,
+                report: Optional[str] = None,
                 **kwargs: Any) -> None:
     """
     Predict sex based on expression of Xist (or another gene).
@@ -443,6 +464,8 @@ def predict_sex(adata: sc.AnnData,
         Whether to plot the distribution of gene expression per group.
     save : Optional[str], default None
         If provided, the plot will be saved to this path.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
         Additional arguments are passed to scanpy.pl.violin.
 
@@ -534,6 +557,10 @@ def predict_sex(adata: sc.AnnData,
 
         _save_figure(save)
 
+        # report
+        if settings.report_dir and report:
+            _save_figure(report, report=True)
+
 
 ###############################################################################
 #                      STEP 1: FINDING AUTOMATIC CUTOFFS                      #
@@ -544,7 +571,7 @@ def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
                   min_n: Union[int, float] = 3,
                   max_n: Union[int, float] = 3,
-                  plot: bool = False) -> dict[str, Union[int, float]]:
+                  plot: bool = False) -> dict[str, Union[int, np.int_, float, np.floating]]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -569,7 +596,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, Union[int, float]]
+    dict[str, Union[int, np.int_, float, np.floating]]
         Dictionary with min and max thresholds.
     """
 
@@ -777,7 +804,8 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]) -> pd.DataFrame:
+def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]],
+                        report: Optional[str] = None) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
 
@@ -785,6 +813,8 @@ def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | 
     ----------
     threshold_dict : dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]]
         Dictionary with thresholds.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -814,6 +844,11 @@ def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | 
 
         # Remove duplicate rows
         df.drop_duplicates(inplace=True)
+
+    # report
+    if settings.report_dir and report:
+        # save table
+        pl.general.plot_table(table=df, report=report, show_index=False)
 
     return df
 
@@ -1090,7 +1125,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
                         thresholds: Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]],
                         which: Literal["obs", "var"] = "obs",
                         inplace: bool = True,
-                        overwrite: bool = False) -> Optional[sc.AnnData]:
+                        overwrite: bool = False,
+                        report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Apply QC thresholds to anndata object.
 
@@ -1106,6 +1142,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
         Change adata inplace or return a changed copy.
     overwrite : bool, default False
         Set to overwrite previously applied filters.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1117,6 +1155,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
     ValueError
         1: If the keys in thresholds do not match with the columns in adata.<which>.
     """
+    global_ = True  # False if there are any group based filters
+
     # get the table which contains the filter metrics
     table = getattr(adata, which)
 
@@ -1140,6 +1180,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
                 )
 
         else:
+            global_ = False
             # group based filtering
             tmp_bool = []
             for _, grp_dict in _dict.items():
@@ -1154,6 +1195,20 @@ def apply_qc_thresholds(adata: sc.AnnData,
     # create an union from the boolean filters of all metrics
     include = [all(row) for row in zip(*inclusion_bools)]
 
+    # add info to method report
+    if settings.report_dir and report:
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({f"{which}_global": global_})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
+
     # apply the filter
     return _filter_object(adata=adata,
                           filter=include,
@@ -1162,7 +1217,8 @@ def apply_qc_thresholds(adata: sc.AnnData,
                           inplace=inplace,
                           name="threshold",
                           value=thresholds,
-                          overwrite=overwrite)
+                          overwrite=overwrite,
+                          report=report)
 
 
 ###############################################################################
@@ -1177,7 +1233,8 @@ def _filter_object(adata: sc.AnnData,
                    inplace: bool = True,
                    name: Optional[str | list[str]] = None,
                    value: Optional[Dict] = None,
-                   overwrite: bool = False
+                   overwrite: bool = False,
+                   report: Optional[str] = None
                    ) -> Optional[sc.AnnData]:
     """
     Filter an adata object based on a filter.
@@ -1209,6 +1266,8 @@ def _filter_object(adata: sc.AnnData,
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Raises
     ------
@@ -1292,7 +1351,31 @@ def _filter_object(adata: sc.AnnData,
 
     n_after = adata.shape[0] if which == "obs" else adata.shape[1]
     filtered = n_before - n_after
-    logger.info(f"Filtered {filtered} elements from AnnData.{which} ({n_before} -> {n_after}).")
+    label = f"{', '.join(name)}" if name else ""
+    msg = f"Filtered {filtered} {label} elements from AnnData.{which} ({n_before} -> {n_after})."
+    logger.info(msg)
+
+    # report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report, "w") as f:
+            f.write(msg)
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        if label == "threshold":
+            m_label = "gene" if which == "var" else "cell"
+        else:
+            m_label = label
+
+        with open(meth_file, "w") as f:
+            method.update({m_label: filtered})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
 
     # store thresholds and statistics
     if name:
@@ -1315,7 +1398,9 @@ def filter_cells(adata: sc.AnnData,
                  inplace: bool = True,
                  name: Optional[str | list[str]] = None,
                  value: Optional[Dict] = None,
-                 overwrite: bool = False) -> Optional[sc.AnnData]:
+                 overwrite: bool = False,
+                 report: Optional[str] = None
+                 ) -> Optional[sc.AnnData]:
     """
     Remove cells from the AnnData object.
 
@@ -1338,6 +1423,8 @@ def filter_cells(adata: sc.AnnData,
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1345,7 +1432,7 @@ def filter_cells(adata: sc.AnnData,
         If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
+    return _filter_object(adata, cells, which="obs", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite, report=report)
 
 
 @deco.log_anndata
@@ -1356,7 +1443,8 @@ def filter_genes(adata: sc.AnnData,
                  inplace: bool = True,
                  name: Optional[str | list[str]] = None,
                  value: Optional[Dict] = None,
-                 overwrite: bool = False) -> Optional[sc.AnnData]:
+                 overwrite: bool = False,
+                 report: Optional[str] = None) -> Optional[sc.AnnData]:
     """
     Remove genes from adata object.
 
@@ -1379,6 +1467,8 @@ def filter_genes(adata: sc.AnnData,
         The value that will be assigned to the name. Additionally, a 'before' and 'after' key will be inserted giving the amount before and after filtering.
     overwrite : bool, default False
         Set to apply filter on top of existing filter.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1386,7 +1476,7 @@ def filter_genes(adata: sc.AnnData,
         If inplace is False, returns the filtered AnnData object. If inplace is True, returns None.
     """
 
-    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite)
+    return _filter_object(adata, genes, which="var", invert=not invert, inplace=inplace, name=name, value=value, overwrite=overwrite, report=report)
 
 
 @deco.log_anndata
@@ -1398,7 +1488,8 @@ def denoise_data(adata: sc.AnnData,
                  prob: float = 0.995,
                  save: Optional[str] = None,
                  verbose: bool = False,
-                 overwrite: bool = False) -> sc.AnnData:
+                 overwrite: bool = False,
+                 report: Optional[str] = None) -> sc.AnnData:
     """
     Use scAR and the raw feature counts to remove ambient RNA.
 
@@ -1420,6 +1511,8 @@ def denoise_data(adata: sc.AnnData,
         Enable scAR status messages.
     overwrite : bool, default False
         Set to perform denoising on top of existing denoising.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -1484,6 +1577,22 @@ def denoise_data(adata: sc.AnnData,
     )
 
     _save_figure(save)
+
+    # report
+    if settings.report_dir and report:
+        _save_figure(report, report=True)
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({"ambient": True})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
 
     end_time = time.time() - start_time
 

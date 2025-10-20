@@ -1,16 +1,13 @@
 """Module to calculate fold change of reads or fragments from a BAM or fragments file that overlap specified regions."""
 
 import os
-import pkg_resources
 import pandas as pd
 from pathlib import Path
 import scanpy as sc
 
 from beartype import beartype
-from beartype.typing import Optional, Tuple, Literal
+from beartype.typing import Optional, Tuple
 
-import deprecation
-import sctoolbox
 import sctoolbox.utils as utils
 from sctoolbox.tools.bam import create_fragment_file
 import sctoolbox.utils.decorator as deco
@@ -73,78 +70,6 @@ def _convert_gtf_to_bed(gtf: str,
     return out_sorted, temp_files
 
 
-@deprecation.deprecated(deprecated_in="0.4b", removed_in="0.5",
-                        current_version=sctoolbox.__version__,
-                        details="Use the overlap_fragments_in_regions function instead.")
-@deco.log_anndata
-@beartype
-def pct_fragments_in_promoters(adata: sc.AnnData,
-                               gtf_file: Optional[str] = None,
-                               bam_file: Optional[str] = None,
-                               fragments_file: Optional[str] = None,
-                               cb_col: Optional[str] = None,
-                               cb_tag: str = 'CB',
-                               species: Optional[Literal['bos_taurus', 'caenorhabditis_elegans',
-                                                         'canis_lupus_familiaris', 'danio_rerio',
-                                                         'drosophila_melanogaster', 'gallus_gallus',
-                                                         'homo_sapiens', 'mus_musculus', 'oryzias_latipes',
-                                                         'rattus_norvegicus', 'sus_scrofa', 'xenopus_tropicalis']] = None,
-                               threads: int = 1) -> None:
-    """
-    Calculate the fold change of fragments in promoters.
-
-    This function calculates for each cell, the fold change of fragments in a BAM alignment file
-    that overlap with a promoter region specified in a GTF file. The results are added to the anndata object
-    as new column.
-    This is a wrapper function for fc_fragments_in_regions to use promoters.
-
-    Parameters
-    ----------
-    adata : sc.AnnData
-        The anndata object containig cell barcodes in adata.obs.
-    gtf_file : str, default None
-        Path to GTF file for promoters regions. if None, the GTF file in flatfiles directory will be used.
-    bam_file : str, default None
-        Path to BAM file. If None, a fragments file must be provided in the parameter 'fragments_file'.
-    fragments_file : str, default None
-        Path to fragments file. If None, a BAM file must be provided in the parameter 'bam_file'. The
-        BAM file will be converted into fragments file.
-    cb_col : str, default None
-        The column in adata.obs containing cell barcodes. If None, adata.obs.index will be used.
-    cb_tag : str, default 'CB'
-        The tag where cell barcodes are saved in the bam file. Set to None if the barcodes are in read names.
-    species : str, default None
-        Name of the species, will only be used if gtf_file is None to use internal GTF files.
-        Species are {bos_taurus, caenorhabditis_elegans, canis_lupus_familiaris, danio_rerio, drosophila_melanogaster,
-        gallus_gallus, homo_sapiens, mus_musculus, oryzias_latipes, rattus_norvegicus, sus_scrofa, xenopus_tropicalis}
-    threads : int, default 1
-        Number of threads for parallelization. Will be used to convert BAM to fragments file.
-
-    Raises
-    ------
-    ValueError
-        If no species and no gtf_file is given.
-    """
-
-    # exit if no gtf file and no species
-    if not gtf_file and not species:
-        raise ValueError('Please provide a GTF file or specify a species!')
-    if not gtf_file:
-        promoters_gtf = pkg_resources.resource_filename("sctoolbox", f"data/promoters_gtf/{species}.104.promoters2000.gtf")
-    else:
-        promoters_gtf = gtf_file
-
-    # call function
-    fc_fragments_in_regions(adata,
-                            regions_file=promoters_gtf,
-                            bam_file=bam_file,
-                            fragments_file=fragments_file,
-                            cb_col=cb_col,
-                            cb_tag=cb_tag,
-                            regions_name='promoters',
-                            threads=threads)
-
-
 @deco.log_anndata
 @beartype
 def fc_fragments_in_regions(adata: sc.AnnData,
@@ -154,7 +79,7 @@ def fc_fragments_in_regions(adata: sc.AnnData,
                             cb_col: Optional[str] = None,
                             cb_tag: str = 'CB',
                             regions_name: str = 'list',
-                            threads: int = 4,
+                            threads: Optional[int] = 4,
                             temp_dir: Optional[str] = None) -> None:
     """
     Calculate the fold change of fragments in a region against the background.
@@ -181,8 +106,8 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     regions_name : str, default 'list'
         The name of the regions in the BED or GTF file (e.g. Exons). The name will be used as columns' name
         added to the anndata object (e.g. pct_fragments_in_{regions_name}).
-    threads : int, default 1
-        Number of threads for parallelization. Will be used to convert BAM to fragments file.
+    threads : Optional[int], default 4
+        Number of threads for parallelization. Will be used to convert BAM to fragments file. None to use settings.get_threads.
     temp_dir : Optional[str], default None
         Path to temporary directory. Will use the current working directory by default.
 
@@ -191,6 +116,9 @@ def fc_fragments_in_regions(adata: sc.AnnData,
     ValueError
         If bam_file and fragment file is not provided.
     """
+    if threads is None:
+        threads = settings.get_threads()
+
     if temp_dir:
         utils.io.create_dir(temp_dir)
     else:

@@ -41,7 +41,9 @@ def normalize_adata(adata: sc.AnnData,
                     method: Literal["total", "tfidf"] | list[Literal["total", "tfidf"]],
                     exclude_highly_expressed: bool = True,
                     use_highly_variable: bool = False,
-                    target_sum: Optional[int] = None) -> Union[dict[str, sc.AnnData], sc.AnnData]:
+                    target_sum: Optional[float] = None,
+                    keep_layer: Optional[str] = "raw",
+                    n_comps: int = 50) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -57,8 +59,12 @@ def normalize_adata(adata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
     use_highly_variable : bool, default False
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
-    target_sum : Optional[int], default None
+    target_sum : Optional[float], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
+    keep_layer : Optional[str], default "raw"
+        Will create a copy of the .X matrix with the given name before applying normalization.
+    n_comps : int, default 50
+        The number of components to calculate.
 
     Returns
     -------
@@ -72,7 +78,9 @@ def normalize_adata(adata: sc.AnnData,
                                         method=method,
                                         exclude_highly_expressed=exclude_highly_expressed,
                                         use_highly_variable=use_highly_variable,
-                                        target_sum=target_sum)
+                                        target_sum=target_sum,
+                                        keep_layer=keep_layer,
+                                        n_comps=n_comps)
 
     elif isinstance(method, list):
         adatas = {}
@@ -82,7 +90,9 @@ def normalize_adata(adata: sc.AnnData,
                                                           method=method_str,
                                                           exclude_highly_expressed=exclude_highly_expressed,
                                                           use_highly_variable=use_highly_variable,
-                                                          target_sum=target_sum)
+                                                          target_sum=target_sum,
+                                                          keep_layer=keep_layer,
+                                                          n_comps=n_comps)
 
         return adatas
 
@@ -93,8 +103,10 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
                              method: Literal["total", "tfidf"],
                              exclude_highly_expressed: bool = True,
                              use_highly_variable: bool = False,
-                             target_sum: Optional[int] = None,
-                             inplace: bool = False) -> Optional[sc.AnnData]:
+                             target_sum: Optional[float] = None,
+                             inplace: bool = False,
+                             keep_layer: Optional[str] = "raw",
+                             n_comps: int = 50) -> Optional[sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -108,10 +120,14 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         Parameter for sc.pp.normalize_total. Decision to exclude highly expressed genes (HEG) from total normalization.
     use_highly_variable : bool, default False
         Parameter for sc.pp.pca and lsi. Decision to use highly variable genes for PCA/LSI.
-    target_sum : Optional[int], default None
+    target_sum : Optional[float], default None
         Parameter for sc.pp.normalize_total. Decide the target sum of each cell after normalization.
     inplace : bool, default False
         If True, change the anndata object inplace. Otherwise return changed anndata object.
+    keep_layer : Optional[str], default "raw"
+        Will create a copy of the .X matrix with the given name before applying normalization.
+    n_comps : int, default 50
+        The number of components to calculate.
 
     Returns
     -------
@@ -121,16 +137,22 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
 
     adata = anndata if inplace else anndata.copy()
 
+    if keep_layer:
+        if keep_layer in adata.layers:
+            logger.warning(f"A layer with the name '{keep_layer}' already exists. Skipping to avoid layer overwrite.")
+        else:
+            adata.layers[keep_layer] = adata.X.copy()
+
     if method == "total":  # perform total normalization and pca
         logger.info('Performing total normalization and PCA...')
         sc.pp.normalize_total(adata, exclude_highly_expressed=exclude_highly_expressed, target_sum=target_sum)
         sc.pp.log1p(adata)
-        sc.pp.pca(adata, mask_var="highly_variable" if use_highly_variable else None)
+        sc.pp.pca(adata, mask_var="highly_variable" if use_highly_variable else None, n_comps=n_comps)
 
     elif method == "tfidf":
         logger.info('Performing TFIDF and LSI...')
         tfidf(adata, inplace=True)
-        lsi(adata, use_highly_variable=use_highly_variable)  # corresponds to PCA
+        lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
 
     if not inplace:
         return adata
@@ -221,9 +243,9 @@ def tfidf(anndata: sc.AnnData,
         tf_idf = np.log1p(tf_idf)
 
     if layer:
-        adata.layers[layer] = np.nan_to_num(tf_idf, 0)
+        adata.layers[layer] = np.nan_to_num(tf_idf, nan=0)
     else:
-        adata.X = np.nan_to_num(tf_idf, 0)
+        adata.X = np.nan_to_num(tf_idf, nan=0)
 
     if not inplace:
         return adata
@@ -240,7 +262,8 @@ def wrap_corrections(adata: sc.AnnData,
                      methods: Union[batch_methods,
                                     list[batch_methods],
                                     Callable] = ["bbknn", "mnn"],
-                     method_kwargs: dict = {}) -> dict[str, sc.AnnData]:
+                     method_kwargs: dict = {},
+                     keep_layer: Optional[str] = "norm") -> dict[str, sc.AnnData]:
     """
     Calculate multiple batch corrections for adata using the 'batch_correction' function.
 
@@ -260,6 +283,8 @@ def wrap_corrections(adata: sc.AnnData,
         Or provide a custom batch correction function. See `batch_correction(method)` for more information.
     method_kwargs : dict, default {}
         Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).
+    keep_layer : Optional[str], default "norm"
+        Will create a copy of the .X matrix with the given name before applying correction.
 
     Returns
     -------
@@ -288,6 +313,13 @@ def wrap_corrections(adata: sc.AnnData,
             f = io.StringIO()
             with redirect_stderr(f):  # make the output of check_module silent; mnnpy prints ugly warnings
                 utils.checker.check_module(required_packages[method])
+
+    # keep .X as layer; will propagate through the batch corrections
+    if keep_layer:
+        if keep_layer in adata.layers:
+            logger.warning(f"A layer with the name '{keep_layer}' already exists. Skipping to avoid layer overwrite.")
+        else:
+            adata.layers[keep_layer] = adata.X.copy()
 
     # Collect batch correction per method
     anndata_dict = {'uncorrected': adata}
@@ -331,6 +363,10 @@ def batch_correction(adata: sc.AnnData,
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     **kwargs : Any
         Additional arguments will be forwarded to the method function.
+        The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
+        - bbknn: `computation="cKDTree"`
+        - scanorama: `approx=False`
+        See here for further information https://github.com/Teichlab/bbknn/issues/60, https://github.com/brianhie/scanorama?tab=readme-ov-file#troubleshooting
 
     Returns
     -------
@@ -364,6 +400,10 @@ def batch_correction(adata: sc.AnnData,
             n_pcs = adata.obsm["X_pca"].shape[1]
         except KeyError:
             raise KeyError("PCA has not been calculated. Please run sc.pp.pca() before running bbknn.")
+
+        # to avoid annoy issues
+        if "computation" not in kwargs:
+            kwargs["computation"] = "cKDTree"
 
         # Run bbknn
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
@@ -410,6 +450,10 @@ def batch_correction(adata: sc.AnnData,
         # therefore anndata.obs should be sorted based on batch column before this method.
         original_order = adata.obs.index
         adata = adata[adata.obs[batch_key].argsort()]  # sort the whole adata to make sure obs is the same order as matrix
+
+        # to avoid annoy issues
+        if "approx" not in kwargs:
+            kwargs["approx"] = False
 
         sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
         adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
@@ -511,7 +555,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
                           batch_key: str,
                           obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
-                          threads: int = 1,
+                          threads: Optional[int] = 1,
                           max_dims: int = 5,
                           inplace: bool = False) -> Optional[dict[str, sc.AnnData]]:
     """
@@ -526,8 +570,8 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
         The column in adata.obs containing batch information.
     obsm_keys : str | list[str], default ['X_pca', 'X_umap']
         Key(s) to coordinates on which the score is calculated.
-    threads : int, default 1
-        Number of threads to use for parallelization.
+    threads : Optional[int], default 1
+        Number of threads to use for parallelization. Set None to use settings.get_threads().
     max_dims : int, default 5
         Maximum number of dimensions of adata.obsm matrix to use for LISI (to speed up computation).
     inplace : bool, default False
@@ -538,6 +582,9 @@ def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
     Optional[dict[str, sc.AnnData]]
         Dict containing an anndata object for each batch correction method as values of LISI scores added to .obs.
     """
+
+    if threads is None:
+        threads = settings.get_threads()
 
     if utils.jupyter._is_notebook() is True:
         from tqdm import tqdm_notebook as tqdm

@@ -96,6 +96,6 @@ def test_marker_gene_clustering(adata, show_umap):
 
     axes_list = pl.marker_gene_clustering(adata, "condition",
                                           marker_dict, show_umap=show_umap)
-    assert isinstance(axes_list, list)
+    assert isinstance(axes_list, np.ndarray)
     ax_type = type(axes_list[0]).__name__
     assert ax_type.startswith("Axes")

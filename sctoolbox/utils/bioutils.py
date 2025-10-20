@@ -26,7 +26,9 @@ def pseudobulk_table(adata: sc.AnnData,
                      how: Literal['mean', 'sum'] = "mean",
                      layer: Optional[str] = None,
                      percentile_range: Tuple[int, int] = (0, 100),
-                     chunk_size: int = 1000) -> pd.DataFrame:
+                     chunk_size: int = 1000,
+                     gene_index: Optional[str] = None,
+                     clean: bool = True) -> pd.DataFrame:
     """
     Get a pseudobulk table of values per cluster.
 
@@ -45,12 +47,26 @@ def pseudobulk_table(adata: sc.AnnData,
         Is used to limit the effect of individual cell outliers, e.g. by setting (0, 95) to exclude high values in the calculation.
     chunk_size : int, default 1000
         If percentile_range is not default, chunk_size controls the number of features to process at once. This is used to avoid memory issues.
+    gene_index : Optional[str], default None
+        Column in adata.var that holds gene symbols/ ids.
+    clean : bool, default True
+        Removes NaN indexes and adds a suffix to duplicated indexes (e.g. 'gene_1', 'gene_2'). Especially important in combination with `gene_index`.
+        Changes index type to str.
 
     Returns
     -------
     pd.DataFrame
         DataFrame with aggregated counts (adata.X). With groups as columns and genes as rows.
+
+    Raises
+    ------
+    KeyError
+        If the groupby column does not exist in adata.obs.
     """
+
+    # Check if groupby column exists
+    if groupby not in adata.obs.columns:
+        raise KeyError(f"Column '{groupby}' not found in adata.obs.")
 
     groupby_categories = adata.obs[groupby].astype('category').cat.categories
 
@@ -60,10 +76,11 @@ def pseudobulk_table(adata: sc.AnnData,
         mat = adata.X
 
     # Fetch the mean/ sum counts across each category in cluster_by
-    res = pd.DataFrame(index=adata.var_names, columns=groupby_categories)
+    res = pd.DataFrame(index=adata.var[gene_index] if gene_index else adata.var_names,
+                       columns=groupby_categories)
     for column_i, clust in enumerate(groupby_categories):
 
-        cluster_values = mat[adata.obs[groupby].isin([clust]), :]
+        cluster_values = mat[list(adata.obs[groupby].isin([clust])), :]
 
         if percentile_range == (0, 100):  # uses all cells
             if how == "mean":
@@ -98,6 +115,11 @@ def pseudobulk_table(adata: sc.AnnData,
                     vals = np.nansum(chunk_values, axis=0)
 
                 res.iloc[i:i + chunk_size, column_i] = vals
+
+    # remove NA and add suffix to duplicate indexes
+    if clean:
+        res = res.loc[res.index.dropna()]
+        res.index = sc.anndata.utils.make_index_unique(res.index.astype(str), join="_")
 
     return res
 
@@ -523,7 +545,7 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> 
 
 
 @beartype
-def _read_bedfile(bedfile: str) -> list:
+def _read_bedfile(bedfile: str, comment: str = "#") -> list:
     """
     Read in a bedfile and returns a list of the rows.
 
@@ -531,6 +553,8 @@ def _read_bedfile(bedfile: str) -> list:
     ----------
     bedfile : str
         path to bedfile
+    comment : str, default "#"
+        Ignore lines starting with the given characters.
 
     Returns
     -------
@@ -541,15 +565,20 @@ def _read_bedfile(bedfile: str) -> list:
     with open(bedfile, 'rb') as file:
         for row in file:
             row = row.decode("utf-8")
+
+            # skip comment lines
+            if row.startswith(comment):
+                continue
+
             row = row.split('\t')
             line = [str(row[0]), int(row[1]), int(row[2]), str(row[3]), int(row[4])]
             bed_list.append(line)
-    file.close()
+
     return bed_list
 
 
 @beartype
-def _bed_is_sorted(bedfile: str) -> bool:
+def _bed_is_sorted(bedfile: str, comment: str = "#") -> bool:
     """
     Check if a bedfile is sorted by the start position.
 
@@ -557,6 +586,8 @@ def _bed_is_sorted(bedfile: str) -> bool:
     ----------
     bedfile : str
         path to bedfile
+    comment : str, default "#"
+        Ignore lines starting with the given characters.
 
     Returns
     -------
@@ -567,6 +598,10 @@ def _bed_is_sorted(bedfile: str) -> bool:
         counter = 0
         previous = 0
         for row in file:
+            # skip comment lines
+            if row.startswith(comment):
+                continue
+
             row = row.split('\t')
             if previous > int(row[1]):
                 file.close()

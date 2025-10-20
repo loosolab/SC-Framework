@@ -23,6 +23,7 @@ def adata():
     adata.obs["samples"] = np.random.choice(sample_names, size=adata.shape[0])
     adata.obs["condition"] = adata.obs["samples"].str.split("_", expand=True)[0]
     adata.obs["condition-col"] = adata.obs["condition"]
+    adata.obs["long_condition"] = ["Tooooooooo_loooooong_duplicate_1"] * (len(adata.obs) // 2) + ["Tooooooooo_loooooong_duplicate_2"] * (len(adata.obs) - len(adata.obs) // 2)
 
     # Raw counts for DESeq2
     adata.layers["raw"] = adata.layers["spliced"] + adata.layers["unspliced"]
@@ -118,6 +119,20 @@ def test_get_rank_genes_tables(adata):
     assert os.path.exists("rank_genes.xlsx")
 
     os.remove("rank_genes.xlsx")
+
+
+@pytest.mark.parametrize("alt_name", [{}, {"Tooooooooo_loooooong_duplicate_1": "Grp_1", "Tooooooooo_loooooong_duplicate_2": "Grp_2"}])
+def test_get_rank_genes_tables_duplicates(adata, alt_name):
+    """Test the handling of duplicated group names during excel write."""
+    sc.tl.rank_genes_groups(adata, groupby="long_condition")
+
+    if alt_name == {}:
+        with pytest.raises(ValueError):
+            _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx", alt_name=alt_name)
+    else:
+        _ = mg.get_rank_genes_tables(adata, out_group_fractions=True, save_excel="rank_genes.xlsx", alt_name=alt_name)
+
+        os.remove("rank_genes.xlsx")
 
 
 @pytest.mark.parametrize("kwargs", [{"var_columns": ["invalid", "columns"]}])  # save_excel must be str

@@ -5,9 +5,21 @@ import scanpy as sc
 import scipy
 import os
 import numpy as np
+from contextlib import contextmanager
 
 import sctoolbox.utils.adata as utils
 
+# ---------------------------- HELPER ------------------------------- #
+
+
+@contextmanager
+def add_logger_handler(logger, handler):
+    """Temporarily add a handler to the given logger."""
+    logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
 
 # --------------------------- FIXTURES ------------------------------ #
 
@@ -31,6 +43,10 @@ def adata():
     adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
 
+    # add some layers for testing
+    adata.raw = adata.copy()
+    adata.layers["layer"] = adata.X.copy() * 2
+
     return adata
 
 
@@ -47,14 +63,34 @@ def test_get_adata_subsets(adata):
         assert sub_adata.obs["group"].nunique() == 1
 
 
-def test_save_h5ad(adata):
-    """Test if h5ad file is saved correctly."""
-
+@pytest.mark.parametrize("raw", [True, False])
+def test_save_and_load_h5ad(adata, raw, caplog):
+    """Test if h5ad file is saved correctly. Then test loading."""
     path = "test.h5ad"
-    utils.save_h5ad(adata, path)
 
-    assert os.path.isfile(path)
-    os.remove(path)  # clean up after tests
+    # add raw layer
+    adata = adata.copy()  # copy to avoid overwriting the adata (side-effects)
+    if raw:
+        adata.raw = adata
+    else:
+        adata.raw = None
+
+    try:
+        with add_logger_handler(utils.logger, caplog.handler):
+            utils.save_h5ad(adata, path)
+
+            assert os.path.isfile(path)
+
+            loaded = utils.load_h5ad(path)
+
+            assert isinstance(loaded, sc.AnnData)
+
+            # assume the last record is the warning
+            log_rec = caplog.records[-1]
+            assert raw == (log_rec.levelname == "WARNING" and log_rec.message.startswith("Found AnnData.raw!"))
+
+    finally:
+        os.remove(path)  # clean up after tests
 
 
 @pytest.fixture(scope="session")
@@ -79,6 +115,9 @@ def adata_icxg():
     obj.obs["Int32"] = obj.obs["Int32"].astype("Int32")
     obj.var["Int32"] = 1
     obj.var["Int32"] = obj.var["Int32"].astype("Int32")
+
+    # add layer
+    obj.layers["layer"] = obj.X.copy()
 
     return obj
 
@@ -114,6 +153,18 @@ def test_in_uns(adata, key):
         utils.add_uns_info(adata=adata, key=key, value="placeholder")
 
         assert utils.in_uns(adata, ["sctoolbox"] + key)
+
+
+@pytest.mark.parametrize("key", ["a", ["a", "b", "c"]])
+def test_get_uns(adata, key):
+    """Test get_uns success."""
+    if isinstance(key, str):
+        adata.uns[key] = "placeholder"
+        res = utils.get_uns(adata, key)
+    else:
+        utils.add_uns_info(adata=adata, key=key, value="placeholder")
+        res = utils.get_uns(adata, ['sctoolbox'] + key)
+    assert res == "placeholder"
 
 
 def test_prepare_for_cellxgene(adata_icxg):
@@ -195,6 +246,33 @@ def test_prepare_cellxgene_emb(adata_icxg, inplace, embedding_names):
             assert len(adata.var.columns) > 1
 
 
+def test_prepare_cellxgene_delete(adata2):
+    """Test delete_obs and delete_var parameters."""
+    with pytest.raises(ValueError):
+        utils.prepare_for_cellxgene(adata2, delete_obs=[], keep_obs=[])
+    with pytest.raises(ValueError):
+        utils.prepare_for_cellxgene(adata2, delete_var=[], keep_var=[])
+
+    obs_cols = list(adata2.obs.columns)[:-1]
+    var_cols = list(adata2.var.columns)[:-1]
+    prepare_out = utils.prepare_for_cellxgene(adata2,
+                                              delete_obs=[adata2.obs.columns[-1]],
+                                              delete_var=[adata2.var.columns[-1]],
+                                              inplace=False)
+    assert obs_cols == list(prepare_out.obs.columns)
+    assert var_cols == list(prepare_out.var.columns)
+
+
+@pytest.mark.parametrize("layer", ["layer", None, "invalid"])
+def test_prepare_cellxgene_layer(adata_icxg, layer):
+    """Test layer parameter."""
+    if layer == "invalid":
+        with pytest.raises(ValueError):
+            utils.prepare_for_cellxgene(adata_icxg, layer=layer)
+    else:
+        utils.prepare_for_cellxgene(adata_icxg, layer=layer)
+
+
 @pytest.mark.parametrize("adatas,label", [(["adata1", "adata2"], "list"), ({"a": "adata1", "b": "adata2"}, "dict")])
 def test_concadata(adatas, label, request):
     """Test the concadata function."""
@@ -219,3 +297,70 @@ def test_concadata(adatas, label, request):
     assert len(set(result.obs[label])) == len(adatas)
     if label == "dict":
         assert all(result.obs[label].isin([k]).any() for k in adatas.keys())
+
+
+@pytest.mark.parametrize("allow_raw,inplace", [(True, True),
+                                               (False, False),
+                                               ("raw", False)])
+def test_tidy_layer_raw(adata, allow_raw, inplace):
+    """Test the 'allow_raw' and 'inplace' parameter."""
+    adata_in = adata.copy() if inplace else adata
+
+    adata_out = utils.tidy_layers(adata_in, allow_raw=allow_raw, inplace=inplace)
+
+    # make sure there is a raw in the input
+    assert adata_in.raw is not None
+
+    if allow_raw is True:
+        assert adata_out is None  # assert no return if inplace
+    elif allow_raw is False:
+        assert adata_out.raw is None  # is raw deleted?
+    elif isinstance(allow_raw, str):
+        assert adata_out.raw is None and allow_raw in adata_out.layers  # is raw stored in a new layer?
+
+
+@pytest.mark.parametrize("rename", [
+    {"layer": "new_name"},  # success
+    {"layer": "layer"}  # fail (pre-existing layer)
+])
+def test_tidy_layer_rename(adata, rename):
+    """Test the 'rename' parameter."""
+    if list(rename.keys())[0] == list(rename.values())[0]:
+        with pytest.raises(KeyError):  # fail if a layer with the name already exists
+            adata_out = utils.tidy_layers(adata, rename=rename, inplace=False)
+    else:
+        adata_out = utils.tidy_layers(adata, rename=rename, inplace=False)
+
+        # check that old names don't and new names don't exist in the input
+        assert all(layer in adata.layers for layer in rename.keys())
+        assert all(new not in adata.layers for new in rename.values())
+
+        # check that old names are removed and replaced with new names
+        assert all(layer not in adata_out.layers for layer in rename.keys())
+        assert all(new in adata_out.layers for new in rename.values())
+
+
+@pytest.mark.parametrize("keep_X,replace_X,keep", [
+    ("layer", None, "all"),  # fail (pre-existing layer)
+    ("x_backup", "layer", "all"),
+    ("x_backup", None, ["x_backup"])
+])
+def test_tidy_layer_keep_and_X(adata, keep_X, replace_X, keep):
+    """Test the 'keep_X', 'replace_X', 'keep' parameters."""
+    if keep_X in adata.layers:
+        with pytest.raises(KeyError):  # fail if a layer with the name already exists
+            adata_out = utils.tidy_layers(adata, keep_X=keep_X, replace_X=replace_X, keep=keep, inplace=False)
+    else:
+        adata_out = utils.tidy_layers(adata, keep_X=keep_X, replace_X=replace_X, keep=keep, inplace=False)
+
+        assert keep_X in adata_out.layers  # assert the new layer is created
+        if keep == "all":
+            assert len(adata.layers) <= len(adata_out.layers)  # assert that no layers are removed
+        else:
+            assert len(adata_out.layers) == len(keep) and all(layer in keep for layer in adata_out.layers.keys())  # assert the correct layers are removed
+
+        if replace_X:
+            # assert the original .X is replaced with the right layer
+            # this expects dense matrices
+            assert not np.array_equal(adata_out.layers[replace_X], adata.X)
+            assert np.array_equal(adata_out.layers[replace_X], adata_out.X)

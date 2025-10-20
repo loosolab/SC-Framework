@@ -3,10 +3,12 @@
 import numpy as np
 import scanpy as sc
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import warnings
 
 from beartype import beartype
 from beartype.typing import Literal, Tuple, Optional, Any
+from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
 from sctoolbox.plotting.general import _save_figure
@@ -24,7 +26,8 @@ def search_clustering_parameters(adata: sc.AnnData,
                                  ncols: int = 3,
                                  verbose: bool = True,
                                  save: Optional[str] = None,
-                                 **kwargs: Any) -> np.ndarray:
+                                 report: bool = False,
+                                 **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a grid of different resolution parameters for clustering.
 
@@ -44,12 +47,14 @@ def search_clustering_parameters(adata: sc.AnnData,
         Print progress to console.
     save : Optional[str], default None
         Path to save figure.
+    report : bool, default False
+        Whether to add information to the method report. Ignored if `sctoolbox.settings.report_dir` is not set.
     **kwargs : Any
         Keyword arguments to be passed to sc.pl.embedding.
 
     Returns
     -------
-    axarr : np.ndarray
+    axarr : NDArray[Axes]
         Array of axes objects containing the plot(s).
 
     Raises
@@ -103,7 +108,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     for i, res in enumerate(resolutions):
 
         if verbose is True:
-            logger.info(f"Plotting umap for resolution={res} ({i+1} / {len(resolutions)})")
+            logger.info(f"Plotting umap for resolution={res} ({i + 1} / {len(resolutions)})")
 
         # Run clustering
         key_added = method + "_" + str(round(res, 2))
@@ -124,6 +129,16 @@ def search_clustering_parameters(adata: sc.AnnData,
     plt.tight_layout()
     _save_figure(save)
 
+    if settings.report_dir and report:
+        utils.io.update_yaml(
+            d={
+                "cluster_name": method,
+                "cluster_cite": "Traag et al., https://arxiv.org/abs/1810.08473" if method == "leiden" else "Blondel et al., http://dx.doi.org/10.1088/1742-5468/2008/10/P10008"
+            },
+            yml="method.yml",
+            path_prefix="report"
+        )
+
     return axarr
 
 
@@ -135,7 +150,7 @@ def marker_gene_clustering(adata: sc.AnnData,
                            show_umap: bool = True,
                            save: Optional[str] = None,
                            figsize: Optional[Tuple[float | int, float | int]] = None,
-                           **kwargs: Any) -> list:
+                           **kwargs: Any) -> NDArray[Axes]:
     """
     Plot an overview of marker genes and clustering.
 
@@ -158,8 +173,8 @@ def marker_gene_clustering(adata: sc.AnnData,
 
     Returns
     -------
-    axarr : list
-        List of axes objects containing the plot(s).
+    axarr : NDArray[Axes]
+        Array of axes objects containing the plot(s).
 
     Examples
     --------
@@ -184,7 +199,7 @@ def marker_gene_clustering(adata: sc.AnnData,
     else:
         figsize = (6, 6) if figsize is None else figsize
         fig, axarr = plt.subplots(1, 1, figsize=figsize)
-        axarr = [axarr]  # Make sure axarr can be indexed
+        axarr = np.array([axarr])  # Make sure axarr can be indexed
 
     # Make sure all genes are in the data
     marker_genes_dict = utils.checker.check_marker_lists(adata, marker_genes_dict)
@@ -204,4 +219,4 @@ def marker_gene_clustering(adata: sc.AnnData,
     # Save figure
     _save_figure(save)
 
-    return list(axarr)
+    return axarr

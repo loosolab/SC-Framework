@@ -8,11 +8,14 @@ import scipy
 import matplotlib.pyplot as plt
 from scipy.sparse import issparse
 import pandas as pd
+from pathlib import Path
+import yaml
 
-from beartype.typing import Optional, Any, Union, Collection, Mapping
+from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import plot_table
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -157,12 +160,16 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     logger.info(f"The adata object was loaded from: {adata_input}")
 
+    if adata.raw:
+        logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+
     return adata
 
 
 @deco.log_anndata
 @beartype
-def save_h5ad(adata: sc.AnnData, path: str) -> None:
+def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, **kwargs: Any) -> None:
     """
     Save an anndata object to an .h5ad file.
 
@@ -172,12 +179,17 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
         Anndata object to save.
     path : str
         Name of the file to save the anndata object. NOTE: Uses the internal 'sctoolbox.settings.adata_output_dir' + 'sctoolbox.settings.adata_output_prefix' as prefix.
+    report : Optional[list[str]]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Expects a list of three names: ["overview.md", "AnnData.obs.png", "AnnData.var.png"]
+    **kwargs : Any
+        Parameters forwarded to sc.AnnData.write
     """
     # fixes rank_genes nan in adata.uns[<rank_genes>]['names'] error
     # https://github.com/scverse/scanpy/issues/61
     rank_keys = set(['params', 'names', 'scores', 'pvals', 'pvals_adj', 'logfoldchanges'])  # the keys found with rank_genes_groups
     for unk in adata.uns.keys():
-        if isinstance(adata.uns[unk], dict) and set(adata.uns[unk].keys()) == rank_keys:
+        if isinstance(adata.uns[unk], dict) and rank_keys.issubset(set(adata.uns[unk].keys())):
             names = list()
             dnames = adata.uns[unk]["names"].dtype.names  # save dtype names
             for i in adata.uns[unk]["names"]:
@@ -186,11 +198,93 @@ def save_h5ad(adata: sc.AnnData, path: str) -> None:
             tmp.dtype.names = dnames  # set old names back in place
             adata.uns[unk]["names"] = tmp
 
+    # add file compression if not already present
+    # this was default prior to version 0.6.16
+    if "compression" not in kwargs:
+        kwargs["compression"] = "gzip"
+
+    # check var/obs/uns and replace any "/" with "|" as anndata does not allow "/" in any keys
+    # as of anndata>=0.12
+    for attr in ["obs", "var", "uns"]:
+        _rec_search(getattr(adata, attr), path=[attr], repl=("/", "|"))
+
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
-    adata.write(filename=adata_output)
+    adata.write(filename=adata_output, **kwargs)
+
+    # generate report
+    if settings.report_dir and report:
+        with open(Path(settings.report_dir) / report[0], "w") as f:
+            f.write("\n".join([
+                "## Dataset",
+                f"{adata.shape[0]} observations x {adata.shape[1]} variables",
+                f"Observation information: {', '.join(adata.obs.columns)}",
+                f"Variable information: {', '.join(adata.var.columns)}",
+                f"Additional data layers: {', '.join(adata.layers.keys())}" if adata.layers.keys() else ""
+            ]))
+
+        # method
+        meth_file = Path(settings.report_dir) / "method.yml"
+        method = {}
+        if meth_file.is_file():
+            with open(meth_file, "r") as f:
+                method = yaml.safe_load(f)
+            method = {} if method is None else method
+
+        with open(meth_file, "w") as f:
+            method.update({"var_count": len(adata.var), "obs_count": len(adata.obs)})
+            yaml.safe_dump(method, stream=f, sort_keys=False)
+
+        plot_table(adata.obs, report=report[1], crop=4)
+        plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
+
+
+@beartype
+def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")):
+    """
+    Help to search and replace characters in keys in nested dicts and pd.DataFrames column names.
+
+    Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
+    Note: The function operates inplace.
+
+    Parameters
+    ----------
+    var : Union[Dict, pd.DataFrame]
+        The variable that will be searched. Either a dict or a pd.DataFrame.
+        In case of dict all keys will be searched and given characters are replaced (also for nested dicts).
+        In case of pd.DataFrame column names with given characters are updated (also if the DataFrame is nested inside a dict).
+    path : List[str]
+        The nesting path as a list. First element should be the name of an AnnData attribute e.g. 'obs'.
+    repl : Tuple[str, str], default ("/", "|")
+        Search for the first string and replace every occurrence with the second string.
+    """
+    # check DataFrame column names
+    if isinstance(var, pd.DataFrame):
+        col_names = [n for n in var.columns if "/" in n]
+
+        if col_names:
+            # first element is an adata attribute
+            tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+            path_str = f".{path[0]}{tmp_path}"
+
+            logger.warning(f"Found pd.DataFrame in {path_str} with '{repl[0]}' in column name(s) ({col_names}), which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            var.rename(columns={n: n.replace(*repl) for n in col_names}, inplace=True)
+    else:
+        # recursively check dict
+        # go through all items
+        for k, v in list(var.items()):
+            if repl[0] in k:
+                var[k.replace(*repl)] = var.pop(k)
+
+                # first element is an adata attribute
+                tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+                path_str = f".{path[0]}{tmp_path}"
+                logger.warning(f"Found '{repl[0]}' in {path_str}['{k}'], which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            # open a nested dict
+            if isinstance(v, dict) or isinstance(v, pd.DataFrame):
+                _rec_search(v, repl=repl, path=path + [k])
 
 
 @beartype
@@ -295,8 +389,44 @@ def in_uns(adata: sc.AnnData,
 
 
 @beartype
+def get_uns(adata: sc.AnnData,
+            key: str | list[str]) -> Any:
+    """
+    Get value from adata.uns.
+
+    Parameters
+    ----------
+    adata: sc.AnnData
+        The anndata object.
+    key: str | list[str]
+        The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
+        a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
+
+    Returns
+    -------
+    Any
+        Any value stored in adata.uns
+    """
+    d = adata.uns
+    path = ""
+    for k in key:
+        if k in d:
+            d = d[k]
+            path += f"['{k}']"
+        else:
+            raise ValueError(f"Key {k} not found in adata.uns{path}")
+    return d
+
+
+@beartype
 def get_cell_values(adata: sc.AnnData,
-                    element: str) -> np.ndarray:
+                    element: str,
+                    var_col: Optional[str] = None) -> np.ndarray:
     """Get the values of a given element in adata.obs or adata.var per cell in adata. Can for example be used to extract gene expression values.
 
     Parameters
@@ -305,6 +435,9 @@ def get_cell_values(adata: sc.AnnData,
         Anndata object.
     element : str
         The element to extract from adata.obs or adata.var, e.g. a column in adata.obs or an index in adata.var.
+    var_col : Optional[str], default None
+        Use the given column of adata.var instead of the index.
+        Adata.obs is skipped when this is set.
 
     Returns
     -------
@@ -315,12 +448,20 @@ def get_cell_values(adata: sc.AnnData,
     ------
     ValueError
         If element is not found in adata.obs or adata.var.
+        If var_col is not a column name of adata.var.
     """
 
-    if element in adata.obs:
+    if element in adata.obs and var_col is None:
         values = np.array(adata.obs[element].values)
-    elif element in adata.var.index:
-        idx = list(adata.var.index).index(element)
+    elif element in adata.var.index or var_col is not None:
+        if var_col is None:
+            idx = list(adata.var.index).index(element)
+        else:
+            try:
+                idx = list(adata.var[var_col]).index(element)
+            except ValueError:
+                raise ValueError(f"{var_col} is not a column of adata.var.")
+
         values = adata.X[:, idx]
         values = values.todense().A1 if issparse(values) else values
     else:
@@ -333,11 +474,14 @@ def get_cell_values(adata: sc.AnnData,
 def prepare_for_cellxgene(adata: sc.AnnData,
                           keep_obs: Optional[list[str]] = None,
                           keep_var: Optional[list[str]] = None,
+                          delete_obs: Optional[list[str]] = None,
+                          delete_var: Optional[list[str]] = None,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
                           embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
                           cmap: Optional[str] = None,
                           palette: Optional[str | Sequence[str]] = None,
+                          layer: Optional[str] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
     Prepare the given adata for cellxgene deployment.
@@ -348,8 +492,16 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Anndata object.
     keep_obs : Optional[list[str]], default None
         adata.obs columns that should be kept. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
     keep_var : Optional[list[str]], default None
         adata.var columns that should be kept. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
+    delete_obs : Optional[list[str]], default None
+        adata.obs columns that should be deleted. None to keep all.
+        'keep_obs' and 'delete_obs' are mutually exclusive.
+    delete_var : Optional[list[str]], default None
+        adata.var columns that should be deleted. None to keep all.
+        'keep_var' and 'delete_var' are mutually exclusive.
     rename_obs : Optional[dict[str, str]], default None
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
     rename_var : Optional[dict[str, str]], default None
@@ -364,21 +516,30 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Color map to use for categorical annotation groups.
         Use this replacement color map for broken color maps.
         If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
+    layer : Optional[str], default None
+
     inplace : bool, default False
 
     Raises
     ------
     ValueError
-        If not at least one of the named embeddings are found in the adata.
+        1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
+        2. If not at least one of the named embeddings are found in the adata.
+        3. If there is no layer with the given name.
 
     Returns
     -------
     Optional[sc.AnnData]
         Returns the deployment ready Anndata object.
     """
+    if layer and layer not in adata.layers:
+        raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
-    def clean_section(obj, axis="obs", keep=None, rename=None) -> None:
+    def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
         """Clean either obs or var section of given adata object."""
+        if keep is not None and delete is not None:
+            raise ValueError(f"'keep_{axis}' and 'delete_{axis}' are mutually exclusive. Please configure only one to proceed.")
+
         if axis == "obs":
             sec_table = obj.obs
         elif axis == "var":
@@ -387,6 +548,12 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         # drop columns
         if keep is not None:
             drop = set(sec_table.columns) - set(keep)
+        elif delete is not None:
+            drop = set(delete)
+        else:
+            drop = False
+
+        if drop is not False:
             sec_table.drop(columns=drop, inplace=True)
 
             # drop matching color maps
@@ -420,13 +587,18 @@ def prepare_for_cellxgene(adata: sc.AnnData,
             raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
 
     # ----- .obs -----
-    clean_section(out, axis="obs", keep=keep_obs, rename=rename_obs)
+    clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
+    out.obs_names_make_unique()
 
     # ----- .var -----
-    clean_section(out, axis="var", keep=keep_var, rename=rename_var)
+    clean_section(out, axis="var", keep=keep_var, delete=delete_var, rename=rename_var)
     out.var_names_make_unique()
 
     # ----- .X -----
+    # overwrite .X with another layer
+    if layer:
+        out.X = out.layers[layer].copy()
+
     # convert .X to sparse matrix if needed
     if not scipy.sparse.isspmatrix(out.X):
         out.X = scipy.sparse.csc_matrix(out.X)
@@ -500,3 +672,95 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
     adata.var = var.loc[adata.var_names]
 
     return adata
+
+
+@deco.log_anndata
+@beartype
+def tidy_layers(adata: sc.AnnData, allow_raw: bool | str = False, rename: Optional[Dict[str, str]] = None, keep_X: Optional[str] = None, replace_X: Optional[str] = None, keep: Literal['all'] | list[str] = 'all', inplace: bool = True) -> Optional[sc.AnnData]:
+    """
+    Clean up AnnData layers and special layers (X, raw).
+
+    The parameters are executed in the following order:
+    "allow_raw" -> "rename" -> "keep_X" -> "replace_X" -> "keep"
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object to edit.
+    allow_raw : bool | str, default False
+        Whether to keep AnnData.raw. Provide a string to move AnnData.raw.X to a layer with the given name.
+        Note: Moving the raw matrix to a layer creates a subset on var to match adata.var.
+    rename : Optional[Dict[str, str]]
+        Rename AnnData.layers. In the form of `{"old_name": "new_name"}`.
+    keep_X : Optional[str]
+        Copy AnnData.X to the given name (AnnData.layers[keep_X]).
+    replace_X : Optional[str]
+        Overwrite the AnnData.X layer with on of the AnnData.layer layers.
+    keep : Literal['all'] | list[str], default 'all'
+        Name(s) of AnnData.layer layers to keep, others will be removed. Use 'all' to keep all layers.
+    inplace : bool, default True
+        Modify the AnnData inplace or return a modified copy.
+
+    Raises
+    ------
+    KeyError
+        1. If the new name already exists. During renaming or when raw is saved as a layer.
+        2. If the layer to replace X with is not found.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The modified AnnData object.
+    """
+    if not inplace:
+        adata = adata.copy()
+
+    # ----- raw ----- #
+    # move raw to adata.layer
+    if isinstance(allow_raw, str):
+        if allow_raw in adata.layers:
+            raise KeyError(f"{allow_raw} is already a layer name.")
+        # Filter adata.raw to var to ensure the dimensions match (obs subset is automatic)
+        adata.layers[allow_raw] = adata.raw[:, adata.var.index].X.copy()
+    # delete raw
+    if not allow_raw or isinstance(allow_raw, str):
+        adata.raw = None
+
+    # ----- rename ----- #
+    if rename:
+        no_match = []
+        for old, new in rename.items():
+            if old in adata.layers:
+                if new in adata.layers:
+                    raise KeyError(f"{new} is already a layer name.")
+
+                adata.layers[new] = adata.layers[old].copy()
+                del adata.layers[old]
+            else:
+                no_match.append(old)
+
+        if no_match:
+            logger.warning(f"Can not rename name(s) {no_match}. Not found in `AnnData.layers`. Skipped.")
+
+    # ----- keep_X ----- #
+    if keep_X:
+        if keep_X not in adata.layers:
+            adata.layers[keep_X] = adata.X.copy()
+        else:
+            raise KeyError(f"{keep_X} is already a layer name.")
+
+    # ----- replace_X ----- #
+    if replace_X:
+        if replace_X in adata.layers:
+            adata.X = adata.layers[replace_X].copy()
+        else:
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+
+    # ----- keep ----- #
+    if keep != "all":
+        for layer in list(adata.layers.keys()):
+            if layer not in keep:
+                del adata.layers[layer]
+
+    if not inplace:
+        return adata

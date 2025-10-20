@@ -3,15 +3,16 @@
 import matplotlib.pyplot as plt
 import sctoolbox.utils.decorator as deco
 import sctoolbox.utils as utils
+from sctoolbox.plotting.general import _save_figure
 import scanpy as sc
 
 from beartype import beartype
-from beartype.typing import Any
+from beartype.typing import Any, Optional
 
 
 @deco.log_anndata
 @beartype
-def violin_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
+def violin_HVF_distribution(adata: sc.AnnData, save: Optional[str] = None, **kwargs: Any):
     """
     Plot the distribution of the HVF as violinplot.
 
@@ -19,6 +20,8 @@ def violin_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
     ----------
     adata : sc.AnnData
         AnnData object containing columns ['highly_variable', 'n_cells_by_counts'] column.
+    save: Optional[str]
+        Path to save figure. Uses `sctoolbox.settings.figdir`.
     **kwargs : Any
         Keyword arguments to be passed to matplotlib.pyplot.violinplot.
     """
@@ -33,6 +36,11 @@ def violin_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
     ax.set_title('Distribution of the number of cells per highly variable feature')
     ax.set_ylabel('Number of cells')
     ax.set_xlabel('Highly variable features')
+
+    # save
+    if save:
+        _save_figure(save)
+
     plt.show()
 
 
