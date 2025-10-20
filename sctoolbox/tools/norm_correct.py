@@ -384,6 +384,7 @@ def batch_correction(adata: sc.AnnData,
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
     dim_red_kwargs : dict, default {}
         Arguments to redo the steps following the selected batch correction (see table above). Forwarded to :func:`sctoolbox.tools.dim_reduction.dim_red`.
+        Will default to PCA unless specified otherwise (:code:`{"method": "PCA"}`).
     **kwargs : Any
         Additional arguments will be forwarded to the method function.
         The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
@@ -413,6 +414,10 @@ def batch_correction(adata: sc.AnnData,
     # Check that batch_key is in adata object
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
+
+    # set default dimension reduction
+    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama"]:
+        dim_red_kwargs["method"] = "PCA"
 
     # ensure no side effects
     adata = adata.copy()
@@ -459,14 +464,12 @@ def batch_correction(adata: sc.AnnData,
         sc.pp.scale(adata)  # from the mnnpy github example
 
         # dimension reduction and neighbor graph
-        # mnn dim_red default
-        mnn_dim_def = {
-            "method": "PCA",  # TODO allow lsi
-            "method_kwargs": {"mask_var": "highly_variable" if highly_variable else None}
-        }
-        mnn_dim_def.update(dim_red_kwargs)
+        if dim_red_kwargs["method"] == "PCA":
+            dim_red_kwargs.setdefault("method_kwargs", {}).update({"mask_var": "highly_variable" if highly_variable else None})
+        elif dim_red_kwargs["method"] == "LSI":
+            dim_red_kwargs.setdefault("method_kwargs", {}).update({"use_highly_variable": highly_variable})
 
-        dim_red.dim_red(anndata=adata, inplace=True, **mnn_dim_def)
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif method == "harmony":
         adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
@@ -499,9 +502,6 @@ def batch_correction(adata: sc.AnnData,
     elif method == "combat":
         # run combat
         sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
-
-        if "method" not in dim_red_kwargs:
-            dim_red_kwargs["method"] = "PCA"
 
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
