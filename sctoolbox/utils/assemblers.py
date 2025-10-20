@@ -710,15 +710,23 @@ def _read_and_merge(
     path : Union[str, Collection[str], Mapping[str, str]]
         Path or list of paths to the input file(s).
     method : Callable
-        Method for reading individual files. Set depending on file format e.g.
-        scanpy.read_h5ad for h5ad files.
+        Method for reading individual files. Set depending on file format e.g. scanpy.read_h5ad for h5ad files.
+        The method is expected to receive a file path as the first parameter and to return a single AnnData object.
     label: Optional[str], default "batch"
         Name of the `adata.obs` column to place the batch information in.
         Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     **kwargs : Any
-        Contains additional arguments for reading method.
+        Contains additional arguments for the reading method.
+
+        Note: The keyword "layer" is a special case, which, depending on the type, can result in three different behaviors:
+            1. Type string, e.g. :code:`{"layer": "raw"}`.
+                Standard kwargs behavior. The same value will be applied to each function call.
+            2. Type list, e.g. :code:`{"layer": ["raw", "norm"]}`.
+                List length has to be the same as :code:`path`. Will apply the values in the given order.
+            3. Type dict, e.g. :code:`{"layer": {"first": "raw", "second": "norm"}}`.
+                Applies the values to files matching the dict of :code:`path`.
 
     Raises
     ------
@@ -726,13 +734,6 @@ def _read_and_merge(
         1. layer datatype and path datatype do not match (if layer is not string).
         2. if path and layer are lists with different lengths.
         3. if not all keys in path dict match with keys in layer dict.
-
-    Notes
-    -----
-    This function is designed to work with functions that return a h5ad file and does not require file specific input.
-    Parameters with different values per file needs to be handled specifically.
-    Current special cases:
-        - layer (e.g. used by utils.assemblers.convertToAdata)
 
     Returns
     -------
