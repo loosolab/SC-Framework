@@ -100,7 +100,9 @@ def prepare_atac_anndata(adata: sc.AnnData,
 
 
 @beartype
-def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]], report: Optional[str] = None, label: Optional[str] = "batch") -> sc.AnnData:
+def from_h5ad(h5ad_file: Union[str, Collection[str], Mapping[str, str]],
+              report: Optional[str] = None,
+              label: Optional[str] = "batch") -> sc.AnnData:
     """
     Load one or more .h5ad files.
 
@@ -588,7 +590,7 @@ def convertToAdata(file: str,
             }
 
             # update/validate SeuratObject to match newer versions
-            object = UpdateSeuratObject(object)
+            object <- UpdateSeuratObject(object)
 
             # ----- convert to SingleCellExperiment ----- #
             # can only convert Seurat -> SingleCellExperiment -> anndata
@@ -649,7 +651,7 @@ def convertToAdata(file: str,
 @beartype
 def from_R(
         rds_file: Union[str, Collection[str], Mapping[str, str]],
-        label: Optional[str] = None,
+        label: Optional[str] = "batch",
         output: Optional[str] = None,
         report: Optional[str] = None,
         layer: Optional[Union[str, Collection[str], Mapping[str, str]]] = None,
@@ -663,7 +665,7 @@ def from_R(
     ----------
     rds_file : Union[str, Collection[str], Mapping[str, str]]
         Path or list of paths to the .rds or .robj file(s).
-    label: Optional[str], default None
+    label: Optional[str], default "batch"
         Name of the `adata.obs` column to place the batch information in.
         Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
     output : Optional[str], default None
@@ -697,7 +699,7 @@ def from_R(
 def _read_and_merge(
         path: Union[str, Collection[str], Mapping[str, str]],
         method: Callable,
-        label: Optional[str] = None,
+        label: Optional[str] = "batch",
         report: Optional[str] = None,
         **kwargs: Any) -> sc.AnnData:
     """
@@ -710,7 +712,7 @@ def _read_and_merge(
     method : Callable
         Method for reading individual files. Set depending on file format e.g.
         scanpy.read_h5ad for h5ad files.
-    label: Optional[str], default None
+    label: Optional[str], default "batch"
         Name of the `adata.obs` column to place the batch information in.
         Forwarded to the `label` parameter of [scanpy.concat](https://anndata.readthedocs.io/en/stable/generated/anndata.concat.html#anndata.concat)
     report : Optional[str]
@@ -728,8 +730,9 @@ def _read_and_merge(
     Notes
     -----
     This function is designed to work with functions that return a h5ad file and does not require file specific input.
-    Special cases:
-        utils.assemblers.convertToAdata: the layer parameter needs to be handled individually
+    Parameters with different values per file needs to be handled specifically.
+    Current special cases:
+        - layer (e.g. used by utils.assemblers.convertToAdata)
 
     Returns
     -------
