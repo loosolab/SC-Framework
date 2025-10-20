@@ -500,6 +500,9 @@ def batch_correction(adata: sc.AnnData,
         # run combat
         sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
+        if "method" not in dim_red_kwargs:
+            dim_red_kwargs["method"] = "PCA"
+
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif callable(method):
