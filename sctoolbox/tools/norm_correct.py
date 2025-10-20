@@ -12,7 +12,7 @@ from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype
 
 import sctoolbox.utils as utils
-from sctoolbox.tools.dim_reduction import lsi
+import sctoolbox.tools.dim_reduction as dim_red
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -152,7 +152,7 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
     elif method == "tfidf":
         logger.info('Performing TFIDF and LSI...')
         tfidf(adata, inplace=True)
-        lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
+        dim_red.lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
 
     if not inplace:
         return adata
@@ -339,6 +339,7 @@ def batch_correction(adata: sc.AnnData,
                                    list[batch_methods],
                                    Callable] = ["bbknn", "mnn"],
                      highly_variable: bool = True,
+                     dim_red_kwargs: dict = {},
                      **kwargs: Any) -> sc.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
@@ -411,7 +412,7 @@ def batch_correction(adata: sc.AnnData,
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
 
-    # ensure no sideeffects
+    # ensure no side effects
     adata = adata.copy()
 
     # Run batch correction depending on method
@@ -455,8 +456,18 @@ def batch_correction(adata: sc.AnnData,
         adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example
-        sc.tl.pca(adata)  # rerun pca # TODO
-        sc.pp.neighbors(adata)
+
+        # dimension reduction and neighbor graph
+        # mnn dim_red default
+        mnn_dim_def = {
+            "method": "PCA",  # TODO allow lsi
+            "method_kwargs": {"mask_var": "highly_variable" if highly_variable else None},
+            "subset": [],
+            "neighbor_kwargs": {}
+        }
+        mnn_dim_def.update(dim_red_kwargs)
+
+        dim_red.dim_red(anndata=adata, inplace=True, **mnn_dim_def)
 
     elif method == "harmony":
         adata = adata.copy()  # there is no copy option for harmony
