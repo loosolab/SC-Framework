@@ -411,3 +411,56 @@ def subset_PCA(adata: sc.AnnData,
 
     if inplace is False:
         return adata
+
+
+############################################################################
+#                      All in one dimension reduction                      #
+############################################################################
+
+# TODO doesn't use @deco.log_anndata as it is currently intended as a primarily internal convenience function.
+@beartype
+def dim_red(anndata: sc.AnnData, method: Literal["PCA", "LSI"], method_kwargs: dict = {}, subset: Optional[List[int]] = None, neighbor_kwargs: dict = {}, inplace: bool = False) -> Optional[sc.AnnData]:
+    """
+    Compute a dimension reduction, select components and create a neighbor graph.
+
+    An all in one dimension reduction function that is intended to be used to quickly compute all dimension reduction steps.
+    E.g. to reproduce an analysis where all parameters are known already.
+
+    Parameters
+    ----------
+    anndata : sc.AnnData
+        The object to dimension reduce.
+    method : Literal["PCA", "LSI"]
+        Either do a PCA (:func:`sctoolbox.tools.dim_reduction.comput_PCA`) or LSI (:func:`sctoolbox.tools.dim_reduction.lsi`).
+    method_kwargs : dict, default {}
+        Parameters of the chosen method.
+    subset : Optional[List[int]], default None
+        A list of integers specifing a subset of components to keep. Forwarded to "select" of :func:sctoolbox.`tools.dim_reduction.subset_PCA`.
+    neighbor_kwargs : dict, default {}
+        Parameters to the neighbor graph computation. :func:`scanpy.pp.neighbors`
+    inplace : bool, default False
+        Whether to modify the anndata object inplace.
+
+    Returns
+    -------
+    Optional[sc.AnnData] :
+        The AnnData with dimension reduction and neighbor graph.
+    """
+    if not inplace:
+        anndata = anndata.copy()
+
+    # dimension reduction
+    if method == "PCA":
+        compute_PCA(anndata, **method_kwargs, inplace=True)
+    elif method == "LSI":
+        lsi(anndata, **method_kwargs)  # this is always inplace
+
+    # component subset
+    if subset:
+        subset_PCA(anndata, select=subset, inplace=True)
+
+    # neighbor graph
+    sc.pp.neighbors(anndata, **neighbor_kwargs, copy=False)
+
+    if not inplace:
+        return anndata

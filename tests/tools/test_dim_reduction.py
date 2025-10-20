@@ -115,3 +115,32 @@ def test_subset_PCA(adata_pca):
     assert cstm_res_adata is None
     assert adata_copy.obsm["X_pca"].shape[1] == len(select)
     assert adata_copy.obsm["X_pca"].shape[1] != adata_pca.obsm["X_pca"].shape[1]
+
+
+# -------------------------------- subset_pca --------------------------------
+
+
+@pytest.mark.parametrize("inplace", [True, False])
+@pytest.mark.parametrize("method", ["PCA", "LSI"])
+def test_dim_red(adata_no_pca, method, inplace):
+    """Test the dim_red function."""
+    adata = adata_no_pca.copy()
+
+    # check there is no dimension reduction and neighbor graph
+    assert "X_pca" not in adata.obsm.keys()
+    assert "neighbors" not in adata.uns.keys()
+
+    method_kwargs = {}
+    if method == "PCA":
+        method_kwargs = {"mask_var": None}
+
+    out = std.dim_red(anndata=adata, method=method, method_kwargs=method_kwargs, inplace=inplace)
+
+    # everything is calculated
+    if inplace:
+        assert "X_pca" in adata.obsm.keys()
+        assert "neighbors" in adata.uns.keys()
+        assert out is None
+    else:
+        assert "X_pca" in out.obsm.keys()
+        assert "neighbors" in out.uns.keys()
