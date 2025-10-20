@@ -1,5 +1,8 @@
 0.14.0 (in progress)
 ====================
+- connectionPlot: fix legend title issues (#369) and add parameters to edit the ranges displayed in the legends
+- hairball plot: add colormap parameter
+- cyclone plot: add restrict_to parameter (#314), fix color_max plot/colorbar mismatch (#373)
 - fix sctoolbox.plotting.qc_filter.quality_violin warning (#347)
 - fix sctoolbox.plotting.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - sctoolbox.tools.download_data: s3_downloader, download_data add option to display progress bar
