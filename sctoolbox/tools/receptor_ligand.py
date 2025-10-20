@@ -1363,7 +1363,7 @@ def connectionPlot(adata: sc.AnnData,
         # size normalization
         def size_norm(x):
             """Scale dot sizes."""
-            minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
+            return minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
 
         if hue != size:
             # create one legend for hue and one for size
