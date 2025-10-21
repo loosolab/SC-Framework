@@ -505,7 +505,7 @@ def batch_correction(adata: sc.AnnData,
         # TODO does this work with LSI?
         sce.pp.scanorama_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
 
-        # only redo niehgbor graph
+        # only redo neihgbor graph
         dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
         # sort the adata back to the original order
