@@ -339,7 +339,7 @@ def batch_correction(adata: sc.AnnData,
                                    list[batch_methods],
                                    Callable] = ["bbknn", "mnn"],
                      highly_variable: bool = True,
-                     dim_red_kwargs: dict = {},
+                     dim_red_kwargs: Optional[dict] = None,
                      **kwargs: Any) -> sc.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
@@ -382,7 +382,7 @@ def batch_correction(adata: sc.AnnData,
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
-    dim_red_kwargs : dict, default {}
+    dim_red_kwargs : Optional[dict], default None
         Arguments to redo the steps following the selected batch correction (see table above). Forwarded to :func:`sctoolbox.tools.dim_reduction.dim_red`.
         Will default to PCA unless specified otherwise (:code:`{"method": "PCA"}`).
     **kwargs : Any
@@ -414,6 +414,10 @@ def batch_correction(adata: sc.AnnData,
     # Check that batch_key is in adata object
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
+
+    # initialize dim_red_kwargs
+    if dim_red_kwargs is None:
+        dim_red_kwargs = {}
 
     # set default dimension reduction
     if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama"]:
