@@ -339,7 +339,7 @@ def batch_correction(adata: sc.AnnData,
                                    list[batch_methods],
                                    Callable] = ["bbknn", "mnn"],
                      highly_variable: bool = True,
-                     dim_red_kwargs: Optional[dict] = None,
+                     dim_red_kwargs: dict = {},
                      **kwargs: Any) -> sc.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
@@ -382,7 +382,7 @@ def batch_correction(adata: sc.AnnData,
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
-    dim_red_kwargs : Optional[dict], default None
+    dim_red_kwargs : dict, default {}
         Arguments to redo the steps following the selected batch correction (see table above). Forwarded to :func:`sctoolbox.tools.dim_reduction.dim_red`.
         Will default to PCA unless specified otherwise (:code:`{"method": "PCA"}`).
     **kwargs : Any
@@ -415,9 +415,8 @@ def batch_correction(adata: sc.AnnData,
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
 
-    # initialize dim_red_kwargs
-    if dim_red_kwargs is None:
-        dim_red_kwargs = {}
+    # so dim_red_kwargs is unqiue for each function call
+    dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
 
     # set default dimension reduction
     if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama"]:
@@ -478,11 +477,13 @@ def batch_correction(adata: sc.AnnData,
     elif method == "harmony":
         adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
 
-        sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
-        adata.obsm["X_pca"] = adata.obsm.pop("X_pca_harmony")
+        # harmony takes a PCA and corrects it
+        # here we replace the old PCA with the corrected version
+        # TODO does this work with LSI?
+        sce.pp.harmony_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
 
-        # don't redo dimension reduction but apply subset
-        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
+        # only redo neighbor graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
     elif method == "scanorama":
         # scanorama expect the batch key in a sorted format
@@ -494,11 +495,13 @@ def batch_correction(adata: sc.AnnData,
         if "approx" not in kwargs:
             kwargs["approx"] = False
 
-        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
-        adata.obsm["X_pca"] = adata.obsm.pop("X_scanorama")
+        # scanorama takes a PCA and corrects it
+        # here we replace the old PCA with the corrected version
+        # TODO does this work with LSI?
+        sce.pp.scanorama_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
 
-        # don't redo dimension reduction but apply subset
-        dim_red.dim_red(anndata=adata, inplace=True, method=None, **dim_red_kwargs)
+        # only redo niehgbor graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
         # sort the adata back to the original order
         adata = adata[original_order]
