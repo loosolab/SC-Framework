@@ -1,5 +1,8 @@
 0.14.0 (in progress)
 ====================
+- fix dimension reduction and neighbor graph overwritten by batch correction (#343)
+- remove deprecated define_pc (replaced by propose_pcs)
+- implemented dim_red
 - fix sctoolbox.plotting.qc_filter.quality_violin warning (#347)
 - fix sctoolbox.plotting.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - sctoolbox.tools.download_data: s3_downloader, download_data add option to display progress bar
