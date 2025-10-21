@@ -484,7 +484,7 @@ def batch_correction(adata: sc.AnnData,
 
         # harmony takes a PCA and corrects it
         # here we replace the old PCA with the corrected version
-        # TODO does this work with LSI?
+        # LSI is also stored in "X_pca"
         sce.pp.harmony_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
 
         # only redo neighbor graph
@@ -502,7 +502,7 @@ def batch_correction(adata: sc.AnnData,
 
         # scanorama takes a PCA and corrects it
         # here we replace the old PCA with the corrected version
-        # TODO does this work with LSI?
+        # LSI is also stored in "X_pca"
         sce.pp.scanorama_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
 
         # only redo neihgbor graph

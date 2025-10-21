@@ -5,9 +5,6 @@ import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 
-import deprecation
-from sctoolbox import __version__
-
 from beartype.typing import Optional, Any, Literal, List, Union
 from beartype import beartype
 
@@ -400,7 +397,7 @@ def dim_red(anndata: sc.AnnData, method: Optional[Literal["PCA", "LSI"]], method
 
     Returns
     -------
-    Optional[sc.AnnData] :
+    Optional[sc.AnnData]:
         The AnnData with dimension reduction and neighbor graph.
     """
     if not inplace:
