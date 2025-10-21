@@ -443,6 +443,7 @@ def batch_correction(adata: sc.AnnData,
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
+        is_sparse = sparse.issparse(adata.X)
         var_table = adata.var  # var_table before batch correction
 
         # split adata on batch_key
@@ -465,6 +466,10 @@ def batch_correction(adata: sc.AnnData,
         adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example
+
+        # convert the matrix to sparse if it was sparse before
+        if is_sparse:
+            adata.X = sparse.csr_matrix(adata.X)
 
         # dimension reduction and neighbor graph
         if dim_red_kwargs["method"] == "PCA":
@@ -507,8 +512,14 @@ def batch_correction(adata: sc.AnnData,
         adata = adata[original_order]
 
     elif method == "combat":
+        is_sparse = sparse.issparse(adata.X)
+
         # run combat
         sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
+
+        # convert the matrix to sparse if it was sparse before
+        if is_sparse:
+            adata.X = sparse.csr_matrix(adata.X)
 
         dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
