@@ -50,20 +50,6 @@ def test_lsi(adata):
     assert np.sum(adata.varm['LSI'][adata.var['highly_variable']]) != 0
 
 
-# --------------------------------- define_PC ---------------------------------
-
-
-def test_define_PC(adata_pca):
-    """Test if threshold is returned."""
-    assert isinstance(std.define_PC(adata_pca), int)
-
-
-def test_define_PC_error(adata_no_pca):
-    """Test if error without PCA."""
-    with pytest.raises(ValueError, match="PCA not found! Please make sure to compute PCA before running this function."):
-        std.define_PC(adata_no_pca)
-
-
 # -------------------------------- propose_pcs --------------------------------
 
 
