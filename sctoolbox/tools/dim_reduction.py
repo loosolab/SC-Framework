@@ -397,7 +397,7 @@ def dim_red(anndata: sc.AnnData, method: Optional[Literal["PCA", "LSI"]], method
 
     Returns
     -------
-    Optional[sc.AnnData]:
+    Optional[sc.AnnData]
         The AnnData with dimension reduction and neighbor graph.
     """
     if not inplace:
