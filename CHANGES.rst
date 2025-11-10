@@ -1,5 +1,6 @@
 0.14.0 (in progress)
 ====================
+- fix docker image build (#400)
 - connectionPlot: fix legend title issues (#369) and add parameters to edit the ranges displayed in the legends
 - hairball plot: add colormap parameter
 - cyclone plot: add restrict_to parameter (#314), fix color_max plot/colorbar mismatch (#373)
