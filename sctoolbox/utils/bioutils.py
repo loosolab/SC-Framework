@@ -11,6 +11,7 @@ import argparse
 import os
 import pybedtools
 import scanpy as sc
+import anndata
 
 from beartype.typing import Optional, Literal, Tuple, Any
 from beartype import beartype
@@ -119,7 +120,7 @@ def pseudobulk_table(adata: sc.AnnData,
     # remove NA and add suffix to duplicate indexes
     if clean:
         res = res.loc[res.index.dropna()]
-        res.index = sc.anndata.utils.make_index_unique(res.index.astype(str), join="_")
+        res.index = anndata.utils.make_index_unique(res.index.astype(str), join="_")
 
     return res
 
