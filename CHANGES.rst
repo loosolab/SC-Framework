@@ -1,5 +1,8 @@
 0.14.0 (in progress)
 ====================
+- connectionPlot: fix legend title issues (#369) and add parameters to edit the ranges displayed in the legends
+- hairball plot: add colormap parameter
+- cyclone plot: add restrict_to parameter (#314), fix color_max plot/colorbar mismatch (#373)
 - fix sctoolbox.plotting.qc_filter.quality_violin warning (#347)
 - fix sctoolbox.plotting.marker_genes.rank_genes_plot, "n_genes" and "var_names" are mutually exclusive (#315)
 - sctoolbox.tools.download_data: s3_downloader, download_data add option to display progress bar
@@ -16,6 +19,7 @@
 - sctoolbox.utils.bioutils._bed_is_sorted and _read_bedfile account for comment lines.
 - migrate to numpy 2
 - Fix error in bam_adata_ov if some reads do not contain the tag
+- Add function from_R (#395)
 
 Changes to notebooks
 --------------------
@@ -24,6 +28,7 @@ Changes to notebooks
 - move gene annotation (clustering -> QC; #357)
 - move HFV (QC -> normalization; #355)
 - ATAC & RNA assembly: add section to adjust layers (#363)
+- Allow multiple .rds/r.obj files to be read and merged into one adata (#395)
 
 
 0.13.5 (20-08-2025)
