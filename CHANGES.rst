@@ -8,6 +8,7 @@
 - sctoolbox.utils.bioutils._bed_is_sorted and _read_bedfile account for comment lines.
 - migrate to numpy 2
 - Fix error in bam_adata_ov if some reads do not contain the tag
+- add advanced tutorial notebooks (!448)
 
 Changes to notebooks
 --------------------
