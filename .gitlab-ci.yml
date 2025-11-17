@@ -125,7 +125,7 @@ build-package:
     - python -m build --sdist --wheel  # build the package
     - python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
     # collect the current changes and export as variable
-    - changelog=$(python scripts/collect_changes.py CHANGES.rst $BUILD_VERSION)
+    - changelog=$(python scripts/collect_changes.py CHANGES.md $BUILD_VERSION)
     - echo "Changelog entries:"
     - echo "$changelog"
     - echo "$changelog" >> release-description.txt
@@ -297,7 +297,7 @@ test coverage:
       - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
 
 
-#Changes.rst file must be changed in merge requests
+#Changes.md file must be changed in merge requests
 check-changes:
   image: python:3.10
   inherit:
@@ -319,7 +319,7 @@ check-changes:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
 
-#In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
+#In addition to CHANGES.md, the _version.py file must be changed in merge requests to main in order to make a new version
 check-version:
   image:
     name: cicirello/alpine-plus-plus
@@ -446,7 +446,7 @@ notebooks-ATAC:
         #- general_notebooks/*.ipynb
         - scripts/run_notebooks.py
 
-# In addition to CHANGES.rst and the _version.py file the notebook version for every notebook
+# In addition to CHANGES.md and the _version.py file the notebook version for every notebook
 # must be changed in merge requests to main in order to make a new version
 check-notebook-version:
   image: python:3.10-alpine3.19
