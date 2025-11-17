@@ -1,7 +1,7 @@
 # collect all changes associated with the given version
 
 # Args:
-# 1: path to changelog file (CHANGES.rst)
+# 1: path to changelog file (CHANGES.md)
 # 2: version to search for (e.g. 0.1.2)
 
 import sys
@@ -18,17 +18,17 @@ end = len(lines) - 1  # select the rest of the file if no end is found
 
 # search for the start
 for i, line in enumerate(lines):
-    if line.startswith(version):
+    if line.startswith(f"## {version}"):
         start = i
         break
 if start == -1:
-    raise ValueError(f"Version {version} not found in changelog. Are the versions in sctoolbox/_version.py and CHANGES.rst matching?")
+    raise ValueError(f"Version {version} not found in changelog. Are the versions in sctoolbox/_version.py and CHANGES.md matching?")
 
 # search for the end
 for i in range(start + 2, len(lines)):
-    # look for the ====== marking the start of the next section
-    if lines[i].startswith("="):
-        # count empty lines above === line
+    # look for the "## " marking the start of the next section
+    if lines[i].startswith("## "):
+        # count empty lines above "## " line
         empty_count = 0
         for j in range(i - 2, start, -1):
             if lines[j].strip() == "":

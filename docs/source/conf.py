@@ -42,7 +42,8 @@ extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in doc
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',
               "nbsphinx",
-              "nbsphinx_link"
+              "nbsphinx_link",
+              "myst_parser"
               ]
 
 napoleon_numpy_docstring = True
