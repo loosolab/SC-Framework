@@ -22,6 +22,7 @@
 - Fix error in bam_adata_ov if some reads do not contain the tag
 - add advanced tutorial notebooks (!448)
 - Add function from_R (#395)
+- make mampok fully optional
 
 ### Changes to notebooks
 - temporarily remove the velocity notebook from testing (#397)
