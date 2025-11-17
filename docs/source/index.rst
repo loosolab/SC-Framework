@@ -13,4 +13,4 @@ Welcome to the documentation of the single cell framework!
    atac-notebooks/index
    general-notebooks/index
    API/index
-   CHANGES.md
+   CHANGES

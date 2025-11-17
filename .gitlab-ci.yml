@@ -484,6 +484,7 @@ build-pages:
     - pip install sphinx-exec-code
     - pip install nbsphinx
     - pip install nbsphinx_link
+    - pip install myst-parser
     - cd docs
     - make html
   artifacts:
