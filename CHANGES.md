@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.14.0 (in progress)
+- fix docker image build (#400)
 - connectionPlot: fix legend title issues (#369) and add parameters to edit the ranges displayed in the legends
 - hairball plot: add colormap parameter
 - cyclone plot: add restrict_to parameter (#314), fix color_max plot/colorbar mismatch (#373)
@@ -22,7 +23,6 @@
 - Fix error in bam_adata_ov if some reads do not contain the tag
 - add advanced tutorial notebooks (!448)
 - Add function from_R (#395)
-- make mampok fully optional
 
 ### Changes to notebooks
 - temporarily remove the velocity notebook from testing (#397)
