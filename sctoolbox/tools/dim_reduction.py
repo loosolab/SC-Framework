@@ -5,9 +5,6 @@ import scipy
 from scipy.sparse.linalg import svds
 from kneed import KneeLocator
 
-import deprecation
-from sctoolbox import __version__
-
 from beartype.typing import Optional, Any, Literal, List, Union
 from beartype import beartype
 
@@ -206,50 +203,6 @@ def apply_svd(adata: sc.AnnData,
 #                         Subset number of PCs                             #
 ############################################################################
 
-@deprecation.deprecated(deprecated_in="0.5", removed_in="0.7",
-                        current_version=__version__,
-                        details="Use the 'sctoolbox.tools.propose_pcs' function instead.")
-@beartype
-def define_PC(anndata: sc.AnnData) -> int:
-    """
-    Define threshold for most variable PCA components.
-
-    Note: Function expects PCA to be computed beforehand.
-
-    Parameters
-    ----------
-    anndata : sc.AnnData
-        Anndata object with PCA to get significant PCs threshold from.
-
-    Returns
-    -------
-    int
-        An int representing the number of PCs until elbow, defining PCs with significant variance.
-
-    Raises
-    ------
-    ValueError
-        If PCA is not found in anndata.
-    """
-
-    # check if pca exists
-    if "pca" not in anndata.uns or "variance_ratio" not in anndata.uns["pca"]:
-        raise ValueError("PCA not found! Please make sure to compute PCA before running this function.")
-
-    # prepare values
-    y = anndata.uns["pca"]["variance_ratio"]
-    x = range(1, len(y) + 1)
-
-    # compute knee
-    kn = KneeLocator(x, y, curve='convex', direction='decreasing')
-    knee = int(kn.knee)  # cast from numpy.int64
-
-    # Adding info in anndata.uns["infoprocess"]
-    # cr.build_infor(anndata, "PCA_knee_threshold", knee)
-
-    return knee
-
-
 @beartype
 def propose_pcs(anndata: sc.AnnData,
                 how: List[Literal["variance", "cumulative variance", "correlation"]] = ["variance", "correlation"],
@@ -411,3 +364,57 @@ def subset_PCA(adata: sc.AnnData,
 
     if inplace is False:
         return adata
+
+
+############################################################################
+#                      All in one dimension reduction                      #
+############################################################################
+
+# TODO doesn't use @deco.log_anndata as it is currently intended as a primarily internal convenience function.
+@beartype
+def dim_red(anndata: sc.AnnData, method: Optional[Literal["PCA", "LSI"]], method_kwargs: dict = {}, subset: Optional[List[int]] = None, neighbor_kwargs: dict = {}, inplace: bool = False) -> Optional[sc.AnnData]:
+    """
+    Compute a dimension reduction, select components and create a neighbor graph.
+
+    An all in one dimension reduction function that is intended to be used to quickly compute all dimension reduction steps.
+    E.g. to reproduce an analysis where all parameters are known already.
+
+    Parameters
+    ----------
+    anndata : sc.AnnData
+        The object to dimension reduce.
+    method : Optional[Literal["PCA", "LSI"]]
+        Either do a PCA (:func:`sctoolbox.tools.dim_reduction.comput_PCA`) or LSI (:func:`sctoolbox.tools.dim_reduction.lsi`).
+        Will skip the dimension reduction if None (make sure it was computed beforehand).
+    method_kwargs : dict, default {}
+        Parameters of the chosen method.
+    subset : Optional[List[int]], default None
+        A list of integers specifing a subset of components to keep. Forwarded to "select" of :func:sctoolbox.`tools.dim_reduction.subset_PCA`.
+    neighbor_kwargs : dict, default {}
+        Parameters to the neighbor graph computation. :func:`scanpy.pp.neighbors`
+    inplace : bool, default False
+        Whether to modify the anndata object inplace.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The AnnData with dimension reduction and neighbor graph.
+    """
+    if not inplace:
+        anndata = anndata.copy()
+
+    # dimension reduction
+    if method == "PCA":
+        compute_PCA(anndata, **method_kwargs, inplace=True)
+    elif method == "LSI":
+        lsi(anndata, **method_kwargs)  # this is always inplace
+
+    # component subset
+    if subset:
+        subset_PCA(anndata, select=subset, inplace=True)
+
+    # neighbor graph
+    sc.pp.neighbors(anndata, **neighbor_kwargs, copy=False)
+
+    if not inplace:
+        return anndata

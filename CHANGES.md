@@ -1,6 +1,9 @@
 # Changelog
 
 ## 0.14.0 (in progress)
+- fix dimension reduction and neighbor graph overwritten by batch correction (#343)
+- remove deprecated define_pc (replaced by propose_pcs)
+- implemented dim_red
 - fix docker image build (#400)
 - connectionPlot: fix legend title issues (#369) and add parameters to edit the ranges displayed in the legends
 - hairball plot: add colormap parameter
