@@ -31,6 +31,7 @@
 - move HFV (QC -> normalization; #355)
 - ATAC & RNA assembly: add section to adjust layers (#363)
 - Allow multiple .rds/r.obj files to be read and merged into one adata (#395)
+- renamed 0A2_ligand_receptor_differences.ipynb to 0A2_ligand_receptor_hub_genes.ipynb
 
 ## 0.13.5 (20-08-2025)
 - fix pydeseq2 bug
