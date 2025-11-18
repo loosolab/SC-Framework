@@ -34,6 +34,13 @@ cmd = f"git log -n 1 origin/{target_branch} -- CHANGES.md"
 target_commit = subprocess.check_output(cmd, shell=True, text=True)
 target_date = read_date(target_commit)
 
+# TODO remove this block once all branches have the CHANGES.md
+if target_date is None:
+    # assume no date is found due to the old filename (CHANGES.rst)
+    cmd = f"git log -n 1 origin/{target_branch} -- CHANGES.rst"
+    target_commit = subprocess.check_output(cmd, shell=True, text=True)
+    target_date = read_date(target_commit)
+
 # Check that the current commit is newer than the target commit
 if current_date == target_date:
     print(f"The CHANGES.md file was not updated since the version on {target_branch}. Please update the CHANGES.md file.")
