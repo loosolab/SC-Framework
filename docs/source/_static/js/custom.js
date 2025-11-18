@@ -5,7 +5,11 @@ document.addEventListener('DOMContentLoaded', function () {
         'Tutorial_01.ipynb': [1, 4, 6, 10],
         'Tutorial_02.ipynb': [2, 3, 4, 5, 6, 7, 15, 19, 31],
         'Tutorial_03.ipynb': [2, 5, 8, 11, 14, 18, 21, 24, 26, 30, 34],
-        'Tutorial_04.ipynb': [2, 3, 4, 6, 13, 14, 15, 19]
+        'Tutorial_04.ipynb': [2, 3, 4, 6, 13, 14, 15, 19],
+        'Tutorial_annotation.ipynb': [3, 6, 9, 11],
+        'Tutorial_ligand_receptor.ipynb': [2, 4, 6, 8, 10, 13, 15],
+        'Tutorial_marker.ipynb': [2, 4, 6, 8, 17, 21],
+        'Tutorial_proportion.ipynb': [2, 4]
         // add other notebooks here
     };
 
