@@ -3,7 +3,7 @@
 [![Release](https://gitlab.gwdg.de/loosolab/software/sc_framework/-/badges/release.svg)](https://github.com/loosolab/SC-Framework/releases)
 ![Coverage](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/coverage.svg?key_text=coverage&key_width=70)
 ![Pipeline](https://gitlab.gwdg.de/loosolab/software/sc_framework/badges/main/pipeline.svg?ignore_skipped=true)
-[![FAIR checklist badge](https://fairsoftwarechecklist.net/badge.svg)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32311&r=133)
+[![Static Badge](https://img.shields.io/badge/Software-green?label=FAIR)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32311&r=133)
 [![PyPI Version](https://img.shields.io/pypi/v/SC-Framework.svg?style=plastic)](https://pypi.org/project/SC-Framework/)
 [![PyPI download month](https://img.shields.io/pypi/dm/SC-Framework.svg?style=plastic)](https://pypi.python.org/pypi/SC-Framework/)
 
