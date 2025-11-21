@@ -68,7 +68,8 @@ def compute_PCA(anndata: sc.AnnData,
 def lsi(data: sc.AnnData,
         scale_embeddings: bool = True,
         n_comps: int = 50,
-        use_highly_variable: bool = False) -> None:
+        use_highly_variable: bool = False,
+        report: bool = False) -> None:
     """
     Run Latent Semantic Indexing for dimensionality reduction.
 
@@ -85,6 +86,8 @@ def lsi(data: sc.AnnData,
         Number of components to calculate with SVD.
     use_highly_variable : bool, default True
         If true, use highly variable genes to compute LSI.
+    report : bool, default False
+        Will add information to the report methods if `sctoolbox.settings.report_dir` is set.
 
     Raises
     ------
@@ -149,6 +152,12 @@ def lsi(data: sc.AnnData,
     adata.obsm["X_pca"] = adata.obsm["X_lsi"]
     adata.varm["PCs"] = adata.varm["LSI"]
     adata.uns["pca"] = adata.uns["lsi"]
+
+    # generate method report
+    if settings.report_dir and report:
+        # method
+        update_yaml(d={"hvg": int(adata.var["highly_variable"].sum()), "pc_count": adata.obsm["X_pca"].shape[1]},
+                    yml="method.yml", path_prefix="report")
 
 
 @beartype

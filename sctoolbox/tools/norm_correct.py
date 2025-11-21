@@ -43,7 +43,8 @@ def normalize_adata(adata: sc.AnnData,
                     use_highly_variable: bool = False,
                     target_sum: Optional[float] = None,
                     keep_layer: Optional[str] = "raw",
-                    n_comps: int = 50) -> Union[dict[str, sc.AnnData], sc.AnnData]:
+                    n_comps: int = 50,
+                    report: bool = False) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -65,6 +66,8 @@ def normalize_adata(adata: sc.AnnData,
         Will create a copy of the .X matrix with the given name before applying normalization.
     n_comps : int, default 50
         The number of components to calculate.
+    report : bool, default False
+        Enable report method slide. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -80,7 +83,8 @@ def normalize_adata(adata: sc.AnnData,
                                         use_highly_variable=use_highly_variable,
                                         target_sum=target_sum,
                                         keep_layer=keep_layer,
-                                        n_comps=n_comps)
+                                        n_comps=n_comps,
+                                        report=report)
 
     elif isinstance(method, list):
         adatas = {}
@@ -92,7 +96,8 @@ def normalize_adata(adata: sc.AnnData,
                                                           use_highly_variable=use_highly_variable,
                                                           target_sum=target_sum,
                                                           keep_layer=keep_layer,
-                                                          n_comps=n_comps)
+                                                          n_comps=n_comps,
+                                                          report=report)
 
         return adatas
 
@@ -106,7 +111,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
                              target_sum: Optional[float] = None,
                              inplace: bool = False,
                              keep_layer: Optional[str] = "raw",
-                             n_comps: int = 50) -> Optional[sc.AnnData]:
+                             n_comps: int = 50,
+                             report: bool = False) -> Optional[sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -128,6 +134,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         Will create a copy of the .X matrix with the given name before applying normalization.
     n_comps : int, default 50
         The number of components to calculate.
+    report : bool, default False
+        Enable report method slide. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -153,6 +161,10 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         logger.info('Performing TFIDF and LSI...')
         tfidf(adata, inplace=True)
         dim_red.lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
+
+    # report
+    if settings.report_dir and report:
+        utils.io.update_yaml({"norm": method}, "method.yml", path_prefix="report")
 
     if not inplace:
         return adata

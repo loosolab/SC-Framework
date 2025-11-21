@@ -26,6 +26,7 @@
 - Fix error in bam_adata_ov if some reads do not contain the tag
 - add advanced tutorial notebooks (!448)
 - Add function from_R (#395)
+- update analysis reports (#225, #392)
 
 ### Changes to notebooks
 - temporarily remove the velocity notebook from testing (#397)
