@@ -1,6 +1,10 @@
 # Changelog
 
 ## 0.14.0 (21-11-2025)
+- fix dimension reduction and neighbor graph overwritten by batch correction (#343)
+- remove deprecated define_pc (replaced by propose_pcs)
+- implemented dim_red
+- fix docker image build (#400)
 - connectionPlot: fix legend title issues (#369) and add parameters to edit the ranges displayed in the legends
 - hairball plot: add colormap parameter
 - cyclone plot: add restrict_to parameter (#314), fix color_max plot/colorbar mismatch (#373)
@@ -22,6 +26,7 @@
 - Fix error in bam_adata_ov if some reads do not contain the tag
 - add advanced tutorial notebooks (!448)
 - Add function from_R (#395)
+- update analysis reports (#225, #392)
 
 ### Changes to notebooks
 - temporarily remove the velocity notebook from testing (#397)
@@ -30,6 +35,7 @@
 - move HFV (QC -> normalization; #355)
 - ATAC & RNA assembly: add section to adjust layers (#363)
 - Allow multiple .rds/r.obj files to be read and merged into one adata (#395)
+- renamed 0A2_ligand_receptor_differences.ipynb to 0A2_ligand_receptor_hub_genes.ipynb
 
 ## 0.13.5 (20-08-2025)
 - fix pydeseq2 bug

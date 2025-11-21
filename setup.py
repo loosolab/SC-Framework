@@ -137,7 +137,7 @@ setup(
         'packaging',
         'throttler',
         'upsetplot',
-        'pptreport',
+        'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
         'Jinja2'
     ],
