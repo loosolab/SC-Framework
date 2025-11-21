@@ -22,6 +22,8 @@ def adata():
     # Add batch column
     adata.obs['batch'] = ["a", "b"] * 100
 
+    sc.pp.highly_variable_genes(adata)
+
     return adata
 
 

@@ -9,10 +9,15 @@
 #           If yes then a new docker image will be build and pushed to the container registry.
 #           The newly build image is then used for testing later.
 #           If no changes were made to the enviroment nothing is build and the latest image is used later on.
+#           In addition the python package is build and pushed to the Gitlab package registry but only when on the main branch.
 # 3. setup: This stage is used to get the container tag for the testing stage.
 # 4. test: This stage is used to lint the code and docstrings, to test if the minimal sctoolbox package can still be imported without additional dependencies,
 #          to run tests and to test if the notebooks contain output.
 # 5. deploy: This stage is used to build and deploy the documentation to the public pages if it was the main branch.
+# 6. publish: This stage is used to publish the package to PyPi.
+#             Also a GitLab release and tag is created.
+# 7. .post: This stage is used to delete orphan tags from the registry.
+#           It is used to delete tags that are not associated with a branch or a semantic version.
 
 stages:
   - .pre
@@ -20,6 +25,7 @@ stages:
   - setup
   - test
   - deploy
+  - publish
   - .post
 
 # ############################################################################################################################################################
@@ -53,10 +59,10 @@ extract-version:
 
 
 # ############################################################################################################################################################
-# ######################################################### build docker image ###############################################################################
+# ###################################################################### build ###############################################################################
 # ############################################################################################################################################################
 
-# The build stage below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
+# The build job below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
@@ -64,7 +70,7 @@ extract-version:
 # build job
 build:
   stage: build
-  image: docker:latest # image as building environment
+  image: docker:28.5 # TODO switch back to latest when our runners are updated. Ask Noah about the progress. # image as building environment
   needs: [extract-version]
   tags:
     - sctoolbox
@@ -90,7 +96,6 @@ build:
         else
           echo "No image will be build."
         fi
-
   rules:
     - if: $CI_COMMIT_BRANCH
       changes:  # if any of the files were changed
@@ -101,9 +106,40 @@ build:
         - pyproject.toml
     - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_SLUG == 'main'  # all MR to main
 
+# Build the python wheel and push it to the Gitlab package registry
+# Also collect the current changelog and export as variable
+# Note: will fail if the version is already in the package registry
+build-package:
+  stage: build
+  image: python:latest
+  tags:
+    - sctoolbox
+  variables:
+    TWINE_USERNAME: gitlab-ci-token  # used for authentication to the Gitlab package registry
+    TWINE_PASSWORD: $CI_JOB_TOKEN
+  before_script:
+    - echo $BUILD_VERSION
+    - pip install build twine
+  script:
+    # build the package and upload to the GitLab package registry
+    - python -m build --sdist --wheel  # build the package
+    - python -m twine upload --verbose --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*  # upload the package to the GitLab package registry
+    # collect the current changes and export as variable
+    - changelog=$(python scripts/collect_changes.py CHANGES.md $BUILD_VERSION)
+    - echo "Changelog entries:"
+    - echo "$changelog"
+    - echo "$changelog" >> release-description.txt
+  artifacts:
+    paths:
+      - dist/*
+      - release-description.txt
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
+      allow_failure: false
+
 
 # ############################################################################################################################################################
-# ######################################################### setup #############################################################################################
+# ######################################################### setup ############################################################################################
 # ############################################################################################################################################################
 
 # The setup stage is used to get the container tag for the testing stage.
@@ -261,7 +297,7 @@ test coverage:
       - if: $CI_COMMIT_BRANCH == "dev" # commits to dev (for coverage)
 
 
-#Changes.rst file must be changed in merge requests
+#Changes.md file must be changed in merge requests
 check-changes:
   image: python:3.10
   inherit:
@@ -283,7 +319,7 @@ check-changes:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
 
-#In addition to CHANGES.rst, the _version.py file must be changed in merge requests to main in order to make a new version
+#In addition to CHANGES.md, the _version.py file must be changed in merge requests to main in order to make a new version
 check-version:
   image:
     name: cicirello/alpine-plus-plus
@@ -318,7 +354,7 @@ notebook-output-check:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
 
 # Test notebooks
-notebooks:
+notebooks-RNA:
   image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
   needs: [get-container-tag]
   inherit:
@@ -327,28 +363,74 @@ notebooks:
   tags:
       - sctoolbox
   artifacts:
+    when: always
     paths:
       - rna_analysis/logs/*.txt
       - rna_analysis/*.ipynb
-      - atac_analysis/*.ipynb
-      - atac_analysis/logs/*.txt
   before_script:
+    # install the sctoolbox
     - pip install .[all]
-  script:
-    - pip install papermill
+    # install mampok; TODO update the pre-installed packages
     #  - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
     - apt-get update
     - apt-get -y install libsasl2-dev python-dev-is-python3 libldap2-dev libssl-dev
     - pip install python-ldap pyOpenSSL
-    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git
+    - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git || echo "Mampok install failed, continuing"
+    # prepare notebook run
+    - pip install papermill
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb # ./general_notebooks/pseudotime_analysis.ipynb
-    - python scripts/run_notebooks.py
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb
+  script:
+    - python scripts/run_notebooks.py RNA
   after_script:
     - pwd
     - echo -------------------------------------------------- RNA logs --------------------------------------------------
     - "[ -d 'rna_analysis/logs/' ] && ls -l 'rna_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks.'"
     - if [[ -d rna_analysis/logs/ && "$(ls -A rna_analysis/logs/)" ]]; then for f in rna_analysis/logs/*; do echo "==> $f <=="; cat $f; done; fi
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" && $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:  # if any of the files were changed
+        - setup.py
+        - sctoolbox_env.yml
+        - Dockerfile
+        - sctoolbox/_version.py
+        - rna_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb
+        - scripts/run_notebooks.py
+
+# Test notebooks
+notebooks-ATAC:
+  image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
+  needs: [get-container-tag]
+  inherit:
+    default: false
+  stage: test
+  tags:
+      - sctoolbox
+  artifacts:
+    when: always
+    paths:
+      - atac_analysis/*.ipynb
+      - atac_analysis/logs/*.txt
+  before_script:
+    # install the sctoolbox
+    - pip install .[all]
+    # install mampok; TODO update the pre-installed packages; this is only needed for the prepare_for_cellxgene.ipynb
+    #  - mv /opt/conda/lib/python3.10/site-packages/urllib3-2.1.0.dist-info/ .  # Fixes metadata bug
+    #- apt-get update
+    #- apt-get -y install libsasl2-dev python-dev-is-python3 libldap2-dev libssl-dev
+    #- pip install python-ldap pyOpenSSL
+    #- pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.gwdg.de/loosolab/software/mampok.git || echo "Mampok install failed, continuing"
+    # prepare notebook run
+    - pip install papermill
+    - python -m ipykernel install --user --name sctoolbox
+    # TODO test the general notebooks with ATAC
+    #- cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb
+  script:
+    - python scripts/run_notebooks.py ATAC
+  after_script:
+    - pwd
     - echo -------------------------------------------------- ATAC logs --------------------------------------------------
     - "[ -d 'atac_analysis/logs/' ] && ls -l 'atac_analysis/logs/' || echo 'Log dir not found! Please check the artifacts to identify potential errors that occured within the notebooks.'"
     - if [[ -d atac_analysis/logs/ && "$(ls -A atac_analysis/logs/)" ]]; then for f in atac_analysis/logs/*; do echo "==> $f <=="; cat $f; done; fi
@@ -360,11 +442,11 @@ notebooks:
         - sctoolbox_env.yml
         - Dockerfile
         - sctoolbox/_version.py
-        - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
-        - general_notebooks/*.ipynb
+        #- general_notebooks/*.ipynb
+        - scripts/run_notebooks.py
 
-# In addition to CHANGES.rst and the _version.py file the notebook version for every notebook
+# In addition to CHANGES.md and the _version.py file the notebook version for every notebook
 # must be changed in merge requests to main in order to make a new version
 check-notebook-version:
   image: python:3.10-alpine3.19
@@ -402,6 +484,7 @@ build-pages:
     - pip install sphinx-exec-code
     - pip install nbsphinx
     - pip install nbsphinx_link
+    - pip install myst-parser
     - cd docs
     - make html
   artifacts:
@@ -418,7 +501,7 @@ build-pages:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
       allow_failure: false
-    - if: $CI_COMMIT_BRANCH == "main"  # always for commits to dev
+    - if: $CI_COMMIT_BRANCH == "main"  # always for commits to main
       allow_failure: false
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # all MR
       when: manual
@@ -475,7 +558,64 @@ pages:
       allow_failure: false  # main not allowed to fail
 
 # ############################################################################################################################################################
-# ######################################################### .post #############################################################################################
+# ########################################################################## Publish #########################################################################
+# ############################################################################################################################################################
+
+# Create a GitLab release and Tag when a commit to main is made
+# Fails when the tag or release already exists
+GitLab-release:
+  stage: publish
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  needs:
+    - job: extract-version  # so $BUILD_VERSION and release-description.txt is available
+      artifacts: true
+    - job: build-package  # so the build package is available
+      artifacts: true
+    # wait until the tests are done
+    - job: test coverage
+    - job: check-changes
+    - job: lint
+    - job: test import
+  script:
+    - echo "Running $BUILD_VERSION release"
+  release:
+    name: 'Release $BUILD_VERSION'
+    description: ./release-description.txt
+    tag_name: 'v$BUILD_VERSION'
+    ref: '$CI_COMMIT_SHA'
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH  # Run this job when commits are pushed or merged to the default branch
+    - if: $CI_COMMIT_TAG
+      when: never  # don't run this job for tags, only for commits to main
+
+
+# Publish the package that was build in the build stage to PyPI.
+PyPI:
+  stage: publish
+  image: python:latest
+  needs:
+    - job: build-package
+      artifacts: true
+    # release a fully tested package to PyPI
+    - job: GitLab-release
+  tags:
+    - sctoolbox
+  variables:
+    TWINE_USERNAME: __token__  # used for authentication to PyPI
+    TWINE_PASSWORD: $PYPI_API_TOKEN
+  before_script:
+    - echo $BUILD_VERSION
+    - pip install build twine
+  script:
+    - ls -lah dist/  # to check if the package is there
+    - python -m twine upload --verbose --repository pypi dist/*  # upload the package to PyPI
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
+      allow_failure: false
+
+
+# ############################################################################################################################################################
+# ######################################################### .post ############################################################################################
 # ############################################################################################################################################################
 
 # clean up
@@ -501,8 +641,31 @@ cleanup-orphan-tags:
     - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - |
+     # Handle broken API TOKENS
+      api() {
+        url="$1"
+        # capture body + status in one go
+        resp="$(curl -sS --retry 3 --retry-connrefused \
+                -H "PRIVATE-TOKEN: $API_TOKEN" \
+                -w '\n%{http_code}' "$url")" || { echo "curl failed"; return 1; }
+
+        status="${resp##*$'\n'}"
+        body="${resp%$'\n'$status}"
+
+        if [ "$status" -ge 400 ]; then
+          # Try to extract a useful message from JSON, fall back to raw body
+          msg="$(printf '%s' "$body" | jq -r '.message? // .error? // .[]? // empty' 2>/dev/null)"
+          echo "GitLab API error $status for $url: ${msg:-$body}" >&2
+          return 1
+        fi
+
+        printf '%s' "$body"
+      }
+
       # Fetch all branch names
-      BRANCHES=$(curl --silent --header "PRIVATE-TOKEN: $API_TOKEN" "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches" | jq -r '.[].name')
+      branches_json="$(api "https://gitlab.gwdg.de/api/v4/projects/$CI_PROJECT_ID/repository/branches?per_page=100")"
+      BRANCHES="$(printf '%s' "$branches_json" | jq -er 'if type=="array" then .[].name else empty end')"
+
       echo "Branches:"
       echo "$BRANCHES"
       

@@ -194,7 +194,7 @@ def generate_report(
 
         prefixes = sorted(set(prefixes))
 
-        report.add_title_slide(title=title)
+        report.add_title_slide(title=title, remove_placeholders=True)
 
         # create one slide for each prefix
         for prefix in prefixes:

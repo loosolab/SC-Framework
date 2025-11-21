@@ -11,7 +11,7 @@ import pandas as pd
 from pathlib import Path
 import yaml
 
-from beartype.typing import Optional, Any, Union, Collection, Mapping
+from beartype.typing import Optional, Any, Union, Collection, Mapping, Dict, Tuple, List, Literal
 from beartype import beartype
 
 import sctoolbox.utils.decorator as deco
@@ -203,6 +203,11 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
     if "compression" not in kwargs:
         kwargs["compression"] = "gzip"
 
+    # check var/obs/uns and replace any "/" with "|" as anndata does not allow "/" in any keys
+    # as of anndata>=0.12
+    for attr in ["obs", "var", "uns"]:
+        _rec_search(getattr(adata, attr), path=[attr], repl=("/", "|"))
+
     # Save adata
     adata_output = settings.full_adata_output_prefix + path
     adata.write(filename=adata_output, **kwargs)
@@ -234,6 +239,52 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
         plot_table(adata.var, report=report[2], crop=4)
 
     logger.info(f"The adata object was saved to: {adata_output}")
+
+
+@beartype
+def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")):
+    """
+    Help to search and replace characters in keys in nested dicts and pd.DataFrames column names.
+
+    Note: This is intended to be used on AnnData attributes such as .obs, .var, .uns.
+    Note: The function operates inplace.
+
+    Parameters
+    ----------
+    var : Union[Dict, pd.DataFrame]
+        The variable that will be searched. Either a dict or a pd.DataFrame.
+        In case of dict all keys will be searched and given characters are replaced (also for nested dicts).
+        In case of pd.DataFrame column names with given characters are updated (also if the DataFrame is nested inside a dict).
+    path : List[str]
+        The nesting path as a list. First element should be the name of an AnnData attribute e.g. 'obs'.
+    repl : Tuple[str, str], default ("/", "|")
+        Search for the first string and replace every occurrence with the second string.
+    """
+    # check DataFrame column names
+    if isinstance(var, pd.DataFrame):
+        col_names = [n for n in var.columns if "/" in n]
+
+        if col_names:
+            # first element is an adata attribute
+            tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+            path_str = f".{path[0]}{tmp_path}"
+
+            logger.warning(f"Found pd.DataFrame in {path_str} with '{repl[0]}' in column name(s) ({col_names}), which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            var.rename(columns={n: n.replace(*repl) for n in col_names}, inplace=True)
+    else:
+        # recursively check dict
+        # go through all items
+        for k, v in list(var.items()):
+            if repl[0] in k:
+                var[k.replace(*repl)] = var.pop(k)
+
+                # first element is an adata attribute
+                tmp_path = ''.join([f"['{e}']" for e in path[1:]]) if len(path) > 1 else ''
+                path_str = f".{path[0]}{tmp_path}"
+                logger.warning(f"Found '{repl[0]}' in {path_str}['{k}'], which is prohibited as of anndata>=0.12. Replacing with '{repl[1]}'.")
+            # open a nested dict
+            if isinstance(v, dict) or isinstance(v, pd.DataFrame):
+                _rec_search(v, repl=repl, path=path + [k])
 
 
 @beartype
@@ -621,3 +672,95 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
     adata.var = var.loc[adata.var_names]
 
     return adata
+
+
+@deco.log_anndata
+@beartype
+def tidy_layers(adata: sc.AnnData, allow_raw: bool | str = False, rename: Optional[Dict[str, str]] = None, keep_X: Optional[str] = None, replace_X: Optional[str] = None, keep: Literal['all'] | list[str] = 'all', inplace: bool = True) -> Optional[sc.AnnData]:
+    """
+    Clean up AnnData layers and special layers (X, raw).
+
+    The parameters are executed in the following order:
+    "allow_raw" -> "rename" -> "keep_X" -> "replace_X" -> "keep"
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The AnnData object to edit.
+    allow_raw : bool | str, default False
+        Whether to keep AnnData.raw. Provide a string to move AnnData.raw.X to a layer with the given name.
+        Note: Moving the raw matrix to a layer creates a subset on var to match adata.var.
+    rename : Optional[Dict[str, str]]
+        Rename AnnData.layers. In the form of `{"old_name": "new_name"}`.
+    keep_X : Optional[str]
+        Copy AnnData.X to the given name (AnnData.layers[keep_X]).
+    replace_X : Optional[str]
+        Overwrite the AnnData.X layer with on of the AnnData.layer layers.
+    keep : Literal['all'] | list[str], default 'all'
+        Name(s) of AnnData.layer layers to keep, others will be removed. Use 'all' to keep all layers.
+    inplace : bool, default True
+        Modify the AnnData inplace or return a modified copy.
+
+    Raises
+    ------
+    KeyError
+        1. If the new name already exists. During renaming or when raw is saved as a layer.
+        2. If the layer to replace X with is not found.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The modified AnnData object.
+    """
+    if not inplace:
+        adata = adata.copy()
+
+    # ----- raw ----- #
+    # move raw to adata.layer
+    if isinstance(allow_raw, str):
+        if allow_raw in adata.layers:
+            raise KeyError(f"{allow_raw} is already a layer name.")
+        # Filter adata.raw to var to ensure the dimensions match (obs subset is automatic)
+        adata.layers[allow_raw] = adata.raw[:, adata.var.index].X.copy()
+    # delete raw
+    if not allow_raw or isinstance(allow_raw, str):
+        adata.raw = None
+
+    # ----- rename ----- #
+    if rename:
+        no_match = []
+        for old, new in rename.items():
+            if old in adata.layers:
+                if new in adata.layers:
+                    raise KeyError(f"{new} is already a layer name.")
+
+                adata.layers[new] = adata.layers[old].copy()
+                del adata.layers[old]
+            else:
+                no_match.append(old)
+
+        if no_match:
+            logger.warning(f"Can not rename name(s) {no_match}. Not found in `AnnData.layers`. Skipped.")
+
+    # ----- keep_X ----- #
+    if keep_X:
+        if keep_X not in adata.layers:
+            adata.layers[keep_X] = adata.X.copy()
+        else:
+            raise KeyError(f"{keep_X} is already a layer name.")
+
+    # ----- replace_X ----- #
+    if replace_X:
+        if replace_X in adata.layers:
+            adata.X = adata.layers[replace_X].copy()
+        else:
+            raise KeyError(f"{replace_X} is not a valid AnnData.layer name ({list(adata.layers.keys())}).")
+
+    # ----- keep ----- #
+    if keep != "all":
+        for layer in list(adata.layers.keys()):
+            if layer not in keep:
+                del adata.layers[layer]
+
+    if not inplace:
+        return adata

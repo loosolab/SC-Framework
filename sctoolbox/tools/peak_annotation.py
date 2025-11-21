@@ -31,7 +31,8 @@ def annotate_adata(adata: sc.AnnData,
                    coordinate_cols: Optional[list[str]] = None,
                    temp_dir: str = "",
                    remove_temp: bool = True,
-                   inplace: bool = True) -> Optional[sc.AnnData]:
+                   inplace: bool = True,
+                   report: bool = False) -> Optional[sc.AnnData]:
     """
     Annotate adata .var features with genes from .gtf using UROPA [1]_.
 
@@ -62,6 +63,8 @@ def annotate_adata(adata: sc.AnnData,
         If True remove temporary directory after execution.
     inplace : boolean, default True
         Whether to add the annotations to the adata object in place.
+    report : boolean, default False
+        Add UROPA annotation to report (methods slide) if True and sctoolbox.settings.report_dir is not empty.
 
     Returns
     -------
@@ -191,6 +194,10 @@ def annotate_adata(adata: sc.AnnData,
     # Remove temporary directory
     if remove_temp:
         utils.io.rm_tmp(temp_dir, tempfiles)
+
+    # enable UROPA sentence on the methods slide
+    if settings.report_dir and report:
+        utils.io.update_yaml({"UROPA": True}, yml="method.yml", path_prefix="report")
 
     if inplace is False:
         return adata  # else returns None
