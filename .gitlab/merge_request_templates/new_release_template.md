@@ -3,7 +3,7 @@
 ## Before merge:
 - [ ] Update date in Changes.md
 - [ ] Update sctoolbox/_version.py
-- [ ] Update Notebook versions by running ./scripts/change_notebook_versions.py
+- [ ] Update Notebook versions by running `python scripts/change_notebook_versions.py <path_to_notebooks> "<version>"`
 
 ## After merge:
 ### Gitlab (pipeline takes ~1.5 hrs)
