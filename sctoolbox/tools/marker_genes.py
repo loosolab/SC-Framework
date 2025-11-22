@@ -915,17 +915,13 @@ def run_deseq2(adata: sc.AnnData,
 def score_genes(
     adata: sc.AnnData,
     gene_set: str | list[str],
+    species: str | None = None,
     score_name: str = "score",
     inplace: bool = True,
     **kwargs: Any
 ) -> Optional[sc.AnnData]:
     """
-    Assign a score to each cell depending on the expression of a set of genes.
-    Wrapper around `scanpy.tl.score_genes` with a convenient loader for internal
-    apoptosis lists and robust handling of file/list inputs.
-
-    Core idea (Seurat/Scanpy style):
-        score = mean(expression of gene_set) - mean(expression of matched control genes)
+    Assign a score to each cell depending on the expression of a set of genes. This is a wrapper for scanpy.tl.score_genes.
 
     Parameters
     ----------
@@ -933,21 +929,21 @@ def score_genes(
         AnnData object to score. Uses `adata.X` (or `use_raw` via kwargs; see Scanpy).
     gene_set : str | list[str]
         - list[str]: list of gene symbols
-        - str      : path to a TXT file (one gene per line)
+        - str:path to a TXT file (one gene per line)
         - "apoptosis_internal": use internal genelist in
           `sctoolbox/data/gene_lists/{species}_apoptosis_genes.txt`
+    species : str, optional
+        Required if `gene_set == "apoptosis_internal"`. Used to select the
+        internal apoptosis gene list(e.g. "human", "mouse", "rat", "zebrafish").
     score_name : str, default "score"
         Column name in `adata.obs` where the score will be stored.
     inplace : bool, default True
         If True, add column to `adata.obs` and return None.
         If False, return a copy of AnnData with the added column.
-    **kwargs : Any
-        Forwarded to `scanpy.tl.score_genes`. Additionally supports:
-        - species : str (optional, required if `gene_set == "apoptosis_internal"`)
-            Species key matching internal filenames (e.g. "human", "mouse", "rat", "zebrafish").
+   **kwargs : Any
+        Additional arguments to be passed to scanpy.tl.score_genes.Common scanpy kwargs (examples):
+        - ctrl_as_ref, ctrl_size, gene_pool, n_bins, random_state,use_raw
 
-        Common scanpy kwargs (examples):
-        - ctrl_as_ref, ctrl_size, gene_pool, n_bins, random_state, copy, use_raw
 
     Returns
     -------
@@ -957,22 +953,22 @@ def score_genes(
     Notes
     -----
     - Genes not present in `adata.var_names` are ignored (reported via logger).
-    - If fewer als 5 Gene des gene_set im Datensatz gefunden werden, wird gewarnt
+    - If fewer than 5 Genes in gene_set in data are found we will see a warning
       (Score ist dann potenziell instabil).
-    - TXT-Dateien müssen *ein Gen pro Zeile* enthalten.
-    - Interne Apoptose-Listen werden aus `sctoolbox/data/gene_lists/` geladen.
+    - TXT-files should be 1 gene per row
+    - Intern Apoptosis-Listsare loaded from `sctoolbox/data/gene_lists/`.
 
     Examples
     --------
-    # 1) Interne Apoptose-Liste (empfohlen, wenn vorhanden)
+    # 1) Intern Apoptosis-List (suggested)
     score_genes(adata, gene_set="apoptosis_internal", species="human",
                 score_name="apoptosis_score")
 
-    # 2) Eigene Liste (Python-Liste)
+    # 2) Own list (Python-List)
     apop = ["CASP3", "BAX", "BCL2", "TP53"]
     score_genes(adata, gene_set=apop, score_name="apoptosis_score")
 
-    # 3) Eigene Liste (TXT-Datei, ein Gen pro Zeile)
+    # 3) Own Liste (TXT-file, One Gen per row)
     score_genes(adata, gene_set="path/to/my_apoptosis_genes.txt",
                 score_name="apoptosis_score")
 
@@ -985,7 +981,6 @@ def score_genes(
         or if zero genes are present in the dataset after filtering.
     """
     # Optional species 
-    species = kwargs.pop("species", None)
     if isinstance(species, str):
         species = species.lower()
 
@@ -994,7 +989,7 @@ def score_genes(
         adata = adata.copy()
 
     # Load the Genes-
-    loaded_genes: list[str] | None = None
+    loaded_genes= None
 
     if isinstance(gene_set, list):
         loaded_genes = gene_set
@@ -1003,7 +998,6 @@ def score_genes(
     elif isinstance(gene_set, str):
         # Special Case interne Apoptose-Liste
         if gene_set.lower() == "apoptosis_internal":
-          
             if species is None:
                 raise ValueError(
                     "Please provide `species` when using gene_set='apoptosis_internal'."
@@ -1026,17 +1020,12 @@ def score_genes(
                 # Altes Verhalten: sofortiger Fehler bei ungültigem Pfad
                 raise FileNotFoundError("The list was not found!")
 
-    else:
-        # If the gene_set is not str/list 
-        raise ValueError("`gene_set` must be a list of genes, a path to a TXT file, "
-                         "or the string 'apoptosis_internal'.")
-
     # Check if the genes in data
     present = [g for g in loaded_genes if g in adata.var_names]
     missing = [g for g in loaded_genes if g not in adata.var_names]
 
     if len(missing) > 0:
-        logger.info(f"{len(missing)} gene(s) not found in adata.var_names and will be ignored.")
+        logger.warning(f"{len(missing)} of {len(loaded_genes)} gene(s) not found in adata.var_names and will be ignored.")
     if len(present) == 0:
         raise ValueError("None of the provided genes are present in `adata.var_names`.")
     if len(present) < 5:
@@ -1044,7 +1033,7 @@ def score_genes(
                        "The resulting score may be unstable.")
 
     # scale data and score the cells
-    sdata = sc.pp.scale(adata, copy=True)  # wie zuvor: skaliert, um Scanpy-Score stabil zu machen
+    sdata = sc.pp.scale(adata, copy=True)
     sc.tl.score_genes(
         sdata,
         gene_list=present,
