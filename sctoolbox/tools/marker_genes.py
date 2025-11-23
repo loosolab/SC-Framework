@@ -943,8 +943,7 @@ def score_genes(
     **kwargs : Any
         Additional arguments to be passed to scanpy.tl.score_genes.Common scanpy kwargs (examples):
         - ctrl_as_ref, ctrl_size, gene_pool, n_bins, random_state,use_raw
-    
-    
+        
     Returns
     -------
     Optional[sc.AnnData]
