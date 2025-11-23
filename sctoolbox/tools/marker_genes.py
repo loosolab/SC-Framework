@@ -979,7 +979,7 @@ def score_genes(
     ValueError
         If `gene_set == "apoptosis_internal"` but no `species` is provided,
         or if zero genes are present in the dataset after filtering.
-    """
+    """   
     # Optional species
     if isinstance(species, str):
         species = species.lower()
@@ -993,7 +993,6 @@ def score_genes(
 
     if isinstance(gene_set, list):
         loaded_genes = gene_set
-
     # check if list is in a file
     elif isinstance(gene_set, str):
         # Special Case interne Apoptose-Liste
