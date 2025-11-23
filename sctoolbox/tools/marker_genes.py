@@ -979,7 +979,7 @@ def score_genes(
     ValueError
         If `gene_set == "apoptosis_internal"` but no `species` is provided,
         or if zero genes are present in the dataset after filtering.
-    """   
+    """
     # Optional species
     if isinstance(species, str):
         species = species.lower()
@@ -993,7 +993,7 @@ def score_genes(
 
     if isinstance(gene_set, list):
         loaded_genes = gene_set
-    # check if list is in a file
+    # Check if list is in a file
     elif isinstance(gene_set, str):
         # Special Case interne Apoptose-Liste
         if gene_set.lower() == "apoptosis_internal":
@@ -1016,7 +1016,7 @@ def score_genes(
                 loaded_genes = [x.strip() for x in open(path)]
                 logger.info(f"Loaded genelist from file '{path}' ({len(loaded_genes)} genes).")
             else:
-                # Altes Verhalten: sofortiger Fehler bei ungültigem Pfad
+                # Direct error if the list is not found
                 raise FileNotFoundError("The list was not found!")
 
     # Check if the genes in data
@@ -1031,7 +1031,7 @@ def score_genes(
         logger.warning(f"Only {len(present)} genes from the provided set are present. "
                        "The resulting score may be unstable.")
 
-    # scale data and score the cells
+    # Scale data and score the cells
     sdata = sc.pp.scale(adata, copy=True)
     sc.tl.score_genes(
         sdata,
@@ -1040,7 +1040,7 @@ def score_genes(
         **kwargs
     )
 
-    # add score to adata.obs
+    # Add score to adata.obs
     adata.obs[score_name] = sdata.obs[score_name]
 
     return adata if not inplace else None
