@@ -980,7 +980,7 @@ def score_genes(
         If `gene_set == "apoptosis_internal"` but no `species` is provided,
         or if zero genes are present in the dataset after filtering.
     """
-    # Optional species 
+    # Optional species
     if isinstance(species, str):
         species = species.lower()
 
@@ -989,11 +989,11 @@ def score_genes(
         adata = adata.copy()
 
     # Load the Genes-
-    loaded_genes= None
+    loaded_genes = None
 
     if isinstance(gene_set, list):
         loaded_genes = gene_set
-        
+
     # check if list is in a file
     elif isinstance(gene_set, str):
         # Special Case interne Apoptose-Liste
@@ -1002,7 +1002,7 @@ def score_genes(
                 raise ValueError(
                     "Please provide `species` when using gene_set='apoptosis_internal'."
                 )
-            internal_path =_GENELIST_LOC/ f"{species}_apoptosis_genes.txt"
+            internal_path = _GENELIST_LOC / f"{species}_apoptosis_genes.txt"
             if not internal_path.is_file():
                 raise FileNotFoundError(
                     f"Internal apoptosis list not found: {internal_path}"
