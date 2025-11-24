@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.14.1 (21-11-2025)
+- pin statsmodels to >= 0.14.5
+
 ## 0.14.0 (21-11-2025)
 - fix dimension reduction and neighbor graph overwritten by batch correction (#343)
 - remove deprecated define_pc (replaced by propose_pcs)
