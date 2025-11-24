@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.14.2 (24-11-2025)
+- remove direct link dependencies to allow PyPI upload
+
 ## 0.14.1 (21-11-2025)
 - pin statsmodels to >= 0.14.5
 
