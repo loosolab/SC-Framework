@@ -1,3 +1,4 @@
+"""Multiprocessing utilities for parallel execution of functions."""
 import multiprocessing as mp
 import sctoolbox.utils as utils
 
@@ -9,12 +10,11 @@ from functools import partial
 
 @beartype
 def mp_first_position(func: Any, iterable: Any, threads: Optional[int] = None, **kwargs: Any) -> None:
+    """
+    Run a function in multiple processes.
 
-    '''
-    Decorator to run a function in multiple processes.
-
-    Parameters:
-    -----------
+    Parameters
+    ----------
     func:
         The function to be executed in parallel.
     iterable (iterable):
@@ -23,7 +23,7 @@ def mp_first_position(func: Any, iterable: Any, threads: Optional[int] = None, *
         Number of processes to spawn. Defaults to the number of CPU.
     **kwargs:
         Additional keyword arguments to pass to the function.
-    '''
+    """
 
     # Determine number of processes
     if threads is None:
@@ -48,12 +48,11 @@ def mp_first_position(func: Any, iterable: Any, threads: Optional[int] = None, *
 
 @beartype
 def adata_first_arg(func: Any, adata: Any, iterable: Any, threads: Optional[int] = None, **kwargs: Any) -> None:
+    """
+    Run a function in multiple processes, with anndata object as the first argument.
 
-    '''
-    Decorator to run a function in multiple processes, with anndata object as the first argument.
-
-    Parameters:
-    -----------
+    Parameters
+    ----------
     adata:
         The anndata object to be passed as the first argument.
     func:
@@ -64,7 +63,7 @@ def adata_first_arg(func: Any, adata: Any, iterable: Any, threads: Optional[int]
         Number of processes to spawn. Defaults to the number of CPU.
     **kwargs:
         Additional keyword arguments to pass to the function.
-    '''
+    """
 
     # Set adata as the first argument
     func_wrapper = partial(func, adata)
