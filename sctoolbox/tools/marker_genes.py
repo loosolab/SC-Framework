@@ -134,12 +134,12 @@ def label_genes(adata: sc.AnnData,
         Either a list of gender genes, a file containing one gender gene name per line or 'internal' to use an sctoolbox provided list.
     g_regex : Optional[str]
         A regex to identify gender genes if 'g_genes' is not available or failing.
-    report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     a_genes : Optional[list[str], str, Literal["internal"]], default "internal"
         Either a list of apoptosis genes, a file containing one apoptosis gene name per line or 'internal' to use an sctoolbox provided list.
     a_regex : Optional[str]
         A regex to identify apoptosis genes if 'a_genes' is not available or failing.
+    report : Optional[str]
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.    
 
     Raises
     ------
