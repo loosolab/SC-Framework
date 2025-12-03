@@ -139,7 +139,7 @@ def label_genes(adata: sc.AnnData,
     a_regex : Optional[str]
         A regex to identify apoptosis genes if 'a_genes' is not available or failing.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.    
+        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Raises
     ------
