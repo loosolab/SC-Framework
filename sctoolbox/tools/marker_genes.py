@@ -101,6 +101,9 @@ def label_genes(adata: sc.AnnData,
                 # gender args
                 g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 g_regex: Optional[str] = None,
+                # apoptosis args
+                a_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                a_regex: Optional[str] = None,
                 # report args
                 report: Optional[str] = None
                 ) -> list[str]:
@@ -150,8 +153,8 @@ def label_genes(adata: sc.AnnData,
     """
     if species:
         species = species.lower()
-    elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal":
-        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes' and 'g_genes' to not be 'internal'.")
+    elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal" or a_genes == "internal":
+        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes' and 'g_genes' and 'a_genes' to not be 'internal'.")
 
     # Get the full list of genes from adata
     if gene_column is None:
@@ -164,7 +167,8 @@ def label_genes(adata: sc.AnnData,
 
     for kind, labeler, regex in [("mito", m_genes, m_regex),
                                  ("ribo", r_genes, r_regex),
-                                 ("gender", g_genes, g_regex)]:
+                                 ("gender", g_genes, g_regex),
+                                 ("apoptosis", a_genes, a_regex)]:
         # prepare genelist if needed
         if labeler == "internal":
             available_species = utils.general.clean_flanking_strings(glob.glob(str(_GENELIST_LOC / f"*_{kind}_genes.txt")))
@@ -251,7 +255,7 @@ def _annotate(genes: pd.Series, labeler: Optional[list[str]], regex: Optional[st
     pd.Series
         A boolean list of len(genes). True denotes 'genes' that matched either the regex or where contained in the labeler list.
     """
-    logger.info(f"Annotating {kind} genes...")
+    logger.info(f"Annotatting {kind} genes...")
     if labeler:
         # handle elements which are in the labeler list but not in the genes list
         not_found = [lab for lab in labeler if lab not in genes]
@@ -914,7 +918,7 @@ def run_deseq2(adata: sc.AnnData,
 @beartype
 def score_genes(
     adata: sc.AnnData,
-    gene_set: str | list[str],
+    gene_set: str | list[str] | Literal["apoptosis_internal"],
     species: str | None = None,
     score_name: str = "score",
     inplace: bool = True,
