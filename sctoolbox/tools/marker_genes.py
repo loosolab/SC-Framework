@@ -103,7 +103,7 @@ def label_genes(adata: sc.AnnData,
                 g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 g_regex: Optional[str] = None,
                 # apoptosis args
-                a_genes: Optional[list[str] | str | Literal["internal"]] = "internal" |  None = None,
+                a_genes: Optional[list[str] | str | Literal["internal"] = "internal" | Literal["internal"]] = None,
                 a_regex: Optional[str] = None,
                 # report args
                 report: Optional[str] = None
