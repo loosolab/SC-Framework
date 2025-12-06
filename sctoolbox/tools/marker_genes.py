@@ -11,6 +11,7 @@ import warnings
 import anndata
 from pathlib import Path
 import matplotlib.pyplot as plt
+from typing import Sequence
 
 from beartype import beartype
 from beartype.typing import Optional, Tuple, Any, Literal
@@ -102,7 +103,7 @@ def label_genes(adata: sc.AnnData,
                 g_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
                 g_regex: Optional[str] = None,
                 # apoptosis args
-                a_genes: Optional[list[str] | str | Literal["internal"]] = "internal",
+                a_genes: Optional[list[str] | str | Literal["internal"]] = "internal" |  None = None,
                 a_regex: Optional[str] = None,
                 # report args
                 report: Optional[str] = None
@@ -922,7 +923,8 @@ def run_deseq2(adata: sc.AnnData,
 @beartype
 def score_genes(
     adata: sc.AnnData,
-    gene_set: str | list[str] | Literal["apoptosis_internal"],
+    gene_set: str | list[str] | Literal["internal"],
+    kind: str | None = None,
     species: str | None = None,
     score_name: str = "score",
     inplace: bool = True,
@@ -938,11 +940,14 @@ def score_genes(
     gene_set : str | list[str]
         - list[str]: list of gene symbols
         - str:path to a TXT file (one gene per line)
-        - "apoptosis_internal": use internal genelist in
-          `sctoolbox/data/gene_lists/{species}_apoptosis_genes.txt`
+        - "internal": use internal genelist in
+          `sctoolbox/data/gene_lists/{species}_{kind}_genes.txt`
+    kind : str, optional
+          Required if `gene_set == "internal"`. Used to select the Kind of Score. Kind can be "apoptosis", "mito", "ribo", "gender",
+      and potentially future categories (and cellcycle).
     species : str, optional
-        Required if `gene_set == "apoptosis_internal"`. Used to select the
-        internal apoptosis gene list(e.g. "human", "mouse", "rat", "zebrafish").
+        Required if `gene_set == "internal"`. Used to select the
+        internal gene list(e.g. "human", "mouse", "rat", "zebrafish").
     score_name : str, default "score"
         Column name in `adata.obs` where the score will be stored.
     inplace : bool, default True
@@ -963,12 +968,12 @@ def score_genes(
     - If fewer than 5 Genes in gene_set in data are found we will see a warning
       (Score ist dann potenziell instabil).
     - TXT-files should be 1 gene per row
-    - Intern Apoptosis-Listsare loaded from `sctoolbox/data/gene_lists/`.
+    - Intern Lists are loaded from `sctoolbox/data/gene_lists/`.
 
     Examples
     --------
-    # 1) Intern Apoptosis-List (suggested)
-    score_genes(adata, gene_set="apoptosis_internal", species="human",
+    # 1) Intern list (suggested)
+    score_genes(adata, gene_set="internal", species="human",
                 score_name="apoptosis_score")
 
     # 2) Own list (Python-List)
@@ -984,7 +989,7 @@ def score_genes(
     FileNotFoundError
         If a provided path string doesn't exist, or internal file not found.
     ValueError
-        If `gene_set == "apoptosis_internal"` but no `species` is provided,
+        If `gene_set == "internal"` but no `species` is provided,
         or if zero genes are present in the dataset after filtering.
     """
     # Optional species
@@ -995,6 +1000,9 @@ def score_genes(
     if not inplace:
         adata = adata.copy()
 
+    if isinstance(kind, str):
+        kind = kind.lower()
+
     # Load the Genes-
     loaded_genes = None
 
@@ -1003,24 +1011,23 @@ def score_genes(
     # Check if list is in a file
     elif isinstance(gene_set, str):
         # Special Case interne Apoptose-Liste
-        if gene_set.lower() == "apoptosis_internal":
-            if species is None:
+        if gene_set.lower() == "internal":
+            if species is None or kind is None:
                 raise ValueError(
-                    "Please provide `species` when using gene_set='apoptosis_internal'."
+                    "Please provide `species` and `kind` when using gene_set='internal'."
                 )
-            internal_path = _GENELIST_LOC / f"{species}_apoptosis_genes.txt"
+            internal_path = _GENELIST_LOC / f"{species}_{kind}_genes.txt"
             if not internal_path.is_file():
                 raise FileNotFoundError(
-                    f"Internal apoptosis list not found: {internal_path}"
+                    f"Internal gene list not found: {internal_path}"
                 )
             loaded_genes = utils.general.read_list_file(str(internal_path))
-            logger.info(f"Loaded internal apoptosis genelist for species='{species}' "
-                        f"({len(loaded_genes)} genes).")
+            logger.info(f"Loaded internal genelist kind='{kind}' for species='{species}' "f"({len(loaded_genes)} genes).")
         else:
             # Normal path to the file
             path = Path(gene_set)
             if path.is_file():
-                loaded_genes = [x.strip() for x in open(path)]
+                loaded_genes = utils.general.read_list_file(str(path))
                 logger.info(f"Loaded genelist from file '{path}' ({len(loaded_genes)} genes).")
             else:
                 # Direct error if the list is not found
