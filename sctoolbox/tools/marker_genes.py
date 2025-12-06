@@ -11,7 +11,6 @@ import warnings
 import anndata
 from pathlib import Path
 import matplotlib.pyplot as plt
-from typing import Sequence
 
 from beartype import beartype
 from beartype.typing import Optional, Tuple, Any, Literal
