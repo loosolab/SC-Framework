@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.14.3(09.12.2025)
+- apoptosis score integrated
+
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
 
