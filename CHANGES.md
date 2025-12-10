@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.14.3(09.12.2025)
+## 0.14.3(in progress)
 - apoptosis score integrated
 
 ## 0.14.2 (24-11-2025)

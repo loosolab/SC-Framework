@@ -158,7 +158,7 @@ def label_genes(adata: sc.AnnData,
     if species:
         species = species.lower()
     elif m_genes == "internal" or r_genes == "internal" or g_genes == "internal" or a_genes == "internal":
-        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes' and 'g_genes' and 'a_genes' to not be 'internal'.")
+        raise ValueError("Species is mandatory for usage of internal genelists. Either set the parameter 'species' or set 'm_genes', 'r_genes', 'g_genes' and 'a_genes' to not be 'internal'.")
 
     # Get the full list of genes from adata
     if gene_column is None:
@@ -259,7 +259,7 @@ def _annotate(genes: pd.Series, labeler: Optional[list[str]], regex: Optional[st
     pd.Series
         A boolean list of len(genes). True denotes 'genes' that matched either the regex or where contained in the labeler list.
     """
-    logger.info(f"Annotatting {kind} genes...")
+    logger.info(f"Annotating {kind} genes...")
     if labeler:
         # handle elements which are in the labeler list but not in the genes list
         not_found = [lab for lab in labeler if lab not in genes]
@@ -938,12 +938,11 @@ def score_genes(
         AnnData object to score. Uses `adata.X` (or `use_raw` via kwargs; see Scanpy).
     gene_set : str | list[str]
         - list[str]: list of gene symbols
-        - str:path to a TXT file (one gene per line)
+        - str: path to a TXT file (one gene per line)
         - "internal": use internal genelist in
           `sctoolbox/data/gene_lists/{species}_{kind}_genes.txt`
     kind : str, optional
-          Required if `gene_set == "internal"`. Used to select the Kind of Score. Kind can be "apoptosis", "mito", "ribo", "gender",
-      and potentially future categories (and cellcycle).
+          Required if `gene_set == "internal"`. Used to select the Kind of Score. Kind can be "apoptosis", "mito", "ribo", "gender".
     species : str, optional
         Required if `gene_set == "internal"`. Used to select the
         internal gene list(e.g. "human", "mouse", "rat", "zebrafish").
@@ -954,7 +953,7 @@ def score_genes(
         If False, return a copy of AnnData with the added column.
     **kwargs : Any
         Additional arguments to be passed to scanpy.tl.score_genes.Common scanpy kwargs (examples):
-        - ctrl_as_ref, ctrl_size, gene_pool, n_bins, random_state,use_raw
+        - ctrl_as_ref, ctrl_size, gene_pool, n_bins, random_state, use_raw
 
     Returns
     -------
@@ -964,8 +963,7 @@ def score_genes(
     Notes
     -----
     - Genes not present in `adata.var_names` are ignored (reported via logger).
-    - If fewer than 5 Genes in gene_set in data are found we will see a warning
-      (Score ist dann potenziell instabil).
+    - A warning will be displayed if fewer than 5 genes from the gene set are detected in the data, as this may lead to an unstable score.
     - TXT-files should be 1 gene per row
     - Intern Lists are loaded from `sctoolbox/data/gene_lists/`.
 
@@ -979,7 +977,7 @@ def score_genes(
     apop = ["CASP3", "BAX", "BCL2", "TP53"]
     score_genes(adata, gene_set=apop, score_name="apoptosis_score")
 
-    # 3) Own Liste (TXT-file, One Gen per row)
+    # 3) Own file (TXT-file, One Gen per row)
     score_genes(adata, gene_set="path/to/my_apoptosis_genes.txt",
                 score_name="apoptosis_score")
 
@@ -999,10 +997,7 @@ def score_genes(
     if not inplace:
         adata = adata.copy()
 
-    if isinstance(kind, str):
-        kind = kind.lower()
-
-    # Load the Genes-
+    # Load the Genes
     loaded_genes = None
 
     if isinstance(gene_set, list):
