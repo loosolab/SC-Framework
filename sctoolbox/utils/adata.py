@@ -517,7 +517,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Use this replacement color map for broken color maps.
         If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
     layer : Optional[str], default None
-
+        Layer to be set as adata.X before upload.
     inplace : bool, default False
 
     Raises
@@ -584,7 +584,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
 
     # ----- .obsm -----
     # Add "X_" if missing
-    out.obsm = {(k if k.startswith("X_") else f"X_{k}"):v for k,v in out.obsm.items()}
+    out.obsm = {(k if k.startswith("X_") else f"X_{k}"): v for k, v in out.obsm.items()}
 
     # Anndata needs at least one embedding for cellxgene
     if len(out.obsm) == 0:
