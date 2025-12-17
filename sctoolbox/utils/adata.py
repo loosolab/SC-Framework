@@ -478,7 +478,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
                           delete_var: Optional[list[str]] = None,
                           rename_obs: Optional[dict[str, str]] = None,
                           rename_var: Optional[dict[str, str]] = None,
-                          embedding_names: Optional[list[str]] = ["pca", "umap", "tsne"],
+                          embedding_names: Optional[list[str]] = None,
                           cmap: Optional[str] = None,
                           palette: Optional[str | Sequence[str]] = None,
                           layer: Optional[str] = None,
@@ -506,7 +506,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
         Dictionary of .obs columns to rename. Key is the old name, value the new one.
     rename_var : Optional[dict[str, str]], default None
         Dictionary of .var columns to rename. Key is the old name, value the new one.
-    embedding_names : Optional[list[str]], default ["pca", "umap", "tsne"]
+    embedding_names : Optional[list[str]], default None
         List of embeddings to check for. Will raise an error if none of the embeddings are found. Set None to disable check. Embeddings are stored in `adata.obsm`.
     cmap : Optional[str], default None
         Color map to use for continous variables.
@@ -582,9 +582,18 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     # TODO remove more adata internals not needed for cellxgene
 
     # ----- .obsm -----
+    # Add "X_" if missing
+    out.obsm = {(k if k.startswith("X_") else f"X_{k}"):v for k,v in out.obsm.items()}
+
+    # Anndata needs at least one embedding for cellxgene
+    if len(out.obsm) == 0:
+        raise ValueError("Unable to find any embeddings. At least one is needed for cellxgene.")
+
+    # Check for specific embedding names
+    # TODO do we even need this?
     if embedding_names:
         if not any(f"X_{e}" == k for e in embedding_names for k in out.obsm.keys()):
-            raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed for cellxgene.")
+            raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed required.")
 
     # ----- .obs -----
     clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
