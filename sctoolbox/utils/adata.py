@@ -524,8 +524,9 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     ------
     ValueError
         1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
-        2. If not at least one of the named embeddings are found in the adata.
-        3. If there is no layer with the given name.
+        2. If not at least one embedding is found in adata.obsm.
+        3. If not at least one of the named embeddings are found in the adata when embedding_names is given.
+        4. If there is no layer with the given name.
 
     Returns
     -------
