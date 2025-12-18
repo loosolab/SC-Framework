@@ -594,7 +594,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     # TODO do we even need this?
     if embedding_names:
         if not any(f"X_{e}" == k for e in embedding_names for k in out.obsm.keys()):
-            raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is needed required.")
+            raise ValueError(f"Unable to find any of the embeddings {embedding_names}. At least one is required.")
 
     # ----- .obs -----
     clean_section(out, axis="obs", keep=keep_obs, delete=delete_obs, rename=rename_obs)
