@@ -486,6 +486,12 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     """
     Prepare the given adata for cellxgene deployment.
 
+    Preparation includes removing, renaming of gene and cell metadata,
+    fixing color maps, and checking for correctly formatted embedding names.
+
+    All embeddings stored in adata.obsm must have names starting with 'X_'.
+    This function verifies the prefix and appends it if missing.
+
     Parameters
     ----------
     adata : sc.Anndata
