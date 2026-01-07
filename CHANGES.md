@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.15.0 (in progress)
+- prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
+
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
 
