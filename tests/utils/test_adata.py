@@ -217,18 +217,18 @@ def test_prepare_for_cellxgene(adata_icxg):
 
 
 @pytest.mark.parametrize("inplace", [True, False])
-@pytest.mark.parametrize("embedding_names", [["umap", "pca", "tsne"], ["invalid"]])
-def test_prepare_cellxgene_emb(adata_icxg, inplace, embedding_names):
+@pytest.mark.parametrize("keep_obsm", [["umap", "pca", "tsne"], ["invalid"]])
+def test_prepare_cellxgene_emb(adata_icxg, inplace, keep_obsm):
     """Test inplace and embedding check."""
     adata = adata_icxg.copy() if inplace else adata_icxg
 
-    if "invalid" in embedding_names:
+    if "invalid" in keep_obsm:
         with pytest.raises(ValueError):
-            utils.prepare_for_cellxgene(adata, embedding_names=embedding_names)
+            utils.prepare_for_cellxgene(adata, keep_obsm=keep_obsm)
     else:
         out = utils.prepare_for_cellxgene(
             adata,
-            embedding_names=embedding_names,
+            keep_obsm=keep_obsm,
             keep_obs=[adata.obs.columns[0]],
             keep_var=[adata.var.columns[0]],
             inplace=inplace
