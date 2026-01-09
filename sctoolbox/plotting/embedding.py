@@ -389,20 +389,24 @@ def plot_embedding(adata: sc.AnnData,
 
     axarr = sc.pl.embedding(adata, **kwargs)
 
-    # add figure title
-    if suptitle:
-        axarr[0].get_figure().suptitle(suptitle, fontsize="x-large")
-
-    # add dedicated legend ax to make it uniform with colorbar
-    leg_ax = None
-    if "ax" in kwargs:
-        leg_ax = _add_legend_ax(axarr)
-
     # if only one axis is returned, convert to list
     if not isinstance(axarr, list):
         axarr = [axarr]
     if not isinstance(color, list):
         color = [color]
+
+    # add figure title
+    if suptitle:
+        # If number of plots is <= ncols the subplot title and suptitle overlap
+        # Make sure that the titles do not overlap
+        num_cols = kwargs["ncols"] if "ncols" in kwargs else 4  # 4 is default of sc.pl.embedding()
+        suptitle_y = 1.05 if len(axarr) <= num_cols else 0.98  # 0.98 is default of suptitle()
+        axarr[0].get_figure().suptitle(suptitle, fontsize="x-large", y=suptitle_y)
+
+    # add dedicated legend ax to make it uniform with colorbar
+    leg_ax = None
+    if "ax" in kwargs:
+        leg_ax = _add_legend_ax(axarr)
 
     # Duplicate colors/dimensions if needed
     if len(kwargs["components"]) > 1 or len(color) > 1:
