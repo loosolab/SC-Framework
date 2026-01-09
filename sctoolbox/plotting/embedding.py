@@ -406,7 +406,10 @@ def plot_embedding(adata: sc.AnnData,
     # add dedicated legend ax to make it uniform with colorbar
     leg_ax = None
     if "ax" in kwargs:
-        leg_ax = _add_legend_ax(axarr)
+        if len(axarr) == 1:
+            leg_ax = _add_legend_ax(axarr[0])
+        else:
+            warnings.warn("Ignoring ax parameter. Setting ax only works if plotting a single component (set by 'color').")
 
     # Duplicate colors/dimensions if needed
     if len(kwargs["components"]) > 1 or len(color) > 1:
