@@ -33,7 +33,7 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                            'peakqc',
                            'tobias>=0.17.2'],  # to avoid installation error
                   "interactive": ['click'],
-                  "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
+                  "batch_correction": ['bbknn', 'harmonypy==0.0.10', 'scanorama'],  # latest scanpy version is incompatible with newest harmonypy version: https://github.com/scverse/scanpy/issues/3940
                   # pycirclize https://github.com/moshi4/pyCirclize/issues/75
                   "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize>=1.7.1', 'liana', 'mudata>=0.3.1', 'networkx>=3.5'],  # anndata>=10.9 requires mudata>=0.3.1; networkx>=3.5 for numpy 2 support
                   # "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
