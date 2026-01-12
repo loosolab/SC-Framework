@@ -2,6 +2,10 @@
 
 ## 0.15.0 (in progress)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
+- label_genes: Add show_all parameter (#404)
+
+### Changes to notebooks
+- RNA Notebook 2: Add show_all parameter option for label_genes to notebook
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
