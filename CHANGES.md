@@ -2,10 +2,12 @@
 
 ## 0.15.0 (in progress)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
+- plot_embedding: Fix bug when setting color to list of length 1 (#402)
 - label_genes: Add show_all parameter (#404)
 
 ### Changes to notebooks
 - RNA Notebook 2: Add show_all parameter option for label_genes to notebook
+- Notebook 3: Add color_map option for pca quality plots
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
