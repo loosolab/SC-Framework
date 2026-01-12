@@ -266,7 +266,7 @@ def _annotate(genes: pd.Series,
         not_found = [lab for lab in labeler if lab not in genes]
         if not_found:
             list_to_show = not_found if show_all else not_found[:5]
-            logger.warning(f"Following genes are not present in the dataset. Please check for typos. "
+            logger.warning("Following genes are not present in the dataset. Please check for typos. "
                            + f"{list_to_show} (Showing {len(list_to_show)} of {len(not_found)})")
         return genes.isin(labeler)
     elif regex:
