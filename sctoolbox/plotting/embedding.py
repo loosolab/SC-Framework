@@ -409,7 +409,7 @@ def plot_embedding(adata: sc.AnnData,
         if len(axarr) == 1:
             leg_ax = _add_legend_ax(axarr[0])
         else:
-            warnings.warn("Ignoring ax parameter. Setting ax only works if plotting a single component (set by 'color').")
+            warnings.warn("Ignoring ax parameter. Setting ax only works when plotting a single component (providing one 'color').")
 
     # Duplicate colors/dimensions if needed
     if len(kwargs["components"]) > 1 or len(color) > 1:
