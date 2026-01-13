@@ -6,7 +6,6 @@
 - label_genes: Add show_all parameter (#404)
 
 ### Changes to notebooks
-- RNA Notebook 2: Add show_all parameter option for label_genes to notebook
 - Notebook 3: Add color_map option for pca quality plots
 
 ## 0.14.2 (24-11-2025)
