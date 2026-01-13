@@ -103,7 +103,7 @@ def label_genes(adata: sc.AnnData,
                 g_regex: Optional[str] = None,
                 # report args
                 report: Optional[str] = None,
-                show_all: bool = False
+                show_mismatches: Optional[int] = 3
                 ) -> list[str]:
     """
     Label genes as ribosomal, mitochrondrial and gender genes.
@@ -134,8 +134,8 @@ def label_genes(adata: sc.AnnData,
         A regex to identify gender genes if 'g_genes' is not available or failing.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
-    show_all : bool, default False
-        If True shows all mismatching genes contained in 'labeler'
+    show_mismatches : Optional[int], default 3
+        Show top and bottom X mismatching genes contained in 'labeler'. Set to None or 0 for all.
 
     Raises
     ------
@@ -193,7 +193,7 @@ def label_genes(adata: sc.AnnData,
             genelist = None  # to trigger regex
 
         # create list of boolean indicators
-        bool_label = _annotate(genes=adata_genes, labeler=genelist, regex=regex, kind=kind, show_all=show_all)
+        bool_label = _annotate(genes=adata_genes, labeler=genelist, regex=regex, kind=kind, show_mismatches=show_mismatches)
 
         if bool_label is not None:
             adata.var[f"is_{kind}"] = bool_label
@@ -238,7 +238,7 @@ def _annotate(genes: pd.Series,
               labeler: Optional[list[str]],
               regex: Optional[str],
               kind: str,
-              show_all: bool = False) -> pd.Series:
+              show_mismatches: Optional[int] = 3) -> pd.Series:
     """
     Create a boolean list that shows whether a gene is contained in 'labeler' or matches the regex.
 
@@ -252,8 +252,8 @@ def _annotate(genes: pd.Series,
         A regex pattern used to match genes. Only used if labeler = None.
     kind : str
         Name of the genes that are annotated. E.g. mito
-    show_all : bool, default False
-        If True shows all mismatching genes contained in 'labeler'
+    show_mismatches : Optional[int], default 3
+        Show top and bottom X mismatching genes contained in 'labeler'. Set to None or 0 for all.
 
     Returns
     -------
@@ -265,9 +265,15 @@ def _annotate(genes: pd.Series,
         # handle elements which are in the labeler list but not in the genes list
         not_found = [lab for lab in labeler if lab not in genes]
         if not_found:
-            list_to_show = not_found if show_all else not_found[:5]
-            logger.warning("Following genes are not present in the dataset. Please check for typos. "
-                           + f"{list_to_show} (Showing {len(list_to_show)} of {len(not_found)})")
+            perc_mismatch = (len(not_found)/len(labeler))
+            if show_mismatches:
+                list_to_show = f"{", ".join(not_found[:show_mismatches])},... {", ".join(not_found[-show_mismatches:])}"
+                number_shown = show_mismatches*2
+            else:
+                list_to_show = ", ".join(not_found)
+                number_shown = len(not_found)
+            logger.warning(f"Some genes from the internal database are not present in the dataset ({perc_mismatch:.1%}). (possible typos or missing entries).\n"
+                           + f"Missing genes: {list_to_show} (Showing {number_shown} of {len(not_found)} mismatches)")
         return genes.isin(labeler)
     elif regex:
         return genes.str.match(regex, case=False)
