@@ -267,7 +267,7 @@ def _annotate(genes: pd.Series,
         if not_found:
             perc_mismatch = (len(not_found)/len(labeler))
             if show_mismatches:
-                list_to_show = f"{", ".join(not_found[:show_mismatches])},... {", ".join(not_found[-show_mismatches:])}"
+                list_to_show = f"{', '.join(not_found[:show_mismatches])},... {", ".join(not_found[-show_mismatches:])}"
                 number_shown = show_mismatches*2
             else:
                 list_to_show = ", ".join(not_found)
