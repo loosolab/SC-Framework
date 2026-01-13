@@ -267,10 +267,10 @@ def _annotate(genes: pd.Series,
         if not_found:
             perc_mismatch = (len(not_found)/len(labeler))
             if show_mismatches:
-                list_to_show = f"{', '.join(not_found[:show_mismatches])},... {", ".join(not_found[-show_mismatches:])}"
+                list_to_show = f"{', '.join(not_found[:show_mismatches])},... {', '.join(not_found[-show_mismatches:])}"
                 number_shown = show_mismatches*2
             else:
-                list_to_show = ", ".join(not_found)
+                list_to_show = ', '.join(not_found)
                 number_shown = len(not_found)
             logger.warning(f"Some genes from the internal database are not present in the dataset ({perc_mismatch:.1%}). (possible typos or missing entries).\n"
                            + f"Missing genes: {list_to_show} (Showing {number_shown} of {len(not_found)} mismatches)")
