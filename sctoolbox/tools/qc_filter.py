@@ -735,7 +735,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         FUN_kwargs: dict = {}) -> dict[str, dict[Union[str, int, float] , Union[Union[int, float], dict[str, Union[int, float]]]]]:
+                         FUN_kwargs: dict = {}) -> dict[str, dict[Union[str, int, float], Union[Union[int, float], dict[str, Union[int, float]]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -757,7 +757,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[Union[str, int, float] , Union[Union[int, float], dict[str, Union[int, float]]]]]
+    dict[str, dict[Union[str, int, float], Union[Union[int, float], dict[str, Union[int, float]]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
