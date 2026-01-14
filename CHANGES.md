@@ -3,7 +3,7 @@
 ## 0.15.0 (in progress)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
 - plot_embedding: Fix bug when setting color to list of length 1 (#402)
-- label_genes: Add show_all parameter (#404)
+- label_genes: Add `show_mismatches` parameter (#404)
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots

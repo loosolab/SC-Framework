@@ -135,7 +135,7 @@ def label_genes(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
     show_mismatches : Optional[int], default 3
-        Show top and bottom X mismatching genes contained in 'labeler'. Set to None or 0 for all.
+        Select the number of mismatching genes to show, i.e., not available in the dataset. Will truncate the list to top and bottom X. Set to None or 0 for all.
 
     Raises
     ------
@@ -253,7 +253,7 @@ def _annotate(genes: pd.Series,
     kind : str
         Name of the genes that are annotated. E.g. mito
     show_mismatches : Optional[int], default 3
-        Show top and bottom X mismatching genes contained in 'labeler'. Set to None or 0 for all.
+        Show top and bottom X mismatching genes contained in 'labeler' but not in 'genes'. Set to None or 0 for all.
 
     Returns
     -------
@@ -272,7 +272,7 @@ def _annotate(genes: pd.Series,
             else:
                 list_to_show = ', '.join(not_found)
                 number_shown = len(not_found)
-            logger.warning(f"Some genes from the internal database are not present in the dataset ({perc_mismatch:.1%}). (possible typos or missing entries).\n"
+            logger.warning(f"Detected {perc_mismatch:.1%} genes unavailable in the dataset. Check the parameters for potential issues.\n"
                            + f"Missing genes: {list_to_show} (Showing {number_shown} of {len(not_found)} mismatches)")
         return genes.isin(labeler)
     elif regex:
