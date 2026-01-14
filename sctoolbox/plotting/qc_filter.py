@@ -629,7 +629,7 @@ def quality_violin(adata: sc.AnnData,
                    header: Optional[list[str]] = None,
                    color_list: Optional[list[str | Tuple[float | int, float | int, float | int]]] = None,
                    title: Optional[str] = None,
-                   thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
+                   thresholds: Optional[dict[str, dict[float | int | str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
                    global_threshold: bool = True,
                    save: Optional[str] = None,
                    report: Optional[str] = None,
@@ -831,7 +831,7 @@ def quality_violin(adata: sc.AnnData,
             # Add slider to control thresholds
             if is_interactive:
 
-                slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max,
+                slider = ipywidgets.FloatRangeSlider(description=str(group), min=data_min, max=data_max,
                                                      value=[tmin, tmax],  # initial value
                                                      continuous_update=False)
 
@@ -950,8 +950,8 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
 
 
 def _upset_select_cells(adata: sc.AnnData,
-                        thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
-                        groupby: Optional[str] = None) -> pd.DataFrame:
+                        thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
+                        ) -> pd.DataFrame:
     """
     Select cells based on thresholds for UpSet Plot.
 
@@ -960,9 +960,7 @@ def _upset_select_cells(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix object.
     thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
-        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
-    groupby : Optional[str], default None
-        Name of the column in adata.obs to group cells by.
+        Dictionary containing thresholds for each column.
 
     Returns
     -------
@@ -973,7 +971,7 @@ def _upset_select_cells(adata: sc.AnnData,
     # loop over all columns
     for column_name, values in thresholds.items():
         # loop over all groups
-        if groupby:
+        if not all(x in values for x in ["min", "max"]):
             # initialize an array of False values
             accumulate_results = np.zeros(adata.obs.shape[0], dtype=bool)
             # loop over all samples
@@ -1001,9 +999,8 @@ def _upset_select_cells(adata: sc.AnnData,
 
 
 def upset_plot_filter_impacts(adata: sc.AnnData,
-                              thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                              thresholds: dict[str, dict[str | int | float, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
                               limit_combinations: Optional[int] = None,
-                              groupby: Optional[int] = None,
                               report: Optional[str] = None) -> Optional[dict]:
     """
     Plot the impact of filtering cells based on thresholds in an UpSet Plot.
@@ -1013,11 +1010,9 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix object.
     thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
-        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+        Dictionary containing thresholds for each column.
     limit_combinations : Optional[int], default None
         Limit the number of combinations to show in the plot.
-    groupby : Optional[str], default None
-        Name of the column in adata.obs to group cells by.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
@@ -1030,7 +1025,7 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
 
         return None
 
-    selection = _upset_select_cells(adata, thresholds, groupby)
+    selection = _upset_select_cells(adata, thresholds)
 
     # Number of variables
     n = len(selection.columns)
