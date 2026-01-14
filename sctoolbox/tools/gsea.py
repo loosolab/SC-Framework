@@ -60,6 +60,7 @@ def gene_set_enrichment(adata: sc.AnnData,
         Get top or bottom degs for enrichr analyisis.
         Positive values get the top X upregulated genes.
         Negative values get the top X downregulated genes.
+        For example, ``10`` to use the top 10 and ``-10`` to use the bottom 10 genes.
     **kwargs : Any
         Additional parameters forwarded to gseapy.prerank().
 
