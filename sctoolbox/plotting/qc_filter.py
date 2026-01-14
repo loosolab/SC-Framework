@@ -950,8 +950,8 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
 
 
 def _upset_select_cells(adata: sc.AnnData,
-                        thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
-                        ) -> pd.DataFrame:
+                        thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                        groupby: Optional[str] = None) -> pd.DataFrame:
     """
     Select cells based on thresholds for UpSet Plot.
 
@@ -961,6 +961,8 @@ def _upset_select_cells(adata: sc.AnnData,
         Annotated data matrix object.
     thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
         Dictionary containing thresholds for each column.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
 
     Returns
     -------
@@ -1001,6 +1003,7 @@ def _upset_select_cells(adata: sc.AnnData,
 def upset_plot_filter_impacts(adata: sc.AnnData,
                               thresholds: dict[str, dict[str | int | float, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
                               limit_combinations: Optional[int] = None,
+                              groupby: Optional[int] = None,
                               report: Optional[str] = None) -> Optional[dict]:
     """
     Plot the impact of filtering cells based on thresholds in an UpSet Plot.
@@ -1013,6 +1016,8 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
         Dictionary containing thresholds for each column.
     limit_combinations : Optional[int], default None
         Limit the number of combinations to show in the plot.
+    groupby : Optional[str], default None
+        Name of the column in adata.obs to group cells by.
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
@@ -1025,7 +1030,7 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
 
         return None
 
-    selection = _upset_select_cells(adata, thresholds)
+    selection = _upset_select_cells(adata, thresholds, groupby=groupby)
 
     # Number of variables
     n = len(selection.columns)
