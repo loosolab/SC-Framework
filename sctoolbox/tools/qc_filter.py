@@ -735,7 +735,7 @@ def automatic_thresholds(adata: sc.AnnData,
                          groupby: Optional[str] = None,
                          columns: Optional[list[str]] = None,
                          FUN: Callable = gmm_threshold,
-                         FUN_kwargs: dict = {}) -> dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]]:
+                         FUN_kwargs: dict = {}) -> dict[str, dict[Union[str, int, float] , Union[Union[int, float], dict[str, Union[int, float]]]]]:
     """
     Get automatic thresholds for multiple data columns in adata.obs or adata.var.
 
@@ -757,7 +757,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    dict[str, dict[str, Union[Union[int, float], dict[str, Union[int, float]]]]]
+    dict[str, dict[Union[str, int, float] , Union[Union[int, float], dict[str, Union[int, float]]]]]
         A dict containing thresholds for each data column,
         either grouped by groupby or directly containing "min" and "max" per column.
 
@@ -804,7 +804,7 @@ def automatic_thresholds(adata: sc.AnnData,
 
 
 @beartype
-def thresholds_as_table(threshold_dict: dict[str, dict[str, Union[int, float] | dict[str, Union[int, float]]]],
+def thresholds_as_table(threshold_dict: dict[str, dict[Union[int, float, str], Union[int, float] | dict[Union[int, float, str], Union[int, float]]]],
                         report: Optional[str] = None) -> pd.DataFrame:
     """
     Show the threshold dictionary as a table.
@@ -936,12 +936,12 @@ def validate_threshold_dict(table: pd.DataFrame,
 @deco.log_anndata
 @beartype
 def get_thresholds(adata: sc.AnnData,
-                   manual_thresholds: Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float, None]], Dict[str, Dict[Literal["min", "max"], Union[int, float, None]]]]],
+                   manual_thresholds: Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float, None]], Dict[Union[int, float, str], Dict[Literal["min", "max"], Union[int, float, None]]]]],
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
                    ignore_stored: bool = False,
                    only_automatic: bool = False,
-                   **kwargs: Any) -> Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]:
+                   **kwargs: Any) -> Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[Union[int, float, str], Dict[Literal["min", "max"], Union[int, float]]]]]:
     """
     Prepare thresholds for filtering.
 
@@ -959,7 +959,7 @@ def get_thresholds(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         Anndata object to find QC thresholds for.
-    manual_thresholds : Dict[str, Union[None, Dict[Literal["min", "max"], Optional[Union[int, float]]], Dict[str, Dict[Literal["min", "max"], Optional[Union[int, float]]]]]]
+    manual_thresholds : Dict[str, Union[None, Dict[Literal["min", "max"], Optional[Union[int, float]]], Dict[Union[int, float, str], Dict[Literal["min", "max"], Optional[Union[int, float]]]]]]
         Dictionary containing manually set thresholds.
         Formatted as:
         {
@@ -980,7 +980,7 @@ def get_thresholds(adata: sc.AnnData,
 
     Returns
     -------
-    Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[str, Dict[Literal["min", "max"], Union[int, float]]]]]
+    Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[Union[int, float, str], Dict[Literal["min", "max"], Union[int, float]]]]]
         A dictionary containing the thresholds.
     """
     # remove keys not present in the adata
