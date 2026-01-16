@@ -48,7 +48,7 @@ extract-version:
   stage: .pre
   image: python:3.10-alpine3.19
   script:
-    - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
+    - VERSION=$(python -c "import sys; sys.path.append('./src/sctoolbox'); from _version import __version__; print(__version__)")
     - echo "BUILD_VERSION=$VERSION"
     - echo "BUILD_VERSION=$VERSION" >> build.env
   artifacts:
