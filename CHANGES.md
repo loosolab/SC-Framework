@@ -5,6 +5,8 @@
 - plot_embedding: Fix bug when setting color to list of length 1 (#402)
 - gene_set_enrichment: Add deg_set_size to gene_set_enrichment (#396)
 - label_genes: Add `show_mismatches` parameter (#404)
+- get_package_versions: gets correct sctoolbox version (#410)
+- Switch from setup.py to pyproject.toml
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots
