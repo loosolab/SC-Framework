@@ -138,9 +138,6 @@ Documentation = "https://loosolab.pages.gwdg.de/software/sc_framework/"
 Issues = "https://github.com/loosolab/SC-Framework/issues"
 Changelog = "https://github.com/loosolab/SC-Framework/blob/main/CHANGES.md"
 
-#[tool.setuptools.packages.find]
-#where = ["sctoolbox"]
-
 [build-system]
 requires = [
     "setuptools",  # needed pre-install
@@ -155,10 +152,13 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"" = "."}
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "sctoolbox.__version__"}
+
+[tool.setuptools.package-data]
+sctoolbox = ["src/data/**/*"]
