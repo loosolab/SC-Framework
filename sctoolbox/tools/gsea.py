@@ -27,6 +27,7 @@ def gene_set_enrichment(adata: sc.AnnData,
                         inplace: bool = False,
                         gene_sets: Optional[dict[str, list[str]]] = None,
                         background: Optional[set[str]] = None,
+                        deg_set_size: int = 200,
                         **kwargs: Any
                         ) -> Optional[sc.AnnData]:
     """
@@ -55,6 +56,11 @@ def gene_set_enrichment(adata: sc.AnnData,
     background : Optional[set[str]], default None
         Set of background genes. Will be automatically determined when
         library_name or gene_sets is given. Only needed for enrichr.
+    deg_set_size : int, default 200
+        Get top or bottom degs for enrichr analyisis.
+        Positive values get the top X upregulated genes.
+        Negative values get the top X downregulated genes.
+        For example, ``10`` to use the top 10 and ``-10`` to use the bottom 10 genes.
     **kwargs : Any
         Additional parameters forwarded to gseapy.prerank().
 
@@ -155,7 +161,9 @@ def gene_set_enrichment(adata: sc.AnnData,
             # briefly silence all loggers to disable gseapy logging
             with utils.general.suppress_logging():
                 if method == "enrichr":
-                    enr = gp.enrichr(list(deg["names"].str.upper()),
+                    deg_list = list(deg["names"].str.upper())
+                    deg_list = deg_list[:deg_set_size] if deg_set_size >= 0 else deg_list[deg_set_size:]
+                    enr = gp.enrichr(deg_list,
                                      gene_sets=gene_sets,
                                      organism=organism,
                                      background=background,
