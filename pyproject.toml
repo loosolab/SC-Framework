@@ -1,3 +1,16 @@
+[build-system]
+requires = [
+    "setuptools",  # needed pre-install
+    "wheel",
+    "numpy",  # needed pre-install
+    "pyyaml",
+    "beartype",
+    "pip",  # to make pip accessible during installation
+    "cmake>=3.18",    # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
+    "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
+]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "SC-Framework"
 dynamic = ["version"]
@@ -138,19 +151,6 @@ Documentation = "https://loosolab.pages.gwdg.de/software/sc_framework/"
 Issues = "https://github.com/loosolab/SC-Framework/issues"
 Changelog = "https://github.com/loosolab/SC-Framework/blob/main/CHANGES.md"
 
-[build-system]
-requires = [
-    "setuptools",  # needed pre-install
-    "wheel",
-    "numpy",  # needed pre-install
-    "pyyaml",
-    "beartype",
-    "pip",  # to make pip accessible during installation
-    "cmake>=3.18",    # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
-    "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
-]
-build-backend = "setuptools.build_meta"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 
@@ -162,3 +162,17 @@ version = {attr = "sctoolbox.__version__"}
 
 [tool.setuptools.package-data]
 sctoolbox = ["src/data/**/*"]
+
+[tool.pytest.ini_options]
+# durations=0 shows the ranked duration of all tests for improving compute time
+addopts = """
+--cov-report=term \
+--cov=sctoolbox \
+--junitxml=pytest.xml \
+--cov-report=html:htmlcov \
+--html=pytest.html \
+--durations=0
+"""
+testpaths = [
+    "./tests",
+]
