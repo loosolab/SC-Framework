@@ -15,6 +15,39 @@ build-backend = "setuptools.build_meta"
 name = "SC-Framework"
 dynamic = ["version"]
 description = 'Custom modules for single cell analysis'
+requires-python = ">=3.9,<3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Hendrik Schultheis" },
+    { name = "Jan Detleffsen" },
+    { name = "René Wiegandt" },
+    { name = "Mette Bentsen" },
+    { name = "Yousef Alayoubi" },
+    { name = "Guilherme Valente" },
+    { name = "Micha Frederick Keßler" },
+    { name = "Brenton Joey Bruns" },
+    { name = "DInija Mirza" },
+    { name = "Angeline Usanayo" },
+    { name = "Jasmin Walter" },
+    { name = "Philipp Goymann" },
+    { name = "Moritz Hobein" },
+    { name = "Carsten Kuenne" },
+    { name = "Mario Looso" }
+]
+maintainers = [
+    { name = "Hendrik Schultheis", email="Hendrik.Schultheis@mpi-bn.mpg.de" },
+    { name = "Jan Detleffsen", email="Jan.Detleffsen@mpi-bn.mpg.de" },
+    { name = "René Wiegandt", email="Rene.Wiegandt@mpi-bn.mpg.de" }
+]
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
 keywords = [
     "single-cell",
     "scRNA-seq",
@@ -44,17 +77,6 @@ keywords = [
     "Scanpy",
     "AnnData",
     "visualization",
-]
-readme = "README.md"
-requires-python = ">=3.9,<3.13"
-license = "MIT"
-license-files = ["LICENSE"]
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12"
 ]
 dependencies = [
         'pysam',
