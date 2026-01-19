@@ -968,16 +968,27 @@ def _upset_select_cells(adata: sc.AnnData,
     -------
     selection : pd.DataFrame
         DataFrame containing boolean values for each cell based on thresholds.
+
+    Raises
+    ------
+    ValueError
+        1. If any/all thresholds are grouped but groupby is set to None
+        2. If grouped threhold dict key does not match values in given groupby column
     """
     selection = {}
     # loop over all columns
     for column_name, values in thresholds.items():
         # loop over all groups
         if not all(x in values for x in ["min", "max"]):
+            if groupby is None:
+                raise ValueError(f"Parameter groupby is set to None while threshold {column_name} is grouped. 'groupby' has to be set to the correct group column.")
             # initialize an array of False values
             accumulate_results = np.zeros(adata.obs.shape[0], dtype=bool)
             # loop over all samples
             for sample, cutoffs in values.items():
+                # Check if correct group column machtes threshold dict
+                if sample not in list(adata.obs[groupby]):
+                    raise ValueError(f"Wrong group selection. '{sample}' not found in groupby column '{groupby}'")
                 # select cells based on the sample
                 sample_selection = np.array(adata.obs[groupby] == sample)
                 # select cells based on the cutoffs
