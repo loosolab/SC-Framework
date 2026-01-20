@@ -4,6 +4,7 @@ import importlib as _importlib
 
 # define what is exported in this module
 __all__ = [
+    "amulet",
     "bam",
     "calc_overlap_fc",
     "celltype_annotation",
