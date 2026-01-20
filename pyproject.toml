@@ -167,6 +167,14 @@ all = [
     'SC-Framework[core,downstream]'
 ]
 
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest-html"
+]
+
 [project.urls]
 Repository = "https://github.com/loosolab/SC-Framework"
 Documentation = "https://loosolab.pages.gwdg.de/software/sc_framework/"
