@@ -40,7 +40,7 @@ RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 RUN mamba install -y "louvain>=0.8.2"
 
 # install sctoolbox
-RUN pip install "/home/sc_framework/[all]" --group "/home/sc_framework/[test]"
+RUN pip install "/home/sc_framework/[all]" --group "/home/sc_framework/pyproject.toml:test"
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \
