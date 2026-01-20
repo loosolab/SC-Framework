@@ -483,6 +483,7 @@ build-pages:
     - pip install nbsphinx
     - pip install nbsphinx_link
     - pip install myst-parser
+    - pip install "docutils<=0.21"  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     - cd docs
     - make html
   artifacts:
