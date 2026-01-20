@@ -629,7 +629,7 @@ def quality_violin(adata: sc.AnnData,
                    header: Optional[list[str]] = None,
                    color_list: Optional[list[str | Tuple[float | int, float | int, float | int]]] = None,
                    title: Optional[str] = None,
-                   thresholds: Optional[dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
+                   thresholds: Optional[dict[str, dict[float | int | str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]] = None,
                    global_threshold: bool = True,
                    save: Optional[str] = None,
                    report: Optional[str] = None,
@@ -831,7 +831,7 @@ def quality_violin(adata: sc.AnnData,
             # Add slider to control thresholds
             if is_interactive:
 
-                slider = ipywidgets.FloatRangeSlider(description=group, min=data_min, max=data_max,
+                slider = ipywidgets.FloatRangeSlider(description=str(group), min=data_min, max=data_max,
                                                      value=[tmin, tmax],  # initial value
                                                      continuous_update=False)
 
@@ -960,7 +960,7 @@ def _upset_select_cells(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix object.
     thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
-        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+        Dictionary containing thresholds for each column.
     groupby : Optional[str], default None
         Name of the column in adata.obs to group cells by.
 
@@ -968,16 +968,27 @@ def _upset_select_cells(adata: sc.AnnData,
     -------
     selection : pd.DataFrame
         DataFrame containing boolean values for each cell based on thresholds.
+
+    Raises
+    ------
+    ValueError
+        1. If any/all thresholds are grouped but groupby is set to None
+        2. If grouped threhold dict key does not match values in given groupby column
     """
     selection = {}
     # loop over all columns
     for column_name, values in thresholds.items():
         # loop over all groups
-        if groupby:
+        if not all(x in values for x in ["min", "max"]):
+            if groupby is None:
+                raise ValueError(f"Parameter groupby is set to None while threshold {column_name} is grouped. 'groupby' has to be set to the correct group column.")
             # initialize an array of False values
             accumulate_results = np.zeros(adata.obs.shape[0], dtype=bool)
             # loop over all samples
             for sample, cutoffs in values.items():
+                # Check if correct group column machtes threshold dict
+                if sample not in list(adata.obs[groupby]):
+                    raise ValueError(f"Wrong group selection. '{sample}' not found in groupby column '{groupby}'")
                 # select cells based on the sample
                 sample_selection = np.array(adata.obs[groupby] == sample)
                 # select cells based on the cutoffs
@@ -1001,7 +1012,7 @@ def _upset_select_cells(adata: sc.AnnData,
 
 
 def upset_plot_filter_impacts(adata: sc.AnnData,
-                              thresholds: dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
+                              thresholds: dict[str, dict[str | int | float, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]],
                               limit_combinations: Optional[int] = None,
                               groupby: Optional[int] = None,
                               report: Optional[str] = None) -> Optional[dict]:
@@ -1013,7 +1024,7 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix object.
     thresholds : dict[str, dict[str, dict[Literal["min", "max"], int | float]] | dict[Literal["min", "max"], int | float]]
-        Dictionary containing thresholds for each column. If groupby is given, thresholds are set per group.
+        Dictionary containing thresholds for each column.
     limit_combinations : Optional[int], default None
         Limit the number of combinations to show in the plot.
     groupby : Optional[str], default None
@@ -1030,7 +1041,7 @@ def upset_plot_filter_impacts(adata: sc.AnnData,
 
         return None
 
-    selection = _upset_select_cells(adata, thresholds, groupby)
+    selection = _upset_select_cells(adata, thresholds, groupby=groupby)
 
     # Number of variables
     n = len(selection.columns)
