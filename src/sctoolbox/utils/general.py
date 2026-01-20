@@ -152,7 +152,7 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
 
     for p in current_packages:
         try:
-            out_dict[p] = version(p)
+            out_dict[p] = version(p if p != "sctoolbox" else "SC-Framework")
         except PackageNotFoundError:
             out_dict[p] = "NA"
 
