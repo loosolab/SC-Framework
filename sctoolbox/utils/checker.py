@@ -21,7 +21,7 @@ logger = settings.logger
 
 
 @beartype
-def check_module(module: str) -> None:
+def check_module(module: str, addon: Optional[str] = None) -> None:
     """
     Check if <module> can be imported without error.
 
@@ -29,6 +29,8 @@ def check_module(module: str) -> None:
     ----------
     module : str
         Name of the module to check.
+    addon : Optional[str], default None
+        Additional message added to the error.
 
     Raises
     ------
@@ -49,6 +51,10 @@ def check_module(module: str) -> None:
     # Write out error if module was not found
     if error == 1:
         s = f"ERROR: Could not find the '{module}' module on path, but the module is needed for this functionality. Please install this package to proceed."
+
+        if addon:
+            s += f"\n{addon}"
+
         raise ImportError(s)
 
 

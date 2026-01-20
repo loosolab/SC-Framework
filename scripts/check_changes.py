@@ -1,4 +1,4 @@
-"""Script to check that the CHANGES.rst file was updated, and that the latest commit is newer than the target branch."""
+"""Script to check that the CHANGES.md file was updated, and that the latest commit is newer than the target branch."""
 
 import sys
 import subprocess
@@ -25,21 +25,28 @@ cmd = f"git fetch origin {target_branch}"
 _ = subprocess.check_output(cmd, shell=True, text=True, stderr=PIPE)
 
 # Get the last commit message of the current branch
-cmd = "git log -n 1 CHANGES.rst"
+cmd = "git log -n 1 CHANGES.md"
 current_commit = subprocess.check_output(cmd, shell=True, text=True)
 current_date = read_date(current_commit)
 
 # Get the last commit message from the target branch
-cmd = f"git log -n 1 origin/{target_branch} -- CHANGES.rst"
+cmd = f"git log -n 1 origin/{target_branch} -- CHANGES.md"
 target_commit = subprocess.check_output(cmd, shell=True, text=True)
 target_date = read_date(target_commit)
 
+# TODO remove this block once all branches have the CHANGES.md
+if target_date is None:
+    # assume no date is found due to the old filename (CHANGES.rst)
+    cmd = f"git log -n 1 origin/{target_branch} -- CHANGES.rst"
+    target_commit = subprocess.check_output(cmd, shell=True, text=True)
+    target_date = read_date(target_commit)
+
 # Check that the current commit is newer than the target commit
 if current_date == target_date:
-    print(f"The CHANGES.rst file was not updated since the version on {target_branch}. Please update the CHANGES.rst file.")
+    print(f"The CHANGES.md file was not updated since the version on {target_branch}. Please update the CHANGES.md file.")
     sys.exit(1)  # exit with error
 if current_date < target_date:
-    print(f"The CHANGES.rst file is not up-to-date. The version on {target_branch} was updated '{target_date}' but the current version was last updated '{current_date}'. Please update the CHANGES.rst file.")
+    print(f"The CHANGES.md file is not up-to-date. The version on {target_branch} was updated '{target_date}' but the current version was last updated '{current_date}'. Please update the CHANGES.md file.")
     sys.exit(1)  # exit with error
 else:
-    print(f"CHANGES.rst file was updated (version on {target_branch} committed '{target_date}'; current version was committed '{current_date}').")
+    print(f"CHANGES.md file was updated (version on {target_branch} committed '{target_date}'; current version was committed '{current_date}').")

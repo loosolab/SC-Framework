@@ -66,6 +66,11 @@ def adata_rna():
     return sc.read_h5ad(adata_f)
 
 
+@pytest.fixture()
+def rds_file():
+    """Return path to rds file."""
+    return os.path.join(os.path.dirname(__file__), '..', 'data', 'adata_rna.rds')
+
 # --------------------------- TESTS --------------------------------- #
 
 
@@ -168,3 +173,48 @@ def test_from_single_mtx():
     # test partial adata (matrix, barcodes)
     adata = assemblers.from_single_mtx(MTX_FILENAME, BARCODES_FILENAME, header=None)
     assert isinstance(adata, anndata.AnnData)
+
+
+@pytest.mark.parametrize("files, layer", [
+    ("rds_file", None),
+    ("rds_file", "RNA"),
+    (["rds_file", "rds_file"], None),
+    (["rds_file", "rds_file"], "RNA"),
+    (["rds_file", "rds_file"], ["RNA", "RNA"]),
+    ({"a": "rds_file", "b": "rds_file"}, None),
+    ({"a": "rds_file", "b": "rds_file"}, "RNA"),
+    ({"a": "rds_file", "b": "rds_file"}, {"a": "RNA", "b": "RNA"})
+])
+def test_from_R(files, layer, request):
+    """Test from_R success."""
+
+    # enable fixture in parametrize https://engineeringfordatascience.com/posts/pytest_fixtures_with_parameterize/
+    if isinstance(files, list):
+        files = [request.getfixturevalue(f) for f in files]
+    elif isinstance(files, dict):
+        files = {k: request.getfixturevalue(v) for k, v in files.items()}
+    else:
+        files = request.getfixturevalue(files)
+
+    assert isinstance(assemblers.from_R(files, layer=layer), sc.AnnData)
+
+
+@pytest.mark.parametrize("files, layer", [
+    ("rds_file", ["RNA", "RNA"]),
+    (["rds_file", "rds_file"], ["RNA"]),
+    (["rds_file", "rds_file"], ["RNA", "RNA", "RNA"]),
+    ({"a": "rds_file", "b": "rds_file"}, {"a": "RNA"})
+])
+def test_from_R_fail(files, layer, request):
+    """Test from_R fail."""
+
+    # enable fixture in parametrize https://engineeringfordatascience.com/posts/pytest_fixtures_with_parameterize/
+    if isinstance(files, list):
+        files = [request.getfixturevalue(f) for f in files]
+    elif isinstance(files, dict):
+        files = {k: request.getfixturevalue(v) for k, v in files.items()}
+    else:
+        files = request.getfixturevalue(files)
+
+    with pytest.raises(ValueError):
+        assemblers.from_R(files, layer=layer)

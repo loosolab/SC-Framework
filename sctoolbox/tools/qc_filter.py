@@ -1527,7 +1527,7 @@ def denoise_data(adata: sc.AnnData,
     RuntimeError
         Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
     """
-    utils.checker.check_module("scar")
+    utils.checker.check_module("scar", "scAR is available on https://github.com/Novartis/scar. To install do e.g. 'pip install scar@git+https://github.com/Novartis/scar.git'.")
     import scar
 
     report_path = _uns_report_path + ["denoise"]

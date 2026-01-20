@@ -13,7 +13,7 @@ import subprocess
 # do this here (not in conda) to make this package buildable without prior steps
 pre_deps = [
     "cmake>=3.18",  # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
-    "setuptools_scm==8.0.4"  # Pin until https://github.com/pypa/setuptools-scm/issues/938 is fixed
+    "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
 ]
 
 # get a clean bash path (not altered by the pip build process)
@@ -34,12 +34,13 @@ extras_require = {"converter": ['rpy2', 'anndata2ri'],
                            'tobias>=0.17.2'],  # to avoid installation error
                   "interactive": ['click'],
                   "batch_correction": ['bbknn', 'harmonypy', 'scanorama'],
-                  "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize', 'liana', 'mudata>=0.3.1', 'networkx>=3.5'],  # anndata>=10.9 requires mudata>=0.3.1; networkx>=3.5 for numpy 2 support
-                  "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
+                  # pycirclize https://github.com/moshi4/pyCirclize/issues/75
+                  "receptor_ligand": ['scikit-learn', 'igraph', 'pycirclize>=1.7.1', 'liana', 'mudata>=0.3.1', 'networkx>=3.5'],  # anndata>=10.9 requires mudata>=0.3.1; networkx>=3.5 for numpy 2 support
+                  # "velocity": ['scvelo @ git+https://github.com/rwiegan/scvelo.git'],  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
                   "pseudotime": ["scFates"],  # omit scFates due to version conflict https://github.com/LouisFaure/scFates/issues/50
                   "gsea": ["gseapy"],
-                  "deseq2": ["pydeseq2>=0.5.2"],  # https://github.com/owkin/PyDESeq2/issues/242
-                  "scar": ["scar @ git+https://github.com/Novartis/scar.git"]
+                  "deseq2": ["pydeseq2>=0.5.2"]  # https://github.com/owkin/PyDESeq2/issues/242
+                  # "scar": ["scar @ git+https://github.com/Novartis/scar.git"]  # PyPI doesn't accept git packages
                   }
 
 # contains all requirements aka a full installation
@@ -85,14 +86,26 @@ packages = ["sctoolbox." + package for package in packages]  # add sctoolbox. pr
 modules = glob.glob("sctoolbox/*.py")
 modules = [m.replace("/", ".")[:-3] for m in modules if not m.endswith("__init__.py")]  # omit file ending and adjust path to import format e.g. sctoolbox._modules
 
+
+# Readme from git
+def readme():
+    """Collect the readme file content."""
+    with open('README.md') as f:
+        return f.read()
+
+
 setup(
-    name='sctoolbox',
+    # This is the name of the package important in PyPI, important during installation "pip install SC-Framework".
+    # The package is imported using "import sctoolbox" defined by the folder name.
+    name='SC-Framework',
     description='Custom modules for single cell analysis',
+    long_description=readme(),
+    long_description_content_type='text/markdown',
     version=find_version(os.path.join("sctoolbox", "_version.py")),
     license='MIT',
     packages=packages,
     py_modules=modules,
-    python_requires='>=3.9',  # dict type hints as we use it require python 3.9
+    python_requires='>=3.9,<3.13',  # dict type hints as we use it require python 3.9; 3.13 not supported by cmake # https://github.com/python-cmake-buildsystem/python-cmake-buildsystem/issues/350
     install_requires=[
         'pysam',
         'matplotlib',
@@ -105,7 +118,7 @@ setup(
         'qnorm',
         'plotly',
         'scipy>=1.14',
-        'statsmodels @ git+https://github.com/statsmodels/statsmodels',  # remove once statsmodels 0.15 is released
+        'statsmodels>=0.14.5',
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
@@ -124,7 +137,7 @@ setup(
         'packaging',
         'throttler',
         'upsetplot',
-        'pptreport',
+        'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
         'Jinja2'
     ],

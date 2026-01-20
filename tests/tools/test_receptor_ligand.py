@@ -283,6 +283,7 @@ def test_cyclone(adata_inter):
                       directional=True,
                       sector_size_is_cluster_size=True,
                       show_genes=True,
+                      restrict_to=list(set(adata_inter.obs["cluster"][:-1])),
                       title="Test Title")
 
     assert isinstance(plot, Figure)
