@@ -3,13 +3,16 @@ import multiprocessing as mp
 import sctoolbox.utils as utils
 
 from sctoolbox._settings import settings
-from beartype.typing import Any, Optional
+from beartype.typing import Iterable, Any, Literal, Optional, Tupl
 from beartype import beartype
 from functools import partial
 
 
 @beartype
-def mp_first_position(func: Any, iterable: Any, threads: Optional[int] = None, **kwargs: Any) -> None:
+def mp_first_position(func: Any, 
+                      iterable: Iterable,
+                      threads: Optional[int] = None, 
+                      **kwargs: Any) -> None:
     """
     Run a function in multiple processes.
 
@@ -32,31 +35,36 @@ def mp_first_position(func: Any, iterable: Any, threads: Optional[int] = None, *
     pool = mp.Pool(threads)
 
     # Create a pool of processes
-    jobs = []
-    job = [pool.apply_async(func, args=(items,), kwds=kwargs) for items in iterable]
-    jobs.append(job)
+    jobs = [pool.apply_async(func, args=(items,), kwds=kwargs) for items in iterable]
     pool.close()
 
     # Monitor the jobs
-    results = utils.multiprocessing.monitor_jobs(jobs)
+    utils.multiprocessing.monitor_jobs(jobs)
 
     # Wait for all processes to finish
     pool.join()
+
+    # Collect results
+    results = [job.get() for job in jobs]
 
     return results
 
 
 @beartype
-def adata_first_arg(func: Any, adata: Any, iterable: Any, threads: Optional[int] = None, **kwargs: Any) -> None:
+def mp_adata_first_arg(func: Any, 
+                       adata: sc.AnnData, 
+                       iterable: Iterable, 
+                       threads: Optional[int] = None, 
+                       **kwargs: Any) -> None:
     """
     Run a function in multiple processes, with anndata object as the first argument.
 
     Parameters
     ----------
-    adata:
-        The anndata object to be passed as the first argument.
     func:
         The function to be executed in parallel.
+    adata (sc.AnnData):
+        The anndata object to be passed as the first argument to the function.
     iterable (iterable):
         An iterable of arguments to pass to the function.
     threads (int, optional):
@@ -75,15 +83,16 @@ def adata_first_arg(func: Any, adata: Any, iterable: Any, threads: Optional[int]
     pool = mp.Pool(threads)
 
     # Create a pool of processes
-    jobs = []
-    job = [pool.apply_async(func_wrapper, args=(items,), kwds=kwargs) for items in iterable]
-    jobs.append(job)
+    jobs = [pool.apply_async(func_wrapper, args=(items,), kwds=kwargs) for items in iterable]
     pool.close()
 
     # Monitor the jobs
-    results = utils.multiprocessing.monitor_jobs(jobs)
+    utils.multiprocessing.monitor_jobs(jobs)
 
     # Wait for all processes to finish
     pool.join()
+
+    # Collect results
+    results = [job.get() for job in jobs]
 
     return results
