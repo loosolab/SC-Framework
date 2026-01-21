@@ -139,7 +139,10 @@ def gene_set_enrichment(adata: sc.AnnData,
                                  key=['gsea', 'library'],
                                  value=library_name)
     else:
-        modified_adata.uns['gsea']['gene_sets'] = gene_sets
+        utils.adata.add_uns_info(modified_adata,
+                                 key=['gsea', 'gene_sets'],
+                                 value=gene_sets)
+
     if not background:
         # Generating background if no custom background is given
         background = set([item for sublist in gene_sets.values() for item in sublist])
