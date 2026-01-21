@@ -14,7 +14,7 @@ import scanpy as sc
 import gzip
 
 # Import module under test
-import amulet
+import sctoolbox.tools.amulet as amulet
 
 
 # ==============================================================================
