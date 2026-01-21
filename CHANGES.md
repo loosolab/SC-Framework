@@ -9,6 +9,7 @@
 - Switch from setup.py to pyproject.toml
 - QC: Allow groupby column values to be of type float and int (#391)
 - Fix upset plot bug not handling a mix of grouped and global thresholds.
+- gene_set_enrichment fix error with gene_sets parameter (#425)
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots
