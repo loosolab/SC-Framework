@@ -11,8 +11,6 @@ import pytest
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import tempfile
-import os
 import gzip
 
 # Import module under test
@@ -731,9 +729,9 @@ class TestDetectMultiplets:
         # predicted_doublet should be based on q_value < threshold
         for _, row in result_df.iterrows():
             if row['q_value'] < 0.01:
-                assert row['predicted_doublet'] == True
+                assert row['predicted_doublet'] is True
             else:
-                assert row['predicted_doublet'] == False
+                assert row['predicted_doublet'] is False
 
     def test_with_repeat_filter(self, sample_overlaps_df, sample_summary_df, sample_repeat_regions):
         """Test pipeline with repeat filter."""
@@ -760,7 +758,7 @@ class TestDetectMultiplets:
 
         # Should return DataFrame with all cells as non-doublets
         assert len(result_df) == len(sample_summary_df)
-        assert all(result_df['predicted_doublet'] == False)
+        assert all(result_df['predicted_doublet'] is False)
 
 
 # ==============================================================================

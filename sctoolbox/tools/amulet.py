@@ -17,7 +17,7 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
 from beartype import beartype
-from beartype.typing import Optional, Tuple, List, Dict, Union
+from beartype.typing import Optional, Tuple, List, Dict
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
@@ -518,6 +518,11 @@ def count_fragment_overlaps(
         DataFrame with columns: cell_id, n_valid_reads, n_overlaps, barcode,
         n_total_reads.
 
+    Raises
+    ------
+    ValueError
+        Raises if the fragment file format is not recognized.
+
     Notes
     -----
     Source: FragmentFileOverlapCounter.py → findOverlaps() (lines 213-354)
@@ -655,7 +660,7 @@ def count_fragment_overlaps(
         )
         # Reorder columns to match original format
         overlaps_df = overlaps_df[['chr', 'start', 'end', 'cell_id',
-                                    'min_overlap', 'max_overlap', 'starts', 'ends']]
+                                   'min_overlap', 'max_overlap', 'starts', 'ends']]
     else:
         overlaps_df = pd.DataFrame(
             columns=['chr', 'start', 'end', 'cell_id', 'min_overlap',
