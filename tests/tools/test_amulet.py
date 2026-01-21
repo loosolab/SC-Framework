@@ -758,7 +758,7 @@ class TestDetectMultiplets:
 
         # Should return DataFrame with all cells as non-doublets
         assert len(result_df) == len(sample_summary_df)
-        assert all(result_df['predicted_doublet'] is False)
+        assert not result_df['predicted_doublet'].any()
 
 
 # ==============================================================================
