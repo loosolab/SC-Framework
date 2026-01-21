@@ -1,7 +1,208 @@
 [build-system]
 requires = [
     "setuptools",  # needed pre-install
+    "wheel",
     "numpy",  # needed pre-install
-    "pip"  # to make pip accessible during installation
+    "pyyaml",
+    "beartype",
+    "pip",  # to make pip accessible during installation
+    "cmake>=3.18",    # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
+    "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "SC-Framework"
+dynamic = ["version"]
+description = 'Custom modules for single cell analysis'
+requires-python = ">=3.9,<3.13"  # dict type hints as we use it require python 3.9; 3.13 not supported by cmake # https://github.com/python-cmake-buildsystem/python-cmake-buildsystem/issues/350
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Hendrik Schultheis" },
+    { name = "Jan Detleffsen" },
+    { name = "René Wiegandt" },
+    { name = "Mette Bentsen" },
+    { name = "Yousef Alayoubi" },
+    { name = "Guilherme Valente" },
+    { name = "Micha Frederick Keßler" },
+    { name = "Brenton Joey Bruns" },
+    { name = "DInija Mirza" },
+    { name = "Angeline Usanayo" },
+    { name = "Jasmin Walter" },
+    { name = "Philipp Goymann" },
+    { name = "Moritz Hobein" },
+    { name = "Carsten Kuenne" },
+    { name = "Mario Looso" }
+]
+maintainers = [
+    { name = "Hendrik Schultheis", email="Hendrik.Schultheis@mpi-bn.mpg.de" },
+    { name = "Jan Detleffsen", email="Jan.Detleffsen@mpi-bn.mpg.de" },
+    { name = "René Wiegandt", email="Rene.Wiegandt@mpi-bn.mpg.de" }
+]
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
+keywords = [
+    "single-cell",
+    "scRNA-seq",
+    "scATAC-seq",
+    "single-cell analysis",
+    "transcriptomics",
+    "epigenomics",
+    "chromatin accessibility",
+    "gene expression",
+    "peak calling",
+    "dimensionality reduction",
+    "clustering",
+    "cell type annotation",
+    "differential expression",
+    "trajectory",
+    "pseudotime",
+    "QC",
+    "quality control",
+    "normalization",
+    "integration",
+    "batch correction",
+    "pipeline",
+    "workflow",
+    "reproducible research",
+    "Jupyter notebooks",
+    "analysis notebooks",
+    "Scanpy",
+    "AnnData",
+    "visualization",
+]
+dependencies = [
+        'pysam',
+        'matplotlib',
+        'matplotlib_venn',
+        'scanpy[louvain,leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (louvain & leiden)
+        'anndata>=0.8',  # anndata 0.7 is not upward compatible
+        'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
+        'numpy>=2',
+        'kneed',
+        'qnorm',
+        'plotly',
+        'scipy>=1.14',
+        'statsmodels>=0.14.5',
+        'tqdm',
+        'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
+        'seaborn>0.12',
+        'ipympl',
+        'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
+        'scrublet',
+        'IPython',
+        'openpyxl',
+        'apybiomart',
+        'requests',
+        'python-gitlab',
+        'psutil',
+        'deprecation',
+        'pyyaml',
+        'beartype>=0.18.2',  # Version 0.18.0 is not working properly
+        'packaging',
+        'throttler',
+        'upsetplot',
+        'pptreport>=1.1.4',  # to fix placeholder not found error
+        'boto3',
+        'Jinja2'
+]
+
+[project.optional-dependencies]
+converter = [
+    "rpy2",
+    "anndata2ri"
+    ]
+atac = [
+    'uropa',
+    'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
+    'pygenometracks>=3.8',
+    'peakqc',
+    'tobias>=0.17.2'  # to avoid installation error
+]
+interactive = [
+    'click'
+]
+batch_correction = [
+    'bbknn',
+    'harmonypy<=0.0.10',  # latest scanpy version is incompatible with newest harmonypy version: https://github.com/scverse/scanpy/issues/3940
+    'scanorama'
+]
+receptor_ligand = [
+    'scikit-learn',
+    'igraph',
+    'pycirclize>=1.7.1',
+    'liana',
+    'mudata>=0.3.1',  # anndata>=10.9 requires mudata>=0.3.1
+    'networkx>=3.5'
+]
+pseudotime = [
+    'scFates'  # omit scFates due to version conflict https://github.com/LouisFaure/scFates/issues/50
+]
+gsea = [
+    'gseapy'
+]
+deseq2 = [
+    'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
+]
+#velocity = [
+#    'scvelo @ git+https://github.com/rwiegan/scvelo.git'  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
+#]
+#scar = [
+#    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
+#]
+core = [
+    'SC-Framework[converter,atac,interactive,batch_correction]'
+]
+downstream = [
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2]'
+]
+all = [
+    'SC-Framework[core,downstream]'
+]
+
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest-html"
+]
+
+[project.urls]
+Repository = "https://github.com/loosolab/SC-Framework"
+Documentation = "https://loosolab.pages.gwdg.de/software/sc_framework/"
+Issues = "https://github.com/loosolab/SC-Framework/issues"
+Changelog = "https://github.com/loosolab/SC-Framework/blob/main/CHANGES.md"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sctoolbox.__version__"}
+
+[tool.setuptools.package-data]
+sctoolbox = ["src/data/**/*"]
+
+[tool.pytest.ini_options]
+# durations=0 shows the ranked duration of all tests for improving compute time
+addopts = """
+--cov-report=term \
+--cov=sctoolbox \
+--junitxml=pytest.xml \
+--cov-report=html:htmlcov \
+--html=pytest.html \
+--durations=0
+"""
+testpaths = [
+    "./tests",
+]

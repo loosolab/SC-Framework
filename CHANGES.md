@@ -3,10 +3,22 @@
 ## 0.15.0 (in progress)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
 - plot_embedding: Fix bug when setting color to list of length 1 (#402)
+<<<<<<< HEAD
 - integration of AMULET to find multiplets in single-cell ATAC-seq data (#260)
+=======
+- gene_set_enrichment: Add deg_set_size to gene_set_enrichment (#396)
+- label_genes: Add `show_mismatches` parameter (#404)
+- get_package_versions: gets correct sctoolbox version (#410)
+- Switch from setup.py to pyproject.toml
+- QC: Allow groupby column values to be of type float and int (#391)
+- Fix upset plot bug not handling a mix of grouped and global thresholds.
+>>>>>>> origin/dev
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots
+- GSEA: Add deg_set_size option to notebook
+- RNA/02: Create 06_*_info.txt report file when no genes are filtered
+- RNA/ATAC: always keep the norm layer (#411)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload

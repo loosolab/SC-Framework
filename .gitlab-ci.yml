@@ -5,7 +5,7 @@
 # This is the Gitlab CI/CD pipeline for the SC FRAMEWORK repository.
 # The pipeline is divided into several stages:
 # 1. .pre: This stage is used to export variables and to get the sctoolbox version as global variable.
-# 2. build: This stage checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
+# 2. build: This stage checks if something in the enviroment (pyproject.toml or sctoolbox_env.yml) has changed.
 #           If yes then a new docker image will be build and pushed to the container registry.
 #           The newly build image is then used for testing later.
 #           If no changes were made to the enviroment nothing is build and the latest image is used later on.
@@ -48,7 +48,7 @@ extract-version:
   stage: .pre
   image: python:3.10-alpine3.19
   script:
-    - VERSION=$(python -c "import sys; sys.path.append('./sctoolbox'); from _version import __version__; print(__version__)")
+    - VERSION=$(python -c "import sys; sys.path.append('./src/sctoolbox'); from _version import __version__; print(__version__)")
     - echo "BUILD_VERSION=$VERSION"
     - echo "BUILD_VERSION=$VERSION" >> build.env
   artifacts:
@@ -62,7 +62,7 @@ extract-version:
 # ###################################################################### build ###############################################################################
 # ############################################################################################################################################################
 
-# The build job below checks if something in the enviroment (setup.py or sctoolbox_env.yml) has changed.
+# The build job below checks if something in the enviroment (pyproject.toml or sctoolbox_env.yml) has changed.
 # If yes then a new docker image will be build and pushed to the container registry.
 # The newly build image is then used for testing later. 
 # If no changes were made to the enviroment nothing is build and the latest image is used later on.
@@ -99,7 +99,6 @@ build:
   rules:
     - if: $CI_COMMIT_BRANCH
       changes:  # if any of the files were changed
-        - setup.py
         - sctoolbox_env.yml
         - Dockerfile
         - MANIFEST.in
@@ -236,15 +235,14 @@ lint:
     - pip install flake8
     - pip install pydoclint>=0.1.7
     - pip install flake8-docstrings  # adds pydocstyle to flake
-    - flake8 sctoolbox setup.py tests --ignore=E501,W503,D202,DOC301,DOC105 -sdpca True --docstring-convention numpy --show-source --extend-exclude=sctoolbox/__init__.py,sctoolbox/data,tests/data
+    - flake8 src/sctoolbox tests --ignore=E501,W503,D202,DOC301,DOC105 -sdpca True --docstring-convention numpy --show-source --extend-exclude=src/sctoolbox/__init__.py,src/sctoolbox/data,src/tests/data
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
       changes:
-        - setup.py
         - tests/*.py
         - tests/**/*.py
-        - sctoolbox/**/*.py
+        - src/sctoolbox/**/*.py
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
@@ -258,8 +256,8 @@ test import:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - setup.py
-        - sctoolbox/**/*.py
+        - pyproject.toml
+        - src/sctoolbox/**/*.py
 
 # Run tests
 test coverage:
@@ -274,7 +272,7 @@ test coverage:
     script:
       - echo $DYNAMIC_IMAGE_TAG
       - chmod +x scripts/bedGraphToBigWig  # make script executable
-      - pytest --cov-report=term --cov=./sctoolbox . --junitxml=pytest.xml --cov-report=html:htmlcov --html=pytest.html --durations=0  # durations=0 shows the ranked duration of all tests for improving compute time
+      - pytest tests
     artifacts:
       when: always
       paths:
@@ -286,11 +284,11 @@ test coverage:
     rules:
       - if: $CI_PIPELINE_SOURCE == "merge_request_event"  #all merge requests with changes
         changes:
-          - setup.py
-          - sctoolbox_env.yml
+          - pyproject.toml
+          - src/sctoolbox_env.yml
           - Dockerfile
-          - sctoolbox/_version.py
-          - sctoolbox/**/*.py
+          - src/sctoolbox/_version.py
+          - src/sctoolbox/**/*.py
           - tests/*.py
           - tests/**/*.py
       - if: $CI_COMMIT_BRANCH == "main" # commits to dev (for coverage)
@@ -310,11 +308,11 @@ check-changes:
       changes:
         - tests/*.py
         - tests/**/*.py
-        - setup.py
+        - pyproject.toml
         - sctoolbox_env.yml
         - Dockerfile
-        - sctoolbox/_version.py
-        - sctoolbox/**/*.py
+        - src/sctoolbox/_version.py
+        - src/sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
@@ -330,8 +328,8 @@ check-version:
     - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     - git diff-tree --name-only -r "HEAD..origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > changed_files.txt
     - cat changed_files.txt
-    - if grep -q "sctoolbox/_version.py" changed_files.txt; then echo "The 'sctoolbox/_version.py' file was changed."; else echo "The 'sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
-    - version=$(sed -e 's/.*\"\(.*\)\".*/\1/' <<< $(head -n 1 sctoolbox/_version.py)) # Get version from _version.py file
+    - if grep -q "src/sctoolbox/_version.py" changed_files.txt; then echo "The 'src/sctoolbox/_version.py' file was changed."; else echo "The 'src/sctoolbox/_version.py' file must be changed for merge requests to main!"; exit 1; fi
+    - version=$(sed -e 's/.*\"\(.*\)\".*/\1/' <<< $(head -n 1 src/sctoolbox/_version.py)) # Get version from _version.py file
     - echo ${version} # for debugging
     - if [[ ! ${version} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then exit 1; fi
   rules:
@@ -391,10 +389,10 @@ notebooks-RNA:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" && $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:  # if any of the files were changed
-        - setup.py
+        - pyproject.toml
         - sctoolbox_env.yml
         - Dockerfile
-        - sctoolbox/_version.py
+        - src/sctoolbox/_version.py
         - rna_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
         - scripts/run_notebooks.py
@@ -438,10 +436,10 @@ notebooks-ATAC:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main" && $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:  # if any of the files were changed
-        - setup.py
+        - pyproject.toml
         - sctoolbox_env.yml
         - Dockerfile
-        - sctoolbox/_version.py
+        - src/sctoolbox/_version.py
         - atac_analysis/notebooks/*.ipynb
         #- general_notebooks/*.ipynb
         - scripts/run_notebooks.py
@@ -458,7 +456,7 @@ check-notebook-version:
     pip install nbformat packaging
   script:
     - python --version
-    - python scripts/check_notebook_version.py -n rna_analysis/notebooks/ atac_analysis/notebooks/ general_notebooks/ -v sctoolbox
+    - python scripts/check_notebook_version.py -n rna_analysis/notebooks/ atac_analysis/notebooks/ general_notebooks/ -v src/sctoolbox
   rules:
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" # only on MR to main
 
@@ -485,6 +483,7 @@ build-pages:
     - pip install nbsphinx
     - pip install nbsphinx_link
     - pip install myst-parser
+    - pip install "docutils<=0.21"  # pinned until https://github.com/vidartf/nbsphinx-link/issues/25 is fixed
     - cd docs
     - make html
   artifacts:
@@ -496,7 +495,7 @@ build-pages:
       allow_failure: true
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
       changes:
-        - sctoolbox/**/*.py
+        - src/sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
@@ -529,7 +528,7 @@ deploy-pages:
       allow_failure: true
     - if: $CI_COMMIT_BRANCH == "dev"  # always for commits to dev
       changes:
-        - sctoolbox/**/*.py
+        - src/sctoolbox/**/*.py
         - rna_analysis/notebooks/*.ipynb
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb  # changes in general notebooks
@@ -607,6 +606,7 @@ PyPI:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"  # always and only run for commits to main
       allow_failure: false
+  retry: 2
 
 
 # ############################################################################################################################################################
