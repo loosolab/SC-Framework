@@ -143,7 +143,7 @@ receptor_ligand = [
     'networkx>=3.5'
 ]
 pseudotime = [
-    'scFates'  # omit scFates due to version conflict https://github.com/LouisFaure/scFates/issues/50
+    'scFates>=1.2.1'  # https://github.com/LouisFaure/scFates/issues/54
 ]
 gsea = [
     'gseapy'
@@ -151,9 +151,9 @@ gsea = [
 deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
 ]
-velocity = [
-    'scvelo>=1.2.1'  # https://github.com/LouisFaure/scFates/issues/54
-]
+#velocity = [
+#    'scvelo @ git+https://github.com/rwiegan/scvelo.git'  # install from fork until this is merged and on PyPI: https://github.com/theislab/scvelo/pull/1308
+#]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
@@ -163,11 +163,11 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,velocity]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2]'
 ]
 # all is intended to install everything
 all = [
-    'SC-Framework[converter,atac,interactive,batch_correction,receptor_ligand,pseudotime,gsea,deseq2,velocity]'
+    'SC-Framework[converter,atac,interactive,batch_correction,receptor_ligand,pseudotime,gsea,deseq2]'
 ]
 
 [dependency-groups]
