@@ -36,7 +36,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix object.
     method : str, default: "leiden"
-        Clustering method to use. Can be one of 'leiden'.
+        Clustering method to use. Can currently only be 'leiden'.
     resolution_range : Tuple[float | int, float | int, float | int], default: (0.1, 1, 0.1)
         Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
     embedding : str, default: "X_umap".
