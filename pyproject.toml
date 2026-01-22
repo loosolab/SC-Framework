@@ -157,14 +157,17 @@ velocity = [
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
+# core and downstream are intended to install commonly used dependencies
+# e.g. scar is deliberately skipped to to save disk space
 core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,velocity]'
 ]
+# all is intended to install everything
 all = [
-    'SC-Framework[core,downstream]'
+    'SC-Framework[converter,atac,interactive,batch_correction,receptor_ligand,pseudotime,gsea,deseq2,velocity]'
 ]
 
 [dependency-groups]
