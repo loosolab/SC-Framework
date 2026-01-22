@@ -50,7 +50,7 @@ def adata():
 # ------------------------------ TESTS --------------------------------- #
 
 
-@pytest.mark.parametrize("method", ["leiden", "louvain"])
+@pytest.mark.parametrize("method", ["leiden"])
 def test_search_clustering_parameters(adata, method):
     """Test if search_clustering_parameters returns an array of axes."""
 

@@ -6,7 +6,6 @@ requires = [
     "pyyaml",
     "beartype",
     "pip",  # to make pip accessible during installation
-    "cmake>=3.18",    # fixes ERROR: Failed to build installable wheels for some pyproject.toml based projects (louvain)
     "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
 ]
 build-backend = "setuptools.build_meta"
@@ -82,7 +81,7 @@ dependencies = [
         'pysam',
         'matplotlib',
         'matplotlib_venn',
-        'scanpy[louvain,leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (louvain & leiden)
+        'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
         'numpy>=2',
