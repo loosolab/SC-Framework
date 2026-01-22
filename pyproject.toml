@@ -151,9 +151,9 @@ gsea = [
 deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
 ]
-#velocity = [
-#    'scvelo @ git+https://github.com/rwiegan/scvelo.git'  # install from fork until this is merged: https://github.com/theislab/scvelo/pull/1308
-#]
+velocity = [
+    'scvelo>=1.2.1'  # https://github.com/LouisFaure/scFates/issues/54
+]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
