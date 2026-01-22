@@ -167,7 +167,7 @@ downstream = [
 ]
 # all is intended to install everything
 all = [
-    'SC-Framework[converter,atac,interactive,batch_correction,receptor_ligand,pseudotime,gsea,deseq2]'
+    'SC-Framework[core,downstream]'
 ]
 
 [dependency-groups]
