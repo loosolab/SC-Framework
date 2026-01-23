@@ -889,12 +889,3 @@ class TestEstimateDoubletsAmuletWithRepeats:
         # Both should complete (results may differ)
         assert "doublet_score" in adata_no_filter.obs.columns
         assert "doublet_score" in adata_with_filter.obs.columns
-
-
-# ==============================================================================
-# MAIN
-# ==============================================================================
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
