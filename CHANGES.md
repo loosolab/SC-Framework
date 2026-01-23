@@ -10,6 +10,7 @@
 - QC: Allow groupby column values to be of type float and int (#391)
 - Fix upset plot bug not handling a mix of grouped and global thresholds.
 - gene_set_enrichment fix error with gene_sets parameter (#425)
+- Remove support for louvain since the package is not maintained. (#426)
 - fix scFates dependency issues (#390)
 
 ### Changes to notebooks

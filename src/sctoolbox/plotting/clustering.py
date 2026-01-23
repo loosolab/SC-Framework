@@ -20,7 +20,7 @@ logger = settings.logger
 @deco.log_anndata
 @beartype
 def search_clustering_parameters(adata: sc.AnnData,
-                                 method: Literal["leiden", "louvain"] = "leiden",
+                                 method: Literal["leiden"] = "leiden",
                                  resolution_range: Tuple[float | int, float | int, float | int] = (0.1, 1, 0.1),
                                  embedding: str = "X_umap",
                                  ncols: int = 3,
@@ -36,7 +36,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     adata : sc.AnnData
         Annotated data matrix object.
     method : str, default: "leiden"
-        Clustering method to use. Can be one of 'leiden' or 'louvain'.
+        Clustering method to use. Can currently only be 'leiden'.
     resolution_range : Tuple[float | int, float | int, float | int], default: (0.1, 1, 0.1)
         Range of 'resolution' parameter values to test. Must be a tuple in the form (min, max, step).
     embedding : str, default: "X_umap".
@@ -69,7 +69,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     .. plot::
         :context: close-figs
 
-        pl.clustering.search_clustering_parameters(adata, method='louvain', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
+        pl.clustering.search_clustering_parameters(adata, method='leiden', resolution_range=(0.1, 2, 0.2), embedding='X_umap', ncols=3, verbose=True, save=None)
     """
 
     # Check validity of parameters
@@ -88,8 +88,6 @@ def search_clustering_parameters(adata: sc.AnnData,
         # set future defaults to omit warning
         def cl_function(*args, **kwargs):
             sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
-    elif method == "louvain":
-        cl_function = sc.tl.louvain
 
     # Setup parameters to loop over
     res_min, res_max, res_step = resolution_range
