@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import gzip
+from pathlib import Path
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
@@ -494,7 +495,7 @@ def count_fragment_overlaps(
     Parameters
     ----------
     fragments_file : str
-        Path to fragment file (.tsv or .tsv.gz, 10x CellRanger format).
+        Path to fragment file (.tsv, .txt, .bed or .tsv.gz, .txt.gz, .bed.gz).
     barcodes : List[str]
         List of cell barcodes to include.
     chromosomes : Optional[List[str]], default None
@@ -534,12 +535,17 @@ def count_fragment_overlaps(
     chr_dict = {chrom: True for chrom in chromosomes}
 
     # Set up file reader
-    if fragments_file.endswith(".tsv.gz") or fragments_file.endswith(".txt.gz"):
-        fragment_reader = gzip.open(fragments_file, 'rt')
-    elif fragments_file.endswith(".tsv") or fragments_file.endswith(".txt"):
-        fragment_reader = open(fragments_file, 'r')
+    path = Path(fragments_file)
+    suffixes = path.suffixes  # e.g. ['.bed', '.gz']
+
+    if suffixes in ([".txt", ".gz"], [".tsv", ".gz"], [".bed", ".gz"]):
+        fragment_reader = gzip.open(path, "rt")
+    elif suffixes in ([".txt"], [".tsv"], [".bed"]):
+        fragment_reader = open(path, "r")
     else:
-        raise ValueError("Fragment file must be *.txt, *.txt.gz, *.tsv, or *.tsv.gz")
+        raise ValueError(
+            "Fragment file must be *.txt, *.tsv, *.bed or their .gz equivalents"
+        )
 
     # Set up barcode maps
     bc_map = dict()
@@ -1336,4 +1342,3 @@ def estimate_doublets_amulet(
 
     if not inplace:
         return adata
-    return None
