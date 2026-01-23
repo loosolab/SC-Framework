@@ -484,61 +484,65 @@ def prepare_for_cellxgene(adata: sc.AnnData,
                           layer: Optional[str] = None,
                           inplace: bool = False) -> Optional[sc.AnnData]:
     """
-    Prepare the given adata for cellxgene deployment.
+    Prepare ``adata`` for cellxgene deployment.
 
-    Preparation includes removing, renaming of gene and cell metadata,
-    fixing color maps, and checking for correctly formatted embedding names.
+    Preparation includes removing and renaming gene and cell metadata, fixing
+    color maps, and checking for correctly formatted embedding names.
 
-    All embeddings stored in adata.obsm must have names starting with 'X_'.
-    This function verifies the prefix and appends it if missing.
+    All embeddings stored in ``adata.obsm`` must have names starting with
+    ``"X_"``. This function verifies the prefix and appends it if missing.
 
     Parameters
     ----------
     adata : sc.Anndata
-        Anndata object.
+        AnnData object.
     keep_obs : Optional[list[str]], default None
-        adata.obs columns that should be kept. None to keep all.
-        'keep_obs' and 'delete_obs' are mutually exclusive.
+        Columns in ``adata.obs`` to keep. If None, keep all. Mutually exclusive
+        with ``delete_obs``.
     keep_var : Optional[list[str]], default None
-        adata.var columns that should be kept. None to keep all.
-        'keep_var' and 'delete_var' are mutually exclusive.
+        Columns in ``adata.var`` to keep. If None, keep all. Mutually exclusive
+        with ``delete_var``.
     delete_obs : Optional[list[str]], default None
-        adata.obs columns that should be deleted. None to keep all.
-        'keep_obs' and 'delete_obs' are mutually exclusive.
+        Columns in ``adata.obs`` to delete. If None, delete none. Mutually
+        exclusive with ``keep_obs``.
     delete_var : Optional[list[str]], default None
-        adata.var columns that should be deleted. None to keep all.
-        'keep_var' and 'delete_var' are mutually exclusive.
+        Columns in ``adata.var`` to delete. If None, delete none. Mutually
+        exclusive with ``keep_var``.
     rename_obs : Optional[dict[str, str]], default None
-        Dictionary of .obs columns to rename. Key is the old name, value the new one.
+        Mapping of ``.obs`` columns to rename. Keys are old names, values are new
+        names.
     rename_var : Optional[dict[str, str]], default None
-        Dictionary of .var columns to rename. Key is the old name, value the new one.
+        Mapping of ``.var`` columns to rename. Keys are old names, values are new
+        names.
     keep_obsm : Optional[list[str]], default None
-        List of embeddings to keep. Other embeddings are removed. Set to None to keep all.
-        The list values can be given with or wihtout the "X_" prefix.
+        Embeddings to keep; all others are removed. If None, keep all.
+        Embedding names may be provided with or without the ``"X_"`` prefix.
     cmap : Optional[str], default None
-        Color map to use for continous variables.
-        Use this replacement color map for broken color maps.
-        If None will use scanpy default, which uses `mpl.rcParams["image.cmap"]`. See `sc.pl.embedding`.
+        Colormap to use for continuous variables. Used as a replacement for
+        broken colormaps. If None, uses the Scanpy default (via
+        ``mpl.rcParams["image.cmap"]``; see :func:`sc.pl.embedding`).
     palette : Optional[str | Sequence[str]], default None
-        Color map to use for categorical annotation groups.
-        Use this replacement color map for broken color maps.
-        If None will use scanpy default, which uses `mpl.rcParams["axes.prop_cycle"]`. See `sc.pl.embedding`.
+        Palette/colormap to use for categorical annotation groups. Used as a
+        replacement for broken palettes. If None, uses the Scanpy default (via
+        ``mpl.rcParams["axes.prop_cycle"]``; see :func:`sc.pl.embedding`).
     layer : Optional[str], default None
-        Layer to be set as adata.X before upload.
+        Layer to set as ``adata.X`` before upload.
     inplace : bool, default False
+        If True, modify ``adata`` in place. If False, return a modified copy.
 
     Raises
     ------
     ValueError
-        1. If mutally exclusive parameters keep_obs/keep_var abd delete_obs/delete_var are both set.
-        2. If not at least one embedding is found in adata.obsm.
-        3. If not at least one of the named embeddings are found in the adata when embedding_names is given.
-        4. If there is no layer with the given name.
+        If mutually exclusive parameters (``keep_obs``/``delete_obs`` or
+        ``keep_var``/``delete_var``) are both set.
+        If no embeddings are found in ``adata.obsm``.
+        If none of the requested embeddings are found when ``keep_obsm`` is provided.
+        If ``layer`` is set but no layer with that name exists.
 
     Returns
     -------
     Optional[sc.AnnData]
-        Returns the deployment ready Anndata object.
+        Deployment-ready AnnData object. Returns None if ``inplace`` is True.
     """
     if layer and layer not in adata.layers:
         raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")

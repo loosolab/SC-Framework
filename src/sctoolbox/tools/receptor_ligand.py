@@ -600,55 +600,62 @@ def cyclone(
     report: Optional[str] = None
 ) -> matplotlib.figure.Figure:
     """
-    Generate network graph of interactions between clusters. See the hairball plot as an alternative.
+    Generate a network graph of interactions between clusters.
+
+    See the hairball plot as an alternative.
 
     Parameters
     ----------
     adata : sc.AnnData
-        AnnData object
+        AnnData object.
     min_perc : int | float
-        Minimum percentage of cells in a cluster that express the respective gene. A value from 0-100.
+        Minimum percentage of cells in a cluster that express the respective gene
+        (0-100).
     interaction_score : float | int, default 0
-        Interaction score must be above this threshold for the interaction to be counted in the graph.
+        Interaction score must be above this threshold for the interaction to be
+        counted in the graph.
     interaction_perc : Optional[int | float], default None
-        Select interaction scores above or equal to the given percentile. Will overwrite parameter interaction_score. A value from 0-100.
+        Select interaction scores above or equal to the given percentile (0-100).
+        Overrides ``interaction_score``.
     title : str, default 'Network'
-        The plots title.
+        Plot title.
     color_min : float, default 0
-        Min value for color range.
+        Minimum value for the color range.
     color_max : Optional[float | int], default None
-        Max value for color range.
+        Maximum value for the color range.
     cbar_label : str, default 'Interaction count'
         Label above the colorbar.
     colormap : str, default "viridis"
-        The colormap to be used when plotting.
-    sector_text_size: int | float, default 10
-        The text size for the sector name.
-    directional: bool, defalut False
-        Determines whether to display the interactions as arrows (Ligand -> Receptor).
-    sector_size_is_cluster_size: bool, default False
-        Determines whether the sector's size is equivalent to the coresponding cluster's number of cells.
-    show_genes: bool, default True
-        Determines whether to display the top genes as an additional track.
-    gene_amount: int = 5
-        The amount of genes per receptor and ligand to display on the outer track (displayed genes per sector = gene_amount *2).
+        Colormap used for plotting.
+    sector_text_size : int | float, default 10
+        Text size for sector names.
+    directional : bool, default False
+        If True, display interactions as arrows (ligand → receptor).
+    sector_size_is_cluster_size : bool, default False
+        If True, sector sizes are proportional to the number of cells per cluster.
+    show_genes : bool, default True
+        If True, display top genes as an additional track.
+    gene_amount : int, default 5
+        Number of genes per receptor and ligand to display on the outer track
+        (genes per sector = ``gene_amount * 2``).
     restrict_to : Optional[list[str]], default None
-        Only show given clusters provided in list.
+        If provided, only show these clusters.
     figsize : Tuple[int | float, int | float], default (10, 10)
-        Figure size
+        Figure size.
     dpi : Optional[int | float], default None
-        The resolution of the figure in dots-per-inch. Overwrites `sctoolbox.settings.dpi` and `sctoolbox.settings.report_dpi`.
+        Figure resolution in dots per inch. Overrides ``sctoolbox.settings.dpi`` and
+        ``sctoolbox.settings.report_dpi``.
     save : str, default None
-        Output filename. Uses the internal 'sctoolbox.settings.figure_dir'.
+        Output filename. Uses the internal ``sctoolbox.settings.figure_dir``.
     report : Optional[str]
-        Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Output filename used for report creation. Silently skipped if
+        ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
     matplotlib.figure.Figure
         The Matplotlib figure object containing the plot.
     """
-
     # check if data is available
     _check_interactions(adata)
 
@@ -2020,120 +2027,129 @@ def calculate_condition_differences(
     layer: Optional[str] = None
 ) -> Optional[sc.AnnData]:
     """
-    Calculate interaction quantile rank differences between conditions.
+    Calculate interaction quantile-rank differences between conditions.
 
-    Compares values of the first condition within each combination of subsequent conditions.
-    Can also analyze conditions over specific timepoints in user-defined order.
+    This compares values of the first condition within each combination of the
+    subsequent conditions. Optionally, conditions can be analyzed over specific
+    timepoints in a user-defined order.
 
     Parameters
     ----------
     adata : sc.AnnData
         Annotated data matrix with expression values and metadata.
     condition_columns : List[str]
-        Columns in adata.obs for hierarchical filtering, ordered sequentially.
-        First column contains values to be compared within combinations of other columns.
-        The interaction score differences will be calculated between the values of the first
-        column given all combinations of the subsequent condition columns.
+        Columns in ``adata.obs`` used for hierarchical filtering, in sequential
+        order.
+
+        The first column contains the values to be compared within combinations of
+        the other columns. Interaction score differences are computed between values
+        of the first column, given all combinations of the subsequent condition
+        columns.
     cluster_column : str
-        Name of the cluster column in adata.obs.
+        Name of the cluster column in ``adata.obs``.
     min_perc : Optional[int | float], optional
-        Minimum percentage of cells in a cluster expressing a gene (0-100).
-        Default is None.
+        Minimum percentage of cells in a cluster expressing a gene (0–100). Default
+        is None.
     interaction_score : Optional[float | int], optional
-        Threshold for filtering receptor-ligand interactions by score.
-        Ignored if interaction_perc is set. Default is None.
+        Threshold for filtering receptor–ligand interactions by score. Ignored if
+        ``interaction_perc`` is set. Default is None.
     interaction_perc : Optional[int | float], optional
-        Percentile threshold for filtering receptor-ligand interactions (0-100).
-        Overrides interaction_score. Default is None.
+        Percentile threshold for filtering receptor–ligand interactions (0–100).
+        Overrides ``interaction_score``. Default is None.
     condition_filters : Optional[Dict[str, List[str] | npt.ArrayLike]], optional
-        Mapping of condition column names to values to include.
-        If None or column not specified, all unique values are used. Default is None.
+        Mapping of condition column names to values to include. If None (or a column
+        is not specified), all unique values are used. Default is None.
     time_column : Optional[str], optional
-        Column in adata.obs containing timepoint information.
-        If provided, analysis will respect time ordering. Default is None.
+        Column in ``adata.obs`` containing timepoint information. If provided,
+        analysis respects time ordering. Default is None.
     time_order : Optional[List[str] | npt.ArrayLike], optional
-        Order of timepoints to use in analysis.
-        Provide the unique timepoints in the correct order as a list.
-        Required if time_column is specified. Default is None.
+        Order of timepoints to use in analysis. Provide the unique timepoints in the
+        correct order as a list. Required if ``time_column`` is specified. Default
+        is None.
     gene_column : Optional[str], optional
-        Column in adata.var containing gene symbols/IDs.
-        Uses index if None. Default is None.
+        Column in ``adata.var`` containing gene symbols/IDs. Uses the index if None.
+        Default is None.
     cluster_filter : Optional[List[str] | npt.ArrayLike], optional
-        Clusters to include in analysis.
-        If None, all clusters are included. Default is None.
+        Clusters to include in analysis. If None, all clusters are included. Default
+        is None.
     gene_filter : Optional[List[str] | npt.ArrayLike], optional
-        Genes to include in analysis.
-        If None, all genes are included. Default is None.
+        Genes to include in analysis. If None, all genes are included. Default is
+        None.
     normalize : Optional[int], optional
-        Correct clusters to specified size.
-        If None, maximum cluster size is used. Default is None.
+        Correct clusters to a specified size. If None, the maximum cluster size is
+        used. Default is None.
     weight_by_ep : Optional[bool], default True
-        Whether to weight expression Z-Score by expression proportion.
+        Whether to weight expression Z-score by expression proportion.
     inplace : bool, default False
-        If True, modifies adata in-place.
-        If False, returns a copy of adata with results.
+        If True, modify ``adata`` in-place. If False, return a copy of ``adata``
+        with results.
     overwrite : bool, default False
-        If True, overwrites existing interaction table.
+        If True, overwrite an existing interaction table.
     save_diff : bool, default False
         Whether to save the differences table.
     layer : Optional[str], default None
-        The layer used for score computation. None to use `adata.X`. It is recommended to use raw or normalized data for statistical analysis.
+        Layer used for score computation. Use None to use ``adata.X``. For
+        statistical analysis, raw or normalized data are recommended.
 
     Returns
     -------
     Optional[sc.AnnData]
-        - If inplace=False: Returns a copy of AnnData with condition differences
-        - If inplace=True: Returns None, modifies original AnnData
+        If ``inplace`` is False, returns a copy of AnnData with condition
+        differences. If ``inplace`` is True, returns None and modifies the original
+        AnnData.
 
-        In both cases, the differences are stored in:
-        adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
+        In both cases, differences are stored in::
+
+            adata.uns["sctoolbox"]["receptor-ligand"]["condition-differences"]
 
     Raises
     ------
     ValueError
-        - If invalid keys are provided in condition_filters
-        - If no valid values exist for a condition after filtering
-        - If fewer than one condition column is provided
-        - If no valid values match any provided filters
+        If invalid keys are provided in ``condition_filters``.
+        If no valid values exist for a condition after filtering.
+        If fewer than one condition column is provided.
+        If no valid values match any provided filters.
 
     Examples
     --------
-    # Calculate differences between treatment conditions across batches
-    diff_adata = calculate_condition_differences(
-        adata=adata,
-        condition_columns=['treatment', 'batch'],
-        cluster_column='leiden',
-        min_perc=10,
-        condition_filters={'treatment': ['control', 'treatment_A', 'treatment_B']},
-        inplace=False
-    )
+    Calculate differences between treatment conditions across batches::
 
-    # Access the results
-    results = diff_adata.uns['sctoolbox']['receptor-ligand']['condition-differences']
+        diff_adata = calculate_condition_differences(
+            adata=adata,
+            condition_columns=["treatment", "batch"],
+            cluster_column="leiden",
+            min_perc=10,
+            condition_filters={"treatment": ["control", "treatment_A", "treatment_B"]},
+            inplace=False,
+        )
 
-    # Temporal analysis with timepoints in specific order
-    time_series_adata = calculate_condition_differences(
-        adata=adata,
-        condition_columns=['timepoint', 'treatment'],
-        cluster_column='leiden',
-        time_column='timepoint',
-        time_order=['day0', 'day3', 'day7', 'day14', 'day28'],
-        condition_filters={'treatment': ['control', 'drug_A']},
-        inplace=False
-    )
+    Access the results::
 
-    # Analyzing a condition over timepoints
-    # Note: 'timepoint' as first column with time_column specified
-    # will trigger sequential analysis (day3 vs day0, day7 vs day3, etc.)
-    time_course_adata = calculate_condition_differences(
-        adata=adata,
-        condition_columns=['timepoint', 'treatment'],
-        cluster_column='leiden',
-        time_column='timepoint',
-        time_order=['day0', 'day3', 'day7', 'day14', 'day28'],
-        condition_filters={'treatment': ['drug_A']},
-        inplace=False
-    )
+        results = diff_adata.uns["sctoolbox"]["receptor-ligand"]["condition-differences"]
+
+    Temporal analysis with timepoints in a specific order::
+
+        time_series_adata = calculate_condition_differences(
+            adata=adata,
+            condition_columns=["timepoint", "treatment"],
+            cluster_column="leiden",
+            time_column="timepoint",
+            time_order=["day0", "day3", "day7", "day14", "day28"],
+            condition_filters={"treatment": ["control", "drug_A"]},
+            inplace=False,
+        )
+
+    Analyze a condition over timepoints (sequential analysis)::
+
+        time_course_adata = calculate_condition_differences(
+            adata=adata,
+            condition_columns=["timepoint", "treatment"],
+            cluster_column="leiden",
+            time_column="timepoint",
+            time_order=["day0", "day3", "day7", "day14", "day28"],
+            condition_filters={"treatment": ["drug_A"]},
+            inplace=False,
+        )
     """
 
     # Create modified_adata at the beginning
