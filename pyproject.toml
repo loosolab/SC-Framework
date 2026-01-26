@@ -98,7 +98,6 @@ dependencies = [
         'IPython',
         'apybiomart',
         'requests',
-        'python-gitlab',
         'psutil',
         'deprecation',
         'pyyaml',
