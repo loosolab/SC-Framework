@@ -130,7 +130,13 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
     -------
     dict[str, str] | pd.DataFrame
         Either a dict of the form ``{"package1": "1.2.1", "package2": "4.0.1", ...}``
-        or a DataFrame with columns ``Name`` and ``Version``.
+        or a DataFrame in the form:
+        =========  =========
+        Name       Version
+        =========  =========
+        Package 1  1.0
+        Package 2  2.0
+        =========  =========
     """
     current_packages = sys.modules.keys() - __cached_modules
 
