@@ -63,27 +63,6 @@ def get_temporary_filename(tempdir: str = ".") -> str:
     return filename
 
 
-@deprecation.deprecated(deprecated_in="0.4b", removed_in="0.6",
-                        current_version=sctoolbox.__version__,
-                        details="Use rm_tmp() with rm_dir=False.")
-@beartype
-def remove_files(file_list: list[str]) -> None:
-    """
-    Delete all files in a file list. Prints a warning if deletion was not possible.
-
-    Parameters
-    ----------
-    file_list : list[str]
-        List of files to delete.
-    """
-
-    for f in file_list:
-        try:
-            os.remove(f)
-        except Exception as e:
-            warnings.warn(f"Could not remove file {f}. Exception was: {e}")
-
-
 @beartype
 def rm_tmp(temp_dir: Optional[str] = None,
            temp_files: Optional[list[str]] = None,
