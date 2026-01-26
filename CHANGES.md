@@ -13,6 +13,7 @@
 - Remove support for louvain since the package is not maintained. (#426)
 - fix scFates dependency issues (#390)
 - Fix html build errors (#422)
+- README: Update figure (#268)
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots
