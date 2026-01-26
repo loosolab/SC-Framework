@@ -100,6 +100,7 @@ dependencies = [
         'requests',
         'psutil',
         'deprecation',
+        'pyyaml',
         'beartype>=0.18.2',  # Version 0.18.0 is not working properly
         'packaging',
         'throttler',
