@@ -103,36 +103,46 @@ _vip_packages = ["sctoolbox", "scanpy", "anndata", "numpy", "pandas", "peakqc", 
 @beartype
 def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"] | list[str]] = "vip", table: bool = True, report: Optional[str] = None) -> dict[str, str] | pd.DataFrame:
     """
-    Report important packages and versions loaded after the sctoolbox was imported.
+    Report important packages and versions loaded after importing ``sctoolbox``.
 
-    Note: The package version will be "NA" if `importlib.metadata.version` raises a PackageNotFoundError.
-          For example, because no metadata was found.
+    Notes
+    -----
+    The package version is reported as ``"NA"`` if
+    :func:`importlib.metadata.version` raises :class:`importlib.metadata.PackageNotFoundError`
+    (e.g., because no metadata were found).
 
     Parameters
     ----------
-    python_version: bool, default True
-        Adds the python version to the dict.
-    keep: Optional[Literal["vip"] | list[str]], default "vip"
-        Reduce the output to the given names of packages. "vip" will use a predefined list of packages important to the sctoolbox.
-        The "vip" list can be accessed and edited with `sctoolbox.general._vip_packages`.
+    python_version : bool, default True
+        If True, include the Python version in the output.
+    keep : Optional[Literal["vip"] | list[str]], default "vip"
+        Reduce the output to the given package names.
+        ``"vip"`` uses a predefined list of packages important to sctoolbox, accessible and editable via ``sctoolbox.general._vip_packages``.
         Names that do not match are silently ignored.
-        None to show all.
-    table: bool, default True
-        Whether to return a DataFrame or a dict.
+        Use None to include all packages.
+    table : bool, default True
+        If True, return a :class:`pandas.DataFrame`. If False, return a dict.
     report : Optional[str]
-        Name of the output yaml used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
+        Name of the output YAML used for report creation. Silently skipped if
+        ``sctoolbox.settings.report_dir`` is None.
 
     Returns
     -------
     dict[str, str] | pd.DataFrame
-        A dict in the form:
-        `{"package1": "1.2.1", "package2":"4.0.1", (...)}`
-        or
-        A DataFrame in the form:
-        |   Name    | Version |
-        |---------------------|
-        | Package 1 |   1.0   |
-        | Package 2 |   2.0   |
+        Either a dict of the form ``{"package1": "1.2.1", "package2": "4.0.1", ...}``
+
+        or a DataFrame in the form:
+
+        .. list-table::
+           :header-rows: 1
+
+           * - Name
+             - Version
+           * - Package 1
+             - 1.0
+           * - Package 2
+             - 2.0
+
     """
     current_packages = sys.modules.keys() - __cached_modules
 

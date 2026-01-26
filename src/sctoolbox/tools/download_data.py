@@ -92,28 +92,29 @@ def download_dataset(pattern: str,
     """
     Prepare and download data from an S3 storage.
 
-    This initiates the S3 client and select files based on a regex like pattern.
-    Subsequently the selected files are downloaded by s3_downloader.
+    This initializes an S3 client and selects files based on a regex-like pattern.
+    The selected files are then downloaded via ``s3_downloader``.
 
     Parameters
     ----------
     pattern : str
-        Pattern for files to download e.g. '*.txt'
+        Pattern for files to download, e.g. ``"*.txt"``.
     endpoint : str, default "https://s3.mpi-bn.mpg.de"
-        Link to the s3 server (default: The loosolab s3 server)
+        S3 endpoint URL (default: the Loosolab S3 server).
     bucket : str, default "data-sc-framework-2025"
-        Name of bucket to download from
+        Name of the bucket to download from.
     download_path : Optional[str], default None
-        Download path. Creates directory with same name as bucket in current directory if None
+        Download path. If None, creates a directory named like ``bucket`` in the
+        current working directory.
     force : bool, default False
-        Force download of already exisiting files
+        If True, download files even if they already exist locally.
     progress : bool, default False
-        Display a progress bar.
+        If True, display a progress bar.
 
     Raises
     ------
     FileNotFoundError
-        If pattern does not match any file in S3 bucket
+        If ``pattern`` does not match any file in the S3 bucket.
     """
 
     bsession = boto3.Session()

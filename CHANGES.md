@@ -12,6 +12,7 @@
 - gene_set_enrichment fix error with gene_sets parameter (#425)
 - Remove support for louvain since the package is not maintained. (#426)
 - fix scFates dependency issues (#390)
+- Fix html build errors (#422)
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots

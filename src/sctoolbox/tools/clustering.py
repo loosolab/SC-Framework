@@ -61,6 +61,12 @@ def recluster(adata: sc.AnnData,
     --------
     .. plot::
         :context: close-figs
+        :include-source: False
+
+        import sctoolbox
+
+    .. plot::
+        :context: close-figs
 
         sctoolbox.tools.clustering.recluster(adata, column="louvain", clusters=["1", "5"], task="join", method="leiden", resolution=1.5, plot=True)
 

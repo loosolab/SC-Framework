@@ -54,7 +54,7 @@ def get_modules(path):
 # ---------------------------- Configure API ------------------------------- #
 ##############################################################################
 
-package_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../sctoolbox/"
+package_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../src/sctoolbox/"
 
 # ------- Setup categories within modules ------- #
 
@@ -112,7 +112,6 @@ def main():
             # Check if module has categories
             submodule_categories_module = submodule_categories.get(module, None)
             if submodule_categories_module is None:
-
                 # Find all submodules
                 submodules = get_modules(package_dir + module)
 
@@ -126,7 +125,7 @@ def main():
                     fp.write(header(submodule, 2))
                     fp.write(automodule(f"sctoolbox.{module}.{submodule}"))
 
-                    if submodule != submodules[-1]:
+                    if submodule != submodules_ordered[-1]:
                         fp.write(hline())  # add horizontal line between submodules
 
             else:
