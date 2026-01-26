@@ -4,14 +4,12 @@ import os
 import tempfile
 import warnings
 import glob
-import deprecation
 import yaml
 from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Optional, Literal
 
-import sctoolbox
 from sctoolbox._settings import settings
 logger = settings.logger
 
