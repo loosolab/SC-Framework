@@ -130,7 +130,6 @@ batch_correction = [
     'scanorama'
 ]
 receptor_ligand = [
-    'scikit-learn',
     'igraph',
     'pycirclize>=1.7.1',
     'liana',
