@@ -144,8 +144,14 @@ gsea = [
 deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
 ]
+annotation = [
+    'markerRepo'
+]
+proportion = [
+    'scanpro>=0.4.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+]
 #velocity = [
-#    'scvelo @ git+https://github.com/rwiegan/scvelo.git'  # install from fork until this is merged and on PyPI: https://github.com/theislab/scvelo/pull/1308
+#    'scvelo @ git+https://github.com/theislab/scvelo.git'  # install from github until next release: https://github.com/theislab/scvelo/issues/1334
 #]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
@@ -156,7 +162,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion]'
 ]
 # all is intended to install everything
 all = [
