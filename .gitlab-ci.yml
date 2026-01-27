@@ -269,6 +269,7 @@ test coverage:
     coverage: '/TOTAL.*\s(\d*.\d*\%)/'
     before_script:
       - pip install .[all]
+      - pip install scar @ git+https://github.com/Novartis/scar.git  # install scar here to test related functions. Should be removed if scar is available on conda and PyPI
     script:
       - echo $DYNAMIC_IMAGE_TAG
       - chmod +x scripts/bedGraphToBigWig  # make script executable
