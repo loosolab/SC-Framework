@@ -79,8 +79,8 @@ keywords = [
 ]
 dependencies = [
         'pysam',
-        'matplotlib',
-        'matplotlib_venn',
+        'matplotlib>=3.8.4',  # to speed up installation
+        'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
@@ -95,9 +95,9 @@ dependencies = [
         'seaborn>0.12',
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
-        'IPython',
+        'IPython>=9.9.0',  # to speed up installation
         'apybiomart',
-        'requests',
+        'requests>=2.32.5',  # to speed up installation
         'psutil',
         'deprecation',
         'pyyaml',
@@ -118,7 +118,7 @@ converter = [
 atac = [
     'uropa',
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-    'pygenometracks>=3.8',
+    'pygenometracks>=3.9',  # to speed up installation
     'peakqc',
     'tobias>=0.17.2'  # to avoid installation error
 ]
@@ -139,7 +139,7 @@ pseudotime = [
     'scFates>=1.2.1'  # https://github.com/LouisFaure/scFates/issues/54
 ]
 gsea = [
-    'gseapy'
+    'gseapy>=1.1.11'  # to speed up installation
 ]
 deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
@@ -162,7 +162,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation]'
 ]
 # all is intended to install everything
 all = [
