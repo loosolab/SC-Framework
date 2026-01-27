@@ -98,6 +98,7 @@ dependencies = [
         'IPython',
         'apybiomart',
         'requests>=2.32.5',  # to speed up installation
+        'python-gitlab',
         'psutil',
         'deprecation',
         'pyyaml',
