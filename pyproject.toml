@@ -97,6 +97,7 @@ dependencies = [
         'scrublet',
         'IPython',
         'ipympl',
+        'openpyxl',
         'apybiomart',
         'requests>=2.32.5',  # to speed up installation
         'python-gitlab',
