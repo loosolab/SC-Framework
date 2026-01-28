@@ -148,7 +148,7 @@ deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
 ]
 annotation = [
-    'markerRepo>=0.1.4'  # to speed up installation
+    'markerRepo>=0.1.5'  # to speed up installation
 ]
 proportion = [
     'scanpro>=0.4.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
