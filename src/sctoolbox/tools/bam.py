@@ -904,7 +904,7 @@ def bam_to_bigwig(bam: str,
 
     # Remove all temp files
     if remove_temp is True:
-        utils.io.rm_tmp([chromsizes_file, bedgraph_out, bedgraph_out_sorted], rm_dir=False)
+        utils.io.rm_tmp(temp_files=[chromsizes_file, bedgraph_out, bedgraph_out_sorted], rm_dir=False)
 
     logger.info(f"Finished converting bam to bigwig! Output bigwig is found in: {output}")
 

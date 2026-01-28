@@ -394,7 +394,7 @@ def run_scsa(adata: sc.AnnData,
 
     # Remove the temporary files
     files = [csv, results_path]
-    utils.io.rm_tmp(files, rm_dir=False)
+    utils.io.rm_tmp(temp_files=files, rm_dir=False)
 
     # Add the annotated celltypes to the anndata-object
     if inplace:
