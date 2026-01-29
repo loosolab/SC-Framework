@@ -246,7 +246,7 @@ def _binarize_expression(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def plot_embedding(adata: sc.AnnData,
+def plot_embedding(adata: sc.AnnData,  # noqa: C901
                    method: str = "umap",
                    color: Optional[list[str | None] | str] = None,
                    style: Literal["dots", "hexbin", "density"] = "dots",
@@ -636,7 +636,7 @@ def plot_embedding(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def feature_per_group(adata: sc.AnnData,
+def feature_per_group(adata: sc.AnnData,  # noqa: C901
                       y: str,
                       x: Optional[Union[str, list[str]]] = None,
                       top_n: Optional[int] = None,
