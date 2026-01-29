@@ -18,7 +18,7 @@ _core_uns_path = ['sctoolbox', 'gsea']
 
 @deco.log_anndata
 @beartype
-def gene_set_enrichment(adata: sc.AnnData,
+def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
                         marker_key: str,
                         organism: str,
                         method: Literal["prerank", "enrichr"] = "prerank",
