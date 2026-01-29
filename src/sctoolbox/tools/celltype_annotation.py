@@ -198,7 +198,7 @@ def _get_rank_genes(d: dict[str, Any]) -> list[str]:
 
 @deco.log_anndata
 @beartype
-def run_scsa(adata: sc.AnnData,
+def run_scsa(adata: sc.AnnData,  # noqa: C901
              gene_column: Optional[str] = None,
              gene_symbol: Literal['auto', 'symbol', 'id'] = 'auto',
              key: str = 'rank_genes_groups',
