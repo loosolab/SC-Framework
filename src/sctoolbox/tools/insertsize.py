@@ -44,12 +44,6 @@ def _check_in_list(element: Any, alist: list[Any] | set[Any]) -> bool:
     return element in alist
 
 
-def _check_true(element, alist) -> True:  # true regardless of input
-    """TODO WHY?."""
-
-    return True
-
-
 @deco.log_anndata
 @beartype
 def add_insertsize(adata: sc.AnnData,
@@ -130,7 +124,7 @@ def add_insertsize(adata: sc.AnnData,
 
 
 @beartype
-def _insertsize_from_bam(bam: str,
+def _insertsize_from_bam(bam: str,  # noqa: C901
                          barcode_tag: str = "CB",
                          barcodes: Optional[list[str]] = None,
                          regions: Optional[str | list[str]] = 'chr1:1-2000000',
@@ -180,7 +174,8 @@ def _insertsize_from_bam(bam: str,
         barcodes = set(barcodes)
         check_in = _check_in_list
     else:
-        check_in = _check_true
+        # TODO
+        check_in = lambda x, y: True  # noqa: E731
 
     # Open bamfile
     logger.info("Opening bam file...")
@@ -293,7 +288,8 @@ def _insertsize_from_fragments(fragments: str,
         barcodes = set(barcodes)
         check_in = _check_in_list
     else:
-        check_in = _check_true
+        # TODO
+        check_in = lambda x, y: True  # noqa: E731
 
     # Read fragments file and add to dict
     logger.info("Counting fragment lengths from fragments file...")
