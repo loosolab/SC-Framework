@@ -672,7 +672,7 @@ def gmm_threshold(data: npt.ArrayLike,
         axarr[1].set_ylabel("Density")
         for i in range(M_best.n_components):
             w = weights[i] * 100
-            axarr[1].plot(x, pdf_individual[:, i], label=f"Component {i+1} ({w:.0f}%)")
+            axarr[1].plot(x, pdf_individual[:, i], label=f"Component {i + 1} ({w:.0f}%)")
 
         axarr[1].axvline(thresholds["min"], color="red", linestyle="--")
         axarr[1].axvline(thresholds["max"], color="red", linestyle="--")
@@ -1608,7 +1608,7 @@ def denoise_data(adata: sc.AnnData,
 
     end_time = time.time() - start_time
 
-    logger.info(f'Finisihed setting up data in: {round(end_time/60, 2)} minutes')
+    logger.info(f'Finisihed setting up data in: {round(end_time / 60, 2)} minutes')
 
     logger.info('Training model to remove ambient signal...')
     scar_model = scar.model(raw_count=adata,

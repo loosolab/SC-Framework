@@ -29,7 +29,13 @@ batch_methods = Literal["bbknn",
 
 
 def atac_norm(*args: Any, **kwargs: Any):
-    """Normalize ATAC data - deprecated functionality. Use normalize_adata instead."""
+    """Normalize ATAC data - deprecated functionality. Use normalize_adata instead.
+
+    Returns
+    -------
+    Union[dict[str, sc.AnnData], sc.AnnData]
+        Result from normalize_adata.
+    """
 
     logger.warning("The function 'atac_norm' is deprecated. Use 'normalize_adata' instead.")
     return normalize_adata(*args, **kwargs)

@@ -54,7 +54,7 @@ def log_anndata(func: Callable) -> Callable:
             adata.uns["sctoolbox"]["log"][funcname] = {}
 
         # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
-        args_repr = {f"arg{i+1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
+        args_repr = {f"arg{i + 1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
         kwargs_repr = kwargs
         convert = {sc.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
         for typ, convfunc in convert.items():

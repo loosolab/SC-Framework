@@ -47,7 +47,7 @@ def adata():
 
     # next we create 6 obs columns that each contain single 1 fore each category combination
     for i in range(6):
-        df[f'obscol{i+1}'] = test_layer[:, i]
+        df[f'obscol{i + 1}'] = test_layer[:, i]
 
     adata.obs = df
     return adata
