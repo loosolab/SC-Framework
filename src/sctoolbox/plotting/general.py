@@ -26,7 +26,7 @@ logger = settings.logger
 ########################################################################################
 
 @beartype
-def _save_figure(path: Optional[str],
+def _save_figure(path: Optional[str],  # noqa: C901
                  dpi: Optional[int | float] = None,
                  report: bool = False,
                  max_pixle: int = 2**16,
@@ -52,6 +52,11 @@ def _save_figure(path: Optional[str],
     **kwargs : Any
         Additional arguments to pass to matplotlib.pyplot.savefig.
     """
+    # do nothing without a path
+    # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
+    # This moves the checking to the _save_figure function rather than each plotting function.
+    if path is None:
+        return
 
     savefig_kwargs = {"bbox_inches": "tight", "facecolor": "white"}  # defaults
     savefig_kwargs.update(kwargs)
@@ -62,43 +67,40 @@ def _save_figure(path: Optional[str],
         else:
             dpi = settings.dpi
 
-    # 'path' can be None if _save_figure was used within a plotting function, and the internal 'save' was "None".
-    # This moves the checking to the _save_figure function rather than each plotting function.
-    if path is not None:
-        # calculate the figure dimensions
-        fig = plt.gcf()  # get current figure
-        w, h = (int(s * dpi) for s in fig.get_size_inches())
+    # calculate the figure dimensions
+    fig = plt.gcf()  # get current figure
+    w, h = (int(s * dpi) for s in fig.get_size_inches())
 
-        if w > max_pixle or h > max_pixle:
-            warnings.warn(f"Image size of {w}x{h} pixels is too large. It must be less than {max_pixle} in each direction. Shrinking image...")
+    if w > max_pixle or h > max_pixle:
+        warnings.warn(f"Image size of {w}x{h} pixels is too large. It must be less than {max_pixle} in each direction. Shrinking image...")
 
-            if w > max_pixle:
-                w = max_pixle - 1
-            if h > max_pixle:
-                h = max_pixle - 1
-            fig.set_size_inches(w / dpi, h / dpi)
+        if w > max_pixle:
+            w = max_pixle - 1
+        if h > max_pixle:
+            h = max_pixle - 1
+        fig.set_size_inches(w / dpi, h / dpi)
 
-        # save either at report or standard figure location
-        if not report:
-            output_path = settings.full_figure_prefix + path
-            logger.info(f"Saving figure to {output_path}")
-        else:
-            output_path = Path(settings.report_dir) / path
+    # save either at report or standard figure location
+    if not report:
+        output_path = settings.full_figure_prefix + path
+        logger.info(f"Saving figure to {output_path}")
+    else:
+        output_path = Path(settings.report_dir) / path
 
-        original_state = []
+    original_state = []
+    if rasterize:
+        # rasterize all axes
+        for ax in fig.axes:
+            original_state.append(ax.get_rasterized())
+            ax.set_rasterized(True)
+
+    try:
+        plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
+    finally:
         if rasterize:
-            # rasterize all axes
-            for ax in fig.axes:
-                original_state.append(ax.get_rasterized())
-                ax.set_rasterized(True)
-
-        try:
-            plt.savefig(output_path, dpi=dpi, **savefig_kwargs)
-        finally:
-            if rasterize:
-                # restore rasterization
-                for ax, raster in zip(fig.axes, original_state):
-                    ax.set_rasterized(raster)
+            # restore rasterization
+            for ax, raster in zip(fig.axes, original_state):
+                ax.set_rasterized(raster)
 
 
 @beartype
@@ -612,7 +614,7 @@ def boxplot(dt: pd.DataFrame,
 
 
 @beartype
-def violinplot(table: pd.DataFrame,
+def violinplot(table: pd.DataFrame,  # noqa: C901
                y: str,
                color_by: Optional[str] = None,
                hlines: Optional[Union[float | int,
@@ -834,7 +836,7 @@ def plot_venn(groups_dict: dict[str, list[Any]],
 ########################################################################################
 
 @beartype
-def pairwise_scatter(table: pd.DataFrame,
+def pairwise_scatter(table: pd.DataFrame,  # noqa: C901
                      columns: list[str],
                      thresholds: Optional[dict[str, dict[Literal["min", "max"], int | float]]] = None,
                      save: Optional[str] = None,
@@ -980,7 +982,7 @@ def pairwise_scatter(table: pd.DataFrame,
 ########################################################################################
 
 @beartype
-def plot_table(table: pd.DataFrame,
+def plot_table(table: pd.DataFrame,  # noqa: C901
                ax: Optional[Axes] = None,
                save: Optional[str] = None,
                report: Optional[str] = None,
