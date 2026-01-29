@@ -1106,7 +1106,13 @@ def _match_columns(adata: sc.AnnData,
 
 @beartype
 def get_mean_thresholds(thresholds: dict[str, Any]) -> dict[str, Any]:
-    """Convert grouped thresholds to global thresholds by taking the mean across groups."""
+    """Convert grouped thresholds to global thresholds by taking the mean across groups.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary of global thresholds with mean values across groups.
+    """
 
     global_thresholds = {}
     for key, adict in thresholds.items():

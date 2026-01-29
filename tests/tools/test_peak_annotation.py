@@ -15,7 +15,13 @@ uropa_config = {"queries": [{"distance": [10000, 1000]}]}
 
 @pytest.fixture
 def adata_atac():
-    """Load atac anndata."""
+    """Load atac anndata.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 

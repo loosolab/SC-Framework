@@ -14,7 +14,13 @@ import sctoolbox.utils as utils
 
 @pytest.fixture(scope="session")
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with batch annotation and highly variable genes.
+    """
 
     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
     adata = sc.read_h5ad(f)
@@ -29,7 +35,13 @@ def adata():
 
 @pytest.fixture
 def adata_mm10():
-    """Fixture for an AnnData object."""
+    """Fixture for an AnnData object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_mm10 = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
     return adata_mm10
 
@@ -37,7 +49,13 @@ def adata_mm10():
 # adapted from muon package
 @pytest.fixture
 def tfidf_x():
-    """Create anndata with random expression."""
+    """Create anndata with random expression.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with random expression matrix for TF-IDF testing.
+    """
     np.random.seed(2020)
     x = np.abs(np.random.normal(size=(4, 5)))
     adata_X = ad.AnnData(x)
@@ -46,7 +64,13 @@ def tfidf_x():
 
 @pytest.fixture
 def adata_batch_dict(adata):
-    """Create dict containing adata with a batch column in obs."""
+    """Create dict containing adata with a batch column in obs.
+
+    Returns
+    -------
+    dict
+        Dictionary with AnnData object containing batch information.
+    """
     anndata_batch_dict = adata.copy()
 
     return {'adata': anndata_batch_dict}

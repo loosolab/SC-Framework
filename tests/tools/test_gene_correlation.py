@@ -14,7 +14,13 @@ from sctoolbox.tools.gene_correlation import correlate_conditions, correlate_ref
 
 @pytest.fixture
 def adata():
-    """Fixture for simple adata to test with."""
+    """Fixture for simple adata to test with.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with gene names as index.
+    """
     h5ad = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
     adata = sc.read_h5ad(h5ad)
 

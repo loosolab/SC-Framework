@@ -16,7 +16,13 @@ plt.switch_backend("Agg")
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with test layer for planet plot.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 

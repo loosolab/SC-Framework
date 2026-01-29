@@ -26,19 +26,37 @@ def add_logger_handler(logger, handler):
 
 @pytest.fixture
 def adata1():
-    """Load scanpy moignard15 adata."""
+    """Load scanpy moignard15 adata.
+
+    Returns
+    -------
+    sc.AnnData
+        Moignard15 dataset from scanpy.
+    """
     return sc.datasets.moignard15()
 
 
 @pytest.fixture
 def adata2():
-    """Load scanpy processed pbmc3k adata."""
+    """Load scanpy processed pbmc3k adata.
+
+    Returns
+    -------
+    sc.AnnData
+        Processed PBMC3k dataset from scanpy.
+    """
     return sc.datasets.pbmc3k_processed()
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Return adata object with 3 groups."""
+    """Return adata object with 3 groups.
+
+    Returns
+    -------
+    sc.AnnData
+        Random AnnData object with 3 groups (C1, C2, C3) and test layers.
+    """
 
     adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
@@ -95,7 +113,13 @@ def test_save_and_load_h5ad(adata, raw, caplog):
 
 @pytest.fixture(scope="session")
 def adata_icxg():
-    """Load and returns an cellxgene incompatible anndata object."""
+    """Load and returns an cellxgene incompatible anndata object.
+
+    Returns
+    -------
+    sc.AnnData
+        PBMC3k dataset with intentional cellxgene incompatibilities for testing.
+    """
 
     # has .X of type numpy.array
     obj = sc.datasets.pbmc3k_processed()

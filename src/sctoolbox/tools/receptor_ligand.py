@@ -1293,7 +1293,13 @@ def connectionPlot(adata: sc.AnnData,
         # set custom min and max values
         if alpha_range:
             def alpha_sorter(x):
-                """Set values outside of range to min or max."""
+                """Set values outside of range to min or max.
+
+                Returns
+                -------
+                float
+                    Value clamped to the specified alpha range.
+                """
                 if x < alpha_range[0]:
                     return alpha_range[0]
                 elif x > alpha_range[1]:
@@ -1355,7 +1361,13 @@ def connectionPlot(adata: sc.AnnData,
     step_num = 5  # the number of steps in all legends
 
     def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
-        """Create a custom handle list for the legend."""
+        """Create a custom handle list for the legend.
+
+        Returns
+        -------
+        list
+            List of matplotlib handles for the legend.
+        """
         handles = []
 
         # define the hue and size ranges
@@ -1369,7 +1381,13 @@ def connectionPlot(adata: sc.AnnData,
 
         # size normalization
         def size_norm(x):
-            """Scale dot sizes."""
+            """Scale dot sizes.
+
+            Returns
+            -------
+            float
+                Normalized dot size.
+            """
             return minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
 
         if hue != size:

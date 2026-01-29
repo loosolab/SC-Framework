@@ -12,7 +12,13 @@ import numpy as np
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        Preprocessed AnnData object.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 

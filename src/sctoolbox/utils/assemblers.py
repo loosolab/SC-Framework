@@ -369,7 +369,13 @@ def from_single_mtx(mtx: Union[str, Path],
         raise ValueError()
 
     def load_meta(file, header, index_col, delimiter, comment, expected_size, name):
-        """Load and prepare AnnData.var or AnnData.obs."""
+        """Load and prepare AnnData.var or AnnData.obs.
+
+        Returns
+        -------
+        pd.DataFrame
+            Prepared metadata table with validated index and columns.
+        """
         # load the file
         table = pd.read_csv(file, header=header, index_col=index_col, delimiter=delimiter, comment=comment)
 

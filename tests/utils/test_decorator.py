@@ -14,7 +14,13 @@ import sctoolbox.utils as utils
 
 @pytest.fixture
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object.
+    """
     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
 
     return sc.read_h5ad(f)

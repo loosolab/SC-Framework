@@ -14,7 +14,13 @@ import sys
 
 @pytest.fixture
 def named_var_adata():
-    """Return a adata object with a prefix attached to the .var index."""
+    """Return a adata object with a prefix attached to the .var index.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with a prefix attached to the .var index.
+    """
 
     f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_named_var.h5ad')
 
@@ -23,7 +29,13 @@ def named_var_adata():
 
 @pytest.fixture
 def atac_adata():
-    """Return a adata object from ATAC-seq."""
+    """Return a adata object from ATAC-seq.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object from ATAC-seq.
+    """
 
     f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
 
@@ -32,7 +44,13 @@ def atac_adata():
 
 @pytest.fixture
 def adata_atac_emptyvar(atac_adata):
-    """Create adata with empty adata.var."""
+    """Create adata with empty adata.var.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with empty var table.
+    """
     adata = atac_adata.copy()
     adata.var = adata.var.drop(columns=adata.var.columns)
     return adata
@@ -40,7 +58,13 @@ def adata_atac_emptyvar(atac_adata):
 
 @pytest.fixture
 def adata_atac_invalid(atac_adata):
-    """Create adata with invalid index."""
+    """Create adata with invalid index.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with invalid index.
+    """
     adata = atac_adata.copy()
     adata.var.iloc[0, 1] = 500  # start
     adata.var.iloc[0, 2] = 100  # end
@@ -50,14 +74,26 @@ def adata_atac_invalid(atac_adata):
 
 @pytest.fixture
 def adata_rna():
-    """Load rna adata."""
+    """Load rna adata.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture
 def adata2():
-    """Load and return an anndata object."""
+    """Load and return an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object.
+    """
     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
 
     return sc.read_h5ad(f)
@@ -65,7 +101,13 @@ def adata2():
 
 @pytest.fixture
 def marker_dict():
-    """Return a dict of cell type markers."""
+    """Return a dict of cell type markers.
+
+    Returns
+    -------
+    dict
+        Dictionary of cell type markers.
+    """
     return {"Celltype A": ['ENSMUSG00000103377', 'ENSMUSG00000104428'],
             "Celltype B": ['ENSMUSG00000102272', 'invalid_gene'],
             "Celltype C": ['invalid_gene_1', 'invalid_gene_2']}

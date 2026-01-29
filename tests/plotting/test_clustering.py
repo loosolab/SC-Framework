@@ -17,7 +17,13 @@ quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with processed data and clustering results.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 

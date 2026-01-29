@@ -17,7 +17,13 @@ from beartype.roar import BeartypeCallHintParamViolation
 
 @pytest.fixture
 def df_bidir_bar():
-    """Create DataFrame for bidirectional barplot."""
+    """Create DataFrame for bidirectional barplot.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with left and right labels and values for bidirectional barplot.
+    """
     return pd.DataFrame(data={'left_label': np.random.choice(["B1", "B2", "B3"], size=5),
                               'right_label': np.random.choice(["A1", "A2", "A3"], size=5),
                               'left_value': np.random.normal(size=5),
@@ -26,14 +32,26 @@ def df_bidir_bar():
 
 @pytest.fixture
 def df():
-    """Create and return a pandas dataframe."""
+    """Create and return a pandas dataframe.
+
+    Returns
+    -------
+    pd.DataFrame
+        Simple dataframe with two columns.
+    """
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with processed data and clustering results.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -65,7 +83,13 @@ def adata():
 
 @pytest.fixture
 def venn_dict():
-    """Create arbitrary groups for venn."""
+    """Create arbitrary groups for venn.
+
+    Returns
+    -------
+    dict
+        Dictionary with group names as keys and lists of items as values for Venn diagram.
+    """
     return {"Group A": [1, 2, 3, 4, 5, 6],
             "Group B": [2, 3, 7, 8],
             "Group C": [3, 4, 5, 9, 10]}

@@ -32,7 +32,13 @@ def add_logger_handler(logger, handler):
 
 @pytest.fixture(scope="function")  # create for each test
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with QC variables and cell cycle genes.
+    """
     f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
     adata = sc.read_h5ad(f)
     adata.obs['sample'] = np.random.choice(["sample1", "sample2"], size=len(adata))
@@ -73,7 +79,13 @@ def adata():
 
 @pytest.fixture
 def threshold_dict():
-    """Create dict with qc thresholds."""
+    """Create dict with qc thresholds.
+
+    Returns
+    -------
+    dict
+        Dictionary with QC variable thresholds.
+    """
     d = {"qc_variable1": {"min": 0.5, "max": 1.5},
          "qc_variable2": {"min": 0.5, "max": 1}}
     return d
@@ -81,7 +93,13 @@ def threshold_dict():
 
 @pytest.fixture
 def invalid_threshold_dict():
-    """Create invalid qc threshold dict."""
+    """Create invalid qc threshold dict.
+
+    Returns
+    -------
+    dict
+        Dictionary with invalid QC variable specifications.
+    """
     d = {"not_present": {"notmin": 0.5, "max": 1.5},
          "qc_variable2": {"min": 0.5, "max": 1}}
     return d
@@ -89,13 +107,25 @@ def invalid_threshold_dict():
 
 @pytest.fixture
 def s_list(adata):
-    """Return a list of first half of adata genes."""
+    """Return a list of first half of adata genes.
+
+    Returns
+    -------
+    list
+        List of gene names for S phase.
+    """
     return adata.var.index[:int(len(adata.var) / 2)].tolist()
 
 
 @pytest.fixture
 def g2m_list(adata):
-    """Return a list of second half of adata genes."""
+    """Return a list of second half of adata genes.
+
+    Returns
+    -------
+    list
+        List of gene names for G2M phase.
+    """
     return adata.var.index[int(len(adata.var) / 2):].tolist()
 
 
@@ -125,7 +155,13 @@ def s_file(s_list):
 
 @pytest.fixture(scope="session")
 def norm_dist():
-    """Return a normal distribution."""
+    """Return a normal distribution.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of 1000 normally distributed values.
+    """
     return np.random.normal(size=1000)
 
 

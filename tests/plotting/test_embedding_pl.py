@@ -21,7 +21,13 @@ plt.switch_backend("Agg")
 
 
 def _make_adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with processed data and clustering results.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -53,19 +59,37 @@ def _make_adata():
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Create a fixture of the adata with session scope."""
+    """Create a fixture of the adata with session scope.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with session scope.
+    """
     return _make_adata()
 
 
 @pytest.fixture(scope="function")  # create a new fixture for each test
 def adata_fun_scope():
-    """Create a fixture of the adata with function scope."""
+    """Create a fixture of the adata with function scope.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with function scope.
+    """
     return _make_adata()
 
 
 @pytest.fixture
 def df():
-    """Create and return a pandas dataframe."""
+    """Create and return a pandas dataframe.
+
+    Returns
+    -------
+    pd.DataFrame
+        Simple dataframe with two columns.
+    """
     return pd.DataFrame(data={'col1': [1, 2, 3, 4, 5],
                               'col2': [3, 4, 5, 6, 7]})
 
