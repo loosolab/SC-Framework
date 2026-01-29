@@ -11,8 +11,8 @@ from beartype.typing import Literal, Tuple, Optional, Any
 from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import _save_figure
 from sctoolbox._settings import settings
 logger = settings.logger
 
