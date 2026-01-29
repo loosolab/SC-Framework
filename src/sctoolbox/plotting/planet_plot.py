@@ -133,7 +133,7 @@ def _genes_aggregator(plot_vars: pd.DataFrame,
 #############################################################################
 
 @beartype
-def planet_plot_anndata_preprocess(adata: sc.AnnData,
+def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
                                    x_col: str,
                                    y_col: str,
                                    genes: list | str,
@@ -318,7 +318,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
 #############################################################################
 
 @beartype
-def planet_plot_render(plot_vars: pd.DataFrame,
+def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                        x_col: str,
                        y_col: str,
                        x_label: str | None = None,
