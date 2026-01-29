@@ -134,12 +134,14 @@ batch_correction = [
     'scanorama'
 ]
 receptor_ligand = [
-    'pycirclize>=1.7.1',
+    'pycirclize>=1.10.1',  # to speed up installation
     'liana>=1.7.0',  # to speed up installation
+    'plotnine>=0.15.2',  # is a liana dependency; set to speed up installation
     'networkx>=3.5'
 ]
 pseudotime = [
     'scFates>=1.2.1'  # https://github.com/LouisFaure/scFates/issues/54
+    'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
 ]
 gsea = [
     'gseapy>=1.1.11'  # to speed up installation
