@@ -17,7 +17,7 @@ def recluster(adata: sc.AnnData,
               column: str,
               clusters: str | list[str],
               task: Literal["join", "split"] = "join",
-              method: Literal["leiden", "louvain"] = "leiden",
+              method: Literal["leiden"] = "leiden",
               resolution: float | int = 1,
               key_added: Optional[str] = None,
               plot: bool = True,
@@ -37,8 +37,8 @@ def recluster(adata: sc.AnnData,
         Task to perform. Options are:
         - "join": Join clusters in `clusters` into one cluster.
         - "split": Split clusters in `clusters` are merged and then reclustered using `method` and `resolution`.
-    method : Literal["leiden", "louvain"], default "leiden"
-        Clustering method to use. Must be one of "leiden" or "louvain".
+    method : Literal["leiden"], default "leiden"
+        Clustering method to use. Must be "leiden".
     resolution : float, default 1
         Resolution parameter for clustering.
     key_added : Optional[str], default None
@@ -59,6 +59,12 @@ def recluster(adata: sc.AnnData,
 
     Examples
     --------
+    .. plot::
+        :context: close-figs
+        :include-source: False
+
+        import sctoolbox
+
     .. plot::
         :context: close-figs
 
@@ -90,8 +96,6 @@ def recluster(adata: sc.AnnData,
         # set future defaults to omit warning
         def cl_function(*args, **kwargs):
             sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
-    elif method == "louvain":
-        cl_function = sc.tl.louvain
 
     # Check if clusters are found in column
     if not set(clusters).issubset(adata_copy.obs[column]):

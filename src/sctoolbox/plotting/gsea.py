@@ -55,8 +55,8 @@ def term_dotplot(adata: sc.AnnData,
     gene_col : str, default "Lead_genes"
         Name of column the containg gene (lists).
         Typical names used by different methods:
-            prerank -> 'Lead_genes'
-            enrichr -> 'Genes'
+        1. prerank -> 'Lead_genes'
+        2. enrichr -> 'Genes'
     term_col : str, default 'Term'
         Name of column containg the terms.
     groups : Optional[list[str] | str], default None

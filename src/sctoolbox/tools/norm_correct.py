@@ -277,36 +277,44 @@ def wrap_corrections(adata: sc.AnnData,
                      method_kwargs: dict = {},
                      keep_layer: Optional[str] = "norm") -> dict[str, sc.AnnData]:
     """
-    Calculate multiple batch corrections for adata using the 'batch_correction' function.
+    Compute multiple batch corrections for ``adata`` using :func:`batch_correction`.
 
     Parameters
     ----------
     adata : sc.AnnData
-        An annotated data matrix object to apply corrections to.
+        Annotated data matrix to apply batch corrections to.
     batch_key : str
-        The column in adata.obs containing batch information.
+        Column in ``adata.obs`` containing batch labels.
     methods : list[batch_methods] | Callable | batch_methods, default ["bbknn", "mnn"]
-        The method(s) to use for batch correction. Options are:
-        - bbknn
-        - mnn
-        - harmony
-        - scanorama
-        - combat
-        Or provide a custom batch correction function. See `batch_correction(method)` for more information.
+        Batch-correction method(s) to apply.
+
+        Supported built-in methods are:
+
+        - ``"bbknn"``
+        - ``"mnn"``
+        - ``"harmony"``
+        - ``"scanorama"``
+        - ``"combat"``
+
+        Alternatively, provide a custom batch correction function. See
+        :func:`batch_correction` for more information.
     method_kwargs : dict, default {}
-        Dict with methods as keys. Values are dicts of additional parameters forwarded to method. See batch_correction(**kwargs).
+        Dict with methods as keys. Values are dicts of additional parameters
+        forwarded to the method. See :func:`batch_correction`.
     keep_layer : Optional[str], default "norm"
-        Will create a copy of the .X matrix with the given name before applying correction.
+        If not None, store a copy of ``adata.X`` in ``adata.layers[keep_layer]``
+        before applying correction.
 
     Returns
     -------
     dict[str, sc.AnnData]
-        Dictonary of batch corrected anndata objects. Where the key is the correction method and the value is the corrected anndata.
+        Dictionary of batch corrected AnnData objects. The key is the correction
+        method and the value is the corrected AnnData object.
 
     Raises
     ------
     ValueError
-        If not all methods in methods are valid.
+        If not all methods in ``methods`` are valid.
     """
 
     # Ensure that methods can be looped over

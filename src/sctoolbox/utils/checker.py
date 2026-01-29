@@ -401,28 +401,35 @@ def validate_regions(adata: sc.AnnData,
 def var_index_to_column(adata: sc.AnnData,
                         coordinate_columns: NDArray[str] | Sequence[str] | pd.core.indexes.base.Index = ["chr", "start", "end"]) -> None:
     """
-    Format the index of adata.var and adds peak location columns (chr, start, end) to adata.var if needed.
+    Format ``adata.var`` index and add peak location columns (chr, start, end) if needed.
 
-    If coordinate_columns are given, the function will check if these columns already contain the information needed. If the coordinate_columns are in the correct format, nothing will be done.
-    If the coordinate_columns are invalid (or coordinate_columns is not given) the index is checked for the following format:
-    "*[_:-]start[_:-]end"
+    If ``coordinate_columns`` are given, the function checks whether these columns
+    already contain the required information. If the columns are in the correct
+    format, no changes are made.
+    If ``coordinate_columns`` are invalid (or not provided), the function attempts
+    to parse coordinates from ``adata.var_names`` using the format::
 
-    If the index can be formatted, the formatted columns (coordinate_columns) will be added.
-    If the index cannot be formatted, an error will be raised.
+        *[_:-]start[_:-]end
 
-    NOTE: adata object is changed inplace.
+    If parsing succeeds, the parsed coordinate columns are added to ``adata.var``.
+    If parsing fails, an error is raised.
+
+    Notes
+    -----
+    This function modifies ``adata`` in place.
 
     Parameters
     ----------
     adata : sc.AnnData
-        The anndata object containing features to annotate.
+        AnnData object containing features to annotate.
     coordinate_columns : NDArray[str] | Sequence[str] | pd.core.indexes.base.Index, default ['chr', 'start', 'end']
-        List of length 3 for column names in adata.var containing chr, start, end coordinates.
+        Sequence of length 3 specifying column names in ``adata.var`` for
+        chromosome, start, and end coordinates.
 
     Raises
     ------
     ValueError
-        If regions are of incorrect format.
+        If regions are in an incorrect format and cannot be parsed.
     """
 
     # Test whether the three columns are in the right format

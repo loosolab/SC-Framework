@@ -4,14 +4,12 @@ import os
 import tempfile
 import warnings
 import glob
-import deprecation
 import yaml
 from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Optional, Literal
 
-import sctoolbox
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -61,27 +59,6 @@ def get_temporary_filename(tempdir: str = ".") -> str:
     filehandle.close()  # remove the file again
 
     return filename
-
-
-@deprecation.deprecated(deprecated_in="0.4b", removed_in="0.6",
-                        current_version=sctoolbox.__version__,
-                        details="Use rm_tmp() with rm_dir=False.")
-@beartype
-def remove_files(file_list: list[str]) -> None:
-    """
-    Delete all files in a file list. Prints a warning if deletion was not possible.
-
-    Parameters
-    ----------
-    file_list : list[str]
-        List of files to delete.
-    """
-
-    for f in file_list:
-        try:
-            os.remove(f)
-        except Exception as e:
-            warnings.warn(f"Could not remove file {f}. Exception was: {e}")
 
 
 @beartype
