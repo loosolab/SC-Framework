@@ -53,7 +53,7 @@ def wrap_umap(adatas: Iterable[sc.AnnData], threads: Optional[int] = None, **kwa
 
 
 @beartype
-def correlation_matrix(adata: sc.AnnData,
+def correlation_matrix(adata: sc.AnnData,  # noqa: C901
                        which: Literal["obs", "var"] = "obs",
                        basis: str = "pca",
                        n_components: Optional[int] = None,
@@ -127,9 +127,9 @@ def correlation_matrix(adata: sc.AnnData,
     # Get table of pcs and columns
     n_components = min(n_components, mat.shape[1]) if n_components else mat.shape[1]  # make sure we don't exceed the number of pcs available
     if "pca" in basis.lower():
-        comp_columns = [f"PC{i+1}" for i in range(n_components)]  # e.g. PC1, PC2, ...
+        comp_columns = [f"PC{i + 1}" for i in range(n_components)]  # e.g. PC1, PC2, ...
     else:
-        comp_columns = [f"{re.sub('^X_', '', basis.upper())}{i+1}" for i in range(n_components)]  # e.g. UMAP1, UMAP2, ...
+        comp_columns = [f"{re.sub('^X_', '', basis.upper())}{i + 1}" for i in range(n_components)]  # e.g. UMAP1, UMAP2, ...
     comp_table = pd.DataFrame(mat[:, :n_components], columns=comp_columns)
     comp_table[numeric_columns] = table[numeric_columns].reset_index(drop=True)
 
