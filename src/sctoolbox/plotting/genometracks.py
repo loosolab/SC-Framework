@@ -81,11 +81,16 @@ class GenomeTracks():
         self.output = None  # path to the output file if written
 
     def __repr__(self):
-        """Return a string representation of the GenomeTracks object."""
+        """Return a string representation of the GenomeTracks object.
+
+        Returns
+        -------
+        String represantation of the object.
+        """
         n_tracks = len(self.tracks)
         return f"GenomeTracks object with {n_tracks} track(s). See <obj>.tracks for details."
 
-    def add_track(self,
+    def add_track(self,  # noqa: C901
                   file: str,
                   file_type: Optional[str] = None,
                   name: Optional[str] = None,
@@ -126,24 +131,23 @@ class GenomeTracks():
         # Predict file type
         if file_type is None:
             file_type = self._predict_type(file)
-        else:
+        elif file_type not in self.available_types:
             # Check if file_type is valid
-            if file_type not in self.available_types:
-                if file_type == "spacer":
-                    raise ValueError("file_type 'spacer' is not valid. Use GenomeTracks.add_spacer() instead.")
-                elif file_type == "x-axis":
-                    raise ValueError("file_type 'x-axis' is not valid. Use GenomeTracks.add_xaxis() instead.")
-                elif file_type == "hlines":
-                    raise ValueError("file_type 'hlines' is not valid. Use GenomeTracks.add_hlines() instead.")
-                else:
-                    raise ValueError(f"file_type '{file_type}' not valid. Choose from {self.available_types}")
-
-        # If filetype was predicted or given; add to track dict
-        if file_type is not None:
+            if file_type == "spacer":
+                raise ValueError("file_type 'spacer' is not valid. Use GenomeTracks.add_spacer() instead.")
+            elif file_type == "x-axis":
+                raise ValueError("file_type 'x-axis' is not valid. Use GenomeTracks.add_xaxis() instead.")
+            elif file_type == "hlines":
+                raise ValueError("file_type 'hlines' is not valid. Use GenomeTracks.add_hlines() instead.")
+            else:
+                raise ValueError(f"file_type '{file_type}' not valid. Choose from {self.available_types}")
+        else:
+            # If filetype was predicted or given; add to track dict
             if file_type in ["vlines", "vhighlight"]:
                 track_dict["type"] = file_type   # file_type = type for some options
             else:
                 track_dict["file_type"] = file_type
+
         track_dict.update(self.type_defaults.get(file_type, {}))  # add type defaults
 
         # Set title depending on file_type
@@ -321,7 +325,13 @@ class GenomeTracks():
         return config_file
 
     def show_plot(self):
-        """Display the plot."""
+        """Display the plot.
+
+        Raises
+        ------
+        ValueError
+            If no output file was created. Run GenomeTracks.plot() first.
+        """
 
         if self.output is None:
             raise ValueError("No output file was created. Run GenomeTracks.plot() first.")
