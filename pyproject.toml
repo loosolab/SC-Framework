@@ -96,7 +96,7 @@ dependencies = [
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
         'IPython',
-        'ipympl',
+        'ipympl>=0.9.8',  # to speed up installation
         'openpyxl',
         'apybiomart',
         'requests>=2.32.5',  # to speed up installation
@@ -135,7 +135,7 @@ batch_correction = [
 ]
 receptor_ligand = [
     'pycirclize>=1.7.1',
-    'liana',
+    'liana>=1.7.0',  # to speed up installation
     'networkx>=3.5'
 ]
 pseudotime = [
