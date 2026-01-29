@@ -990,7 +990,7 @@ def search_tsne_parameters(adata: sc.AnnData,
 
 
 @beartype
-def _search_dim_red_parameters(adata: sc.AnnData,
+def _search_dim_red_parameters(adata: sc.AnnData,  # noqa: C901
                                method: Literal["umap", "tsne"],
                                min_dist_range: Optional[Tuple[int | float, int | float, int | float]] = None,  # for UMAP
                                spread_range: Optional[Tuple[int | float, int | float, int | float]] = None,  # for UMAP
@@ -1040,7 +1040,23 @@ def _search_dim_red_parameters(adata: sc.AnnData,
         threads = settings.get_threads()
 
     def get_loop_params(r):
-        """Get parameters to loop over."""
+        """Get parameters to loop over.
+
+        Parameters
+        ----------
+        r : tuple
+            Range parameters in the form (name, min, max, step).
+
+        Returns
+        -------
+        NDArray
+            Array of parameter values to loop over.
+
+        Raises
+        ------
+        ValueError
+            If the range tuple does not have 4 elements or if step is larger than (max - min).
+        """
         # Check validity of range parameters
         if len(r) != 4:
             raise ValueError(f"The parameter '{r[0]}' must be a tuple in the form (min, max, step)")
@@ -1125,7 +1141,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,
             # Add precalculated UMAP to adata
             adata.obsm[f"X_{method}"] = jobs[(i, j)].obsm[f"X_{method}"]
 
-            logger.debug(f"Plotting {method} for row={r2_param} and col={r1_param} ({i*len(loop_params[0])+j+1}/{len(loop_params[0])*len(loop_params[1])})")
+            logger.debug(f"Plotting {method} for row={r2_param} and col={r1_param} ({i * len(loop_params[0]) + j + 1}/{len(loop_params[0]) * len(loop_params[1])})")
 
             # Set legend loc for last column
             if i == 0 and j == (len(loop_params[0]) - 1):
@@ -1269,7 +1285,7 @@ def plot_group_embeddings(adata: sc.AnnData,
 
 
 @beartype
-def compare_embeddings(adata_list: list[sc.AnnData],
+def compare_embeddings(adata_list: list[sc.AnnData],  # noqa: C901
                        var_list: list[str] | str,
                        embedding: Literal["umap", "tsne", "pca"] = "umap",
                        adata_names: Optional[list[str]] = None,
@@ -1354,7 +1370,7 @@ def compare_embeddings(adata_list: list[sc.AnnData],
     axes = np.array(axes).reshape((1, -1)) if n_rows == 1 else axes  # Fix indexing for one row figures
 
     if adata_names is None:
-        adata_names = [f"adata_{n+1}" for n in range(len(adata_list))]
+        adata_names = [f"adata_{n + 1}" for n in range(len(adata_list))]
 
     # code for coloring single cell expressions?
     # import matplotlib.colors as clr
@@ -1416,7 +1432,12 @@ def compare_embeddings(adata_list: list[sc.AnnData],
 
 @beartype
 def _get_3d_dotsize(n: int) -> int:
-    """Get the optimal plotting dotsize for a given number of points."""
+    """Get the optimal plotting dotsize for a given number of points.
+
+    Returns
+    -------
+    The plotsize for the given n (number of points).
+    """
     if n < 1000:
         return 12
     elif n < 10000:
@@ -1656,7 +1677,7 @@ ListOfValidPlots = Annotated[List[Literal["UMAP", "tSNE", "PCA", "PCA-var", "LIS
 
 
 @beartype
-def anndata_overview(adatas: dict[str, sc.AnnData],
+def anndata_overview(adatas: dict[str, sc.AnnData],  # noqa: C901
                      color_by: str | list[str],
                      plots: Union[ListOfValidPlots,
                                   Literal["UMAP", "tSNE", "PCA", "PCA-var", "LISI"]] = ["PCA", "PCA-var", "UMAP", "LISI"],
@@ -1908,7 +1929,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],
 
 @deco.log_anndata
 @beartype
-def plot_pca_variance(adata: sc.AnnData,
+def plot_pca_variance(adata: sc.AnnData,  # noqa: C901
                       method: str = "pca",
                       n_pcs: int = 20,
                       selected: Optional[List[int]] = None,
