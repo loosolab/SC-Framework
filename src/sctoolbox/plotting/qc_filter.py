@@ -272,7 +272,7 @@ def _n_cells_pieplot(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def n_cells_barplot(adata: sc.AnnData,
+def n_cells_barplot(adata: sc.AnnData,  # noqa: C901
                     x: str,
                     groupby: Optional[str] = None,
                     stacked: bool = True,
@@ -621,7 +621,7 @@ def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
 
 @deco.log_anndata
 @beartype
-def quality_violin(adata: sc.AnnData,
+def quality_violin(adata: sc.AnnData,  # noqa: C901
                    columns: list[str],
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
