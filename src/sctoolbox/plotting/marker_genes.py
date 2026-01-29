@@ -27,7 +27,7 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 @beartype
-def rank_genes_plot(adata: sc.AnnData,
+def rank_genes_plot(adata: sc.AnnData,  # noqa: C901
                     key: Optional[str] = "rank_genes_groups",
                     genes: Optional[list[str] | dict[str, list[str]]] = None,
                     n_genes: Optional[int] = 15,
@@ -203,7 +203,7 @@ def rank_genes_plot(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def grouped_violin(adata: sc.AnnData,
+def grouped_violin(adata: sc.AnnData,  # noqa: C901
                    x: str | list[str],
                    y: Optional[str] = None,
                    groupby: Optional[str] = None,
