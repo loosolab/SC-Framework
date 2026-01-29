@@ -23,55 +23,69 @@ import sctoolbox.tools.amulet as amulet
 
 
 @pytest.fixture
-def sample_region_data():
+def available_chromosomes():
+    """Define chromosomes used across test data - single source of truth.
+
+    All test fixtures and test methods should reference this fixture
+    instead of hardcoding chromosome names.
+    """
+    return ["chr1", "chr2"]
+
+
+@pytest.fixture
+def sample_region_data(available_chromosomes):
     """Create sample region data for testing utility functions."""
+    chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
     # Format: [chromosome, start, end, ...]
     data = np.array([
-        ["chr1", 100, 200],
-        ["chr1", 150, 250],
-        ["chr1", 300, 400],
-        ["chr2", 100, 200],
-        ["chr2", 500, 600],
+        [chr1, 100, 200],
+        [chr1, 150, 250],
+        [chr1, 300, 400],
+        [chr2, 100, 200],
+        [chr2, 500, 600],
     ], dtype=object)
     return data
 
 
 @pytest.fixture
-def sample_reads():
+def sample_reads(available_chromosomes):
     """Create sample reads for testing overlap detection."""
+    chr1 = available_chromosomes[0]
     # Simple case: 3 overlapping reads on chr1
     reads = [
-        ["chr1", 100, 200],
-        ["chr1", 150, 250],
-        ["chr1", 180, 280],
+        [chr1, 100, 200],
+        [chr1, 150, 250],
+        [chr1, 180, 280],
     ]
     return reads
 
 
 @pytest.fixture
-def sample_reads_no_overlap():
+def sample_reads_no_overlap(available_chromosomes):
     """Create non-overlapping reads."""
+    chr1 = available_chromosomes[0]
     reads = [
-        ["chr1", 100, 150],
-        ["chr1", 200, 250],
+        [chr1, 100, 150],
+        [chr1, 200, 250],
     ]
     return reads
 
 
 @pytest.fixture
-def sample_fragment_file(tmp_path):
+def sample_fragment_file(tmp_path, available_chromosomes):
     """Create a temporary fragment file for testing."""
-    fragment_content = """# Comment line
-chr1	100	200	BARCODE1	1
-chr1	150	250	BARCODE1	1
-chr1	180	280	BARCODE1	1
-chr1	300	400	BARCODE1	1
-chr1	100	200	BARCODE2	1
-chr1	110	210	BARCODE2	1
-chr1	120	220	BARCODE2	1
-chr1	130	230	BARCODE2	1
-chr2	500	600	BARCODE1	1
-chr2	100	200	BARCODE3	1
+    chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
+    fragment_content = f"""# Comment line
+{chr1}	100	200	BARCODE1	1
+{chr1}	150	250	BARCODE1	1
+{chr1}	180	280	BARCODE1	1
+{chr1}	300	400	BARCODE1	1
+{chr1}	100	200	BARCODE2	1
+{chr1}	110	210	BARCODE2	1
+{chr1}	120	220	BARCODE2	1
+{chr1}	130	230	BARCODE2	1
+{chr2}	500	600	BARCODE1	1
+{chr2}	100	200	BARCODE3	1
 """
     fragment_path = tmp_path / "fragments.tsv"
     fragment_path.write_text(fragment_content)
@@ -79,11 +93,12 @@ chr2	100	200	BARCODE3	1
 
 
 @pytest.fixture
-def sample_fragment_file_gz(tmp_path):
+def sample_fragment_file_gz(tmp_path, available_chromosomes):
     """Create a compressed fragment file for testing."""
-    fragment_content = """chr1	100	200	BARCODE1	1
-chr1	150	250	BARCODE1	1
-chr1	180	280	BARCODE1	1
+    chr1 = available_chromosomes[0]
+    fragment_content = f"""{chr1}	100	200	BARCODE1	1
+{chr1}	150	250	BARCODE1	1
+{chr1}	180	280	BARCODE1	1
 """
     fragment_path = tmp_path / "fragments.tsv.gz"
     with gzip.open(fragment_path, 'wt') as f:
@@ -92,19 +107,21 @@ chr1	180	280	BARCODE1	1
 
 
 @pytest.fixture
-def sample_repeat_regions():
+def sample_repeat_regions(available_chromosomes):
     """Create sample repeat regions for testing."""
+    chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
     return np.array([
-        ["chr1", 150, 180],
-        ["chr2", 100, 150],
+        [chr1, 150, 180],
+        [chr2, 100, 150],
     ], dtype=object)
 
 
 @pytest.fixture
-def sample_repeat_bed_file(tmp_path):
+def sample_repeat_bed_file(tmp_path, available_chromosomes):
     """Create a temporary BED file with repeat regions."""
-    bed_content = """chr1	150	180
-chr2	100	150
+    chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
+    bed_content = f"""{chr1}	150	180
+{chr2}	100	150
 """
     bed_path = tmp_path / "repeats.bed"
     bed_path.write_text(bed_content)
@@ -163,28 +180,30 @@ def sample_summary_df():
 class TestGetChrStartSorted:
     """Tests for _get_chr_start_sorted function."""
 
-    def test_basic_sorting(self, sample_region_data):
+    def test_basic_sorting(self, sample_region_data, available_chromosomes):
         """Test that data is sorted by chromosome and start position."""
+        chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
         result = amulet._get_chr_start_sorted(sample_region_data)
 
         # Should have two chromosomes
-        assert "chr1" in result
-        assert "chr2" in result
+        assert chr1 in result
+        assert chr2 in result
 
         # chr1 should have 3 entries sorted by start
-        chr1_data = result["chr1"]
+        chr1_data = result[chr1]
         assert len(chr1_data) == 3
         # Check starts are sorted
         assert chr1_data[0, 0] == 100
         assert chr1_data[1, 0] == 150
         assert chr1_data[2, 0] == 300
 
-    def test_index_mapping(self, sample_region_data):
+    def test_index_mapping(self, sample_region_data, available_chromosomes):
         """Test that index mapping is correct."""
+        chr1 = available_chromosomes[0]
         result = amulet._get_chr_start_sorted(sample_region_data)
 
         # First entry in chr1 should map to index 0 in original data
-        chr1_data = result["chr1"]
+        chr1_data = result[chr1]
         original_idx = int(chr1_data[0, 1])
         assert sample_region_data[original_idx, 1] == 100
 
@@ -198,13 +217,14 @@ class TestGetChrStartSorted:
 class TestGetOverlappingRegions:
     """Tests for _get_overlapping_regions function."""
 
-    def test_find_overlapping(self, sample_region_data):
+    def test_find_overlapping(self, sample_region_data, available_chromosomes):
         """Test finding overlapping regions."""
+        chr1 = available_chromosomes[0]
         chr_start_sorted = amulet._get_chr_start_sorted(sample_region_data)
 
         # Query region that overlaps with first two chr1 entries
         result = amulet._get_overlapping_regions(
-            "chr1", 120, 170, chr_start_sorted, sample_region_data
+            chr1, 120, 170, chr_start_sorted, sample_region_data
         )
 
         # Should find indices 0 and 1 (the first two chr1 entries overlap)
@@ -212,24 +232,26 @@ class TestGetOverlappingRegions:
         assert 0 in result
         assert 1 in result
 
-    def test_no_overlap(self, sample_region_data):
+    def test_no_overlap(self, sample_region_data, available_chromosomes):
         """Test query with no overlapping regions."""
+        chr1 = available_chromosomes[0]
         chr_start_sorted = amulet._get_chr_start_sorted(sample_region_data)
 
         # Query region that doesn't overlap anything
         result = amulet._get_overlapping_regions(
-            "chr1", 500, 600, chr_start_sorted, sample_region_data
+            chr1, 500, 600, chr_start_sorted, sample_region_data
         )
 
         assert len(result) == 0
 
-    def test_exact_boundaries(self, sample_region_data):
+    def test_exact_boundaries(self, sample_region_data, available_chromosomes):
         """Test with exact boundary overlap."""
+        chr1 = available_chromosomes[0]
         chr_start_sorted = amulet._get_chr_start_sorted(sample_region_data)
 
         # Query exactly matching first entry
         result = amulet._get_overlapping_regions(
-            "chr1", 100, 200, chr_start_sorted, sample_region_data
+            chr1, 100, 200, chr_start_sorted, sample_region_data
         )
 
         # Should find at least the first entry
@@ -239,8 +261,9 @@ class TestGetOverlappingRegions:
         """Test query on non-existent chromosome."""
         chr_start_sorted = amulet._get_chr_start_sorted(sample_region_data)
 
+        # Use a chromosome name that definitely doesn't exist in test data
         result = amulet._get_overlapping_regions(
-            "chrX", 100, 200, chr_start_sorted, sample_region_data
+            "chrNONEXISTENT", 100, 200, chr_start_sorted, sample_region_data
         )
 
         assert len(result) == 0
@@ -249,34 +272,37 @@ class TestGetOverlappingRegions:
 class TestGetUnionPeaks:
     """Tests for _get_union_peaks function."""
 
-    def test_merge_overlapping(self):
+    def test_merge_overlapping(self, available_chromosomes):
         """Test merging of overlapping regions."""
-        data1 = np.array([["chr1", 100, 200]], dtype=object)
-        data2 = np.array([["chr1", 150, 250]], dtype=object)
+        chr1 = available_chromosomes[0]
+        data1 = np.array([[chr1, 100, 200]], dtype=object)
+        data2 = np.array([[chr1, 150, 250]], dtype=object)
 
         result = amulet._get_union_peaks((data1, data2))
 
         # Should merge into single region
         assert len(result) == 1
-        assert result[0][0] == "chr1"
+        assert result[0][0] == chr1
         assert result[0][1] == 100
         assert result[0][2] == 250
 
-    def test_non_overlapping_separate(self):
+    def test_non_overlapping_separate(self, available_chromosomes):
         """Test that non-overlapping regions stay separate."""
-        data1 = np.array([["chr1", 100, 200]], dtype=object)
-        data2 = np.array([["chr1", 300, 400]], dtype=object)
+        chr1 = available_chromosomes[0]
+        data1 = np.array([[chr1, 100, 200]], dtype=object)
+        data2 = np.array([[chr1, 300, 400]], dtype=object)
 
         result = amulet._get_union_peaks((data1, data2))
 
         # Should have 2 separate regions
         assert len(result) == 2
 
-    def test_multiple_chromosomes(self):
+    def test_multiple_chromosomes(self, available_chromosomes):
         """Test with regions on multiple chromosomes."""
+        chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
         data = np.array([
-            ["chr1", 100, 200],
-            ["chr2", 100, 200],
+            [chr1, 100, 200],
+            [chr2, 100, 200],
         ], dtype=object)
 
         result = amulet._get_union_peaks((data,))
@@ -288,11 +314,12 @@ class TestGetUnionPeaks:
 class TestGetOverlapCount:
     """Tests for _get_overlap_count function."""
 
-    def test_count_overlaps(self, sample_region_data):
+    def test_count_overlaps(self, sample_region_data, available_chromosomes):
         """Test counting overlaps with multiple datasets."""
+        chr1 = available_chromosomes[0]
         # Create reference datasets
-        dataset1 = np.array([["chr1", 100, 200]], dtype=object)
-        dataset2 = np.array([["chr1", 150, 250]], dtype=object)
+        dataset1 = np.array([[chr1, 100, 200]], dtype=object)
+        dataset2 = np.array([[chr1, 150, 250]], dtype=object)
 
         overlap_vector, overlap_matrix = amulet._get_overlap_count(
             sample_region_data, (dataset1, dataset2)
@@ -318,8 +345,9 @@ class TestGetOverlapCount:
 class TestGetOverlapsBasic:
     """Tests for _get_overlaps function."""
 
-    def test_simple_overlap(self, sample_reads):
+    def test_simple_overlap(self, sample_reads, available_chromosomes):
         """Test with simple overlapping reads."""
+        chr1 = available_chromosomes[0]
         result = amulet._get_overlaps(sample_reads, expected_overlap=2)
 
         # Should detect one overlap region
@@ -327,7 +355,7 @@ class TestGetOverlapsBasic:
 
         # Check chromosome and position
         overlap = result[0]
-        assert overlap[0] == "chr1"
+        assert overlap[0] == chr1
         assert overlap[3] >= 3  # min_overlap >= 3
         assert overlap[4] >= 3  # max_overlap >= 3
 
@@ -353,11 +381,12 @@ class TestGetOverlapsNoOverlap:
         # Should return empty list
         assert len(result) == 0
 
-    def test_exactly_two_reads(self):
+    def test_exactly_two_reads(self, available_chromosomes):
         """Test with exactly 2 overlapping reads (threshold edge case)."""
+        chr1 = available_chromosomes[0]
         reads = [
-            ["chr1", 100, 200],
-            ["chr1", 150, 250],
+            [chr1, 100, 200],
+            [chr1, 150, 250],
         ]
 
         # With expected_overlap=2, exactly 2 overlapping reads should NOT trigger
@@ -368,12 +397,13 @@ class TestGetOverlapsNoOverlap:
 class TestGetOverlapsEdgeCases:
     """Edge case tests for _get_overlaps."""
 
-    def test_three_overlapping_reads(self):
+    def test_three_overlapping_reads(self, available_chromosomes):
         """Test that 3+ overlapping reads trigger detection."""
+        chr1 = available_chromosomes[0]
         reads = [
-            ["chr1", 100, 200],
-            ["chr1", 150, 250],
-            ["chr1", 175, 275],
+            [chr1, 100, 200],
+            [chr1, 150, 250],
+            [chr1, 175, 275],
         ]
 
         result = amulet._get_overlaps(reads, expected_overlap=2)
@@ -386,9 +416,10 @@ class TestGetOverlapsEdgeCases:
         result = amulet._get_overlaps([], expected_overlap=2)
         assert len(result) == 0
 
-    def test_single_read(self):
+    def test_single_read(self, available_chromosomes):
         """Test with single read."""
-        reads = [["chr1", 100, 200]]
+        chr1 = available_chromosomes[0]
+        reads = [[chr1, 100, 200]]
         result = amulet._get_overlaps(reads, expected_overlap=2)
         assert len(result) == 0
 
@@ -434,12 +465,12 @@ class TestAssignReadsWithinOverlaps:
 class TestCountFragmentOverlaps:
     """Tests for count_fragment_overlaps function."""
 
-    def test_parse_tsv(self, sample_fragment_file):
+    def test_parse_tsv(self, sample_fragment_file, available_chromosomes):
         """Test parsing plain TSV file."""
         barcodes = ["BARCODE1", "BARCODE2", "BARCODE3"]
 
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
-            sample_fragment_file, barcodes, chromosomes=["chr1", "chr2"]
+            sample_fragment_file, barcodes, chromosomes=available_chromosomes
         )
 
         # Check overlaps_df structure
@@ -450,52 +481,55 @@ class TestCountFragmentOverlaps:
         assert "starts" in overlaps_df.columns
         assert "ends" in overlaps_df.columns
 
-    def test_parse_gzip(self, sample_fragment_file_gz):
+    def test_parse_gzip(self, sample_fragment_file_gz, available_chromosomes):
         """Test parsing gzipped TSV file."""
+        chr1 = available_chromosomes[0]
         barcodes = ["BARCODE1"]
 
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
-            sample_fragment_file_gz, barcodes, chromosomes=["chr1"]
+            sample_fragment_file_gz, barcodes, chromosomes=[chr1]
         )
 
         # Should parse without error
         assert isinstance(overlaps_df, pd.DataFrame)
         assert isinstance(summary_df, pd.DataFrame)
 
-    def test_barcode_filtering(self, sample_fragment_file):
+    def test_barcode_filtering(self, sample_fragment_file, available_chromosomes):
         """Test that barcode filtering works."""
         # Only include BARCODE1
         barcodes = ["BARCODE1"]
 
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
-            sample_fragment_file, barcodes, chromosomes=["chr1", "chr2"]
+            sample_fragment_file, barcodes, chromosomes=available_chromosomes
         )
 
         # All overlaps should be from BARCODE1
         if len(overlaps_df) > 0:
             assert all(overlaps_df["cell_id"] == "BARCODE1")
 
-    def test_chromosome_filtering(self, sample_fragment_file):
+    def test_chromosome_filtering(self, sample_fragment_file, available_chromosomes):
         """Test that chromosome filtering works."""
+        chr1 = available_chromosomes[0]
         barcodes = ["BARCODE1", "BARCODE2"]
 
-        # Only include chr1
+        # Only include first chromosome
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
-            sample_fragment_file, barcodes, chromosomes=["chr1"]
+            sample_fragment_file, barcodes, chromosomes=[chr1]
         )
 
         # All overlaps should be from chr1
         if len(overlaps_df) > 0:
-            assert all(overlaps_df["chr"] == "chr1")
+            assert all(overlaps_df["chr"] == chr1)
 
-    def test_insert_size_filtering(self, sample_fragment_file):
+    def test_insert_size_filtering(self, sample_fragment_file, available_chromosomes):
         """Test that insert size filtering works."""
+        chr1 = available_chromosomes[0]
         barcodes = ["BARCODE1", "BARCODE2"]
 
         # Set very small max insert size
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
             sample_fragment_file, barcodes,
-            chromosomes=["chr1"],
+            chromosomes=[chr1],
             max_insert_size=50  # Very small
         )
 
@@ -503,12 +537,13 @@ class TestCountFragmentOverlaps:
         # Check valid reads count
         assert summary_df["n_valid_reads"].sum() == 0
 
-    def test_starts_ends_columns(self, sample_fragment_file):
+    def test_starts_ends_columns(self, sample_fragment_file, available_chromosomes):
         """Test that overlaps_df contains starts and ends columns."""
+        chr1 = available_chromosomes[0]
         barcodes = ["BARCODE1", "BARCODE2"]
 
         overlaps_df, summary_df = amulet.count_fragment_overlaps(
-            sample_fragment_file, barcodes, chromosomes=["chr1"]
+            sample_fragment_file, barcodes, chromosomes=[chr1]
         )
 
         assert "starts" in overlaps_df.columns
@@ -607,8 +642,9 @@ class TestGenerateMatrix:
 class TestInferRepeats:
     """Tests for _infer_repeats function."""
 
-    def test_detects_high_overlap_regions(self):
+    def test_detects_high_overlap_regions(self, available_chromosomes):
         """Test that high-overlap regions are detected as repetitive."""
+        chr1 = available_chromosomes[0]
         # Create matrix where first region has very high overlap
         matrix = np.array([
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Region 0: overlaps in all cells
@@ -617,9 +653,9 @@ class TestInferRepeats:
         ])
 
         union_overlaps = np.array([
-            ["chr1", 100, 200],
-            ["chr1", 300, 400],
-            ["chr1", 500, 600],
+            [chr1, 100, 200],
+            [chr1, 300, 400],
+            [chr1, 500, 600],
         ], dtype=object)
 
         rep_regions, non_rep, probas = amulet._infer_repeats(
@@ -630,12 +666,13 @@ class TestInferRepeats:
         # (it has significantly more overlaps than average)
         assert len(rep_regions) >= 1
 
-    def test_returns_probabilities(self):
+    def test_returns_probabilities(self, available_chromosomes):
         """Test that probabilities are returned."""
+        chr1 = available_chromosomes[0]
         matrix = np.array([[1, 0], [0, 1]])
         union_overlaps = np.array([
-            ["chr1", 100, 200],
-            ["chr1", 300, 400],
+            [chr1, 100, 200],
+            [chr1, 300, 400],
         ], dtype=object)
 
         rep_regions, non_rep, probas = amulet._infer_repeats(
@@ -649,8 +686,9 @@ class TestInferRepeats:
 class TestGetDoublets:
     """Tests for _get_doublets function."""
 
-    def test_pvalue_calculation(self):
+    def test_pvalue_calculation(self, available_chromosomes):
         """Test that p-values are calculated."""
+        chr1 = available_chromosomes[0]
         matrix = np.array([
             [1, 1, 1, 0, 0],
             [1, 1, 1, 0, 0],
@@ -658,9 +696,9 @@ class TestGetDoublets:
         ])
 
         union_overlaps = np.array([
-            ["chr1", 100, 200],
-            ["chr1", 300, 400],
-            ["chr1", 500, 600],
+            [chr1, 100, 200],
+            [chr1, 300, 400],
+            [chr1, 500, 600],
         ], dtype=object)
 
         reverse_dict = {0: "CELL1", 1: "CELL2", 2: "CELL3", 3: "CELL4", 4: "CELL5"}
@@ -671,8 +709,9 @@ class TestGetDoublets:
         assert result.shape[1] == 3
         assert len(result) == 5  # 5 cells
 
-    def test_fdr_correction(self):
+    def test_fdr_correction(self, available_chromosomes):
         """Test that FDR correction is applied."""
+        chr1 = available_chromosomes[0]
         # Create matrix where some cells have many more overlaps
         matrix = np.array([
             [1, 1, 1, 0, 0],
@@ -683,11 +722,11 @@ class TestGetDoublets:
         ])
 
         union_overlaps = np.array([
-            ["chr1", 100, 200],
-            ["chr1", 300, 400],
-            ["chr1", 500, 600],
-            ["chr1", 700, 800],
-            ["chr1", 900, 1000],
+            [chr1, 100, 200],
+            [chr1, 300, 400],
+            [chr1, 500, 600],
+            [chr1, 700, 800],
+            [chr1, 900, 1000],
         ], dtype=object)
 
         reverse_dict = {0: "CELL1", 1: "CELL2", 2: "CELL3", 3: "CELL4", 4: "CELL5"}
@@ -769,29 +808,29 @@ class TestDetectMultiplets:
 class TestEstimateDoubletsAmuletBasic:
     """Basic tests for estimate_doublets_amulet function."""
 
-    def test_adds_doublet_score(self, sample_adata, sample_fragment_file):
+    def test_adds_doublet_score(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test that doublet_score is added to adata.obs."""
         amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"]
+            chromosomes=available_chromosomes
         )
 
         assert "doublet_score" in sample_adata.obs.columns
 
-    def test_adds_predicted_doublet(self, sample_adata, sample_fragment_file):
+    def test_adds_predicted_doublet(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test that predicted_doublet is added to adata.obs."""
         amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"]
+            chromosomes=available_chromosomes
         )
 
         assert "predicted_doublet" in sample_adata.obs.columns
 
-    def test_adds_metadata(self, sample_adata, sample_fragment_file):
+    def test_adds_metadata(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test that metadata is added to adata.uns."""
         amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"]
+            chromosomes=available_chromosomes
         )
 
         assert "amulet" in sample_adata.uns
@@ -801,11 +840,11 @@ class TestEstimateDoubletsAmuletBasic:
 class TestEstimateDoubletsAmuletGroupby:
     """Tests for estimate_doublets_amulet with groupby parameter."""
 
-    def test_per_sample_processing(self, sample_adata, sample_fragment_file):
+    def test_per_sample_processing(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test per-sample processing with groupby."""
         amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"],
+            chromosomes=available_chromosomes,
             groupby="sample"
         )
 
@@ -813,11 +852,11 @@ class TestEstimateDoubletsAmuletGroupby:
         assert "doublet_score" in sample_adata.obs.columns
         assert "predicted_doublet" in sample_adata.obs.columns
 
-    def test_results_combined(self, sample_adata, sample_fragment_file):
+    def test_results_combined(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test that results are combined correctly across groups."""
         amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"],
+            chromosomes=available_chromosomes,
             groupby="sample"
         )
 
@@ -828,22 +867,22 @@ class TestEstimateDoubletsAmuletGroupby:
 class TestEstimateDoubletsAmuletInplace:
     """Tests for estimate_doublets_amulet inplace parameter."""
 
-    def test_inplace_true(self, sample_adata, sample_fragment_file):
+    def test_inplace_true(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test inplace=True returns None."""
         result = amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"],
+            chromosomes=available_chromosomes,
             inplace=True
         )
 
         assert result is None
         assert "doublet_score" in sample_adata.obs.columns
 
-    def test_inplace_false(self, sample_adata, sample_fragment_file):
+    def test_inplace_false(self, sample_adata, sample_fragment_file, available_chromosomes):
         """Test inplace=False returns modified AnnData."""
         result = amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"],
+            chromosomes=available_chromosomes,
             inplace=False
         )
 
@@ -858,18 +897,18 @@ class TestEstimateDoubletsAmuletInplace:
 class TestEstimateDoubletsAmuletWithRepeats:
     """Tests for estimate_doublets_amulet with repeat filter."""
 
-    def test_with_repeat_bed(self, sample_adata, sample_fragment_file, sample_repeat_bed_file):
+    def test_with_repeat_bed(self, sample_adata, sample_fragment_file, sample_repeat_bed_file, available_chromosomes):
         """Test with repeat filter BED file."""
         amulet.estimate_doublets_amulet(
             sample_adata, sample_fragment_file,
-            chromosomes=["chr1", "chr2"],
+            chromosomes=available_chromosomes,
             repeat_filter=sample_repeat_bed_file
         )
 
         # Should complete without error
         assert "doublet_score" in sample_adata.obs.columns
 
-    def test_filters_known_repeats(self, sample_adata, sample_fragment_file, sample_repeat_bed_file):
+    def test_filters_known_repeats(self, sample_adata, sample_fragment_file, sample_repeat_bed_file, available_chromosomes):
         """Test that known repeats are filtered."""
         # Run with and without repeat filter
         adata_no_filter = sample_adata.copy()
@@ -877,12 +916,12 @@ class TestEstimateDoubletsAmuletWithRepeats:
 
         amulet.estimate_doublets_amulet(
             adata_no_filter, sample_fragment_file,
-            chromosomes=["chr1", "chr2"]
+            chromosomes=available_chromosomes
         )
 
         amulet.estimate_doublets_amulet(
             adata_with_filter, sample_fragment_file,
-            chromosomes=["chr1", "chr2"],
+            chromosomes=available_chromosomes,
             repeat_filter=sample_repeat_bed_file
         )
 
