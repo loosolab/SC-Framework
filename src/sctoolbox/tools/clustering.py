@@ -13,7 +13,7 @@ import numpy.typing as npt
 
 @deco.log_anndata
 @beartype
-def recluster(adata: sc.AnnData,
+def recluster(adata: sc.AnnData,  # noqa: C901
               column: str,
               clusters: str | list[str],
               task: Literal["join", "split"] = "join",
