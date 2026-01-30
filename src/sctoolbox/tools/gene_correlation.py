@@ -101,6 +101,15 @@ def correlate_ref_vs_all(adata: sc.AnnData,
     def spearmanr_of_gene(ref: np.ndarray, gene: np.ndarray, gene_name: str) -> tuple:
         """Get tuple of gene and spearman correlation of gene to reference.
 
+        Parameters
+        ----------
+        ref : np.ndarray
+            Reference values.
+        gene : np.ndarray
+            Expression values.
+        gene_name : str
+            Gene name.
+
         Returns
         -------
         tuple
