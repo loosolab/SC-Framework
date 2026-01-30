@@ -217,8 +217,6 @@ cache:
 
 # lint code and docstrings with ruff
 # Configuration is in pyproject.toml [tool.ruff] section
-# Ruff ignore rules: E501 (line too long), D202 (blank lines after docstring)
-# Note: W503, DOC301, DOC105 from flake8 don't exist in ruff
 lint:
   image:
     name: python:latest
