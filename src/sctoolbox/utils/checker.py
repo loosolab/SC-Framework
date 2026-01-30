@@ -36,8 +36,6 @@ def check_module(module: str, addon: Optional[str] = None) -> None:
     ------
     ImportError
         If the module is not available for import.
-    Exception
-        If the module cannot be loaded due to an unknown exception.
     """
 
     error = 0
@@ -45,8 +43,6 @@ def check_module(module: str, addon: Optional[str] = None) -> None:
         importlib.import_module(module)
     except ModuleNotFoundError:
         error = 1
-    except Exception:
-        raise  # unexpected error loading module
 
     # Write out error if module was not found
     if error == 1:
@@ -162,7 +158,7 @@ def is_str_numeric(ans: str) -> bool:
 
 
 @beartype
-def var_column_to_index(adata: sc.AnnData,
+def var_column_to_index(adata: sc.AnnData,  # noqa: C901
                         coordinate_cols: Optional[Union[list[str], str]] = None,
                         remove_var_index_prefix: bool = True,
                         keep_original_index: Optional[str] = None,
