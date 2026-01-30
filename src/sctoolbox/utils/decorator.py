@@ -5,7 +5,7 @@ import functools
 import pandas as pd
 import matplotlib
 
-from beartype.typing import Callable
+from beartype.typing import Callable, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -30,7 +30,7 @@ def log_anndata(func: Callable) -> Callable:
     # TODO store datatypes not supported by scanpy.write as string representation (repr())
 
     @functools.wraps(func)  # preserve information of the decorated func
-    def wrapper(*args: Any, **kwargs: Any) -> callable:
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
 
         # find anndata object within parameters (if there are more use the first one)
         adata = None
@@ -135,6 +135,6 @@ def debug_func_log(func: Callable) -> None:
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         print(f"DEBUG: {func.__name__} called with args: {args} and kwargs: {kwargs}")
         return func(*args, **kwargs)
