@@ -96,7 +96,13 @@ def df():
 
 @pytest.fixture
 def tmp_file():
-    """Return path for a temporary file."""
+    """
+    Return path for a temporary file.
+
+    Yields
+    ------
+    A temporary file path
+    """
     tmpdir = tempfile.mkdtemp()
 
     yield os.path.join(tmpdir, "output.pdf")
