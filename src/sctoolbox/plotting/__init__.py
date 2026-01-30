@@ -17,12 +17,12 @@ __all__ = [
 ]
 
 
-def __dir__():
+def __dir__() -> list:
     """Return the defined submodules."""
     return __all__
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> _importlib.Module:
     """Lazyload modules (inspired by scipy)."""
     if name in __all__:
         # return import to make it directly available

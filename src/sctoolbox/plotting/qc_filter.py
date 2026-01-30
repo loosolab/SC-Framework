@@ -113,13 +113,13 @@ def plot_starsolo_quality(folder: str,
     """
 
     # Prepare functions for converting labels
-    def format_million(label):
+    def format_million(label: str) -> str:
         return '{:,.0f} M'.format(int(label) / 10**6)
 
-    def format_thousand(label):
+    def format_thousand(label: str) -> str:
         return '{:,.0f} K'.format(int(label) / 10**3)
 
-    def format_percent(label):
+    def format_percent(label: str) -> str:
         return '{:,.0f}%'.format(float(label) * 100)
 
     # Get summary table
@@ -250,7 +250,7 @@ def plot_starsolo_UMI(folder: str,
 @beartype
 def _n_cells_pieplot(adata: sc.AnnData,
                      groupby: str,
-                     figsize: Optional[Tuple[int | float, int | float]] = None):
+                     figsize: Optional[Tuple[int | float, int | float]] = None) -> None:
     """
     Plot number of cells per group in a pieplot.
 
@@ -591,7 +591,12 @@ def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox | traitlets.utils.bunc
                 linkage.unlink()
 
 
-def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
+def _update_thresholds(slider: dict,
+                       fig: plt.Figure,
+                       min_line: plt.Line2D,
+                       min_shade: Rectangle,
+                       max_line: plt.Line2D,
+                       max_shade: Rectangle) -> None:
     """Update the locations of thresholds in plot."""
 
     tmin, tmax = slider["new"]  # threshold values from slider

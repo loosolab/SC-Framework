@@ -149,7 +149,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
                                    obs_columns: list | None = None,
                                    obs_thresholds: list | None = None,
                                    obs_aggregator_array: list | None = None,
-                                   **kwargs) -> pd.DataFrame:
+                                   **kwargs: Any) -> pd.DataFrame:
     """
     Preprocess data from an anndata object and return a dataframe for the planet_plot_render function.
 

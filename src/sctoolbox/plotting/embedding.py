@@ -75,7 +75,7 @@ def grey_colormap() -> ListedColormap:
 
 @deco.log_anndata
 @beartype
-def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertical", "horizontal"] = "vertical"):
+def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertical", "horizontal"] = "vertical") -> None:
     """Flip the embedding in adata.obsm[key] along the given axis.
 
     Parameters
@@ -113,7 +113,7 @@ def flip_embedding(adata: sc.AnnData, key: str = "X_umap", how: Literal["vertica
 @beartype
 def _add_contour(x: NDArray,
                  y: NDArray,
-                 ax: Axes):
+                 ax: Axes) -> None:
     """Add contour plot to a scatter plot.
 
     Parameters
@@ -201,7 +201,7 @@ def _binarize_expression(adata: sc.AnnData,
                          features: list[str],
                          threshold: Optional[float] = 0,
                          percentile_threshold: Optional[float] = None,
-                         var_col: Optional[str] = None):
+                         var_col: Optional[str] = None) -> None:
     """
     Binarize the expression of a list of features based on a threshold and store the results in adata.obs.
 
@@ -261,7 +261,7 @@ def plot_embedding(adata: sc.AnnData,  # noqa: C901
                    save: Optional[str] = None,
                    report: Optional[str] = None,
                    rasterize: bool = False,
-                   **kwargs) -> NDArray[Axes]:
+                   **kwargs: Any) -> NDArray[Axes]:
     """Plot a dimensionality reduction embedding e.g. UMAP or tSNE with different style options. This is a wrapper around scanpy.pl.embedding.
 
     Parameters
@@ -648,7 +648,7 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
                       save: Optional[str] = None,
                       report: Optional[str] = None,
                       rasterize: bool = True,
-                      **kwargs) -> NDArray[Axes]:
+                      **kwargs: Any) -> NDArray[Axes]:
     """
     Plot a grid of embeddings with rows/columns corresponding to adata.obs column(s).
 
@@ -790,7 +790,7 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
 
 @deco.log_anndata
 @beartype
-def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, **kwargs) -> NDArray[Axes]:
+def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_score: bool = False, fun: Callable = np.mean, fun_kwargs: dict = {"axis": 1}, report: Optional[str] = None, layer: Optional[str] = None, **kwargs: Any) -> NDArray[Axes]:
     """
     Plot the embedding colored by an aggregated score based on the given set of features. E.g. a UMAP colored by the mean expression several provided genes.
 
@@ -1039,7 +1039,7 @@ def _search_dim_red_parameters(adata: sc.AnnData,  # noqa: C901
     if threads is None:
         threads = settings.get_threads()
 
-    def get_loop_params(r):
+    def get_loop_params(r: tuple) -> NDArray:
         """Get parameters to loop over.
 
         Parameters
@@ -1751,7 +1751,7 @@ def anndata_overview(adatas: dict[str, sc.AnnData],  # noqa: C901
         plots = [plots]
 
     # ---- helper functions ---- #
-    def annotate_row(ax, plot_type):
+    def annotate_row(ax: Axes, plot_type: str) -> None:
         """Annotate row in figure."""
         # https://stackoverflow.com/a/25814386
         ax.annotate(plot_type,

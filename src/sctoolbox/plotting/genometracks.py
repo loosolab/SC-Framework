@@ -65,7 +65,7 @@ class GenomeTracks():
     .. image:: genometrack_X.png
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the GenomeTracks object."""
 
         self.tracks = []  # dictionary of tracks
@@ -80,7 +80,7 @@ class GenomeTracks():
 
         self.output = None  # path to the output file if written
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of the GenomeTracks object.
 
         Returns
@@ -94,7 +94,7 @@ class GenomeTracks():
                   file: str,
                   file_type: Optional[str] = None,
                   name: Optional[str] = None,
-                  **kwargs: Any):
+                  **kwargs: Any) -> None:
         """Add a track to the GenomeTracks object.
 
         The track will be added to the configuration file as one element, e.g. .add_track("file1.bed", file_type="bed", name="my_bed") will add the following to the configuration file:
@@ -177,7 +177,7 @@ class GenomeTracks():
     def add_hlines(self,
                    y_values: Iterable[int | float],
                    overlay_previous: Literal["share-y", "no"] = "share-y",
-                   **kwargs: Any):
+                   **kwargs: Any) -> None:
         """Add horizontal lines to the previous plot.
 
         Parameters
@@ -201,7 +201,7 @@ class GenomeTracks():
     def add_hline(self,
                   height: int | float = 1,
                   line_width: int | float = 2,
-                  **kwargs: Any):
+                  **kwargs: Any) -> None:
         """Add a horizontal line between tracks, not within a track.
 
         Can be used to visually separate tracks.
@@ -225,7 +225,7 @@ class GenomeTracks():
         self.add_hlines([1], min_value=0, max_value=2, **d)  # line is in the middle of the track
 
     def add_spacer(self,
-                   height: int | float = 1):
+                   height: int | float = 1) -> None:
         """Add a spacer between tracks.
 
         Parameters
@@ -238,7 +238,7 @@ class GenomeTracks():
 
     def add_xaxis(self,
                   height: int | float = 1,
-                  **kwargs: Any):
+                  **kwargs: Any) -> None:
         """Add the x-axis to the plot.
 
         Parameters
@@ -324,7 +324,7 @@ class GenomeTracks():
 
         return config_file
 
-    def show_plot(self):
+    def show_plot(self) -> None:
         """Display the plot.
 
         Raises
@@ -354,7 +354,7 @@ class GenomeTracks():
             else:
                 logger.warning("Only .png files can be shown in the console.")
 
-    def show_config(self):
+    def show_config(self) -> None:
         """Show the current configuration file as a string."""
 
         config_str = self._create_config_str()
@@ -367,7 +367,7 @@ class GenomeTracks():
              title: Optional[str] = None,
              show: bool = True,
              dpi: int = 300,
-             **kwargs: Any):
+             **kwargs: Any) -> None:
         """
         Plot the final GenomeTracks plot based on the collected tracks.
 
