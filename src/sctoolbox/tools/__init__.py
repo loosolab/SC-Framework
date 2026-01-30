@@ -33,7 +33,7 @@ def __dir__() -> str:
     return __all__
 
 
-def __getattr__(name: str) -> object:
+def __getattr__(name: str) -> _importlib.Module:
     """Lazyload modules (inspired by scipy)."""
     if name in __all__:
         # return import to make it directly available
