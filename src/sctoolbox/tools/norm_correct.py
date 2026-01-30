@@ -28,7 +28,7 @@ batch_methods = Literal["bbknn",
 #####################################################################
 
 
-def atac_norm(*args: Any, **kwargs: Any):
+def atac_norm(*args: Any, **kwargs: Any) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """Normalize ATAC data - deprecated functionality. Use normalize_adata instead.
 
     Returns

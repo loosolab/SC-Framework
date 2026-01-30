@@ -94,7 +94,7 @@ def recluster(adata: sc.AnnData,  # noqa: C901
     # Check that method is valid
     if method == "leiden":
         # set future defaults to omit warning
-        def cl_function(*args, **kwargs):
+        def cl_function(*args: Any, **kwargs: Any) -> None:
             sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
 
     # Check if clusters are found in column

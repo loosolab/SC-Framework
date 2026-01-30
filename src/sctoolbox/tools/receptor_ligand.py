@@ -1208,7 +1208,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
         # create a custom sort function
         sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
 
-        def sort_fun(x):
+        def sort_fun(x: pd.Series) -> pd.Series:
             return x.map(sorting_dict)
     else:
         sort_fun = None
@@ -1292,7 +1292,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
     if connection_alpha:
         # set custom min and max values
         if alpha_range:
-            def alpha_sorter(x):
+            def alpha_sorter(x: float | int) -> float | int:
                 """Set values outside of range to min or max.
 
                 Returns
@@ -1360,7 +1360,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
     # ----- legends -----
     step_num = 5  # the number of steps in all legends
 
-    def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
+    def _create_handle_list(hue: str, hue_range: Tuple[int | float, int | float], palette: str, size: str, size_range: Tuple[int | float, int | float], dot_size: Tuple[int | float, int | float], step_num: int = 5) -> list:
         """Create a custom handle list for the legend.
 
         Returns
@@ -1380,7 +1380,7 @@ def connectionPlot(adata: sc.AnnData,  # noqa: C901
         size_steps = np.linspace(*(size_range), num=step_num)
 
         # size normalization
-        def size_norm(x):
+        def size_norm(x: float | int) -> float:
             """Scale dot sizes.
 
             Returns
@@ -1542,7 +1542,7 @@ def get_interactions(anndata: sc.AnnData,
 
 
 @beartype
-def _check_interactions(anndata: sc.AnnData):
+def _check_interactions(anndata: sc.AnnData) -> None:
     """
     Return error message if anndata object doesn't contain interaction data.
 

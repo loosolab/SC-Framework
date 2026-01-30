@@ -98,7 +98,7 @@ def correlate_ref_vs_all(adata: sc.AnnData,
         Dataframe containing correlation of refrence gene to other genes.
     """
 
-    def spearmanr_of_gene(ref, gene, gene_name):
+    def spearmanr_of_gene(ref: np.ndarray, gene: np.ndarray, gene_name: str) -> tuple:
         """Get tuple of gene and spearman correlation of gene to reference.
 
         Returns
@@ -108,7 +108,7 @@ def correlate_ref_vs_all(adata: sc.AnnData,
         """
         return (gene_name, spearmanr(ref, gene))
 
-    def map_correlation_strength(x):
+    def map_correlation_strength(x: float) -> str | float:
         """Map correlation to describing strings.
 
         Parameters
@@ -191,7 +191,7 @@ def compare_two_conditons(df_cond_A: pd.DataFrame,
         Dataframe containing single correlation and Fischer Z transformation
     """
 
-    def independent_corr(gene_row, n_xy, n_ab):
+    def independent_corr(gene_row: pd.Series, n_xy: int, n_ab: int) -> tuple[float, float]:
         """z-transforms correlation coefficient xy (of n cells) andab (of n2 cells) and p-value of the difference.
 
         Returns
