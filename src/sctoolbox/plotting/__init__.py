@@ -1,6 +1,7 @@
 """sctoolbox plotting functions."""
 
 import importlib as _importlib
+from types import ModuleType
 
 # define what is exported in this module
 __all__ = [
@@ -22,7 +23,7 @@ def __dir__() -> list:
     return __all__
 
 
-def __getattr__(name: str) -> _importlib.Module:
+def __getattr__(name: str) -> ModuleType:
     """Lazyload modules (inspired by scipy)."""
     if name in __all__:
         # return import to make it directly available
