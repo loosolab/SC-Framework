@@ -359,7 +359,7 @@ def wrap_corrections(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def batch_correction(adata: sc.AnnData,
+def batch_correction(adata: sc.AnnData,  # noqa: C901
                      batch_key: str,
                      method: Union[batch_methods,
                                    list[batch_methods],
@@ -478,9 +478,8 @@ def batch_correction(adata: sc.AnnData,
 
         # Set highly variable genes as var_subset if chosen (and available)
         var_subset = None
-        if highly_variable:
-            if "highly_variable" in adata.var.columns:
-                var_subset = adata.var[adata.var.highly_variable].index
+        if highly_variable and "highly_variable" in adata.var.columns:
+            var_subset = adata.var[adata.var.highly_variable].index
 
         # give individual adatas to mnn_correct
         corrected_adatas, _, _ = sce.pp.mnn_correct(adatas, batch_key=batch_key, var_subset=var_subset,
@@ -632,7 +631,7 @@ def evaluate_batch_effect(adata: sc.AnnData,
 
 
 @beartype
-def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],
+def wrap_batch_evaluation(adatas: dict[str, sc.AnnData],  # noqa: C901
                           batch_key: str,
                           obsm_keys: str | list[str] = ['X_pca', 'X_umap'],
                           threads: Optional[int] = 1,
