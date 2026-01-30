@@ -13,7 +13,7 @@ from beartype.typing import Optional, Any, Literal
 
 
 @beartype
-def gitlab_download(internal_path: str,
+def gitlab_download(internal_path: str,  # noqa: C901
                     file_regex: str,
                     host: str = "https://gitlab.gwdg.de/",
                     repo: str = "sc_framework",
