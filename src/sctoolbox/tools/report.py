@@ -51,7 +51,7 @@ def _get_slide_kwargs(section: str, slide_section_dict: Dict[str, Dict[str, Any]
 
 
 @beartype
-def generate_report(
+def generate_report(  # noqa: C901
     dataset_name: str,
     section_titles: Dict[str, str],
     slide_sec_kwargs: Dict[str, Dict[str, Any] | List[Dict[str, Any]]],
