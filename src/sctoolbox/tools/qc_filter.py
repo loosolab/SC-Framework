@@ -103,7 +103,7 @@ def calculate_qc_metrics(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def predict_cell_cycle(adata: sc.AnnData,
+def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
                        species: Optional[str],
                        s_genes: Optional[str | list[str]] = None,
                        g2m_genes: Optional[str | list[str]] = None,
@@ -259,7 +259,7 @@ def predict_cell_cycle(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def estimate_doublets(adata: sc.AnnData,
+def estimate_doublets(adata: sc.AnnData,  # noqa: C901
                       use_native: bool = False,
                       threshold: Optional[float] = None,
                       inplace: bool = True,
@@ -437,7 +437,7 @@ def _run_scrublet(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def predict_sex(adata: sc.AnnData,
+def predict_sex(adata: sc.AnnData,  # noqa: C901
                 groupby: str,
                 gene: str = "Xist",
                 gene_column: Optional[str] = None,
@@ -473,10 +473,6 @@ def predict_sex(adata: sc.AnnData,
     Notes
     -----
     adata.X will be converted to numpy.ndarray if it is of type numpy.matrix.
-
-    Returns
-    -------
-    None
     """
 
     # Normalize data before estimating expression
@@ -860,7 +856,14 @@ def thresholds_as_table(threshold_dict: dict[str, dict[Union[int, float, str], U
 
 @beartype
 def _validate_minmax(d: dict) -> None:
-    """Validate that the dict 'd' contains the keys 'min' and 'max'."""
+    """
+    Validate that the dict 'd' contains the keys 'min' and 'max'.
+
+    Raises
+    ------
+    ValueError
+        If key is neither "min" nor "max".
+    """
 
     allowed = set(["min", "max"])
     keys = set(d.keys())
@@ -936,7 +939,7 @@ def validate_threshold_dict(table: pd.DataFrame,
 
 @deco.log_anndata
 @beartype
-def get_thresholds(adata: sc.AnnData,
+def get_thresholds(adata: sc.AnnData,  # noqa: C901
                    manual_thresholds: Dict[str, Union[None, Dict[Literal["min", "max"], Union[int, float, None]], Dict[Union[int, float, str], Dict[Literal["min", "max"], Union[int, float, None]]]]],
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
@@ -1244,7 +1247,7 @@ def apply_qc_thresholds(adata: sc.AnnData,
 ###############################################################################
 
 @beartype
-def _filter_object(adata: sc.AnnData,
+def _filter_object(adata: sc.AnnData,  # noqa: C901
                    filter: str | list[str] | list[bool],
                    which: Literal["obs", "var"] = "obs",
                    invert: bool = False,
@@ -1501,7 +1504,7 @@ def filter_genes(adata: sc.AnnData,
 @beartype
 def denoise_data(adata: sc.AnnData,
                  adata_raw: sc.AnnData,
-                 feature_type: Literal['Gene Expression', 'Peaks', 'CRISPR Guide Capture', 'Multiplexing Capture', None] = 'Gene Expression',
+                 feature_type: Literal['Gene Expression', 'Peaks', 'CRISPR Guide Capture', 'Multiplexing Capture', None] = 'Gene Expression',  # noqa: F722
                  epochs: int = 150,
                  prob: float = 0.995,
                  save: Optional[str] = None,
