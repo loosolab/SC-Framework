@@ -131,7 +131,13 @@ def g2m_list(adata):
 
 @pytest.fixture
 def g2m_file(g2m_list):
-    """Write a tmp file, which is deleted after usage."""
+    """
+    Write a tmp file, which is deleted after usage.
+
+    Yields
+    ------
+    Path to a temporary file.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "g2m_genes.txt")
 
@@ -143,7 +149,13 @@ def g2m_file(g2m_list):
 
 @pytest.fixture
 def s_file(s_list):
-    """Write a tmp file, which is deleted after usage."""
+    """
+    Write a tmp file, which is deleted after usage.
+
+    Yields
+    ------
+    Path to a temporary file.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = os.path.join(tmpdir, "s_genes.txt")
 
