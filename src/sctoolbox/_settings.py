@@ -6,7 +6,7 @@ import sys
 import logging
 
 from beartype import beartype
-from beartype.typing import Optional
+from beartype.typing import Optional, Tuple
 
 
 class SctoolboxConfig(object):
@@ -76,7 +76,7 @@ class SctoolboxConfig(object):
                  overwrite_log: bool = False,     # Overwrite log file if it already exists; default is to append
                  dpi: float = 600,                # The resolution in dots per inch, used to save figures.
                  report_dpi: float = 200          # The resolution in dots per inch, used for report figures.
-                 ):
+                 ) -> None:
 
         self.create_dirs = create_dirs  # must be set first to avoid error when creating directories
 
@@ -86,15 +86,15 @@ class SctoolboxConfig(object):
                 setattr(self, key, value)
         self._freeze()  # Freeze the class; no new attributes can be added
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset all settings to default."""
         self.__init__()
 
-    def _freeze(self):
+    def _freeze(self) -> None:
         """Set __frozen to True, disallowing new attributes to be added."""
         self.__frozen = True
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: object) -> None:
         """Set attribute if it exists in __init__ and is of the correct type.
 
         Raises
@@ -122,7 +122,7 @@ class SctoolboxConfig(object):
         # Setup logger if relevant settings are present
         self._trigger_logger_setup_if_needed(key)
 
-    def _validate_and_process_attribute(self, key: str, value):
+    def _validate_and_process_attribute(self, key: str, value: object) -> object:
         """Validate and process attribute value based on type and key.
 
         Raises
@@ -161,25 +161,25 @@ class SctoolboxConfig(object):
 
         return value
 
-    def _trigger_logger_setup_if_needed(self, key: str):
+    def _trigger_logger_setup_if_needed(self, key: str) -> None:
         """Set up logger if all required logging settings are now present."""
         logging_keys = ["verbosity", "overwrite_log", "log_file"]
         if key in logging_keys and all(hasattr(self, k) for k in logging_keys):
             self._setup_logger(verbosity=self.verbosity, log_file=self.log_file, overwrite_log=self.overwrite_log)
 
-    def _validate_string(self, string: str):
+    def _validate_string(self, string: str) -> None:
         if not isinstance(string, str):
             raise TypeError("Parameter must be of type str.")
 
-    def _validate_int(self, integer: int):
+    def _validate_int(self, integer: int) -> None:
         if not isinstance(integer, int):
             raise TypeError("Parameter must be of type int.")
 
-    def _validate_bool(self, boolean: bool):
+    def _validate_bool(self, boolean: bool) -> None:
         if not isinstance(boolean, bool):
             raise TypeError("Parameter must be of type bool.")
 
-    def _create_dir(self, dirname: str):
+    def _create_dir(self, dirname: str) -> None:
         """Create a directory if it does not exist yet."""
 
         if dirname == "":  # do not create directory if path is empty
@@ -192,42 +192,42 @@ class SctoolboxConfig(object):
 
     # Getter / setter for filename prefixes
     @property
-    def full_figure_prefix(self):
+    def full_figure_prefix(self) -> None:
         """Combine figure_dir and figure_prefix on the fly to get the full figure prefix."""
         return self.figure_dir + self.figure_prefix   # figure_dir has trailing slash
 
     @full_figure_prefix.setter
-    def full_figure_prefix(self, value):
+    def full_figure_prefix(self, value: str) -> None:
         raise ValueError("'full_figure_prefix' cannot be set directly. Adjust 'figure_dir' & 'figure_prefix' instead.")
 
     @property
-    def full_table_prefix(self):
+    def full_table_prefix(self) -> None:
         """Combine table_dir and table_prefix on the fly to get the full table prefix."""
         return self.table_dir + self.table_prefix
 
     @full_table_prefix.setter
-    def full_table_prefix(self, value):
+    def full_table_prefix(self, value: str) -> None:
         raise ValueError("'full_table_prefix' cannot be set directly. Adjust 'table_dir' & 'table_prefix' instead.")
 
     @property
-    def full_adata_input_prefix(self):
+    def full_adata_input_prefix(self) -> str:
         """Combine adata_input_dir and adata_input_prefix on the fly to get the full adata input prefix."""
         return self.adata_input_dir + self.adata_input_prefix
 
     @full_adata_input_prefix.setter
-    def full_adata_input_prefix(self, value):
+    def full_adata_input_prefix(self, value: str) -> None:
         raise ValueError("'full_adata_input_prefix' cannot be set directly. Adjust 'adata_input_dir' & 'adata_input_prefix' instead.")
 
     @property
-    def full_adata_output_prefix(self):
+    def full_adata_output_prefix(self) -> str:
         """Combine adata_output_dir and adata_output_prefix on the fly to get the full adata output prefix."""
         return self.adata_output_dir + self.adata_output_prefix
 
     @full_adata_output_prefix.setter
-    def full_adata_output_prefix(self, value):
+    def full_adata_output_prefix(self, value: str) -> None:
         raise ValueError("'full_adata_output_prefix' cannot be set directly. Adjust 'adata_output_dir' & 'adata_output_prefix' instead.")
 
-    def _setup_logger(self, verbosity: int = None, log_file: str = None, overwrite_log: bool = False):
+    def _setup_logger(self, verbosity: int = None, log_file: str = None, overwrite_log: bool = False) -> None:
         """Set up logger on the basis of the verbosity level."""
 
         # Use current settings if no new settings are provided
@@ -259,7 +259,7 @@ class SctoolboxConfig(object):
         if log_file is not None:
             self._setup_file_handler(log_file, overwrite_log, debug_formatter)
 
-    def _get_logger_level_and_formatter(self, verbosity: int, simple_formatter, debug_formatter):
+    def _get_logger_level_and_formatter(self, verbosity: int, simple_formatter: logging.Formatter, debug_formatter: logging.Formatter) -> Tuple[int, logging.Formatter]:
         """Get logger level and formatter based on verbosity.
 
         Returns
@@ -274,7 +274,7 @@ class SctoolboxConfig(object):
         else:  # verbosity == 2
             return logging.DEBUG, debug_formatter
 
-    def _setup_file_handler(self, log_file: str, overwrite_log: bool, debug_formatter):
+    def _setup_file_handler(self, log_file: str, overwrite_log: bool, debug_formatter: logging.Formatter) -> None:
         """Set up file handler for logger.
 
         Raises
@@ -303,19 +303,19 @@ class SctoolboxConfig(object):
         F.setFormatter(debug_formatter)  # always use debug formatter for file handler
         self._logger.addHandler(F)
 
-    def close_logfile(self):
+    def close_logfile(self) -> None:
         """Close all open filehandles of logger."""
         for handler in self._logger.handlers:
             if isinstance(handler, logging.FileHandler):
                 handler.close()
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
         """Return logger object."""
         return self._logger
 
     @beartype
-    def settings_from_config(self: object, config_file: str, key: Optional[str] = None):
+    def settings_from_config(self: object, config_file: str, key: Optional[str] = None) -> None:
         """
         Set settings from a config file in yaml format. Settings are set directly in sctoolbox.settings.
 
@@ -347,7 +347,7 @@ class SctoolboxConfig(object):
         for key, value in sorted(config_dict.items(), key=lambda x: preferred_order.index(x[0]) if x[0] in preferred_order else 999):
             setattr(settings, key, value)
 
-    def get_threads(self):
+    def get_threads(self) -> int:
         """Return the number of threads. Either self.threads or self.k8s_threads.
 
         Returns
