@@ -23,18 +23,6 @@ def test_create_dir():
     shutil.rmtree("testdir")  # clean up after tests
 
 
-def test_remove_files():
-    """Remove files from list."""
-
-    if not os.path.isfile("afile.txt"):
-        os.mknod("afile.txt")
-
-    files = ["afile.txt", "notfound.txt"]
-    utils.io.remove_files(files)
-
-    assert os.path.isfile("afile.txt") is False
-
-
 def test_rm_tmp():
     """Test create_dir and rm_tmp success."""
 

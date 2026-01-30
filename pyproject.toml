@@ -79,8 +79,8 @@ keywords = [
 ]
 dependencies = [
         'pysam',
-        'matplotlib',
-        'matplotlib_venn',
+        'matplotlib>=3.8.4',  # to speed up installation
+        'matplotlib_venn>=1.1.2',  # to speed up installation
         'scanpy[leiden]>=1.11',  # 'colorbar_loc' not available before 1.9; fix run_rank_genes error 1.11; also install community detection (leiden)
         'anndata>=0.8',  # anndata 0.7 is not upward compatible
         'numba>=0.57.0rc1',  # minimum version supporting python>=3.10, but 0.57 fails with "cannot import name 'quicksort' from 'numba.misc'" for scrublet
@@ -93,13 +93,13 @@ dependencies = [
         'tqdm',
         'pandas>1.5.3',  # https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/200
         'seaborn>0.12',
-        'ipympl',
         'ipywidgets>=8.0.0',  # needed to show labels in interactive accordion widgets
         'scrublet',
         'IPython',
+        'ipympl>=0.9.8',  # to speed up installation
         'openpyxl',
         'apybiomart',
-        'requests',
+        'requests>=2.32.5',  # to speed up installation
         'python-gitlab',
         'psutil',
         'deprecation',
@@ -121,7 +121,7 @@ converter = [
 atac = [
     'uropa',
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
-    'pygenometracks>=3.8',
+    'pygenometracks>=3.9',  # to speed up installation
     'peakqc',
     'tobias>=0.17.2'  # to avoid installation error
 ]
@@ -134,24 +134,29 @@ batch_correction = [
     'scanorama'
 ]
 receptor_ligand = [
-    'scikit-learn',
-    'igraph',
-    'pycirclize>=1.7.1',
-    'liana',
-    'mudata>=0.3.1',  # anndata>=10.9 requires mudata>=0.3.1
+    'pycirclize>=1.10.1',  # to speed up installation
+    'liana>=1.7.0',  # to speed up installation
+    'plotnine>=0.15.2',  # is a liana dependency; set to speed up installation
     'networkx>=3.5'
 ]
 pseudotime = [
-    'scFates>=1.2.1'  # https://github.com/LouisFaure/scFates/issues/54
+    'scFates>=1.2.1',  # https://github.com/LouisFaure/scFates/issues/54
+    'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
 ]
 gsea = [
-    'gseapy'
+    'gseapy>=1.1.11'  # to speed up installation
 ]
 deseq2 = [
     'pydeseq2>=0.5.2'  # https://github.com/owkin/PyDESeq2/issues/242
 ]
+annotation = [
+    'markerRepo>=0.1.5'  # to speed up installation
+]
+proportion = [
+    'scanpro>=0.4.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+]
 #velocity = [
-#    'scvelo @ git+https://github.com/rwiegan/scvelo.git'  # install from fork until this is merged and on PyPI: https://github.com/theislab/scvelo/pull/1308
+#    'scvelo @ git+https://github.com/theislab/scvelo.git'  # install from github until next release: https://github.com/theislab/scvelo/issues/1334
 #]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
@@ -162,7 +167,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation]'
 ]
 # all is intended to install everything
 all = [
@@ -206,7 +211,7 @@ addopts = """
 --durations=0
 """
 testpaths = [
-    "./tests",
+    "./tests"
 ]
 
 [tool.ruff]

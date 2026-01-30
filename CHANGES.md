@@ -14,6 +14,7 @@
 - Remove support for louvain since the package is not maintained. (#426)
 - fix scFates dependency issues (#390)
 - Fix html build errors (#422)
+- cleanup dependencies (#427)
 - README: Update figure (#268)
 
 ### Changes to notebooks
