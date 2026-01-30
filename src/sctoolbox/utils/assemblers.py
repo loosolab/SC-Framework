@@ -197,7 +197,7 @@ def from_single_starsolo(path: str,
 
 
 @beartype
-def from_quant(path: str,
+def from_quant(path: str,  # noqa: C901
                configuration: list = [],
                use_samples: Optional[list] = None,
                dtype: Literal["raw", "filtered"] = "filtered",
@@ -375,6 +375,11 @@ def from_single_mtx(mtx: Union[str, Path],
         -------
         pd.DataFrame
             Prepared metadata table with validated index and columns.
+
+        Raises
+        ------
+        ValueError
+            If the table index is not unique
         """
         # load the file
         table = pd.read_csv(file, header=header, index_col=index_col, delimiter=delimiter, comment=comment)
@@ -702,7 +707,7 @@ def from_R(
 
 
 @beartype
-def _read_and_merge(
+def _read_and_merge(  # noqa: C901
         path: Union[str, Collection[str], Mapping[str, str]],
         method: Callable,
         label: Optional[str] = "batch",
