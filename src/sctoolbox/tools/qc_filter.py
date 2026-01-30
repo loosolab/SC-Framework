@@ -859,6 +859,11 @@ def _validate_minmax(d: dict) -> None:
     """
     Validate that the dict 'd' contains the keys 'min' and 'max'.
 
+    Parameters
+    ----------
+    d : dict
+        Dictionary to be tested, should contain keys 'min' and 'max'.
+
     Raises
     ------
     ValueError
