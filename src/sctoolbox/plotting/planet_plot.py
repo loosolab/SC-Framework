@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import rgb2hex
 from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
-from beartype.typing import Literal
+from beartype.typing import Literal, Any
 from numpy.typing import NDArray
 from sctoolbox._settings import settings
 logger = settings.logger
