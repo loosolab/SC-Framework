@@ -368,7 +368,7 @@ def from_single_mtx(mtx: Union[str, Path],
     if False:
         raise ValueError()
 
-    def load_meta(file, header, index_col, delimiter, comment, expected_size, name):
+    def load_meta(file: Union[str, Path], header: Union[int, list[int], Literal['infer'], None], index_col: int, delimiter: str, comment: str, expected_size: int, name: str) -> pd.DataFrame:
         """Load and prepare AnnData.var or AnnData.obs.
 
         Returns

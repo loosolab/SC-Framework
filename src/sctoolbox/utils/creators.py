@@ -64,7 +64,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
         If repository is inaccesible.
     """
 
-    def limited(until):
+    def limited(until) -> None:
         duration = int(round(until - time.time()))
         print('Rate limited, sleeping for {:d} seconds'.format(duration))
 

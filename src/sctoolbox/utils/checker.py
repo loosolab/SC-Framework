@@ -690,7 +690,7 @@ def check_marker_lists(adata: sc.AnnData,
     return marker_dict
 
 
-def check_type(obj: Any, obj_name: str, test_type: Any):
+def check_type(obj: Any, obj_name: str, test_type: Any) -> None:
     """
     Check type of given object.
 

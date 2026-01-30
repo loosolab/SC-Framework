@@ -242,7 +242,7 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
 
 @beartype
-def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")):
+def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")) -> None:
     """
     Help to search and replace characters in keys in nested dicts and pd.DataFrames column names.
 
@@ -547,7 +547,7 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
     if layer and layer not in adata.layers:
         raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
-    def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:  # noqa: C901
+    def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
         """
         Clean either obs or var section of given adata object.
 
