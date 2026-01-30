@@ -145,7 +145,14 @@ def test_get_organism(mocker):
 
 
 def test_overlap_two_bedfiles(bedfile):
-    """Test overlap_two_bedfiles."""
+    """
+    Test overlap_two_bedfiles.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file is not found.
+    """
 
     # Copy a file from source to destination
     test_data_dir = os.path.split(bedfile)[0]
