@@ -229,7 +229,8 @@ select = [
     "W",      # pycodestyle warnings
     "F",      # Pyflakes
     "D",      # pydocstyle (docstring rules)
-    "C90"     # mccabe complexity
+    "C90",    # mccabe complexity
+    "ANN"     # flake8-annotations
 ]
 
 # Ignore specific rules
