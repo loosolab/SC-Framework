@@ -81,6 +81,7 @@ def generate_report(  # noqa: C901
         The slides are filled using the file prefix (e.g. 01_*) if there is no `content` parameter. Each prefix results in one slide,
         multiple files with the same prefix are put on the same slide.
     file_ext: List[str], default ["png", "md", "txt"]
+        The file extensions to include in the report.
     template: Optional[str]
         A PowerPoint template.
     slide_format: str, default "widescreen"
