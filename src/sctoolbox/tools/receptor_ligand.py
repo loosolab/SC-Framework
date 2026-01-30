@@ -162,7 +162,7 @@ def download_db(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def calculate_interaction_table(adata: sc.AnnData,
+def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
                                 cluster_column: str,
                                 gene_index: Optional[str] = None,
                                 normalize: Optional[int] = None,
@@ -578,7 +578,7 @@ def hairball(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def cyclone(
+def cyclone(  # noqa: C901
     adata: sc.AnnData,
     min_perc: int | float,
     interaction_score: float | int = 0,
@@ -1072,7 +1072,7 @@ def interaction_progress(datalist: list[sc.AnnData],
 
 @deco.log_anndata
 @beartype
-def connectionPlot(adata: sc.AnnData,
+def connectionPlot(adata: sc.AnnData,  # noqa: C901
                    restrict_to: Optional[list[str]] = None,
                    figsize: Tuple[int | float, int | float] = (10, 15),
                    dpi: Optional[int | float] = None,
@@ -1543,7 +1543,14 @@ def get_interactions(anndata: sc.AnnData,
 
 @beartype
 def _check_interactions(anndata: sc.AnnData):
-    """Return error message if anndata object doesn't contain interaction data."""
+    """
+    Return error message if anndata object doesn't contain interaction data.
+
+    Raises
+    ------
+    ValueError
+        If no interaction data is found.
+    """
 
     # is interaction table available?
     if "receptor-ligand" not in anndata.uns.keys() or "interactions" not in anndata.uns["receptor-ligand"].keys():
@@ -1570,7 +1577,7 @@ def _check_interactions(anndata: sc.AnnData):
 
 # Function to create a filtered AnnData object
 @beartype
-def _filter_anndata(
+def _filter_anndata(  # noqa: C901
     adata: sc.AnnData,
     condition_values: List[str] | npt.ArrayLike,
     condition_columns: List[str],
@@ -1818,7 +1825,7 @@ def _calculate_condition_difference(
 
 
 @beartype
-def _process_condition_combinations(
+def _process_condition_combinations(  # noqa: C901
     adata: sc.AnnData,
     condition_columns: List[str],
     cluster_column: str,
@@ -2024,7 +2031,7 @@ def _process_condition_combinations(
 
 @deco.log_anndata
 @beartype
-def calculate_condition_differences(
+def calculate_condition_differences(  # noqa: C901
     adata: sc.AnnData,
     condition_columns: List[str],
     cluster_column: str,
@@ -2394,11 +2401,6 @@ def _draw_network(graph: nx.DiGraph,
     all_cell_types : set
         Set of all cell types to ensure consistent drawing
 
-    Returns
-    -------
-    None
-        This function modifies the provided axis in-place
-
     Examples
     --------
     # Create simple test graph
@@ -2617,7 +2619,7 @@ def _format_control_conditions(diff_df: pd.DataFrame) -> str:
 
 
 @beartype
-def condition_differences_network(
+def condition_differences_network(  # noqa: C901
     adata: sc.AnnData,
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
@@ -3340,7 +3342,7 @@ def _get_gene_expression(
 
 
 @beartype
-def plot_interaction_timeline(
+def plot_interaction_timeline(  # noqa: C901
     adata: sc.AnnData,
     interactions: List[Tuple[str, str, str, str]],
     timepoint_column: str,
