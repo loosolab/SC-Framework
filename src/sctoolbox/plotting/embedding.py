@@ -1434,6 +1434,11 @@ def compare_embeddings(adata_list: list[sc.AnnData],  # noqa: C901
 def _get_3d_dotsize(n: int) -> int:
     """Get the optimal plotting dotsize for a given number of points.
 
+    Parameters
+    ----------
+    n : int
+        Number of points.
+
     Returns
     -------
     The plotsize for the given n (number of points).
