@@ -123,7 +123,7 @@ def write_TOBIAS_config(out_path: str,
 
 
 @beartype
-def prepare_tobias(adata: sc.AnnData,
+def prepare_tobias(adata: sc.AnnData,  # noqa: C901
                    groupby: str,
                    output: str,
                    path_bam: str,
