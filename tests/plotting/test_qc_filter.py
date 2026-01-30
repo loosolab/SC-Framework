@@ -24,44 +24,86 @@ quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 @pytest.fixture
 def slider():
-    """Create a slider widget."""
+    """Create a slider widget.
+
+    Returns
+    -------
+    ipywidgets.FloatRangeSlider
+        Slider widget with default range.
+    """
     return widgets.FloatRangeSlider(value=[5, 7], min=0, max=10, step=1)
 
 
 @pytest.fixture
 def slider_list(slider):
-    """Create a list of slider widgets."""
+    """Create a list of slider widgets.
+
+    Returns
+    -------
+    list
+        List of slider widgets.
+    """
     return [slider for _ in range(2)]
 
 
 @pytest.fixture
 def checkbox():
-    """Create a checkbox widget."""
+    """Create a checkbox widget.
+
+    Returns
+    -------
+    ipywidgets.Checkbox
+        Checkbox widget.
+    """
     return widgets.Checkbox()
 
 
 @pytest.fixture
 def slider_dict(slider):
-    """Create a dict of sliders."""
+    """Create a dict of sliders.
+
+    Returns
+    -------
+    dict
+        Dictionary mapping column names to sliders.
+    """
     return {c: slider for c in ['LISI_score_pca', 'qc_float']}
 
 
 @pytest.fixture
 def slider_dict_grouped(slider):
-    """Create a nested dict of slider widgets."""
+    """Create a nested dict of slider widgets.
+
+    Returns
+    -------
+    dict
+        Nested dictionary mapping columns to groups to sliders.
+    """
     return {c: {g: slider for g in ['C1', 'C2', 'C3']} for c in ['LISI_score_pca', 'qc_float']}
 
 
 @pytest.fixture
 def slider_dict_grouped_diff(slider):
-    """Create a nested dict of slider widgets with different selections."""
+    """Create a nested dict of slider widgets with different selections.
+
+    Returns
+    -------
+    dict
+        Nested dictionary with varied slider configurations.
+    """
     return {"A": {"1": slider, "2": widgets.FloatRangeSlider(value=[1, 5], min=0, max=10, step=1)},
             "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with QC metrics.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -93,7 +135,13 @@ def adata():
 
 @pytest.fixture
 def atac_adata():
-    """Fixture for an AnnData object."""
+    """Fixture for an AnnData object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))
     return adata
 

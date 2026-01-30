@@ -162,7 +162,7 @@ def download_db(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def calculate_interaction_table(adata: sc.AnnData,
+def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
                                 cluster_column: str,
                                 gene_index: Optional[str] = None,
                                 normalize: Optional[int] = None,
@@ -578,7 +578,7 @@ def hairball(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def cyclone(
+def cyclone(  # noqa: C901
     adata: sc.AnnData,
     min_perc: int | float,
     interaction_score: float | int = 0,
@@ -1072,7 +1072,7 @@ def interaction_progress(datalist: list[sc.AnnData],
 
 @deco.log_anndata
 @beartype
-def connectionPlot(adata: sc.AnnData,
+def connectionPlot(adata: sc.AnnData,  # noqa: C901
                    restrict_to: Optional[list[str]] = None,
                    figsize: Tuple[int | float, int | float] = (10, 15),
                    dpi: Optional[int | float] = None,
@@ -1208,7 +1208,7 @@ def connectionPlot(adata: sc.AnnData,
         # create a custom sort function
         sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
 
-        def sort_fun(x):
+        def sort_fun(x: pd.Series) -> pd.Series:
             return x.map(sorting_dict)
     else:
         sort_fun = None
@@ -1292,8 +1292,14 @@ def connectionPlot(adata: sc.AnnData,
     if connection_alpha:
         # set custom min and max values
         if alpha_range:
-            def alpha_sorter(x):
-                """Set values outside of range to min or max."""
+            def alpha_sorter(x: float | int) -> float | int:
+                """Set values outside of range to min or max.
+
+                Returns
+                -------
+                float
+                    Value clamped to the specified alpha range.
+                """
                 if x < alpha_range[0]:
                     return alpha_range[0]
                 elif x > alpha_range[1]:
@@ -1354,8 +1360,14 @@ def connectionPlot(adata: sc.AnnData,
     # ----- legends -----
     step_num = 5  # the number of steps in all legends
 
-    def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
-        """Create a custom handle list for the legend."""
+    def _create_handle_list(hue: str, hue_range: Tuple[int | float, int | float], palette: str, size: str, size_range: Tuple[int | float, int | float], dot_size: Tuple[int | float, int | float], step_num: int = 5) -> list:
+        """Create a custom handle list for the legend.
+
+        Returns
+        -------
+        list
+            List of matplotlib handles for the legend.
+        """
         handles = []
 
         # define the hue and size ranges
@@ -1368,8 +1380,14 @@ def connectionPlot(adata: sc.AnnData,
         size_steps = np.linspace(*(size_range), num=step_num)
 
         # size normalization
-        def size_norm(x):
-            """Scale dot sizes."""
+        def size_norm(x: float | int) -> float:
+            """Scale dot sizes.
+
+            Returns
+            -------
+            float
+                Normalized dot size.
+            """
             return minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
 
         if hue != size:
@@ -1524,8 +1542,15 @@ def get_interactions(anndata: sc.AnnData,
 
 
 @beartype
-def _check_interactions(anndata: sc.AnnData):
-    """Return error message if anndata object doesn't contain interaction data."""
+def _check_interactions(anndata: sc.AnnData) -> None:
+    """
+    Return error message if anndata object doesn't contain interaction data.
+
+    Raises
+    ------
+    ValueError
+        If no interaction data is found.
+    """
 
     # is interaction table available?
     if "receptor-ligand" not in anndata.uns.keys() or "interactions" not in anndata.uns["receptor-ligand"].keys():
@@ -1552,7 +1577,7 @@ def _check_interactions(anndata: sc.AnnData):
 
 # Function to create a filtered AnnData object
 @beartype
-def _filter_anndata(
+def _filter_anndata(  # noqa: C901
     adata: sc.AnnData,
     condition_values: List[str] | npt.ArrayLike,
     condition_columns: List[str],
@@ -1800,7 +1825,7 @@ def _calculate_condition_difference(
 
 
 @beartype
-def _process_condition_combinations(
+def _process_condition_combinations(  # noqa: C901
     adata: sc.AnnData,
     condition_columns: List[str],
     cluster_column: str,
@@ -2006,7 +2031,7 @@ def _process_condition_combinations(
 
 @deco.log_anndata
 @beartype
-def calculate_condition_differences(
+def calculate_condition_differences(  # noqa: C901
     adata: sc.AnnData,
     condition_columns: List[str],
     cluster_column: str,
@@ -2376,11 +2401,6 @@ def _draw_network(graph: nx.DiGraph,
     all_cell_types : set
         Set of all cell types to ensure consistent drawing
 
-    Returns
-    -------
-    None
-        This function modifies the provided axis in-place
-
     Examples
     --------
     # Create simple test graph
@@ -2599,7 +2619,7 @@ def _format_control_conditions(diff_df: pd.DataFrame) -> str:
 
 
 @beartype
-def condition_differences_network(
+def condition_differences_network(  # noqa: C901
     adata: sc.AnnData,
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
@@ -3322,7 +3342,7 @@ def _get_gene_expression(
 
 
 @beartype
-def plot_interaction_timeline(
+def plot_interaction_timeline(  # noqa: C901
     adata: sc.AnnData,
     interactions: List[Tuple[str, str, str, str]],
     timepoint_column: str,

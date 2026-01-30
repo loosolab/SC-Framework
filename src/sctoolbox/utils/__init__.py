@@ -1,6 +1,7 @@
 """Provides a range of different utilitis."""
 
 import importlib as _importlib
+from types import ModuleType
 import os
 import sys
 
@@ -23,12 +24,12 @@ __all__ = [
 ]
 
 
-def __dir__():
+def __dir__() -> list[str]:
     """Return the defined submodules."""
     return __all__
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> ModuleType:
     """Lazyload modules (inspired by scipy)."""
     if name in __all__:
         # return import to make it directly available

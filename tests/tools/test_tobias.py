@@ -12,13 +12,25 @@ import shutil
 
 @pytest.fixture
 def bam_file():
-    """Fixture pointing to test bam."""
+    """Fixture pointing to test bam.
+
+    Returns
+    -------
+    str
+        Path to the test BAM file.
+    """
     return os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.bam')
 
 
 @pytest.fixture(scope="session")
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    sc.AnnData
+        ATAC-seq AnnData object for testing.
+    """
 
     # has .X of type numpy.array
     obj = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_atac.h5ad'))

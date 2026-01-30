@@ -12,7 +12,13 @@ from sctoolbox.utils.adata import in_uns
 
 @pytest.fixture
 def adata():
-    """Return clustered dataset with ranked genes."""
+    """Return clustered dataset with ranked genes.
+
+    Returns
+    -------
+    anndata.AnnData
+        Preprocessed PBMC3k dataset with ranked genes.
+    """
     obj = sc.datasets.pbmc3k_processed()
     tools.marker_genes.run_rank_genes(obj, "louvain")
 

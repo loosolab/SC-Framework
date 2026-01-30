@@ -25,7 +25,7 @@ def s3_downloader(client: Client,
                   download_list: list[str],
                   force: bool = False,
                   download_path: Optional[str] = None,
-                  progress: bool = False):
+                  progress: bool = False) -> None:
     """
     Download selected files from the given client's S3 storage.
 
@@ -88,7 +88,7 @@ def download_dataset(pattern: str,
                      bucket: str = "data-sc-framework-2025",
                      download_path: Optional[str] = None,
                      force: bool = False,
-                     progress: bool = False):
+                     progress: bool = False) -> None:
     """
     Prepare and download data from an S3 storage.
 
@@ -139,7 +139,7 @@ def download_dataset(pattern: str,
 
 
 @beartype
-def _download_and_unpack(archive_name: str, path: str | Path = ".", keep_archive: bool = False):
+def _download_and_unpack(archive_name: str, path: str | Path = ".", keep_archive: bool = False) -> None:
     """
     Download and unpack a single archive.
 

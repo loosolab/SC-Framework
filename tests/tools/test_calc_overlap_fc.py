@@ -13,7 +13,13 @@ import pkg_resources
 
 @pytest.fixture
 def bam():
-    """Load bam file."""
+    """Load bam file.
+
+    Returns
+    -------
+    str
+        Path to test BAM file.
+    """
     bam_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac')
     bam_path = os.path.join(bam_dir, 'mm10_atac.bam')
 
@@ -22,7 +28,13 @@ def bam():
 
 @pytest.fixture
 def gtf():
-    """Load gtf file."""
+    """Load gtf file.
+
+    Returns
+    -------
+    str
+        Path to GTF file with promoter annotations.
+    """
 
     # Location of gene lists
     gtf_dir = pkg_resources.resource_filename("sctoolbox", "data/promoters_gtf/")
@@ -33,7 +45,13 @@ def gtf():
 
 @pytest.fixture
 def gtf_with_header():
-    """Load a gtf like file with a header."""
+    """Load a gtf like file with a header.
+
+    Returns
+    -------
+    str
+        Path to GTF file with header.
+    """
     gtf_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'gtf_testdata', 'cropped_gencode.v41.unsorted.gtf')
 
     return gtf_path
@@ -41,7 +59,13 @@ def gtf_with_header():
 
 @pytest.fixture
 def fragments():
-    """Load a bed file containing fragments."""
+    """Load a bed file containing fragments.
+
+    Returns
+    -------
+    str
+        Path to BED file with ATAC-seq fragments.
+    """
     fragments_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'mm10_sorted_fragments.bed')
 
     return fragments_path
@@ -49,7 +73,13 @@ def fragments():
 
 @pytest.fixture
 def bed():
-    """Load a bed with blacklisted regions."""
+    """Load a bed with blacklisted regions.
+
+    Returns
+    -------
+    str
+        Path to BED file with blacklisted regions.
+    """
     bed_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac', 'hg38.blacklist.v2_sorted.bed')
 
     return bed_path
@@ -57,7 +87,13 @@ def bed():
 
 @pytest.fixture
 def adata():
-    """Load adata."""
+    """Load adata.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'atac')
     adata = ad.read_h5ad(adata_dir + '/mm10_atac.h5ad')
 

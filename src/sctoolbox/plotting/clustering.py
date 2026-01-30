@@ -11,8 +11,8 @@ from beartype.typing import Literal, Tuple, Optional, Any
 from numpy.typing import NDArray
 
 import sctoolbox.utils as utils
-from sctoolbox.plotting.general import _save_figure
 import sctoolbox.utils.decorator as deco
+from sctoolbox.plotting.general import _save_figure
 from sctoolbox._settings import settings
 logger = settings.logger
 
@@ -86,7 +86,7 @@ def search_clustering_parameters(adata: sc.AnnData,
     # Check that method is valid
     if method == "leiden":
         # set future defaults to omit warning
-        def cl_function(*args, **kwargs):
+        def cl_function(*args: Any, **kwargs: Any) -> None:
             sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
 
     # Setup parameters to loop over

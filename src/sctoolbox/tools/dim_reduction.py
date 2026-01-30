@@ -214,7 +214,7 @@ def apply_svd(adata: sc.AnnData,
 
 @beartype
 def propose_pcs(anndata: sc.AnnData,
-                how: List[Literal["variance", "cumulative variance", "correlation"]] = ["variance", "correlation"],
+                how: List[Literal["variance", "cumulative variance", "correlation"]] = ["variance", "correlation"],  # noqa: F722
                 var_method: Literal["knee", "percent"] = "percent",
                 perc_thresh: Union[int, float] = 30,
                 corr_thresh: float = 0.3,

@@ -22,7 +22,7 @@ import sctoolbox.utils.decorator as deco
 
 @deco.log_anndata
 @beartype
-def pseudobulk_table(adata: sc.AnnData,
+def pseudobulk_table(adata: sc.AnnData,  # noqa: C901
                      groupby: str,
                      how: Literal['mean', 'sum'] = "mean",
                      layer: Optional[str] = None,
@@ -86,10 +86,9 @@ def pseudobulk_table(adata: sc.AnnData,
         if percentile_range == (0, 100):  # uses all cells
             if how == "mean":
                 vals = cluster_values.mean(0)
-                res[clust] = vals.A1 if issparse(cluster_values) else vals
             elif how == "sum":
                 vals = cluster_values.sum(0)
-                res[clust] = vals.A1 if issparse(cluster_values) else vals
+            res[clust] = vals.A1 if issparse(cluster_values) else vals
         else:
 
             n_features = cluster_values.shape[1]
@@ -526,10 +525,6 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> 
         path to output bedfile
     **kwargs : Any
         Additional arguments passed to pybedtools.BedTool.intersect
-
-    Returns
-    -------
-    None
     """
     # Ensure that path to bedtools is set
     pybedtools.helpers.set_bedtools_path(utils.checker._add_path())
@@ -629,10 +624,6 @@ def _sort_bed(bedfile: str, sorted_bedfile: str) -> None:
         path to bedfile
     sorted_bedfile : str
         path to sorted bedfile
-
-    Returns
-    -------
-    None
     """
     sort_cmd = f'sort -k1,1 -k2,2n {bedfile} > {sorted_bedfile}'
     os.system(sort_cmd)

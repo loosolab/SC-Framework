@@ -98,12 +98,43 @@ def correlate_ref_vs_all(adata: sc.AnnData,
         Dataframe containing correlation of refrence gene to other genes.
     """
 
-    def spearmanr_of_gene(ref, gene, gene_name):
-        """Get tuple of gene and spearman correlation of gene to reference."""
+    def spearmanr_of_gene(ref: np.ndarray, gene: np.ndarray, gene_name: str) -> tuple:
+        """Get tuple of gene and spearman correlation of gene to reference.
+
+        Parameters
+        ----------
+        ref : np.ndarray
+            Reference values.
+        gene : np.ndarray
+            Expression values.
+        gene_name : str
+            Gene name.
+
+        Returns
+        -------
+        tuple
+            Tuple containing gene name and spearman correlation result.
+        """
         return (gene_name, spearmanr(ref, gene))
 
-    def map_correlation_strength(x):
-        """Map correlation to describing strings."""
+    def map_correlation_strength(x: float) -> str | float:
+        """Map correlation to describing strings.
+
+        Parameters
+        ----------
+        x : float
+            Correlation value to map.
+
+        Returns
+        -------
+        str or float
+            String describing correlation strength or NaN if input is NaN.
+
+        Raises
+        ------
+        ValueError
+            If correlation value is outside the range [0, 1].
+        """
         if 0 <= x < 0.2:
             return "very weak (0.00-0.19)"
         elif x < 0.4:
@@ -169,8 +200,23 @@ def compare_two_conditons(df_cond_A: pd.DataFrame,
         Dataframe containing single correlation and Fischer Z transformation
     """
 
-    def independent_corr(gene_row, n_xy, n_ab):
-        """z-transforms correlation coefficient xy (of n cells) andab (of n2 cells) and p-value of the difference."""
+    def independent_corr(gene_row: pd.Series, n_xy: int, n_ab: int) -> tuple[float, float]:
+        """z-transforms correlation coefficient xy (of n cells) and ab (of n2 cells) and p-value of the difference.
+
+        Parameters
+        ----------
+        gene_row : pd.Series
+            Gene values.
+        n_xy : int
+            Number of cells
+        n_ab : int
+            Number of cells
+
+        Returns
+        -------
+        tuple
+            Tuple containing z-score and p-value of the difference.
+        """
         if (1 - gene_row['correlation_A']) == 0 or (1 - gene_row['correlation_B']) == 0:
             return np.nan, np.nan
         # Fisher's r-to-Z Transformation

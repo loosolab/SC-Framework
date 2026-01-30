@@ -12,7 +12,13 @@ from sctoolbox.plotting import gsea
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Minimal adata file for testing."""
+    """Minimal adata file for testing.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with GSEA results.
+    """
     adata = sc.datasets.pbmc68k_reduced()
     tools.marker_genes.run_rank_genes(adata, "louvain")
     tools.gsea.gene_set_enrichment(adata,

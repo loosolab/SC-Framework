@@ -19,7 +19,7 @@ logger = settings.logger
 class _SpaceDumper(yaml.SafeDumper):
     # HACK: insert blank lines between top-level objects
     # inspired by https://stackoverflow.com/a/44284819/3786245
-    def write_line_break(self, data=None):
+    def write_line_break(self, data: Optional[str] = None) -> None:
         super().write_line_break(data)
 
         if len(self.indents) == 1:
@@ -123,7 +123,7 @@ def write_TOBIAS_config(out_path: str,
 
 
 @beartype
-def prepare_tobias(adata: sc.AnnData,
+def prepare_tobias(adata: sc.AnnData,  # noqa: C901
                    groupby: str,
                    output: str,
                    path_bam: str,

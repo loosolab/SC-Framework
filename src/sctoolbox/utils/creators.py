@@ -13,7 +13,7 @@ from beartype.typing import Optional, Any, Literal
 
 
 @beartype
-def gitlab_download(internal_path: str,
+def gitlab_download(internal_path: str,  # noqa: C901
                     file_regex: str,
                     host: str = "https://gitlab.gwdg.de/",
                     repo: str = "sc_framework",
@@ -64,7 +64,7 @@ def gitlab_download(internal_path: str,
         If repository is inaccesible.
     """
 
-    def limited(until):
+    def limited(until: float) -> None:
         duration = int(round(until - time.time()))
         print('Rate limited, sleeping for {:d} seconds'.format(duration))
 
@@ -228,7 +228,7 @@ def build_notebooks_regex(starts_with: int) -> str:
     elif 1 <= starts_with < 10:
         regex = f"[0]*[1-9]?[{starts_with}-9].*.ipynb"
     elif 10 <= starts_with < 90:
-        regex = f"[0]*([{str(starts_with)[0]}][{str(starts_with)[1]}-9]|[{str(starts_with+10)[0]}-9][0-9]).*.ipynb"
+        regex = f"[0]*([{str(starts_with)[0]}][{str(starts_with)[1]}-9]|[{str(starts_with + 10)[0]}-9][0-9]).*.ipynb"
     else:
         # Needs change if we ever reach 90+ Notebooks
         raise ValueError("starts_with needs to be lower than 90")

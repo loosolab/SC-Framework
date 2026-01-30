@@ -23,7 +23,7 @@ logger = settings.logger
 
 @deco.log_anndata
 @beartype
-def annotate_adata(adata: sc.AnnData,
+def annotate_adata(adata: sc.AnnData,  # noqa: C901
                    gtf: str,
                    config: Optional[dict[str, Any]] = None,
                    best: bool = True,
@@ -314,7 +314,7 @@ def _load_narrowPeak(filepath: str) -> list[dict[str, Union[str, int]]]:
 
 
 @beartype
-def _prepare_gtf(gtf: str,
+def _prepare_gtf(gtf: str,  # noqa: C901
                  temp_dir: str) -> Tuple[str, list[str]]:
     """
     Prepare the .gtf file to use it in the annotation process.
@@ -422,7 +422,7 @@ def _prepare_gtf(gtf: str,
 
 
 @beartype
-def _annotate_features(region_dicts: list[dict[Literal["peak_chr", "peak_start", "peak_end", "peak_id"], str | int]],
+def _annotate_features(region_dicts: list[dict[Literal["peak_chr", "peak_start", "peak_end", "peak_id"], str | int]],  # noqa: C901
                        threads: int,
                        gtf: str,
                        cfg_dict: Optional[dict[str, Union[list, bool, str, int, float]]],

@@ -13,19 +13,37 @@ import os
 
 @pytest.fixture(scope="session")
 def adata_no_pca():
-    """Create an anndata object without PCA."""
+    """Create an anndata object without PCA.
+
+    Returns
+    -------
+    anndata.AnnData
+        PBMC3k dataset without PCA.
+    """
     return sc.datasets.pbmc3k()
 
 
 @pytest.fixture(scope="session")
 def adata_pca():
-    """Create an anndata object with precalculated PCA."""
+    """Create an anndata object with precalculated PCA.
+
+    Returns
+    -------
+    anndata.AnnData
+        Preprocessed PBMC3k dataset with PCA.
+    """
     return sc.datasets.pbmc3k_processed()
 
 
 @pytest.fixture
 def adata():
-    """Fixture for an AnnData object."""
+    """Fixture for an AnnData object.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object for testing.
+    """
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'anndata_2.h5ad'))
     return adata
 

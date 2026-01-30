@@ -202,7 +202,7 @@ def subset_bam(bam_in: str,
 
 @deco.log_anndata
 @beartype
-def split_bam_clusters(adata: sc.AnnData,
+def split_bam_clusters(adata: sc.AnnData,  # noqa: C901
                        bams: str | Iterable[str],
                        groupby: str,
                        barcode_col: Optional[str] = None,
@@ -382,7 +382,7 @@ def split_bam_clusters(adata: sc.AnnData,
 
         # Loop over bamfile(s)
         for i, bam in enumerate(bams):
-            logger.info(f"Looping over reads from {bam} ({i+1}/{len(bams)})")
+            logger.info(f"Looping over reads from {bam} ({i + 1}/{len(bams)})")
 
             bam_obj = open_bam(bam, "rb", verbosity=0)
 
@@ -518,7 +518,7 @@ def get_bam_reads(bam_obj: "pysam.AlignmentFile") -> int:
 
 
 @beartype
-def _monitor_progress(progress_queue: Any,
+def _monitor_progress(progress_queue: Any,  # noqa: C901
                       cluster_queues: Any,
                       reader_jobs: Any,
                       writer_jobs: Any,
@@ -670,7 +670,7 @@ def _buffered_reader(path: str,
     ------
     Exception
         If buffered reader failes.
-    """
+    """  # noqa: DOC502
 
     # Test parameter types not covered by beartype
     for value in out_queues.values():
@@ -759,7 +759,7 @@ def _writer(read_queue: Any,
     ------
     Exception
         If buffered reader failes.
-    """
+    """  # noqa: DOC502
 
     # Check parameter that are not covered by beartype
     utils.checker.check_type(read_queue, "read_queue", BaseProxy)
@@ -916,7 +916,7 @@ def bam_to_bigwig(bam: str,
 # ---------------------------------------------------------------------------------- #
 
 @beartype
-def create_fragment_file(bam: str,
+def create_fragment_file(bam: str,  # noqa: C901
                          barcode_tag: Optional[str] = 'CB',
                          barcode_regex: Optional[str] = None,
                          outdir: Optional[str] = None,
@@ -974,7 +974,7 @@ def create_fragment_file(bam: str,
         If the input bam file does not exist.
     Exception
         On unkown error while sorting .bam
-    """
+    """  # noqa: DOC502
 
     utils.checker.check_module("pysam")
     import pysam
