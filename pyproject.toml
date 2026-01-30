@@ -229,7 +229,7 @@ select = [
     "W",      # pycodestyle warnings
     "F",      # Pyflakes
     "D",      # pydocstyle (docstring rules)
-    "C90"    # mccabe complexity
+    "C90"     # mccabe complexity
 ]
 
 # Ignore specific rules
@@ -245,7 +245,8 @@ ignore = [
 preview = true
 extend-select = [
     "DOC",  # pydoclint rules
-    "E226"  # Missing whitespace around arithmetic operator (preview rule)
+    "E226",  # Missing whitespace around arithmetic operator (preview rule)
+    "D417"  # check if docstring parameters match function signature
 ]
 
 [tool.ruff.lint.pydocstyle]
