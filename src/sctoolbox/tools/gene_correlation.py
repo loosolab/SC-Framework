@@ -201,7 +201,16 @@ def compare_two_conditons(df_cond_A: pd.DataFrame,
     """
 
     def independent_corr(gene_row: pd.Series, n_xy: int, n_ab: int) -> tuple[float, float]:
-        """z-transforms correlation coefficient xy (of n cells) andab (of n2 cells) and p-value of the difference.
+        """z-transforms correlation coefficient xy (of n cells) and ab (of n2 cells) and p-value of the difference.
+
+        Parameters
+        ----------
+        gene_row : pd.Series
+            Gene values.
+        n_xy : int
+            Number of cells
+        n_ab : int
+            Number of cells
 
         Returns
         -------
