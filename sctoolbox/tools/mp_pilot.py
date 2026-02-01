@@ -1,18 +1,19 @@
 """Multiprocessing utilities for parallel execution of functions."""
 import multiprocessing as mp
 import sctoolbox.utils as utils
+import scanpy as sc
 
 from sctoolbox._settings import settings
-from beartype.typing import Iterable, Any, Literal, Optional, Tupl
 from beartype import beartype
+from beartype.typing import Iterable, Any, Optional
 from functools import partial
 
 
 @beartype
-def mp_first_position(func: Any, 
+def mp_first_position(func: Any,
                       iterable: Iterable,
-                      threads: Optional[int] = None, 
-                      **kwargs: Any) -> None:
+                      threads: Optional[int] = None,
+                      **kwargs: Any):
     """
     Run a function in multiple processes.
 
@@ -51,11 +52,11 @@ def mp_first_position(func: Any,
 
 
 @beartype
-def mp_adata_first_arg(func: Any, 
-                       adata: sc.AnnData, 
-                       iterable: Iterable, 
-                       threads: Optional[int] = None, 
-                       **kwargs: Any) -> None:
+def mp_adata_first_arg(func: Any,
+                       adata: sc.AnnData,
+                       iterable: Iterable,
+                       threads: Optional[int] = None,
+                       **kwargs: Any): 
     """
     Run a function in multiple processes, with anndata object as the first argument.
 
@@ -65,7 +66,7 @@ def mp_adata_first_arg(func: Any,
         The function to be executed in parallel.
     adata (sc.AnnData):
         The anndata object to be passed as the first argument to the function.
-    iterable (iterable):
+    iterable (Iterable):
         An iterable of arguments to pass to the function.
     threads (int, optional):
         Number of processes to spawn. Defaults to the number of CPU.
