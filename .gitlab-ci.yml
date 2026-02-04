@@ -345,6 +345,9 @@ notebooks-RNA:
   inherit:
     default: false
   stage: test
+  variables:
+    KUBERNETES_MEMORY_LIMIT: "32Gi"
+    KUBERNETES_MEMORY_REQUEST: "16Gi"
   artifacts:
     when: always
     paths:
