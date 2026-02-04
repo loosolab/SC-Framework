@@ -215,6 +215,17 @@ testpaths = [
 ]
 
 [tool.ruff]
+# Include these directores and files
+include = [
+    "pyproject.toml",
+    "src/**/*.py",
+    "scripts/*.py",
+    "tests/**/*.py",
+    "tests/*.py",
+    "*_analysis/notebooks/*.ipynb",
+    "general_notebooks/*.ipynb"
+]
+
 # Exclude directories from linting
 extend-exclude = [
     "src/sctoolbox/__init__.py",

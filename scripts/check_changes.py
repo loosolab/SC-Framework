@@ -6,8 +6,18 @@ from subprocess import PIPE
 from datetime import datetime
 
 
-def read_date(commit_message):
-    """Read the date from a commit message."""
+def read_date(commit_message: str) -> str:
+    """Read the date from a commit message.
+
+    Parameters
+    ----------
+    commit_message : str
+        The full/raw commit message.
+
+    Returns
+    -------
+        The parsed date from the commit message.
+    """
 
     for line in commit_message.split("\n"):
         if line.startswith("Date:"):
