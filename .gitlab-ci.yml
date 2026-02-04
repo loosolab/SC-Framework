@@ -72,8 +72,6 @@ build:
   stage: build
   image: docker:28.5 # TODO switch back to latest when our runners are updated. Ask Noah about the progress. # image as building environment
   needs: [extract-version]
-  tags:
-    - sctoolbox
   services:
       - name: "docker:dind" # docker in docker to build
         alias: docker
@@ -111,8 +109,6 @@ build:
 build-package:
   stage: build
   image: python:latest
-  tags:
-    - sctoolbox
   variables:
     TWINE_USERNAME: gitlab-ci-token  # used for authentication to the Gitlab package registry
     TWINE_PASSWORD: $CI_JOB_TOKEN
@@ -224,8 +220,6 @@ lint:
   inherit:
     default: false # do not inherit before_script
   stage: test
-  tags:
-    - sctoolbox
   script:
     - python --version
     - pip install ruff
@@ -258,8 +252,6 @@ test coverage:
     stage: test
     image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
     needs: [get-container-tag]
-    tags:
-      - sctoolbox
     coverage: '/TOTAL.*\s(\d*.\d*\%)/'
     before_script:
       - pip install .[all]
@@ -353,8 +345,6 @@ notebooks-RNA:
   inherit:
     default: false
   stage: test
-  tags:
-      - sctoolbox
   artifacts:
     when: always
     paths:
@@ -399,8 +389,6 @@ notebooks-ATAC:
   inherit:
     default: false
   stage: test
-  tags:
-      - sctoolbox
   artifacts:
     when: always
     paths:
@@ -587,8 +575,6 @@ PyPI:
       artifacts: true
     # release a fully tested package to PyPI
     - job: GitLab-release
-  tags:
-    - sctoolbox
   variables:
     TWINE_USERNAME: __token__  # used for authentication to PyPI
     TWINE_PASSWORD: $PYPI_API_TOKEN
