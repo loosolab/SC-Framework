@@ -72,6 +72,8 @@ build:
   stage: build
   image: docker:28.5 # TODO switch back to latest when our runners are updated. Ask Noah about the progress. # image as building environment
   needs: [extract-version]
+  tags:
+    - docker
   services:
       - name: "docker:dind" # docker in docker to build
         alias: docker
