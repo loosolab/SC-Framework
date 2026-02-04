@@ -229,7 +229,7 @@ lint:
   script:
     - python --version
     - pip install ruff
-    - ruff check --preview src/sctoolbox tests
+    - ruff check --preview .
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
@@ -237,6 +237,11 @@ lint:
         - tests/*.py
         - tests/**/*.py
         - src/sctoolbox/**/*.py
+        - pyproject.toml
+        - scripts/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
