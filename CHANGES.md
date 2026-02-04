@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
-- migrate to ruff linting (#420)
+- migrate to ruff linting and lint more files (#420)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
 - plot_embedding: Fix bug when setting color to list of length 1 (#402)
 - gene_set_enrichment: Add deg_set_size to gene_set_enrichment (#396)
