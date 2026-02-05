@@ -43,7 +43,7 @@ logger = settings.logger
 
 @deco.log_anndata
 @beartype
-def download_db(adata: sc.AnnData,  # noqa: C901
+def download_db(adata: sc.AnnData,
                 db_path: str,
                 ligand_column: str,
                 receptor_column: str,
@@ -51,8 +51,8 @@ def download_db(adata: sc.AnnData,  # noqa: C901
                 inplace: bool = False,
                 overwrite: bool = False,
                 remove_duplicates: bool = True,
-                report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
-    r"""
+                report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:  # noqa: C901
+    """
     Download table of receptor-ligand interactions and store in adata.
 
     Parameters
