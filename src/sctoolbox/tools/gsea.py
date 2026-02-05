@@ -2,6 +2,7 @@
 import pandas as pd
 import gseapy as gp
 import scanpy as sc
+from pathlib import Path
 
 import sctoolbox.utils.decorator as deco
 from sctoolbox.tools.marker_genes import get_rank_genes_tables
