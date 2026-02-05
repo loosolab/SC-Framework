@@ -209,7 +209,7 @@ def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
         # get cellcylce genes lists
-        path_cellcycle_genes = genelist_dir + f"{species}_cellcycle_genes.txt"
+        path_cellcycle_genes = genelist_dir / f"{species}_cellcycle_genes.txt"
         cell_cycle_genes = pd.read_csv(path_cellcycle_genes, header=None,
                                        sep="\t", names=['gene', 'phase']).set_index('gene')
         logger.debug(f"Read {len(cell_cycle_genes)} cell cycle genes list from file: {path_cellcycle_genes}")
