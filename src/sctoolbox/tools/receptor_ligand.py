@@ -43,7 +43,7 @@ logger = settings.logger
 
 @deco.log_anndata
 @beartype
-def download_db(adata: sc.AnnData,
+def download_db(adata: sc.AnnData, # noqa: C901
                 db_path: str,
                 ligand_column: str,
                 receptor_column: str,
