@@ -28,6 +28,7 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
                         gene_sets: Optional[dict[str, list[str]]] = None,
                         background: Optional[set[str]] = None,
                         deg_set_size: int = 200,
+                        save_table: Optional[str] = "gsea.tsv",
                         **kwargs: Any
                         ) -> Optional[sc.AnnData]:
     """
@@ -61,6 +62,9 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
         Positive values get the top X upregulated genes.
         Negative values get the top X downregulated genes.
         For example, ``10`` to use the top 10 and ``-10`` to use the bottom 10 genes.
+    save_table : Optional[str], default "gsea.tsv"
+        Save the enrichment table as a file. In addition to saving the table in ``adata.uns['sctoolbox']['gsea']['enrichment_table']``.
+        Uses ``settings.table_dir``.
     **kwargs : Any
         Additional parameters forwarded to gseapy.prerank().
 
@@ -214,6 +218,12 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
     utils.adata.add_uns_info(modified_adata,
                              key=['gsea', 'enrichment_table'],
                              value=merged_results)
+
+    if save_table:
+        outfile = Path(settings.table_dir) / save_table
+
+        logger.info(f"Saving results to {outfile}")
+        merged_result.to_csv(outfile, sep="\t", header=True, index=False)
 
     if not inplace:
         return modified_adata

@@ -37,12 +37,15 @@ def adata():
                                                'P-value', 'Adjusted P-value',
                                                'Odds Ratio', 'Combined Score',
                                                'Genes'])])
-def test_gene_set_enrichment(adata, method, res_col):
+def test_gene_set_enrichment(adata, method, res_col, tmp_path):
     """Test enrichr_marker_genes."""
+    table_file = tmp_path / f"{method}_gsea.tsv"
+
     adata_mod = tools.gsea.gene_set_enrichment(adata,
                                                marker_key="rank_genes_louvain_filtered",
                                                organism="human",
                                                method=method,
+                                               save_table=str(table_file),
                                                inplace=False)
     assert in_uns(adata_mod, ['sctoolbox', 'gsea'])
     assert not in_uns(adata, ['sctoolbox', 'gsea'])
@@ -50,6 +53,7 @@ def test_gene_set_enrichment(adata, method, res_col):
     assert isinstance(adata_mod.uns['sctoolbox']['gsea']['enrichment_table'], pd.DataFrame)
     assert len(adata_mod.uns['sctoolbox']['gsea']['enrichment_table'].columns) > 0
     assert set(res_col).issubset(set(adata_mod.uns['sctoolbox']['gsea']['enrichment_table'].columns))
+    assert table_file.exists()
 
 
 def test_fail_gene_set_enrichment(adata):
