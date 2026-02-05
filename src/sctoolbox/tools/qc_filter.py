@@ -205,7 +205,7 @@ def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
             logger.debug("Species was not found in available species!")
             logger.debug(f"genelist_dir: {genelist_dir}")
             logger.debug(f"available_files: {available_files}")
-            logger.debug(f"All files in dir: {glob.glob(genelist_dir / '*')}")
+            logger.debug(f"All files in dir: {glob.glob(str(genelist_dir / '*'))}")
             raise ValueError(f"No cellcycle genes available for species '{species}'. Available species are: {available_species}")
 
         # get cellcylce genes lists
