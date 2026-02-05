@@ -64,16 +64,22 @@ def download_db(adata: sc.AnnData,
         Either a path to a database table e.g.:
         - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
         - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        - Zebrafish: https://connectomedb.org/downloads/Current-Release/CSV/ConnectomeDB2025_zebrafish.csv
         or the name of a database available in the LIANA package:
         - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
     ligand_column : str
         Name of the column with ligand gene names.
-        Use 'ligand_gene_symbol' for the urls provided above. For LIANA databases use 'ligand'.
+        Use 'ligand_gene_symbol' for the urls provided above.
+        For LIANA databases use 'ligand'.
+        For ConnectomeDB zebrafish use 'ligand'.
     receptor_column : str
         Name of column with receptor gene names.
-        Use 'receptor_gene_symbol' for the urls provided above. For LIANA databases use 'receptor'.
+        Use 'receptor_gene_symbol' for the urls provided above.
+        For LIANA databases use 'receptor'.
+        For ConnectomeDB zebrafish use 'receptor'.
     sep : str, default '\t'
         Separator of database table.
+        Use sep=',' for ConnectomeDB CSV files.
     inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
@@ -123,6 +129,11 @@ def download_db(adata: sc.AnnData,
             liana = True
         else:
             raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
+
+    # Handling ConnectomeDB format (has 'LR Pair' column, e.g. 'si:dkey-46g23.5 lrp1ab' <Ligand Receptor>
+    if 'LR Pair' in database.columns and ligand_column == 'ligand' and receptor_column == 'receptor':
+        # Split 'LR Pair' into ligand and receptor columns
+        database[['ligand', 'receptor']] = database['LR Pair'].str.split(n=1, expand=True)
 
     # check column names in table
     if ligand_column not in database.columns:
@@ -229,7 +240,11 @@ def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
     # test if database gene columns overlap with adata.var genes
     if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
             or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)):
-        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
+        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. "
+                        f"No overlap found between database genes and your data. "
+                        f"This may occur if: (1) gene IDs/symbols don't match (use .var index or a column with matching IDs), "
+                        f"or (2) you're using a database for the wrong organism (e.g., human/mouse database with zebrafish data). "
+                        f"For zebrafish, consider using: https://connectomedb.org/downloads/Current-Release/CSV/ConnectomeDB2025_zebrafish.csv")
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
