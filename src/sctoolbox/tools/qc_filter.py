@@ -6,7 +6,7 @@ import multiprocessing as mp
 import warnings
 import time
 import anndata
-import pkg_resources
+import importlib_resources
 import glob
 from pathlib import Path
 from sklearn.mixture import GaussianMixture
@@ -196,7 +196,7 @@ def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
         species = species.lower()
 
         # get path of directory where cell cycles gene lists are saved
-        genelist_dir = pkg_resources.resource_filename("sctoolbox", "data/gene_lists/")
+        genelist_dir = importlib_resources.files("sctoolbox") / "data" / "gene_lists"
 
         # check if given species is available
         available_files = glob.glob(genelist_dir + "*_cellcycle_genes.txt")

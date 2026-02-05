@@ -5,7 +5,7 @@ import sctoolbox.utils as ul
 import os
 import pytest
 import anndata as ad
-import pkg_resources
+import importlib_resources
 
 
 # ---------------------------- FIXTURES -------------------------------- #
@@ -37,7 +37,7 @@ def gtf():
     """
 
     # Location of gene lists
-    gtf_dir = pkg_resources.resource_filename("sctoolbox", "data/promoters_gtf/")
+    gtf_dir = importlib_resources.files("sctoolbox") / "data" / "promoters_gtf"
     gtf_path = os.path.join(gtf_dir, "mus_musculus.104.promoters2000.gtf")
 
     return gtf_path

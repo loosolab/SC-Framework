@@ -1,7 +1,7 @@
 """Module for general celltype annotation."""
 import sys
 import pandas as pd
-import pkg_resources
+import importlib_resources
 import copy
 import subprocess
 import scanpy as sc
@@ -303,10 +303,10 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     if not python_path:
         python_path = sys.executable
 
-    scsa_path = pkg_resources.resource_filename("sctoolbox", "data/SCSA_custom.py")
+    scsa_path = importlib_resources.files("sctoolbox") / "data" / "SCSA_custom.py"
 
     if species is not None:
-        marker_db = pkg_resources.resource_filename("sctoolbox", f"data/celltype_markers/cellmarker_{species.lower()}.tsv")
+        marker_db = importlib_resources.files("sctoolbox") / "data" / "celltype_markers" / f"cellmarker_{species.lower()}.tsv"
     else:
         marker_db = user_db
 
