@@ -9,7 +9,7 @@ requires = [
     "setuptools_scm>=9.0.3"  # due to https://github.com/pypa/setuptools-scm/issues/938
 ]
 build-backend = "setuptools.build_meta"
-# start tests
+
 [project]
 name = "SC-Framework"
 dynamic = ["version"]
