@@ -627,3 +627,75 @@ def _sort_bed(bedfile: str, sorted_bedfile: str) -> None:
     """
     sort_cmd = f'sort -k1,1 -k2,2n {bedfile} > {sorted_bedfile}'
     os.system(sort_cmd)
+
+
+#####################################################################
+#                      ATAC related functions                       #
+#####################################################################
+
+def peaks_to_bins(adata: sc.AnnData, chromsizes: str, bin_size: int = 5000) -> sc.AnnData:
+    """
+    Combine the peaks of a scATAC AnnData into equal sized bins.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The object to bin. Expects adata.var to contain # TODO
+    chromsizes : str
+        A table file with chromosome sizes. Expected to contain three columns "Chromosome", "Start", "End".
+        # TODO allow dict or table?
+    bin_size : int, default 5000
+        The size of the bins.
+
+    Returns
+    -------
+    sc.AnnData
+        The binned object.
+    """
+    # TODO logging
+    # TODO inplace?
+    # TODO eliminate hardcoded column names
+    # TODO parameters to select peak location columns
+    # TODO mention/use adata.var assembler function?
+    # TODO tests
+
+    # 1) Prepare your peaks DataFrame with an explicit index
+    adata.var["peak_idx"] = np.arange(adata.var.shape[0])
+
+    chrom_lengths = pd.read_csv(chromsizes, sep='\t')
+    chrom_lengths.set_index('id', inplace=True)
+    chrom_lengths.pop('length.1')
+    chrom_lengths = chrom_lengths.to_dict()['length']
+
+    bins = []
+    for chrom, length in chrom_lengths.items():
+        for start in range(0, length, bin_size):
+            bins.append((chrom, start, min(start + bin_size, length)))
+    bins_df = pd.DataFrame(bins, columns=["Chromosome", "Start", "End"])
+    bins_df["bin_idx"] = np.arange(bins_df.shape[0])
+
+    # 2) Turn into PyRanges (include the index columns)
+    gr_peaks = pr.PyRanges(adata.var)
+    gr_bins = pr.PyRanges(bins_df)
+
+    # 3) Join to get bin↔peak overlaps (will carry bin_idx & peak_idx)
+    overlap = gr_bins.join(gr_peaks).df
+    # overlap columns include: Chromosome, Start, End, bin_idx, Start_b, End_b, peak_idx
+
+    # 4) Build the sparse “peak→bin” matrix M
+    rows = overlap["peak_idx"].values
+    cols = overlap["bin_idx"].values
+    data = np.ones_like(rows, dtype=np.int8)
+    M = coo_matrix((data, (rows, cols)),
+                   shape=(adata.n_vars, bins_df.shape[0])).tocsr()
+
+    # 5) Multiply to get cell×bin counts
+    X_bins = adata.X.dot(M)  # sparse CSR result
+
+    # 6) Wrap into a new AnnData and save
+    var_bins = bins_df.set_index("bin_idx")[["Chromosome", "Start", "End"]]
+    var_bins.index = [f"{c}:{s}-{e}" for c, s, e in var_bins[["Chromosome", "Start", "End"]].itertuples(index=False)]
+    adata_bins = ad.AnnData(X=X_bins, obs=adata.obs.copy(), var=var_bins)
+    adata = adata_bins
+
+    return adata
