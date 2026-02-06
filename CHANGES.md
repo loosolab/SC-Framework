@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- implement `tools.gsea.gene_set_enrichment` save_table parameter (#405)
 - replace deprecated pkg_resources with importlib_resources (#432)
 - migrate to ruff linting and lint more files (#420)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
