@@ -224,7 +224,7 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
         outfile = Path(settings.table_dir) / save_table
 
         logger.info(f"Saving results to {outfile}")
-        merged_result.to_csv(outfile, sep="\t", header=True, index=False)
+        merged_results.to_csv(outfile, sep="\t", header=True, index=False)
 
     if not inplace:
         return modified_adata
