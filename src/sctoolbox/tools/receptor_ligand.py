@@ -53,7 +53,7 @@ def download_db(  # noqa: C901
     overwrite: bool = False,
     remove_duplicates: bool = True,
     report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
-    """
+    r"""
     Download table of receptor-ligand interactions and store in adata.
 
     Parameters
