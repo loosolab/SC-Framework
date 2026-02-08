@@ -16,6 +16,7 @@
 - Fix html build errors (#422)
 - cleanup dependencies (#427)
 - README: Update figure (#268)
+- Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots
