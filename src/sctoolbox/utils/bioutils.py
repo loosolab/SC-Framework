@@ -660,7 +660,7 @@ def peaks_to_bins(adata: sc.AnnData,
         A table file with chromosome sizes. Expected to contain two columns "Chromosome", "Length". The header is optional.
         Or a dict in the format ``{"chr_name": <length>}``.
     chrom_kwargs : dict, default {"sep": "\t"}
-        Additional parameters forwarded to :func:pandas.read_csv.
+        Additional parameters forwarded to :func:pandas.read_csv. Only if chromsizes is a file path.
     bin_size : int, default 5000
         The size of the bins.
     peak_id_col : Optional[str], default None
