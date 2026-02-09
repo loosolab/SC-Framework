@@ -278,7 +278,7 @@ def test_sort_bed(unsorted_fragments):
 @pytest.mark.parametrize("var_map", ({}, {"Chromosome": "chr", "Start": "start", "End": "stop"}))
 def test_peaks_to_bins(adata, var_map):
     """Test peaks_to_bins."""
-    bin_size=5000
+    bin_size = 5000
     chromsizes = {
        "chr4": 83000000
     }
