@@ -642,8 +642,7 @@ def peaks_to_bins(adata: sc.AnnData,
                   chromsizes: str | Dict[str, int],
                   var_map: Dict[Literal["Chromosome", "Start", "End"], str] = {},
                   chrom_kwargs: dict = {"sep": "\t"},
-                  bin_size: int = 5000,
-                  peak_id_col: Optional[str] = None) -> sc.AnnData:
+                  bin_size: int = 5000) -> sc.AnnData:
     r"""
     Combine the peaks of a scATAC AnnData into equal sized bins.
 
@@ -663,8 +662,6 @@ def peaks_to_bins(adata: sc.AnnData,
         Additional parameters forwarded to :func:pandas.read_csv. Only if chromsizes is a file path.
     bin_size : int, default 5000
         The size of the bins.
-    peak_id_col : Optional[str], default None
-        Name of the column in ``.var`` that contains unique peak IDs. ``None`` to use ``.var.index``.
 
     Returns
     -------
@@ -674,36 +671,24 @@ def peaks_to_bins(adata: sc.AnnData,
     Raises
     ------
     ValueError
-        If ``peak_id_col`` is not a valid column of ``adata.var``.
-        If the column is not unique.
         If there is neither a matching column name nor a value in ``var_map``.
     """
+    id_col = "peak_idx"
+
     # 1) Prepare your peaks DataFrame with an explicit index
-    logger.info("Preparing var table.")
+    logger.info("Preparing data")
     var = adata.var.copy()
 
-    # use a pre-existing column/index as id
-    if peak_id_col is None:
-        id_col = var.index.name or "index"
-        var.reset_index(drop=False, inplace=True)
-    else:
-        if peak_id_col not in var.columns:
-            raise ValueError(f"{peak_id_col} not found in adata.var columns.")
-        id_col = peak_id_col
-
-    if not var[id_col].is_unique:
-        raise ValueError(f"var column {id_col} has duplicated values.")
-    # adata.var["peak_idx"] = np.arange(adata.var.shape[0])
+    var[id_col] = np.arange(adata.var.shape[0])
 
     # format chromosome, start, end columns for binning
-    var.rename(columns=var_map, inplace=True)
+    var.rename(columns={k: v for v, k in var_map.items()}, inplace=True)
 
     missing_names = [n for n in ["Chromosome", "Start", "End"] if n not in var.columns]
     if missing_names:
         raise ValueError(f"Use 'var_map' to set column names for {missing_names}.")
 
     # 2) Prepare chromosome sizes and bins
-    logger.info("Preparing bins.")
     # prepare chromosome sizes
     if isinstance(chromsizes, str):
         chrom_lengths = pd.read_csv(chromsizes, **chrom_kwargs)
