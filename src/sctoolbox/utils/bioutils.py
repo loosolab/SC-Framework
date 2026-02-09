@@ -713,7 +713,7 @@ def peaks_to_bins(adata: sc.AnnData,
     # overlap columns include: Chromosome, Start, End, bin_idx, Start_b, End_b, <id_col>
 
     # 4) Build the sparse “peak→bin” matrix M
-    logger.info("Binning data.")
+    logger.info("Binning data")
     rows = overlap[id_col].values
     cols = overlap["bin_idx"].values
     data = np.ones_like(rows, dtype=np.int8)
