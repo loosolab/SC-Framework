@@ -639,7 +639,7 @@ def _sort_bed(bedfile: str, sorted_bedfile: str) -> None:
 @deco.log_anndata
 @beartype
 def peaks_to_bins(adata: sc.AnnData,
-                  chromsizes: str,
+                  chromsizes: str | Dict[str, int],
                   var_map: Dict[Literal["Chromosome", "Start", "End"], str] = {},
                   chrom_kwargs: dict = {"sep": "\t"},
                   bin_size: int = 5000,
@@ -656,9 +656,9 @@ def peaks_to_bins(adata: sc.AnnData,
     var_map : Dict[Literal["Chromosome", "Start", "End"], str], default {"Chromosome": "Chromosome", "Start": "Start", "End": "End"}
         Select the names of the ``adata.var`` columns that contain the respective information.
         E.g. ``{"Chromosome": "chr"}`` to use the "chr" column for chromosome information.
-    chromsizes : str
+    chromsizes : str | Dict[str, int]
         A table file with chromosome sizes. Expected to contain two columns "Chromosome", "Length". The header is optional.
-        # TODO allow dict/table
+        Or a dict in the format ``{"chr_name": <length>}``.
     chrom_kwargs : dict, default {"sep": "\t"}
         Additional parameters forwarded to :func:pandas.read_csv.
     bin_size : int, default 5000
@@ -705,8 +705,11 @@ def peaks_to_bins(adata: sc.AnnData,
     # 2) Prepare chromosome sizes and bins
     logger.info("Preparing bins.")
     # prepare chromosome sizes
-    chrom_lengths = pd.read_csv(chromsizes, **chrom_kwargs)
-    chrom_lengths.set_index(chrom_lengths.columns[0], inplace=True)
+    if isinstance(chromsizes, str):
+        chrom_lengths = pd.read_csv(chromsizes, **chrom_kwargs)
+        chrom_lengths.set_index(chrom_lengths.columns[0], inplace=True)
+    else:
+        chrom_lengths = pd.DataFrame.from_dict(chromsizes, orient="index")
 
     # create a table of bins
     bins = []
