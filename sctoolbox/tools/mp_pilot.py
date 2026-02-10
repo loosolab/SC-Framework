@@ -5,12 +5,12 @@ import scanpy as sc
 
 from sctoolbox._settings import settings
 from beartype import beartype
-from beartype.typing import Iterable, Any, Optional
+from beartype.typing import Any,  Callable, Iterable, Optional
 from functools import partial
 
 
 @beartype
-def mp_first_position(func: Any,
+def mp_first_position(func: Callable,
                       iterable: Iterable,
                       threads: Optional[int] = None,
                       **kwargs: Any):
@@ -19,13 +19,13 @@ def mp_first_position(func: Any,
 
     Parameters
     ----------
-    func:
+    func: Callable
         The function to be executed in parallel.
-    iterable (iterable):
+    iterable: Iterable
         An iterable of arguments to pass to the function.
-    threads (int, optional):
-        Number of processes to spawn. Defaults to the number of CPU.
-    **kwargs:
+    threads: Optional[int]
+        Number of processes to spawn. Defaults to the settings.threads.
+    **kwargs: Any
         Additional keyword arguments to pass to the function.
     """
 
@@ -52,7 +52,7 @@ def mp_first_position(func: Any,
 
 
 @beartype
-def mp_adata_first_arg(func: Any,
+def mp_adata_first_arg(func: Callable,
                        adata: sc.AnnData,
                        iterable: Iterable,
                        threads: Optional[int] = None,
@@ -62,15 +62,15 @@ def mp_adata_first_arg(func: Any,
 
     Parameters
     ----------
-    func:
+    func: Callable
         The function to be executed in parallel.
-    adata (sc.AnnData):
+    adata: sc.AnnData
         The anndata object to be passed as the first argument to the function.
-    iterable (Iterable):
+    iterable: Iterable
         An iterable of arguments to pass to the function.
-    threads (int, optional):
-        Number of processes to spawn. Defaults to the number of CPU.
-    **kwargs:
+    threads: Optional[int]
+        Number of processes to spawn. Defaults to the settings.threads.
+    **kwargs: Any
         Additional keyword arguments to pass to the function.
     """
 
