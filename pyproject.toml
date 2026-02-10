@@ -123,7 +123,8 @@ atac = [
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
     'pygenometracks>=3.9',  # to speed up installation
     'peakqc',
-    'tobias>=0.17.2'  # to avoid installation error
+    'tobias>=0.17.2',  # to avoid installation error
+    'pyranges'
 ]
 interactive = [
     'click'
