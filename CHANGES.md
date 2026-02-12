@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- fix values outside data range (#337)
 - implement `utils.bioutils.peaks_to_bins` (#374)
 - implement `tools.gsea.gene_set_enrichment` save_table parameter (#405)
 - replace deprecated pkg_resources with importlib_resources (#432)
