@@ -141,7 +141,7 @@ receptor_ligand = [
     'networkx>=3.5'
 ]
 pseudotime = [
-    'scFates>=1.2.1',  # https://github.com/LouisFaure/scFates/issues/54
+    'scFates>=1.2.3',  # https://github.com/LouisFaure/scFates/issues/54; https://github.com/LouisFaure/scFates/issues/43
     'adjustText>=1.3.0'  # is a scFates dependency; set to speed up installation
 ]
 gsea = [

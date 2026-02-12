@@ -20,6 +20,7 @@
 - cleanup dependencies (#427)
 - README: Update figure (#268)
 - fix logging issue causing error on save (#333)
+- Pin scFates to >= 1.2.3 (#433)
 
 ### Changes to notebooks
 - Notebook 3: Add color_map option for pca quality plots
@@ -27,6 +28,7 @@
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
+- Pseudotime: Run tl.merge_empty_segments after tl.pseudotime
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
