@@ -866,9 +866,9 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
             # Add slider to control thresholds
             if is_interactive:
 
-                slider = ipywidgets.InitFloatRangeSlider(description=str(group), min=data_min, max=data_max,
-                                                     value=[tmin, tmax],  # initial value
-                                                     continuous_update=False)
+                slider = InitFloatRangeSlider(description=str(group), min=data_min, max=data_max,
+                                              value=[tmin, tmax],  # initial value
+                                              continuous_update=False)
 
                 slider.observe(functools.partial(_update_thresholds,
                                                  fig=fig,
