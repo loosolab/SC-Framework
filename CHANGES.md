@@ -19,6 +19,7 @@
 - Fix html build errors (#422)
 - cleanup dependencies (#427)
 - README: Update figure (#268)
+- CI improvments
 - fix logging issue causing error on save (#333)
 
 ### Changes to notebooks
