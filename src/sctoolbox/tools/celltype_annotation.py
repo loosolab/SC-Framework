@@ -1,10 +1,11 @@
 """Module for general celltype annotation."""
 import sys
 import pandas as pd
-import pkg_resources
+import importlib_resources
 import copy
 import subprocess
 import scanpy as sc
+from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal
@@ -129,14 +130,14 @@ def get_celltype_assignment(adata: sc.AnnData,
 #####################################################################
 
 @beartype
-def _match_database(marker_db: str,
+def _match_database(marker_db: str | Path,
                     input_genes: list[str]) -> str:
     """
     Find best matching column in the marker database for the input genes.
 
     Parameters
     ----------
-    marker_db : str
+    marker_db : str | Path
         Path to marker database.
     input_genes : list[str]
         List of input genes.
@@ -303,10 +304,10 @@ def run_scsa(adata: sc.AnnData,  # noqa: C901
     if not python_path:
         python_path = sys.executable
 
-    scsa_path = pkg_resources.resource_filename("sctoolbox", "data/SCSA_custom.py")
+    scsa_path = importlib_resources.files("sctoolbox") / "data" / "SCSA_custom.py"
 
     if species is not None:
-        marker_db = pkg_resources.resource_filename("sctoolbox", f"data/celltype_markers/cellmarker_{species.lower()}.tsv")
+        marker_db = importlib_resources.files("sctoolbox") / "data" / "celltype_markers" / f"cellmarker_{species.lower()}.tsv"
     else:
         marker_db = user_db
 
