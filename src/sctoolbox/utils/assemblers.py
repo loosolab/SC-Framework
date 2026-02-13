@@ -8,7 +8,7 @@ from pathlib import Path
 from scipy import sparse
 from scipy.io import mmread
 
-from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping, Callable
+from beartype.typing import Optional, Union, Literal, Any, Collection, Mapping, Callable, Tuple, Dict
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -417,7 +417,7 @@ def from_single_mtx(mtx: Union[str, Path],
 
 
 @beartype
-def from_mtx(path: str,
+def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],
              mtx: str = "*matrix.mtx*",
              barcodes: str = "*barcodes.tsv*",
              variables: str = "*genes.tsv*",
@@ -432,8 +432,16 @@ def from_mtx(path: str,
 
     Parameters
     ----------
-    path : str
-        Path to data files
+    path : str | Dict[str, Tuple[str, str, str] | Tuple[str, str]]
+        Path to data files or a dict to supply direct file paths. The dict has the format::
+
+            {
+                "sample1": ("matrix.mtx", "barcodes.tsv", "genes.tsv"),
+                "sample2": ("matrix2.mtx", "barcodes2.tsv", "genes2.tsv")
+            }
+
+        The order within the ``()`` is expected to be matrix, barcodes, variables. The variables may be skipped if not available.
+        Using a dict will cause the parameters ``mtx``, ``barcodes`` and ``variables`` to be ignored.
     mtx : str, default '*matrix.mtx*'
         String for glob to find matrix files.
     barcodes : str, default '*barcodes.tsv*'
@@ -451,7 +459,8 @@ def from_mtx(path: str,
     Returns
     -------
     sc.AnnData
-        Merged anndata object containing the mtx matrix, gene and cell labels
+        Merged anndata object containing the mtx matrix, gene and cell labels.
+        Contains a column in ``.obs`` named "key" with the dict keys given through ``path`` or ``rel_path`` in case of a directory path.
 
     Raises
     ------
@@ -461,42 +470,60 @@ def from_mtx(path: str,
         3. If the barcode file is missing for mtx file.
         4. If the variable file is missing for mtx file and var_error is set to True
     """
-    # initialize path as path object
-    path = Path(path)
-
-    # recursively find mtx files
-    mtx_files = list(path.rglob(mtx))
-
-    if not mtx_files:
-        raise ValueError('No files were found with the given directory and suffixes.')
-
     adata_objects = []
-    for i, m in enumerate(mtx_files):
-        logger.info(f"Reading files: {i + 1} of {len(mtx_files)} ")
+    if isinstance(path, dict):
+        for key, files in path.items():
+            if len(files) == 3:
+                mtx, barcode_file, variable_file = files
+            else:
+                mtx, barcode_file = files
+                variable_file = None
 
-        # find barcode and variable file in same folder
-        barcode_file = list(m.parents[0].glob(barcodes))
-        if len(barcode_file) > 1:
-            raise ValueError(f'{str(m)} expected one barcode file but found multiple: {[str(bf) for bf in barcode_file]}')
-        elif len(barcode_file) < 1:
-            raise ValueError(f'Missing required barcode file for {str(m)}.')
+            # create adata object
+            adata_objects.append(
+                from_single_mtx(mtx=mtx,
+                                barcodes=barcode_file,
+                                variables=variable_file if variable_file else None,
+                                **kwargs)
+            )
 
-        variable_file = list(m.parents[0].glob(variables))
-        if len(variable_file) > 1:
-            raise ValueError(f'{str(m)} expected one variable file but found multiple: {[str(vf) for vf in variable_file]}')
-        elif var_error and len(variable_file) < 1:
-            raise ValueError(f'Missing required variable file for {str(m)}.')
+            adata_objects[-1].obs["key"] = key
+    else:
+        # initialize path as path object
+        path = Path(path)
 
-        # create adata object
-        adata_objects.append(
-            from_single_mtx(m,
-                            barcode_file[0],
-                            variable_file[0] if variable_file else None,
-                            **kwargs)
-        )
+        # recursively find mtx files
+        mtx_files = list(path.rglob(mtx))
 
-        # add relative path to obs as it could contain e.g. sample information
-        adata_objects[-1].obs["rel_path"] = str(m.parents[0].relative_to(path))
+        if not mtx_files:
+            raise ValueError('No files were found with the given directory and suffixes.')
+
+        for i, m in enumerate(mtx_files):
+            logger.info(f"Reading files: {i + 1} of {len(mtx_files)} ")
+
+            # find barcode and variable file in same folder
+            barcode_file = list(m.parents[0].glob(barcodes))
+            if len(barcode_file) > 1:
+                raise ValueError(f'{str(m)} expected one barcode file but found multiple: {[str(bf) for bf in barcode_file]}')
+            elif len(barcode_file) < 1:
+                raise ValueError(f'Missing required barcode file for {str(m)}.')
+
+            variable_file = list(m.parents[0].glob(variables))
+            if len(variable_file) > 1:
+                raise ValueError(f'{str(m)} expected one variable file but found multiple: {[str(vf) for vf in variable_file]}')
+            elif var_error and len(variable_file) < 1:
+                raise ValueError(f'Missing required variable file for {str(m)}.')
+
+            # create adata object
+            adata_objects.append(
+                from_single_mtx(m,
+                                barcode_file[0],
+                                variable_file[0] if variable_file else None,
+                                **kwargs)
+            )
+
+            # add relative path to obs as it could contain e.g. sample information
+            adata_objects[-1].obs["rel_path"] = str(m.parents[0].relative_to(path))
 
     # create final adata
     if len(adata_objects) > 1:
@@ -508,9 +535,14 @@ def from_mtx(path: str,
     if settings.report_dir and report:
         info_table = {}
 
-        for m in mtx_files:
-            info_table.setdefault("Name", []).append("NA")
-            info_table.setdefault("Source", []).append(str(m.parents[0]))
+        if isinstance(path, str):
+            for m in mtx_files:
+                info_table.setdefault("Name", []).append("NA")
+                info_table.setdefault("Source", []).append(str(m.parents[0]))
+        else:
+            for k, v in path.items():
+                info_table.setdefault("Name", []).append(k)
+                info_table.setdefault("Source", []).append(v)
 
         # save table
         plot_table(table=pd.DataFrame(info_table), report=report, show_index=False)
