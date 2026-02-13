@@ -36,8 +36,7 @@ if notebook_type == "RNA":
     rna_notebook_path_suffix = "/../rna_analysis/notebooks/"
     notebook_dir = script_dir + rna_notebook_path_suffix
     rna_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"), key=key)  # sort as glob output is not ordered
-    # TODO temporarily remove velocity notebook (#397)
-    rna_notebooks = [n for n in rna_notebooks if os.path.basename(n) not in ["0B_velocity_analysis.ipynb"]]
+    rna_notebooks = [n for n in rna_notebooks]
     print("\n\n")
     print("--------------------------------------- RNA ---------------------------------------")
     print(f"Notebook directory: {notebook_dir}")
