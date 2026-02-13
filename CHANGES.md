@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- enhance `utils.assemblers.from_mtx(path)` to accept dicts (#367)
 - implement `utils.bioutils.peaks_to_bins` (#374)
 - implement `tools.gsea.gene_set_enrichment` save_table parameter (#405)
 - replace deprecated pkg_resources with importlib_resources (#432)
@@ -27,6 +28,7 @@
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
+- RNA/ATAC assembly: adjust for updated `from_mtx`
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
