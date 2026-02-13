@@ -49,9 +49,9 @@ classifiers = [
 ]
 keywords = [
     "single-cell",
+    "single-cell analysis",
     "scRNA-seq",
     "scATAC-seq",
-    "single-cell analysis",
     "transcriptomics",
     "epigenomics",
     "chromatin accessibility",
