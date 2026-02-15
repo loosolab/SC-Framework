@@ -1,6 +1,4 @@
-"""
-Script to add/update notebook versions.
-"""
+"""Script to add/update notebook versions."""
 import nbformat
 import warnings
 import argparse

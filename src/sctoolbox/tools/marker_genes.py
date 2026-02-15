@@ -2,7 +2,7 @@
 
 import re
 import glob
-import pkg_resources
+import importlib_resources
 import pandas as pd
 import numpy as np
 import scanpy as sc
@@ -22,7 +22,7 @@ from sctoolbox.plotting.general import _save_figure
 logger = settings.logger
 
 # path to the internal gene lists (gender, cellcycle, mito, ...)
-_GENELIST_LOC = Path(pkg_resources.resource_filename("sctoolbox", "data/gene_lists/"))
+_GENELIST_LOC = importlib_resources.files("sctoolbox") / "data" / "gene_lists"
 
 
 @beartype

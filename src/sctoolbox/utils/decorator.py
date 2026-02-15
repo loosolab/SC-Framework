@@ -56,7 +56,10 @@ def log_anndata(func: Callable) -> Callable:
         # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
         args_repr = {f"arg{i + 1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
         kwargs_repr = kwargs
-        convert = {sc.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
+        convert = {sc.AnnData: repr,
+                   tuple: list,
+                   matplotlib.axes._axes.Axes: str,
+                   dict: str}  # nested dicts are not allowed
         for typ, convfunc in convert.items():
             args_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in args_repr.items()}
             kwargs_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in kwargs_repr.items()}

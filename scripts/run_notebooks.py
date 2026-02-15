@@ -1,3 +1,5 @@
+"""Automatically run the notebooks in order."""
+
 import sys
 import os
 import glob
@@ -11,16 +13,30 @@ notebook_type = sys.argv[1]
 script_dir = os.path.dirname(__file__)
 print(f"Script location: {script_dir}")
 
+
 # notebook sorting key
-key = lambda x: "zzzz" if os.path.basename(x).startswith("99") else str.lower(os.path.basename(x))  # put the 99-report.ipynb notebook last
+def key(x: str) -> str:
+    """Sort key for notebooks.
+
+    Parameters
+    ----------
+    x : str
+        Notebook file path.
+
+    Returns
+    -------
+    str
+        Sort key that puts 99-prefixed notebooks last.
+    """
+    return "zzzz" if os.path.basename(x).startswith("99") else str.lower(os.path.basename(x))  # put the 99-report.ipynb notebook last
+
 
 if notebook_type == "RNA":
     # Run RNA notebooks
     rna_notebook_path_suffix = "/../rna_analysis/notebooks/"
     notebook_dir = script_dir + rna_notebook_path_suffix
     rna_notebooks = sorted(glob.glob(notebook_dir + "*.ipynb"), key=key)  # sort as glob output is not ordered
-    # TODO temporarily remove velocity notebook (#397)
-    rna_notebooks = [n for n in rna_notebooks if os.path.basename(n) not in ["0B_velocity_analysis.ipynb"]]
+    rna_notebooks = [n for n in rna_notebooks]
     print("\n\n")
     print("--------------------------------------- RNA ---------------------------------------")
     print(f"Notebook directory: {notebook_dir}")

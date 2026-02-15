@@ -1,14 +1,18 @@
-"""
-Script to check whether notebook(s) contains output. Fails if it does.
-"""
+"""Script to check whether notebook(s) contains output. Fails if it does."""
 
 import sys
 import json
 import glob
 
 
-def check_notebook(path):
-    """ Check whether a notebook contains output. Exits with error if it does. """
+def check_notebook(path: str) -> None:
+    """Check whether a notebook contains output. Exits with error if it does.
+
+    Parameters
+    ----------
+    path : str
+        Path to a notebook.
+    """
 
     with open(path, 'r') as f:
         nb = json.load(f)
