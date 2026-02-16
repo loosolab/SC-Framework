@@ -417,7 +417,7 @@ def from_single_mtx(mtx: Union[str, Path],
 
 
 @beartype
-def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],
+def from_mtx(path: str | Dict[str, Tuple[str, str, str] | Tuple[str, str]],  # noqa: C901
              mtx: str = "*matrix.mtx*",
              barcodes: str = "*barcodes.tsv*",
              variables: str = "*genes.tsv*",
