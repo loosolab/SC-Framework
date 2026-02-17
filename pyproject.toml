@@ -266,10 +266,6 @@ extend-select = [
 # Use NumPy docstring convention
 convention = "numpy"
 
-[tool.ruff.lint.mccabe]
-# Allow functions to have complexity up to 11
-max-complexity = 11
-
 [tool.ruff.lint.per-file-ignores]
 # Ignore rules in specific files
 "__init__.py" = [
