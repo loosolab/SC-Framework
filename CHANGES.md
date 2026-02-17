@@ -20,6 +20,7 @@
 - Fix html build errors (#422)
 - cleanup dependencies (#427)
 - README: Update figure (#268)
+- Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - CI improvments
 - fix logging issue causing error on save (#333)
 
