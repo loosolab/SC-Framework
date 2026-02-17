@@ -29,6 +29,7 @@
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
+- Notebook 4: Fix report issue when reclustering (#431)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
