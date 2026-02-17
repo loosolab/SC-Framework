@@ -24,7 +24,7 @@
 - fix logging issue causing error on save (#333)
 
 ### Changes to notebooks
-- RNA/02: Check for `filter_gender` and `predict_sex` to filter gender genes (#430)
+- RNA/02: Filter genes: Added check for label column (#430)
 - Notebook 3: Add color_map option for pca quality plots
 - GSEA: Add deg_set_size option to notebook
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
