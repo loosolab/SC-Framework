@@ -471,11 +471,11 @@ def adjust_doublet_threshold(adata: sc.AnnData,  # noqa: C901
     Returns
     -------
     Optional[sc.AnnData]
-        Returns None 
+        Returns None
     """
     if "doublet_score" not in adata.obs.columns:
         raise KeyError("Column 'doublet_score' not found in adata.obs")
-    
+
     if "scrublet" not in adata.uns:
         raise KeyError("Key 'scrublet' not found in adata.uns. Run estimate doublet first.")
 

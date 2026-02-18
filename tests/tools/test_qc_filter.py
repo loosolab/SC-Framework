@@ -219,7 +219,6 @@ def test_adjust_doublet_threshold_failure(adata):
         qc.adjust_doublet_threshold(adata_copy, threshold=threshold)
 
 
-
 def test_gmm_threshold(norm_dist):
     """Test whether min/max threshold can be found using a gaussian mixture model."""
     threshold = qc.gmm_threshold(norm_dist, plot=True)
