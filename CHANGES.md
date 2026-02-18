@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- Add function adjust_doublet_threshold
 - fix values outside data range (#337)
 - implement `utils.bioutils.peaks_to_bins` (#374)
 - implement `tools.gsea.gene_set_enrichment` save_table parameter (#405)
@@ -25,6 +26,7 @@
 - fix logging issue causing error on save (#333)
 
 ### Changes to notebooks
+- Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
 - Notebook 3: Add color_map option for pca quality plots
 - GSEA: Add deg_set_size option to notebook
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered

@@ -16,6 +16,7 @@ import scrublet as scr
 import scipy.stats as stats
 from scipy.sparse import csr_matrix
 import yaml
+from skimage.filters import threshold_minimum
 
 from beartype import beartype
 import numpy.typing as npt
@@ -377,9 +378,17 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
     if adata.obs["predicted_doublet"].dtype != "bool":
         logger.warning("Could not estimate doublets for every barcode. Columns can contain NAN values.")
 
+    # Recalculate automatic threshold
+    if not threshold:
+        threshold = threshold_minimum(adata.uns["scrublet"]["doublet_scores_sim"])
+    adata.uns["scrublet"]["threshold"] = float(threshold)
+    logger.info("Doublet threshold set to {:.4f}".format(threshold))
+
     # Plot the distribution of scrublet scores
     if plot is True:
-        sc.pl.scrublet_score_distribution(adata)
+        axes = sc.pl.scrublet_score_distribution(adata, show=False)
+        for ax in axes:
+            ax.axvline(x=threshold, color="red", linestyle="--")
 
     # Return adata (or None if inplace)
     if inplace is False:
@@ -433,6 +442,50 @@ def _run_scrublet(adata: sc.AnnData,
             sc.pp.scrublet(adata, copy=False, threshold=threshold, **kwargs)
 
     return (adata.obs, adata.uns["scrublet"])
+
+
+@deco.log_anndata
+@beartype
+def adjust_doublet_threshold(adata: sc.AnnData,  # noqa: C901
+                             threshold: float,
+                             inplace: bool = True) -> Optional[sc.AnnData]:
+    """
+    Add a boolean 'predicted_doublet' column to adata.obs based on a threshold.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        AnnData object containing a 'doublet_score' column in adata.obs.
+    threshold : float
+        Doublet score threshold. Cells with score > threshold are marked as doublets.
+    inplace : bool, default True
+        If True, modify adata in place.
+        If False, return a modified copy of adata.
+
+    Raises
+    ------
+    KeyError
+        If adata.obs does not have the column'doublet_score'.
+        If 'scrublet' is not in  adata.uns.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Returns None 
+    """
+    if "doublet_score" not in adata.obs.columns:
+        raise KeyError("Column 'doublet_score' not found in adata.obs")
+    
+    if "scrublet" not in adata.uns:
+        raise KeyError("Key 'scrublet' not found in adata.uns. Run estimate doublet first.")
+
+    adata = adata if inplace else adata.copy()
+    logger.info(f"Adjust doublet threshold to {threshold}")
+    adata.obs["predicted_doublet"] = adata.obs["doublet_score"] > threshold
+    adata.uns["scrublet"]["threshold"] = threshold
+
+    if inplace:
+        return adata
 
 
 @deco.log_anndata
