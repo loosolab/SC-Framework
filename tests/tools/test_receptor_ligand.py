@@ -25,7 +25,13 @@ plt.switch_backend("Agg")
 
 @pytest.fixture
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    sc.AnnData
+        An anndata object with cluster annotations.
+    """
     f = os.path.join(os.path.dirname(__file__), '..', 'data', "adata.h5ad")
 
     obj = sc.read_h5ad(f)
@@ -36,6 +42,11 @@ def adata():
         Repeat list until size reached.
 
         https://stackoverflow.com/a/54864336/19870975
+
+        Returns
+        -------
+        list
+            Repeated list elements up to the specified count.
         """
         return list * (count // len(list)) + list[:(count % len(list))]
 
@@ -46,13 +57,25 @@ def adata():
 
 @pytest.fixture
 def db_file():
-    """Path to receptor-ligand database."""
+    """Path to receptor-ligand database.
+
+    Returns
+    -------
+    str
+        Path to the mouse receptor-ligand database TSV file.
+    """
     return os.path.join(os.path.dirname(__file__), '..', 'data', 'receptor-ligand', 'mouse_lr_pair.tsv')
 
 
 @pytest.fixture
 def adata_db(adata, db_file):
-    """Add interaction db to adata."""
+    """Add interaction db to adata.
+
+    Returns
+    -------
+    sc.AnnData
+        AnnData object with receptor-ligand database added to uns.
+    """
     return rl.download_db(adata=adata,
                           db_path=db_file,
                           ligand_column='ligand_gene_symbol',
@@ -63,7 +86,13 @@ def adata_db(adata, db_file):
 
 @pytest.fixture
 def adata_inter(adata_db):
-    """Add interaction scores to adata."""
+    """Add interaction scores to adata.
+
+    Returns
+    -------
+    sc.AnnData
+        AnnData object with calculated interaction scores.
+    """
     obj = adata_db.copy()
 
     # replace with random interactions
@@ -84,7 +113,13 @@ def adata_inter(adata_db):
 
 @pytest.fixture
 def adata_with_conditions(adata_inter):
-    """Add condition information to existing adata_inter fixture."""
+    """Add condition information to existing adata_inter fixture.
+
+    Returns
+    -------
+    sc.AnnData
+        AnnData object with condition, batch, and timepoint metadata.
+    """
     obj = adata_inter.copy()
 
     # Add condition information
@@ -98,7 +133,13 @@ def adata_with_conditions(adata_inter):
 
 @pytest.fixture
 def diff_results():
-    """Create mock differential analysis results."""
+    """Create mock differential analysis results.
+
+    Returns
+    -------
+    dict
+        Dictionary containing differential analysis results with condition comparisons.
+    """
     differences = pd.DataFrame({
         'receptor_gene': ['gene1', 'gene2', 'gene3'],
         'ligand_gene': ['gene10', 'gene20', 'gene30'],
@@ -123,7 +164,13 @@ def diff_results():
 
 @pytest.fixture
 def adata_with_diff_results(adata_with_conditions, diff_results):
-    """Create AnnData with mock differential results."""
+    """Create AnnData with mock differential results.
+
+    Returns
+    -------
+    sc.AnnData
+        AnnData object with mock condition-difference results in uns.
+    """
     obj = adata_with_conditions.copy()
 
     # Add the mock results
@@ -283,6 +330,7 @@ def test_cyclone(adata_inter):
                       directional=True,
                       sector_size_is_cluster_size=True,
                       show_genes=True,
+                      restrict_to=list(set(adata_inter.obs["cluster"][:-1])),
                       title="Test Title")
 
     assert isinstance(plot, Figure)
@@ -888,7 +936,13 @@ def test_calculate_condition_differences_errors(
 
 
 def mock_filter_anndata_for_timepoints(kwargs, valid_timepoints):
-    """Mock implementation of _filter_anndata for time-based tests."""
+    """Mock implementation of _filter_anndata for time-based tests.
+
+    Returns
+    -------
+    sc.AnnData or None
+        Filtered AnnData copy if conditions are valid, None otherwise.
+    """
     # Get adata from kwargs
     adata = kwargs.get('adata')
     values = kwargs.get('condition_values', [])

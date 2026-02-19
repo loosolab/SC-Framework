@@ -16,7 +16,13 @@ plt.switch_backend("Agg")
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with test layer for planet plot.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -47,7 +53,7 @@ def adata():
 
     # next we create 6 obs columns that each contain single 1 fore each category combination
     for i in range(6):
-        df[f'obscol{i+1}'] = test_layer[:, i]
+        df[f'obscol{i + 1}'] = test_layer[:, i]
 
     adata.obs = df
     return adata

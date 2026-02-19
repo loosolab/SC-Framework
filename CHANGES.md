@@ -1,15 +1,37 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- fix values outside data range (#337)
+- implement `utils.bioutils.peaks_to_bins` (#374)
+- implement `tools.gsea.gene_set_enrichment` save_table parameter (#405)
+- replace deprecated pkg_resources with importlib_resources (#432)
+- migrate to ruff linting and lint more files (#420)
 - prepare_for_cellxgene: Add "X_" to obsm keys if missing (#416)
 - plot_embedding: Fix bug when setting color to list of length 1 (#402)
 - gene_set_enrichment: Add deg_set_size to gene_set_enrichment (#396)
 - label_genes: Add `show_mismatches` parameter (#404)
+- get_package_versions: gets correct sctoolbox version (#410)
+- Switch from setup.py to pyproject.toml
+- QC: Allow groupby column values to be of type float and int (#391)
+- Fix upset plot bug not handling a mix of grouped and global thresholds.
+- gene_set_enrichment fix error with gene_sets parameter (#425)
+- Remove support for louvain since the package is not maintained. (#426)
+- fix scFates dependency issues (#390)
+- Fix html build errors (#422)
+- cleanup dependencies (#427)
+- README: Update figure (#268)
+- Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
+- CI improvments
+- fix logging issue causing error on save (#333)
 
 ### Changes to notebooks
+- RNA/02: Filter genes: Added check for label column (#430)
 - Notebook 3: Add color_map option for pca quality plots
 - GSEA: Add deg_set_size option to notebook
 - RNA/02: Create 06_*_info.txt report file when no genes are filtered
+- RNA/ATAC: always keep the norm layer (#411)
+- ATAC/02: add peakqc references
+- Notebook 4: Fix report issue when reclustering (#431)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload

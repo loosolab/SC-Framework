@@ -12,7 +12,13 @@ import sctoolbox.tools.marker_genes as mg
 
 @pytest.fixture
 def adata():
-    """Create testing adata."""
+    """Create testing adata.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object with sample and condition annotations.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -33,7 +39,13 @@ def adata():
 
 @pytest.fixture
 def adata_score(adata):
-    """Prepare adata for scoring/ cell cycle test."""
+    """Prepare adata for scoring/ cell cycle test.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with gene names as index for scoring tests.
+    """
 
     # set gene names as index instead of ensemble ids
     adata.var.reset_index(inplace=True)
@@ -46,7 +58,13 @@ def adata_score(adata):
 
 @pytest.fixture
 def gene_set(adata_score):
-    """Return subset of adata genes."""
+    """Return subset of adata genes.
+
+    Returns
+    -------
+    list
+        List of 50 gene names.
+    """
     return adata_score.var.index.to_list()[:50]
 
 

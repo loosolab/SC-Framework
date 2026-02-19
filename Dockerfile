@@ -37,14 +37,9 @@ RUN mamba update -n base mamba && \
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
 # install sctoolbox
-RUN pip install "/home/sc_framework/[core,downstream]" && \
-    pip install pytest && \
-    pip install pytest-html && \
-    pip install pytest-cov && \
-    pip install pytest-mock
+RUN pip install "/home/sc_framework/[all]" --group "/home/sc_framework/pyproject.toml:test"
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \
     mkdir .ssh && \
     ssh-keygen -t ed25519 -N "" -f .ssh/id_ed25519
-

@@ -14,7 +14,13 @@ from scipy import sparse
 
 @pytest.fixture
 def equal_adata():
-    """Build a mock anndata object with equally distributed features."""
+    """Build a mock anndata object with equally distributed features.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with equally distributed features across clusters.
+    """
 
     mtx = equal_mtx()
     adata = build_adata(mtx)
@@ -24,7 +30,13 @@ def equal_adata():
 
 @pytest.fixture
 def unequal_adata():
-    """Build a mock anndata object with unequally distributed features."""
+    """Build a mock anndata object with unequally distributed features.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with unequally distributed features across clusters.
+    """
     mtx = unequal_mtx()
     adata = build_adata(mtx)
 
@@ -33,7 +45,13 @@ def unequal_adata():
 
 @pytest.fixture
 def clust_adata():
-    """Return a clustered adata."""
+    """Return a clustered adata.
+
+    Returns
+    -------
+    anndata.AnnData
+        Preprocessed and clustered PBMC3k dataset.
+    """
     return sc.datasets.pbmc3k_processed()
 
 
@@ -122,7 +140,13 @@ def test_calc_ragi(equal_adata, unequal_adata):
 
 
 def build_adata(mtx):
-    """Build mock anndata object."""
+    """Build mock anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        Mock AnnData object with given matrix.
+    """
 
     # define the number of observations (obs) and var regions
     n_obs = 30
@@ -140,7 +164,13 @@ def build_adata(mtx):
 
 
 def unequal_mtx():
-    """Build a mock mtx with unequal distribution."""
+    """Build a mock mtx with unequal distribution.
+
+    Returns
+    -------
+    scipy.sparse.csr_matrix
+        Sparse matrix with unequal feature distribution.
+    """
 
     index = np.arange(0, 31, 3)
     zero_arr = np.zeros((30, 30))
@@ -154,7 +184,13 @@ def unequal_mtx():
 
 
 def equal_mtx():
-    """Build a mock mtx with equal distribution."""
+    """Build a mock mtx with equal distribution.
+
+    Returns
+    -------
+    scipy.sparse.csr_matrix
+        Sparse matrix with equal feature distribution.
+    """
 
     ones_arr = np.ones((30, 30))
     mtx = sparse.csr_matrix(ones_arr)

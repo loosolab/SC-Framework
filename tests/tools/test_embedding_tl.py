@@ -11,7 +11,13 @@ import sctoolbox.tools.embedding as ste
 
 @pytest.fixture(scope="session")
 def adata():
-    """Create an anndata object with PCA and UMAP."""
+    """Create an anndata object with PCA and UMAP.
+
+    Returns
+    -------
+    anndata.AnnData
+        Preprocessed PBMC3k dataset with PCA and UMAP.
+    """
     return sc.datasets.pbmc3k_processed()
 
 

@@ -12,8 +12,9 @@ dependencies:
 # Dependencies used within the notebooks (but not the sctoolbox package)
   - pip>=24.2  # for installing additional packages
   - pip:
-    - scanpro>=0.4.0  # scanpro < 0.3.1 needs statannotations which causes versioning issues
-    - git+https://gitlab.gwdg.de/loosolab/software/annotate_by_marker_and_features.git
+    # PyPI does not accept direct links so non PyPI packages are installed here
+    # - git+https://github.com/Novartis/scar.git  # skipped as it would add ~10GB to the docker image
+    - git+https://github.com/theislab/scvelo.git
 # sctoolbox related dependency exemptions
 # R dependencies (needed to enable data R->Python conversion)
   - r-base

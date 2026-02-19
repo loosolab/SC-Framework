@@ -17,7 +17,13 @@ quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with processed data and clustering results.
+    """
 
     np.random.seed(1)  # set seed for reproducibility
 
@@ -50,7 +56,7 @@ def adata():
 # ------------------------------ TESTS --------------------------------- #
 
 
-@pytest.mark.parametrize("method", ["leiden", "louvain"])
+@pytest.mark.parametrize("method", ["leiden"])
 def test_search_clustering_parameters(adata, method):
     """Test if search_clustering_parameters returns an array of axes."""
 
