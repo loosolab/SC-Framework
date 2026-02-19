@@ -32,6 +32,7 @@
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
 - Notebook 4: Fix report issue when reclustering (#431)
+- Pilot: Implemented Pilot Notebook (#353)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
