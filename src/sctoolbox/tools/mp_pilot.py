@@ -27,6 +27,10 @@ def mp_first_position(func: Callable,
         Number of processes to spawn. Defaults to the settings.threads.
     **kwargs: Any
         Additional keyword arguments to pass to the function.
+    
+    Returns
+    -------
+    Results of the given function
     """
 
     # Determine number of processes
@@ -72,6 +76,10 @@ def mp_adata_first_arg(func: Callable,
         Number of processes to spawn. Defaults to the settings.threads.
     **kwargs: Any
         Additional keyword arguments to pass to the function.
+    
+    Returns
+    -------
+    Results of the given function
     """
 
     # Set adata as the first argument
