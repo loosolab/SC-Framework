@@ -17,21 +17,35 @@ Welcome to the documentation of the single cell framework!
 
 SC-Framework
 ------------
-# TODO add a brief introduction
+
+The SC-Framework provides a full environment for single cell analysis. It is split into a python package, aimed to conduct common tasks and visualization, and Jupyter notebooks to streamline the individual analysis steps. This in combination with extensive documentation, tutorials, logging, etc. provides a FAIR framework to analyze single cell data in a rapid, comprehensible and reproducible manner.
 
 Quickstart
 ----------
 
+**Prerequesites: A `Jupyter Notebook Server <https://jupyter.org/>`_ and `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_ (or Conda).**
+
+Create and activate the SC-Framework environment (downloaded from our GitHub repository).
+.. code-block:: bash
+
+  curl -L -o sctoolbox_env.yml "https://raw.githubusercontent.com/loosolab/SC-Framework/main/sctoolbox_env.yml"
+  mamba env create -f sctoolbox_env.yml
+  mamba activate sctoolbox
+
 Install the package from PyPI. We recommend to install into a conda environment.
-``pip install SC-Framework[all]``
+.. code-block:: bash
+
+  pip install SC-Framework[all]
 
 Setup a jupyter kernel
-``python -m ipykernel install --user --name <conda_env_name> --display-name "sctoolbox"``
+.. code-block:: bash
 
-Load the analysis notebooks matching your data, e.g., `rna`.
-``TODO sctoolbox.creators.setup_experiment``
+  python -m ipykernel install --user --name <conda_env_name> --display-name "sctoolbox"
 
-Open the notebooks and start your analysis.
+Open the notebooks matching your data, e.g., `rna`, and start your analysis. The notebooks can be found in the respective folders:
+- `RNA <https://github.com/loosolab/SC-Framework/tree/main/rna_analysis/notebooks>`_
+- `ATAC <https://github.com/loosolab/SC-Framework/tree/main/atac_analysis/notebooks>`_
+- `general <https://github.com/loosolab/SC-Framework/tree/main/general_notebooks>`_ (data type independent notebooks. Move to the RNA/ATAC notebook folder before use)
 
 Other links
 -----------
