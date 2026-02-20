@@ -46,6 +46,11 @@ extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in doc
               "myst_parser"
               ]
 
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
 napoleon_numpy_docstring = True
 autodoc_member_order = 'bysource'
 
