@@ -34,9 +34,7 @@ Welcome to the documentation of the single cell framework!
    :target: https://pypi.python.org/pypi/SC-Framework/
    :alt: PyPI download month
 
-**Visit the SC-Framework on GitHub_!**
-
-.. _GitHub: https://github.com/loosolab/SC-Framework
+**Visit the SC-Framework on** `GitHub <https://github.com/loosolab/SC-Framework>`_ **!**
 
 SC-Framework
 ------------
@@ -46,11 +44,7 @@ The SC-Framework provides a full environment for single cell analysis. It is spl
 Quickstart
 ----------
 
-**Prerequesites: A Jupyter Notebook Server_ and Mamba_ (or Conda).**
-
-.. _Jupyter Notebook Server: https://jupyter.org/
-.. _Mamba: https://mamba.readthedocs.io/en/latest/index.html
-
+**Prerequesites: A** `Jupyter Notebook Server <https://jupyter.org/>`_ **and** `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_ **(or Conda).**
 
 Create and activate the SC-Framework environment (downloaded from our GitHub repository).
 
@@ -99,6 +93,7 @@ Interested in our group and our projects? :)
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   :hidden:
 
    tutorials/index
    rna-notebooks/index
