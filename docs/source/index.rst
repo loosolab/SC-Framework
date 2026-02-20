@@ -34,7 +34,9 @@ Welcome to the documentation of the single cell framework!
    :target: https://pypi.python.org/pypi/SC-Framework/
    :alt: PyPI download month
 
-**Visit the SC-Framework on `GitHub <https://github.com/loosolab/SC-Framework>`__!**
+**Visit the SC-Framework on GitHub_!**
+
+.. _GitHub: https://github.com/loosolab/SC-Framework
 
 SC-Framework
 ------------
@@ -44,9 +46,14 @@ The SC-Framework provides a full environment for single cell analysis. It is spl
 Quickstart
 ----------
 
-**Prerequesites: A `Jupyter Notebook Server <https://jupyter.org/>`__ and `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`__ (or Conda).**
+**Prerequesites: A Jupyter Notebook Server_ and Mamba_ (or Conda).**
+
+.. _Jupyter Notebook Server: https://jupyter.org/
+.. _Mamba: https://mamba.readthedocs.io/en/latest/index.html
+
 
 Create and activate the SC-Framework environment (downloaded from our GitHub repository).
+
 .. code-block:: bash
 
   curl -L -o sctoolbox_env.yml "https://raw.githubusercontent.com/loosolab/SC-Framework/main/sctoolbox_env.yml"
@@ -54,19 +61,26 @@ Create and activate the SC-Framework environment (downloaded from our GitHub rep
   mamba activate sctoolbox
 
 Install the package from PyPI. We recommend to install into a conda environment.
+
 .. code-block:: bash
 
   pip install SC-Framework[all]
 
 Setup a jupyter kernel
+
 .. code-block:: bash
 
   python -m ipykernel install --user --name <conda_env_name> --display-name "sctoolbox"
 
 Open the notebooks matching your data, e.g., `rna`, and start your analysis. The notebooks can be found in the respective folders:
-- `RNA <https://github.com/loosolab/SC-Framework/tree/main/rna_analysis/notebooks>`__
-- `ATAC <https://github.com/loosolab/SC-Framework/tree/main/atac_analysis/notebooks>`__
-- `general <https://github.com/loosolab/SC-Framework/tree/main/general_notebooks>`__ (data type independent notebooks. Move to the RNA/ATAC notebook folder before use)
+
+- RNA_
+- ATAC_
+- general_ (data type independent notebooks. Move to the RNA/ATAC notebook folder before use)
+
+.. _RNA: https://github.com/loosolab/SC-Framework/tree/main/rna_analysis/notebooks
+.. _ATAC: https://github.com/loosolab/SC-Framework/tree/main/atac_analysis/notebooks
+.. _general: https://github.com/loosolab/SC-Framework/tree/main/general_notebooks
 
 Other links
 -----------
@@ -81,3 +95,14 @@ Interested in our group and our projects? :)
 - `X <https://x.com/loosolab>`_
 - `YouTube <https://www.youtube.com/@loosolab>`_
 - `Contact <https://github.molgen.mpg.de/pages/loosolab/www/contact/>`_
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   tutorials/index
+   rna-notebooks/index
+   atac-notebooks/index
+   general-notebooks/index
+   API/index
+   CHANGES
