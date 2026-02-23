@@ -25,6 +25,7 @@
 - fix logging issue causing error on save (#333)
 
 ### Changes to notebooks
+- Notebooks 4: Fix blue input cell order
 - RNA/02: Filter genes: Added check for label column (#430)
 - Notebook 3: Add color_map option for pca quality plots
 - GSEA: Add deg_set_size option to notebook
