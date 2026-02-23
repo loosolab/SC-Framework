@@ -5,8 +5,8 @@ Welcome to the documentation of the single cell framework!
    :width: 800
 
 .. image:: https://img.shields.io/badge/Zenodo-10.5281%2Fzenodo.16913120-blue
-   :target: https://doi.org/10.5281/zenodo.16913120
-   :alt: Zenodo DOI 10.5281/zenodo.16913120
+   :target: https://doi.org/10.5281/zenodo.11065517
+   :alt: Zenodo DOI 10.5281/zenodo.11065517
 
 .. image:: https://img.shields.io/badge/bioRxiv-10.1101%2F2025.11.11.687874-%23bd2736
    :target: https://doi.org/10.1101/2025.11.11.687874
@@ -101,3 +101,4 @@ Interested in our group and our projects? :)
    general-notebooks/index
    API/index
    CHANGES
+   cite
