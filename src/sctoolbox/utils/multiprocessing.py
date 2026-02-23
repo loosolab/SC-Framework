@@ -78,7 +78,7 @@ def monitor_jobs(jobs: dict[Tuple[int, int | str], Any] | list[Any], description
 def mp_first_position(func: Callable,
                       iterable: Iterable,
                       threads: Optional[int] = None,
-                      **kwargs: Any):
+                      **kwargs: Any) -> list[Any]:
     """
     Run a function in multiple processes.
 
@@ -125,7 +125,7 @@ def mp_adata_first_arg(func: Callable,
                        adata: sc.AnnData,
                        iterable: Iterable,
                        threads: Optional[int] = None,
-                       **kwargs: Any):
+                       **kwargs: Any) -> list[Any]:
     """
     Run a function in multiple processes, with anndata object as the first argument.
 
