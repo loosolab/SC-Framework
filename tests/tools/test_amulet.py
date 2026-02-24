@@ -28,6 +28,11 @@ def available_chromosomes():
 
     All test fixtures and test methods should reference this fixture
     instead of hardcoding chromosome names.
+
+    Returns
+    -------
+    list of str
+        List of chromosome names.
     """
     return ["chr1", "chr2"]
 
@@ -38,13 +43,24 @@ def available_barcodes():
 
     All test fixtures and test methods should reference this fixture
     instead of hardcoding barcode names.
+
+    Returns
+    -------
+    list of str
+        List of barcode names.
     """
     return ["BARCODE1", "BARCODE2", "BARCODE3"]
 
 
 @pytest.fixture
 def sample_region_data(available_chromosomes):
-    """Create sample region data for testing utility functions."""
+    """Create sample region data for testing utility functions.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of region data with columns [chromosome, start, end].
+    """
     chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
     # Format: [chromosome, start, end, ...]
     data = np.array([
@@ -59,7 +75,13 @@ def sample_region_data(available_chromosomes):
 
 @pytest.fixture
 def sample_reads(available_chromosomes):
-    """Create sample reads for testing overlap detection."""
+    """Create sample reads for testing overlap detection.
+
+    Returns
+    -------
+    list of list
+        List of reads, each as [chromosome, start, end].
+    """
     chr1 = available_chromosomes[0]
     # Simple case: 3 overlapping reads on chr1
     reads = [
@@ -72,7 +94,13 @@ def sample_reads(available_chromosomes):
 
 @pytest.fixture
 def sample_reads_no_overlap(available_chromosomes):
-    """Create non-overlapping reads."""
+    """Create non-overlapping reads.
+
+    Returns
+    -------
+    list of list
+        List of reads, each as [chromosome, start, end].
+    """
     chr1 = available_chromosomes[0]
     reads = [
         [chr1, 100, 150],
@@ -83,7 +111,13 @@ def sample_reads_no_overlap(available_chromosomes):
 
 @pytest.fixture
 def sample_fragment_file(tmp_path, available_chromosomes, available_barcodes):
-    """Create a temporary fragment file for testing."""
+    """Create a temporary fragment file for testing.
+
+    Returns
+    -------
+    str
+        Path to the temporary fragment TSV file.
+    """
     chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
     bc1, bc2, bc3 = available_barcodes[0], available_barcodes[1], available_barcodes[2]
     fragment_content = f"""# Comment line
@@ -105,7 +139,13 @@ def sample_fragment_file(tmp_path, available_chromosomes, available_barcodes):
 
 @pytest.fixture
 def sample_fragment_file_gz(tmp_path, available_chromosomes, available_barcodes):
-    """Create a compressed fragment file for testing."""
+    """Create a compressed fragment file for testing.
+
+    Returns
+    -------
+    str
+        Path to the temporary gzip-compressed fragment file.
+    """
     chr1 = available_chromosomes[0]
     bc1 = available_barcodes[0]
     fragment_content = f"""{chr1}	100	200	{bc1}	1
@@ -120,7 +160,13 @@ def sample_fragment_file_gz(tmp_path, available_chromosomes, available_barcodes)
 
 @pytest.fixture
 def sample_repeat_regions(available_chromosomes):
-    """Create sample repeat regions for testing."""
+    """Create sample repeat regions for testing.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of repeat regions with columns [chromosome, start, end].
+    """
     chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
     return np.array([
         [chr1, 150, 180],
@@ -130,7 +176,13 @@ def sample_repeat_regions(available_chromosomes):
 
 @pytest.fixture
 def sample_repeat_bed_file(tmp_path, available_chromosomes):
-    """Create a temporary BED file with repeat regions."""
+    """Create a temporary BED file with repeat regions.
+
+    Returns
+    -------
+    str
+        Path to the temporary BED file.
+    """
     chr1, chr2 = available_chromosomes[0], available_chromosomes[1]
     bed_content = f"""{chr1}	150	180
 {chr2}	100	150
@@ -142,7 +194,13 @@ def sample_repeat_bed_file(tmp_path, available_chromosomes):
 
 @pytest.fixture
 def sample_adata(sample_fragment_file, available_barcodes):
-    """Create a sample AnnData object for testing."""
+    """Create a sample AnnData object for testing.
+
+    Returns
+    -------
+    anndata.AnnData
+        Sample AnnData object with barcodes as obs index.
+    """
     # Create simple count matrix
     n_cells = len(available_barcodes)
     n_features = 10
@@ -157,7 +215,13 @@ def sample_adata(sample_fragment_file, available_barcodes):
 
 @pytest.fixture
 def sample_overlaps_df():
-    """Create sample overlaps DataFrame for testing."""
+    """Create sample overlaps DataFrame for testing.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with overlap information columns.
+    """
     data = {
         'chr': ['chr1', 'chr1', 'chr1'],
         'start': [100, 300, 100],
@@ -173,7 +237,13 @@ def sample_overlaps_df():
 
 @pytest.fixture
 def sample_summary_df():
-    """Create sample summary DataFrame for testing."""
+    """Create sample summary DataFrame for testing.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with per-cell read and overlap counts.
+    """
     data = {
         'cell_id': ['CELL1', 'CELL2', 'CELL3'],
         'n_valid_reads': [100, 150, 80],
@@ -190,6 +260,11 @@ def chr_start_sorted(sample_region_data):
 
     This fixture reduces redundant calls to _get_chr_start_sorted()
     in TestGetOverlappingRegions tests.
+
+    Returns
+    -------
+    tuple
+        Chromosome-sorted region data as returned by _get_chr_start_sorted.
     """
     return amulet._get_chr_start_sorted(sample_region_data)
 
@@ -199,7 +274,11 @@ def generate_matrix_inputs(sample_overlaps_df):
     """Prepare inputs for _generate_matrix tests.
 
     This fixture reduces redundant setup code in TestGenerateMatrix tests.
-    Returns a dict with data, cell_ids, and union_overlaps.
+
+    Returns
+    -------
+    dict
+        Dict with keys 'data', 'cell_ids', and 'union_overlaps'.
     """
     data = sample_overlaps_df[['chr', 'start', 'end', 'cell_id']].values
     cell_ids = np.array(['CELL1', 'CELL2', 'CELL3'])
@@ -837,6 +916,11 @@ def processed_adata(sample_adata, sample_fragment_file, available_chromosomes):
     """Run AMULET on sample_adata and return the processed object.
 
     This fixture reduces redundant function calls in TestEstimateDoubletsAmuletBasic.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object after AMULET doublet estimation has been applied.
     """
     amulet.estimate_doublets_amulet(
         sample_adata, sample_fragment_file,
