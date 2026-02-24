@@ -2,6 +2,7 @@
 
 ## 0.15.0 (in progress)
 - Add function adjust_doublet_threshold
+- integration of AMULET to find multiplets in single-cell ATAC-seq data (#260)
 - fix values outside data range (#337)
 - implement `utils.bioutils.peaks_to_bins` (#374)
 - implement `tools.gsea.gene_set_enrichment` save_table parameter (#405)
