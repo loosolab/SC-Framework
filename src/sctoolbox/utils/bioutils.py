@@ -5,24 +5,27 @@ import pandas as pd
 import re
 import requests
 import apybiomart
-from scipy.sparse import issparse
+from scipy.sparse import issparse, coo_matrix
 import gzip
 import argparse
 import os
 import pybedtools
 import scanpy as sc
 import anndata
+import pyranges as pr
 
-from beartype.typing import Optional, Literal, Tuple, Any
+from beartype.typing import Optional, Literal, Tuple, Any, Dict
 from beartype import beartype
 
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
+from sctoolbox._settings import settings
+logger = settings.logger
 
 
 @deco.log_anndata
 @beartype
-def pseudobulk_table(adata: sc.AnnData,
+def pseudobulk_table(adata: sc.AnnData,  # noqa: C901
                      groupby: str,
                      how: Literal['mean', 'sum'] = "mean",
                      layer: Optional[str] = None,
@@ -86,10 +89,9 @@ def pseudobulk_table(adata: sc.AnnData,
         if percentile_range == (0, 100):  # uses all cells
             if how == "mean":
                 vals = cluster_values.mean(0)
-                res[clust] = vals.A1 if issparse(cluster_values) else vals
             elif how == "sum":
                 vals = cluster_values.sum(0)
-                res[clust] = vals.A1 if issparse(cluster_values) else vals
+            res[clust] = vals.A1 if issparse(cluster_values) else vals
         else:
 
             n_features = cluster_values.shape[1]
@@ -526,10 +528,6 @@ def _overlap_two_bedfiles(bed1: str, bed2: str, overlap: str, **kwargs: Any) -> 
         path to output bedfile
     **kwargs : Any
         Additional arguments passed to pybedtools.BedTool.intersect
-
-    Returns
-    -------
-    None
     """
     # Ensure that path to bedtools is set
     pybedtools.helpers.set_bedtools_path(utils.checker._add_path())
@@ -629,10 +627,105 @@ def _sort_bed(bedfile: str, sorted_bedfile: str) -> None:
         path to bedfile
     sorted_bedfile : str
         path to sorted bedfile
-
-    Returns
-    -------
-    None
     """
     sort_cmd = f'sort -k1,1 -k2,2n {bedfile} > {sorted_bedfile}'
     os.system(sort_cmd)
+
+
+#####################################################################
+#                      ATAC related functions                       #
+#####################################################################
+
+@deco.log_anndata
+@beartype
+def peaks_to_bins(adata: sc.AnnData,
+                  chromsizes: str | Dict[str, int],
+                  var_map: Dict[Literal["Chromosome", "Start", "End"], str] = {},
+                  chrom_kwargs: dict = {"sep": "\t"},
+                  bin_size: int = 5000) -> sc.AnnData:
+    r"""
+    Combine the peaks of a scATAC AnnData into equal sized bins.
+
+    Note: the binned object will only contain ``.obs`` and binned ``.X`` and ``.var`` other attributes won't carry over.
+
+    Parameters
+    ----------
+    adata : sc.AnnData
+        The object to bin. Expects ``adata.var`` to contain at least three columns: "Chromosome", "Start", "End".
+    var_map : Dict[Literal["Chromosome", "Start", "End"], str], default {"Chromosome": "Chromosome", "Start": "Start", "End": "End"}
+        Select the names of the ``adata.var`` columns that contain the respective information.
+        E.g. ``{"Chromosome": "chr"}`` to use the "chr" column for chromosome information.
+    chromsizes : str | Dict[str, int]
+        A table file with chromosome sizes. Expected to contain two columns "Chromosome", "Length". The header is optional.
+        Or a dict in the format ``{"chr_name": <length>}``.
+    chrom_kwargs : dict, default {"sep": "\t"}
+        Additional parameters forwarded to :func:pandas.read_csv. Only if chromsizes is a file path.
+    bin_size : int, default 5000
+        The size of the bins.
+
+    Returns
+    -------
+    sc.AnnData
+        A new object with binned peaks.
+
+    Raises
+    ------
+    ValueError
+        If there is neither a matching column name nor a value in ``var_map``.
+    """
+    id_col = "peak_idx"
+
+    # 1) Prepare your peaks DataFrame with an explicit index
+    logger.info("Preparing data")
+    var = adata.var.copy()
+
+    var[id_col] = np.arange(adata.var.shape[0])
+
+    # format chromosome, start, end columns for binning
+    var.rename(columns={k: v for v, k in var_map.items()}, inplace=True)
+
+    missing_names = [n for n in ["Chromosome", "Start", "End"] if n not in var.columns]
+    if missing_names:
+        raise ValueError(f"Use 'var_map' to set column names for {missing_names}.")
+
+    # 2) Prepare chromosome sizes and bins
+    # prepare chromosome sizes
+    if isinstance(chromsizes, str):
+        chrom_lengths = pd.read_csv(chromsizes, **chrom_kwargs)
+        chrom_lengths.set_index(chrom_lengths.columns[0], inplace=True)
+    else:
+        chrom_lengths = pd.DataFrame.from_dict(chromsizes, orient="index")
+
+    # create a table of bins
+    bins = []
+    for row in chrom_lengths.itertuples():  # itertuples is faster than iterrows
+        for start in range(0, row[1], bin_size):
+            bins.append((row[0], start, min(start + bin_size, row[1])))
+    bins_df = pd.DataFrame(bins, columns=["Chromosome", "Start", "End"])
+    bins_df["bin_idx"] = np.arange(bins_df.shape[0])
+
+    # 3) Turn into PyRanges (include the index columns)
+    gr_peaks = pr.PyRanges(var)
+    gr_bins = pr.PyRanges(bins_df)
+
+    # 3) Join to get bin↔peak overlaps (will carry bin_idx & peak_idx)
+    overlap = gr_bins.join(gr_peaks).df
+    # overlap columns include: Chromosome, Start, End, bin_idx, Start_b, End_b, <id_col>
+
+    # 4) Build the sparse “peak→bin” matrix M
+    logger.info("Binning data")
+    rows = overlap[id_col].values
+    cols = overlap["bin_idx"].values
+    data = np.ones_like(rows, dtype=np.int8)
+    M = coo_matrix((data, (rows, cols)),
+                   shape=(adata.n_vars, bins_df.shape[0])).tocsr()
+
+    # 5) Multiply to get cell×bin counts
+    X_bins = adata.X.dot(M)  # sparse CSR result
+
+    # 6) Wrap into a new AnnData and save
+    var_bins = bins_df.set_index("bin_idx")[["Chromosome", "Start", "End"]]
+    var_bins.index = [f"{c}:{s}-{e}" for c, s, e in var_bins[["Chromosome", "Start", "End"]].itertuples(index=False)]
+    adata_bins = sc.AnnData(X=X_bins, obs=adata.obs.copy(), var=var_bins)
+
+    return adata_bins

@@ -43,15 +43,16 @@ logger = settings.logger
 
 @deco.log_anndata
 @beartype
-def download_db(adata: sc.AnnData,
-                db_path: str,
-                ligand_column: str,
-                receptor_column: str,
-                sep: str = "\t",
-                inplace: bool = False,
-                overwrite: bool = False,
-                remove_duplicates: bool = True,
-                report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
+def download_db(  # noqa: C901
+    adata: sc.AnnData,
+    db_path: str,
+    ligand_column: str,
+    receptor_column: str,
+    sep: str = "\t",
+    inplace: bool = False,
+    overwrite: bool = False,
+    remove_duplicates: bool = True,
+    report: Optional[Tuple[str, str]] = None) -> Optional[sc.AnnData]:
     r"""
     Download table of receptor-ligand interactions and store in adata.
 
@@ -64,16 +65,22 @@ def download_db(adata: sc.AnnData,
         Either a path to a database table e.g.:
         - Human: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/human_lr_pair.txt
         - Mouse: http://tcm.zju.edu.cn/celltalkdb/download/processed_data/mouse_lr_pair.txt
+        - Zebrafish: https://connectomedb.org/downloads/Current-Release/CSV/ConnectomeDB2025_zebrafish.csv
         or the name of a database available in the LIANA package:
         - https://liana-py.readthedocs.io/en/latest/notebooks/prior_knowledge.html#Ligand-Receptor-Interactions
     ligand_column : str
         Name of the column with ligand gene names.
-        Use 'ligand_gene_symbol' for the urls provided above. For LIANA databases use 'ligand'.
+        Use 'ligand_gene_symbol' for the urls provided above.
+        For LIANA databases use 'ligand'.
+        For ConnectomeDB zebrafish use 'ligand'.
     receptor_column : str
         Name of column with receptor gene names.
-        Use 'receptor_gene_symbol' for the urls provided above. For LIANA databases use 'receptor'.
+        Use 'receptor_gene_symbol' for the urls provided above.
+        For LIANA databases use 'receptor'.
+        For ConnectomeDB zebrafish use 'receptor'.
     sep : str, default '\t'
         Separator of database table.
+        Use sep=',' for ConnectomeDB CSV files.
     inplace : bool, default False
         Whether to copy `adata` or modify it inplace.
     overwrite : bool, default False
@@ -124,6 +131,11 @@ def download_db(adata: sc.AnnData,
         else:
             raise ValueError(f"{db_path} is neither a valid file nor on of the available LIANA resources ({liana_res.show_resources()}).")
 
+    # Handling ConnectomeDB format (has 'LR Pair' column, e.g. 'si:dkey-46g23.5 lrp1ab' <Ligand Receptor>
+    if 'LR Pair' in database.columns and ligand_column == 'ligand' and receptor_column == 'receptor':
+        # Split 'LR Pair' into ligand and receptor columns
+        database[['ligand', 'receptor']] = database['LR Pair'].str.split(n=1, expand=True)
+
     # check column names in table
     if ligand_column not in database.columns:
         raise ValueError(f"Ligand column '{ligand_column}' not found in database! Available columns: {database.columns}")
@@ -162,7 +174,7 @@ def download_db(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def calculate_interaction_table(adata: sc.AnnData,
+def calculate_interaction_table(adata: sc.AnnData,  # noqa: C901
                                 cluster_column: str,
                                 gene_index: Optional[str] = None,
                                 normalize: Optional[int] = None,
@@ -229,7 +241,11 @@ def calculate_interaction_table(adata: sc.AnnData,
     # test if database gene columns overlap with adata.var genes
     if (not set(adata.uns["receptor-ligand"]["database"][r_col]) & set(index)
             or not set(adata.uns["receptor-ligand"]["database"][l_col]) & set(index)):
-        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. Please make sure to select gene ids or symbols in all columns.")
+        raise ValueError(f"Database columns '{r_col}', '{l_col}' don't match adata.var['{gene_index}']. "
+                        f"No overlap found between database genes and your data. "
+                        f"This may occur if: (1) gene IDs/symbols don't match (use .var index or a column with matching IDs), "
+                        f"or (2) you're using a database for the wrong organism (e.g., human/mouse database with zebrafish data). "
+                        f"For zebrafish, consider using: https://connectomedb.org/downloads/Current-Release/CSV/ConnectomeDB2025_zebrafish.csv")
 
     # ----- compute cluster means and expression percentage for each gene -----
     # gene mean expression per cluster
@@ -578,7 +594,7 @@ def hairball(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def cyclone(
+def cyclone(  # noqa: C901
     adata: sc.AnnData,
     min_perc: int | float,
     interaction_score: float | int = 0,
@@ -1072,7 +1088,7 @@ def interaction_progress(datalist: list[sc.AnnData],
 
 @deco.log_anndata
 @beartype
-def connectionPlot(adata: sc.AnnData,
+def connectionPlot(adata: sc.AnnData,  # noqa: C901
                    restrict_to: Optional[list[str]] = None,
                    figsize: Tuple[int | float, int | float] = (10, 15),
                    dpi: Optional[int | float] = None,
@@ -1208,7 +1224,7 @@ def connectionPlot(adata: sc.AnnData,
         # create a custom sort function
         sorting_dict = {c: i for i, c in enumerate(xlabel_order)}
 
-        def sort_fun(x):
+        def sort_fun(x: pd.Series) -> pd.Series:
             return x.map(sorting_dict)
     else:
         sort_fun = None
@@ -1292,8 +1308,14 @@ def connectionPlot(adata: sc.AnnData,
     if connection_alpha:
         # set custom min and max values
         if alpha_range:
-            def alpha_sorter(x):
-                """Set values outside of range to min or max."""
+            def alpha_sorter(x: float | int) -> float | int:
+                """Set values outside of range to min or max.
+
+                Returns
+                -------
+                float
+                    Value clamped to the specified alpha range.
+                """
                 if x < alpha_range[0]:
                     return alpha_range[0]
                 elif x > alpha_range[1]:
@@ -1354,8 +1376,14 @@ def connectionPlot(adata: sc.AnnData,
     # ----- legends -----
     step_num = 5  # the number of steps in all legends
 
-    def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
-        """Create a custom handle list for the legend."""
+    def _create_handle_list(hue: str, hue_range: Tuple[int | float, int | float], palette: str, size: str, size_range: Tuple[int | float, int | float], dot_size: Tuple[int | float, int | float], step_num: int = 5) -> list:
+        """Create a custom handle list for the legend.
+
+        Returns
+        -------
+        list
+            List of matplotlib handles for the legend.
+        """
         handles = []
 
         # define the hue and size ranges
@@ -1368,8 +1396,14 @@ def connectionPlot(adata: sc.AnnData,
         size_steps = np.linspace(*(size_range), num=step_num)
 
         # size normalization
-        def size_norm(x):
-            """Scale dot sizes."""
+        def size_norm(x: float | int) -> float:
+            """Scale dot sizes.
+
+            Returns
+            -------
+            float
+                Normalized dot size.
+            """
             return minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
 
         if hue != size:
@@ -1524,8 +1558,15 @@ def get_interactions(anndata: sc.AnnData,
 
 
 @beartype
-def _check_interactions(anndata: sc.AnnData):
-    """Return error message if anndata object doesn't contain interaction data."""
+def _check_interactions(anndata: sc.AnnData) -> None:
+    """
+    Return error message if anndata object doesn't contain interaction data.
+
+    Raises
+    ------
+    ValueError
+        If no interaction data is found.
+    """
 
     # is interaction table available?
     if "receptor-ligand" not in anndata.uns.keys() or "interactions" not in anndata.uns["receptor-ligand"].keys():
@@ -1552,7 +1593,7 @@ def _check_interactions(anndata: sc.AnnData):
 
 # Function to create a filtered AnnData object
 @beartype
-def _filter_anndata(
+def _filter_anndata(  # noqa: C901
     adata: sc.AnnData,
     condition_values: List[str] | npt.ArrayLike,
     condition_columns: List[str],
@@ -1800,7 +1841,7 @@ def _calculate_condition_difference(
 
 
 @beartype
-def _process_condition_combinations(
+def _process_condition_combinations(  # noqa: C901
     adata: sc.AnnData,
     condition_columns: List[str],
     cluster_column: str,
@@ -2006,7 +2047,7 @@ def _process_condition_combinations(
 
 @deco.log_anndata
 @beartype
-def calculate_condition_differences(
+def calculate_condition_differences(  # noqa: C901
     adata: sc.AnnData,
     condition_columns: List[str],
     cluster_column: str,
@@ -2376,11 +2417,6 @@ def _draw_network(graph: nx.DiGraph,
     all_cell_types : set
         Set of all cell types to ensure consistent drawing
 
-    Returns
-    -------
-    None
-        This function modifies the provided axis in-place
-
     Examples
     --------
     # Create simple test graph
@@ -2599,7 +2635,7 @@ def _format_control_conditions(diff_df: pd.DataFrame) -> str:
 
 
 @beartype
-def condition_differences_network(
+def condition_differences_network(  # noqa: C901
     adata: sc.AnnData,
     n_top: int = 100,
     figsize: Tuple[int | float, int | float] = (22, 16),
@@ -3322,7 +3358,7 @@ def _get_gene_expression(
 
 
 @beartype
-def plot_interaction_timeline(
+def plot_interaction_timeline(  # noqa: C901
     adata: sc.AnnData,
     interactions: List[Tuple[str, str, str, str]],
     timepoint_column: str,

@@ -11,28 +11,52 @@ import os
 
 @pytest.fixture
 def adata():
-    """Fixture for an AnnData object."""
+    """Fixture for an AnnData object.
+
+    Returns
+    -------
+    sc.AnnData
+        ATAC-seq AnnData object.
+    """
     adata = sc.read_h5ad(os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad'))
     return adata
 
 
 @pytest.fixture
 def fragments():
-    """Fixture for a fragments object."""
+    """Fixture for a fragments object.
+
+    Returns
+    -------
+    str
+        Path to the fragments BED file.
+    """
     fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_fragments.bed')
     return fragments
 
 
 @pytest.fixture
 def gtf():
-    """Fixture for a gtf object."""
+    """Fixture for a gtf object.
+
+    Returns
+    -------
+    str
+        Path to the GTF annotation file.
+    """
     gtf = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_genes.gtf')
     return gtf
 
 
 @pytest.fixture
 def tss_file():
-    """Fixture for a tss_file object."""
+    """Fixture for a tss_file object.
+
+    Returns
+    -------
+    str
+        Path to the TSS BED file.
+    """
     tss_file = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_tss.bed')
     return tss_file
 

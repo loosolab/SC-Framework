@@ -49,9 +49,9 @@ classifiers = [
 ]
 keywords = [
     "single-cell",
+    "single-cell analysis",
     "scRNA-seq",
     "scATAC-seq",
-    "single-cell analysis",
     "transcriptomics",
     "epigenomics",
     "chromatin accessibility",
@@ -123,7 +123,8 @@ atac = [
     'pybedtools>=0.9.1',  # https://github.com/daler/pybedtools/issues/384
     'pygenometracks>=3.9',  # to speed up installation
     'peakqc',
-    'tobias>=0.17.2'  # to avoid installation error
+    'tobias>=0.17.2',  # to avoid installation error
+    'pyranges'
 ]
 interactive = [
     'click'
@@ -212,4 +213,66 @@ addopts = """
 """
 testpaths = [
     "./tests"
+]
+
+[tool.ruff]
+# Include these directores and files
+include = [
+    "pyproject.toml",
+    "src/**/*.py",
+    "scripts/*.py",
+    "tests/**/*.py",
+    "tests/*.py",
+    "*_analysis/notebooks/*.ipynb",
+    "general_notebooks/*.ipynb"
+]
+
+# Exclude directories from linting
+extend-exclude = [
+    "src/sctoolbox/__init__.py",
+    "src/sctoolbox/data",
+    "src/tests/data",
+]
+
+[tool.ruff.lint]
+# Enable rule categories
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "D",      # pydocstyle (docstring rules)
+    "C90",    # mccabe complexity
+    "ANN"     # flake8-annotations
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",  # Line too long
+    "D202",  # No blank lines allowed after function docstring
+    "F821"  # Undefined name
+    # Note: W503 doesn't exist in ruff - line break style handled by formatters
+    # Note: DOC301, DOC105 don't exist in ruff yet - not implemented from pydoclint
+]
+
+# Preview rules for pydoclint support and E226
+preview = true
+extend-select = [
+    "DOC",  # pydoclint rules
+    "E226",  # Missing whitespace around arithmetic operator (preview rule)
+    "D417"  # check if docstring parameters match function signature
+]
+
+[tool.ruff.lint.pydocstyle]
+# Use NumPy docstring convention
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore rules in specific files
+"__init__.py" = [
+    "F822",  # allows undefined strings in __all__
+    "DOC201",  # `return` is not documented in docstring
+    "DOC501"  #  Raised exception `xyz` missing from docstring
+]
+"tests/*" = [
+    "ANN"  # disable the flake8-annotation rules
 ]

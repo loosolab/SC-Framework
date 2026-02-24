@@ -11,14 +11,26 @@ import sctoolbox.tools.highly_variable as hv
 
 @pytest.fixture
 def adata_rna():
-    """Load rna anndata."""
+    """Load rna anndata.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
 
 @pytest.fixture
 def adata_atac():
-    """Load atac anndata."""
+    """Load atac anndata.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
     return sc.read_h5ad(adata_f)
 
@@ -26,7 +38,13 @@ def adata_atac():
 # TODO add precalculated qc adata to save runtime
 @pytest.fixture(scope="module")
 def adata_atac_qc():
-    """Add qc to anndata."""
+    """Add qc to anndata.
+
+    Returns
+    -------
+    anndata.AnnData
+        ATAC-seq AnnData object with QC metrics.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
     adata = sc.read_h5ad(adata_f)
     sc.pp.calculate_qc_metrics(adata, inplace=True)

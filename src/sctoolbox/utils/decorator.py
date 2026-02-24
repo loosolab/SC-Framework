@@ -5,7 +5,7 @@ import functools
 import pandas as pd
 import matplotlib
 
-from beartype.typing import Callable
+from beartype.typing import Callable, Any
 from beartype import beartype
 
 import sctoolbox.utils as utils
@@ -30,7 +30,7 @@ def log_anndata(func: Callable) -> Callable:
     # TODO store datatypes not supported by scanpy.write as string representation (repr())
 
     @functools.wraps(func)  # preserve information of the decorated func
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
 
         # find anndata object within parameters (if there are more use the first one)
         adata = None
@@ -54,9 +54,12 @@ def log_anndata(func: Callable) -> Callable:
             adata.uns["sctoolbox"]["log"][funcname] = {}
 
         # Convert objects to safe representations, e.g. anndata objects to string representation and tuple to list
-        args_repr = {f"arg{i+1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
+        args_repr = {f"arg{i + 1}": element for i, element in enumerate(args)}  # create dict with arg1, arg2, ... as keys instead of list to prevent errors with wrongly shaped arrays
         kwargs_repr = kwargs
-        convert = {sc.AnnData: repr, tuple: list, matplotlib.axes._axes.Axes: str}
+        convert = {sc.AnnData: repr,
+                   tuple: list,
+                   matplotlib.axes._axes.Axes: str,
+                   dict: str}  # nested dicts are not allowed
         for typ, convfunc in convert.items():
             args_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in args_repr.items()}
             kwargs_repr = {param: convfunc(element) if isinstance(element, typ) else element for param, element in kwargs_repr.items()}
@@ -135,6 +138,6 @@ def debug_func_log(func: Callable) -> None:
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         print(f"DEBUG: {func.__name__} called with args: {args} and kwargs: {kwargs}")
         return func(*args, **kwargs)

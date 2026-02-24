@@ -113,13 +113,13 @@ def plot_starsolo_quality(folder: str,
     """
 
     # Prepare functions for converting labels
-    def format_million(label):
+    def format_million(label: str) -> str:
         return '{:,.0f} M'.format(int(label) / 10**6)
 
-    def format_thousand(label):
+    def format_thousand(label: str) -> str:
         return '{:,.0f} K'.format(int(label) / 10**3)
 
-    def format_percent(label):
+    def format_percent(label: str) -> str:
         return '{:,.0f}%'.format(float(label) * 100)
 
     # Get summary table
@@ -250,7 +250,7 @@ def plot_starsolo_UMI(folder: str,
 @beartype
 def _n_cells_pieplot(adata: sc.AnnData,
                      groupby: str,
-                     figsize: Optional[Tuple[int | float, int | float]] = None):
+                     figsize: Optional[Tuple[int | float, int | float]] = None) -> None:
     """
     Plot number of cells per group in a pieplot.
 
@@ -272,7 +272,7 @@ def _n_cells_pieplot(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def n_cells_barplot(adata: sc.AnnData,
+def n_cells_barplot(adata: sc.AnnData,  # noqa: C901
                     x: str,
                     groupby: Optional[str] = None,
                     stacked: bool = True,
@@ -591,7 +591,12 @@ def _toggle_linkage(checkbox: ipywidgets.widgets.Checkbox | traitlets.utils.bunc
                 linkage.unlink()
 
 
-def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
+def _update_thresholds(slider: dict,
+                       fig: plt.Figure,
+                       min_line: plt.Line2D,
+                       min_shade: Rectangle,
+                       max_line: plt.Line2D,
+                       max_shade: Rectangle) -> None:
     """Update the locations of thresholds in plot."""
 
     tmin, tmax = slider["new"]  # threshold values from slider
@@ -621,7 +626,7 @@ def _update_thresholds(slider, fig, min_line, min_shade, max_line, max_shade):
 
 @deco.log_anndata
 @beartype
-def quality_violin(adata: sc.AnnData,
+def quality_violin(adata: sc.AnnData,  # noqa: C901
                    columns: list[str],
                    which: Literal["obs", "var"] = "obs",
                    groupby: Optional[str] = None,
@@ -684,6 +689,36 @@ def quality_violin(adata: sc.AnnData,
     """
 
     is_interactive = utils.checker._is_interactive()
+
+    class InitFloatRangeSlider(ipywidgets.FloatRangeSlider):
+        """FloatRangeSlider that returns the initial value even if it is outside the range when the threshold was never updated."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Forward everything to ipywidgets.FloatRangeSlider but save the initial thresholds."""
+            super().__init__(*args, **kwargs)
+
+            self._init_values = tuple(kwargs.get("value", self.value))
+
+            self._low_updated = False
+            self._high_updated = False
+
+            self.observe(self._on_value, names="value")
+
+        def _on_value(self, change: dict) -> None:
+            old_low, old_high = change["old"]
+            new_low, new_high = change["new"]
+            if new_low != old_low:
+                self._low_updated = True
+            if new_high != old_high:
+                self._high_updated = True
+
+        @property
+        def ext_value(self) -> tuple:
+            """Return _init_values if never updated otherwise self.value."""
+            return (
+                self._init_values[0] if not self._low_updated else self.value[0],
+                self._init_values[1] if not self._high_updated else self.value[1]
+            )
 
     # ---------------- Test input and get ready --------------#
 
@@ -831,9 +866,9 @@ def quality_violin(adata: sc.AnnData,
             # Add slider to control thresholds
             if is_interactive:
 
-                slider = ipywidgets.FloatRangeSlider(description=str(group), min=data_min, max=data_max,
-                                                     value=[tmin, tmax],  # initial value
-                                                     continuous_update=False)
+                slider = InitFloatRangeSlider(description=str(group), min=data_min, max=data_max,
+                                              value=[tmin, tmax],  # initial value
+                                              continuous_update=False)
 
                 slider.observe(functools.partial(_update_thresholds,
                                                  fig=fig,
@@ -928,7 +963,11 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
         if isinstance(slider_dict[measure], dict):  # thresholds for groups
             for group in slider_dict[measure]:
                 slider = slider_dict[measure][group]
-                threshold_dict[measure][group] = {"min": slider.value[0], "max": slider.value[1]}
+                if hasattr(slider, "ext_value"):
+                    value = slider.ext_value
+                else:
+                    value = slider.value
+                threshold_dict[measure][group] = {"min": value[0], "max": value[1]}
 
             # Check if all groups have the same thresholds
             mins = set([d["min"] for d in threshold_dict[measure].values()])
@@ -940,7 +979,11 @@ def get_slider_thresholds(slider_dict: dict) -> dict:
 
         else:  # One threshold for measure
             slider = slider_dict[measure]
-            threshold_dict[measure] = {"min": slider.value[0], "max": slider.value[1]}
+            if hasattr(slider, "ext_value"):
+                value = slider.ext_value
+            else:
+                value = slider.value
+            threshold_dict[measure] = {"min": value[0], "max": value[1]}
 
     return threshold_dict
 

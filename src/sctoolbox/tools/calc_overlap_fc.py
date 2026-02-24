@@ -72,7 +72,7 @@ def _convert_gtf_to_bed(gtf: str,
 
 @deco.log_anndata
 @beartype
-def fc_fragments_in_regions(adata: sc.AnnData,
+def fc_fragments_in_regions(adata: sc.AnnData,  # noqa: C901
                             regions_file: str,
                             bam_file: Optional[str] = None,
                             fragments_file: Optional[str] = None,

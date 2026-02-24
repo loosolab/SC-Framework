@@ -15,7 +15,13 @@ from types import SimpleNamespace
 
 @pytest.fixture(scope="session")  # re-use the fixture for all tests
 def adata_mock():
-    """Return adata object with 3 groups."""
+    """Return adata object with 3 groups.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object with 3 groups.
+    """
 
     adata = sc.AnnData(np.random.randint(0, 100, (100, 100)))
     adata.obs["group"] = np.random.choice(["C1", "C2", "C3"], size=adata.shape[0])
@@ -25,7 +31,13 @@ def adata_mock():
 
 @pytest.fixture
 def adata():
-    """Return a adata object from SnapATAC."""
+    """Return a adata object from SnapATAC.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object from SnapATAC.
+    """
 
     f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac.h5ad')
 
@@ -34,7 +46,13 @@ def adata():
 
 @pytest.fixture
 def bedfile():
-    """Return a bedfile."""
+    """Return a bedfile.
+
+    Returns
+    -------
+    str
+        Path to bedfile.
+    """
 
     f = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
 
@@ -43,7 +61,13 @@ def bedfile():
 
 @pytest.fixture
 def unsorted_fragments():
-    """Return adata object with 3 groups."""
+    """Return adata object with 3 groups.
+
+    Returns
+    -------
+    str
+        Path to unsorted fragments bedfile.
+    """
 
     fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_atac_fragments.bed')
     return fragments
@@ -51,7 +75,13 @@ def unsorted_fragments():
 
 @pytest.fixture
 def sorted_fragments():
-    """Return adata object with 3 groups."""
+    """Return adata object with 3 groups.
+
+    Returns
+    -------
+    str
+        Path to sorted fragments bedfile.
+    """
 
     fragments = os.path.join(os.path.dirname(__file__), '../data', 'atac', 'mm10_sorted_fragments.bed')
     return fragments
@@ -115,7 +145,14 @@ def test_get_organism(mocker):
 
 
 def test_overlap_two_bedfiles(bedfile):
-    """Test overlap_two_bedfiles."""
+    """
+    Test overlap_two_bedfiles.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file is not found.
+    """
 
     # Copy a file from source to destination
     test_data_dir = os.path.split(bedfile)[0]
@@ -237,3 +274,29 @@ def test_sort_bed(unsorted_fragments):
 
 #     # no Ensembl IDs in output column
 #     assert not any(adata2.var[mixed_name].str.startswith("ENS"))
+
+@pytest.mark.parametrize("var_map", ({}, {"Chromosome": "chr", "Start": "start", "End": "stop"}))
+def test_peaks_to_bins(adata, var_map):
+    """Test peaks_to_bins."""
+    bin_size = 5000
+    chromsizes = {
+       "chr4": 83000000
+    }
+
+    if var_map == {}:
+        with pytest.raises(ValueError):
+            binned_adata = utils.bioutils.peaks_to_bins(
+                adata,
+                chromsizes=chromsizes,
+                var_map=var_map,
+                bin_size=bin_size
+            )
+    else:
+        binned_adata = utils.bioutils.peaks_to_bins(
+                adata,
+                chromsizes=chromsizes,
+                var_map=var_map,
+                bin_size=bin_size
+            )
+
+        assert len(binned_adata.var) == int(chromsizes["chr4"] / bin_size)

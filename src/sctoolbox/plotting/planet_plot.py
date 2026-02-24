@@ -8,7 +8,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import rgb2hex
 from sctoolbox.plotting.general import _save_figure
 from beartype import beartype
-from beartype.typing import Literal
+from beartype.typing import Literal, Any
 from numpy.typing import NDArray
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -133,7 +133,7 @@ def _genes_aggregator(plot_vars: pd.DataFrame,
 #############################################################################
 
 @beartype
-def planet_plot_anndata_preprocess(adata: sc.AnnData,
+def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
                                    x_col: str,
                                    y_col: str,
                                    genes: list | str,
@@ -149,7 +149,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
                                    obs_columns: list | None = None,
                                    obs_thresholds: list | None = None,
                                    obs_aggregator_array: list | None = None,
-                                   **kwargs) -> pd.DataFrame:
+                                   **kwargs: Any) -> pd.DataFrame:
     """
     Preprocess data from an anndata object and return a dataframe for the planet_plot_render function.
 
@@ -318,7 +318,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,
 #############################################################################
 
 @beartype
-def planet_plot_render(plot_vars: pd.DataFrame,
+def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                        x_col: str,
                        y_col: str,
                        x_label: str | None = None,

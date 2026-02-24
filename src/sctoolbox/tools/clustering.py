@@ -6,14 +6,14 @@ import matplotlib.pyplot as plt
 import sctoolbox.utils as utils
 import sctoolbox.utils.decorator as deco
 
-from beartype.typing import Literal, Optional, Tuple
+from beartype.typing import Literal, Optional, Tuple, Any
 from beartype import beartype
 import numpy.typing as npt
 
 
 @deco.log_anndata
 @beartype
-def recluster(adata: sc.AnnData,
+def recluster(adata: sc.AnnData,  # noqa: C901
               column: str,
               clusters: str | list[str],
               task: Literal["join", "split"] = "join",
@@ -94,7 +94,7 @@ def recluster(adata: sc.AnnData,
     # Check that method is valid
     if method == "leiden":
         # set future defaults to omit warning
-        def cl_function(*args, **kwargs):
+        def cl_function(*args: Any, **kwargs: Any) -> None:
             sc.tl.leiden(*args, **kwargs, flavor="igraph", n_iterations=2)
 
     # Check if clusters are found in column

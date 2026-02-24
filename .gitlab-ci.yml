@@ -70,10 +70,10 @@ extract-version:
 # build job
 build:
   stage: build
-  image: docker:28.5 # TODO switch back to latest when our runners are updated. Ask Noah about the progress. # image as building environment
+  image: docker:28.5 # image as building environment (See https://gitlab.gwdg.de/loosolab/software/sc_framework/-/issues/397)
   needs: [extract-version]
   tags:
-    - sctoolbox
+    - docker
   services:
       - name: "docker:dind" # docker in docker to build
         alias: docker
@@ -111,8 +111,6 @@ build:
 build-package:
   stage: build
   image: python:latest
-  tags:
-    - sctoolbox
   variables:
     TWINE_USERNAME: gitlab-ci-token  # used for authentication to the Gitlab package registry
     TWINE_PASSWORD: $CI_JOB_TOKEN
@@ -215,27 +213,19 @@ cache:
     - .cache/pip
     - venv/
 
-# lint code and docstrings
-# flake8 ignore rules:
-# E501 = Line too long
-# W503 = Line break occurred before a binary operator
-# D202 = No blank lines allowed after function docstring
-# DOC301 = __init__() should not have a docstring; <- conflicts with "D107 Missing docstring in __init__"
+# lint code and docstrings with ruff
+# Configuration is in pyproject.toml [tool.ruff] section
 lint:
-  image: 
-    name: python:3.10 # pybedtools is not compatible with python 3.11
+  image:
+    name: python:latest
     entrypoint: [ '/bin/bash', '-c', 'ln -snf /bin/bash /bin/sh && /bin/bash -c $0' ]  # Fixes shell not found error (See Issue #129)
   inherit:
     default: false # do not inherit before_script
   stage: test
-  tags:
-    - sctoolbox
   script:
     - python --version
-    - pip install flake8
-    - pip install pydoclint>=0.1.7
-    - pip install flake8-docstrings  # adds pydocstyle to flake
-    - flake8 src/sctoolbox tests --ignore=E501,W503,D202,DOC301,DOC105 -sdpca True --docstring-convention numpy --show-source --extend-exclude=src/sctoolbox/__init__.py,src/sctoolbox/data,src/tests/data
+    - pip install ruff
+    - ruff check --preview .
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # all MR
@@ -243,6 +233,11 @@ lint:
         - tests/*.py
         - tests/**/*.py
         - src/sctoolbox/**/*.py
+        - pyproject.toml
+        - scripts/*.py
+        - rna_analysis/notebooks/*.ipynb
+        - atac_analysis/notebooks/*.ipynb
+        - general_notebooks/*.ipynb
 
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
@@ -264,8 +259,6 @@ test coverage:
     stage: test
     image: "$CI_REGISTRY_IMAGE:$DYNAMIC_IMAGE_TAG"
     needs: [get-container-tag]
-    tags:
-      - sctoolbox
     coverage: '/TOTAL.*\s(\d*.\d*\%)/'
     before_script:
       - pip install .[all]
@@ -359,8 +352,9 @@ notebooks-RNA:
   inherit:
     default: false
   stage: test
-  tags:
-      - sctoolbox
+  variables:
+    KUBERNETES_MEMORY_LIMIT: "32Gi"
+    KUBERNETES_MEMORY_REQUEST: "16Gi"
   artifacts:
     when: always
     paths:
@@ -405,8 +399,6 @@ notebooks-ATAC:
   inherit:
     default: false
   stage: test
-  tags:
-      - sctoolbox
   artifacts:
     when: always
     paths:
@@ -593,8 +585,6 @@ PyPI:
       artifacts: true
     # release a fully tested package to PyPI
     - job: GitLab-release
-  tags:
-    - sctoolbox
   variables:
     TWINE_USERNAME: __token__  # used for authentication to PyPI
     TWINE_PASSWORD: $PYPI_API_TOKEN

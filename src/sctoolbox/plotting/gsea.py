@@ -36,8 +36,8 @@ def term_dotplot(adata: sc.AnnData,
                  groupby: str,
                  gene_col: str = "Lead_genes",
                  term_col: str = "Term",
-                 groups: Optional[list[str] | str] = None,
-                 hue: Literal["Mean Expression", "Zscore"] = "Zscore",
+                 groups: list[str] | str | None = None,
+                 hue: Literal["Mean Expression", "Zscore"] = "Zscore",  # noqa: F722
                  layer: Optional[str] = None,
                  report: Optional[str] = None,
                  **kwargs: Any) -> NDArray[Axes]:
@@ -168,7 +168,7 @@ def term_dotplot(adata: sc.AnnData,
 def gsea_network(adata: sc.AnnData,
                  score_col: Optional[str] = None,
                  clust_col: str = "Cluster",
-                 sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
+                 sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,  # noqa: F722
                  cutoff: int | float = 0.05,
                  scale: int | float = 1,
                  resolution: int | float = 0.35,
@@ -386,7 +386,7 @@ def gsea_network(adata: sc.AnnData,
 
 def cluster_dotplot(adata: sc.AnnData,
                     cluster_col: str = "Cluster",
-                    sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
+                    sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,  # noqa: F722
                     top_up: int = 5,
                     top_down: int = 5,
                     cutoff: float = 0.05,
@@ -485,7 +485,7 @@ def cluster_dotplot(adata: sc.AnnData,
 
 
 def gsea_dot(adata: sc.AnnData,
-             sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,
+             sig_col: Optional[Literal['Adjusted P-value', 'P-value', 'FDR q-val', 'NOM p-val']] = None,  # noqa: F722
              x: Optional[str] = None,
              cluster_col: str = "Cluster",
              cutoff: float = 0.05,

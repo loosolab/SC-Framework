@@ -197,7 +197,7 @@ def from_single_starsolo(path: str,
 
 
 @beartype
-def from_quant(path: str,
+def from_quant(path: str,  # noqa: C901
                configuration: list = [],
                use_samples: Optional[list] = None,
                dtype: Literal["raw", "filtered"] = "filtered",
@@ -368,8 +368,19 @@ def from_single_mtx(mtx: Union[str, Path],
     if False:
         raise ValueError()
 
-    def load_meta(file, header, index_col, delimiter, comment, expected_size, name):
-        """Load and prepare AnnData.var or AnnData.obs."""
+    def load_meta(file: Union[str, Path], header: Union[int, list[int], Literal['infer'], None], index_col: int, delimiter: str, comment: str, expected_size: int, name: str) -> pd.DataFrame:
+        """Load and prepare AnnData.var or AnnData.obs.
+
+        Returns
+        -------
+        pd.DataFrame
+            Prepared metadata table with validated index and columns.
+
+        Raises
+        ------
+        ValueError
+            If the table index is not unique
+        """
         # load the file
         table = pd.read_csv(file, header=header, index_col=index_col, delimiter=delimiter, comment=comment)
 
@@ -461,7 +472,7 @@ def from_mtx(path: str,
 
     adata_objects = []
     for i, m in enumerate(mtx_files):
-        logger.info(f"Reading files: {i+1} of {len(mtx_files)} ")
+        logger.info(f"Reading files: {i + 1} of {len(mtx_files)} ")
 
         # find barcode and variable file in same folder
         barcode_file = list(m.parents[0].glob(barcodes))
@@ -696,7 +707,7 @@ def from_R(
 
 
 @beartype
-def _read_and_merge(
+def _read_and_merge(  # noqa: C901
         path: Union[str, Collection[str], Mapping[str, str]],
         method: Callable,
         label: Optional[str] = "batch",

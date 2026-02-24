@@ -12,7 +12,7 @@ from beartype.typing import Any, Optional
 
 @deco.log_anndata
 @beartype
-def violin_HVF_distribution(adata: sc.AnnData, save: Optional[str] = None, **kwargs: Any):
+def violin_HVF_distribution(adata: sc.AnnData, save: Optional[str] = None, **kwargs: Any) -> None:
     """
     Plot the distribution of the HVF as violinplot.
 
@@ -46,7 +46,7 @@ def violin_HVF_distribution(adata: sc.AnnData, save: Optional[str] = None, **kwa
 
 @deco.log_anndata
 @beartype
-def scatter_HVF_distribution(adata: sc.AnnData, **kwargs: Any):
+def scatter_HVF_distribution(adata: sc.AnnData, **kwargs: Any) -> None:
     """
     Plot the distribution of the HVF as scatterplot.
 

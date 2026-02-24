@@ -242,7 +242,7 @@ def save_h5ad(adata: sc.AnnData, path: str, report: Optional[list[str]] = None, 
 
 
 @beartype
-def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")):
+def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str, str] = ("/", "|")) -> None:
     """
     Help to search and replace characters in keys in nested dicts and pd.DataFrames column names.
 
@@ -288,7 +288,7 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
 
 
 @beartype
-def add_uns_info(adata: sc.AnnData,
+def add_uns_info(adata: sc.AnnData,  # noqa: C901
                  key: str | list[str],
                  value: Any,
                  how: str = "overwrite") -> None:
@@ -471,7 +471,7 @@ def get_cell_values(adata: sc.AnnData,
 
 
 @beartype
-def prepare_for_cellxgene(adata: sc.AnnData,
+def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
                           keep_obs: Optional[list[str]] = None,
                           keep_var: Optional[list[str]] = None,
                           delete_obs: Optional[list[str]] = None,
@@ -547,8 +547,15 @@ def prepare_for_cellxgene(adata: sc.AnnData,
     if layer and layer not in adata.layers:
         raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
 
-    def clean_section(obj, axis="obs", keep=None, delete=None, rename=None) -> None:
-        """Clean either obs or var section of given adata object."""
+    def clean_section(obj: sc.AnnData, axis: str = "obs", keep: Optional[list[str]] = None, delete: Optional[list[str]] = None, rename: Optional[dict[str, str]] = None) -> None:  # noqa: C901
+        """
+        Clean either obs or var section of given adata object.
+
+        Raises
+        ------
+        ValueError
+            If parameters keep and delete are set.
+        """
         if keep is not None and delete is not None:
             raise ValueError(f"'keep_{axis}' and 'delete_{axis}' are mutually exclusive. Please configure only one to proceed.")
 
@@ -698,7 +705,14 @@ def concadata(adatas: Union[Collection[sc.AnnData], Mapping[str, sc.AnnData]], l
 
 @deco.log_anndata
 @beartype
-def tidy_layers(adata: sc.AnnData, allow_raw: bool | str = False, rename: Optional[Dict[str, str]] = None, keep_X: Optional[str] = None, replace_X: Optional[str] = None, keep: Literal['all'] | list[str] = 'all', inplace: bool = True) -> Optional[sc.AnnData]:
+def tidy_layers(  # noqa: C901
+    adata: sc.AnnData,
+    allow_raw: bool | str = False,
+    rename: Optional[Dict[str, str]] = None,
+    keep_X: Optional[str] = None,
+    replace_X: Optional[str] = None,
+    keep: Literal['all'] | list[str] = 'all',
+    inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Clean up AnnData layers and special layers (X, raw).
 

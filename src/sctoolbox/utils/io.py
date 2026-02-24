@@ -108,7 +108,7 @@ def rm_tmp(temp_dir: Optional[str] = None,
 
 
 @beartype
-def update_yaml(d: dict, yml: str, path_prefix: Optional[Literal["report", "table"]] = None):
+def update_yaml(d: dict, yml: str, path_prefix: Optional[Literal["report", "table"]] = None) -> None:
     """
     Add/ update entries in the given yaml file.
 

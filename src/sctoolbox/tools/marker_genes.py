@@ -2,7 +2,7 @@
 
 import re
 import glob
-import pkg_resources
+import importlib_resources
 import pandas as pd
 import numpy as np
 import scanpy as sc
@@ -22,7 +22,7 @@ from sctoolbox.plotting.general import _save_figure
 logger = settings.logger
 
 # path to the internal gene lists (gender, cellcycle, mito, ...)
-_GENELIST_LOC = Path(pkg_resources.resource_filename("sctoolbox", "data/gene_lists/"))
+_GENELIST_LOC = importlib_resources.files("sctoolbox") / "data" / "gene_lists"
 
 
 @beartype
@@ -88,7 +88,7 @@ def get_chromosome_genes(gtf: str,
 
 @deco.log_anndata
 @beartype
-def label_genes(adata: sc.AnnData,
+def label_genes(adata: sc.AnnData,  # noqa: C901
                 species: Optional[str] = None,
                 gene_column: Optional[str] = None,
                 plot: bool = True,
@@ -517,7 +517,7 @@ def pairwise_rank_genes(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def get_rank_genes_tables(adata: sc.AnnData,
+def get_rank_genes_tables(adata: sc.AnnData,  # noqa: C901
                           key: str = "rank_genes_groups",
                           n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
@@ -741,7 +741,7 @@ def mask_rank_genes(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def run_deseq2(adata: sc.AnnData,
+def run_deseq2(adata: sc.AnnData,  # noqa: C901
                sample_col: str,
                condition_col: str,
                confounders: Optional[str | list[str]] = None,

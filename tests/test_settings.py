@@ -40,7 +40,7 @@ def test_invalid_keys():
         settings.invalid_key = "value"
 
     for key in ["full_adata_input_prefix", "full_adata_output_prefix", "full_figure_prefix"]:
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             setattr(settings, key, "value")
 
 
