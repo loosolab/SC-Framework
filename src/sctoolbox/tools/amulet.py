@@ -478,7 +478,7 @@ def _assign_reads_within_overlaps(
         cur_overlap.append(end_string)
 
 
-def count_fragment_overlaps( # noqa: C901
+def count_fragment_overlaps(  # noqa: C901
     fragments_file: str,
     barcodes: List[str],
     chromosomes: Optional[List[str]] = None,
@@ -697,7 +697,7 @@ def count_fragment_overlaps( # noqa: C901
 # ==============================================================================
 
 
-def _filter_known_repeats( # noqa: C901
+def _filter_known_repeats(  # noqa: C901
     data: np.ndarray,
     repeat_regions: np.ndarray,
     expected_overlap: int
