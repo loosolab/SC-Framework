@@ -154,7 +154,7 @@ annotation = [
     'markerRepo>=0.1.5'  # to speed up installation
 ]
 proportion = [
-    'scanpro>=0.4.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+    'scanpro>=0.4.1'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
 ]
 velocity = [
     'scvelo>=0.3.4'
