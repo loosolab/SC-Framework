@@ -23,8 +23,8 @@
 - cleanup dependencies (#427)
 - README: Update figure (#268)
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
-- CI improvments
 - fix logging issue causing error on save (#333)
+- CI improvments
 
 ### Changes to notebooks
 - RNA/02: Filter genes: Added check for label column (#430)
