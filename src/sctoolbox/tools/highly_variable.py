@@ -49,16 +49,16 @@ def annot_HVG(anndata: sc.AnnData,
     **kwargs : Any
         Additional arguments forwarded to scanpy.pp.highly_variable_genes().
 
-    Notes
-    -----
-    Logarithmized data is expected.
-
     Returns
     -------
     Optional[sc.AnnData]
         Adds annotation of HVG to anndata object. Information is added to Anndata.var["highly_variable"].
         If inplace is False, the function returns None
         Else returns a chagned copy of the input anndata object.
+
+    Notes
+    -----
+    Logarithmized data is expected.
     """
 
     adata_m = anndata if inplace else anndata.copy()
@@ -123,10 +123,6 @@ def get_variable_features(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Notes
-    -----
-    Designed for scATAC-seq data
-
     Raises
     ------
     KeyError
@@ -137,6 +133,10 @@ def get_variable_features(adata: sc.AnnData,
     Optional[sc.AnnData]
         If inplace is False, the function returns None
         If inplace is True, the function returns an anndata object.
+
+    Notes
+    -----
+    Designed for scATAC-seq data
     """
 
     if 'n_cells_by_counts' not in adata.var.columns:

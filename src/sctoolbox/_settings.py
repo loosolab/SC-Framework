@@ -13,11 +13,6 @@ class SctoolboxConfig(object):
     """
     Config manager for sctoolbox.
 
-    Attributes
-    ----------
-    __frozen : bool
-        If True, disallows new attributes to be added.
-
     Parameters
     ----------
     figure_dir : str
@@ -54,6 +49,11 @@ class SctoolboxConfig(object):
         The resolution in dots per inch used when saving plots.
     report_dpi : float
         The resolution in dots per inch used when saving report plots.
+
+    Attributes
+    ----------
+    __frozen : bool
+        If True, disallows new attributes to be added.
     """
 
     __frozen: bool = False
@@ -125,14 +125,14 @@ class SctoolboxConfig(object):
     def _validate_and_process_attribute(self, key: str, value: object) -> object:
         """Validate and process attribute value based on type and key.
 
+        Returns
+        -------
+        The processed attribute value.
+
         Raises
         ------
         ValueError
             If verbosity is neither 0, 1 nor 2.
-
-        Returns
-        -------
-        The processed attribute value.
         """
         # Validate log_file specially
         if key == "log_file" and value is not None:

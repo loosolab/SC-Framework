@@ -43,14 +43,14 @@ def get_chromosome_genes(gtf: str,
     list[str]
         A list of all genes in the gtf for the given chromosome(s).
 
-    Notes
-    -----
-    This function is not directly used by the framework, but is used to create the marker gene lists for 'label_genes'.
-
     Raises
     ------
     ValueError
         If not all given chromosomes are found in the GTF-file.
+
+    Notes
+    -----
+    This function is not directly used by the framework, but is used to create the marker gene lists for 'label_genes'.
     """
 
     if isinstance(chromosomes, str):
@@ -137,15 +137,15 @@ def label_genes(adata: sc.AnnData,  # noqa: C901
     show_mismatches : Optional[int], default 3
         Select the number of mismatching genes to show, i.e., not available in the dataset. Will truncate the list to top and bottom X. Set to None or 0 for all.
 
-    Raises
-    ------
-    ValueError
-        If 'species' parameter is missing despite having any of 'm_genes', 'r_genes', 'g_genes' set to 'internal'.
-
     Returns
     -------
     list[str]
         List containing the column names added to adata.var.
+
+    Raises
+    ------
+    ValueError
+        If 'species' parameter is missing despite having any of 'm_genes', 'r_genes', 'g_genes' set to 'internal'.
 
     See Also
     --------
@@ -434,15 +434,17 @@ def pairwise_rank_genes(adata: sc.AnnData,
     **kwargs : Any
         Additional arguments to be passed to scanpy.tl.rank_genes_groups.
 
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe containinge the pairwise ranked gened between the groups.
+
+
     Raises
     ------
     ValueError
         Raised when there are less than two groups in the adata.obs column selected by groupby.
 
-    Returns
-    -------
-    pd.DataFrame
-        Dataframe containinge the pairwise ranked gened between the groups.
     """
 
     groups = adata.obs[groupby].astype("category").cat.categories
@@ -793,14 +795,14 @@ def run_deseq2(adata: sc.AnnData,  # noqa: C901
         4. If the samples have more than one condition.
         5. If there are no replicates.
 
+    See Also
+    --------
+    sctoolbox.utils.bioutils.pseudobulk_table
+
     Notes
     -----
     Needs the package 'pydeseq2' to be installed.
     This can be obtained by installing the sctoolbox [deseq2] extra with pip using: `pip install .[deseq2]`.
-
-    See Also
-    --------
-    sctoolbox.utils.bioutils.pseudobulk_table
     """
     utils.checker.check_module("pydeseq2")
     from pydeseq2.dds import DeseqDataSet

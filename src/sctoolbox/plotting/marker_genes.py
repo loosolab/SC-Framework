@@ -69,16 +69,16 @@ def rank_genes_plot(adata: sc.AnnData,  # noqa: C901
     **kwargs : Any
         Additional arguments passed to `sc.pl.rank_genes_groups_dotplot` or `sc.pl.rank_genes_groups_matrixplot`.
 
+    Returns
+    -------
+    g : dict
+        Dictionary containing the matplotlib axes objects for the plot.
+
     Raises
     ------
     ValueError
         1. If `style` is not one of `dots` or `heatmap`
         2. If `groupby` is not specified when `genes` is specified.
-
-    Returns
-    -------
-    g : dict
-        Dictionary containing the matplotlib axes objects for the plot.
 
     Examples
     --------
@@ -639,15 +639,15 @@ def plot_differential_genes(rank_table: pd.DataFrame,
     **kwargs : Any
         Keyword arguments passed to pl.general.bidirectional_barplot.
 
-    Raises
-    ------
-    ValueError
-        If no significant differentially expressed genes are found in the data.
-
     Returns
     -------
     Axes
         Axes object.
+
+    Raises
+    ------
+    ValueError
+        If no significant differentially expressed genes are found in the data.
 
     Examples
     --------

@@ -298,15 +298,15 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
     **kwargs : Any
         Additional arguments are passed to scanpy.external.pp.scrublet.
 
-    Notes
-    -----
-    Groupby should be set if the adata consists of multiple samples, as this improves the doublet estimation.
-
     Returns
     -------
     Optional[sc.AnnData]
         If inplace is False, the function returns a copy of the adata object.
         If inplace is True, the function returns None.
+
+    Notes
+    -----
+    Groupby should be set if the adata consists of multiple samples, as this improves the doublet estimation.
     """
 
     if threads is None:
@@ -963,11 +963,6 @@ def get_thresholds(adata: sc.AnnData,  # noqa: C901
     If stored thresholds are available, the function uses them exclusively and
     ignores the other sources.
 
-    Notes
-    -----
-    - Metrics that are not present in the :class:`~anndata.AnnData` object are removed with a warning.
-    - A warning is emitted if thresholds stored in ``adata`` are detected (unless``ignore_stored=True``).
-
     Parameters
     ----------
     adata : sc.AnnData
@@ -1002,6 +997,11 @@ def get_thresholds(adata: sc.AnnData,  # noqa: C901
     -------
     Dict[str, Union[Dict[Literal["min", "max"], Union[int, float]], Dict[Union[int, float, str], Dict[Literal["min", "max"], Union[int, float]]]]]
         A dictionary containing the thresholds.
+
+    Notes
+    -----
+    - Metrics that are not present in the :class:`~anndata.AnnData` object are removed with a warning.
+    - A warning is emitted if thresholds stored in ``adata`` are detected (unless``ignore_stored=True``).
     """
     # remove keys not present in the adata
     manual_thresholds = _match_columns(adata=adata, d=manual_thresholds, which=which)
@@ -1176,15 +1176,15 @@ def apply_qc_thresholds(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Returns
-    -------
-    Optional[sc.AnnData]
-        Anndata object with QC thresholds applied.
-
     Raises
     ------
     ValueError
         1: If the keys in thresholds do not match with the columns in adata.<which>.
+
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Anndata object with QC thresholds applied.
     """
     global_ = True  # False if there are any group based filters
 

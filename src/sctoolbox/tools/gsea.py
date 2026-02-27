@@ -69,14 +69,6 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
     **kwargs : Any
         Additional parameters forwarded to gseapy.prerank().
 
-    Notes
-    -----
-    This function only works in combination with the
-    tools.marker_genes.run_rank_genes function. Depending on the organism the
-    genes are saved uppercase or lowercase. Since it does not follow the
-    typically guidelines all genes are converted to uppercase to prevent
-    failed overlaps.
-
     Returns
     -------
     Optional[sc.AnnData]
@@ -88,6 +80,14 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
         If marker_key not in adata.uns
     ValueError
         If result dictinary is empty
+
+    Notes
+    -----
+    This function only works in combination with the
+    tools.marker_genes.run_rank_genes function. Depending on the organism the
+    genes are saved uppercase or lowercase. Since it does not follow the
+    typically guidelines all genes are converted to uppercase to prevent
+    failed overlaps.
     """
 
     if not overwrite and utils.adata.in_uns(adata, _core_uns_path):
