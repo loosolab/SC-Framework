@@ -26,6 +26,7 @@
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
 - CI improvments
+- lint according to new D420 rule
 
 ### Changes to notebooks
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)

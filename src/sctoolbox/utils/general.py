@@ -105,12 +105,6 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
     """
     Report important packages and versions loaded after importing ``sctoolbox``.
 
-    Notes
-    -----
-    The package version is reported as ``"NA"`` if
-    :func:`importlib.metadata.version` raises :class:`importlib.metadata.PackageNotFoundError`
-    (e.g., because no metadata were found).
-
     Parameters
     ----------
     python_version : bool, default True
@@ -143,6 +137,11 @@ def get_version_report(python_version: bool = True, keep: Optional[Literal["vip"
            * - Package 2
              - 2.0
 
+    Notes
+    -----
+    The package version is reported as ``"NA"`` if
+    :func:`importlib.metadata.version` raises :class:`importlib.metadata.PackageNotFoundError`
+    (e.g., because no metadata were found).
     """
     current_packages = sys.modules.keys() - __cached_modules
 

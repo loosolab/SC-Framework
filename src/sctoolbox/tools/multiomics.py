@@ -32,17 +32,17 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     sc.AnnData
         Merged anndata object.
 
+    Raises
+    ------
+    ValueError
+        If no indices of both adata.obs tables are overlapping.
+
     Notes
     -----
     Important: Depending on the size of the anndata objects the function takes
     around 60 to 300 GB of RAM!
     To save RAM and runtime the function generates a minimal anndata object.
     Only .X, .var, .obs and .obsm are kept. Layers, .varm, etc is removed.
-
-    Raises
-    ------
-    ValueError
-        If no indices of both adata.obs tables are overlapping.
     """
 
     if join == "outer":

@@ -739,17 +739,17 @@ def _read_and_merge(  # noqa: C901
             3. Type dict, e.g. :code:`{"layer": {"first": "raw", "second": "norm"}}`.
                 Applies the values to files matching the dict of :code:`path`.
 
+    Returns
+    -------
+    sc.AnnData
+        Returns converted (and merged) anndata object.
+
     Raises
     ------
     ValueError
         1. layer datatype and path datatype do not match (if layer is not string).
         2. if path and layer are lists with different lengths.
         3. if not all keys in path dict match with keys in layer dict.
-
-    Returns
-    -------
-    sc.AnnData
-        Returns converted (and merged) anndata object.
     """
 
     # Checks for layer option used by convertToAdata method
