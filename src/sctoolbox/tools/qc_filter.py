@@ -446,8 +446,10 @@ def _run_scrublet(adata: sc.AnnData,
 
 @deco.log_anndata
 @beartype
-def adjust_doublet_threshold(adata: sc.AnnData,  # noqa: C901
+def adjust_doublet_threshold(adata: sc.AnnData,
                              threshold: float,
+                             score_col: str = "doublet_score",
+                             prediciton_col: str = "predicted_doublet",
                              inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Add a boolean 'predicted_doublet' column to adata.obs based on a threshold.
@@ -458,6 +460,10 @@ def adjust_doublet_threshold(adata: sc.AnnData,  # noqa: C901
         AnnData object containing a 'doublet_score' column in adata.obs.
     threshold : float
         Doublet score threshold. Cells with score > threshold are marked as doublets.
+    score_col : str, default 'doublet_score'
+        Column containing doublet scores (float).
+    prediciton_col : str, default 'predicted_doublet'
+        Column containing doublet prediciton (boolean).
     inplace : bool, default True
         If True, modify adata in place.
         If False, return a modified copy of adata.
@@ -473,15 +479,15 @@ def adjust_doublet_threshold(adata: sc.AnnData,  # noqa: C901
     Optional[sc.AnnData]
         Returns None
     """
-    if "doublet_score" not in adata.obs.columns:
-        raise KeyError("Column 'doublet_score' not found in adata.obs")
+    if score_col not in adata.obs.columns:
+        raise KeyError(f"Column '{score_col}' not found in adata.obs")
 
     if "scrublet" not in adata.uns:
         raise KeyError("Key 'scrublet' not found in adata.uns. Run estimate doublet first.")
 
     adata = adata if inplace else adata.copy()
     logger.info(f"Adjust doublet threshold to {threshold}")
-    adata.obs["predicted_doublet"] = adata.obs["doublet_score"] > threshold
+    adata.obs[prediciton_col] = adata.obs[score_col] > threshold
     adata.uns["scrublet"]["threshold"] = threshold
 
     if inplace:
