@@ -468,16 +468,16 @@ def adjust_doublet_threshold(adata: sc.AnnData,
         If True, modify adata in place.
         If False, return a modified copy of adata.
 
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Returns None
+
     Raises
     ------
     KeyError
         If adata.obs does not have the column'doublet_score'.
         If 'scrublet' is not in  adata.uns.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        Returns None
     """
     if score_col not in adata.obs.columns:
         raise KeyError(f"Column '{score_col}' not found in adata.obs")
