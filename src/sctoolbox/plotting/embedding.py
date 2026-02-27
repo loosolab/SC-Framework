@@ -688,16 +688,16 @@ def feature_per_group(adata: sc.AnnData,  # noqa: C901
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
+    Returns
+    -------
+    axes : NDArray[Axes]
+        Array of axis objects
+
     Raises
     ------
     ValueError
         "top_n" and "x" are both set or neither is set
         groups of "y" do not match with the "marker_key"
-
-    Returns
-    -------
-    axes : NDArray[Axes]
-        Array of axis objects
     """
     if x and top_n:
         raise ValueError("The usage of 'top_n' excludes the usage of 'x' and vice versa. Set one of the parameters to None.")
@@ -816,15 +816,15 @@ def agg_feature_embedding(adata: sc.AnnData, features: List, fname: str, keep_sc
     **kwargs : arguments
         Additional keyword arguments are passed to :func:`sctoolbox.plotting.embedding.plot_embedding`.
 
-    Raises
-    ------
-    ValueError
-        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
-
     Returns
     -------
     axes : NDArray[Axes]
         Array of axis objects
+
+    Raises
+    ------
+    ValueError
+        For features not found in adata.var.index or if fname already exists in adata.obs.columns.
 
     Examples
     --------

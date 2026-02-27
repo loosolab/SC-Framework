@@ -1052,15 +1052,15 @@ def plot_table(table: pd.DataFrame,  # noqa: C901
     **kwargs
         Additional arguments are forwarded to `matplotlib.pyplot.table`
 
-    Raises
-    ------
-    ValueError
-        When the number of col_widths doesn't match the number of columns + indices.
-
     Returns
     -------
     Axes
         Object containing the plot.
+
+    Raises
+    ------
+    ValueError
+        When the number of col_widths doesn't match the number of columns + indices.
     """
     table = table.copy()  # ensure not to change the original table
 

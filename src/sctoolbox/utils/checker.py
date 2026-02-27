@@ -410,10 +410,6 @@ def var_index_to_column(adata: sc.AnnData,
     If parsing succeeds, the parsed coordinate columns are added to ``adata.var``.
     If parsing fails, an error is raised.
 
-    Notes
-    -----
-    This function modifies ``adata`` in place.
-
     Parameters
     ----------
     adata : sc.AnnData
@@ -426,6 +422,10 @@ def var_index_to_column(adata: sc.AnnData,
     ------
     ValueError
         If regions are in an incorrect format and cannot be parsed.
+
+    Notes
+    -----
+    This function modifies ``adata`` in place.
     """
 
     # Test whether the three columns are in the right format
