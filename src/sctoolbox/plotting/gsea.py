@@ -70,10 +70,6 @@ def term_dotplot(adata: sc.AnnData,
     **kwargs : Any
         Additional parameters for sctoolbox.plotting.general.clustermap_dotplot
 
-    Notes
-    -----
-    All genes will be converted to uppercase for comparison.
-
     Returns
     -------
     NDArray[Axes]
@@ -84,6 +80,10 @@ def term_dotplot(adata: sc.AnnData,
     ValueError
         If gsea results cannot be found in adata.uns.
         If no genes are matching the given term in term_table
+
+    Notes
+    -----
+    All genes will be converted to uppercase for comparison.
 
     Examples
     --------
@@ -213,15 +213,15 @@ def gsea_network(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Notes
-    -----
-    Default values expect input dataframe to be prerank output.
-
     Raises
     ------
     ValueError
         If gsea key is not found in adata.uns.
         If no cluster with valid pathways are found.
+
+    Notes
+    -----
+    Default values expect input dataframe to be prerank output.
 
     Examples
     --------

@@ -402,15 +402,15 @@ def get_uns(adata: sc.AnnData,
         The key(s) of value. A list is treated similar to a path which results in checking for nested lists. E.g.:
         a key ['a', 'b', 'c'] would return true if adata.uns = {'a': {'b': {'c': ...}}}.
 
-    Raises
-    ------
-    ValueError
-        If key not fóund in adata.uns sub dictionary.
-
     Returns
     -------
     Any
         Any value stored in adata.uns
+
+    Raises
+    ------
+    ValueError
+        If key not fóund in adata.uns sub dictionary.
     """
     d = adata.uns
     path = ""
@@ -530,6 +530,11 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
     inplace : bool, default False
         If True, modify ``adata`` in place. If False, return a modified copy.
 
+    Returns
+    -------
+    Optional[sc.AnnData]
+        Deployment-ready AnnData object. Returns None if ``inplace`` is True.
+
     Raises
     ------
     ValueError
@@ -538,11 +543,6 @@ def prepare_for_cellxgene(adata: sc.AnnData,  # noqa: C901
         If no embeddings are found in ``adata.obsm``.
         If none of the requested embeddings are found when ``keep_obsm`` is provided.
         If ``layer`` is set but no layer with that name exists.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        Deployment-ready AnnData object. Returns None if ``inplace`` is True.
     """
     if layer and layer not in adata.layers:
         raise ValueError(f"No layer named '{layer}' found in the AnnData. Available layers are {','.join(adata.layers.keys())}.")
@@ -737,16 +737,16 @@ def tidy_layers(  # noqa: C901
     inplace : bool, default True
         Modify the AnnData inplace or return a modified copy.
 
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The modified AnnData object.
+
     Raises
     ------
     KeyError
         1. If the new name already exists. During renaming or when raw is saved as a layer.
         2. If the layer to replace X with is not found.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        The modified AnnData object.
     """
     if not inplace:
         adata = adata.copy()
