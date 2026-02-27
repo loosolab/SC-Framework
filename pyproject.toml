@@ -154,11 +154,11 @@ annotation = [
     'markerRepo>=0.1.5'  # to speed up installation
 ]
 proportion = [
-    'scanpro>=0.4.0'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
+    'scanpro>=0.4.1'  # scanpro < 0.3.1 needs statannotations which causes versioning issues
 ]
-#velocity = [
-#    'scvelo @ git+https://github.com/theislab/scvelo.git'  # install from github until next release: https://github.com/theislab/scvelo/issues/1334
-#]
+velocity = [
+    'scvelo>=0.3.4'
+]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
@@ -171,7 +171,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity]'
 ]
 # all is intended to install everything
 all = [
