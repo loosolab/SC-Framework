@@ -352,9 +352,12 @@ notebooks-RNA:
   inherit:
     default: false
   stage: test
+  timeout: 2h
   variables:
     KUBERNETES_MEMORY_LIMIT: "32Gi"
     KUBERNETES_MEMORY_REQUEST: "16Gi"
+    RUNNER_SCRIPT_TIMEOUT: 1h45m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m  # reserve 15 minutes to ensure artifact upload
   artifacts:
     when: always
     paths:
@@ -399,6 +402,12 @@ notebooks-ATAC:
   inherit:
     default: false
   stage: test
+  timeout: 2h
+  variables:
+    KUBERNETES_MEMORY_LIMIT: "32Gi"
+    KUBERNETES_MEMORY_REQUEST: "16Gi"
+    RUNNER_SCRIPT_TIMEOUT: 1h45m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m  # reserve 15 minutes to ensure artifact upload
   artifacts:
     when: always
     paths:
