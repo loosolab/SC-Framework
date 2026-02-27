@@ -8,7 +8,9 @@ The SC-Framework provides a comprehensive environment for single-cell data analy
 
 **See our** `video series <https://youtube.com/playlist?list=PLTA07KFyG53ImxJKpoiPO9XiU_I5anMKp&si=hSFQx0CSiakG3Aj7>`_ **on YouTube.**
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/videoseries?si=7g1uGaqruajYDGCo&amp;list=PLTA07KFyG53ImxJKpoiPO9XiU_I5anMKp" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+.. raw::html
+
+   <iframe width="560" height="315" src="https://www.youtube.com/embed/videoseries?si=p80aoSEzqSmmhmwa&amp;list=PLTA07KFyG53ImxJKpoiPO9XiU_I5anMKp" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 The package
 -----------
@@ -18,14 +20,17 @@ The main functionalities of the SC-Framework are implemented as a Python package
 The package is split into three submodules:
 
 1. ``utils``
+~~~~~~~~~~~~
 
 General-purpose utility functions to support analysis workflows, including input/output operations, logging and table formatting.
 
 2. ``tools``
+~~~~~~~~~~~~
 
 Core analysis functions such as dimension reduction, normalization, marker identification and peak annotation.
 
 3. ``plotting``
+~~~~~~~~~~~~~~~
 
 Visualization functions designed to generate plots and figures from results produced by the ``tools`` submodule.
 
