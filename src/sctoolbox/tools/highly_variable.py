@@ -123,16 +123,16 @@ def get_variable_features(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Raises
-    ------
-    KeyError
-        If adata.var['n_cells_by_counts'] is not available.
-
     Returns
     -------
     Optional[sc.AnnData]
         If inplace is False, the function returns None
         If inplace is True, the function returns an anndata object.
+
+    Raises
+    ------
+    KeyError
+        If adata.var['n_cells_by_counts'] is not available.
 
     Notes
     -----

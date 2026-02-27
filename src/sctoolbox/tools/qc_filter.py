@@ -1176,15 +1176,15 @@ def apply_qc_thresholds(adata: sc.AnnData,
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Raises
-    ------
-    ValueError
-        1: If the keys in thresholds do not match with the columns in adata.<which>.
-
     Returns
     -------
     Optional[sc.AnnData]
         Anndata object with QC thresholds applied.
+
+    Raises
+    ------
+    ValueError
+        1: If the keys in thresholds do not match with the columns in adata.<which>.
     """
     global_ = True  # False if there are any group based filters
 
@@ -1300,6 +1300,11 @@ def _filter_object(adata: sc.AnnData,  # noqa: C901
     report : Optional[str]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
+    Returns
+    -------
+    Optional[sc.AnnData]
+        The filtered anndata object.
+
     Raises
     ------
     ValueError
@@ -1307,11 +1312,6 @@ def _filter_object(adata: sc.AnnData,  # noqa: C901
         - The boolean filter length is unequal to the appropriate AnnData dimension.
     RuntimeError
         Raised if a previous filtering is detected in adata.uns['sctoolbox']['report']['filter'][<which>] and overwrite = False.
-
-    Returns
-    -------
-    Optional[sc.AnnData]
-        The filtered anndata object.
     """
     report_path = _uns_report_path + [which]
     if name:

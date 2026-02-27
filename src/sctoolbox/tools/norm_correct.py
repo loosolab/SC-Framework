@@ -196,15 +196,15 @@ def tfidf(anndata: sc.AnnData,
     layer : Optional[str], default None
         Perform tfidf on given layer. If None tfidf is run on adata.X.
 
-    Raises
-    ------
-    AttributeError
-        log(TF*IDF) requires log(TF) and log(IDF) to be False.
-
     Returns
     -------
     Optional[sc.AnnData]
         TF-IDF normalized anndata object.
+
+    Raises
+    ------
+    AttributeError
+        log(TF*IDF) requires log(TF) and log(IDF) to be False.
 
     Notes
     -----
