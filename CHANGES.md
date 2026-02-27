@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
-
+- move scvelo dependency to pyproject.toml (#423)
 - integration of AMULET to find multiplets in single-cell ATAC-seq data (#260)
 - fix values outside data range (#337)
 - implement `utils.bioutils.peaks_to_bins` (#374)
@@ -23,8 +23,8 @@
 - cleanup dependencies (#427)
 - README: Update figure (#268)
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
-- CI improvments
 - fix logging issue causing error on save (#333)
+- CI improvments
 
 ### Changes to notebooks
 - Notebooks 4: Fix blue input cell order
