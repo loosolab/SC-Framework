@@ -32,16 +32,57 @@ Visualization functions designed to generate plots and figures from results prod
 The Jupyter notebooks
 ---------------------
 
-The SC-Framework contains Jupyter notebook, which organize individual functions into analysis workflows. Different notebooks apply to different workflow sections such as quality control or annotation. 
+The SC-Framework includes Jupyter notebooks that organize individual functions into structured analysis workflows. Different notebooks are designed for specific workflow sections, such as quality control or annotation. The framework provides core notebooks—that manage essential steps required in every analysis, such as quality control—and downstream notebooks tailored to address specific research questions (see the top image).
+The SC-Framework offers notebooks for various types of analysis:
 
-TODO
-- explain core vs downstream
-- rna and atac
-- general
-- concept of repeating steps and notebooks (fig from paper; runs)
+ - Transcriptome analysis (`RNA <https://github.com/loosolab/SC-Framework/tree/main/rna_analysis/notebooks>`_)
+ - Chromatin accessibility analysis (`ATAC <https://github.com/loosolab/SC-Framework/tree/main/atac_analysis/notebooks>`_)
+ - Data type-agnostic notebooks that can be applied to any dataset (`general <https://github.com/loosolab/SC-Framework/tree/main/general_notebooks>`_)
+
+.. figure:: image/analysis_progress.png
+   :alt: Typicall analysis workflow with iterative analysis to find optimal parameters and branching into concurrent runs.
+   :width: 400
+
+   A typical analysis workflow involves iterative steps, where individual cells or entire notebooks may be repeated to identify optimal parameters. The analysis may also branch into concurrent runs to explore different hypotheses or investigative paths.
+
+Single-cell analysis often requires iterative exploration of the dataset to identify optimal parameter combinations. Moreover, ongoing analysis may necessitate splitting the workflow into multiple concurrent branches, for example to analyze a specific subset of cell types while continuing the analysis on the full dataset. The SC-Framework is designed to accommodate both needs by enabling the re-execution of individual cells or entire notebooks within a workflow (see image above). This flexibility supports dynamic, adaptive analysis pipelines tailored to evolving research questions.
 
 Analysis directory structure
 ----------------------------
 
-TODO
-- draw output structure in ascii (is there a better way?)
+.. figure:: image/result_structure.png
+   :alt: The folder structure of an analysis run. The folder creation is on-demand. The main folders store ``.h5ad`` files (adata), visualization (figures), logging information (logs) and tables (tables). The folders are created next to the ``notebooks`` folder that contains the analysis notebooks.
+   :width: 400
+
+   The folder structure created during an analysis run.
+
+Running the Jupyter notebooks automatically creates an output structure. Directories are created on-demand based on the ``config.yaml`` found in the notebooks folder (adjust the config-file to your needs).
+
+::
+
+    run/
+    ├── adatas/
+    │   ├── anndata_1.h5ad
+    │   └── anndata_annotated.h5ad
+    ├── figures/
+    │   └── 02_QC/
+    │       └── cell_filtering.png
+    ├── logs/
+    │   └── 02_log.txt
+    ├── notebooks/
+    │   ├── 02_QC_filtering.ipynb
+    │   └── config.yaml
+    ├── report/
+    └── tables/
+        └── 0A1_receptor_ligand/
+            └── rl_interaction_table.tsv
+
+**Description:**
+
+- ``run/`` - Contains everything related to the analysis run
+- ``adatas/`` - The individual AnnData-files in ```.h5ad`` format. Created at the end of each notebook
+- ``figures/`` - The images created during the analysis
+- ``logs`` - Logging files for each notebook
+- ``notebooks`` - Contains the analysis notebooks and a ``config.yaml`` that defines the folder-structure
+- ``report`` - Files used to render an analysis report PowerPoint
+- ``tables`` - Tables created during the analysis
