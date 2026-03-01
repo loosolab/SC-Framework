@@ -90,10 +90,6 @@ def download_db(  # noqa: C901
     report : Optional[Tuple[str, str]]
         Name of the output file used for report creation. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
-    Notes
-    -----
-    This will remove all information stored in adata.uns['receptor-ligand']
-
     Returns
     -------
     Optional[sc.AnnData]
@@ -106,6 +102,10 @@ def download_db(  # noqa: C901
         1: If ligand_column is not in database.
         2: If receptor_column is not in database.
         3: If db_path is neither a file nor a LIANA resource.
+
+    Notes
+    -----
+    This will remove all information stored in adata.uns['receptor-ligand']
     """
 
     # datbase already existing?

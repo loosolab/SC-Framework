@@ -42,15 +42,15 @@ def _read_starsolo_summary(folder: str) -> pd.DataFrame:
     folder : str
         Path to a folder, e.g. "path/to/starsolo_output", which contains folders "solorun1", "solorun2", etc.
 
-    Raises
-    ------
-    ValueError
-        If no summary files are found in the folder.
-
     Returns
     -------
     summary_table : pd.DataFrame
         Table with summary statistics from all runs.
+
+    Raises
+    ------
+    ValueError
+        If no summary files are found in the folder.
     """
 
     summary_files = glob.glob(folder + "/**/solo/Gene/Summary.csv")
@@ -643,10 +643,6 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
     """
     Plot quality measurements for cells/features in an anndata object.
 
-    Notes
-    -----
-    Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
-
     Parameters
     ----------
     adata : sc.AnnData
@@ -686,6 +682,10 @@ def quality_violin(adata: sc.AnnData,  # noqa: C901
     ------
     ValueError
         If 'which' is not 'obs' or 'var' or if columns are not in table.
+
+    Notes
+    -----
+    Notebook needs "%matplotlib widget" before the call for the interactive sliders to work.
     """
 
     is_interactive = utils.checker._is_interactive()
