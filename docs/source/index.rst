@@ -96,6 +96,7 @@ Interested in our group and our projects? :)
    :hidden:
 
    introduction
+   how_to_start
    tutorials/index
    rna-notebooks/index
    atac-notebooks/index
