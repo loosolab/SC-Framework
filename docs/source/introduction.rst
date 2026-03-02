@@ -8,8 +8,7 @@ The SC-Framework provides a comprehensive environment for single-cell data analy
 
 **See our** `video series <https://youtube.com/playlist?list=PLTA07KFyG53ImxJKpoiPO9XiU_I5anMKp&si=hSFQx0CSiakG3Aj7>`_ **on YouTube.**
 
-.. youtube::
-   :list: PLTA07KFyG53ImxJKpoiPO9XiU_I5anMKp
+.. youtube:: H_0DNURMOvM
    :align: center
    :width: 100%
 
