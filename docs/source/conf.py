@@ -44,7 +44,7 @@ extensions = ['matplotlib.sphinxext.plot_directive',  # for plot examples in doc
               "nbsphinx",
               "nbsphinx_link",
               "myst_parser",
-              "sphinxcontrib-youtube"
+              "sphinxcontrib.youtube"
               ]
 
 source_suffix = {
