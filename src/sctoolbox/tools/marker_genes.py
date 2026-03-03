@@ -1033,12 +1033,11 @@ def score_genes(
         else:
             # Normal path to the file
             path = Path(gene_set)
-            if path.is_file():
-                loaded_genes = utils.general.read_list_file(str(path))
-                logger.info(f"Loaded genelist from file '{path}' ({len(loaded_genes)} genes).")
-            else:
+            if not path.is_file():
                 # Direct error if the list is not found
                 raise FileNotFoundError("The list was not found!")
+            loaded_genes = utils.general.read_list_file(str(path))
+            logger.info(f"Loaded genelist from file '{path}' ({len(loaded_genes)} genes).")
 
     # Check if the genes in data
     present = [g for g in loaded_genes if g in adata.var_names]
