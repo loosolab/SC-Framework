@@ -12,7 +12,13 @@ import scanpy as sc
 
 @pytest.fixture
 def test_adata():
-    """Load adata."""
+    """Load adata.
+
+    Returns
+    -------
+    anndata.AnnData
+        AnnData object for SCSA testing.
+    """
     adata_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'scsa')
     adata = ad.read_h5ad(adata_dir + '/adata_scsa.h5ad')
     return adata
@@ -20,7 +26,13 @@ def test_adata():
 
 @pytest.fixture
 def adata_rna():
-    """Load rna anndata."""
+    """Load rna anndata.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object.
+    """
     adata_f = os.path.join(os.path.dirname(__file__), '..', 'data', 'adata.h5ad')
     return sc.read_h5ad(adata_f)
 
@@ -29,7 +41,13 @@ def adata_rna():
 
 
 def fetch_adata_uns(test_adata):
-    """Return precalculated gene ranking dict."""
+    """Return precalculated gene ranking dict.
+
+    Returns
+    -------
+    dict
+        Dictionary containing rank_genes_groups results from adata.uns.
+    """
     # fetches adata.uns['rank_genes_groups] as dict from a test adata to use in
     # test_get_rank_genes
     d = test_adata.uns['rank_genes_groups']

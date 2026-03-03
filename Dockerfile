@@ -36,15 +36,8 @@ RUN mamba update -n base mamba && \
 # install enviroment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
-# prevent "Build failed for the C core of igraph." #400
-RUN mamba install -y "louvain>=0.8.2"
-
 # install sctoolbox
-RUN pip install "/home/sc_framework/[core,downstream]" && \
-    pip install pytest && \
-    pip install pytest-html && \
-    pip install pytest-cov && \
-    pip install pytest-mock
+RUN pip install "/home/sc_framework/[all]" --group "/home/sc_framework/pyproject.toml:test"
 
 # Generate an ssh key
 RUN apt-get install -y openssh-client && \

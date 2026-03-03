@@ -14,7 +14,13 @@ import sctoolbox.tools.multiomics as multi
 
 @pytest.fixture
 def adata():
-    """Load and returns an anndata object."""
+    """Load and returns an anndata object.
+
+    Returns
+    -------
+    anndata.AnnData
+        RNA-seq AnnData object.
+    """
     f = os.path.join(os.path.dirname(__file__), '../data', "adata.h5ad")
 
     return sc.read_h5ad(f)
@@ -22,7 +28,13 @@ def adata():
 
 @pytest.fixture
 def adata2(adata):
-    """Build second adata from first."""
+    """Build second adata from first.
+
+    Returns
+    -------
+    anndata.AnnData
+        Copy of AnnData object with mock PCA and UMAP embeddings.
+    """
     adata2 = adata.copy()
     adata2.obsm['X_pca'] = np.random.uniform(low=-3, high=3, size=(200, 50))
     adata2.obsm['X_umap'] = np.random.uniform(low=-30, high=70, size=(200, 3))
