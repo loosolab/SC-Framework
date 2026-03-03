@@ -164,7 +164,7 @@ velocity = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
 pilot = [
-    'pilotpy @ git+git+https://github.com/loosolab/PILOT_scframework.git'  # PyPI doesn't accept git packages
+    'pilotpy @ git+git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
     'palantir>=1.4.4'
 ]
 # core and downstream are intended to install commonly used dependencies
