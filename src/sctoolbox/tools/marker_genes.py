@@ -986,6 +986,14 @@ def score_genes(
     - TXT-files should be 1 gene per row
     - Intern Lists are loaded from `sctoolbox/data/gene_lists/`.
 
+     Raises
+    ------
+    FileNotFoundError
+        If a provided path string doesn't exist, or internal file not found.
+    ValueError
+        If `gene_set == "internal"` but no `species` is provided,
+        or if zero genes are present in the dataset after filtering.
+      
     Examples
     --------
     # 1) Intern list (suggested)
@@ -999,18 +1007,7 @@ def score_genes(
     # 3) Own file (TXT-file, One Gen per row)
     score_genes(adata, gene_set="path/to/my_apoptosis_genes.txt",
                 score_name="apoptosis_score")
-
-    Raises
-    ------
-    FileNotFoundError
-        If a provided path string doesn't exist, or internal file not found.
-    ValueError
-        If `gene_set == "internal"` but no `species` is provided,
-        or if zero genes are present in the dataset after filtering.
     """
-    # Optional species
-    if isinstance(species, str):
-        species = species.lower()
 
     # Use the copy
     if not inplace:
