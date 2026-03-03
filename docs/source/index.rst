@@ -98,9 +98,7 @@ Interested in our group and our projects? :)
    introduction
    how_to_start
    tutorials/index
-   rna-notebooks/index
-   atac-notebooks/index
-   general-notebooks/index
+   notebooks
    API/index
    CHANGES
    cite
