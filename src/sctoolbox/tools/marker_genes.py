@@ -979,6 +979,14 @@ def score_genes(
     Optional[sc.AnnData]
         None if `inplace=True`, otherwise a copied AnnData with `obs[score_name]`.
 
+    Raises
+    ------
+    FileNotFoundError
+        If a provided path string doesn't exist, or internal file not found.
+    ValueError
+        If `gene_set == "internal"` but no `species` is provided,
+        or if zero genes are present in the dataset after filtering.
+
     Notes
     -----
     - Genes not present in `adata.var_names` are ignored (reported via logger).
@@ -986,14 +994,6 @@ def score_genes(
     - TXT-files should be 1 gene per row
     - Intern Lists are loaded from `sctoolbox/data/gene_lists/`.
 
-     Raises
-    ------
-    FileNotFoundError
-        If a provided path string doesn't exist, or internal file not found.
-    ValueError
-        If `gene_set == "internal"` but no `species` is provided,
-        or if zero genes are present in the dataset after filtering.
-      
     Examples
     --------
     # 1) Intern list (suggested)
@@ -1012,9 +1012,6 @@ def score_genes(
     # Use the copy
     if not inplace:
         adata = adata.copy()
-
-    # Load the Genes
-    loaded_genes = None
 
     if isinstance(gene_set, list):
         loaded_genes = gene_set
