@@ -939,7 +939,7 @@ def run_deseq2(adata: sc.AnnData,  # noqa: C901
 
 @deco.log_anndata
 @beartype
-def score_genes(
+def score_genes(  #noqa: C901
     adata: sc.AnnData,
     gene_set: str | list[str] | Literal["internal"],
     kind: str | None = None,
