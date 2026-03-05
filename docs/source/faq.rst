@@ -31,10 +31,10 @@ All notebooks follow the same general template and rules:
 
 2. Module settings
 ~~~~~~~~~~~~~~~~~~
-The SC framework provides a settings class (:class:`SctoolboxConfig`).
+The SC framework provides a settings class (:class:`sctoolbox.settings.SctoolboxConfig`).
 
-- :class:`SctoolboxConfig` is used to set non-analysis options like output paths, number of threads, file prefixes, logging level. 
-- The settings can be changed using the above mentioned class or by loading a config file (:func:`sctoolbox.utils.settings_from_config`).
+- :class:`sctoolbox.settings.SctoolboxConfig` is used to set non-analysis options like output paths, number of threads, file prefixes, logging level. 
+- The settings can be changed using the above mentioned class or by loading a config file (:func:`sctoolbox.settings.settings_from_config`).
 
 3. Logging
 ~~~~~~~~~~
