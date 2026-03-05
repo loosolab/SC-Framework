@@ -101,4 +101,5 @@ Interested in our group and our projects? :)
    notebooks
    API/index
    CHANGES
+   faq
    cite
