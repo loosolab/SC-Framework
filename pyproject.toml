@@ -164,7 +164,7 @@ velocity = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
 pilot = [
-    'pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
+#   'pilotpy @ git+https://github.com/loosolab/PILOT_scframework.git',  # PyPI doesn't accept git packages
     'palantir>=1.4.4'
 ]
 # core and downstream are intended to install commonly used dependencies
@@ -173,7 +173,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity,pilot]'
 ]
 # all is intended to install everything
 all = [

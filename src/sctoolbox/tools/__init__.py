@@ -26,8 +26,7 @@ __all__ = [
     "receptor_ligand",
     "report",
     "tobias",
-    "tsse",
-    "mp_pilot",
+    "tsse"
 ]
 
 
