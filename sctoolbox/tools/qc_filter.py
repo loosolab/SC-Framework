@@ -571,7 +571,7 @@ def gmm_threshold(data: npt.ArrayLike,
                   max_mixtures: int = 5,
                   min_n: Union[int, float] = 3,
                   max_n: Union[int, float] = 3,
-                  plot: bool = False) -> dict[str, Union[int, float]]:
+                  plot: bool = False) -> dict[str, Union[int, np.int_, float, np.floating]]:
     """
     Get automatic min/max thresholds for input data array.
 
@@ -596,7 +596,7 @@ def gmm_threshold(data: npt.ArrayLike,
 
     Returns
     -------
-    dict[str, Union[int, float]]
+    dict[str, Union[int, np.int_, float, np.floating]]
         Dictionary with min and max thresholds.
     """
 
@@ -1527,7 +1527,7 @@ def denoise_data(adata: sc.AnnData,
     RuntimeError
         Raised if a previous denoising is detected in adata.uns['sctoolbox']['report']['filter']['denoise'] and overwrite = False.
     """
-    utils.checker.check_module("scar")
+    utils.checker.check_module("scar", "scAR is available on https://github.com/Novartis/scar. To install do e.g. 'pip install scar@git+https://github.com/Novartis/scar.git'.")
     import scar
 
     report_path = _uns_report_path + ["denoise"]

@@ -12,7 +12,7 @@ from beartype.typing import Optional, Any, Union, Literal, Callable
 from beartype import beartype
 
 import sctoolbox.utils as utils
-from sctoolbox.tools.dim_reduction import lsi
+import sctoolbox.tools.dim_reduction as dim_red
 import sctoolbox.utils.decorator as deco
 from sctoolbox._settings import settings
 logger = settings.logger
@@ -43,7 +43,8 @@ def normalize_adata(adata: sc.AnnData,
                     use_highly_variable: bool = False,
                     target_sum: Optional[float] = None,
                     keep_layer: Optional[str] = "raw",
-                    n_comps: int = 50) -> Union[dict[str, sc.AnnData], sc.AnnData]:
+                    n_comps: int = 50,
+                    report: bool = False) -> Union[dict[str, sc.AnnData], sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -65,6 +66,8 @@ def normalize_adata(adata: sc.AnnData,
         Will create a copy of the .X matrix with the given name before applying normalization.
     n_comps : int, default 50
         The number of components to calculate.
+    report : bool, default False
+        Enable report method slide. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -80,7 +83,8 @@ def normalize_adata(adata: sc.AnnData,
                                         use_highly_variable=use_highly_variable,
                                         target_sum=target_sum,
                                         keep_layer=keep_layer,
-                                        n_comps=n_comps)
+                                        n_comps=n_comps,
+                                        report=report)
 
     elif isinstance(method, list):
         adatas = {}
@@ -92,7 +96,8 @@ def normalize_adata(adata: sc.AnnData,
                                                           use_highly_variable=use_highly_variable,
                                                           target_sum=target_sum,
                                                           keep_layer=keep_layer,
-                                                          n_comps=n_comps)
+                                                          n_comps=n_comps,
+                                                          report=report)
 
         return adatas
 
@@ -106,7 +111,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
                              target_sum: Optional[float] = None,
                              inplace: bool = False,
                              keep_layer: Optional[str] = "raw",
-                             n_comps: int = 50) -> Optional[sc.AnnData]:
+                             n_comps: int = 50,
+                             report: bool = False) -> Optional[sc.AnnData]:
     """
     Normalize the count matrix and calculate dimension reduction using different methods.
 
@@ -128,6 +134,8 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
         Will create a copy of the .X matrix with the given name before applying normalization.
     n_comps : int, default 50
         The number of components to calculate.
+    report : bool, default False
+        Enable report method slide. Will be silently skipped if `sctoolbox.settings.report_dir` is None.
 
     Returns
     -------
@@ -152,7 +160,11 @@ def normalize_and_dim_reduct(anndata: sc.AnnData,
     elif method == "tfidf":
         logger.info('Performing TFIDF and LSI...')
         tfidf(adata, inplace=True)
-        lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
+        dim_red.lsi(adata, use_highly_variable=use_highly_variable, n_comps=n_comps)  # corresponds to PCA
+
+    # report
+    if settings.report_dir and report:
+        utils.io.update_yaml({"norm": method}, "method.yml", path_prefix="report")
 
     if not inplace:
         return adata
@@ -243,9 +255,9 @@ def tfidf(anndata: sc.AnnData,
         tf_idf = np.log1p(tf_idf)
 
     if layer:
-        adata.layers[layer] = np.nan_to_num(tf_idf, 0)
+        adata.layers[layer] = np.nan_to_num(tf_idf, nan=0)
     else:
-        adata.X = np.nan_to_num(tf_idf, 0)
+        adata.X = np.nan_to_num(tf_idf, nan=0)
 
     if not inplace:
         return adata
@@ -322,7 +334,7 @@ def wrap_corrections(adata: sc.AnnData,
             adata.layers[keep_layer] = adata.X.copy()
 
     # Collect batch correction per method
-    anndata_dict = {'uncorrected': adata}
+    anndata_dict = {'uncorrected': adata.copy()}
     for method in methods:
         anndata_dict[method] = batch_correction(adata, batch_key, method, **method_kwargs.setdefault(method, {}))  # batch correction returns the corrected adata
 
@@ -339,9 +351,30 @@ def batch_correction(adata: sc.AnnData,
                                    list[batch_methods],
                                    Callable] = ["bbknn", "mnn"],
                      highly_variable: bool = True,
+                     dim_red_kwargs: dict = {},
                      **kwargs: Any) -> sc.AnnData:
     """
     Perform batch correction on the adata object using the 'method' given.
+
+    Different correction methods will perform the batch correction on different aspects of the data,
+    meaning calculations following the correction have to be redone. Here is an overview on the analysis
+    steps until batch correction and where each of the methods is applied:
+
+    Matrix (adata.X) -> Dimension reduction (e.g. PCA) -> Nearest neighbor
+
+    +-----------+----------------------+
+    | Method    | Applied to/ replaces |
+    +===========+======================+
+    | bbknn     | Nearest neighbor     |
+    +-----------+----------------------+
+    | mnn       | Matrix               |
+    +-----------+----------------------+
+    | harmony   | Dimension reduction  |
+    +-----------+----------------------+
+    | scanorama | Dimension reduction  |
+    +-----------+----------------------+
+    | combat    | Matrix               |
+    +-----------+----------------------+
 
     Parameters
     ----------
@@ -361,6 +394,9 @@ def batch_correction(adata: sc.AnnData,
             - combat
     highly_variable : bool, default True
         Only for method 'mnn'. If True, only the highly variable genes (column 'highly_variable' in .var) will be used for batch correction.
+    dim_red_kwargs : dict, default {}
+        Arguments to redo the steps following the selected batch correction (see table above). Forwarded to :func:`sctoolbox.tools.dim_reduction.dim_red`.
+        Will default to PCA unless specified otherwise (:code:`{"method": "PCA"}`).
     **kwargs : Any
         Additional arguments will be forwarded to the method function.
         The following parameters are set unless specified to avoid potential issues with the annoy package and processor architecture:
@@ -391,6 +427,16 @@ def batch_correction(adata: sc.AnnData,
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
 
+    # so dim_red_kwargs is unqiue for each function call
+    dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
+
+    # set default dimension reduction
+    if "method" not in dim_red_kwargs and method not in ["harmony", "scanorama"]:
+        dim_red_kwargs["method"] = "PCA"
+
+    # ensure no side effects
+    adata = adata.copy()
+
     # Run batch correction depending on method
     if method == "bbknn":
         import bbknn  # sc.external.pp.bbknn() is broken due to n_trees / annoy_n_trees change
@@ -409,7 +455,7 @@ def batch_correction(adata: sc.AnnData,
         adata = bbknn.bbknn(adata, batch_key=batch_key, n_pcs=n_pcs, copy=True, **kwargs)  # bbknn is an alternative to neighbors
 
     elif method == "mnn":
-
+        is_sparse = sparse.issparse(adata.X)
         var_table = adata.var  # var_table before batch correction
 
         # split adata on batch_key
@@ -432,20 +478,31 @@ def batch_correction(adata: sc.AnnData,
         adata.var = var_table  # add var table back into corrected adata
 
         sc.pp.scale(adata)  # from the mnnpy github example
-        sc.tl.pca(adata)  # rerun pca
-        sc.pp.neighbors(adata)
+
+        # convert the matrix to sparse if it was sparse before
+        if is_sparse:
+            adata.X = sparse.csr_matrix(adata.X)
+
+        # dimension reduction and neighbor graph
+        if dim_red_kwargs["method"] == "PCA":
+            dim_red_kwargs.setdefault("method_kwargs", {}).update({"mask_var": "highly_variable" if highly_variable else None})
+        elif dim_red_kwargs["method"] == "LSI":
+            dim_red_kwargs.setdefault("method_kwargs", {}).update({"use_highly_variable": highly_variable})
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif method == "harmony":
-        adata = adata.copy()  # there is no copy option for harmony
         adata.obs[batch_key] = adata.obs[batch_key].astype("str")  # harmony expects a batch key as string
 
-        sce.pp.harmony_integrate(adata, key=batch_key, **kwargs)
-        adata.obsm["X_pca"] = adata.obsm["X_pca_harmony"]
-        sc.pp.neighbors(adata)
+        # harmony takes a PCA and corrects it
+        # here we replace the old PCA with the corrected version
+        # LSI is also stored in "X_pca"
+        sce.pp.harmony_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
+
+        # only redo neighbor graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
     elif method == "scanorama":
-        adata = adata.copy()  # there is no copy option for scanorama
-
         # scanorama expect the batch key in a sorted format
         # therefore anndata.obs should be sorted based on batch column before this method.
         original_order = adata.obs.index
@@ -455,24 +512,33 @@ def batch_correction(adata: sc.AnnData,
         if "approx" not in kwargs:
             kwargs["approx"] = False
 
-        sce.pp.scanorama_integrate(adata, key=batch_key, **kwargs)
-        adata.obsm["X_pca"] = adata.obsm["X_scanorama"]
-        sc.pp.neighbors(adata)
+        # scanorama takes a PCA and corrects it
+        # here we replace the old PCA with the corrected version
+        # LSI is also stored in "X_pca"
+        sce.pp.scanorama_integrate(adata, key=batch_key, basis="X_pca", adjusted_basis="X_pca", **kwargs)
+
+        # only redo neihgbor graph
+        dim_red.dim_red(anndata=adata, inplace=True, method=None, subset=None, **{k: v for k, v in dim_red_kwargs.items() if k != "subset"})
 
         # sort the adata back to the original order
         adata = adata[original_order]
 
     elif method == "combat":
+        is_sparse = sparse.issparse(adata.X)
 
-        adata = adata.copy()  # make sure adata is not modified
         # run combat
         sc.pp.combat(adata, key=batch_key, inplace=True, **kwargs)
 
-        sc.pp.pca(adata)
-        sc.pp.neighbors(adata)
+        # convert the matrix to sparse if it was sparse before
+        if is_sparse:
+            adata.X = sparse.csr_matrix(adata.X)
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
 
     elif callable(method):
-        adata = method(adata.copy(), **kwargs)
+        adata = method(adata, **kwargs)
+
+        dim_red.dim_red(anndata=adata, inplace=True, **dim_red_kwargs)
     else:
         raise ValueError(f"Method '{method}' is not a valid batch correction method.")
 

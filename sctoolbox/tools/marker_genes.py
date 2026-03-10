@@ -505,7 +505,8 @@ def get_rank_genes_tables(adata: sc.AnnData,
                           n_genes: Optional[int] = 200,
                           out_group_fractions: bool = False,
                           var_columns: list[str] = [],
-                          save_excel: Optional[str] = None) -> dict[str, pd.DataFrame]:
+                          save_excel: Optional[str] = None,
+                          alt_name: dict[str, str] = {}) -> dict[str, pd.DataFrame]:
     """
     Get gene tables containing "rank_genes_groups" genes and information per group (from previously chosen `groupby`).
 
@@ -523,6 +524,11 @@ def get_rank_genes_tables(adata: sc.AnnData,
         List of adata.var columns, which will be added to pandas.DataFrame.
     save_excel : Optional[str], default None
         The path to a file for writing the marker gene tables as an excel file (with one sheet per group).
+    alt_name : dict[str, str], default {}
+        Alternative names to be used as sheet names. Needed when sanitized names are not unique, which can happen when names are shortened to the first 30 charachter.
+        Only relevant when saving to excel.
+        E.g. ["Truncated_reeeeeally_long_name_1", "Truncated_reeeeeally_long_name_2"] would be shortened to "Truncated_reeeeeally_long_name" in both cases so names are duplicated.
+        This is solved with alternate names: {"Truncated_reeeeeally_long_name_1": "Unique_1", "Truncated_reeeeeally_long_name_2": "Unique_2"}.
 
     Returns
     -------
@@ -535,7 +541,6 @@ def get_rank_genes_tables(adata: sc.AnnData,
         1. If not all columns given in var_columns are in adata.var.
         2. If key cannot be found in adata.uns.
     """
-
     # Check that all given columns are valid
     if len(var_columns) > 0:
         for col in var_columns:
@@ -637,12 +642,29 @@ def get_rank_genes_tables(adata: sc.AnnData,
 
             sheets[group] = sheet
 
+        # sanitize sheet names and check for duplicated names
+        sani_names_dupl = {}  # key: sanitized name, value: list of full names
+        sani_names = {}  # key: full name, value: sanitized name
+        for full_name in sheets.keys():
+            sani_name = utils.tables._sanitize_sheetname(f'{alt_name[full_name]}' if full_name in alt_name else f'{full_name}')
+            sani_names_dupl.setdefault(sani_name, []).append(full_name)
+            sani_names[full_name] = sani_name
+
+        # check for duplicates
+        duplicates = False
+        for sani, full_list in sani_names_dupl.items():
+            if len(full_list) > 1:
+                duplicates = True
+                logger.error(f"Group names {full_list} are the same after sheet name sanitazion ({sani}).")
+        if duplicates:
+            raise ValueError("Found duplicate sheet names after normalization. Use the 'alt_name' parameter to provide alternate names for the affected groups.")
+
         # Save tables to joined excel
         filename = Path(settings.full_table_prefix) / save_excel
 
         with pd.ExcelWriter(filename) as writer:
             for sheet_name, sheet in sheets.items():
-                sheet.to_excel(writer, sheet_name=utils.tables._sanitize_sheetname(f'{sheet_name}'), index=False)
+                sheet.to_excel(writer, sheet_name=sani_names[sheet_name], index=False)
 
         logger.info(f"Saved marker gene tables to '{filename}'")
 

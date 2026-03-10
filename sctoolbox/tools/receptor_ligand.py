@@ -259,8 +259,8 @@ def calculate_interaction_table(adata: sc.AnnData,
 
     # combine duplicated genes through mean (can happen due to mapping between organisms)
     if len(set(cl_mean_expression.index)) != len(cl_mean_expression):
-        cl_mean_expression = cl_mean_expression.groupby(cl_mean_expression.index).mean()
-        cl_percent_expression = cl_percent_expression.groupby(cl_percent_expression.index).mean()
+        cl_mean_expression = cl_mean_expression.groupby(cl_mean_expression.index, observed=False).mean()
+        cl_percent_expression = cl_percent_expression.groupby(cl_percent_expression.index, observed=False).mean()
 
     # if user does not provide normalization factor - use max clustersize
     max_clust_size = np.max(list(clust_sizes.values()))
@@ -437,6 +437,7 @@ def hairball(adata: sc.AnnData,
              color_min: float | int = 0,
              color_max: Optional[float | int] = None,
              cbar_label: str = "Interaction count",
+             colormap: str = 'viridis',
              show_count: bool = False,
              restrict_to: Optional[list[str]] = None,
              additional_nodes: Optional[list[str]] = None,
@@ -466,6 +467,8 @@ def hairball(adata: sc.AnnData,
         Max value for color range.
     cbar_label : str, default 'Interaction count'
         Label above the colorbar.
+    colormap : str, default "viridis"
+        The colormap to be used when plotting.
     show_count : bool, default False
         Show the interaction count in the hairball.
     restrict_to : Optional[list[str]], default None
@@ -532,11 +535,15 @@ def hairball(adata: sc.AnnData,
         graph.add_edge(a, b, weight=len(subset))
 
     # set edge colors/ width based on weight
-    colormap = matplotlib.cm.get_cmap('viridis', len(graph.es))
     max_weight = np.max(np.array(graph.es['weight'])) if color_max is None else color_max
+
+    # set up colormap
+    colormap_ = matplotlib.colormaps[colormap]
+    norm = matplotlib.colors.Normalize(0 if color_min is None else color_min, max_weight)
+
     for e in graph.es:
-        e["color"] = colormap(e["weight"] / max_weight, e["weight"] / max_weight)
-        e["width"] = (e["weight"] / max_weight)  # * 10
+        e["color"] = colormap_(norm(e["weight"], e["weight"]))
+        e["width"] = norm(e["weight"])
         # show weights in plot
         if show_count and e["weight"] > 0:
             e["label"] = e["weight"]
@@ -552,9 +559,8 @@ def hairball(adata: sc.AnnData,
     # add colorbar
     cb = matplotlib.colorbar.ColorbarBase(axes[1],
                                           orientation='vertical',
-                                          cmap=colormap,
-                                          norm=matplotlib.colors.Normalize(0 if color_min is None else color_min,
-                                                                           max_weight)
+                                          cmap=colormap_,
+                                          norm=norm
                                           )
 
     cb.ax.tick_params(labelsize=10)
@@ -587,6 +593,7 @@ def cyclone(
     sector_size_is_cluster_size: bool = False,
     show_genes: bool = True,
     gene_amount: int = 5,
+    restrict_to: Optional[list[str]] = None,
     figsize: Tuple[int | float, int | float] = (10, 10),
     dpi: Optional[int | float] = None,
     save: Optional[str] = None,
@@ -625,6 +632,8 @@ def cyclone(
         Determines whether to display the top genes as an additional track.
     gene_amount: int = 5
         The amount of genes per receptor and ligand to display on the outer track (displayed genes per sector = gene_amount *2).
+    restrict_to : Optional[list[str]], default None
+        Only show given clusters provided in list.
     figsize : Tuple[int | float, int | float], default (10, 10)
         Figure size
     dpi : Optional[int | float], default None
@@ -650,7 +659,9 @@ def cyclone(
     filtered = get_interactions(anndata=adata,
                                 min_perc=min_perc,
                                 interaction_score=interaction_score,
-                                interaction_perc=interaction_perc)
+                                interaction_perc=interaction_perc,
+                                group_a=restrict_to,
+                                group_b=restrict_to)
 
     # sort data by interaction score for top gene selection
     if show_genes:
@@ -690,6 +701,10 @@ def cyclone(
     else:
         interactions = interactions_directed
 
+    # get color_max value
+    if color_max is None:
+        color_max = interactions.max()["count"]
+
     # gets the size of the clusters and saves it in cluster_to_size
     receptor_cluster_to_size = filtered[["receptor_cluster", "receptor_cluster_size"]]
     ligand_cluster_to_size = filtered[["ligand_cluster", "ligand_cluster_size"]]
@@ -719,7 +734,7 @@ def cyclone(
     # set up for colormapping
     colormap_ = matplotlib.colormaps[colormap]
 
-    norm = matplotlib.colors.Normalize(interactions["count"].min(), interactions["count"].max())
+    norm = matplotlib.colors.Normalize(color_min, color_max)
 
     # --------------------------- setting up for the plot -----------------------------
 
@@ -746,20 +761,8 @@ def cyclone(
     # set link width to 1 so it can be scaled up later
     interactions_for_matrix["count"] = 1
 
-    # TODO remove when this is fixed: https://github.com/moshi4/pyCirclize/issues/75
-    interactions_for_matrix[cluster_col_list] = interactions_for_matrix[cluster_col_list] + "_"
-
     # create the links in pycirclize format
     matrix = pycirclize.parser.Matrix.parse_fromto_table(interactions_for_matrix)
-
-    # TODO remove when this is fixed: https://github.com/moshi4/pyCirclize/issues/75
-    matrix._row_names = [r[:-1] for r in matrix.row_names]
-    matrix._col_names = [c[:-1] for c in matrix.col_names]
-    matrix._matrix.columns = [c[:-1] for c in matrix._matrix.columns]
-    matrix._matrix.index = [r[:-1] for r in matrix._matrix.index]
-    matrix._name2size = {k[:-1]: v for k, v in matrix._name2size.items()}
-    matrix._links = [((l1[0][:-1], *l1[1:]), (l2[0][:-1], *l2[1:])) for l1, l2 in matrix._links]
-    interactions_for_matrix[cluster_col_list] = interactions_for_matrix[cluster_col_list].map(lambda x: x[:-1])
 
     link_list = matrix.to_links()
 
@@ -865,7 +868,7 @@ def cyclone(
     circos.colorbar(
         bounds=(1.1, 0.2, 0.02, 0.5),
         vmin=0 if color_min is None else color_min,
-        vmax=color_max if color_max else interactions.max()["count"],
+        vmax=color_max,
         cmap=colormap_
     )
 
@@ -1073,13 +1076,17 @@ def connectionPlot(adata: sc.AnnData,
                    receptor_cluster_col: str = "receptor_cluster",
                    receptor_col: str = "receptor_gene",
                    receptor_hue: str = "receptor_score",
+                   receptor_hue_range: Optional[Tuple[int | float, int | float]] = None,
                    receptor_size: str = "receptor_percent",
+                   receptor_size_range: Optional[Tuple[int | float, int | float]] = None,
                    receptor_genes: Optional[list[str]] = None,
                    # ligand params
                    ligand_cluster_col: str = "ligand_cluster",
                    ligand_col: str = "ligand_gene",
                    ligand_hue: str = "ligand_score",
+                   ligand_hue_range: Optional[Tuple[int | float, int | float]] = None,
                    ligand_size: str = "ligand_percent",
+                   ligand_size_range: Optional[Tuple[int | float, int | float]] = None,
                    ligand_genes: Optional[list[str]] = None,
                    # additional plot params
                    filter: Optional[str] = None,
@@ -1116,8 +1123,14 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing gene names of receptors. Shown on y-axis.
     receptor_hue : str, default 'receptor_score'
         Name of column containing receptor scores. Shown as point color.
+    receptor_hue_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `receptor_hue` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     receptor_size : str, default 'receptor_percent'
         Name of column containing receptor expression percentage. Shown as point size.
+    receptor_size_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `receptor_size` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     receptor_genes : Optional[list[str]], default None
             Restrict receptors to given genes.
     ligand_cluster_col : str, default 'ligand_cluster'
@@ -1126,8 +1139,14 @@ def connectionPlot(adata: sc.AnnData,
         Name of column containing gene names of ligands. Shown on y-axis.
     ligand_hue : str, default 'ligand_score'
         Name of column containing ligand scores. Shown as point color.
+    ligand_hue_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `ligand_hue` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     ligand_size : str, default 'ligand_percent'
         Name of column containing ligand expression percentage. Shown as point size.
+    ligand_size_range : Optional[Tuple[int | float, int | float]], default None
+        Sets the minimum and maximum value for the `ligand_size` legend. Values outside this range will be set to the min or max value.
+        Will use the min and max values of the data by default (None).
     ligand_genes : Optional[list[str]], default None
             Restrict ligands to given genes.
     filter : Optional[str], default None
@@ -1208,10 +1227,12 @@ def connectionPlot(adata: sc.AnnData,
                                  y=receptor_col,
                                  x=receptor_cluster_col,
                                  hue=receptor_hue,
+                                 hue_norm=receptor_hue_range,
                                  size=receptor_size,
+                                 size_norm=receptor_size_range,
                                  palette=dot_colors,
                                  sizes=dot_size,
-                                 legend="brief",
+                                 legend=False,  # build a custom legend to define the displayed min-max values
                                  ax=axs[0])
     finally:
         logging.getLogger("matplotlib").setLevel(former_level)
@@ -1231,10 +1252,12 @@ def connectionPlot(adata: sc.AnnData,
                                  y=ligand_col,
                                  x=ligand_cluster_col,
                                  hue=ligand_hue,
+                                 hue_norm=ligand_hue_range,
                                  size=ligand_size,
+                                 size_norm=ligand_size_range,
                                  palette=dot_colors,
                                  sizes=dot_size,
-                                 legend="brief",
+                                 legend=False,  # build a custom legend to define the displayed min-max values
                                  ax=axs[1])
     finally:
         logging.getLogger("matplotlib").setLevel(former_level)
@@ -1322,29 +1345,86 @@ def connectionPlot(adata: sc.AnnData,
             axs[1].add_artist(con)
 
     # ----- legends -----
-    # set receptor plot legend position
-    sns.move_legend(r_plot, loc='upper right', bbox_to_anchor=(-1, 1, 0, 0))
+    step_num = 5  # the number of steps in all legends
+
+    def _create_handle_list(hue, hue_range, palette, size, size_range, dot_size, step_num=5):
+        """Create a custom handle list for the legend."""
+        handles = []
+
+        # define the hue and size ranges
+        # hue
+        hue_steps = np.linspace(*hue_range, num=step_num)
+        # set colormap
+        colormap = plt.cm.ScalarMappable(cmap=palette, norm=plt.Normalize(*hue_range))
+
+        # size
+        size_steps = np.linspace(*(size_range), num=step_num)
+
+        # size normalization
+        def size_norm(x):
+            """Scale dot sizes."""
+            return minmax_scale([x] + list(size_range), feature_range=dot_size)[0]
+
+        if hue != size:
+            # create one legend for hue and one for size
+            # add hue legend entries
+            handles.append(plt.scatter([], [], alpha=0, label=hue))  # add title
+            handles.extend([plt.scatter([], [], s=50, color=colormap.cmap(s), label=f"{s:.2f}") for s in hue_steps])
+
+            # add size legend entries
+            handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
+            handles.extend([plt.scatter([], [], s=size_norm(s), color='black', label=f"{s:.2f}") for s in size_steps])
+        else:
+            # create a combined legend if hue and size show the same data
+            # add combined legend entries
+            handles.append(plt.scatter([], [], alpha=0, label=size))  # add title
+            handles.extend([plt.scatter([], [], s=size_norm(color), color=colormap.cmap(color), label=f"{color:.2f}") for color in hue_steps])
+
+        return handles
+
+    # left (receptor) plot legend
+    rec_handles = _create_handle_list(
+        hue=receptor_hue,
+        hue_range=receptor_hue_range if receptor_hue_range else [data[receptor_hue].min(), data[receptor_hue].max()],
+        palette=dot_colors,
+        size=receptor_size,
+        size_range=receptor_size_range if receptor_size_range else [data[receptor_size].min(), data[receptor_size].max()],
+        dot_size=dot_size,
+        step_num=step_num
+    )
+
+    # place the custom legend in the receptor plot
+    axs[0].legend(
+        handles=rec_handles,
+        loc='upper right',
+        bbox_to_anchor=(-1, 1, 0, 0)
+    )
+
+    # right (ligand) plot legend
+    lig_handles = _create_handle_list(
+        hue=ligand_hue,
+        hue_range=ligand_hue_range if ligand_hue_range else [data[ligand_hue].min(), data[ligand_hue].max()],
+        palette=dot_colors,
+        size=ligand_size,
+        size_range=ligand_size_range if ligand_size_range else [data[ligand_size].min(), data[ligand_size].max()],
+        dot_size=dot_size,
+        step_num=step_num
+    )
 
     # create legend for connection lines
     if connection_alpha:
-        step_num = 5
         s_steps, a_steps = np.linspace(min(alpha_values), max(alpha_values), step_num), np.linspace(0.2, 1, step_num)
 
         # create proxy actors https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html#proxy-legend-handles
-        line_list = [lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)]
-        line_list.insert(0, lines.Line2D([], [], alpha=0, label=connection_alpha))
+        lig_handles.append(lines.Line2D([], [], alpha=0, label=connection_alpha))  # add title
+        lig_handles.extend([lines.Line2D([], [], color="black", alpha=a, linewidth=a * lw_multiplier, label=f"{np.round(s, 2)}") for a, s in zip(a_steps, s_steps)])
 
-        # add to current legend
-        handles, _ = axs[1].get_legend_handles_labels()
-        axs[1].legend(handles=handles + line_list,
-                      bbox_to_anchor=(2, 1, 0, 0),
-                      loc='upper left',
-                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
-    else:
-        # set ligand plot legend position
-        axs[1].legend(bbox_to_anchor=(2, 1, 0, 0),
-                      loc='upper left',
-                      title=receptor_hue if receptor_hue == receptor_size else None)  # fix missing legend label
+    # place the custom legend in the ligand plot
+    axs[1].legend(
+        handles=lig_handles,
+        bbox_to_anchor=(2, 1, 0, 0),
+        loc='upper left'
+    )
 
     _save_figure(save, dpi=dpi)
 

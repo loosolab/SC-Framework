@@ -10,7 +10,7 @@ import argparse
 import os
 
 import numpy as np
-from numpy import abs, mat, mean, array, std, log2
+from numpy import abs, mean, array, std, log2
 # import pandas as pd
 from pandas import DataFrame, read_csv, ExcelWriter
 from scipy.sparse import coo_matrix
@@ -186,7 +186,7 @@ class Annotator(object):
         # filter gene expressed matrix according to the markers
         gene_exps = exps.loc[:, [ncol, lcol]][exps[ncol].isin(genenames)]
 
-        gene_matrix = mat(gene_exps.sort_values(ncol)[lcol]).T
+        gene_matrix = np.asmatrix(gene_exps.sort_values(ncol)[lcol]).T
         gene_matrix = gene_matrix * np.mean(gene_matrix)   # ## / np.min(gene_matrix))
 
         if gene_matrix.shape[0] != cell_matrix.shape[1]:
@@ -260,7 +260,7 @@ class Annotator(object):
 
         # Database weight-matrix
         wm = [1]
-        weight_matrix = mat(wm).T
+        weight_matrix = np.asmatrix(wm).T
 
         if genenames is None:
             return DataFrame(), None

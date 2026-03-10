@@ -46,19 +46,23 @@ def bam_adata_ov(adata: sc.AnnData,
     bam_obj = open_bam(bamfile, "rb")
 
     sample = []
-    counter = 0
     iterations = 1000
-    for read in bam_obj:
-        tag = read.get_tag(cb_tag)
-        sample.append(tag)
+
+    for counter, read in enumerate(bam_obj, start=1):
+        if read.has_tag(cb_tag):
+            tag = read.get_tag(cb_tag)
+            sample.append(tag)
         if counter == iterations:
             break
-        counter += 1
+
+    if iterations != len(sample):
+        no_tag = iterations - len(sample)
+        logger.warning(f"{no_tag} ({no_tag / iterations * 100:.2f}%) of the first {iterations} reads did not have a '{cb_tag}' tag.")
 
     barcodes_df = pd.DataFrame(adata.obs.index)
     count_table = barcodes_df.isin(sample)
     hits = count_table.sum()
-    hitrate = hits[0] / iterations
+    hitrate = hits.iloc[0] / iterations
 
     return hitrate
 
@@ -318,7 +322,7 @@ def split_bam_clusters(adata: sc.AnnData,
         output_files = []
         for cluster in clusters:
             # replace special characters in filename with "_" https://stackoverflow.com/a/27647173
-            save_cluster_name = re.sub(r'[\\/*?:"<>| ]', '_', cluster)
+            save_cluster_name = re.sub(r'[\\/*?:"<>| ()]', '_', cluster)
             out_paths[cluster] = f"{output_prefix}{save_cluster_name}.bam"
             output_files.append(f"{output_prefix}{save_cluster_name}.bam")
 

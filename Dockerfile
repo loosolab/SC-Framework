@@ -36,6 +36,9 @@ RUN mamba update -n base mamba && \
 # install enviroment
 RUN mamba env update -n base -f /home/sc_framework/sctoolbox_env.yml
 
+# prevent "Build failed for the C core of igraph." #400
+RUN mamba install -y "louvain>=0.8.2"
+
 # install sctoolbox
 RUN pip install "/home/sc_framework/[core,downstream]" && \
     pip install pytest && \
@@ -47,4 +50,3 @@ RUN pip install "/home/sc_framework/[core,downstream]" && \
 RUN apt-get install -y openssh-client && \
     mkdir .ssh && \
     ssh-keygen -t ed25519 -N "" -f .ssh/id_ed25519
-

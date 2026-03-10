@@ -200,6 +200,7 @@ def get_variable_features(adata: sc.AnnData,
 
     if report:
         _save_figure(report, report=True)
+        utils.io.update_yaml({"hvf": sum(adata.var['highly_variable'])}, yml="method.yml", path_prefix="report")
 
     if show:
         plt.show()
