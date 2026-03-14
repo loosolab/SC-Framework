@@ -940,17 +940,6 @@ def run_deseq2(adata: sc.AnnData,  # noqa: C901
     return deseq_table
 
 
-def _normalize_score(score: str) -> str:
-    """Allow passing 'mito' or 'mito_score' -> normalize to 'mito'."""
-    score = score.strip()
-    return score[:-6] if score.endswith("_score") else score
-
-
-def _obs_key_from_score(score: str) -> str:
-    """'mito' -> 'mito_score'"""
-    return f"{score}_score"
-
-
 @deco.log_anndata
 @beartype
 def score_genes(  # noqa: C901
@@ -1018,9 +1007,9 @@ def score_genes(  # noqa: C901
 
     # --- Normalize score_name(s) ---
     if isinstance(score_name, str):
-        scores = [_normalize_score(score_name)]
+        scores = [score_name.strip()]
     else:
-        scores = [_normalize_score(s) for s in score_name]
+        scores = [s.strip() for s in score_name]
 
     # --- Helper: resolve a gene_set for a given score ---
     def resolve_genes_for_score(sc_name: str) -> list[str]:
@@ -1042,7 +1031,7 @@ def score_genes(  # noqa: C901
             if gs_spec.lower() == "internal":
                 if species is None:
                     raise ValueError("Please provide `species` when using gene_set='internal'.")
-                internal_path = _GENELIST_LOC / f"{species}_{_normalize_score(sc_name)}_genes.txt"
+                internal_path = _GENELIST_LOC / f"{species}_{sc_name}_genes.txt"
                 if not internal_path.is_file():
                     raise FileNotFoundError(f"Internal gene list not found: {internal_path}")
                 loaded = utils.general.read_list_file(str(internal_path))
@@ -1083,7 +1072,7 @@ def score_genes(  # noqa: C901
 
     for sc_name in scores:
         genes = resolve_genes_for_score(sc_name)
-        obs_key = _obs_key_from_score(sc_name)
+        obs_key = sc_name
 
         sc.tl.score_genes(
             sdata,
