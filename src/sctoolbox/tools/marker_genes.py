@@ -1,7 +1,5 @@
 """Tools for marker gene analyis."""
-from __future__ import annotations
-from pathlib import Path
-from typing import Any, Optional, Literal, Sequence, Union
+from typing import Sequence, Union
 
 import re
 import glob
@@ -1036,7 +1034,7 @@ def score_genes(  # noqa: C901
                     raise FileNotFoundError(f"Internal gene list not found: {internal_path}")
                 loaded = utils.general.read_list_file(str(internal_path))
                 logger.info(
-                    f"Loaded internal genelist score='{_normalize_score(sc_name)}' for species='{species}' "
+                    f"Loaded internal genelist score='{sc_name}' for species='{species}' "
                     f"({len(loaded)} genes)."
                 )
             else:
