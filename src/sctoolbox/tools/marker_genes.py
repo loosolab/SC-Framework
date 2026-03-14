@@ -985,18 +985,17 @@ def score_genes(  # noqa: C901
     Optional[sc.AnnData]
         None if inplace=True, else the modified AnnData copy.
 
+    Raises
+    ------
+    ValueError
+        For invalid inputs (e.g. missing species for internal gene sets, or no genes present).
+    FileNotFoundError
+        If a file path (including internal file) does not exist.
+
     Notes
     -----
     Scanpy uses `score_name` only to name the output column in `.obs`.
     The score itself depends on `gene_list`.
-
-    Raises
-    ------
-    ValueError
-        If internal lists are requested but `species` is missing,
-        or if none of the genes are present in `adata.var_names`.
-    FileNotFoundError
-        If a file path (including internal file) does not exist.
     """
 
     # --- Copy behavior ---
@@ -1010,7 +1009,7 @@ def score_genes(  # noqa: C901
         scores = [s.strip() for s in score_name]
 
     # --- Helper: resolve a gene_set for a given score ---
-    def resolve_genes_for_score(sc_name: str) -> list[str]:
+    def resolve_genes_for_score(sc_name: str) -> list[str]:  # noqa: C901
         # choose the right "gene_set spec" for this score
         gs_spec = gene_set
         if isinstance(gene_set, dict):
@@ -1081,3 +1080,4 @@ def score_genes(  # noqa: C901
         adata.obs[obs_key] = sdata.obs[obs_key]
 
     return adata if not inplace else None
+    
