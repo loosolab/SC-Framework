@@ -985,13 +985,6 @@ def score_genes(  # noqa: C901
     Optional[sc.AnnData]
         None if inplace=True, else the modified AnnData copy.
 
-    Raises
-    ------
-    ValueError
-        For invalid inputs (e.g. missing species for internal gene sets, or no genes present).
-    FileNotFoundError
-        If a file path (including internal file) does not exist.
-
     Notes
     -----
     Scanpy uses `score_name` only to name the output column in `.obs`.
@@ -1080,4 +1073,4 @@ def score_genes(  # noqa: C901
         adata.obs[obs_key] = sdata.obs[obs_key]
 
     return adata if not inplace else None
-    
+ 
