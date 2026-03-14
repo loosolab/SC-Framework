@@ -1073,4 +1073,3 @@ def score_genes(  # noqa: C901
         adata.obs[obs_key] = sdata.obs[obs_key]
 
     return adata if not inplace else None
- 
