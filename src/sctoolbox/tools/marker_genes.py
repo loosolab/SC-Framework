@@ -1061,7 +1061,7 @@ def score_genes(  # noqa: C901
     sdata = sc.pp.scale(adata, copy=True)
 
     for sc_name in scores:
-        genes = resolve_genes_for_score(sc_name)
+        genes = resolve_genes_for_score(sc_name, gene_set)
         obs_key = sc_name
 
         sc.tl.score_genes(
