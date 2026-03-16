@@ -1002,7 +1002,7 @@ def score_genes(  # noqa: C901
         scores = [s.strip() for s in score_name]
 
     # --- Helper: resolve a gene_set for a given score ---
-    def resolve_genes_for_score(sc_name: str, gene_set) -> list[str]:  # noqa: C901
+    def resolve_genes_for_score(sc_name: str, gene_set: Union[str, list[str], Literal["internal"], dict[str, Union[str, list[str], Literal["internal"]]]]) -> list[str]:  # noqa: C901
         # choose the right "gene_set spec" for this score
         gs_spec = gene_set
         if isinstance(gene_set, dict):
