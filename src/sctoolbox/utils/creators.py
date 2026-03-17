@@ -326,7 +326,7 @@ def github_download(path: str,
         # save files to the output folder
         for f in tqdm.tqdm(content, desc="Downloading"):
             # construct the path + filename
-            out_path = Path(outpath) / f.path if keep_repo_structure else f.name
+            out_path = Path(outpath) / (f.path if keep_repo_structure else f.name)
 
             # ignore directories
             if f.type == "file":
