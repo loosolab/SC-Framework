@@ -249,7 +249,8 @@ def github_download(path: str,
                     keep_repo_structure: bool = True,
                     match: Optional[str] = None,
                     access_token: Optional[str] = None,
-                    overwrite: bool = False) -> None:
+                    overwrite: bool = False,
+                    reference: Optional[str] = None) -> None:
     """
     Download the a file or directory from the given repository.
 
@@ -270,6 +271,8 @@ def github_download(path: str,
         See `here <https://github.com/settings/tokens>`_ to create one (you have to be logged in).
     overwrite : bool, default False
         Skip or overwrite preexisting files.
+    reference : Optional[str], default None
+        Download the files from a specific branch/tag/commit. Can be a branch name, tag name or a commit-sha.
     """
     # authenticate
     if access_token:
@@ -283,7 +286,7 @@ def github_download(path: str,
         repo_ = github.get_repo(repo)
 
         # get the contents of the path
-        content = repo_.get_contents(path)
+        content = repo_.get_contents(**{"path": path, "ref": reference} if reference else {"path": path})
 
         if not isinstance(content, list):
             content = [content]
@@ -299,7 +302,7 @@ def github_download(path: str,
 
             # ignore directories
             if f.type == "file":
-                logger.info(f"Downloading {f.name}")
+                logger.debug(f"Downloading {f.name}")
 
                 # warn and skip instead of overwriting a file
                 if not overwrite:
