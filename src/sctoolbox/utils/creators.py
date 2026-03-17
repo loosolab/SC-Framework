@@ -173,7 +173,7 @@ def add_analysis(dest: str,
     Parameters
     ----------
     dest : str
-        Path to experiment.
+        Path to which `analysis_name` directory is added.
     analysis_name : str
         Name of the new analysis run.
     method : Literal["rna", "atac"], default "rna"
@@ -186,25 +186,25 @@ def add_analysis(dest: str,
     Raises
     ------
     FileNotFoundError
-        If path to experiment does not exist.
+        If the directory given in `dest` does not exist.
     FileExistsError
         If the `analysis_name` already exists.
     """
 
-    analysis_path = Path(dest) / "Analysis"  # TODO
+    analysis_path = Path(dest)
     if not analysis_path.exists():
-        raise FileNotFoundError("Analysis directory not found."
+        raise FileNotFoundError("Analysis directory (dest) not found."
                                 + "Please check if you entered the right "
                                 + "directory or if it was setup correctly.")
 
     run_path = analysis_path / analysis_name
 
     if run_path.exists():
-        raise FileExistsError(f"The analysis name {run_path} already exists suggesting a preexisting analysis."
-                              + "Please use another name or manually delete the folder before trying again.")
+        raise FileExistsError(f"The analysis directory {run_path} already exists suggesting a preexisting analysis."
+                              + "Please use another name or manually delete the directory before trying again.")
 
     # Download notebooks
-    logger.info("Downloading notebooks...")
+    logger.info(f"Downloading {method} notebooks...")
 
     # create a dict of default parameters
     ghd_params = {
@@ -223,6 +223,7 @@ def add_analysis(dest: str,
 
     # general notebooks
     if general:
+        logger.info(f"Downloading general notebooks...")
         # update the parameters to download the general notebooks to the notebooks dir
         ghd_params.update({
             "outpath": str(Path(run_path) / nb_path),
