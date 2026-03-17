@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- implemented `sctoolbox.utils.creators.github_download`
 - Add function adjust_doublet_threshold
 - move scvelo dependency to pyproject.toml (#423)
 - integration of AMULET to find multiplets in single-cell ATAC-seq data (#260)
