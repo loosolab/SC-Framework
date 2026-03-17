@@ -1,6 +1,5 @@
 """Modules for creating files or directories."""
 
-import pathlib
 import gitlab
 from getpass import getpass
 import warnings
@@ -34,8 +33,8 @@ def gitlab_download(internal_path: str,  # noqa: C901
                     commit: Optional[str] = None,
                     out_path: str = "./",
                     private: bool = False,
-                    load_token: str = str(pathlib.Path.home() / ".gitlab_token"),
-                    save_token: str = str(pathlib.Path.home() / ".gitlab_token"),
+                    load_token: str = str(Path.home() / ".gitlab_token"),
+                    save_token: str = str(Path.home() / ".gitlab_token"),
                     overwrite: bool = False,
                     max_calls: int = 5,
                     period: int = 60) -> None:
@@ -60,9 +59,9 @@ def gitlab_download(internal_path: str,  # noqa: C901
         Where the fike/dir should be downloaded to
     private :  bool, default False
         Set true if repo is private
-    load_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
+    load_token : str, default 'Path.home() / ".gitlab_token"'
         Load token from file. Set to None for new token
-    save_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
+    save_token : str, default 'Path.home() / ".gitlab_token"'
         Save token to file
     overwrite : bool, default False
         Overwrite file if it exsits in the directory
@@ -87,7 +86,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
         branch = commit
 
     if private:
-        load_token_file = pathlib.Path(load_token).is_file() if load_token else False
+        load_token_file = Path(load_token).is_file() if load_token else False
         if load_token_file:
             with open(load_token, 'r') as token_file:
                 token = token_file.readline().strip()
@@ -114,7 +113,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
         for item in items:
             if item["type"] != "blob" or not re.search(file_regex, item["name"]):
                 continue
-            out = pathlib.Path(out_path) / item["name"]
+            out = Path(out_path) / item["name"]
             if not out.is_file() or overwrite:
                 print(f"Downloading: {item['name']}")
                 with rate_limiter:
@@ -149,13 +148,13 @@ def setup_experiment(dest: str,
     """
 
     print("Setting up experiment:")
-    if pathlib.Path(dest).exists():
+    if Path(dest).exists():
         raise Exception(f"Directory '{dest}' already exists. "
                         + "Please make sure you are not going to "
                         + "overwrite an existing project. Exiting..")
 
     for dir in dirs:
-        path_to_build = pathlib.Path(dest) / dir
+        path_to_build = Path(dest) / dir
         path_to_build.mkdir(parents=True, exist_ok=True)
         print(f"Build: {path_to_build}")
 
@@ -192,7 +191,7 @@ def add_analysis(dest: str,
         If the `analysis_name` already exists.
     """
 
-    analysis_path = pathlib.Path(dest) / "Analysis"
+    analysis_path = Path(dest) / "Analysis"  # TODO
     if not analysis_path.exists():
         raise FileNotFoundError("Analysis directory not found."
                                 + "Please check if you entered the right "
@@ -209,7 +208,7 @@ def add_analysis(dest: str,
 
     # create a dict of default parameters
     ghd_params = {
-        "outpath": run_path,
+        "outpath": str(run_path),
         "match": ".ipynb|.yaml|.pptx",
     }
     ghd_params.update(kwargs)
