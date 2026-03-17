@@ -111,7 +111,8 @@ dependencies = [
         'pptreport>=1.1.4',  # to fix placeholder not found error
         'boto3',
         'Jinja2',
-        'scikit-image'
+        'scikit-image',
+        'PyGithub'
 ]
 
 [project.optional-dependencies]
