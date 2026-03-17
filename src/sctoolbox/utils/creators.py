@@ -11,6 +11,7 @@ from github import Github, Auth
 from pathlib import Path
 import tqdm
 import requests
+from deprecated import deprecated
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal
@@ -19,6 +20,7 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
+@deprecated(version='0.15.0', reason="Superseeded by 'sctoolbox.utils.creators.github_download'.")
 @beartype
 def gitlab_download(internal_path: str,  # noqa: C901
                     file_regex: str,
@@ -120,6 +122,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
         print("Error:", e)
 
 
+@deprecated(version='0.15.0', reason="Use `sctoolbox.utils.creators.add_analysis` instead.")
 @beartype
 def setup_experiment(dest: str,
                      dirs: list[str] = ["raw", "preprocessing", "Analysis"]) -> None:
@@ -151,17 +154,16 @@ def setup_experiment(dest: str,
         print(f"Build: {path_to_build}")
 
 
+@beartype
 def add_analysis(dest: str,
                  analysis_name: str,
                  method: Literal["rna", "atac"] = "rna",
-                 dirs: list[str] = ['figures', 'data', 'logs'],
-                 starts_with: int = 1,
+                 general: bool = True,
                  **kwargs: Any) -> None:
     """
     Create and add a new analysis/run.
 
-    Note: Only works for Notebooks until number 99.
-    Needs to be adjusted if we exceed 89 notebooks.
+    This function will create a directory in `dest` with the name `analysis_name` and populate it with the selected analysis notebooks.
 
     Parameters
     ----------
@@ -171,19 +173,17 @@ def add_analysis(dest: str,
         Name of the new analysis run.
     method : Literal["rna", "atac"], default "rna"
         Type of notebooks to download.
-    dirs : list[str], default ['figures', 'data', 'logs']
-        Internal folders to create besides 'notebooks' directory.
-    starts_with : int, default 1
-        Notebook the analysis will start with.
+    general : bool, default True
+        Whether to download the notebooks independent of the method.
     **kwargs : Any
-        Forwarded to `gitlab_download`.
+        Forwarded to `github_download`.
 
     Raises
     ------
     FileNotFoundError
         If path to experiment does not exist.
-    ValueError
-        If `method` is invalid.
+    FileExistsError
+        If the `analysis_name` already exists.
     """
 
     analysis_path = pathlib.Path(dest) / "Analysis"
@@ -191,22 +191,32 @@ def add_analysis(dest: str,
         raise FileNotFoundError("Analysis directory not found."
                                 + "Please check if you entered the right "
                                 + "directory or if it was setup correctly.")
-    run_path = analysis_path / analysis_name
-    method = method.lower()
-    if method not in ['rna', 'atac']:
-        raise ValueError("Invalid method type. Valid options: 'rna', 'atac'")
 
-    # Setup run directorys
-    setup_experiment(run_path, dirs=dirs + ["notebooks"])
-    # Build notebook regex
-    regex = build_notebooks_regex(starts_with)
+    run_path = analysis_path / analysis_name
+
+    if run_path.exists():
+        raise FileExistsError(f"The analysis name {run_path} already exists suggesting a preexisting analysis."
+                              + "Please use another name or manually delete the folder before trying again.")
 
     # Download notebooks
-    print("Downloading notebooks..")
-    gitlab_download(f"{method}-notebooks", file_regex=regex, out_path=run_path / "notebooks", **kwargs)
-    gitlab_download(f"{method}-notebooks", file_regex="config.yaml", out_path=run_path / "notebooks", **kwargs)
+    logger.info("Downloading notebooks...")
+
+    # create a dict of default parameters
+    ghd_params = {
+        "outpath": run_path,
+        "match": ".ipynb|.yaml|.pptx",
+    }
+    ghd_params.update(kwargs)
+
+    # method specific notebooks
+    github_download(path="rna_analysis/notebooks", **ghd_params)
+
+    # general notebooks
+    if general:
+        github_download(path="general_notebooks", **ghd_params)
 
 
+@deprecated(version='0.15.0', reason="No longer required.")
 @beartype
 def build_notebooks_regex(starts_with: int) -> str:
     """
