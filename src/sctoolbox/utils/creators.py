@@ -11,7 +11,9 @@ from github import Github, Auth
 from pathlib import Path
 import tqdm
 import requests
-from deprecated import deprecated
+
+import deprecation
+from sctoolbox import __version__
 
 from beartype import beartype
 from beartype.typing import Optional, Any, Literal
@@ -20,7 +22,9 @@ from sctoolbox._settings import settings
 logger = settings.logger
 
 
-@deprecated(version='0.15.0', reason="Superseeded by 'sctoolbox.utils.creators.github_download'.")
+@deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                        current_version=__version__,
+                        details="Superseeded by 'sctoolbox.utils.creators.github_download'.")
 @beartype
 def gitlab_download(internal_path: str,  # noqa: C901
                     file_regex: str,
@@ -122,7 +126,9 @@ def gitlab_download(internal_path: str,  # noqa: C901
         print("Error:", e)
 
 
-@deprecated(version='0.15.0', reason="Use `sctoolbox.utils.creators.add_analysis` instead.")
+@deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                        current_version=__version__,
+                        details="Use `sctoolbox.utils.creators.add_analysis` instead.")
 @beartype
 def setup_experiment(dest: str,
                      dirs: list[str] = ["raw", "preprocessing", "Analysis"]) -> None:
@@ -227,7 +233,9 @@ def add_analysis(dest: str,
         github_download(path="general_notebooks", **ghd_params)
 
 
-@deprecated(version='0.15.0', reason="No longer required.")
+@deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
+                        current_version=__version__,
+                        details="No longer required.")
 @beartype
 def build_notebooks_regex(starts_with: int) -> str:
     """
