@@ -333,7 +333,7 @@ def github_download(path: str,
                 logger.debug(f"Downloading {f.name}")
 
                 # warn and skip instead of overwriting a file
-                if not overwrite:
+                if not overwrite and out_path.exists():
                     logger.warning(f"{out_path} already exists. Skipping...")
                     continue
 
