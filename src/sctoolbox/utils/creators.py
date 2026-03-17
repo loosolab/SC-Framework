@@ -209,10 +209,21 @@ def add_analysis(dest: str,
     ghd_params.update(kwargs)
 
     # method specific notebooks
-    github_download(path="rna_analysis/notebooks", **ghd_params)
+    if method == "rna":
+        nb_path = "rna_analysis/notebooks"
+    elif method == "atac":
+        nb_path = "atac_analysis/notebooks"
+
+    github_download(path=nb_path, **ghd_params)
 
     # general notebooks
     if general:
+        # update the parameters to download the general notebooks to the notebooks dir
+        ghd_params.update({
+            "outpath": str(Path(run_path) / nb_path),
+            "keep_repo_structure": False
+        })
+
         github_download(path="general_notebooks", **ghd_params)
 
 
