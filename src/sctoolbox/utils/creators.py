@@ -235,7 +235,7 @@ def add_analysis(dest: str,
 
         github_download(path="general_notebooks", **ghd_params)
 
-     # add an empty notes file
+    # add an empty notes file
     if notes:
         (run_path / notes).touch()
 
