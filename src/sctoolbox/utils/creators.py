@@ -206,6 +206,9 @@ def add_analysis(dest: str,
         raise FileExistsError(f"The analysis directory {run_path} already exists suggesting a preexisting analysis. "
                               + "Please use another name or manually delete the directory before trying again.")
 
+    # create the directory
+    run_path.mkdir()
+
     # Download notebooks
     logger.info(f"Downloading {method} notebooks...")
 
