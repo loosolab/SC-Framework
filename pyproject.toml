@@ -185,6 +185,9 @@ test = [
     "pytest-html"
 ]
 
+[project.scripts]
+SCF-analysis-setup = "sctoolbox.utils.cli:main"
+
 [project.urls]
 Repository = "https://github.com/loosolab/SC-Framework"
 Documentation = "https://loosolab.pages.gwdg.de/software/sc_framework/"
