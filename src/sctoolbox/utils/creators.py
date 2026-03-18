@@ -164,6 +164,7 @@ def add_analysis(dest: str,
                  analysis_name: str,
                  method: Literal["rna", "atac"] = "rna",
                  general: bool = True,
+                 notes: Optional[str] = "notes.md",
                  **kwargs: Any) -> None:
     """
     Create and add a new analysis/run.
@@ -180,6 +181,8 @@ def add_analysis(dest: str,
         Type of notebooks to download.
     general : bool, default True
         Whether to download the notebooks independent of the method.
+    notes : Optional[str], default "notes.md"
+        Adds an empty notes file to the analysis folder.
     **kwargs : Any
         Forwarded to `github_download`.
 
@@ -200,7 +203,7 @@ def add_analysis(dest: str,
     run_path = analysis_path / analysis_name
 
     if run_path.exists():
-        raise FileExistsError(f"The analysis directory {run_path} already exists suggesting a preexisting analysis."
+        raise FileExistsError(f"The analysis directory {run_path} already exists suggesting a preexisting analysis. "
                               + "Please use another name or manually delete the directory before trying again.")
 
     # Download notebooks
@@ -231,6 +234,10 @@ def add_analysis(dest: str,
         })
 
         github_download(path="general_notebooks", **ghd_params)
+
+     # add an empty notes file
+    if notes:
+        (run_path / notes).touch()
 
 
 @deprecation.deprecated(deprecated_in="0.15.0", removed_in="0.17.0",
