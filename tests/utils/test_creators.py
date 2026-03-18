@@ -60,3 +60,40 @@ def test_setup_experiment():
 def test_build_notebooks_regex(starts, regex):
     """Test build notebook regex function."""
     assert creator.build_notebooks_regex(starts) == regex
+
+
+def test_add_analysis_FNF(tmp_path):
+    """Test the add_analysis FileNotFoundError."""
+    path = tmp_path / "not_existing"
+
+    assert not path.exists()
+
+    with pytest.raises(FileNotFoundError):
+        creator.add_analysis(dest=str(path), analysis_name="FNF")
+
+
+def test_add_analysis_FE(tmp_path):
+    """Test the add_analysis FileExistsError."""
+    name = "existing_analysis"
+    path = tmp_path / name
+
+    path.mkdir()
+
+    assert path.exists()
+
+    with pytest.raises(FileExistsError):
+        creator.add_analysis(dest=str(path.parent), analysis_name=name)
+
+
+def test_add_analysis(mocker, tmp_path):
+    """Test the add_analysis function."""
+    mock_ghd = mocker.patch("sctoolbox.utils.creators.github_download")
+
+    creator.add_analysis(dest=str(tmp_path), analysis_name="new_analysis")
+
+    assert mock_ghd.call_count == 2
+
+
+def test_github_download():
+    """Test the github_download function."""
+    pass
