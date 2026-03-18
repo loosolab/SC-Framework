@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- implemented SCF-analysis-setup CLI
 - implemented `sctoolbox.utils.creators.github_download`
 - Add function adjust_doublet_threshold
 - move scvelo dependency to pyproject.toml (#423)
