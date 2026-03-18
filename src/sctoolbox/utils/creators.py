@@ -223,7 +223,7 @@ def add_analysis(dest: str,
 
     # general notebooks
     if general:
-        logger.info(f"Downloading general notebooks...")
+        logger.info("Downloading general notebooks...")
         # update the parameters to download the general notebooks to the notebooks dir
         ghd_params.update({
             "outpath": str(Path(run_path) / nb_path),
