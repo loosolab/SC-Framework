@@ -94,6 +94,40 @@ def test_add_analysis(mocker, tmp_path):
     assert mock_ghd.call_count == 2
 
 
-def test_github_download():
+def test_github_download(tmp_path, mocker):
     """Test the github_download function."""
-    pass
+    # mock key functions used within github_download
+    class mockGitHub:
+        class mockRepo:
+            class mockContent:
+                def __init__(self, name, path, decoded_content) -> None:
+                    self.name = name
+                    self.path = path
+                    self.decoded_content = decoded_content
+                    self.type = "file"
+
+            def get_contents(self, *args, **kwargs):
+                return [
+                    self.mockContent(name="fileA.txt", path="path/to/fileA.txt", decoded_content=b"caf\xc3\xa9"),
+                    self.mockContent(name="fileB.txt", path="fileB.txt", decoded_content="milk")
+                ]
+
+        def get_repo(self, *args, **kwargs):
+            return self.mockRepo()
+
+        # to enable context manager usage
+        def __enter__(self):
+            return self
+
+        def __exit__(self, type, value, traceback):
+            pass
+
+    mocker.patch("sctoolbox.utils.creators.Github", return_value=mockGitHub())
+
+    # the directory is empty
+    assert not any(tmp_path.iterdir())
+
+    creator.github_download(path=str(tmp_path), outpath=str(tmp_path))
+
+    # the directory contains "downloaded" files
+    assert any(tmp_path.iterdir())
