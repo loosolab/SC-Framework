@@ -375,7 +375,7 @@ notebooks-RNA:
     # prepare notebook run
     - pip install papermill
     - python -m ipykernel install --user --name sctoolbox
-    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb
+    - cp -t ./rna_analysis/notebooks/ ./general_notebooks/proportion_analysis.ipynb ./general_notebooks/prepare_for_cellxgene.ipynb ./general_notebooks/annotation.ipynb ./general_notebooks/GSEA.ipynb ./general_notebooks/group_markers.ipynb ./general_notebooks/pseudotime_analysis.ipynb ./general_notebooks/Palantir.ipynb
   script:
     - python scripts/run_notebooks.py RNA
   after_script:

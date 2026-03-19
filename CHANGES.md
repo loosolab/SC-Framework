@@ -3,6 +3,7 @@
 ## 0.15.0 (in progress)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
+- fixed TypeError caused by non-string column names in `utils.adata._rec_search`
 - Add function adjust_doublet_threshold
 - move scvelo dependency to pyproject.toml (#423)
 - integration of AMULET to find multiplets in single-cell ATAC-seq data (#260)
@@ -31,6 +32,7 @@
 - lint according to new D420 rule
 
 ### Changes to notebooks
+- implemented the Palantir notebook
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
 - Notebooks 4: Fix blue input cell order
 - RNA/02: Filter genes: Added check for label column (#430)
