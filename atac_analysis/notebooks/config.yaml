@@ -81,3 +81,12 @@
   log_file: "../logs/pseudotime_analysis_log.txt"
   overwrite_log: True
   report_dir: "../report/pseudotime_analysis/"
+
+"Palantir":
+  adata_input_dir: "../adatas/"
+  adata_output_dir: "../adatas/"
+  figure_dir: "../figures/palantir/"
+  table_dir: "../tables/palantir/"
+  log_file: "../logs/palantir_log.txt"
+  overwrite_log: True
+  report_dir: "../report/palantir/"

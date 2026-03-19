@@ -262,7 +262,15 @@ def _rec_search(var: Union[Dict, pd.DataFrame], path: List[str], repl: Tuple[str
     """
     # check DataFrame column names
     if isinstance(var, pd.DataFrame):
-        col_names = [n for n in var.columns if "/" in n]
+        # get column names with the offending character
+        col_names = []
+        for c in var.columns:
+            try:
+                if repl[0] in c:
+                    col_names.append(c)
+            except TypeError:
+                # if the column type doesn't support the 'in' operator skip
+                continue
 
         if col_names:
             # first element is an adata attribute
