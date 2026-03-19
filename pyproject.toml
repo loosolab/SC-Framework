@@ -160,6 +160,9 @@ proportion = [
 velocity = [
     'scvelo>=0.3.4'
 ]
+palantir = [
+    'palantir'
+]
 #scar = [
 #    'scar @ git+https://github.com/Novartis/scar.git'  # PyPI doesn't accept git packages
 #]
@@ -169,7 +172,7 @@ core = [
     'SC-Framework[converter,atac,interactive,batch_correction]'
 ]
 downstream = [
-    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,annotation,proportion,velocity]'
+    'SC-Framework[receptor_ligand,pseudotime,gsea,deseq2,proportion,annotation,velocity,palantir]'
 ]
 # all is intended to install everything
 all = [
