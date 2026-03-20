@@ -280,3 +280,17 @@ convention = "numpy"
 "tests/*" = [
     "ANN"  # disable the flake8-annotation rules
 ]
+
+[tool.codespell]
+# Skip specific directories and file patterns
+# Use commas for multiple entries; globs are supported
+# skip = './.git,./build,./*.ipynb_checkpoints,./docs/_build'
+
+# Comma-separated list of words to ignore (case-sensitive)
+#ignore-words-list = 'sur,nd,te,mytechnicalterm'
+
+# quiet-level 3: suppresses encoding and binary file warnings
+quiet-level = 3
+
+# Check file names for typos as well
+check-filenames = true

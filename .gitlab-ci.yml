@@ -239,6 +239,19 @@ lint:
         - atac_analysis/notebooks/*.ipynb
         - general_notebooks/*.ipynb
 
+# check the spelling in the whole repository
+# Configuration is in pyproject.toml [tool.codespell] section
+spellcheck:
+  stage: test
+  image: python:latest
+  before_script:
+    - pip install codespell[toml]
+  script:
+    - codespell
+  allow_failure: true  # Optional: set to false if you want to block the MR on typos
+  only:
+    - merge_requests
+
 # Test that the minimal sctoolbox package can still be imported without additional dependencies
 test import:
   image: python:3.10  # pybedtools is not compatible with python 3.11
