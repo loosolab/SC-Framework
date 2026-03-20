@@ -284,7 +284,7 @@ convention = "numpy"
 [tool.codespell]
 # Skip specific directories and file patterns
 # Use commas for multiple entries; globs are supported
-# skip = './.git,./build,./*.ipynb_checkpoints,./docs/_build'
+# skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data/'
 
 # Comma-separated list of words to ignore (case-sensitive)
 #ignore-words-list = 'sur,nd,te,mytechnicalterm'
@@ -294,3 +294,6 @@ quiet-level = 3
 
 # Check file names for typos as well
 check-filenames = true
+
+# Display a total typo count
+count = true
