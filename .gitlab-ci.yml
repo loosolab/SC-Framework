@@ -247,7 +247,9 @@ spellcheck:
   before_script:
     - pip install codespell[toml]
   script:
-    - codespell
+    - python --version
+    - codespell --version
+    - codespell --toml pyproject.toml
   allow_failure: true  # Optional: set to false if you want to block the MR on typos
   only:
     - merge_requests
