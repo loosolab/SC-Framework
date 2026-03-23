@@ -284,7 +284,7 @@ convention = "numpy"
 [tool.codespell]
 # Skip specific directories and file patterns
 # Use commas for multiple entries; globs are supported
-skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data'
+skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data/'
 
 # Comma-separated list of words to ignore (case-sensitive)
 #ignore-words-list = 'sur,nd,te,mytechnicalterm'
