@@ -15,7 +15,7 @@ from beartype.roar import BeartypeCallHintParamViolation
 quant_folder = os.path.join(os.path.dirname(__file__), '../data', 'quant')
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Load and returns an anndata object.
 

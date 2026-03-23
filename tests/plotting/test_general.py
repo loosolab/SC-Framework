@@ -43,7 +43,7 @@ def df():
                               'col2': [3, 4, 5, 6, 7]})
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Load and returns an anndata object.
 
