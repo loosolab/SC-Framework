@@ -85,3 +85,19 @@ We recommend to structure the analysis to support multiple analysis runs that ma
         └── notes.md
 
 # TODO CLI tool
+
+
+Docker
+------
+
+The SC-Framework provides a `Docker <https://www.docker.com/>`_ image for each release. This creates a static environment for long-term reproducibility and allows to take full advantage of single cell analysis in a HPC context. Each image contains all necessary software to conduct a full single cell analysis.
+
+The images can be found in our GitLab `Container registry <https://gitlab.gwdg.de/loosolab/software/sc_framework/container_registry/>`_, where each image is tagged for its respective SC-Framework version.
+
+**Download the image:**
+
+.. code-block:: bash
+
+  docker pull docker.gitlab.gwdg.de/loosolab/software/sc_framework:latest
+
+# TODO explain how to start and run notebooks with the container
