@@ -67,7 +67,7 @@ def test_search_clustering_parameters(adata, method):
     assert axarr.shape == (2, 2)
 
 
-def test_wrong_embeding_search_clustering_parameters(adata):
+def test_wrong_embedding_search_clustering_parameters(adata):
     """Test if search_cluster_parameters raises error."""
     with pytest.raises(KeyError):
         pl.search_clustering_parameters(adata, embedding="Invalid")

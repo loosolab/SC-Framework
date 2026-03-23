@@ -38,7 +38,7 @@ def s3_downloader(client: Client,
     download_list : list[str]
         List of filenames in bucket
     force : bool, default False
-        Force download of already exisiting files
+        Force download of already existing files
     download_path : Optional[str]
         Download path. Creates directory with same name as bucket in current directory if None.
     progress : bool, default False

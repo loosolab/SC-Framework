@@ -398,7 +398,7 @@ def dim_red(anndata: sc.AnnData, method: Optional[Literal["PCA", "LSI"]], method
     method_kwargs : dict, default {}
         Parameters of the chosen method.
     subset : Optional[List[int]], default None
-        A list of integers specifing a subset of components to keep. Forwarded to "select" of :func:sctoolbox.`tools.dim_reduction.subset_PCA`.
+        A list of integers specifying a subset of components to keep. Forwarded to "select" of :func:sctoolbox.`tools.dim_reduction.subset_PCA`.
     neighbor_kwargs : dict, default {}
         Parameters to the neighbor graph computation. :func:`scanpy.pp.neighbors`
     inplace : bool, default False

@@ -52,7 +52,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
     save_token : str, default 'pathlib.Path.home() / ".gitlab_token"'
         Save token to file
     overwrite : bool, default False
-        Overwrite file if it exsits in the directory
+        Overwrite file if it exists in the directory
     max_calls : int, default 5
         limit file download rate per period
     period : int, default 60
@@ -61,7 +61,7 @@ def gitlab_download(internal_path: str,  # noqa: C901
     Raises
     ------
     ValueError
-        If repository is inaccesible.
+        If repository is inaccessible.
     """
 
     def limited(until: float) -> None:
@@ -189,7 +189,7 @@ def add_analysis(dest: str,
     if method not in ['rna', 'atac']:
         raise ValueError("Invalid method type. Valid options: 'rna', 'atac'")
 
-    # Setup run directorys
+    # Setup run directories
     setup_experiment(run_path, dirs=dirs + ["notebooks"])
     # Build notebook regex
     regex = build_notebooks_regex(starts_with)

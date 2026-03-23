@@ -162,7 +162,7 @@ def load_h5ad(path: str) -> sc.AnnData:
 
     if adata.raw:
         logger.warning("Found AnnData.raw! Be aware that Scanpy favors '.raw' unless explicitly told to do otherwise."
-                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where neccessary.")
+                       "Change this behavior by either setting 'AnnData.raw = None' or providing your preferred layer where necessary.")
 
     return adata
 
@@ -314,7 +314,7 @@ def add_uns_info(adata: sc.AnnData,  # noqa: C901
     value : Any
         The value to add to adata.uns['sctoolbox'].
     how : str, default "overwrite"
-        When set to "overwrite" provided key will be overwriten. If "append" will add element to existing list or dict.
+        When set to "overwrite" provided key will be overwritten. If "append" will add element to existing list or dict.
 
     Raises
     ------

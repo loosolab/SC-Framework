@@ -232,7 +232,7 @@ def predict_cell_cycle(adata: sc.AnnData,  # noqa: C901
     # Scale the data before scoring
     sdata = sc.pp.scale(adata, copy=True)
 
-    # replace the index with gene symbols if neccessary
+    # replace the index with gene symbols if necessary
     if gene_column:
         sdata.var.set_index(gene_column, inplace=True)
         sdata.var.index = sdata.var.index.astype("string")
@@ -374,7 +374,7 @@ def estimate_doublets(adata: sc.AnnData,  # noqa: C901
         adata.obs[["doublet_score", "predicted_doublet"]] = (
             utils.tables.fill_na(adata.obs[["doublet_score", "predicted_doublet"]], inplace=False))
 
-    # Check if all values in colum are of type boolean
+    # Check if all values in column are of type boolean
     if adata.obs["predicted_doublet"].dtype != "bool":
         logger.warning("Could not estimate doublets for every barcode. Columns can contain NAN values.")
 
@@ -449,7 +449,7 @@ def _run_scrublet(adata: sc.AnnData,
 def adjust_doublet_threshold(adata: sc.AnnData,
                              threshold: float,
                              score_col: str = "doublet_score",
-                             prediciton_col: str = "predicted_doublet",
+                             prediction_col: str = "predicted_doublet",
                              inplace: bool = True) -> Optional[sc.AnnData]:
     """
     Add a boolean 'predicted_doublet' column to adata.obs based on a threshold.
@@ -462,8 +462,8 @@ def adjust_doublet_threshold(adata: sc.AnnData,
         Doublet score threshold. Cells with score > threshold are marked as doublets.
     score_col : str, default 'doublet_score'
         Column containing doublet scores (float).
-    prediciton_col : str, default 'predicted_doublet'
-        Column containing doublet prediciton (boolean).
+    prediction_col : str, default 'predicted_doublet'
+        Column containing doublet prediction (boolean).
     inplace : bool, default True
         If True, modify adata in place.
         If False, return a modified copy of adata.
@@ -487,7 +487,7 @@ def adjust_doublet_threshold(adata: sc.AnnData,
 
     adata = adata if inplace else adata.copy()
     logger.info(f"Adjust doublet threshold to {threshold}")
-    adata.obs[prediciton_col] = adata.obs[score_col] > threshold
+    adata.obs[prediction_col] = adata.obs[score_col] > threshold
     adata.uns["scrublet"]["threshold"] = threshold
 
     if inplace:
@@ -744,7 +744,7 @@ def mad_threshold(data: npt.ArrayLike,
     """
     Compute an automatic threshold using the median absolute deviation (MAD).
 
-    The threshold is calcualted as median(data) -/+ MAD * n.
+    The threshold is calculated as median(data) -/+ MAD * n.
 
     Parameters
     ----------
@@ -1150,9 +1150,9 @@ def _match_columns(adata: sc.AnnData,
     adata : sc.AnnData
         Anndata object
     d : dict
-        Dictionary with adata.obs or .var colums as keys.
+        Dictionary with adata.obs or .var columns as keys.
     which : Literal["obs", "var"], default "obs"
-        Wether to check adata.obs or adata.var columns.
+        Whether to check adata.obs or adata.var columns.
 
     Returns
     -------

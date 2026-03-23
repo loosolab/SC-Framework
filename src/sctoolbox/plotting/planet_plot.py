@@ -1,4 +1,4 @@
-"""Funtions for high dimensional bubble plot a.k.a planet plot."""
+"""Functions for high dimensional bubble plot a.k.a planet plot."""
 
 import scanpy as sc
 import numpy as np
@@ -191,7 +191,7 @@ def planet_plot_anndata_preprocess(adata: sc.AnnData,  # noqa: C901
     fillna: int | float, default 0.0
         Value to fill up the NaN values that are created during aggregation.
     obs_columns: list | None, default None
-        The obs columns of the AnnData object to be additionaly considered for aggregation.
+        The obs columns of the AnnData object to be additionally considered for aggregation.
         Note that these values must have numeric values!
     obs_thresholds: list | None, default None
         A corresponding list of threshold values for the obs_columns.
@@ -382,7 +382,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
     x_label : str | None, default None
         Label for the x-axis of the plot.
     y_label : str | None, default None
-        Label fot the y-axis of the plot.
+        Label for the y-axis of the plot.
     mode : Literal["aggregate", "planet"], default "aggregate"
         There are two modes:
         1)"aggregate" mode to show the aggregate of values per cluster as the center dot.
@@ -730,7 +730,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
                                 color_schema = color_schema)
 
     Figure size adjustment:
-    Ther two parameters FIG_SIZE_SCALER and PLANET_DIST_SCALER can be tuned to adjust the figure size and planet distance in order to achieve a perfect looking plot.
+    The two parameters FIG_SIZE_SCALER and PLANET_DIST_SCALER can be tuned to adjust the figure size and planet distance in order to achieve a perfect looking plot.
 
     Saving space, reducing plot size, FIG_SIZE_SCALER=1.5 from 2 (default).
 
@@ -899,7 +899,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
     fig, ax = plt.subplots(figsize=(w, h))
     plt.xticks(ticks=range(len(x_categories)), labels=x_categories, rotation='vertical')
     plt.yticks(ticks=range(len(y_categories)), labels=y_categories)
-    # Create and array of axises to return.
+    # Create and array of axses to return.
     axarr = []
 
     # ---- Center dot and circle scatter ---- #
@@ -966,7 +966,7 @@ def planet_plot_render(plot_vars: pd.DataFrame,  # noqa: C901
 
     # ---- Planet colour legends for multiple color schemas ---- #
     cbar_count = 1    # initialize color bar count
-    planet_cbar_ax = {}     # array for the axises of the planet specific colorbars
+    planet_cbar_ax = {}     # array for the axses of the planet specific colorbars
     planet_legend_hex_color = {}    # array to store the 70% hex value for the planet legend.
     if (mode == 'planet') and planet_color_schemas is not None:
         for i in range(len(sc_array)):
