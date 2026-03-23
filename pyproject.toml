@@ -293,7 +293,16 @@ skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data/'
 quiet-level = 3
 
 # Check file names for typos as well
-check-filenames = ''
+check-filenames = true
+
+# Check hidden files
+check-hidden = true
+
+# print x lines of surrounding context
+context = 4
 
 # Display a total typo count
-count = ''
+count = true
+
+# print a summary
+summary = true
