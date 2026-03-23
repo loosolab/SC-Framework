@@ -299,7 +299,8 @@ check-filenames = true
 check-hidden = true
 
 # print x lines of surrounding context
-context = 4
+before-context = 1
+after-context = 1
 
 # Display a total typo count
 count = true
