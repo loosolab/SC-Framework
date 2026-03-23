@@ -27,7 +27,6 @@
 - fix logging issue causing error on save (#333)
 - CI improvments
 - lint according to new D420 rule
-- apoptosis score integrated
 
 ### Changes to notebooks
 - Notebook 2: Show doubled threshold in plot and make it adjustable afterwards (#328)
@@ -39,6 +38,7 @@
 - RNA/ATAC: always keep the norm layer (#411)
 - ATAC/02: add peakqc references
 - Notebook 4: Fix report issue when reclustering (#431)
+- RNA Notebook 2: added apoptosis score and fixed section numbers (#401)
 
 ## 0.14.2 (24-11-2025)
 - remove direct link dependencies to allow PyPI upload
