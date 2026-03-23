@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.15.0 (in progress)
+- spellcheck the project
 - fixed TypeError caused by non-string column names in `utils.adata._rec_search`
 - Add function adjust_doublet_threshold
 - move scvelo dependency to pyproject.toml (#423)
