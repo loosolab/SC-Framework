@@ -135,23 +135,23 @@ def gunzip_file(f_in: str, f_out: str) -> None:
 
 
 @beartype
-def is_str_numeric(ans: str) -> bool:  # codespell:ignore ans
+def is_str_numeric(var: str) -> bool:
     """
     Check if string can be converted to number.
 
     Parameters
     ----------
-    ans : str
+    var : str
         String to check.
 
     Returns
     -------
     bool
         True if string can be converted to float.
-    """  # codespell:ignore ans
+    """
 
     try:
-        float(ans)  # codespell:ignore ans
+        float(var)
         return True
     except ValueError:
         return False
