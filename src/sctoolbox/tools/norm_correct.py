@@ -319,7 +319,7 @@ def wrap_corrections(adata: sc.AnnData,
     if unknown_keys:
         raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
 
-    # Check the existance of packages before running batch_corrections
+    # Check the existence of packages before running batch_corrections
     required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama"}
     for method in methods:
         if method in required_packages:  # not all packages need external tools
