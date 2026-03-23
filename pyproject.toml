@@ -220,7 +220,7 @@ testpaths = [
 ]
 
 [tool.ruff]
-# Include these directores and files
+# Include these directories and files
 include = [
     "pyproject.toml",
     "src/**/*.py",
@@ -287,7 +287,7 @@ convention = "numpy"
 skip = './src/sctoolbox/data,./atac_analysis/notebooks/test_data,./tests/data/'
 
 # Comma-separated list of words to ignore (case-sensitive)
-#ignore-words-list = 'sur,nd,te,mytechnicalterm'
+#ignore-words-list = 'sur,nd,te,mytechnicalterm'  # codespell:ignore
 
 # quiet-level 3: suppresses encoding and binary file warnings
 quiet-level = 3
