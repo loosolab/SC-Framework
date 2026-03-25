@@ -42,7 +42,7 @@
   overwrite_log: True
   report_dir: "../report/GSEA/"
 
-"annoation":
+"annotation":
   adata_input_dir: "../adatas/"
   adata_output_dir: "../adatas/"
   figure_dir: "../figures/annotation/"

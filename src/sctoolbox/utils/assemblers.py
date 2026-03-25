@@ -212,7 +212,7 @@ def from_quant(path: str,  # noqa: C901
         The directory where the quant folder from snakemake preprocessing is located.
     configuration : list
         Configurations to setup the samples for anndata assembling.
-        It must containg the sample, the word used in snakemake to assign the condition,
+        It must containing the sample, the word used in snakemake to assign the condition,
         and the condition, e.g., sample1:condition:room_air
     use_samples : Optional[list], default None
         List of samples to use. If None, all samples will be used.
@@ -364,7 +364,7 @@ def from_single_mtx(mtx: Union[str, Path],
     if transpose:
         adata = adata.transpose()
 
-    # statisfy the linter
+    # satisfy the linter
     if False:
         raise ValueError()
 
@@ -396,7 +396,7 @@ def from_single_mtx(mtx: Union[str, Path],
             raise ValueError(f"{name} file is of size {len(table)} but AnnData expects {expected_size}. Try to toggle the transpose argument.")
 
         table.index.names = ["index"]
-        table.columns = [str(c) for c in table.columns]  # conver to string
+        table.columns = [str(c) for c in table.columns]  # convert to string
 
         # Test if they are unique
         if not table.index.is_unique:
@@ -427,7 +427,7 @@ def from_mtx(path: str,
     """
     Build an adata object from list of mtx, barcodes and variables files.
 
-    This function recursively scans trough all subdirectories of the given path for files matching the pattern of the `mtx` parameter.
+    This function recursively scans through all subdirectories of the given path for files matching the pattern of the `mtx` parameter.
     Mtx files accompanied by a file matching the `barcodes` or `variables` pattern will be added to the resulting AnnData as `.obs` and `.var` tables.
 
     Parameters
@@ -571,7 +571,7 @@ def convertToAdata(file: str,
                 stop("R dependency Seurat not found.")
             }
             if (!suppressPackageStartupMessages(require(SingleCellExperiment))) {
-                stop("R dependecy SingleCellExperiment not found.")
+                stop("R dependency SingleCellExperiment not found.")
             }
         """)
 
@@ -769,7 +769,7 @@ def _read_and_merge(  # noqa: C901
                     raise ValueError("Missing keys in layer dict.")
 
     # source is stored in adata.uns["sctoolbox"]["source"]
-    # TODO move for-loop/kwargs handling into seperate function
+    # TODO move for-loop/kwargs handling into separate function
     if isinstance(path, str):
         adata = method(path, **kwargs)
         source = os.path.abspath(path)

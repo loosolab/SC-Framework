@@ -14,7 +14,7 @@ import sctoolbox.utils as utils
 def merge_anndata(anndata_dict: dict[str, sc.AnnData],
                   join: Literal["inner", "outer"] = "inner") -> sc.AnnData:
     """
-    Merge two h5ad files for dual cellxgene deplyoment.
+    Merge two h5ad files for dual cellxgene deployment.
 
     Parameters
     ----------
@@ -54,11 +54,11 @@ def merge_anndata(anndata_dict: dict[str, sc.AnnData],
     for label, adata in anndata_dict.items():
         minimal_adata_dict[label] = sc.AnnData(X=adata.X, obs=adata.obs, var=adata.var, obsm=dict(adata.obsm))
         if not adata.obs.index.is_unique:
-            warnings.warn(f"Obs index of {label} dataset is not unqiue. Running .obs_names_make_unique()..")
+            warnings.warn(f"Obs index of {label} dataset is not unique. Running .obs_names_make_unique()..")
             minimal_adata_dict[label].obs_names_make_unique()
 
         if not adata.var.index.is_unique:
-            warnings.warn(f"Var index of {label} dataset is not unqiue. Running .var_names_make_unique()..")
+            warnings.warn(f"Var index of {label} dataset is not unique. Running .var_names_make_unique()..")
             minimal_adata_dict[label].var_names_make_unique()
 
     # Get cell barcode (obs) intersection

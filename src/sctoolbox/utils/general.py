@@ -577,7 +577,7 @@ def suppress_logging(level: int = logging.CRITICAL) -> Generator:
     Parameters
     ----------
     level : int, default logging.CRITICAL
-        Supress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
+        Suppress logging below this level. See https://docs.python.org/3/library/logging.html#logging-levels
 
     Yields
     ------

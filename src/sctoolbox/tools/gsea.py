@@ -59,7 +59,7 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
         Set of background genes. Will be automatically determined when
         library_name or gene_sets is given. Only needed for enrichr.
     deg_set_size : int, default 200
-        Get top or bottom degs for enrichr analyisis.
+        Get top or bottom degs for enrichr analysis.
         Positive values get the top X upregulated genes.
         Negative values get the top X downregulated genes.
         For example, ``10`` to use the top 10 and ``-10`` to use the bottom 10 genes.
@@ -79,7 +79,7 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
     KeyError
         If marker_key not in adata.uns
     ValueError
-        If result dictinary is empty
+        If result dictionary is empty
 
     Notes
     -----
@@ -100,7 +100,7 @@ def gene_set_enrichment(adata: sc.AnnData,  # noqa: C901
 
     modified_adata = adata if inplace else adata.copy()
 
-    # setup dict to store information old data will be overwriten!
+    # setup dict to store information old data will be overwritten!
     utils.adata.add_uns_info(modified_adata,
                              key=['gsea', 'method'],
                              value=method)

@@ -95,7 +95,7 @@ def slider_dict_grouped_diff(slider):
             "B": {"1": slider, "2": widgets.FloatRangeSlider(value=[3, 4], min=0, max=10, step=1)}}
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Load and returns an anndata object.
 
@@ -246,7 +246,7 @@ def test_toggle_linkage(checkbox, slider_list, global_threshold):
 
 
 def test_update_threshold(slider):
-    """Test if update_threshold runs wihtout error."""
+    """Test if update_threshold runs without error."""
     fig, _ = plt.subplots()
     slider.observe(functools.partial(pl._update_thresholds, fig=fig, min_line=1, min_shade=1, max_line=1, max_shade=1), names=["value"])
     assert True

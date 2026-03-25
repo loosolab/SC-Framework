@@ -48,7 +48,7 @@ def adata2():
     return sc.datasets.pbmc3k_processed()
 
 
-@pytest.fixture(scope="session")  # re-use the fixture for all tests
+@pytest.fixture(scope="session")  # reuse the fixture for all tests
 def adata():
     """Return adata object with 3 groups.
 
