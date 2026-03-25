@@ -45,7 +45,7 @@ The SC-Framework offers notebooks for various types of analysis:
  - Data type-agnostic notebooks that can be applied to any dataset (`general <https://github.com/loosolab/SC-Framework/tree/main/general_notebooks>`_)
 
 .. figure:: image/analysis_progress.png
-   :alt: Typicall analysis workflow with iterative analysis to find optimal parameters and branching into concurrent runs.
+   :alt: Typical analysis workflow with iterative analysis to find optimal parameters and branching into concurrent runs.
    :width: 400
 
    A typical analysis workflow involves iterative steps, where individual cells or entire notebooks may be repeated to identify optimal parameters. The analysis may also branch into concurrent runs to explore different hypotheses or investigative paths.

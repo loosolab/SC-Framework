@@ -44,7 +44,7 @@ The SC-Framework provides a full environment for single cell analysis. It is spl
 Quickstart
 ----------
 
-**Prerequesites: A** `Jupyter Notebook Server <https://jupyter.org/>`_ **and** `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_ **(or Conda).**
+**Prerequisites: A** `Jupyter Notebook Server <https://jupyter.org/>`_ **and** `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_ **(or Conda).**
 
 Create and activate the SC-Framework environment (downloaded from our GitHub repository).
 
