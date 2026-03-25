@@ -33,6 +33,9 @@ Notebooks
 
 This is a collection of rules that should be followed when changing or adding a notebook.
 
+.. note::
+  Keep the code within notebooks minimal. Consider moving large code-blocks into functions and add them to the sctoolbox package.
+
 Location
 ~~~~~~~~
 
@@ -189,7 +192,7 @@ Commonly used cells within the analysis notebooks.
 First cell
 ^^^^^^^^^^
 
-This is a hidden initialization cell, meaning it will run when the notebook is opened. Below is an example for a first cell that may be copied.
+This is a **hidden initialization cell**, meaning it will run when the notebook is opened. Below is an example for a first cell that may be copied.
 
 .. code-block:: python
 
@@ -291,14 +294,59 @@ The final cells in each notebook
 Descriptions
 ~~~~~~~~~~~~
 
-# TODO add something about how descriptions in the notebooks should look
+All notebooks should contain texts describing the current steps to explain the analysis process and help the user in interpretation and descision making.
 
-Plotting
-~~~~~~~~
+- The first text in a notebook should describe the general aim of the notebook.
+- Parameters should be described using tables. The tables should contain at least parameter name, description, options (e.g. "values between 0-1") and default value.
+- Add a rule of thumb when possible. Sentences like "Higher values are better but result in longer runtime." are really valuable in descision making.
+- Keep it concise, explain relevant concepts not each step in an algorithm. Ask yourself: "Is this information relevant to get an optimal analysis result?"
+- Add links to information that is nice to know but not strictly needed to progress with the analysis.
+- Add text to help interpret plots.
+- If necessary, add the requirements to run this notebook, e.g., "Requires clustered data.".
 
-# TODO how should plotting be done?
+.. note::
+  Add sources to packages, best practise, relevant papers or anything else that might help the user to further inform themselfs.
 
-- always as pdf?
-- numbered output files
-- mention report saving
-- mention the internal plot save function
+Outputs
+~~~~~~~
+
+Output files, such as plots and tables should be saved with a number prefix indicating the order in which they were created. Plots should be saved in PDF format to allow easy editing.
+
+Use the sctoolbox internal saving functions for example:
+
+- :func:`sctoolbox.plotting.general._save_figure`
+- :func:`sctoolbox.utils.tables.write_excel`
+
+Testing
+~~~~~~~
+
+The SC-Framework has a CI/CD pipeline which runs all analysis notebooks to ensure robust analysis and interfaces. However, this requires the notebooks to be setup to run with the test data located next to the notebooks. The notebooks run in the correct analysis order (specified through the prefix) so you can use files that will be created during the analysis preceeding the respective notebook.
+
+.. note::
+  General notebooks, i.e. notebooks located in `general_notebooks`, must be copied to the respective `*_analysis` directory. Please add them to the respective CI/CD job (``notebooks-RNA`` or ``notebooks-ATAC``) in the `.gitlab-ci.yml`.
+
+Naming
+~~~~~~
+
+The prefix in the filename, e.g. ``01_assembling_anndata.ipynb``, indicates the order in which notebooks should run. For example, the typical run order of an RNA analysis is:
+
+1. ``01_assembling_anndata.ipynb``
+2. ``02_QC_filtering.ipynb``
+3. ``03_normalization_batch_correction.ipynb``
+4. ``04_clustering.ipynb``
+
+Afterwards, notebooks without prefix (`general_notebooks`) or with a letter-based prefix (e.g. ``0B_velocity_analysis.ipynb``) may be run in any order. Letter-based prefixes that end with a number should run in the order given by the number at the end. For example, first ``0A1_ligand_receptor.ipynb``, then ``0A2_ligand_receptor_hub_genes.ipynb``. The ``99-report.ipynb`` notebook should run last as indicated by its prefix.
+
+Package
+-------
+
+# TODO
+- explain the package structure
+- explain Testing
+- decorators (beartype and log_anndata; when to add what)
+- doc-string
+- adding new submodules
+- use special functions e.g. _save_figure
+
+# TODO
+- add a section for IDE and extension recommendations?
