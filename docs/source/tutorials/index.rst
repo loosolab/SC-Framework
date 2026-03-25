@@ -18,3 +18,5 @@ Follow the links below to see exemplary multi-notebook analysis workflows.
    :maxdepth: 2
 
    scATAC-seq_Analysis/index
+
+**More example analysis can be found** `here <https://github.com/loosolab/Code_Schultheis_et_al_2025_SC-Framework>`_ **.**
