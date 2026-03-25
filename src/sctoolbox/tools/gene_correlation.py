@@ -95,7 +95,7 @@ def correlate_ref_vs_all(adata: sc.AnnData,
     Returns
     -------
     pd.DataFrame
-        Dataframe containing correlation of refrence gene to other genes.
+        Dataframe containing correlation of reference gene to other genes.
     """
 
     def spearmanr_of_gene(ref: np.ndarray, gene: np.ndarray, gene_name: str) -> tuple:
