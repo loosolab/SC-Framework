@@ -340,13 +340,118 @@ Afterwards, notebooks without prefix (`general_notebooks`) or with a letter-base
 Package
 -------
 
-# TODO
-- explain the package structure
-- explain Testing
-- decorators (beartype and log_anndata; when to add what)
-- doc-string
-- adding new submodules
-- use special functions e.g. _save_figure
+`sctoolbox` is the python package that provides a lot of the functionality used within the notebooks. Its code is located in the ``src`` directory. The `sctoolbox` is structured into three main parts each containing a number of submodules.
 
-# TODO
-- add a section for IDE and extension recommendations?
+Structure
+~~~~~~~~~
+
+Adding a new submodule also requires to add the new name to the ``__init__.py`` on the same level.
+
+plotting
+^^^^^^^^
+
+Contains visualization functions. New plotting functions should normally be added here.
+
+tools
+^^^^^
+
+Functions related to a specific tool or topic. Anything regarding integration of a new tool may be added here.
+
+utils
+^^^^^
+
+General utility functions. Usually functions that may be used at several places throughout the package.
+
+Testing
+~~~~~~~
+
+The `sctoolbox` contains unit-tests, utilizing `Pytest <https://docs.pytest.org/en/stable/>`_, to ensure robust code. The code coverage is the percentage of how many lines of code are tested. A coverage `> 90%` is considered great. Therefore, we aim to test as much as possible. Especially, new functions should be tested from the beginning to avoid later problems.
+
+Tests are located within the ``tests`` directory. The structure within the directory follows the structure of the package (``src/sctoolbox``) for convenience.
+
+Decorators
+~~~~~~~~~~
+
+Python `decorators <https://realpython.com/primer-on-python-decorators/>`_ are a way to do something before and/or after calling a function. You should be aware of two decorators used with many of the `sctoolbox` functions:
+
+Beartype
+^^^^^^^^
+
+`Beartype <https://beartype.readthedocs.io/en/latest/>`_ is a package that checks parameter types and ensure that they match the type hint. For example it would raise an error if a parameter expects an integer but receives a string. Adding the beartype decorator enables these parameter checks:
+
+.. code-block:: python
+
+  from beartype import beartype
+
+  @beartype
+  def my_new_function():
+      pass
+
+log_anndata
+^^^^^^^^^^^
+
+This decorator is implemented in the `sctoolbox`. It logs calls to the functions it decorates and adds them to an AnnData object, which must be provided through one of the parameters of the decorated function. The log can be viewed with :func:`sctoolbox.utils.decorator.get_parameter_table`.
+
+Add this decorator to a function that receives an AnnData object. Not every function must be logged, only do this for **top-level/important** functions.
+
+.. code-block:: python
+
+  import sctoolbox.utils.decorator as deco
+
+  @deco.log_anndata
+  @beartype
+  def estimate_doublets_amulet(...):
+      ...
+
+.. note::
+  The order of decorators is important! ``@beartype`` should always be directly above the function.
+
+Doc-string
+~~~~~~~~~~
+
+Documentation is important for usability, that is why the SC-Framework requires doc-strings for every function. Doc-strings should follow the `numpy-style <https://numpydoc.readthedocs.io/en/latest/format.html>`_ and are enforced by the `Ruff <https://docs.astral.sh/ruff/>`_ linter.
+
+Example code and results
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is possible to add examples on how a function should be executed and show the expected output. This is shown in the :doc:`API-reference </API/index>`. Especially, plotting functions benefit from showing the output.
+
+To do so, add an example section to the doc-string of the respective function:
+
+.. code-block:: python
+
+  def some_function():
+      """
+      Some function
+
+      Parameters
+      ----------
+      [some parameters]
+
+      Returns
+      -------
+      [return value]
+
+      Examples
+      --------
+      .. plot:: <- for plotting functions
+          :context: close-figs
+
+          plotting_function(input)
+
+      .. exec_code:: <- for other code
+          import some_code
+          some_code()
+      """
+
+Where does the data come from?
+""""""""""""""""""""""""""""""
+
+For the plotting functions, we have a short script that is run before all examples. This script can be found in the repository (``/docs/source/plot_pre_code.py``). This script can be used to add any imports and input data preparation that should not be shown in the example.
+
+What not to do!
+"""""""""""""""
+
+Please do not overwrite any variables in your example code! All examples run after each other as they are in one script.
+
+For example, the main example input is stored in the variable ``adata``. If you would overwrite it with something else all the following code that uses the input variable is likely to fail.
