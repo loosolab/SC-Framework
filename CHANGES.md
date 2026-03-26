@@ -3,6 +3,7 @@
 ## 0.15.0 (in progress)
 - implemented SCF-analysis-setup CLI (#437)
 - implemented `sctoolbox.utils.creators.github_download`
+- spellcheck the project
 - fixed TypeError caused by non-string column names in `utils.adata._rec_search`
 - Add function adjust_doublet_threshold
 - move scvelo dependency to pyproject.toml (#423)
@@ -28,7 +29,7 @@
 - README: Update figure (#268)
 - Added ConnectomeDB2025 csv file support for receptor ligand analysis (#398)
 - fix logging issue causing error on save (#333)
-- CI improvments
+- CI improvements
 - lint according to new D420 rule
 
 ### Changes to notebooks
@@ -101,7 +102,7 @@
 - set bbknn(computation="cKDTree") and scanorama(approx=False) to fix issue with annoy package and processor architecture
 
 ## 0.13.1 (13-08-25)
-- scrublet: use forkserver to start separte processes to enable multiprocessing (#380)
+- scrublet: use forkserver to start separate processes to enable multiprocessing (#380)
 - enable AnnData write compression (this was default prior to AnnData version 0.6.16)
 
 ## 0.13.0 (08-08-25)
@@ -236,7 +237,7 @@
 - added kwargs and check for quant folder in assemblers.from_quant (#280)
 - GSEA: Fix library gene-set overlap by converting all gene names to uppercase
 - pl.gsea.term_dotplot: Fix example; Fix index==None bug
-- added additional qc metrices for ATAC-seq to the first notebook (#256)
+- added additional qc metrics for ATAC-seq to the first notebook (#256)
 - Pin ipywidget version to > 8.0.0 to fix interactive labels (qc notebooks)
 - revised prepare_atac_anndata (#267)
 - solved scanpy, matplotlib, pandas.. version conflict by temporarily removing scanpro (#257)
@@ -255,7 +256,7 @@
 - expand marker_genes notebook for atac, move to general_notebooks, change deseq2(R) to pydeseq2(python)
 
 ### Changes to notebooks
-- improvments in description and structure of atac and general notebooks (#144)
+- improvements in description and structure of atac and general notebooks (#144)
 - added header parameter to option 2 in notebook 01_assembling_anndata (#280)
 - added notebook versioning (#115)
 - added load from multiple h5ad files to assembly notebooks (#224)
@@ -272,7 +273,7 @@
 - remove legacy import structure
 - implement lazy module loading 
 - wrapped up native scrublet (#242, #150)
-- prepare_for_cellxgene: Account for duplciate var indices
+- prepare_for_cellxgene: Account for duplicate var indices
 - added number of features to ATAC nb 3 and added combat as an available batch correct algorithm (#245)
 - removed cleanup temp for the selfservice container (#258)
 
@@ -313,7 +314,7 @@
 ### Changes to notebooks
 - Move proportion_analysis notebooks to general notebooks (#195 and #214)
 - replace scanpy pseudotime with scFates in pseudotime_analysis notebook
-- prepare_for_cellxgene: Adapt to new mampok verison 2.0.9
+- prepare_for_cellxgene: Adapt to new mampok version 2.0.9
 - prepare_for_cellxgene: Allows the user to set an analyst manually (#213)
 - rna 03_batch revision (#209, #202, #200, #152)
 - 05_marker_genes: Complete Overhaul (#181)
@@ -349,7 +350,7 @@
 - constraint ipywidgets version to 7.7.5 to fix the quality_violinplot() (#151)(#143)
 - Add temp_dir to calc_overlap_fc.py (#167) and revised related functions
 - more testing (mainly sctoolbox.tools) (#166)
-- gerneral text revisions
+- general text revisions
 
 ### Changes to notebooks
 - Add pseudotime & velocity analysis notebooks (#164)
@@ -424,7 +425,7 @@
 ### Changes to ATAC notebooks
 - Fixed assembling atac notebook 01
 - Fixed get_atac_thresholds_wrapper and renamed it to get_thresholds_wrapper
-- Added custome cwt implementation
+- Added custom cwt implementation
 - Added additional parameters to add_insertsize_metrics
 - Revised nucleosomal score scoring
 

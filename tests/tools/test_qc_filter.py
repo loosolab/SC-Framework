@@ -194,7 +194,7 @@ def test_estimate_doublets(adata, groupby, threads):
 
 
 def test_adjust_doublet_threshold(adata):
-    """Test wheter doubet_prediction is updated based on adjusted threshold."""
+    """Test whether doubet_prediction is updated based on adjusted threshold."""
     threshold = 0.25
     qc.adjust_doublet_threshold(adata, threshold=threshold)
 
@@ -206,7 +206,7 @@ def test_adjust_doublet_threshold(adata):
 
 
 def test_adjust_doublet_threshold_failure(adata):
-    """Test wheter doubet_prediction errors are caught."""
+    """Test whether doubet_prediction errors are caught."""
     threshold = 0.25
     with pytest.raises(KeyError, match="Column 'doublet_score' not found in adata.obs"):
         adata_copy = adata.copy()
@@ -258,7 +258,7 @@ def test_automatic_thresholds_failure(adata):
 
 
 def test_thresholds_as_table(threshold_dict):
-    """Test whether treshold dict is successfully converted to pandas table."""
+    """Test whether threshold dict is successfully converted to pandas table."""
 
     table = qc.thresholds_as_table(threshold_dict)
 

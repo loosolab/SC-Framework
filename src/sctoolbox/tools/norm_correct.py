@@ -319,7 +319,7 @@ def wrap_corrections(adata: sc.AnnData,
     if unknown_keys:
         raise ValueError(f"Unknown methods in `method_kwargs` keys: {unknown_keys}")
 
-    # Check the existance of packages before running batch_corrections
+    # Check the existence of packages before running batch_corrections
     required_packages = {"harmony": "harmonypy", "bbknn": "bbknn", "scanorama": "scanorama"}
     for method in methods:
         if method in required_packages:  # not all packages need external tools
@@ -428,7 +428,7 @@ def batch_correction(adata: sc.AnnData,  # noqa: C901
     if batch_key not in adata.obs.columns:
         raise ValueError(f"The given batch_key '{batch_key}' is not in adata.obs.columns")
 
-    # so dim_red_kwargs is unqiue for each function call
+    # so dim_red_kwargs is unique for each function call
     dim_red_kwargs = copy.deepcopy(dim_red_kwargs)
 
     # set default dimension reduction

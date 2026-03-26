@@ -46,12 +46,12 @@ def recluster(adata: sc.AnnData,  # noqa: C901
     plot : bool, default True
         If a plot should be generated of the re-clustering.
     embedding : str, default 'X_umap'
-        Select which embeding should be used.
+        Select which embedding should be used.
 
     Raises
     ------
     KeyError
-        If the given embeding is not in the data.
+        If the given embedding is not in the data.
         1. If the given embedding is not in the data.
         2. If given column is not found in adata.obs
     ValueError
@@ -202,7 +202,7 @@ def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_la
         if binary_layer:
             # check if binary layer is available
             if binary_layer in subdata.layers.keys():
-                # count gene occurence
+                # count gene occurrence
                 genes = subdata.var[subdata.layers[binary_layer].sum(axis=0).A1 > 1].copy()
 
                 # count total genes
@@ -211,7 +211,7 @@ def calc_ragi(adata: sc.AnnData, condition_column: str = 'clustering', binary_la
             else:
                 print('binary layer not available!')
         else:
-            # count gene occurence
+            # count gene occurrence
             genes = subdata.var[subdata.X.sum(axis=0).A1 > 1].copy()
             # count total genes
             gene_counts = subdata.X.sum(axis=0).A1[subdata.X.sum(axis=0).A1 > 1].copy()
